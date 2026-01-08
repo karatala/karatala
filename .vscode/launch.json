@@ -5,10 +5,21 @@
     "version": "0.2.0",
     "configurations": [
     {
-        "name": "(Windows) Launch Standalone",
+        "name": "(Windows) Debug Standalone",
         "type": "cppvsdbg",
         "request": "launch",
         "program": "${workspaceFolder}/build/Karatala_artefacts/Debug/Standalone/Karatala Drum Kit Engine.exe",
+        "args": [],
+        "stopAtEntry": false,
+        "cwd": "${fileDirname}",
+        "environment": [],
+        "externalConsole": false
+    },
+    {
+        "name": "(Windows) Debug Tests",
+        "type": "cppvsdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/Debug/Tests.exe",
         "args": [],
         "stopAtEntry": false,
         "cwd": "${fileDirname}",

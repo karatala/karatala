@@ -1,16 +1,15 @@
-# https://forum.juce.com/t/automatic-juce-like-code-formatting-with-clang-format/31624/20
----
+
 AccessModifierOffset: -4
 AlignAfterOpenBracket: DontAlign
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
-AlignOperands: Align
+AlignOperands: DontAlign
 AlignTrailingComments: false
 AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortBlocksOnASingleLine: Never
+AllowShortBlocksOnASingleLine: Always
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: All
+AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLambdasOnASingleLine: All
 AllowShortLoopsOnASingleLine: false
@@ -21,22 +20,34 @@ AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false
 BinPackParameters: false
 BreakAfterJavaFieldAnnotations: false
+# BreakBeforeClosingParen: Always
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Custom
-BraceWrapping: # Allman except for lambdas
-  AfterClass: true
-  AfterCaseLabel: true
-  AfterFunction: true
-  AfterNamespace: true
-  AfterStruct: true
-  BeforeElse: true
-  AfterControlStatement: Always
+BraceWrapping:
+  AfterClass: false
+  AfterCaseLabel: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  BeforeElse: false
+  AfterControlStatement: MultiLine
+  SplitEmptyFunction: false
   BeforeLambdaBody: false
+BreakBeforeCloseBracketBracedList: true
+BreakBeforeCloseBracketFunction: true
+BreakBeforeCloseBracketLoop: true
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceListStyle: BeforeComma
+EmptyLineBeforeAccessModifier: LogicalBlock
+KeepEmptyLines:
+  AtEndOfFile: true
+  AtStartOfBlock: false
+  AtStartOfFile: false
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
 BreakStringLiterals: false
 ColumnLimit: 0
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 4
 ContinuationIndentWidth: 4
 Cpp11BracedListStyle: false
@@ -46,8 +57,7 @@ ExperimentalAutoDetectBinPacking: false
 IndentCaseLabels: true
 IndentPPDirectives: BeforeHash
 IndentWidth: 4
-IndentWrappedFunctionNames: true
-KeepEmptyLinesAtTheStartOfBlocks: false
+IndentWrappedFunctionNames: false
 Language: Cpp
 MaxEmptyLinesToKeep: 1
 FixNamespaceComments: false
@@ -59,7 +69,7 @@ SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: false
 SpaceBeforeAssignmentOperators: true
 SpaceBeforeCpp11BracedList: true
-SpaceBeforeParens: NonEmptyParentheses
+SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
 SpaceBeforeInheritanceColon: true
 SpacesInAngles: false
@@ -71,10 +81,40 @@ Standard: "c++20"
 TabWidth: 4
 UseTab: Never
 UseCRLF: false
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCaseColons: false
 ---
 Language: ObjC
 BasedOnStyle: Chromium
-BreakBeforeBraces: Allman
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: false
+  AfterCaseLabel: false
+  AfterFunction: false
+  AfterNamespace: false
+  AfterStruct: false
+  BeforeElse: false
+  AfterControlStatement: MultiLine
+  SplitEmptyFunction: false
+  BeforeLambdaBody: false
+  
+BreakBeforeCloseBracketBracedList: true
+BreakBeforeCloseBracketFunction: true
+BreakBeforeCloseBracketLoop: true
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceListStyle: BeforeComma
+AlignConsecutiveShortCaseStatements:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+  AlignCaseColons: false
+KeepEmptyLines:
+  AtEndOfFile: true
+  AtStartOfBlock: false
+  AtStartOfFile: false
 ColumnLimit: 0
 IndentWidth: 4
 KeepEmptyLinesAtTheStartOfBlocks: false
