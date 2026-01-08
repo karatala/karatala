@@ -1,3 +1,7 @@
+init:
+`git submodule update --init --recursive`
+
+
 ![PAMPLEJUCE](assets/images/pamplejuce.png)
 [![](https://github.com/sudara/pamplejuce/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/sudara/pamplejuce/actions)
 
