@@ -369,8 +369,6 @@ void DrumKitEngine::mapKit(DrumKit& kit) {
         //     }
         // }
     }
-
-
 }
 
 
@@ -583,7 +581,31 @@ void InstrumentSynth::unloadInstrument() {
 void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
     this->unloadInstrument();
     mDrumKitInstrumentPtr = instrument;
-    // TODO: actually create/load SynthesiserSound objects based on instrument's samples
+    // Create a lightweight SynthesiserSound for each sample variant and request async load
+    if (instrument == nullptr)
+        return;
+
+    // Use SampledSound defined in header
+
+    auto loader = this->getSampleLoader();
+
+    for (const auto& artPtr : instrument->articulations) {
+        for (const auto& velPtr : artPtr->velocityLayers) {
+            for (const auto& variantPtr : velPtr->sampleVariants) {
+                auto* sound = new SampledSound(instrument, variantPtr->sampleFile, artPtr->name, velPtr->velocityLayer, variantPtr->variantLetter);
+                // add to synth immediately; buffer will be filled asynchronously
+                this->addSound(sound);
+
+                // Request async load; capture raw pointer only to update buffer when ready
+                if (loader != nullptr) {
+                    loader->requestAsyncLoad(variantPtr->sampleFile, [sound](const juce::File& /*file*/, std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
+                        sound->buffer = buf;
+                        sound->sampleRate = sr;
+                    });
+                }
+            }
+        }
+    }
 }
 
 SampleLoader* InstrumentSynth::getSampleLoader() {
@@ -591,10 +613,109 @@ SampleLoader* InstrumentSynth::getSampleLoader() {
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
-    juce::ignoreUnused(newSampleRate); //FIXME: what about sampleRate?
     // Ensure mic buffer has correct size
     if (mMicChannelCount <= 0)
         mMicChannelCount = 2;
     mMicBuffer.setSize(mMicChannelCount, samplesPerBlock);
-    // voices/sounds would also be prepared here when implemented
+
+    // Configure voices for this synth
+    this->clearVoices();
+    const int numVoices = 6; // allow polyphony for round-robins
+    for (int i = 0; i < numVoices; ++i)
+        this->addVoice(new InstrumentSynthVoice());
+
+    // set playback sample rate for voices
+    this->setCurrentPlaybackSampleRate(newSampleRate);
+}
+
+InstrumentSynthVoice::InstrumentSynthVoice()
+    : mGainParameter(nullptr), mPanParameter(nullptr), mInvertPhaseParameter(nullptr) {
+    mPitchRatio = 1.0;
+    mVelocityGain = 1.0f;
+    mSourceSamplePosition = 0.0;
+}
+
+InstrumentSynthVoice::~InstrumentSynthVoice() {}
+
+bool InstrumentSynthVoice::canPlaySound(juce::SynthesiserSound* sound) {
+    return dynamic_cast<SampledSound*>(sound) != nullptr;
+}
+
+void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* s, int /*pitchWheel*/) {
+    mVelocityGain = velocity;
+    mSourceSamplePosition = 0.0;
+    mAdsr.setParameters({0.005f, 0.05f, 0.8f, 0.08f});
+    mAdsr.setSampleRate(getSampleRate());
+    mAdsr.noteOn();
+
+    if (auto* sampled = dynamic_cast<SampledSound*>(s)) {
+        if (sampled->sampleRate > 0 && getSampleRate() > 0)
+            mPitchRatio = sampled->sampleRate / getSampleRate();
+        else
+            mPitchRatio = 1.0;
+    } else {
+        mPitchRatio = 1.0;
+    }
+}
+
+void InstrumentSynthVoice::stopNote(float velocity, bool allowTailOff) {
+    juce::ignoreUnused(velocity);
+    if (allowTailOff) {
+        mAdsr.noteOff();
+    } else {
+        mAdsr.reset();
+        clearCurrentNote();
+    }
+}
+
+void InstrumentSynthVoice::pitchWheelMoved(int /*newValue*/) {}
+void InstrumentSynthVoice::controllerMoved(int /*controllerNumber*/, int /*newValue*/) {}
+
+void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) {
+    if (!isVoiceActive())
+        return;
+
+    auto snd = getCurrentlyPlayingSound();
+    auto* s = dynamic_cast<SampledSound*>(snd.get());
+    if (s == nullptr || !s->buffer)
+        return;
+
+    auto& buf = *s->buffer;
+    const int srcChannels = buf.getNumChannels();
+    const int srcLen = buf.getNumSamples();
+
+    for (int i = 0; i < numSamples; ++i) {
+        const double pos = mSourceSamplePosition;
+        const int idx = static_cast<int>(pos);
+        const double frac = pos - idx;
+
+        float outSample = 0.0f;
+        if (idx >= 0 && idx < srcLen) {
+            float v0 = buf.getSample(0, idx);
+            float v1 = (idx + 1 < srcLen) ? buf.getSample(0, idx + 1) : 0.0f;
+            outSample = static_cast<float>(v0 + (v1 - v0) * frac);
+            if (srcChannels > 1) {
+                float v0r = buf.getSample(1, idx);
+                float v1r = (idx + 1 < srcLen) ? buf.getSample(1, idx + 1) : 0.0f;
+                float r = static_cast<float>(v0r + (v1r - v0r) * frac);
+                outSample = (outSample + r) * 0.5f;
+            }
+        }
+
+        const float env = mAdsr.getNextSample();
+        outSample *= env * mVelocityGain;
+
+        const int outCh = outputBuffer.getNumChannels();
+        for (int ch = 0; ch < outCh; ++ch) {
+            outputBuffer.addSample(ch, startSample + i, outSample);
+        }
+
+        mSourceSamplePosition += mPitchRatio;
+        if (mSourceSamplePosition >= srcLen) {
+            // reached end
+            mAdsr.reset();
+            clearCurrentNote();
+            break;
+        }
+    }
 }

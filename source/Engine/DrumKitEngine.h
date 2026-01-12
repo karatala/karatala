@@ -27,9 +27,9 @@ public:
     using SynthesiserVoice::renderNextBlock;
 
 private:
-    juce::RangedAudioParameter& mGainParameter;
-    juce::RangedAudioParameter& mPanParameter;
-    juce::AudioParameterBool& mInvertPhaseParameter;
+    juce::RangedAudioParameter* mGainParameter = nullptr;
+    juce::RangedAudioParameter* mPanParameter = nullptr;
+    juce::AudioParameterBool* mInvertPhaseParameter = nullptr;
 
     double mPitchRatio = 0;
     float mVelocityGain = 0;
@@ -37,6 +37,23 @@ private:
     juce::ADSR mAdsr;
 
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
+};
+
+class SampledSound : public juce::SynthesiserSound {
+public:
+    DrumKitInstrument* parentInst = nullptr;
+    juce::File sampleFile;
+    std::shared_ptr<juce::AudioBuffer<float>> buffer;
+    double sampleRate = 0.0;
+    juce::String articulation;
+    int velocityLayer = 0;
+    juce_wchar variantLetter = '\0';
+
+    SampledSound(DrumKitInstrument* p = nullptr, const juce::File& f = {}, const juce::String& art = {}, int vel = 0, juce_wchar var = '\0')
+        : parentInst(p), sampleFile(f), articulation(art), velocityLayer(vel), variantLetter(var) {}
+
+    bool appliesToNote(int /*midiNote*/) override { return true; }
+    bool appliesToChannel(int /*midiChannel*/) override { return true; }
 };
 
 class InstrumentSynth : public juce::Synthesiser {

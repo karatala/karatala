@@ -61,7 +61,7 @@ void PluginProcessor::changeProgramName(int index, const juce::String& newName) 
 
 //==============================================================================
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    juce::ignoreUnused(sampleRate, samplesPerBlock);
+    this->mDrumKitEngine->prepareToPlay(sampleRate, samplesPerBlock);
 }
 
 double PluginProcessor::getTailLengthSeconds() const {
@@ -71,7 +71,6 @@ double PluginProcessor::getTailLengthSeconds() const {
 void PluginProcessor::releaseResources() {}
 
 void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
-    juce::ignoreUnused(midiMessages);
 
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels = getTotalNumInputChannels();
@@ -101,6 +100,10 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         auto* channelData = buffer.getWritePointer(channel);
         juce::ignoreUnused(channelData);
         // ..do something to the data...
+    }
+
+    if (mDrumKitEngine) {
+        mDrumKitEngine->processBlock(buffer, midiMessages);
     }
 }
 
