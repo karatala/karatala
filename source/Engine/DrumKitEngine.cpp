@@ -1,7 +1,9 @@
 #include "DrumKitEngine.h"
+#include "SampleSelector.h"
 #include "../Config/Helpers.h"
 #include "../Config/YamlHelper.h"
 #include <juce_core/juce_core.h>
+#include <cmath>
 
 DrumKitEngine::DrumKitEngine() {
     mKitLayoutManager = std::make_unique<KitLayoutManager>();
@@ -566,7 +568,98 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
 // }
 
 void InstrumentSynth::noteOn(int midiChannel, int midiNoteNumber, float velocity) {
-    juce::Synthesiser::noteOn(midiChannel, midiNoteNumber, velocity);
+    // Determine articulation from kit layout mapping (which articulation contains this midi note)
+    juce::String targetArt;
+    for (const auto& art : this->instrumentDef.articulations) {
+        for (const int n : art.notes) {
+            if (n == midiNoteNumber) {
+                targetArt = art.type;
+                break;
+            }
+        }
+        if (targetArt.isNotEmpty())
+            break;
+    }
+
+    if (targetArt.isEmpty()) {
+        // no articulation mapping found; fall back to default behavior
+        // juce::Synthesiser::noteOn(midiChannel, midiNoteNumber, velocity);
+        return;
+    }
+
+    // Convert velocity to 1-127 midi value
+    int midiVel = static_cast<int>(std::round(velocity * 127.0f));
+    if (midiVel < 1) midiVel = 1;
+    if (midiVel > 127) midiVel = 127;
+
+    // Find the best matching velocity layer (greatest layer <= midiVel)
+    auto artIt = mSamplesByArtVel.find(targetArt);
+    std::vector<SampledSound*> candidates;
+    int chosenVelLayer = -1;
+    if (artIt != mSamplesByArtVel.end()) {
+        for (auto it = artIt->second.rbegin(); it != artIt->second.rend(); ++it) {
+            int vel = it->first;
+            if (vel <= midiVel && !it->second.empty()) {
+                candidates = it->second;
+                chosenVelLayer = vel;
+                break;
+            }
+        }
+        // fallback: use lowest available velocity if no <= midiVel found
+        if (candidates.empty()) {
+            for (auto &p : artIt->second) {
+                if (!p.second.empty()) {
+                    candidates = p.second;
+                    chosenVelLayer = p.first;
+                    break;
+                }
+            }
+        }
+    }
+
+    // last resort: any available SampledSound in this synth
+    if (candidates.empty()) {
+        for (int i = 0; i < this->getNumSounds(); ++i) {
+            auto snd = this->getSound(i);
+            if (auto* ss = dynamic_cast<SampledSound*>(snd.get())) {
+                candidates.push_back(ss);
+            }
+        }
+    }
+
+    if (candidates.empty()) {
+        // nothing to play
+        return;
+    }
+
+    // Choose round-robin index deterministically
+    int& idxRef = mNextVariantIndex[targetArt][chosenVelLayer];
+    if (idxRef < 0) idxRef = 0;
+    int chosenIndex = candidates.empty() ? 0 : (idxRef % static_cast<int>(candidates.size()));
+    SampledSound* chosen = candidates[chosenIndex];
+    DBG(chosen->sampleFile.getFileName());
+    idxRef = idxRef + 1;
+
+
+
+
+
+    const ScopedLock sl (lock);
+
+    for (auto* sound : this->sounds) {
+        if (sound->appliesToNote(midiNoteNumber) && sound->appliesToChannel(midiChannel)) {
+            // If hitting a note that's still ringing, stop it first (it could be still playing because of the sustain or sostenuto pedal).
+            for (auto* voice : voices)
+                if (voice->getCurrentlyPlayingNote() == midiNoteNumber && voice->isPlayingChannel (midiChannel))
+                    stopVoice (voice, 1.0f, true);
+            auto stealNotes = false;
+
+            auto voice = this->findFreeVoice(sound, midiChannel, midiNoteNumber, stealNotes);
+            this->startVoice(voice, sound, midiChannel, midiNoteNumber, velocity);
+        }
+    }
+
+
 }
 
 void InstrumentSynth::noteOff(int midiChannel, int midiNoteNumber, float velocity, bool allowTailOff) {
@@ -576,11 +669,14 @@ void InstrumentSynth::noteOff(int midiChannel, int midiNoteNumber, float velocit
 void InstrumentSynth::unloadInstrument() {
     this->clearSounds();
     mDrumKitInstrumentPtr = nullptr;
+    mSamplesByArtVel.clear();
+    mNextVariantIndex.clear();
 }
 
 void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
     this->unloadInstrument();
-    mDrumKitInstrumentPtr = instrument;
+    this->mDrumKitInstrumentPtr = instrument;
+    
     // Create a lightweight SynthesiserSound for each sample variant and request async load
     if (instrument == nullptr)
         return;
@@ -595,6 +691,9 @@ void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
                 auto* sound = new SampledSound(instrument, variantPtr->sampleFile, artPtr->name, velPtr->velocityLayer, variantPtr->variantLetter);
                 // add to synth immediately; buffer will be filled asynchronously
                 this->addSound(sound);
+
+                // track sample pointers for round-robin selection
+                mSamplesByArtVel[artPtr->name][velPtr->velocityLayer].push_back(sound);
 
                 // Request async load; capture raw pointer only to update buffer when ready
                 if (loader != nullptr) {
@@ -642,6 +741,7 @@ bool InstrumentSynthVoice::canPlaySound(juce::SynthesiserSound* sound) {
 }
 
 void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* s, int /*pitchWheel*/) {
+    juce::ignoreUnused(midiNoteNumber);
     mVelocityGain = velocity;
     mSourceSamplePosition = 0.0;
     mAdsr.setParameters({0.005f, 0.05f, 0.8f, 0.08f});

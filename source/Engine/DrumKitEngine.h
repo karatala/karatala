@@ -48,11 +48,12 @@ public:
     juce::String articulation;
     int velocityLayer = 0;
     juce_wchar variantLetter = '\0';
+    bool enabled = true;
 
     SampledSound(DrumKitInstrument* p = nullptr, const juce::File& f = {}, const juce::String& art = {}, int vel = 0, juce_wchar var = '\0')
         : parentInst(p), sampleFile(f), articulation(art), velocityLayer(vel), variantLetter(var) {}
 
-    bool appliesToNote(int /*midiNote*/) override { return true; }
+    bool appliesToNote(int /*midiNote*/) override { return enabled; }
     bool appliesToChannel(int /*midiChannel*/) override { return true; }
 };
 
@@ -64,7 +65,8 @@ public:
         // ,juce::RangedAudioParameter& panParameter
         // ,juce::AudioParameterBool& phaseParameter
         )
-        : parent(parent) 
+        : parent(parent)
+        , instrumentDef(instrument)
         , id(instrument.id)
         , type(DrumKitInstrument::typeFromString(instrument.type)) {
     }
@@ -99,6 +101,12 @@ private:
     DrumKitInstrument::Type type;
     juce::AudioBuffer<float> mMicBuffer;
     int mMicChannelCount = 2;
+    // Keep a copy of the kit layout instrument definition for note->articulation lookup
+    KitLayout::Instrument instrumentDef;
+    // Group available SampledSound pointers by articulation and velocity layer for fast lookup
+    std::unordered_map<juce::String, std::map<int, std::vector<SampledSound*>>> mSamplesByArtVel;
+    // Round-robin indices per articulation+velocity
+    std::unordered_map<juce::String, std::map<int, int>> mNextVariantIndex;
 };
 
 class DrumKitEngine {

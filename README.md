@@ -1,13 +1,14 @@
+![Karatala](assets/images/karatala.png)
+[![](https://github.com/karatala/karatala/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/karatala/karatala/actions)
+
+Karatala is a drum kit engine instrument for e-Drummers and everyone.
+
+
+## Development
+based on Pamplejuce
+
 init:
 `git submodule update --init --recursive`
-
-
-![PAMPLEJUCE](assets/images/pamplejuce.png)
-[![](https://github.com/sudara/pamplejuce/actions/workflows/build_and_test.yml/badge.svg)](https://github.com/sudara/pamplejuce/actions)
-
-Pamplejuce is a ~~template~~ lifestyle for creating and building JUCE plugins in 2026.
-
-Out-of-the-box, it:
 
 1. Runs C++23
 2. Uses JUCE 8.x as a git submodule (tracking develop).
@@ -33,27 +34,3 @@ It also contains:
 3. A `VERSION` file that will propagate through JUCE and your app.
 4. A ton of useful comments and options around the CMake config.
 
-## How does this all work at a high level?
-
-Check out the [official Pamplejuce documentation](https://melatonin.dev/manuals/pamplejuce/how-does-this-all-work/).
-
-[![Arc - 2024-10-01 51@2x](https://github.com/user-attachments/assets/01d19d2d-fbac-481f-8cec-e9325b2abe57)](https://melatonin.dev/manuals/pamplejuce/how-does-this-all-work/)
-
-## Setting up for YOUR project
-
-This is a template repo!
-
-That means you can click "[Use this template](https://github.com/sudara/pamplejuce/generate)" here or at the top of the page to get your own copy (not fork) of the repo. Then you can make it private or keep it public, up to you.
-
-Then check out the [documentation](https://melatonin.dev/manuals/pamplejuce/setting-your-project-up/) so you know what to tweak. 
-
-> [!NOTE]
-> Tests will immediately run and fail (go red) until you [set up code signing](https://melatonin.dev/manuals/pamplejuce/getting-started/code-signing/).
-
-## Having Issues?
-
-Thanks to everyone who has contributed to the repository. 
-
-This repository covers a _lot_ of ground. JUCE itself has a lot of surface area. It's a group effort to maintain the garden and keep things nice!
-
-If something isn't just working out of the box — *it's probably not just you* — others are running into the problem, too, I promise. Check out [the official docs](https://melatonin.dev/manuals/pamplejuce), then please do [open an issue](https://github.com/sudara/pamplejuce/issues/new)!

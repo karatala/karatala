@@ -12,29 +12,23 @@ struct KitLayout {
             juce::String type; // center, rim, edge, bow, pedal, etc.
             juce::String display;
             std::vector<int> notes; // midi notes triggering this articulation
-            int priority = 0;
-            std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids
-            // cc_conditions and crossfade left for later extension
+
+            // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids
+            // int priority = 0;
+            //MAYBE: cc_conditions, crossfade?
         };
         struct CC {
-            struct Range {
-                int min = 0;
-                int max = 127;
-                juce::String name; // target articulation id
-            };
-
             int id = -1; // MIDI CC
-            juce::String type; // pedal, position, etc.
-            juce::String name;
-            std::vector<Range> ranges;
-            // juce::String idString; // optional string id for named controllers like "hh_pedal"
+            juce::String code; // pedal-open-close, zone-center-rim, zone-bow-edge
+            std::vector<int> notes; // midi notes triggering this articulation
         };
 
         juce::String id; // kick1, snare1, hihat1, ...
         juce::String display;
-        juce::String type; // kick/snare/tom/hihat/cymbal
+        juce::String type; // drum, cymbal, snare, hihat
         std::vector<Articulation> articulations;
         std::vector<CC> controllers;
+
         // juce::String outputGroup;
         // std::vector<juce::String> mics;
         // juce::String chokeGroup;
@@ -175,8 +169,7 @@ struct LayoutTraits<KitLayout> {
                         const auto& ctrlItem = ctrlsNode[j];
                         KitLayout::Instrument::CC cd;
                         cd.id = ctrlItem["id"].asInt();
-                        cd.type = ctrlItem["type"].asString();
-                        cd.name = ctrlItem["name"].asString();
+                        cd.code = ctrlItem["code"].asString();
                         inst.controllers.push_back(cd);
                     }
                 }
