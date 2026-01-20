@@ -339,13 +339,12 @@ public:
 class DrumKitInstrument {
 public:
 
-    enum class Type { Unknown, Percussion, Drum, Cymbal, Kick, Tom, Snare, Ride, HiHat }; //FIXME: probably need to leave less types, like only percussion, drum, cymbal, hihat, and rely on available articulations
+    enum class Type { Unknown, Percussion, Drum, Cymbal, Kick, Tom, Snare, Ride, HiHat, Crash, Splash, China }; //FIXME: probably need to leave less types, like only percussion, drum, cymbal, hihat, and rely on available articulations
     struct TypeEntry {
         const char* name;
         Type type;
     };
     static constexpr TypeEntry typeTable[] = {
-        
         {"percussion", Type::Percussion},
         {"drum",       Type::Drum},
         {"cymbal",     Type::Cymbal},
@@ -353,7 +352,10 @@ public:
         {"tom",        Type::Tom},
         {"snare",      Type::Snare},
         {"ride",       Type::Ride},
-        {"hihat",      Type::HiHat}
+        {"hihat",      Type::HiHat},
+        {"crash",      Type::Crash},
+        {"splash",     Type::Splash},
+        {"china",      Type::China},
     };
     static juce::String typeToString(Type type){
         for (auto& e : typeTable)

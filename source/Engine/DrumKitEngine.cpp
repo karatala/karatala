@@ -114,7 +114,7 @@ bool DrumKitEngine::useKitLayout(juce::String name) {
     const KitLayout* ptr = this->getKitLayoutManager()->getLayoutById(name);
     if (ptr != nullptr)
         this->setKitLayout(*ptr);
-    DBG("WARN: KitLayout not found: " + name);
+    if (name != "default") DBG("WARN: KitLayout not found: " + name);
     return false;
 }
 
@@ -122,7 +122,7 @@ bool DrumKitEngine::useMicLayout(juce::String name) {
     const MicLayout* ptr = this->getMicLayoutManager()->getLayoutById(name);
     if (ptr != nullptr)
         this->setMicLayout(*ptr);
-    DBG("WARN: MicLayout not found: " + name);
+    if (name != "default") DBG("WARN: MicLayout not found: " + name);
     return false;
 }
 
@@ -289,75 +289,76 @@ void DrumKitEngine::mapKit(DrumKit& kit) {
         // resolve layout type to DrumKitInstrument::Type
         DrumKitInstrument::Type desiredType = DrumKitInstrument::typeFromString(layoutInstrument.type);
         
-            // If we have a valid type, try type-based selection
-            if (desiredType != DrumKitInstrument::Type::Unknown) {
-                auto candidates = kit.getInstrumentsByType(desiredType);
-            
-                // parse numeric suffix from layout id (e.g., 'kick1' -> index 1)
-                int requestedIdx = -1;
-                {
-                    // find trailing digits
-                    int pos = static_cast<int>(layoutInstrument.id.length()) - 1;
-                    while (pos >= 0 && juce::CharacterFunctions::isDigit(layoutInstrument.id[pos]))
-                        --pos;
-                    auto digits = layoutInstrument.id.substring(pos + 1);
-                    if (digits.isNotEmpty()) {
-                        requestedIdx = digits.getIntValue() - 1; // convert to 0-based
+        // If we have a valid type, try type-based selection
+        if (desiredType != DrumKitInstrument::Type::Unknown) {
+            auto candidates = kit.getInstrumentsByType(desiredType);
+        
+            // parse numeric suffix from layout id (e.g., 'kick1' -> index 1)
+            int requestedIdx = -1;
+            {
+                // find trailing digits
+                int pos = static_cast<int>(layoutInstrument.id.length()) - 1;
+                while (pos >= 0 && juce::CharacterFunctions::isDigit(layoutInstrument.id[pos]))
+                    --pos;
+                auto digits = layoutInstrument.id.substring(pos + 1);
+                if (digits.isNotEmpty()) {
+                    requestedIdx = digits.getIntValue() - 1; // convert to 0-based
+                }
+            }
+        
+            if (requestedIdx >= 0 && requestedIdx < static_cast<int>(candidates.size())) {
+                // pick by explicit position if available and not used
+                if (usedInstruments.find(candidates[requestedIdx]) == usedInstruments.end()) {
+                    matched = candidates[requestedIdx];
+                }
+            }
+        
+            // otherwise pick next unused of that type
+            if (matched == nullptr) {
+                int& next = nextIndexByType[layoutInstrument.type];
+                for (int i = next; i < static_cast<int>(candidates.size()); ++i) {
+                    if (usedInstruments.find(candidates[i]) == usedInstruments.end()) {
+                        matched = candidates[i];
+                        next = i + 1;
+                        break;
                     }
                 }
-            
-                if (requestedIdx >= 0 && requestedIdx < static_cast<int>(candidates.size())) {
-                    // pick by explicit position if available and not used
-                    if (usedInstruments.find(candidates[requestedIdx]) == usedInstruments.end()) {
-                        matched = candidates[requestedIdx];
-                    }
-                }
-            
-                // otherwise pick next unused of that type
+                // wrap-around search from beginning if none found after 'next'
                 if (matched == nullptr) {
-                    int& next = nextIndexByType[layoutInstrument.type];
-                    for (int i = next; i < static_cast<int>(candidates.size()); ++i) {
+                    for (int i = 0; i < static_cast<int>(candidates.size()); ++i) {
                         if (usedInstruments.find(candidates[i]) == usedInstruments.end()) {
                             matched = candidates[i];
                             next = i + 1;
                             break;
                         }
                     }
-                    // wrap-around search from beginning if none found after 'next'
-                    if (matched == nullptr) {
-                        for (int i = 0; i < static_cast<int>(candidates.size()); ++i) {
-                            if (usedInstruments.find(candidates[i]) == usedInstruments.end()) {
-                                matched = candidates[i];
-                                next = i + 1;
-                                break;
-                            }
-                        }
-                    }
                 }
             }
-        
-            // Fallback: attempt fuzzy match by name/code if still not matched
-            if (matched == nullptr) {
-                String needle = layoutInstrument.id.trim().toLowerCase();
-                for (const auto& pair : kit.instruments) {
-                    auto* cand = pair.second.get();
-                    if (cand == nullptr)
-                        continue;
-                    if (usedInstruments.find(cand) != usedInstruments.end())
-                        continue;
-                    if (cand->meta.code.trim().toLowerCase().contains(needle) || cand->meta.name.trim().toLowerCase().contains(needle)) {
-                        matched = cand;
-                        break;
-                    }
+        }
+    
+        // Fallback: attempt fuzzy match by name/code if still not matched
+        if (matched == nullptr) {
+            String needle = layoutInstrument.id.trim().toLowerCase();
+            for (const auto& pair : kit.instruments) {
+                auto* cand = pair.second.get();
+                if (cand == nullptr)
+                    continue;
+                if (usedInstruments.find(cand) != usedInstruments.end())
+                    continue;
+                if (cand->meta.code.trim().toLowerCase().contains(needle) || cand->meta.name.trim().toLowerCase().contains(needle)) {
+                    matched = cand;
+                    break;
                 }
             }
+        }
         
         if (matched == nullptr) {
             DBG("WARN: no matching instrument found in kit '" + kit.meta.name + "' for layout slot: " + layoutInstrument.id);
             slot->unloadInstrument();
             continue;
         }
-
+        
+        DBG("INFO: loading instrument '" + matched->meta.code + "' from kit '" + kit.meta.name + "' for layout slot: " + layoutInstrument.id);
         // load instrument into slot
         slot->loadInstrument(matched);
         usedInstruments.insert(matched);
@@ -674,14 +675,10 @@ void InstrumentSynth::unloadInstrument() {
 }
 
 void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
+    if (instrument == nullptr) return;
+    
     this->unloadInstrument();
     this->mDrumKitInstrumentPtr = instrument;
-    
-    // Create a lightweight SynthesiserSound for each sample variant and request async load
-    if (instrument == nullptr)
-        return;
-
-    // Use SampledSound defined in header
 
     auto loader = this->getSampleLoader();
 

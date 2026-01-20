@@ -63,13 +63,13 @@ int InstrumentManager::scanAll() {
         if (!kit->isEmpty()) {
             mKits.push_back(std::move(kit));
             kitCount++;
-            DBG("  Scanned kit: " + kitDir.getFileName() + ", " + String(instrsInKit) + " instruments, " + String(samplesInKit) + " samples");
+            DBG("INFO: Scanned kit: " + kitDir.getFileName() + ", " + String(instrsInKit) + " instruments, " + String(samplesInKit) + " samples");
         } else {
-            DBG("  Skipped empty kit: " + kitDir.getFileName());
+            DBG("NOTICE: Skipped empty kit: " + kitDir.getFileName());
         }
     }
 
-    DBG("=== Total: " + String(kitCount) + " kits, " + String(mTotalInstruments) + " instruments, " + String(mTotalSamples) + " samples");
+    DBG("INFO: Total: " + String(kitCount) + " kits, " + String(mTotalInstruments) + " instruments, " + String(mTotalSamples) + " samples");
     return kitCount;
 }
 

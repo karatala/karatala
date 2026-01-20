@@ -41,7 +41,7 @@ version: 1.0
 instruments:
   - id: kick1
     display: Kick
-    type: drum
+    type: kick
     articulations:
       - code: center
         notes: [35, 36]
@@ -109,7 +109,7 @@ instruments:
 
   - id: ride1
     display: Ride
-    type: cymbal
+    type: ride
     articulations:
       - code: bow
         notes: [51]
@@ -123,7 +123,7 @@ instruments:
         
   - id: tom1
     display: Tom 1
-    type: drum
+    type: tom
     articulations:
       - code: center
         notes: [48]
@@ -135,7 +135,7 @@ instruments:
 
   - id: tom2
     display: Tom 2
-    type: drum
+    type: tom
     articulations:
       - code: center
         notes: [47]
@@ -147,7 +147,7 @@ instruments:
         
   - id: tom3
     display: Tom 3
-    type: drum
+    type: tom
     articulations:
       - code: center
         notes: [45]
@@ -159,7 +159,7 @@ instruments:
 
   - id: tom4
     display: Tom 4
-    type: drum
+    type: tom
     articulations:
       - code: center
         notes: [43]
@@ -172,7 +172,7 @@ instruments:
 
   - id: tom5
     display: Tom 5
-    type: drum
+    type: tom
     articulations:
       - code: center
         notes: [41]
@@ -184,7 +184,7 @@ instruments:
 
   - id: crash1
     display: Crash 1
-    type: cymbal
+    type: crash
     articulations:
       - code: bow
         notes: [25]
@@ -193,7 +193,7 @@ instruments:
   
   - id: crash2
     display: Crash 2
-    type: cymbal
+    type: crash
     articulations:
       - code: bow
         notes: [33]
@@ -202,7 +202,7 @@ instruments:
 
   - id: splash1
     display: Splash 1
-    type: cymbal
+    type: splash
     articulations:
       - code: bow
         notes: [33]
@@ -211,7 +211,7 @@ instruments:
 
   - id: splash2
     display: Splash 2
-    type: cymbal
+    type: splash
     articulations:
       - code: bow
         notes: [33]
@@ -220,7 +220,7 @@ instruments:
 
   - id: china1
     display: China 1
-    type: cymbal
+    type: china
     articulations:
       - code: bow
         notes: [30]
@@ -229,7 +229,7 @@ instruments:
 
   - id: china2
     display: China 2
-    type: cymbal
+    type: china
     articulations:
       - code: bow
         notes: [33]

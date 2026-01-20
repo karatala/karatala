@@ -332,9 +332,6 @@ TEST_CASE("SampleSelector<3> - full lookup MidSplit strategy", "[SampleSelector]
     }
 }
 
-
-
-
 TEST_CASE("SampleSelectorRuntime - selects based on dimension count", "[SampleSelectorRuntime]") {
     std::vector<RuntimeSample> samples{
         {{10, 20, 30}},

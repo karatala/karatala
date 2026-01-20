@@ -48,11 +48,11 @@ static inline ParseResult<juce::File> getEnvPath(const char* envName) {
     ParseResult<juce::File> result;
 
     if (envPath == nullptr)
-        return result.returnWithError("E: Invalid env: '" + juce::String(envName) + "'");
+        return result.returnWithError("Invalid env: '" + juce::String(envName) + "'");
 
     juce::File f(envPath);
     if (!f.isDirectory())
-        return result.returnWithError("E: Path is not directory in env: '" + juce::String(envName) + "'");
+        return result.returnWithError("Path is not directory in env: '" + juce::String(envName) + "'");
 
     result.value = f;
     return result;

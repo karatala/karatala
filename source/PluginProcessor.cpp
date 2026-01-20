@@ -27,8 +27,7 @@ PluginProcessor::PluginProcessor()
 
     , mAudioFormatManagerPtr(std::make_unique<juce::AudioFormatManager>())
     , mAudioProcessorValueTreeStatePtr(std::make_unique<juce::AudioProcessorValueTreeState>(*this, nullptr, juce::Identifier("plugin_params"), createParameterLayout())
-          //
-      ) {
+) {
     mDrumKitEngine = std::make_unique<DrumKitEngine>();
     mDrumKitEngine->init(*mAudioProcessorValueTreeStatePtr);
 }
