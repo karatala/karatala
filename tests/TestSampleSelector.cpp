@@ -332,19 +332,19 @@ TEST_CASE("SampleSelector<3> - full lookup MidSplit strategy", "[SampleSelector]
     }
 }
 
-TEST_CASE("SampleSelectorRuntime - selects based on dimension count", "[SampleSelectorRuntime]") {
-    std::vector<RuntimeSample> samples{
-        {{10, 20, 30}},
-        {{40, 50, 60}}
-    };
+// TEST_CASE("SampleSelectorRuntime - selects based on dimension count", "[SampleSelectorRuntime]") {
+//     std::vector<RuntimeSample> samples{
+//         {{10, 20, 30}},
+//         {{40, 50, 60}}
+//     };
 
-    REQUIRE_NOTHROW(SampleSelectorRuntime(samples));
-}
+//     REQUIRE_NOTHROW(SampleSelectorRuntime(samples));
+// }
 
-TEST_CASE("SampleSelectorRuntime - unsupported dimension count throws", "[SampleSelectorRuntime]") {
-    std::vector<RuntimeSample> samples{
-        {{1, 2, 3, 4, 5}}
-    };
+// TEST_CASE("SampleSelectorRuntime - unsupported dimension count throws", "[SampleSelectorRuntime]") {
+//     std::vector<RuntimeSample> samples{
+//         {{1, 2, 3, 4, 5}}
+//     };
 
-    REQUIRE_THROWS_AS(SampleSelectorRuntime(samples), std::logic_error);
-}
+//     REQUIRE_THROWS_AS(SampleSelectorRuntime(samples), std::logic_error);
+// }

@@ -230,9 +230,9 @@ bool InstrumentManager::mapLayoutToKit(const KitLayout& layout, DrumKit* kit, St
 
             // Map articulations: use requested articulation if present, otherwise fallback
             for (const auto& art : lin.articulations) {
-                if (art.type.isEmpty())
+                if (art.code.isEmpty())
                     continue;
-                String targetArt = chooseArticulation(matched, art.type);
+                String targetArt = chooseArticulation(matched, art.code);
                 if (targetArt.isEmpty())
                     continue;
 

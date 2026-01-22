@@ -273,7 +273,7 @@ void DrumKitEngine::mapKit(DrumKit& kit) {
     // simple matching pass: by layout id -> kit instrument code, then fuzzy by name/code containment
     std::unordered_set<DrumKitInstrument*> usedInstruments;
 
-    std::map<juce::String, int> nextIndexByType; // for sequential assignment when layout uses numbering (kick1, kick2)
+    std::map<DrumKitInstrument::Type, int> nextIndexByType; // for sequential assignment when layout uses numbering (kick1, kick2)
     
     //FIXME: rewrite loop thru mInstrumentSynthById
     for (const auto& layoutInstrument : this->mKitLayout->instruments) {
@@ -287,7 +287,7 @@ void DrumKitEngine::mapKit(DrumKit& kit) {
         InstrumentSynth* slot = sit->second;
 
         // resolve layout type to DrumKitInstrument::Type
-        DrumKitInstrument::Type desiredType = DrumKitInstrument::typeFromString(layoutInstrument.type);
+        DrumKitInstrument::Type desiredType = layoutInstrument.type;
         
         // If we have a valid type, try type-based selection
         if (desiredType != DrumKitInstrument::Type::Unknown) {
@@ -574,7 +574,7 @@ void InstrumentSynth::noteOn(int midiChannel, int midiNoteNumber, float velocity
     for (const auto& art : this->instrumentDef.articulations) {
         for (const int n : art.notes) {
             if (n == midiNoteNumber) {
-                targetArt = art.type;
+                targetArt = art.code;
                 break;
             }
         }
@@ -688,10 +688,11 @@ void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
                 auto* sound = new SampledSound(instrument, variantPtr->sampleFile, artPtr->name, velPtr->velocityLayer, variantPtr->variantLetter);
                 // add to synth immediately; buffer will be filled asynchronously
                 this->addSound(sound);
-
+                
                 // track sample pointers for round-robin selection
+                //TODO: apply SampleSelector for dimensions (for not dimensions are velocity for all instrumens except hihat, hihat have 'pedal-open-close' and velocity dimensions
                 mSamplesByArtVel[artPtr->name][velPtr->velocityLayer].push_back(sound);
-
+                
                 // Request async load; capture raw pointer only to update buffer when ready
                 if (loader != nullptr) {
                     loader->requestAsyncLoad(variantPtr->sampleFile, [sound](const juce::File& /*file*/, std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {

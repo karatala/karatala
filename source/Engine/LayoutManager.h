@@ -2,6 +2,7 @@
 
 #include "../Config/Helpers.h"
 #include "../Config/YamlHelper.h"
+#include "DrumKitModel.h"
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <map>
@@ -9,8 +10,7 @@
 struct KitLayout {
     struct Instrument {
         struct Articulation {
-            juce::String type; // center, rim, edge, bow, pedal, etc.
-            juce::String display;
+            juce::String code; // center, rim, edge, bow, pedal, etc.
             std::vector<int> notes; // midi notes triggering this articulation
 
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids
@@ -25,7 +25,7 @@ struct KitLayout {
 
         juce::String id; // kick1, snare1, hihat1, ...
         juce::String display;
-        juce::String type; // drum, cymbal, snare, hihat
+        DrumKitInstrument::Type type = DrumKitInstrument::Type::Unknown;
         std::vector<Articulation> articulations;
         std::vector<CC> controllers;
 
@@ -129,7 +129,7 @@ struct LayoutTraits<KitLayout> {
 
                 inst.id = instItem["id"].asString();
                 inst.display = instItem["display"].asString();
-                inst.type = instItem["type"].asString();
+                inst.type = DrumKitInstrument::typeFromString(instItem["type"].asString());
                 // inst.outputGroup = instItem["output_group"].asString();
 
                 // const auto& notesNode = instItem["notes"];
@@ -147,8 +147,7 @@ struct LayoutTraits<KitLayout> {
                         const auto& artItem = artsNode[j];
                         KitLayout::Instrument::Articulation art;
 
-                        art.type = artItem["type"].asString();
-                        art.display = artItem["display"].asString();
+                        art.code = artItem["code"].asString();
 
                         const auto& artNotesNode = artItem["notes"];
                         if (artNotesNode.isSequence()) {

@@ -44,6 +44,7 @@ public:
     DrumKitInstrument* parentInst = nullptr;
     juce::File sampleFile;
     std::shared_ptr<juce::AudioBuffer<float>> buffer;
+    
     double sampleRate = 0.0;
     juce::String articulation;
     int velocityLayer = 0;
@@ -68,7 +69,10 @@ public:
         : parent(parent)
         , instrumentDef(instrument)
         , id(instrument.id)
-        , type(DrumKitInstrument::typeFromString(instrument.type)) {
+        , type(instrument.type)
+    {
+
+
     }
     ~InstrumentSynth() {}
 

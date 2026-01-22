@@ -148,50 +148,50 @@ private:
 };
 
 
-struct RuntimeSample {
-    std::vector<uint8_t> dimensions;
-};
-class SampleSelectorRuntime {
-public:
-    using Selector = std::variant<
-        std::monostate,
-        SampleSelector<1>,
-        SampleSelector<2>,
-        SampleSelector<3>,
-        SampleSelector<4>>;
+// struct RuntimeSample {
+//     std::vector<uint8_t> dimensions;
+// };
+// class SampleSelectorRuntime {
+// public:
+//     using Selector = std::variant<
+//         std::monostate,
+//         SampleSelector<1>,
+//         SampleSelector<2>,
+//         SampleSelector<3>,
+//         SampleSelector<4>>;
 
-    template <typename SampleVec>
-    explicit SampleSelectorRuntime(const SampleVec& samples) {
-        if (samples.empty())
-            throw std::logic_error("Samples must not be empty");
+//     template <typename SampleVec>
+//     explicit SampleSelectorRuntime(const SampleVec& samples) {
+//         if (samples.empty())
+//             throw std::logic_error("Samples must not be empty");
 
-        switch (samples.front().dimensions.size()) {
-            case 1: selector.emplace<1>(convert<1>(samples)); break;
-            case 2: selector.emplace<2>(convert<2>(samples)); break;
-            case 3: selector.emplace<3>(convert<3>(samples)); break;
-            case 4: selector.emplace<4>(convert<4>(samples)); break;
-            default:
-                throw std::logic_error("Unsupported dimension count");
-        }
-    }
+//         switch (samples.front().dimensions.size()) {
+//             case 1: selector.emplace<1>(convert<1>(samples)); break;
+//             case 2: selector.emplace<2>(convert<2>(samples)); break;
+//             case 3: selector.emplace<3>(convert<3>(samples)); break;
+//             case 4: selector.emplace<4>(convert<4>(samples)); break;
+//             default:
+//                 throw std::logic_error("Unsupported dimension count");
+//         }
+//     }
 
-private:
-    Selector selector;
+// private:
+//     Selector selector;
 
-    template <size_t N, typename SampleVec>
-    static std::vector<typename SampleSelector<N>::Sample>
-    convert(const SampleVec& samples) {
-        std::vector<typename SampleSelector<N>::Sample> out;
-        out.reserve(samples.size());
+//     template <size_t N, typename SampleVec>
+//     static std::vector<typename SampleSelector<N>::Sample>
+//     convert(const SampleVec& samples) {
+//         std::vector<typename SampleSelector<N>::Sample> out;
+//         out.reserve(samples.size());
 
-        for (const auto& s : samples) {
-            if (s.dimensions.size() != N)
-                throw std::logic_error("Dimension mismatch");
+//         for (const auto& s : samples) {
+//             if (s.dimensions.size() != N)
+//                 throw std::logic_error("Dimension mismatch");
 
-            std::array<uint8_t, N> arr{};
-            std::copy_n(s.dimensions.begin(), N, arr.begin());
-            out.push_back({arr});
-        }
-        return out;
-    }
-};
+//             std::array<uint8_t, N> arr{};
+//             std::copy_n(s.dimensions.begin(), N, arr.begin());
+//             out.push_back({arr});
+//         }
+//         return out;
+//     }
+// };

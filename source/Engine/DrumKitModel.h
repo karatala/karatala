@@ -339,7 +339,7 @@ public:
 class DrumKitInstrument {
 public:
 
-    enum class Type { Unknown, Percussion, Drum, Cymbal, Kick, Tom, Snare, Ride, HiHat, Crash, Splash, China }; //FIXME: probably need to leave less types, like only percussion, drum, cymbal, hihat, and rely on available articulations
+    enum class Type { Unknown, Percussion, Drum, Cymbal, Kick, Tom, Snare, Ride, HiHat, Crash, Splash, China }; //TODO: probably need to leave less types, like only percussion, drum, cymbal, hihat, and rely on available articulations
     struct TypeEntry {
         const char* name;
         Type type;

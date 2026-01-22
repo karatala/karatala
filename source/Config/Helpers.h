@@ -65,3 +65,24 @@ static inline juce::File resolvePathRelOrAbs(const juce::File& base, const juce:
         return juce::File(path);
     return base.getChildFile(path);
 }
+
+class StringIdRegistry {
+public:
+    using Id = uint32_t;
+    using Name = juce::String;
+
+    explicit StringIdRegistry(Id nextId = 1) : nextId(nextId) {};
+
+    Id get(Name s) {
+        auto it = map.find(s);
+        if (it != map.end()) return it->second;
+
+        Id id = nextId++;
+        map.emplace(Name(s), id);
+        return id;
+    }
+
+private:
+    std::unordered_map<Name, Id> map;
+    Id nextId = 1;
+};

@@ -95,7 +95,7 @@ ParseResult<DrumKitInstrument::MetaInfo> DrumKitInstrument::parseInfo(const File
 }
 
 bool DrumKitInstrument::isAudioFile(const File& file) {
-    StringArray audioFileExtensions = { ".wav", ".flac", ".aiff", ".mp3", ".ogg" }; //FIXME: refactor dynamical support from plugin's config.yaml
+    StringArray audioFileExtensions = { ".wav", ".flac", ".aiff", ".mp3", ".ogg" }; //TODO: refactor dynamical support from plugin's config.yaml
     String ext = file.getFileExtension().toLowerCase();
     for (int i = 0; i < audioFileExtensions.size(); ++i) {
         if (ext == audioFileExtensions[i]) {
