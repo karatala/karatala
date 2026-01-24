@@ -563,18 +563,16 @@ void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
     for (const auto& artPtr : instrument->articulations) {
         for (const auto& velPtr : artPtr->velocityLayers) {
             for (const auto& variantPtr : velPtr->sampleVariants) {
+
+                
                 auto* sound = new SampledSound(instrument, variantPtr->sampleFile, artPtr->name, velPtr->velocityLayer, variantPtr->variantLetter);
                 
                 this->addSound(sound); // add to synth immediately; buffer will be filled asynchronously
                 
-                
-                
-     
-                
                 // this->mArticulations ?
 
                 if (loader != nullptr) {
-                    loader->requestAsyncLoad(variantPtr->sampleFile, [sound](const juce::File& /*file*/, std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
+                    loader->requestAsyncLoad(variantPtr->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
                         sound->buffer = buf;
                         sound->sampleRate = sr;
                     });

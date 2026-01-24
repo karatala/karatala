@@ -10,10 +10,10 @@ SampleLoader::SampleLoader() {
 SampleLoader::~SampleLoader() {
 }
 
-void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) {
+void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) { //FIXME: review wtf happens here
     if (!file.existsAsFile()) {
         MessageManager::callAsync([file, callback]() {
-            callback(file, nullptr, 0.0);
+            callback(nullptr, 0.0);
         });
         return;
     }
@@ -27,7 +27,7 @@ void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) {
         if (it != cache.end()) {
             auto buf = it->second;
             MessageManager::callAsync([file, buf, this, callback]() {
-                callback(file, buf, 0.0);
+                callback(buf, 0.0);
             });
             return;
         }
@@ -38,7 +38,7 @@ void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) {
         std::unique_ptr<InputStream> in(file.createInputStream());
         if (!in) {
             MessageManager::callAsync([file, callback]() {
-                callback(file, nullptr, 0.0);
+                callback(nullptr, 0.0);
             });
             return;
         }
@@ -46,7 +46,7 @@ void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) {
         std::unique_ptr<AudioFormatReader> reader(formatManager.createReaderFor(std::move(in)));
         if (!reader) {
             MessageManager::callAsync([file, callback]() {
-                callback(file, nullptr, 0.0);
+                callback(nullptr, 0.0);
             });
             return;
         }
@@ -71,7 +71,7 @@ void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) {
         }
 
         MessageManager::callAsync([file, buffer, sr, callback]() {
-            callback(file, buffer, sr);
+            callback(buffer, sr);
         });
     }).detach();
 }

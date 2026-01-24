@@ -13,7 +13,7 @@ using namespace juce;
 // Not a production-grade LRU cache — keeps things simple for now.
 class SampleLoader {
 public:
-    using LoadCallback = std::function<void(const File&, std::shared_ptr<AudioBuffer<float>>, double)>;
+    using LoadCallback = std::function<void(std::shared_ptr<AudioBuffer<float>> audioBuffer, double sampleRate)>;
 
     SampleLoader();
     ~SampleLoader();
