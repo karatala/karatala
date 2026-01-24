@@ -3,6 +3,123 @@
 
 Karatala is a drum kit engine instrument for e-Drummers and everyone.
 
+TODO:
+
+
+
+
+
+
+there will be some special rules for mapping midi notes to articulations per instrument and during play time in order to support choke messages for each cymbal instrument
+   or to support hi-hat pedal cc messages to select specific articulation based on cc value+velocity,
+   or to support multiple midi notes triggering same articulation (like snare center triggered by 38 and 40 notes should play rimshot articulation when center hit note received in a short window after edge hit note etc)
+   
+  need to make mvp of some global realtime logic (or maybe state machine) that monitors what midi note (=articulation, like hihat bow/edge/bell) was played and for how long (is it still < sustainTimeoutMs)
+   and what is available cc state now and what wa before and did it raise or became lower and play crossfaded different articulation based on that, 
+    examples:
+      hihat pedal cc value rising should crossfade from closed articulation to open articulation based on cc value ranges etc, 
+      polyphonic aftertouch for cymbal type instruments should choke them depend on aftertouch value, if it was not maxed out then just lower volume of played articulation and if aftertouch value became lower after that+cymbal still sounds, it should a little make up the volume back etc etc etc, 
+        
+        so need to think through all that logic and make some design for it
+
+
+
+
+### MIC
+need to make engine to use MicLayout with definition of mic destinations so any loaded into InstrumentSlot DrumKitInstrument samples can be routed according to that
+
+3) Implement mic-layout → bus routing
+
+mics:
+  - name: Overheads
+    code: ons
+  - name: Kick In
+    instrument: kick1
+    code: dim
+  - name: Kick Out
+    instrument: kick1
+    code: dom
+  - name: Snare Top
+    instrument: snare1
+    code: dtm
+  - name: Snare Bottom
+    instrument: snare1
+    code: dbm
+
+
+mic code examples (look about code format in MicDescriptor in DrumKitModel.h):
+ons=overhead normal stereo
+oni=overhead normal midside
+ows=overhead wide stereo
+dtm=direct top mono
+dbm=direct bottom mono
+dim=direct in mono
+dom=direct out mono
+rcm=room close mono
+rfs=room far stereo
+
+
+ MicLayout describes MicDescriptor 
+     map slot outputs to physical outputs.
+samples need to be routed correctly to outputs according to the selected mic placement/layout.
+
+
+Approach:
+Interpret MicLayout descriptors into a routing table: slotId (or instrument mic) → destination bus(es).
+Store routing info in engine-level structure so it can be changed at runtime and used by processBlock to perform mixing.
+
+
+4) Implement dynamic runtime re-routing (applyMicLayout)
+Goal: Allow switching mic layouts on the fly and update routing for all existing slots.
+Why: Users should be able to change routing without restarting or reloading instruments.
+Approach:
+Recalculate routing table and update references in all slots.
+If needed, resize per-slot buffers to match new mic channel counts.
+5) Update processBlock: render into per-instrument mic buffers and mix to outputs 🎛️
+Goal: Each slot should render to its own mic buffer(s). The engine then routes/mixes those to main outputs according to mic routing.
+Why: This separates sound generation (slot) from routing/mixing, allowing more flexible output configurations and per-mic processing.
+Approach:
+For each slot: find its mic buffer, clear it, call slot.renderNextBlock into buffer.
+After all slots rendered, iterate routing table and mix channels from slot buffers into the main output buffer (respect channel counts and levels).
+Ensure sample counts and block sizes are respected.
+6) Handle prepareToPlay and buffer sizing (move buffers to slots) ⚖️
+Goal: Ensure buffers are sized based on sample rate and block size and decide where buffers are owned.
+Why: Current hard-coded 2×1024 is unsafe. Buffers must match sample rate/block and mic channel counts.
+Approach:
+In prepareToPlay, set sampleRate and blockSize in engine and pass to slots.
+Prefer moving mic buffers into InstrumentSlot so each slot owns its buffers. Slots can size their buffers according to number of mics assigned to them.
+7) Implement presets / instrument assignment save & load 💾
+Goal: Allow saving and restoring which kit + instrument is assigned to every instrument slot (e.g., "kick1:NakedDrums/kick-22").
+Why: Users want to save and recall instrument assignments with presets or sessions.
+Approach:
+Define a simple format: lines or YAML entries mapping slotId → kitCode/instrumentCode.
+When loading state, parse assignments and call a method on each slot to load the right DrumKitInstrument from the InstrumentManager.
+Add validation and fallback when assignments reference missing kits or instruments.
+
+
+ Analyze this codebase to generate or update `.github/copilot-instructions.md` for guiding AI coding agents.
+
+Focus on discovering the essential knowledge that would help an AI agents be immediately productive in this codebase. Consider aspects like:
+- The "big picture" architecture that requires reading multiple files to understand - major components, service boundaries, data flows, and the "why" behind structural decisions
+- Critical developer workflows (builds, tests, debugging) especially commands that aren't obvious from file inspection alone
+- Project-specific conventions and patterns that differ from common practices
+- Integration points, external dependencies, and cross-component communication patterns
+
+Source existing AI conventions from `**/{.github/copilot-instructions.md,AGENT.md,AGENTS.md,CLAUDE.md,.cursorrules,.windsurfrules,.clinerules,.cursor/rules/**,.windsurf/rules/**,.clinerules/**,README.md}` (do one glob search).
+
+Guidelines (read more at https://aka.ms/vscode-instructions-docs):
+- If `.github/copilot-instructions.md` exists, merge intelligently - preserve valuable content while updating outdated sections
+- Write concise, actionable instructions (~20-50 lines) using markdown structure
+- Include specific examples from the codebase when describing patterns
+- Avoid generic advice ("write tests", "handle errors") - focus on THIS project's specific approaches
+- Document only discoverable patterns, not aspirational practices
+- Reference key files/directories that exemplify important patterns
+
+Update `.github/copilot-instructions.md` for the user, then ask for feedback on any unclear or incomplete sections to iterate.
+
+GitHub Copilot: Chat took too long to get ready. Please ensure you are signed in to GitHub and that the extension `GitHub.copilot-chat` is installed and enabled.
+
+
 
 ## Development
 based on Pamplejuce

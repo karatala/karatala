@@ -4,9 +4,10 @@
 #include "InstrumentManager.h"
 #include "LayoutManager.h"
 #include "SampleLoader.h"
+#include "SampleSelector.h"
 #include <juce_audio_processors/juce_audio_processors.h>
-#include <memory>
 #include <unordered_map>
+#include <variant>
 
 // Forward declarations
 class DrumKitEngine;
@@ -44,15 +45,20 @@ public:
     DrumKitInstrument* parentInst = nullptr;
     juce::File sampleFile;
     std::shared_ptr<juce::AudioBuffer<float>> buffer;
-    
+
     double sampleRate = 0.0;
     juce::String articulation;
     int velocityLayer = 0;
     juce_wchar variantLetter = '\0';
     bool enabled = true;
 
-    SampledSound(DrumKitInstrument* p = nullptr, const juce::File& f = {}, const juce::String& art = {}, int vel = 0, juce_wchar var = '\0')
-        : parentInst(p), sampleFile(f), articulation(art), velocityLayer(vel), variantLetter(var) {}
+    SampledSound(DrumKitInstrument* p = nullptr, const juce::File& f = {}, const juce::String& art = {}, int vel = 0, juce_wchar ltr = '\0')
+        : parentInst(p)
+        , sampleFile(f)
+        , articulation(art)
+        , velocityLayer(vel)
+        , variantLetter(ltr)
+    {}
 
     bool appliesToNote(int /*midiNote*/) override { return enabled; }
     bool appliesToChannel(int /*midiChannel*/) override { return true; }
@@ -71,29 +77,31 @@ public:
         , id(instrument.id)
         , type(instrument.type)
     {
-
+        // this->instrumentDef.controllers
 
     }
     ~InstrumentSynth() {}
 
-    virtual void noteOn(int midiChannel, int midiNoteNumber, float velocity) override;
-    virtual void noteOff(int midiChannel, int midiNoteNumber, float velocity, bool allowTailOff) override;
-    // virtual void handleController (int midiChannel, int controllerNumber, int controllerValue);
-    // virtual void handleAftertouch (int midiChannel, int midiNoteNumber, int aftertouchValue);
-
-    bool isLoaded() { return mDrumKitInstrumentPtr != nullptr; }
-
-    void loadInstrument(DrumKitInstrument* instrument);
     void unloadInstrument();
+    void loadInstrument(DrumKitInstrument* instrument);
+    bool isLoaded() { return mDrumKitInstrumentPtr != nullptr; }
+    
+    SampledSound* selectSampleFor(const juce::String& articulation, int midiVel);
+    
+    bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions);
+    void handleMidiEvent(const MidiMessage& midiMessage) override;
+    // virtual void noteOn(int midiChannel, int midiNoteNumber, float velocity) override;
+    // virtual void noteOff(int midiChannel, int midiNoteNumber, float velocity, bool allowTailOff) override;
+    // virtual void handleController (int midiChannel, int controllerNumber, int controllerValue);
+    // virtual void handleAftertouch (int midiChannel, int midiNoteNumber, int aftertouchValue)
 
     SampleLoader* getSampleLoader();
 
-    // Buffer and mic channel management
-    void setMicChannelCount(int channels) { mMicChannelCount = channels; }
-    int getMicChannelCount() const { return mMicChannelCount; }
-
     void prepareToPlay(double sampleRate, int samplesPerBlock);
 
+    int getMicChannelCount() const { return mMicChannelCount; }
+
+    void setMicChannelCount(int channels) { mMicChannelCount = channels; }
     juce::AudioBuffer<float>& getMicBuffer() { return mMicBuffer; }
 
     const juce::String& getId() const { return id; }
@@ -107,10 +115,27 @@ private:
     int mMicChannelCount = 2;
     // Keep a copy of the kit layout instrument definition for note->articulation lookup
     KitLayout::Instrument instrumentDef;
-    // Group available SampledSound pointers by articulation and velocity layer for fast lookup
-    std::unordered_map<juce::String, std::map<int, std::vector<SampledSound*>>> mSamplesByArtVel;
-    // Round-robin indices per articulation+velocity
-    std::unordered_map<juce::String, std::map<int, int>> mNextVariantIndex;
+
+    struct Articulation {
+        std::variant<std::monostate, SampleSelector<1>, SampleSelector<2>, SampleSelector<3>> selector;
+        // map zone pointer (const void*) -> index into samplesByZone
+        std::unordered_map<const void*, size_t> zoneToIndex;
+        // samples grouped by selector zone (one vector per zone)
+        std::vector<std::vector<SampledSound*>> samplesByZone;
+        // per-zone round-robin counters (stored as plain uint32_t to avoid issues with vector reallocation of non-movable atomics)
+        std::vector<uint32_t> roundRobinCounters;
+        // for HiHat combined instance: list of articulation names in art-index order
+        std::vector<juce::String> artNames;
+
+        void clear() {
+            selector = std::monostate {};
+            zoneToIndex.clear();
+            samplesByZone.clear();
+            roundRobinCounters.clear();
+        }
+    };
+
+    std::unordered_map<juce::String, Articulation> mArticulations;
 };
 
 class DrumKitEngine {

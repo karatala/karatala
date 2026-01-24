@@ -21,6 +21,8 @@ public:
         std::array<uint8_t, N> dimensions;
     };
 
+    static constexpr size_t DIMENSION_COUNT = N;
+
     struct ZoneNode {
         uint8_t min;
         uint8_t max;
@@ -41,7 +43,7 @@ public:
         this->root = buildTree(this->ownedSamples, strategy);
     }
 
-    const ZoneNode* findZone(const std::array<uint8_t, N>& values, size_t level = 0) const { return this->findZoneRecursive(this->root, values, level); }
+    const ZoneNode* findZone(const std::array<uint8_t, N>& values) const { return this->findZoneRecursive(this->root, values); }
 
     const ZoneNode& getRoot() const { return this->root; }
 
@@ -133,7 +135,7 @@ private:
     ZoneSplitStrategy strategy;
     std::vector<Sample> ownedSamples;
 
-    const ZoneNode* findZoneRecursive(const ZoneNode& node, const std::array<uint8_t, N>& values, size_t level) const {
+    const ZoneNode* findZoneRecursive(const ZoneNode& node, const std::array<uint8_t, N>& values, size_t level = 0) const {
         if (node.children.empty())
             return node.samples.empty() ? nullptr : &node;
 

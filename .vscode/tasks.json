@@ -9,13 +9,14 @@
     {
       "label": "Build",
       "type": "shell",
-      "command": "cmake --build build",
+      "command": "cmake --build build --config Debug --target Karatala_Standalone Tests",
       "dependsOn": "Configure",
       "group": {
         "kind": "build"
       },
       "problemMatcher": "$gcc",
     },
+    
     {
       "label": "Run Standalone",
       "type": "shell",

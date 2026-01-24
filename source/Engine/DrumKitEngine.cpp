@@ -347,11 +347,11 @@ void DrumKitEngine::mapKit(DrumKit& kit) {
                     continue;
                 if (cand->meta.code.trim().toLowerCase().contains(needle) || cand->meta.name.trim().toLowerCase().contains(needle)) {
                     matched = cand;
-                    break;
+                            break;
+                        }
+                    }
                 }
-            }
-        }
-        
+
         if (matched == nullptr) {
             DBG("WARN: no matching instrument found in kit '" + kit.meta.name + "' for layout slot: " + layoutInstrument.id);
             slot->unloadInstrument();
@@ -544,134 +544,11 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     }
 }
 
-// bool DrumKitEngine::preprocessMidi(juce::MidiMessage msg) {
-//     if (msg.isController()) {
-//         int cc = msg.getControllerNumber();
-//         int value = msg.getControllerValue();
-//         //DUNNO: if CC is used by any KitLayout instrument, save some map? object with cc number-value and return true, otherwise false
-//         return false;
-//     } else if (msg.isNoteOn() || msg.isNoteOff()) {
-//         int midiNote = msg.getNoteNumber();
-//         // find KitLayout instrument that has this note number and play
-
-//         if (msg.isNoteOn()) {
-//             // for (int stopNote : mapping.stopMidiNotes) {
-//             //     synth->noteOff(msg.getChannel(), stopNote, 0.0f, true);
-//             // }
-//             // float vel = msg.getFloatVelocity();
-//             // synth->noteOn(msg.getChannel(), midiNote, vel);
-//         } else if (msg.isNoteOff()) {
-//             // synth->noteOff(msg.getChannel(), midiNote, 0.0f, true);
-//         }
-
-//     }
-//     return true;
-// }
-
-void InstrumentSynth::noteOn(int midiChannel, int midiNoteNumber, float velocity) {
-    // Determine articulation from kit layout mapping (which articulation contains this midi note)
-    juce::String targetArt;
-    for (const auto& art : this->instrumentDef.articulations) {
-        for (const int n : art.notes) {
-            if (n == midiNoteNumber) {
-                targetArt = art.code;
-                break;
-            }
-        }
-        if (targetArt.isNotEmpty())
-            break;
-    }
-
-    if (targetArt.isEmpty()) {
-        // no articulation mapping found; fall back to default behavior
-        // juce::Synthesiser::noteOn(midiChannel, midiNoteNumber, velocity);
-        return;
-    }
-
-    // Convert velocity to 1-127 midi value
-    int midiVel = static_cast<int>(std::round(velocity * 127.0f));
-    if (midiVel < 1) midiVel = 1;
-    if (midiVel > 127) midiVel = 127;
-
-    // Find the best matching velocity layer (greatest layer <= midiVel)
-    auto artIt = mSamplesByArtVel.find(targetArt);
-    std::vector<SampledSound*> candidates;
-    int chosenVelLayer = -1;
-    if (artIt != mSamplesByArtVel.end()) {
-        for (auto it = artIt->second.rbegin(); it != artIt->second.rend(); ++it) {
-            int vel = it->first;
-            if (vel <= midiVel && !it->second.empty()) {
-                candidates = it->second;
-                chosenVelLayer = vel;
-                break;
-            }
-        }
-        // fallback: use lowest available velocity if no <= midiVel found
-        if (candidates.empty()) {
-            for (auto &p : artIt->second) {
-                if (!p.second.empty()) {
-                    candidates = p.second;
-                    chosenVelLayer = p.first;
-                    break;
-                }
-            }
-        }
-    }
-
-    // last resort: any available SampledSound in this synth
-    if (candidates.empty()) {
-        for (int i = 0; i < this->getNumSounds(); ++i) {
-            auto snd = this->getSound(i);
-            if (auto* ss = dynamic_cast<SampledSound*>(snd.get())) {
-                candidates.push_back(ss);
-            }
-        }
-    }
-
-    if (candidates.empty()) {
-        // nothing to play
-        return;
-    }
-
-    // Choose round-robin index deterministically
-    int& idxRef = mNextVariantIndex[targetArt][chosenVelLayer];
-    if (idxRef < 0) idxRef = 0;
-    int chosenIndex = candidates.empty() ? 0 : (idxRef % static_cast<int>(candidates.size()));
-    SampledSound* chosen = candidates[chosenIndex];
-    DBG(chosen->sampleFile.getFileName());
-    idxRef = idxRef + 1;
-
-
-
-
-
-    const ScopedLock sl (lock);
-
-    for (auto* sound : this->sounds) {
-        if (sound->appliesToNote(midiNoteNumber) && sound->appliesToChannel(midiChannel)) {
-            // If hitting a note that's still ringing, stop it first (it could be still playing because of the sustain or sostenuto pedal).
-            for (auto* voice : voices)
-                if (voice->getCurrentlyPlayingNote() == midiNoteNumber && voice->isPlayingChannel (midiChannel))
-                    stopVoice (voice, 1.0f, true);
-            auto stealNotes = false;
-
-            auto voice = this->findFreeVoice(sound, midiChannel, midiNoteNumber, stealNotes);
-            this->startVoice(voice, sound, midiChannel, midiNoteNumber, velocity);
-        }
-    }
-
-
-}
-
-void InstrumentSynth::noteOff(int midiChannel, int midiNoteNumber, float velocity, bool allowTailOff) {
-    juce::Synthesiser::noteOff(midiChannel, midiNoteNumber, velocity, allowTailOff);
-}
 
 void InstrumentSynth::unloadInstrument() {
     this->clearSounds();
+    mArticulations.clear();
     mDrumKitInstrumentPtr = nullptr;
-    mSamplesByArtVel.clear();
-    mNextVariantIndex.clear();
 }
 
 void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
@@ -679,6 +556,7 @@ void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
     
     this->unloadInstrument();
     this->mDrumKitInstrumentPtr = instrument;
+    this->type = instrument->meta.type;
 
     auto loader = this->getSampleLoader();
 
@@ -686,14 +564,15 @@ void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
         for (const auto& velPtr : artPtr->velocityLayers) {
             for (const auto& variantPtr : velPtr->sampleVariants) {
                 auto* sound = new SampledSound(instrument, variantPtr->sampleFile, artPtr->name, velPtr->velocityLayer, variantPtr->variantLetter);
-                // add to synth immediately; buffer will be filled asynchronously
-                this->addSound(sound);
                 
-                // track sample pointers for round-robin selection
-                //TODO: apply SampleSelector for dimensions (for not dimensions are velocity for all instrumens except hihat, hihat have 'pedal-open-close' and velocity dimensions
-                mSamplesByArtVel[artPtr->name][velPtr->velocityLayer].push_back(sound);
+                this->addSound(sound); // add to synth immediately; buffer will be filled asynchronously
                 
-                // Request async load; capture raw pointer only to update buffer when ready
+                
+                
+     
+                
+                // this->mArticulations ?
+
                 if (loader != nullptr) {
                     loader->requestAsyncLoad(variantPtr->sampleFile, [sound](const juce::File& /*file*/, std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
                         sound->buffer = buf;
@@ -705,8 +584,66 @@ void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
     }
 }
 
+void InstrumentSynth::handleMidiEvent(const MidiMessage& midiMessage) {
+    const int channel = midiMessage.getChannel();
+
+    //TODO: common realistic choke (volume change) on aftertouch: with some custom decay timeout, if aftertouch value became less in that timeout, volume should return back by some percent
+    
+    //TODO: from KitLayout::Instrument instrumentDef get CC and notes to subscribe to
+    /** 
+     * 
+    */
+    
+    
+    if (midiMessage.isNoteOn()) {
+        if (! this->playNote(channel, midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1))
+            this->noteOn(channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
+    }
+    else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(channel, true);
+    else if (midiMessage.isAftertouch()) this->handleAftertouch(channel, midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
+    else if (midiMessage.isController()) this->handleController(channel, midiMessage.getControllerNumber(), midiMessage.getControllerValue());
+
+    // else if (midiMessage.isNoteOff()) this->noteOff (channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity(), true);
+    // else if (midiMessage.isChannelPressure()) this->handleChannelPressure(channel, midiMessage.getChannelPressureValue());
+    // else if (midiMessage.isProgramChange()) this->handleProgramChange(channel, midiMessage.getProgramChangeNumber());
+    // else if (midiMessage.isPitchWheel()) {
+    //     const int wheelPos = midiMessage.getPitchWheelValue();
+    //     lastPitchWheelValues[channel - 1] = wheelPos;
+    //     this->handlePitchWheel(channel, wheelPos);
+    // } 
+    
+}
+
+bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions) {
+    juce::ignoreUnused(midiChannel, midiNoteNumber, velocity, expressions);
+    
+    // SampledSound* chosen = this->selectSampleFor(targetArt, midiVel);
+    // if (chosen == nullptr) {
+    //     DBG("Nothing to play for " + targetArt);
+    //     return;
+    // }
+    
+    // const ScopedLock sl (lock);
+
+    /* TODO: 
+        if note louder then last > choke (kill or fast fade? using NAME_THIS_VAR_RIGHT_CHOKED_BY_LOUDER_TIMEOUT_MS) playing notes of this instrument's articulations that are chokable for this articulation. 
+        create and define logic for what instruments articulation can choke other articulation, like cymbal bow/edge can choke each other and self (if last is louder)
+        for hihat pedal state without note should crossfade changes, like if hitted closed hat and start opening pedal it should crossfade to more opened sound (without attack of course) so more opened starts from time offset when pedal changestarted with NAME_THIS_VAR_RIGHT_HIHAT_PEDAL_CHANGE_CROSSFADE_MS
+        probably have to use juces shouldStealNotes and override findVoiceToSteal 
+        need to make InstrumentSynth abstract and extend with several classes like InstrumentSynthCymbal, InstrumentSynthDrum and for special cases InstrumentSynthHiHat, 
+    */
+
+
+    //     if (voice->getCurrentlyPlayingNote() == midiNoteNumber && voice->isPlayingChannel (midiChannel))
+    //         stopVoice (voice, 1.0f, true);
+
+    // startVoice (findFreeVoice (sound, midiChannel, midiNoteNumber, shouldStealNotes), sound, midiChannel, midiNoteNumber, velocity);
+    
+    return false;
+}
+
 SampleLoader* InstrumentSynth::getSampleLoader() {
-    return this->parent->getSampleLoader();
+    return (this->parent) ? this->parent->getSampleLoader() : nullptr;
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
@@ -723,6 +660,38 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
 
     // set playback sample rate for voices
     this->setCurrentPlaybackSampleRate(newSampleRate);
+}
+
+SampledSound* InstrumentSynth::selectSampleFor(const juce::String& articulation, int midiVel) {
+    std::array<uint8_t, 1> queryDims{ static_cast<uint8_t>(midiVel) };
+    
+    auto it = mArticulations.find(articulation);
+    if (it == mArticulations.end()) return nullptr;
+    auto& inst = it->second;
+
+    const void* zonePtr = nullptr;
+    std::visit([&](auto&& sel) {
+        using T = std::decay_t<decltype(sel)>;
+        if constexpr (!std::is_same_v<T, std::monostate>) {
+            if constexpr (T::DIMENSION_COUNT == std::tuple_size_v<std::remove_reference_t<decltype(queryDims)>>) {
+                const auto* node = sel.findZone(queryDims);
+                zonePtr = static_cast<const void*>(node);
+            }
+        }
+    }, inst.selector);
+
+    if (zonePtr == nullptr) return nullptr;
+
+    auto zit = inst.zoneToIndex.find(zonePtr);
+    if (zit == inst.zoneToIndex.end()) return nullptr;
+
+    size_t idx = zit->second;
+    auto& zoneSamples = inst.samplesByZone[idx];
+    if (zoneSamples.empty()) return nullptr;
+
+    std::atomic_ref<uint32_t> rrRef(inst.roundRobinCounters[idx]);
+    uint32_t rr = rrRef.fetch_add(1, std::memory_order_relaxed);
+    return zoneSamples[ rr % zoneSamples.size() ];
 }
 
 InstrumentSynthVoice::InstrumentSynthVoice()

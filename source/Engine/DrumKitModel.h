@@ -67,7 +67,6 @@ struct MicDescriptor {
         Room = 'r'
     };
     enum class Position { Unknown = 0,
-        Ass = 'a',
         Sub = 'u',
         Side = 's',
         Top = 't',
@@ -192,7 +191,7 @@ class LayerSampleVariant {
 public:
     juce_wchar variantLetter; // 'a'-'z'
     File sampleFile;
-    String sampleFileName; // cached for logging
+    String sampleFileName;
 
     // Optional metadata cached at parse time (lazy-loaded from file)
     int64 fileSizeBytes = 0;
@@ -216,14 +215,12 @@ public:
 
     /**
      * Converts a single letter a-z (case-insensitive) to 0-25.
-     * @return int 0-2 or -1 if input is invalid.
+     * @return int 0-25 or -1 if input is invalid.
      */
-    static int letterToIdx(const juce::String& letter) {
-        return letterToIdx(letter[0]);
-    }
+    static int letterToIdx(const juce::String& letter) { return letterToIdx(letter[0]); }
     /**
      * Converts a single letter a-z (case-insensitive) to 0-25.
-     * @return int 0-2 or -1 if input is invalid.
+     * @return int 0-25 or -1 if input is invalid.
      */
     static int letterToIdx(const juce_wchar& letter) {
         if (letter == '\0')
@@ -240,36 +237,17 @@ public:
 class ArticulationVelocityLayer {
 public:
     int velocityLayer;
+    InstrumentArticulation* parentArticulation = nullptr;
     std::vector<std::unique_ptr<LayerSampleVariant>> sampleVariants;
 
-    InstrumentArticulation* parentArticulation = nullptr;
 
     explicit ArticulationVelocityLayer(int vel)
-        : velocityLayer(vel) {
-    }
-
-    LayerSampleVariant* findSampleVariant(juce_wchar letter) {
-        for (auto& sampleVariant : sampleVariants) {
-            if (sampleVariant->variantLetter == letter) {
-                return sampleVariant.get();
-            }
-        }
-        return nullptr;
-    }
+        : velocityLayer(vel) {}
 
     void addSampleVariant(std::unique_ptr<LayerSampleVariant> entry) {
         entry->parentVelocityLayer = this;
         sampleVariants.push_back(std::move(entry));
     }
-
-    // std::vector<char> getAvailableSampleVariants() const {
-    //     std::vector<char> letters;
-    //     for (const auto& sampleVariant : sampleVariants) {
-    //         letters.push_back(sampleVariant->variantLetter);
-    //     }
-    //     std::sort(letters.begin(), letters.end());
-    //     return letters;
-    // }
 
     bool isEmpty() const {
         return sampleVariants.empty();
@@ -293,9 +271,7 @@ public:
         , name(artName) {
     }
 
-    const std::vector<std::unique_ptr<ArticulationVelocityLayer>>& getVelocityLayers() const {
-        return velocityLayers;
-    }
+    const std::vector<std::unique_ptr<ArticulationVelocityLayer>>& getVelocityLayers() const { return velocityLayers; }
 
     bool isEmpty() const {
         return velocityLayers.empty() || std::all_of(velocityLayers.begin(), velocityLayers.end(), [](const auto& v) {
@@ -363,7 +339,7 @@ public:
         return "unknown";
     }
     static Type typeFromString(const juce::String& name) {
-        //TODO: add global config for custom names mapping (like "chopper">"cymbal" "rototom">"tom" "vibraslap">"percussion" etc
+        //TODO: add global config for custom names mapping (like "chopper">"cymbal" "rototom">"tom" "vibraslap">"percussion" etc or maaybe better use StringIdRegistry for new types?
         for (auto& e : typeTable)
             if (name == e.name) return e.type;
         return Type::Unknown;
