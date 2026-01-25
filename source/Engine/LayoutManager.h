@@ -11,7 +11,7 @@ struct KitLayout {
     struct Instrument {
         struct Articulation {
             juce::String code; // center, rim, edge, bow, pedal, etc.
-            std::vector<int> notes; // midi notes triggering this articulation
+            std::vector<uint8_t> notes; // midi notes triggering this articulation
 
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids
             // int priority = 0;
@@ -20,7 +20,7 @@ struct KitLayout {
         struct CC {
             int id = -1; // MIDI CC
             juce::String code; // pedal-open-close, zone-center-rim, zone-bow-edge
-            std::vector<int> notes; // midi notes triggering this articulation
+            std::vector<uint8_t> notes; // midi notes triggering this articulation
         };
 
         juce::String id; // kick1, snare1, hihat1, ...
@@ -152,10 +152,10 @@ struct LayoutTraits<KitLayout> {
                         const auto& artNotesNode = artItem["notes"];
                         if (artNotesNode.isSequence()) {
                             for (size_t k = 0; k < artNotesNode.size(); ++k) {
-                                art.notes.push_back(artNotesNode[k].asInt());
+                                art.notes.push_back(static_cast<uint8_t>(artNotesNode[k].asInt()));
                             }
                         } else if (artNotesNode.isScalar() && !artNotesNode.asString().isEmpty()) {
-                            art.notes.push_back(artNotesNode.asInt());
+                            art.notes.push_back(static_cast<uint8_t>(artNotesNode.asInt()));
                         }
 
                         inst.articulations.push_back(art);

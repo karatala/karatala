@@ -551,31 +551,33 @@ void InstrumentSynth::unloadInstrument() {
     mDrumKitInstrumentPtr = nullptr;
 }
 
-void InstrumentSynth::loadInstrument(DrumKitInstrument* instrument) {
-    if (instrument == nullptr) return;
+void InstrumentSynth::loadInstrument(DrumKitInstrument* kitInstrument) {
+    if (kitInstrument == nullptr) return;
     
     this->unloadInstrument();
-    this->mDrumKitInstrumentPtr = instrument;
-    this->type = instrument->meta.type;
+    this->mDrumKitInstrumentPtr = kitInstrument;
+    this->type = kitInstrument->meta.type;
 
     auto loader = this->getSampleLoader();
 
-    for (const auto& artPtr : instrument->articulations) {
-        for (const auto& velPtr : artPtr->velocityLayers) {
-            for (const auto& variantPtr : velPtr->sampleVariants) {
+    for (const auto& layoutArt : this->instrumentDef.articulations) {
+        for (const auto& kitArtPtr : kitInstrument->articulations) {
+            if (layoutArt.code != kitArtPtr->name) continue;
+            for (const auto& velPtr : kitArtPtr->velocityLayers) {
+                for (const auto& variantPtr : velPtr->sampleVariants) {
+                    
+                    auto* sound = new SampledSound(kitInstrument, variantPtr.get(), variantPtr->sampleFile, layoutArt.notes);
+                    
+                    this->addSound(sound); // add to synth immediately; buffer will be filled asynchronously
+                    
+                    // this->mArticulations ?
 
-                
-                auto* sound = new SampledSound(instrument, variantPtr->sampleFile, artPtr->name, velPtr->velocityLayer, variantPtr->variantLetter);
-                
-                this->addSound(sound); // add to synth immediately; buffer will be filled asynchronously
-                
-                // this->mArticulations ?
-
-                if (loader != nullptr) {
-                    loader->requestAsyncLoad(variantPtr->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
-                        sound->buffer = buf;
-                        sound->sampleRate = sr;
-                    });
+                    if (loader != nullptr) {
+                        loader->requestAsyncLoad(variantPtr->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
+                            sound->buffer = buf;
+                            sound->sampleRate = sr;
+                        });
+                    }
                 }
             }
         }

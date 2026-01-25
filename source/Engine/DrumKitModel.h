@@ -20,21 +20,43 @@ using namespace juce;
  * Sample Filename Convention:
  *    ${InstrumentsRoot}/
  *       └─ ${kitInfo}/
- *          └─ ${instrumentName}-${size}-${description}/
- *              └─ ${instrumentType}-${articulation}-${velocityLayer}${sampleVariant}-${micChain}.${ext}
+ *          └─ ${instrumentName}-${size}[-${description}]/
+ *              └─ ${articulation}[-${dimensionCode}${dimensionValue}][]/
+ *                  └─ ${velocity}${sampleVariant}-${micChain}.${ext}
  * Example:
  *     instruments/
  *       └─ NakedDrums by WilkinsonAudio [CC-BY-4.0]/
  *          └─ kick-22-YamahaRecordingCustom/
- *              └─ kick-center-1a-dim.flac
+ *              └─ center/
+ *                  └─ 127a-dim.flac
+ *          └─ hihat-14/
+ *              └─ bow-pdl_opn_cls043-zon_bel_edg085/
+ *                  └─ 043a-oni.flac
+ *                  └─ 085a-oni.flac
+ *                  ...
+ *              └─ bow-pdl_opn_cls085/
+ *                  ...
+ *              └─ edge-pdl_opn_cls043/
+ *              ...
+ *          └─ snare-X1/
+ *              └─ center-zon_ctr_rim043/
+ *                  └─ 043a-dtm.flac
+ *                  └─ 085a-dtm.flac
+ *              └─ center-zon_ctr_rim085/
+ *                  ...
+ *              └─ edge/
+ *                  ...
+ *              └─ rimshot/
+ *                  ...
  *
  * Fields:
  *     kitInfo         = KitName by AuthorName [License]
  *     instrumentName  = one work like kick snare tom hihat ride crash splash china stax cowbell tambourine shaker timbale octoban woodblock clap ...
  *     instrumentType  = drum kick tom snare cymbal hihat ride percussion
- *     articulation    = center edge rimshot bell bow
- *     velocityLayer   = digit(s)
- *     sampleVariant      = letter a-z
+ *     articulation    = center rim rimshot edge bell bow pedal
+ *     dimensionCode   = pdl_opn_cls zon_bel_edg zon_ctr_edg zon_lft_rgt // or shorter codes poc zbe zce zlr?
+ *     velocity        = 001-127
+ *     sampleVariant   = letter a-z
  *     micChain        = micCode("_"micCode)* to describe each channel for multichannel files
  *                         ex. dim_dom_ons_rfs for direct in mono, direct out mono, overhead normal stereo, room far stereo
  *                       type = d (direct) | o (overhead) | r (room)
@@ -44,6 +66,20 @@ using namespace juce;
  *                       format   = m (mono) | s (stereo) | i (mid-side)
  *                       variant  = optional number for any additional variant specification (ex. snare with 2 top mics: dtm1, dtm2)
  * ===========================================
+ * 
+ //TODO: in order to detect naming typos, after kit parsed, make summary on code/value usage, for example: 
+        micCide: oni: 39, omi: 1, dtm: 40;
+        sampleVariant: a: 40, b: 39, n: 1;
+        velocity: 1: 2, 27: 20, 127: 18;
+        etc...
+        to collect values/codes use something like StringIdRegistry class from Helpers.h
+ //TODO: add configurable in global config articulation aliases (what string format, how to parse/use?) like:
+        hihat bow poc<=43 'open'
+        hihat bow poc<=52 'half'
+        hihat bow poc<=77 'close'
+        hihat bow poc>=85 'tight'
+        hihat pedal poc>=90 'pedal'
+        hihat pedal poc<90 'foot splash'
  */
 
 // Forward declarations
@@ -185,20 +221,21 @@ struct MicDescriptor {
 /**
  * LayerSampleVariant
  * Represents a single audio file for a specific round-robin variation.
- * Example: velocity level 1, round-robin 'a' → one LayerSampleVariant
  */
 class LayerSampleVariant {
 public:
+    uint8_t id;
     juce_wchar variantLetter; // 'a'-'z'
     File sampleFile;
     String sampleFileName;
 
-    // Optional metadata cached at parse time (lazy-loaded from file)
+    //TODO: use optional metadata cached at parse time (lazy-loaded from file)
     int64 fileSizeBytes = 0;
     double sampleRate = 0.0;
     int bitDepth = 0;
     int numChannels = 0;
     int64 numSamples = 0;
+
     MicDescriptor micDescriptor;
     ArticulationVelocityLayer* parentVelocityLayer = nullptr;
 
@@ -206,43 +243,37 @@ public:
         : sampleFile(file)
         , variantLetter(variantLetter)
         , sampleFileName(file.getFileName())
-        , micDescriptor(micDescriptor) {
+        , micDescriptor(micDescriptor)
+    {
     }
 
-    bool isValid() const {
-        return sampleFile.existsAsFile() && letterToIdx(variantLetter) >= 0;
-    }
+    bool isValid() const { return sampleFile.existsAsFile(); }
 
     /**
-     * Converts a single letter a-z (case-insensitive) to 0-25.
-     * @return int 0-25 or -1 if input is invalid.
+     * Converts a single letter a-z (case-insensitive) to 1-26.
+     * @return uint8_t 1-26 or 0 if invalid
      */
-    static int letterToIdx(const juce::String& letter) { return letterToIdx(letter[0]); }
-    /**
-     * Converts a single letter a-z (case-insensitive) to 0-25.
-     * @return int 0-25 or -1 if input is invalid.
-     */
-    static int letterToIdx(const juce_wchar& letter) {
-        if (letter == '\0')
-            return -1;
+    static uint8_t letterToIdx(const juce::String& letter) { return letterToIdx(letter[0]); }
+    static uint8_t letterToIdx(const juce_wchar& letter) {
+        if (letter == '\0') return 0;
         juce_wchar c = std::tolower(letter);
-        return (c >= 'a' && c <= 'z') ? c - 'a' : -1;
+        return (c >= 'a' && c <= 'z') ? uint8_t(c - 'a' + 1) : 0;
     }
 };
 
 /**
  * ArticulationVelocityLayer
- * Represents a specific velocity level (e.g., velocity=1) with multiple round-robin samples.
+ * Represents a specific velocity level with multiple round-robin samples.
  */
 class ArticulationVelocityLayer {
 public:
-    int velocityLayer;
+    uint8_t velocity;
     InstrumentArticulation* parentArticulation = nullptr;
     std::vector<std::unique_ptr<LayerSampleVariant>> sampleVariants;
 
 
-    explicit ArticulationVelocityLayer(int vel)
-        : velocityLayer(vel) {}
+    explicit ArticulationVelocityLayer(uint8_t velocity)
+        : velocity(velocity) {}
 
     void addSampleVariant(std::unique_ptr<LayerSampleVariant> entry) {
         entry->parentVelocityLayer = this;
@@ -260,15 +291,20 @@ public:
  */
 class InstrumentArticulation {
 public:
+    struct Dimension {
+        String code;
+    };
+
     String name;
+    std::vector<Dimension> dimensions;
 
     std::vector<std::unique_ptr<ArticulationVelocityLayer>> velocityLayers;
 
     DrumKitInstrument* parent = nullptr;
 
-    explicit InstrumentArticulation(DrumKitInstrument* parent, const String& artName)
+    explicit InstrumentArticulation(DrumKitInstrument* parent, const String& name)
         : parent(parent)
-        , name(artName) {
+        , name(name) {
     }
 
     const std::vector<std::unique_ptr<ArticulationVelocityLayer>>& getVelocityLayers() const { return velocityLayers; }
@@ -279,7 +315,7 @@ public:
         });
     }
 
-    ArticulationVelocityLayer* addVelocityLayer(int velocity) {
+    ArticulationVelocityLayer* addVelocityLayer(uint8_t velocity) {
         auto newLevel = std::make_unique<ArticulationVelocityLayer>(velocity);
         newLevel->parentArticulation = this;
         auto* ptr = newLevel.get();
@@ -287,23 +323,23 @@ public:
         return ptr;
     }
 
-    ArticulationVelocityLayer* findVelocityLayer(int velocity) {
+    ArticulationVelocityLayer* findVelocityLayer(uint8_t velocity) {
         for (auto& existing : velocityLayers) {
-            if (existing->velocityLayer == velocity) {
+            if (existing->velocity == velocity) {
                 return existing.get();
             }
         }
         return nullptr;
     }
 
-    ArticulationVelocityLayer* getOrAddVelocityLayer(int velocity) {
+    ArticulationVelocityLayer* getOrAddVelocityLayer(uint8_t velocity) {
         auto exist = findVelocityLayer(velocity);
         return (exist != nullptr) ? exist : addVelocityLayer(velocity);
     }
 
     void sortVelocityLayers() {
         std::sort(velocityLayers.begin(), velocityLayers.end(), [](const auto& a, const auto& b) {
-            return a->velocityLayer < b->velocityLayer;
+            return a->velocity < b->velocity;
         });
     }
 };
@@ -356,7 +392,7 @@ public:
     struct SampleFileInfo {
         String type;
         String articulation;
-        int velocityLayer;
+        uint8_t velocity;
         String sampleVariant;
         std::vector<MicDescriptor> micDescriptors;
         String extension;
@@ -392,7 +428,7 @@ public:
 
     /**
      * Parse a sample filename.
-     * Expected format: ${instrumentType}-${articulation}-${velocityLayer}${sampleVariant}-${micChain}.${ext}
+     * Expected format: ${instrumentType}-${articulation}-${velocity}${sampleVariant}-${micChain}.${ext}
      * Example: "kick-center-1a-dim.flac"
      */
     static ParseResult<DrumKitInstrument::SampleFileInfo> parseSampleFile(const File& file);

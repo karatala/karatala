@@ -29,7 +29,7 @@ public:
      * The resulting mapping is stored internally and can be queried via
      * getMappedInstrumentForNote().
      */
-    bool mapLayoutToKit(const KitLayout& layout, DrumKit* kit, String& outError);
+    // bool mapKitToLayout(const KitLayout& layout, DrumKit* kit, String& outError);
     /**
      * Query mapped instrument + articulation for a given layout id and midi note.
      * Returns pair<DrumKitInstrument*, articulationName>. If not found, returns {nullptr, ""}.

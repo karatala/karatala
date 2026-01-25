@@ -36,6 +36,11 @@ int InstrumentManager::scanAll() {
     DBG("INFO: InstrumentManager: Scanning for drum kits in " + mKitsDir.getFullPathName());
 
     int kitCount = 0;
+    std::unordered_map<String, int> dimensionCodeCounts;
+    std::unordered_map<String, int> micCodeCounts;
+    std::unordered_map<String, int> sampleVariantCounts;
+    std::unordered_map<int, int> velocityCounts;
+
     for (const juce::DirectoryEntry& entry : juce::RangedDirectoryIterator(mKitsDir, false, "*", juce::File::TypesOfFileToFind::findDirectories)) {
         const juce::File& kitDir = entry.getFile();
         if (!kitDir.isDirectory())
@@ -57,6 +62,17 @@ int InstrumentManager::scanAll() {
                 samplesInKit += samplesInInstr;
                 mTotalSamples += samplesInInstr;
                 mTotalInstruments++;
+
+                // Collect statistics
+                for (const auto& articulation : pair.second->articulations) {
+                    for (const auto& velocityLayer : articulation->velocityLayers) {
+                        velocityCounts[velocityLayer->velocity]++;
+                        for (const auto& sampleVariant : velocityLayer->sampleVariants) {
+                            micCodeCounts[sampleVariant->micDescriptor.raw]++;
+                            sampleVariantCounts[String(sampleVariant->variantLetter)]++;
+                        }
+                    }
+                }
             }
         }
 
@@ -67,6 +83,27 @@ int InstrumentManager::scanAll() {
         } else {
             DBG("NOTICE: Skipped empty kit: " + kitDir.getFileName());
         }
+    }
+
+    // Log detailed statistics
+    DBG("INFO: Dimension Code Usage:");
+    for (const auto& [key, count] : dimensionCodeCounts) {
+        DBG("  " + key + ": " + String(count));
+    }
+
+    DBG("INFO: Mic Code Usage:");
+    for (const auto& [key, count] : micCodeCounts) {
+        DBG("  " + key + ": " + String(count));
+    }
+
+    DBG("INFO: Sample Variant Usage:");
+    for (const auto& [key, count] : sampleVariantCounts) {
+        DBG("  " + key + ": " + String(count));
+    }
+
+    DBG("INFO: Velocity Usage:");
+    for (const auto& [key, count] : velocityCounts) {
+        DBG("  " + String(key) + ": " + String(count));
     }
 
     DBG("INFO: Total: " + String(kitCount) + " kits, " + String(mTotalInstruments) + " instruments, " + String(mTotalSamples) + " samples");
@@ -124,137 +161,138 @@ std::pair<DrumKitInstrument*, String> InstrumentManager::getMappedInstrumentForN
 
 
 
-bool InstrumentManager::mapLayoutToKit(const KitLayout& layout, DrumKit* kit, String& outError) {
-    if (kit == nullptr) {
-        outError = "No kit provided";
-        return false;
-    }
+// bool InstrumentManager::mapKitToLayout(const KitLayout& layout, DrumKit* kit, String& outError) {
 
-    LayoutInstrumentMapping mapping;
-    mapping.layoutId = layout.id.isEmpty() ? layout.name : layout.id;
+//     if (kit == nullptr) {
+//         outError = "No kit provided";
+//         return false;
+//     }
 
-    // For each layout instrument, try to find a matching kit instrument
-    for (const auto& lin : layout.instruments) {
-        DrumKitInstrument* matched = nullptr;
+//     LayoutInstrumentMapping mapping;
+//     mapping.layoutId = layout.id.isEmpty() ? layout.name : layout.id;
 
-        // 1) exact match by code
-        if (!lin.id.isEmpty())
-            matched = kit->findInstrument(lin.id);
+//     // For each layout instrument, try to find a matching kit instrument
+//     for (const auto& lin : layout.instruments) {
+//         DrumKitInstrument* matched = nullptr;
 
-        // 2) exact match by instrument name
-        // if (!matched && !lin.id.isEmpty()) {
-        //     auto found = kit->findInstruments(lin.id);
-        //     if (!found.empty())
-        //         matched = found.front();
-        // }
+//         // 1) exact match by code
+//         if (!lin.id.isEmpty())
+//             matched = kit->findInstrument(lin.id);
 
-        // 3) fuzzy match: check containment in instrument name
-        // if (!matched && !lin.id.isEmpty()) {
-        //     String needle = lin.id.toLowerCase();
-        //     for (const auto& instPtr : kit->instruments) {
-        //         if (instPtr->meta.name.toLowerCase().contains(needle) || instPtr->meta.code.toLowerCase().contains(needle)) {
-        //             matched = instPtr.get();
-        //             break;
-        //         }
-        //     }
-        // }
+//         // 2) exact match by instrument name
+//         // if (!matched && !lin.id.isEmpty()) {
+//         //     auto found = kit->findInstruments(lin.id);
+//         //     if (!found.empty())
+//         //         matched = found.front();
+//         // }
 
-        // // 4) fallback: try matching by type/display/name
-        // if (!matched) {
-        //     for (const auto& instPtr : kit->instruments) {
-        //         if (instPtr->meta.name.equalsIgnoreCase(lin.display) || instPtr->meta.code.equalsIgnoreCase(lin.id)) {
-        //             matched = instPtr.get();
-        //             break;
-        //         }
-        //     }
-        // }
+//         // 3) fuzzy match: check containment in instrument name
+//         // if (!matched && !lin.id.isEmpty()) {
+//         //     String needle = lin.id.toLowerCase();
+//         //     for (const auto& instPtr : kit->instruments) {
+//         //         if (instPtr->meta.name.toLowerCase().contains(needle) || instPtr->meta.code.toLowerCase().contains(needle)) {
+//         //             matched = instPtr.get();
+//         //             break;
+//         //         }
+//         //     }
+//         // }
 
-        if (!matched) {
-            // no instrument matched for this layout instrument; record as null and continue
-            mapping.instrumentByLayoutId[lin.id] = nullptr;
-        } else {
-            mapping.instrumentByLayoutId[lin.id] = matched;
+//         // // 4) fallback: try matching by type/display/name
+//         // if (!matched) {
+//         //     for (const auto& instPtr : kit->instruments) {
+//         //         if (instPtr->meta.name.equalsIgnoreCase(lin.display) || instPtr->meta.code.equalsIgnoreCase(lin.id)) {
+//         //             matched = instPtr.get();
+//         //             break;
+//         //         }
+//         //     }
+//         // }
 
-            // Helper to canonicalize articulation names (aliases) and choose an articulation on the matched instrument.
-            // Uses aliases such as head->center, top->center, side->edge, shell->rim, rimshot->rim.
-            auto canonicalizeArt = [&](const String& s) -> String {
-                String key = s.trim().toLowerCase();
-                if (key.isEmpty())
-                    return key;
-                if (key == "head" || key == "top" || key == "mid" || key == "middle")
-                    return "center";
-                if (key == "side" || key == "sidehit")
-                    return "edge";
-                if (key == "shell" || key == "rimshot" || key == "rimshot")
-                    return "rim";
-                if (key == "bell")
-                    return "bell";
-                if (key == "bow")
-                    return "bow";
-                // default: return lowercased original
-                return key;
-            };
+//         if (!matched) {
+//             // no instrument matched for this layout instrument; record as null and continue
+//             mapping.instrumentByLayoutId[lin.id] = nullptr;
+//         } else {
+//             mapping.instrumentByLayoutId[lin.id] = matched;
 
-            auto chooseArticulation = [&](DrumKitInstrument* inst, const String& requested) -> String {
-                String reqCanon = canonicalizeArt(requested);
+//             // Helper to canonicalize articulation names (aliases) and choose an articulation on the matched instrument.
+//             // Uses aliases such as head->center, top->center, side->edge, shell->rim, rimshot->rim.
+//             auto canonicalizeArt = [&](const String& s) -> String {
+//                 String key = s.trim().toLowerCase();
+//                 if (key.isEmpty())
+//                     return key;
+//                 if (key == "head" || key == "top" || key == "mid" || key == "middle")
+//                     return "center";
+//                 if (key == "side" || key == "sidehit")
+//                     return "edge";
+//                 if (key == "shell" || key == "rimshot" || key == "rimshot")
+//                     return "rim";
+//                 if (key == "bell")
+//                     return "bell";
+//                 if (key == "bow")
+//                     return "bow";
+//                 // default: return lowercased original
+//                 return key;
+//             };
 
-                // 1) if requested articulation exists (by exact name)
-                if (requested.isNotEmpty()) {
-                    if (inst->findArticulation(requested) != nullptr)
-                        return requested;
-                }
+//             auto chooseArticulation = [&](DrumKitInstrument* inst, const String& requested) -> String {
+//                 String reqCanon = canonicalizeArt(requested);
 
-                // 1b) if requested canonical exists among instrument articulations, return the actual articulation name
-                if (reqCanon.isNotEmpty()) {
-                    for (const auto& a : inst->articulations) {
-                        if (canonicalizeArt(a->name) == reqCanon)
-                            return a->name;
-                    }
-                }
+//                 // 1) if requested articulation exists (by exact name)
+//                 if (requested.isNotEmpty()) {
+//                     if (inst->findArticulation(requested) != nullptr)
+//                         return requested;
+//                 }
 
-                // priority list (high -> low)
-                const StringArray priority { "center", "bow" };
-                for (auto& p : priority) {
-                    for (const auto& a : inst->articulations) {
-                        if (canonicalizeArt(a->name) == canonicalizeArt(p))
-                            return a->name;
-                    }
-                }
+//                 // 1b) if requested canonical exists among instrument articulations, return the actual articulation name
+//                 if (reqCanon.isNotEmpty()) {
+//                     for (const auto& a : inst->articulations) {
+//                         if (canonicalizeArt(a->name) == reqCanon)
+//                             return a->name;
+//                     }
+//                 }
 
-                // fallback: first existing articulation on the instrument (return its actual name)
-                if (!inst->articulations.empty())
-                    return inst->articulations.front()->name;
+//                 // priority list (high -> low)
+//                 const StringArray priority { "center", "bow" };
+//                 for (auto& p : priority) {
+//                     for (const auto& a : inst->articulations) {
+//                         if (canonicalizeArt(a->name) == canonicalizeArt(p))
+//                             return a->name;
+//                     }
+//                 }
 
-                return String();
-            };
+//                 // fallback: first existing articulation on the instrument (return its actual name)
+//                 if (!inst->articulations.empty())
+//                     return inst->articulations.front()->name;
 
-            // Map articulations: use requested articulation if present, otherwise fallback
-            for (const auto& art : lin.articulations) {
-                if (art.code.isEmpty())
-                    continue;
-                String targetArt = chooseArticulation(matched, art.code);
-                if (targetArt.isEmpty())
-                    continue;
+//                 return String();
+//             };
 
-                // map notes for this articulation (map to chosen articulation name)
-                for (int note : art.notes) {
-                    mapping.noteToInstrument[note] = { matched, targetArt };
-                }
-            }
+//             // Map articulations: use requested articulation if present, otherwise fallback
+//             for (const auto& art : lin.articulations) {
+//                 if (art.code.isEmpty())
+//                     continue;
+//                 String targetArt = chooseArticulation(matched, art.code);
+//                 if (targetArt.isEmpty())
+//                     continue;
 
-            // Also map any top-level notes defined on the layout instrument
-            // for (int note : lin.notes) {
-            //     if (mapping.noteToInstrument.find(note) == mapping.noteToInstrument.end()) {
-            //         // choose default articulation for this instrument (no specific requested)
-            //         String defaultArt = chooseArticulation(matched, String());
-            //         mapping.noteToInstrument[note] = { matched, defaultArt };
-            //     }
-            // }
-        }
-    }
+//                 // map notes for this articulation (map to chosen articulation name)
+//                 for (int note : art.notes) {
+//                     mapping.noteToInstrument[note] = { matched, targetArt };
+//                 }
+//             }
 
-    // store mapping keyed by layout id
-    String key = mapping.layoutId;
-    mLayoutMappings[key] = std::move(mapping);
-    return true;
-}
+//             // Also map any top-level notes defined on the layout instrument
+//             // for (int note : lin.notes) {
+//             //     if (mapping.noteToInstrument.find(note) == mapping.noteToInstrument.end()) {
+//             //         // choose default articulation for this instrument (no specific requested)
+//             //         String defaultArt = chooseArticulation(matched, String());
+//             //         mapping.noteToInstrument[note] = { matched, defaultArt };
+//             //     }
+//             // }
+//         }
+//     }
+
+//     // store mapping keyed by layout id
+//     String key = mapping.layoutId;
+//     mLayoutMappings[key] = std::move(mapping);
+//     return true;
+// }

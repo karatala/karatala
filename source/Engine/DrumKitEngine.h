@@ -42,25 +42,22 @@ private:
 
 class SampledSound : public juce::SynthesiserSound {
 public:
-    DrumKitInstrument* parentInst = nullptr;
+    DrumKitInstrument* ownerInstrument = nullptr;
+    LayerSampleVariant* sampleVariant = nullptr;
     juce::File sampleFile;
     std::shared_ptr<juce::AudioBuffer<float>> buffer;
+    std::vector<uint8_t> notes; 
 
     double sampleRate = 0.0;
-    juce::String articulation;
-    int velocityLayer = 0;
-    juce_wchar variantLetter = '\0';
-    bool enabled = true;
 
-    SampledSound(DrumKitInstrument* p = nullptr, const juce::File& f = {}, const juce::String& art = {}, int vel = 0, juce_wchar ltr = '\0')
-        : parentInst(p)
-        , sampleFile(f)
-        , articulation(art)
-        , velocityLayer(vel)
-        , variantLetter(ltr)
+    SampledSound(DrumKitInstrument* ownerInstrument = nullptr, LayerSampleVariant* sampleVariant = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
+        : ownerInstrument(ownerInstrument)
+        , sampleVariant(sampleVariant)
+        , sampleFile(sampleFile)
+        , notes(notes)
     {}
 
-    bool appliesToNote(int /*midiNote*/) override { return enabled; }
+    bool appliesToNote(int midiNote) override { return std::find(notes.begin(), notes.end(), static_cast<uint8_t>(midiNote)) != notes.end(); }
     bool appliesToChannel(int /*midiChannel*/) override { return true; }
 };
 
@@ -83,7 +80,7 @@ public:
     ~InstrumentSynth() {}
 
     void unloadInstrument();
-    void loadInstrument(DrumKitInstrument* instrument);
+    void loadInstrument(DrumKitInstrument* kitInstrument);
     bool isLoaded() { return mDrumKitInstrumentPtr != nullptr; }
     
     SampledSound* selectSampleFor(const juce::String& articulation, int midiVel);

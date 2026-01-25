@@ -84,12 +84,11 @@ ParseResult<DrumKitInstrument::MetaInfo> DrumKitInstrument::parseInfo(const File
         result.value.size = parts[1].trim();
     if (parts.size() > 2) {
         parts.removeRange(0, 2);
-        result.value.description = parts.size() > 0 ? parts.joinIntoString("-").trim() : "";
+        result.value.description = parts.size() > 0 ? parts.joinIntoString(" ").trim() : "";
     }
     result.value.type = DrumKitInstrument::typeFromString(result.value.name);
     result.value.code = fileName.trim();
     result.value.rootDir = dir;
-
 
     return result;
 }
@@ -106,35 +105,56 @@ bool DrumKitInstrument::isAudioFile(const File& file) {
 }
 
 int DrumKitInstrument::scanInstrumentSamples() {
-    const auto files = meta.rootDir.findChildFiles(juce::File::findFiles, false, "*.*");
+    const auto articulationDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*.*");
 
-    for (const auto& file : files) {
-        if (!file.existsAsFile())
+    for (const auto& artDir : articulationDirs) {
+        if (!artDir.isDirectory())
             continue;
 
-        if (!isAudioFile(file)) {
-            DBG("Skipping non-audio file: " + file.getFileName());
-            continue;
+        auto artName = artDir.getFileName();
+        StringArray artParts;
+        artParts.addTokens(artName, "-", "");
+
+        String articulation = artParts[0].trim();
+        std::unordered_map<String, String> dimensions;
+
+        for (int i = 1; i < artParts.size(); ++i) {
+            auto dimPart = artParts[i];
+            auto dimCodeEnd = dimPart.indexOfAnyOf("0123456789");
+            if (dimCodeEnd > 0) {
+                String dimCode = dimPart.substring(0, dimCodeEnd);
+                String dimValue = dimPart.substring(dimCodeEnd);
+                dimensions[dimCode] = dimValue;
+            }
         }
 
-        auto parsedInfo = parseSampleFile(file);
-        if (!parsedInfo.ok()) {
-            DBG("WARN: Could not parse filename '" + file.getFileName() + "': " + parsedInfo.error());
-            continue;
-        }
+        auto* articulationObj = getOrAddArticulation(articulation);
 
-        auto* articulation = getOrAddArticulation(parsedInfo.value.articulation);
-        auto* velocityLayer = articulation->getOrAddVelocityLayer(parsedInfo.value.velocityLayer);
+        const auto sampleFiles = artDir.findChildFiles(juce::File::findFiles, false, "*.*");
+        for (const auto& sampleFile : sampleFiles) {
+            if (!isAudioFile(sampleFile)) {
+                DBG("Skipping non-audio file: " + sampleFile.getFileName());
+                continue;
+            }
 
-        // Add one sample variant per mic chain
-        for (size_t i = 0; i < parsedInfo.value.micDescriptors.size(); i++) {
-            juce_wchar variantLetter = '\0';
-            if (!parsedInfo.value.sampleVariant.isEmpty())
-                variantLetter = parsedInfo.value.sampleVariant[0];
+            auto parsedInfo = parseSampleFile(sampleFile);
+            if (!parsedInfo.ok()) {
+                DBG("WARN: Could not parse filename '" + sampleFile.getFileName() + "': " + parsedInfo.error());
+                continue;
+            }
 
-            auto sampleVariant = std::make_unique<LayerSampleVariant>(file, variantLetter, parsedInfo.value.micDescriptors[i]);
-            velocityLayer->addSampleVariant(std::move(sampleVariant));
-            sampleCount++;
+            auto* velocityLayer = articulationObj->getOrAddVelocityLayer(parsedInfo.value.velocity);
+
+            // Add one sample variant per mic chain
+            for (size_t i = 0; i < parsedInfo.value.micDescriptors.size(); i++) {
+                uint8_t variantIdx = 0;
+                if (!parsedInfo.value.sampleVariant.isEmpty())
+                    variantIdx = LayerSampleVariant::letterToIdx(parsedInfo.value.sampleVariant[0]);
+
+                auto sampleVariant = std::make_unique<LayerSampleVariant>(sampleFile, variantIdx, parsedInfo.value.micDescriptors[i]);
+                velocityLayer->addSampleVariant(std::move(sampleVariant));
+                sampleCount++;
+            }
         }
     }
     return sampleCount;
@@ -152,22 +172,22 @@ ParseResult<DrumKitInstrument::SampleFileInfo> DrumKitInstrument::parseSampleFil
     StringArray nameParts;
     nameParts.addTokens(fileNameWithoutExt, "-", "");
 
-    if (nameParts.size() < 4) {
-        return result.returnWithError("Filename must be in format instrument-articulation-velocityRR-micChain: " + fileNameWithoutExt);
+    if (nameParts.size() < 2) {
+        return result.returnWithError("Filename must be in format {velocity}{sampleVariant}-{micChain}: " + fileNameWithoutExt);
     }
 
-    String velRRCode = nameParts[2];
+    String velRRCode = nameParts[0];
     int splitIndex = 0;
     while (splitIndex < velRRCode.length() && CharacterFunctions::isDigit(velRRCode[splitIndex])) {
         splitIndex++;
     }
     if (splitIndex == 0) {
-        return result.returnWithError("ArticulationVelocityLayer+LayerSampleVariant code must start with digits (e.g., '1a', '127b', '5'): " + velRRCode);
+        return result.returnWithError("velocity+sampleVariant code must start with digits (e.g., '001a', '127b', '005'): " + velRRCode);
     }
 
     String velocityStr = velRRCode.substring(0, splitIndex);
-    int velocityLayer = velocityStr.getIntValue();
-    if (velocityLayer <= 0 || velocityLayer > 127) {
+    uint8_t velocity = static_cast<uint8_t>(velocityStr.getIntValue());
+    if (velocity <= 0 || velocity > 127) {
         return result.returnWithError("Velocity must be 1-127, got: " + velocityStr);
     }
 
@@ -183,15 +203,12 @@ ParseResult<DrumKitInstrument::SampleFileInfo> DrumKitInstrument::parseSampleFil
         }
     }
 
-    // Parse mic chain
-    auto parsedMics = MicDescriptor::parseMicCodesChain(nameParts[3]);
+    auto parsedMics = MicDescriptor::parseMicCodesChain(nameParts[1]);
     if (!parsedMics.ok()) {
         result.addWarning("Mic chain parsing failed: " + parsedMics.error() + "; file will use default routing");
     }
 
-    result.value.type = nameParts[0];
-    result.value.articulation = nameParts[1];
-    result.value.velocityLayer = velocityLayer;
+    result.value.velocity = velocity;
     result.value.sampleVariant = sampleVariant;
     result.value.micDescriptors = parsedMics.value;
     result.value.extension = file.getFileExtension();
