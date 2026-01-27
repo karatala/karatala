@@ -134,6 +134,13 @@ namespace YamlHelper {
 
             // parse key: value at this indentation
             String trimmed = line.trim();
+            // if this line starts with a dash it actually belongs to a sequence
+            // (it may have been left unconsumed by a previous parse). Avoid
+            // treating it as a map key (which would create keys like "- type").
+            if (startsWithDash(trimmed)) {
+                idx++;
+                continue;
+            }
             String key, value;
 
             if (!tryParseKeyValue(trimmed, key, value)) {
@@ -199,13 +206,17 @@ namespace YamlHelper {
                 // map item
                 idx++;
                 YamlNode itemMap(YamlNode::Map);
+                // track the last inserted key so nested lists attach correctly
+                juce::String lastInsertedKey;
                 // set the first key/value
                 if (itemValue.startsWithChar('[')) {
                     itemMap.mapValue[itemKey] = parseInlineArray(itemValue);
+                    lastInsertedKey = itemKey;
                 } else {
                     YamlNode n(YamlNode::Scalar);
                     n.scalarValue = stripSurroundingQuotes(itemValue);
                     itemMap.mapValue[itemKey] = n;
+                    lastInsertedKey = itemKey;
                 }
 
                 // read subsequent indented lines as children of this map
@@ -222,23 +233,30 @@ namespace YamlHelper {
                     if (nextLineIndent >= nextIndent) {
                         String nextTrimmed = nextLine.trim();
 
-                        // if this is a nested list item (starts with '-') attach to the last key
+                        // if this is a nested list item (starts with '-') attach to the last inserted key
+                        // only when it's more-indented than the child's base indent. When the dash
+                        // has exactly the child's base indent it signals a sibling list item and
+                        // should not be consumed here.
                         if (startsWithDash(nextTrimmed)) {
-                            if (!itemMap.mapValue.empty()) {
-                                juce::String lastKey = itemMap.keys().back();
-                                auto nestedList = parseList(lines, idx, nextIndent);
-                                if (!nestedList.isNull()) {
-                                    itemMap.mapValue[lastKey] = nestedList;
+                            if (nextLineIndent > nextIndent) {
+                                if (!itemMap.mapValue.empty()) {
+                                    auto nestedList = parseList(lines, idx, nextIndent);
+                                    if (!nestedList.isNull()) {
+                                        // attach to the last inserted key (preserve insertion target)
+                                        itemMap.mapValue[lastInsertedKey] = nestedList;
+                                    }
+                                    continue;
+                                } else {
+                                    // no preceding key to attach to: treat as scalar list entry
+                                    auto nestedList = parseList(lines, idx, nextIndent);
+                                    if (!nestedList.isNull()) {
+                                        result.sequenceValue.push_back(nestedList);
+                                    }
+                                    continue;
                                 }
-                                continue;
                             } else {
-                                // no preceding key to attach to: treat as scalar list entry
-                                auto nestedList = parseList(lines, idx, nextIndent);
-                                if (!nestedList.isNull()) {
-                                    // push this nested list as a scalar to the sequence
-                                    result.sequenceValue.push_back(nestedList);
-                                }
-                                continue;
+                                // dash belongs to a sibling item at the same level - stop consuming children
+                                break;
                             }
                         }
 
@@ -249,12 +267,15 @@ namespace YamlHelper {
                             if (nv.isEmpty()) {
                                 // nested block under this key
                                 itemMap.mapValue[nk] = parseBlock(lines, idx, nextIndent);
+                                lastInsertedKey = nk;
                             } else if (nv.startsWithChar('[')) {
                                 itemMap.mapValue[nk] = parseInlineArray(nv);
+                                lastInsertedKey = nk;
                             } else {
                                 YamlNode nn(YamlNode::Scalar);
                                 nn.scalarValue = stripSurroundingQuotes(nv);
                                 itemMap.mapValue[nk] = nn;
+                                lastInsertedKey = nk;
                             }
                         } else {
                             idx++;

@@ -43,7 +43,7 @@ instruments:
     const auto& first = root["instruments"][0];
     REQUIRE(first["id"].asString() == "kick1");
     //FIXME: also first.mapValue shows in debugger size = 6 (with keys '- type', 'articulations', 'display', 'id', 'notes', 'type') - where '- type' and 'articulations' are clearly because of bug in parser
-    //FIXME: another problem is this is imposible to debug, when adding a watch first["id"] it says no operator "[]" matches these operands
+    //FIXME: this is imposible to debug, when adding a watch first["id"] it says no operator "[]" matches these operands
     
     REQUIRE(first["articulations"].isSequence());
     REQUIRE(first["articulations"].size() == 1);
@@ -53,6 +53,16 @@ instruments:
 
     const auto& second = root["instruments"][1];
     REQUIRE(second["id"].asString() == "snare1");
+
+    REQUIRE(second["articulations"].isSequence());
+    REQUIRE(second["articulations"].size() == 3);
+    REQUIRE(second["articulations"][0]["code"].asString() == "center");
+    REQUIRE(second["articulations"][0]["notes"][0].asString() == "38");
+    REQUIRE(second["articulations"][1]["code"].asString() == "rim");
+    REQUIRE(second["articulations"][1]["notes"][0].asString() == "40");
+    REQUIRE(second["articulations"][2]["code"].asString() == "sidestick");
+    REQUIRE(second["articulations"][2]["notes"][0].asString() == "37");
+
     REQUIRE(second["controllers"].isSequence());
     REQUIRE(second["controllers"].size() == 1);
     const auto& ctrl = second["controllers"][0];

@@ -293,6 +293,7 @@ class InstrumentArticulation {
 public:
     struct Dimension {
         String code;
+        std::vector<uint8_t> values;
     };
 
     String name;
@@ -315,6 +316,29 @@ public:
         });
     }
 
+    void addDimensionValue(const String& code, uint8_t value) {
+        auto* dim = getOrAddDimension(code);
+        if (std::find(dim->values.begin(), dim->values.end(), value) == dim->values.end())
+            dim->values.push_back(value);
+    }
+
+    Dimension* addDimension(const String& code) {
+        this->dimensions.push_back(Dimension{code, {}});
+        return &this->dimensions.back();
+    }
+
+    Dimension* getOrAddDimension(const String& code) {
+        auto exist = this->findDimension(code);
+        return (exist != nullptr) ? exist : this->addDimension(code);
+    }
+
+    Dimension* findDimension(const String& code) {
+        for (auto& dim : this->dimensions)
+            if (dim.code == code)
+                return &dim;
+        return nullptr;
+    }
+
     ArticulationVelocityLayer* addVelocityLayer(uint8_t velocity) {
         auto newLevel = std::make_unique<ArticulationVelocityLayer>(velocity);
         newLevel->parentArticulation = this;
@@ -324,11 +348,9 @@ public:
     }
 
     ArticulationVelocityLayer* findVelocityLayer(uint8_t velocity) {
-        for (auto& existing : velocityLayers) {
-            if (existing->velocity == velocity) {
+        for (auto& existing : velocityLayers)
+            if (existing->velocity == velocity)
                 return existing.get();
-            }
-        }
         return nullptr;
     }
 

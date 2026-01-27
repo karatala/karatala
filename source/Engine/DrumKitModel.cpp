@@ -116,7 +116,8 @@ int DrumKitInstrument::scanInstrumentSamples() {
         artParts.addTokens(artName, "-", "");
 
         String articulation = artParts[0].trim();
-        std::unordered_map<String, String> dimensions;
+
+        InstrumentArticulation* articulationObj = getOrAddArticulation(articulation);
 
         for (int i = 1; i < artParts.size(); ++i) {
             auto dimPart = artParts[i];
@@ -124,11 +125,9 @@ int DrumKitInstrument::scanInstrumentSamples() {
             if (dimCodeEnd > 0) {
                 String dimCode = dimPart.substring(0, dimCodeEnd);
                 String dimValue = dimPart.substring(dimCodeEnd);
-                dimensions[dimCode] = dimValue;
+                articulationObj->addDimensionValue(dimCode, static_cast<uint8_t>(dimValue.getIntValue()));
             }
         }
-
-        auto* articulationObj = getOrAddArticulation(articulation);
 
         const auto sampleFiles = artDir.findChildFiles(juce::File::findFiles, false, "*.*");
         for (const auto& sampleFile : sampleFiles) {

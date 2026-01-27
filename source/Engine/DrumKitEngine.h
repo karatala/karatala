@@ -43,16 +43,16 @@ private:
 class SampledSound : public juce::SynthesiserSound {
 public:
     DrumKitInstrument* ownerInstrument = nullptr;
-    LayerSampleVariant* sampleVariant = nullptr;
+    LayerSampleVariant* layerSampleVariant = nullptr;
     juce::File sampleFile;
     std::shared_ptr<juce::AudioBuffer<float>> buffer;
     std::vector<uint8_t> notes; 
 
     double sampleRate = 0.0;
 
-    SampledSound(DrumKitInstrument* ownerInstrument = nullptr, LayerSampleVariant* sampleVariant = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
+    SampledSound(DrumKitInstrument* ownerInstrument = nullptr, LayerSampleVariant* layerSampleVariant = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
         : ownerInstrument(ownerInstrument)
-        , sampleVariant(sampleVariant)
+        , layerSampleVariant(layerSampleVariant)
         , sampleFile(sampleFile)
         , notes(notes)
     {}
@@ -63,6 +63,25 @@ public:
 
 class InstrumentSynth : public juce::Synthesiser {
 public:
+    struct Articulation {
+        std::variant<std::monostate, SampleSelector<1>, SampleSelector<2>, SampleSelector<3>> selector;
+        // map zone pointer (const void*) -> index into samplesByZone
+        std::unordered_map<const void*, size_t> zoneToIndex;
+        // samples grouped by selector zone (one vector per zone)
+        std::vector<std::vector<SampledSound*>> samplesByZone;
+        // per-zone round-robin counters (stored as plain uint32_t to avoid issues with vector reallocation of non-movable atomics)
+        std::vector<uint32_t> roundRobinCounters;
+        // for HiHat combined instance: list of articulation names in art-index order
+        std::vector<juce::String> artNames;
+
+        void clear() {
+            selector = std::monostate {};
+            zoneToIndex.clear();
+            samplesByZone.clear();
+            roundRobinCounters.clear();
+        }
+    };
+
     InstrumentSynth(DrumKitEngine* parent, KitLayout::Instrument instrument
         //DUNNO: add params to instrument or do it somewhere else?
         // ,juce::RangedAudioParameter& gainParameter
@@ -85,9 +104,9 @@ public:
     
     SampledSound* selectSampleFor(const juce::String& articulation, int midiVel);
     
-    bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions);
     void handleMidiEvent(const MidiMessage& midiMessage) override;
-    // virtual void noteOn(int midiChannel, int midiNoteNumber, float velocity) override;
+    bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions);
+    virtual void noteOn(int midiChannel, int midiNoteNumber, float velocity) override;
     // virtual void noteOff(int midiChannel, int midiNoteNumber, float velocity, bool allowTailOff) override;
     // virtual void handleController (int midiChannel, int controllerNumber, int controllerValue);
     // virtual void handleAftertouch (int midiChannel, int midiNoteNumber, int aftertouchValue)
@@ -112,26 +131,6 @@ private:
     int mMicChannelCount = 2;
     // Keep a copy of the kit layout instrument definition for note->articulation lookup
     KitLayout::Instrument instrumentDef;
-
-    struct Articulation {
-        std::variant<std::monostate, SampleSelector<1>, SampleSelector<2>, SampleSelector<3>> selector;
-        // map zone pointer (const void*) -> index into samplesByZone
-        std::unordered_map<const void*, size_t> zoneToIndex;
-        // samples grouped by selector zone (one vector per zone)
-        std::vector<std::vector<SampledSound*>> samplesByZone;
-        // per-zone round-robin counters (stored as plain uint32_t to avoid issues with vector reallocation of non-movable atomics)
-        std::vector<uint32_t> roundRobinCounters;
-        // for HiHat combined instance: list of articulation names in art-index order
-        std::vector<juce::String> artNames;
-
-        void clear() {
-            selector = std::monostate {};
-            zoneToIndex.clear();
-            samplesByZone.clear();
-            roundRobinCounters.clear();
-        }
-    };
-
     std::unordered_map<juce::String, Articulation> mArticulations;
 };
 

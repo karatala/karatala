@@ -353,17 +353,17 @@ void DrumKitEngine::mapKit(DrumKit& kit) {
                 }
 
         if (matched == nullptr) {
-            DBG("WARN: no matching instrument found in kit '" + kit.meta.name + "' for layout slot: " + layoutInstrument.id);
+            DBG("WARN: no matching instrument found in kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
             slot->unloadInstrument();
             continue;
         }
         
-        DBG("INFO: loading instrument '" + matched->meta.code + "' from kit '" + kit.meta.name + "' for layout slot: " + layoutInstrument.id);
+        DBG("INFO: loading instrument '" + matched->meta.code + "' from kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
         // load instrument into slot
         slot->loadInstrument(matched);
         usedInstruments.insert(matched);
 
-        // map MIDI notes for articulations?? WHY? already done
+        //FIXME: map MIDI notes for articulations?? WHY? isnt it already done
         // for (const auto& art : layoutInstrument.articulations) {
         //     for (int note : art.notes) {
         //         auto& vec = mInstrumentSynthsByNote[note];
@@ -553,24 +553,45 @@ void InstrumentSynth::unloadInstrument() {
 
 void InstrumentSynth::loadInstrument(DrumKitInstrument* kitInstrument) {
     if (kitInstrument == nullptr) return;
-    
+    const bool debug = false;
     this->unloadInstrument();
     this->mDrumKitInstrumentPtr = kitInstrument;
     this->type = kitInstrument->meta.type;
 
     auto loader = this->getSampleLoader();
 
-    for (const auto& layoutArt : this->instrumentDef.articulations) {
-        for (const auto& kitArtPtr : kitInstrument->articulations) {
+    for (const KitLayout::Instrument::Articulation& layoutArt : this->instrumentDef.articulations) {
+        
+        if (debug) DBG("  layout articulation " + layoutArt.code);
+        bool foundKitArt = false;
+
+        for (const std::unique_ptr<InstrumentArticulation>& kitArtPtr : kitInstrument->articulations) {
+
             if (layoutArt.code != kitArtPtr->name) continue;
+
+            foundKitArt = true;
+            if (debug) DBG("    instr articulation " + kitArtPtr->name);
+
+            auto synthArt = std::make_unique<InstrumentSynth::Articulation>();
+            // synthArt-> = layoutArt.code;
+            // mArticulations.emplace(layoutArt.code, std::move(synthArt));
+
             for (const auto& velPtr : kitArtPtr->velocityLayers) {
+                if (debug) DBG("      velocity " + juce::String(velPtr->velocity) + " (" + juce::String(velPtr->sampleVariants.size()) + " samples)");
                 for (const auto& variantPtr : velPtr->sampleVariants) {
+
                     
+                    for (const InstrumentArticulation::Dimension& dimension : kitArtPtr->dimensions) {
+                        if (debug) DBG("      dimension " + dimension.code);
+                        for (const auto& value : dimension.values) {
+                            if (debug) DBG("        value " + juce::String(value));
+                        }
+                    }
                     auto* sound = new SampledSound(kitInstrument, variantPtr.get(), variantPtr->sampleFile, layoutArt.notes);
                     
                     this->addSound(sound); // add to synth immediately; buffer will be filled asynchronously
                     
-                    // this->mArticulations ?
+                    // this->mArticulations 
 
                     if (loader != nullptr) {
                         loader->requestAsyncLoad(variantPtr->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
@@ -581,27 +602,40 @@ void InstrumentSynth::loadInstrument(DrumKitInstrument* kitInstrument) {
                 }
             }
         }
+        if (!foundKitArt) DBG("WARN: no kit articulation found for layout art: " + layoutArt.code);
+    }
+
+    for (const auto& cc : this->instrumentDef.controllers) {
+        if (debug) DBG("  layout CC " + cc.code);
+        // cc.id
+        
     }
 }
 
 void InstrumentSynth::handleMidiEvent(const MidiMessage& midiMessage) {
     const int channel = midiMessage.getChannel();
 
-    //TODO: common realistic choke (volume change) on aftertouch: with some custom decay timeout, if aftertouch value became less in that timeout, volume should return back by some percent
-    
+
     //TODO: from KitLayout::Instrument instrumentDef get CC and notes to subscribe to
-    /** 
-     * 
-    */
+
     
     
     if (midiMessage.isNoteOn()) {
         if (! this->playNote(channel, midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1))
             this->noteOn(channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
     }
-    else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(channel, true);
+    
+    
+    //TODO: common realistic choke (volume change) on aftertouch: with some custom decay timeout, if aftertouch value became less in that timeout, volume should return back by some percent
+    
     else if (midiMessage.isAftertouch()) this->handleAftertouch(channel, midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
+    
     else if (midiMessage.isController()) this->handleController(channel, midiMessage.getControllerNumber(), midiMessage.getControllerValue());
+    
+    else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(channel, true);
+    
+    
+    
 
     // else if (midiMessage.isNoteOff()) this->noteOff (channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity(), true);
     // else if (midiMessage.isChannelPressure()) this->handleChannelPressure(channel, midiMessage.getChannelPressureValue());
@@ -615,15 +649,13 @@ void InstrumentSynth::handleMidiEvent(const MidiMessage& midiMessage) {
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions) {
-    juce::ignoreUnused(midiChannel, midiNoteNumber, velocity, expressions);
     
     // SampledSound* chosen = this->selectSampleFor(targetArt, midiVel);
     // if (chosen == nullptr) {
     //     DBG("Nothing to play for " + targetArt);
     //     return;
     // }
-    
-    // const ScopedLock sl (lock);
+
 
     /* TODO: 
         if note louder then last > choke (kill or fast fade? using NAME_THIS_VAR_RIGHT_CHOKED_BY_LOUDER_TIMEOUT_MS) playing notes of this instrument's articulations that are chokable for this articulation. 
@@ -639,7 +671,53 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
 
     // startVoice (findFreeVoice (sound, midiChannel, midiNoteNumber, shouldStealNotes), sound, midiChannel, midiNoteNumber, velocity);
     
-    return false;
+    juce::ignoreUnused(expressions);
+
+    // Choose articulation to play. Prefer layout-defined articulation if present,
+    // otherwise fall back to first known articulation that has samples.
+    juce::String targetArt;
+    if (!this->instrumentDef.articulations.empty())
+        targetArt = this->instrumentDef.articulations.front().code;
+    else if (!this->mArticulations.empty())
+        targetArt = this->mArticulations.begin()->first;
+
+    if (targetArt.isEmpty()) {
+        DBG("WARN: InstrumentSynth::playNote - no articulation available");
+        return false;
+    }
+
+    // Select a sample using the SampleSelector-backed helper
+    SampledSound* chosen = this->selectSampleFor(targetArt, static_cast<int>(velocity));
+    if (chosen == nullptr) {
+        DBG("INFO: Nothing to play for articulation: " + targetArt);
+        return false;
+    }
+
+    const ScopedLock sl (lock);
+
+    const bool stealNotes = true;
+    juce::SynthesiserVoice* voice = findFreeVoice(chosen, midiChannel, midiNoteNumber, stealNotes);
+    if (voice == nullptr) {
+        DBG("WARN: InstrumentSynth::playNote - no free voice available");
+        return false;
+    }
+    float velf = juce::jlimit(0.0f, 1.0f, static_cast<float>(velocity) / 127.0f);
+    startVoice(voice, chosen, midiChannel, midiNoteNumber, velf);
+    return true;
+}
+
+void InstrumentSynth::noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) {
+    const ScopedLock sl (this->lock);
+    bool reallyShouldStealNotes = true;
+    for (auto* sound : this->sounds) {
+        if (auto* sampledSound = dynamic_cast<SampledSound*>(sound)) {
+            if (sampledSound->appliesToNote(midiNoteNumber) && sampledSound->appliesToChannel(midiChannel)) {
+                
+                DBG("DEBUG: NoteOn " + juce::String(midiNoteNumber) + " vel " + juce::String(velocity) + " " + sampledSound->layerSampleVariant->sampleFileName);
+                this->startVoice(this->findFreeVoice (sampledSound, midiChannel, midiNoteNumber, reallyShouldStealNotes), sampledSound, midiChannel, midiNoteNumber, velocity);
+            }
+        }
+    }
 }
 
 SampleLoader* InstrumentSynth::getSampleLoader() {
