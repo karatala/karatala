@@ -2,22 +2,22 @@
 
 #include "../Config/Helpers.h"
 #include "../Config/YamlHelper.h"
-#include "DrumKitModel.h"
+#include "KitLibModel.h"
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <map>
 
 struct KitLayout {
-    struct Instrument {
-        struct Articulation {
+    struct InstrumentSlot {
+        struct ArticulationTrigger {
             juce::String code; // center, rim, edge, bow, pedal, etc.
             std::vector<uint8_t> notes; // midi notes triggering this articulation
 
-            // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids
+            // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
         };
-        struct CC {
+        struct ContinuousController {
             int id = -1; // MIDI CC
             juce::String code; // pedal-open-close, zone-center-rim, zone-bow-edge
             std::vector<uint8_t> notes; // midi notes triggering this articulation
@@ -25,12 +25,9 @@ struct KitLayout {
 
         juce::String id; // kick1, snare1, hihat1, ...
         juce::String display;
-        DrumKitInstrument::Type type = DrumKitInstrument::Type::Unknown;
-        std::vector<Articulation> articulations;
-        std::vector<CC> controllers;
-
-        // juce::String outputGroup;
-        // std::vector<juce::String> mics;
+        KitLib::InstrumentSpecs::Type type = KitLib::InstrumentSpecs::Type::Unknown;
+        std::vector<ArticulationTrigger> articulations;
+        std::vector<ContinuousController> controllers;
         // juce::String chokeGroup;
     };
 
@@ -40,15 +37,15 @@ struct KitLayout {
     juce::String vendor;
     juce::String version;
 
-    std::vector<Instrument> instruments;
+    std::vector<InstrumentSlot> instrumentSlots;
 
     static KitLayout getDefault();
 
-    std::map<juce::String, Instrument*> instrumentsById;
+    std::map<juce::String, InstrumentSlot*> instrumentsById;
     void rebuildIndices() {
-        instrumentsById.clear();
-        for (auto& i : instruments)
-            instrumentsById[i.id] = &i;
+        this->instrumentsById.clear();
+        for (auto& i : this->instrumentSlots)
+            this->instrumentsById[i.id] = &i;
     }
 };
 
@@ -125,27 +122,17 @@ struct LayoutTraits<KitLayout> {
         if (instNode.isSequence()) {
             for (size_t i = 0; i < instNode.size(); ++i) {
                 const auto& instItem = instNode[i];
-                KitLayout::Instrument inst;
+                KitLayout::InstrumentSlot inst;
 
                 inst.id = instItem["id"].asString();
                 inst.display = instItem["display"].asString();
-                inst.type = DrumKitInstrument::typeFromString(instItem["type"].asString());
-                // inst.outputGroup = instItem["output_group"].asString();
-
-                // const auto& notesNode = instItem["notes"];
-                // if (notesNode.isSequence()) {
-                //     for (size_t j = 0; j < notesNode.size(); ++j) {
-                //         inst.notes.push_back(notesNode[j].asInt());
-                //     }
-                // } else if (notesNode.isScalar() && !notesNode.asString().isEmpty()) {
-                //     inst.notes.push_back(notesNode.asInt());
-                // }
+                inst.type = KitLib::InstrumentSpecs::typeFromString(instItem["type"].asString());
 
                 const auto& artsNode = instItem["articulations"];
                 if (artsNode.isSequence()) {
                     for (size_t j = 0; j < artsNode.size(); ++j) {
                         const auto& artItem = artsNode[j];
-                        KitLayout::Instrument::Articulation art;
+                        KitLayout::InstrumentSlot::ArticulationTrigger art;
 
                         art.code = artItem["code"].asString();
 
@@ -166,18 +153,18 @@ struct LayoutTraits<KitLayout> {
                 if (ctrlsNode.isSequence()) {
                     for (size_t j = 0; j < ctrlsNode.size(); ++j) {
                         const auto& ctrlItem = ctrlsNode[j];
-                        KitLayout::Instrument::CC cd;
+                        KitLayout::InstrumentSlot::ContinuousController cd;
                         cd.id = ctrlItem["id"].asInt();
                         cd.code = ctrlItem["code"].asString();
                         inst.controllers.push_back(cd);
                     }
                 }
 
-                layout.instruments.push_back(inst);
+                layout.instrumentSlots.push_back(inst);
             }
         }
 
-        if (layout.instruments.empty()) {
+        if (layout.instrumentSlots.empty()) {
             return result.returnWithError("instruments array is empty");
         }
         layout.rebuildIndices();

@@ -8,6 +8,53 @@ TODO:
 
 
 
+// B	59	RD 1 )
+// Bb	58	VSLP
+// A	57	CR 2 )
+// Ab	56	CWBL
+// G	55	SP 1 )
+// F#	54	TAMB
+// F	53	RD 1 ^
+// E	52	CH 1 )
+// Eb	51	RD 1 ●
+// D	50	OCT1 ●
+// C#	49	CR 1 )
+// C	48	TOM1 ●
+// B	47	TOM2 ●
+// Bb	46	HH O ●
+// A	45	TOM3 ●
+// Ab	44	HH P _
+// G	43	TOM4 ●
+// F#	42	HH C ●
+// F	41	TOM5 ●
+// E	40	SNR1 )
+// Eb	39	CLAP
+// D	38	SNR1 ●
+// C#	37	SNR1 ×
+// C	36	KICK 1
+// B	35	KICK 2
+// Bb	34	RD 2 )
+// A	33	CR 2 ●
+// Ab	32	KRTL O ●
+// G	31	SP 1 ●
+// F#	30	Sp 2 )
+// F	29	RD 2 ^
+// E	28	CH 1 ●
+// Eb	27	RD 2 ●
+// D	26	OCT2 ●
+// C#	25	CR 1 ●
+// C	24	TOM1 )
+// B	23	TOM2 )
+// Bb	22	HH O )
+// A	21	TOM3 )
+// Ab	20	KRTL C _
+// G	19	TOM4 )
+// F#	18	HH C )
+// F	17	TOM5 )
+// E	16	SNR2 )
+// Eb	15	KRTL C ●
+// D	14	SNR2 ●
+// C#	13	SNR2 ×
 
 
 there will be some special rules for mapping midi notes to articulations per instrument and during play time in order to support choke messages for each cymbal instrument
@@ -26,7 +73,7 @@ there will be some special rules for mapping midi notes to articulations per ins
 
 
 ### MIC
-need to make engine to use MicLayout with definition of mic destinations so any loaded into InstrumentSlot DrumKitInstrument samples can be routed according to that
+need to make engine to use MicLayout with definition of mic destinations so any loaded into InstrumentSlot InstrumentSpecs samples can be routed according to that
 
 3) Implement mic-layout → bus routing
 
@@ -47,7 +94,7 @@ mics:
     code: dbm
 
 
-mic code examples (look about code format in MicDescriptor in DrumKitModel.h):
+mic code examples (look about code format in MicSpecs in KitLibModel.h):
 ons=overhead normal stereo
 oni=overhead normal midside
 ows=overhead wide stereo
@@ -59,7 +106,7 @@ rcm=room close mono
 rfs=room far stereo
 
 
- MicLayout describes MicDescriptor 
+ MicLayout describes MicSpecs 
      map slot outputs to physical outputs.
 samples need to be routed correctly to outputs according to the selected mic placement/layout.
 
@@ -93,7 +140,7 @@ Goal: Allow saving and restoring which kit + instrument is assigned to every ins
 Why: Users want to save and recall instrument assignments with presets or sessions.
 Approach:
 Define a simple format: lines or YAML entries mapping slotId → kitCode/instrumentCode.
-When loading state, parse assignments and call a method on each slot to load the right DrumKitInstrument from the InstrumentManager.
+When loading state, parse assignments and call a method on each slot to load the right InstrumentSpecs from the LibraryManager.
 Add validation and fallback when assignments reference missing kits or instruments.
 
 

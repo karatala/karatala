@@ -1,7 +1,7 @@
 #pragma once
 
-#include "DrumKitModel.h"
-#include "InstrumentManager.h"
+#include "../Config/Helpers.h"
+#include "KitLibModel.h"
 #include "LayoutManager.h"
 #include "SampleLoader.h"
 #include "SampleSelector.h"
@@ -9,17 +9,43 @@
 #include <unordered_map>
 #include <variant>
 
+
+// class KitEngine; // was DrumKitEngine
+// class SlotSynth; // was InstrumentSynth
+// class SlotVoice; // was InstrumentSynthVoice
+// class SampleSound;
+
+
 // Forward declarations
 class DrumKitEngine;
 class InstrumentSynth;
 class InstrumentSynthVoice;
+class SampledSound : public juce::SynthesiserSound {
+public:
+    KitLib::InstrumentSpecs* instrumentSpec = nullptr;
+    KitLib::SampleVariantSpecs* sampleVariantSpec = nullptr;
+    juce::File sampleFile;
+    std::shared_ptr<juce::AudioBuffer<float>> buffer;
+    std::vector<uint8_t> notes; 
 
+    double sampleRate = 0.0;
+
+    SampledSound(KitLib::InstrumentSpecs* instrumentSpec = nullptr, KitLib::SampleVariantSpecs* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
+        : instrumentSpec(instrumentSpec)
+        , sampleVariantSpec(sampleVariantSpec)
+        , sampleFile(sampleFile)
+        , notes(notes)
+    {}
+
+    bool appliesToNote(int midiNote) override { return std::find(notes.begin(), notes.end(), static_cast<uint8_t>(midiNote)) != notes.end(); }
+    bool appliesToChannel(int /*midiChannel*/) override { return true; }
+};
 class InstrumentSynthVoice : public juce::SynthesiserVoice {
 public:
     InstrumentSynthVoice();
-    ~InstrumentSynthVoice() override;
+    ~InstrumentSynthVoice() {};
 
-    bool canPlaySound(juce::SynthesiserSound*) override;
+    bool canPlaySound(juce::SynthesiserSound* sound) override { return dynamic_cast<SampledSound*>(sound) != nullptr; }
     void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound*, int pitchWheel) override;
     void stopNote(float velocity, bool allowTailOff) override;
     void pitchWheelMoved(int newValue) override;
@@ -38,27 +64,6 @@ private:
     juce::ADSR mAdsr;
 
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
-};
-
-class SampledSound : public juce::SynthesiserSound {
-public:
-    DrumKitInstrument* ownerInstrument = nullptr;
-    LayerSampleVariant* layerSampleVariant = nullptr;
-    juce::File sampleFile;
-    std::shared_ptr<juce::AudioBuffer<float>> buffer;
-    std::vector<uint8_t> notes; 
-
-    double sampleRate = 0.0;
-
-    SampledSound(DrumKitInstrument* ownerInstrument = nullptr, LayerSampleVariant* layerSampleVariant = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
-        : ownerInstrument(ownerInstrument)
-        , layerSampleVariant(layerSampleVariant)
-        , sampleFile(sampleFile)
-        , notes(notes)
-    {}
-
-    bool appliesToNote(int midiNote) override { return std::find(notes.begin(), notes.end(), static_cast<uint8_t>(midiNote)) != notes.end(); }
-    bool appliesToChannel(int /*midiChannel*/) override { return true; }
 };
 
 class InstrumentSynth : public juce::Synthesiser {
@@ -82,7 +87,7 @@ public:
         }
     };
 
-    InstrumentSynth(DrumKitEngine* parent, KitLayout::Instrument instrument
+    InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrument
         //DUNNO: add params to instrument or do it somewhere else?
         // ,juce::RangedAudioParameter& gainParameter
         // ,juce::RangedAudioParameter& panParameter
@@ -99,7 +104,7 @@ public:
     ~InstrumentSynth() {}
 
     void unloadInstrument();
-    void loadInstrument(DrumKitInstrument* kitInstrument);
+    void loadInstrument(KitLib::InstrumentSpecs* kitInstrument);
     bool isLoaded() { return mDrumKitInstrumentPtr != nullptr; }
     
     SampledSound* selectSampleFor(const juce::String& articulation, int midiVel);
@@ -124,23 +129,26 @@ public:
 
 private:
     DrumKitEngine* parent = nullptr;
-    DrumKitInstrument* mDrumKitInstrumentPtr = nullptr;
+    KitLib::InstrumentSpecs* mDrumKitInstrumentPtr = nullptr;
     juce::String id;
-    DrumKitInstrument::Type type;
+    KitLib::InstrumentSpecs::Type type;
     juce::AudioBuffer<float> mMicBuffer;
     int mMicChannelCount = 2;
     // Keep a copy of the kit layout instrument definition for note->articulation lookup
-    KitLayout::Instrument instrumentDef;
+    KitLayout::InstrumentSlot instrumentDef;
     std::unordered_map<juce::String, Articulation> mArticulations;
 };
 
 class DrumKitEngine {
 public:
-    DrumKitEngine();
-    ~DrumKitEngine();
+    explicit DrumKitEngine() {
+        this->mKitLayoutManager = std::make_unique<KitLayoutManager>();
+        this->mMicLayoutManager = std::make_unique<MicLayoutManager>();
+    }
+    ~DrumKitEngine() {};
 
     juce::File dataPath;
-    static const juce::File defaultDataPath;
+    const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::commonDocumentsDirectory).getChildFile(PRODUCT_NAME_WITHOUT_VERSION) };
     const char* DATA_PATH_ENV = "EDRUMS_DATA_PATH";
 
     struct Config {
@@ -166,13 +174,12 @@ public:
     bool useMicLayout(juce::String name);
     bool useInstrumentMap(juce::String text);
 
-    // Each non-empty, non-comment line should be: <slotId>:<KitName>/<InstrumentCode>
     static std::vector<std::pair<juce::String, juce::String>> parseInstrumentMapText(const juce::String& text);
 
     void mapDefaultKit();
-    void mapKit(DrumKit& kit);
+    void mapKit(KitLib::DrumKitSpecs& kit);
 
-    InstrumentManager* getInstrumentManager() { return mInstrumentManager.get(); }
+    KitLib::LibraryManager* getInstrumentManager() { return mLibraryManager.get(); }
     KitLayoutManager* getKitLayoutManager() { return mKitLayoutManager.get(); }
     MicLayoutManager* getMicLayoutManager() { return mMicLayoutManager.get(); }
     SampleLoader* getSampleLoader() { return mSampleLoader.get(); }
@@ -180,6 +187,9 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
     // bool preprocessMidi(juce::MidiMessage msg);
+        
+    void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (mDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }
+    DebugLevel mDebugLevel = DebugLevel::Error;
 
 private:
     Config mConfig;
@@ -188,7 +198,7 @@ private:
     std::unordered_map<juce::String, InstrumentSynth*> mInstrumentSynthById;
     std::unordered_map<int, std::vector<InstrumentSynth*>> mInstrumentSynthsByNote;
 
-    std::unique_ptr<InstrumentManager> mInstrumentManager;
+    std::unique_ptr<KitLib::LibraryManager> mLibraryManager;
     std::unique_ptr<SampleLoader> mSampleLoader;
     std::unique_ptr<KitLayoutManager> mKitLayoutManager;
     std::unique_ptr<MicLayoutManager> mMicLayoutManager;

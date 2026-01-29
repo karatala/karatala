@@ -13,7 +13,7 @@
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
         "environment": [],
-        "externalConsole": false
+        "console": "integratedTerminal",
     },
     {
         "name": "(Windows) Debug Tests",
@@ -24,7 +24,7 @@
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
         "environment": [],
-        "externalConsole": false
+        "console": "integratedTerminal"
     },
     {
         "name": "(Windows) Debug in REAPER",
@@ -38,7 +38,7 @@
         "stopAtEntry": false,
         "cwd": "${env:REAPER_RESOURCE_PATH}",
         // "console": "externalTerminal",
-        "externalConsole": false,
+        "console": "integratedTerminal",
         "environment": [
           {
             "name": "REAPER_EXE_PATH",

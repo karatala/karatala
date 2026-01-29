@@ -66,6 +66,27 @@ static inline juce::File resolvePathRelOrAbs(const juce::File& base, const juce:
     return base.getChildFile(path);
 }
 
+enum DebugLevel {
+    Error   = 0,
+    Warning = 1,
+    Notice  = 2,
+    Info    = 3,
+    Debug   = 4,
+    Verbose = 5
+};
+
+static inline const juce::String DebugLevelToString(DebugLevel level) {
+    switch (level) {
+        case DebugLevel::Error:   return "ERROR";
+        case DebugLevel::Warning: return "WARNING";
+        case DebugLevel::Notice:  return "NOTICE";
+        case DebugLevel::Info:    return "INFO";
+        case DebugLevel::Debug:   return "DEBUG";
+        case DebugLevel::Verbose: return "VERBOSE";
+        default:                  return "UNKNOWN";
+    }
+}
+
 class StringIdRegistry {
 public:
     using Id = uint32_t;
