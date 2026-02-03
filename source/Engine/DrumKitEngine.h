@@ -68,24 +68,7 @@ private:
 
 class InstrumentSynth : public juce::Synthesiser {
 public:
-    struct Articulation {
-        std::variant<std::monostate, SampleSelector<1>, SampleSelector<2>, SampleSelector<3>> selector;
-        // map zone pointer (const void*) -> index into samplesByZone
-        std::unordered_map<const void*, size_t> zoneToIndex;
-        // samples grouped by selector zone (one vector per zone)
-        std::vector<std::vector<SampledSound*>> samplesByZone;
-        // per-zone round-robin counters (stored as plain uint32_t to avoid issues with vector reallocation of non-movable atomics)
-        std::vector<uint32_t> roundRobinCounters;
-        // for HiHat combined instance: list of articulation names in art-index order
-        std::vector<juce::String> artNames;
-
-        void clear() {
-            selector = std::monostate {};
-            zoneToIndex.clear();
-            samplesByZone.clear();
-            roundRobinCounters.clear();
-        }
-    };
+    struct Articulation {}; //TODO
 
     InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrument
         //DUNNO: add params to instrument or do it somewhere else?
@@ -99,7 +82,6 @@ public:
         , type(instrument.type)
     {
         // this->instrumentDef.controllers
-
     }
     ~InstrumentSynth() {}
 
@@ -198,6 +180,8 @@ private:
     std::unordered_map<juce::String, InstrumentSynth*> mInstrumentSynthById;
     std::unordered_map<int, std::vector<InstrumentSynth*>> mInstrumentSynthsByNote;
 
+    std::unordered_map<int, int> mContinuousControllerValues;
+
     std::unique_ptr<KitLib::LibraryManager> mLibraryManager;
     std::unique_ptr<SampleLoader> mSampleLoader;
     std::unique_ptr<KitLayoutManager> mKitLayoutManager;
@@ -217,4 +201,8 @@ private:
 
     bool applyKitLayout();
     bool applyMicLayout();
+
+
+    std::unordered_map<int, int> getLatestContinuousControllerValues() { return this->mContinuousControllerValues; }
+    void saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages);
 };

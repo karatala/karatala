@@ -41,14 +41,12 @@ version: 1.0
 instruments:
   - id: kick1
     display: Kick
-    type: kick
     articulations:
       - code: center
         notes: [35, 36]
 
   - id: snare1
     display: Snare
-    type: snare
     articulations:
       - code: center
         notes: [38]
@@ -58,58 +56,55 @@ instruments:
         notes: [37]
     controllers:
       - id: 16
-        code: zone-center-rim
+        code: zon_ctr_rim
         notes: [38]
 
   - id: hihat1
     display: Hi-Hat
-    type: hihat
     articulations:
-      - code: tight-edge
+      - code: edge[tight]
         notes: [18]
-      - code: open-edge
+      - code: edge[open]
         notes: [22]
-      - code: tight-bow
+      - code: bow[tight]
         notes: [42]
       - code: pedal
         notes: [44]
-      - code: foot-splash
+      - code: pedal[splash]
         notes: [44]
-      - code: open-bow
+      - code: bow[open]
         notes: [46]
     controllers:
       - id: 4
-        code: pedal-open-close
+        code: pdl_opn_cls
         notes: [22,46]
       - id: 19
-        code: zone-bow-edge
+        code: zon_bow_edg
         notes: [42,46]
       - id: 83
-        code: zone-left-right
+        code: zon_lft_rgt
         notes: [18,22,42,46]
         
   - id: hihat2
     display: Hi-Hat Stax
-    type: hihat
     articulations:
-      - code: tight-bow
+      - code: bow[tight]
         notes: [15]
-      - code: tight-edge
+      - code: edge[tight]
         notes: []
       - code: pedal
         notes: [20]
-      - code: open-bow
+      - code: bow[open]
         notes: [32]
-      - code: open-edge
+      - code: edge[open]
         notes: []
     controllers:
       - id: 4
-        code: pedal-open-close
+        code: pdl_opn_cls
         notes: [22,46]
 
   - id: ride1
     display: Ride
-    type: ride
     articulations:
       - code: bow
         notes: [51]
@@ -119,11 +114,10 @@ instruments:
         notes: [53]
     controllers:
       - id: 17
-        code: zone-bow-edge
+        code: zon_bow_edg
         
   - id: tom1
     display: Tom 1
-    type: tom
     articulations:
       - code: center
         notes: [48]
@@ -131,11 +125,10 @@ instruments:
         notes: [24]
     controllers:
       - id: 18
-        code: zone-center-rim
+        code: zon_ctr_rim
 
   - id: tom2
     display: Tom 2
-    type: tom
     articulations:
       - code: center
         notes: [47]
@@ -143,11 +136,10 @@ instruments:
         notes: [23]
     controllers:
       - id: 18
-        code: zone-center-rim
+        code: zon_ctr_rim
         
   - id: tom3
     display: Tom 3
-    type: tom
     articulations:
       - code: center
         notes: [45]
@@ -155,11 +147,10 @@ instruments:
         notes: [21]
     controllers:
       - id: 18
-        code: zone-center-rim
+        code: zon_ctr_rim
 
   - id: tom4
     display: Tom 4
-    type: tom
     articulations:
       - code: center
         notes: [43]
@@ -167,12 +158,11 @@ instruments:
         notes: [19]
     controllers:
       - id: 18
-        code: zone-center-rim
+        code: zon_ctr_rim
         notes: [43]
 
   - id: tom5
     display: Tom 5
-    type: tom
     articulations:
       - code: center
         notes: [41]
@@ -180,11 +170,10 @@ instruments:
         notes: [17]
     controllers:
       - id: 18
-        code: zone-center-rim
+        code: zon_ctr_rim
 
   - id: crash1
     display: Crash 1
-    type: crash
     articulations:
       - code: bow
         notes: [25]
@@ -193,7 +182,6 @@ instruments:
   
   - id: crash2
     display: Crash 2
-    type: crash
     articulations:
       - code: bow
         notes: [33]
@@ -202,7 +190,6 @@ instruments:
 
   - id: splash1
     display: Splash 1
-    type: splash
     articulations:
       - code: bow
         notes: [33]
@@ -211,7 +198,6 @@ instruments:
 
   - id: splash2
     display: Splash 2
-    type: splash
     articulations:
       - code: bow
         notes: [33]
@@ -220,7 +206,6 @@ instruments:
 
   - id: china1
     display: China 1
-    type: china
     articulations:
       - code: bow
         notes: [30]
@@ -229,7 +214,6 @@ instruments:
 
   - id: china2
     display: China 2
-    type: china
     articulations:
       - code: bow
         notes: [33]

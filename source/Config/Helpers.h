@@ -87,14 +87,19 @@ static inline const juce::String DebugLevelToString(DebugLevel level) {
     }
 }
 
-class StringIdRegistry {
+class StringIdRegistrySingleton {
 public:
     using Id = uint32_t;
     using Name = juce::String;
 
-    explicit StringIdRegistry(Id nextId = 1) : nextId(nextId) {};
+    static StringIdRegistrySingleton& instance() {
+        static StringIdRegistrySingleton inst;
+        return inst;
+    }
 
-    Id get(Name s) {
+    static Id getId(const Name& s) { return instance().get(s); }
+
+    Id get(const Name& s) {
         auto it = map.find(s);
         if (it != map.end()) return it->second;
 
@@ -104,6 +109,7 @@ public:
     }
 
 private:
+    StringIdRegistrySingleton() : nextId(1) {}
     std::unordered_map<Name, Id> map;
-    Id nextId = 1;
+    Id nextId;
 };

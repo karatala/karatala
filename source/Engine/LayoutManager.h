@@ -10,17 +10,27 @@
 struct KitLayout {
     struct InstrumentSlot {
         struct ArticulationTrigger {
-            juce::String code; // center, rim, edge, bow, pedal, etc.
+            juce::String codeRaw; // center, rim, edge, bow, pedal, etc.
             std::vector<uint8_t> notes; // midi notes triggering this articulation
-
+            KitLib::ArticulationSpecs::ExpressionDimension::Type type = KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown;
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
+            explicit ArticulationTrigger(juce::String codeRaw)
+                : codeRaw(codeRaw)
+                , codeIdx(StringIdRegistrySingleton::getId(codeRaw))
+            {}
+            StringIdRegistrySingleton::Id codeIdx = 0;
         };
         struct ContinuousController {
-            int id = -1; // MIDI CC
-            juce::String code; // pedal-open-close, zone-center-rim, zone-bow-edge
-            std::vector<uint8_t> notes; // midi notes triggering this articulation
+            int id = -1;
+            juce::String codeRaw; // pdl_opn_cls, zon_ctr_rim, zon_bow_edg, ...
+            std::vector<uint8_t> notes;
+            
+            explicit ContinuousController(int id, juce::String codeRaw) : id(id), codeRaw(codeRaw)
+                , codeIdx(KitLib::ArticulationSpecs::ExpressionDimension::stringToType(codeRaw))
+            {}
+            KitLib::ArticulationSpecs::ExpressionDimension::Type codeIdx = KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown;
         };
 
         juce::String id; // kick1, snare1, hihat1, ...
@@ -118,29 +128,26 @@ struct LayoutTraits<KitLayout> {
         layout.vendor = root["vendor"].asString();
         layout.version = root["version"].asString();
 
-        const auto& instNode = root["instruments"];
-        if (instNode.isSequence()) {
-            for (size_t i = 0; i < instNode.size(); ++i) {
-                const auto& instItem = instNode[i];
+        const auto& instsNode = root["instruments"];
+        if (instsNode.isSequence()) {
+            for (size_t i = 0; i < instsNode.size(); ++i) {
+                const auto& instItem = instsNode[i];
                 KitLayout::InstrumentSlot inst;
 
                 inst.id = instItem["id"].asString();
                 inst.display = instItem["display"].asString();
-                inst.type = KitLib::InstrumentSpecs::typeFromString(instItem["type"].asString());
+                inst.type = KitLib::InstrumentSpecs::typeFromString(inst.id.removeCharacters("0123456789"));
 
                 const auto& artsNode = instItem["articulations"];
                 if (artsNode.isSequence()) {
                     for (size_t j = 0; j < artsNode.size(); ++j) {
                         const auto& artItem = artsNode[j];
-                        KitLayout::InstrumentSlot::ArticulationTrigger art;
-
-                        art.code = artItem["code"].asString();
+                        KitLayout::InstrumentSlot::ArticulationTrigger art(artItem["code"].asString());
 
                         const auto& artNotesNode = artItem["notes"];
                         if (artNotesNode.isSequence()) {
-                            for (size_t k = 0; k < artNotesNode.size(); ++k) {
+                            for (size_t k = 0; k < artNotesNode.size(); ++k)
                                 art.notes.push_back(static_cast<uint8_t>(artNotesNode[k].asInt()));
-                            }
                         } else if (artNotesNode.isScalar() && !artNotesNode.asString().isEmpty()) {
                             art.notes.push_back(static_cast<uint8_t>(artNotesNode.asInt()));
                         }
@@ -153,10 +160,17 @@ struct LayoutTraits<KitLayout> {
                 if (ctrlsNode.isSequence()) {
                     for (size_t j = 0; j < ctrlsNode.size(); ++j) {
                         const auto& ctrlItem = ctrlsNode[j];
-                        KitLayout::InstrumentSlot::ContinuousController cd;
-                        cd.id = ctrlItem["id"].asInt();
-                        cd.code = ctrlItem["code"].asString();
-                        inst.controllers.push_back(cd);
+                        KitLayout::InstrumentSlot::ContinuousController cc(ctrlItem["id"].asInt(), ctrlItem["code"].asString());
+
+                        const auto& ccNotesNode = ctrlItem["notes"];
+                        if (ccNotesNode.isSequence()) {
+                            for (size_t k = 0; k < ccNotesNode.size(); ++k)
+                                cc.notes.push_back(static_cast<uint8_t>(ccNotesNode[k].asInt()));
+                        } else if (ccNotesNode.isScalar() && !ccNotesNode.asString().isEmpty()) {
+                            cc.notes.push_back(static_cast<uint8_t>(ccNotesNode.asInt()));
+                        }
+
+                        inst.controllers.push_back(cc);
                     }
                 }
 

@@ -90,11 +90,9 @@ ParseResult<InstrumentSpecs::MetaInfo> InstrumentSpecs::parseInfo(const juce::St
 bool InstrumentSpecs::isAudioFile(const juce::File& file) {
     juce::StringArray audioFileExtensions = { ".wav", ".flac", ".aiff", ".mp3", ".ogg" }; //TODO: refactor dynamical support from plugin's config.yaml
     juce::String ext = file.getFileExtension().toLowerCase();
-    for (int i = 0; i < audioFileExtensions.size(); ++i) {
-        if (ext == audioFileExtensions[i]) {
+    for (int i = 0; i < audioFileExtensions.size(); ++i)
+        if (ext == audioFileExtensions[i])
             return true;
-        }
-    }
     return false;
 }
 
@@ -119,6 +117,8 @@ int InstrumentSpecs::scanInstrumentSamples() {
             if (dimCodeEnd > 0) {
                 juce::String dimCode = dimPart.substring(0, dimCodeEnd);
                 juce::String dimValue = dimPart.substring(dimCodeEnd);
+                if (KitLib::ArticulationSpecs::ExpressionDimension::stringToType(dimCode) == KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown)
+                    DBG("WARN: Unknown dimension code '" + dimCode + "' in articulation folder '" + artDir.getFullPathName() + "'");
                 articulationObj->addDimensionValue(dimCode, static_cast<uint8_t>(dimValue.getIntValue()));
             }
         }

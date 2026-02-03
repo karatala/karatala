@@ -114,13 +114,13 @@ bool DrumKitEngine::useMicLayout(juce::String name) {
     return false;
 }
 
-bool DrumKitEngine::useInstrumentMap(juce::String text) {
+bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
     if (text.trim().isEmpty()) {
         DBG("WARN: empty instrument map text");
         return false;
     }
 
-    auto pairs = DrumKitEngine::parseInstrumentMapText(text);
+    auto pairs = DrumKitEngine::parseInstrumentMapText(text); //TODO: plan implementation
     if (pairs.empty()) {
         DBG("WARN: no valid mapping lines found");
         return false;
@@ -251,7 +251,7 @@ void DrumKitEngine::mapDefaultKit() {
         this->mapKit(*kit);
 }
 
-void DrumKitEngine::mapKit(KitLib::DrumKitSpecs& kit) { //FIXME: review, probably rewrite simplify
+void DrumKitEngine::mapKit(KitLib::DrumKitSpecs& kit) { //FIXME: review, probably rewrite, simplify
     if (this->mKitLayout == nullptr) {
         DBG("WARN: no active kit layout to map to");
         return;
@@ -440,20 +440,21 @@ bool DrumKitEngine::applyKitLayout() {
         DBG("WARN: kit layout was not set");
         return false;
     }
-    // Clear previous slots and indices
     this->mInstrumentSynthPtrs.clear();
     this->mInstrumentSynthById.clear();
     this->mInstrumentSynthsByNote.clear();
+    this->mContinuousControllerValues.clear();
 
     for (const auto& instrumentSlot : this->getKitLayout()->instrumentSlots) {
         auto slot = std::make_unique<InstrumentSynth>(this, instrumentSlot);
         auto ptr = slot.get();
 
-        // insert into ownership vector and lookup map
         this->mInstrumentSynthById[slot->getId()] = ptr;
         this->mInstrumentSynthPtrs.push_back(std::move(slot));
 
-        // build midi note mapping from articulations
+        for (const auto& cc : instrumentSlot.controllers) {
+            this->mContinuousControllerValues[cc.id] = 0;
+        }
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
                 this->mInstrumentSynthsByNote[note].push_back(ptr);
@@ -514,6 +515,9 @@ void DrumKitEngine::prepareToPlay(double sampleRate, int samplesPerBlock) {
 void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages) { //TODO: review
     const auto outputBufferStartSample = 0;
     const auto outputBufferNumSamples = outputBuffer.getNumSamples();
+    
+    this->saveLatestContinuousControllerValues(midiMessages);
+
     for (const auto& instrumentSynthPtr : this->mInstrumentSynthPtrs) {
         auto& micBuffer = instrumentSynthPtr->getMicBuffer();
         micBuffer.clear();
@@ -531,6 +535,17 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     }
 }
 
+void DrumKitEngine::saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages) {
+    for (const auto& midiMess : midiMessages) {
+        const juce::MidiMessage msg = midiMess.getMessage();
+        if (!msg.isController()) continue;
+        const auto ccNum = msg.getControllerNumber();
+        if (this->mContinuousControllerValues.find(ccNum) == mContinuousControllerValues.end()) continue;
+        
+        this->mContinuousControllerValues[ccNum] = msg.getControllerValue();
+    }
+}
+
 void InstrumentSynth::unloadInstrument() {
     this->clearSounds();
     mArticulations.clear();
@@ -539,7 +554,7 @@ void InstrumentSynth::unloadInstrument() {
 
 void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* kitInstrument) { //FIXME: rewrite, simplify
     if (kitInstrument == nullptr) return;
-    const bool debug = false;
+    const bool debug = true;
     this->unloadInstrument();
     this->mDrumKitInstrumentPtr = kitInstrument;
     this->type = kitInstrument->meta.type;
@@ -548,16 +563,24 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* kitInstrument) { /
 
     for (const KitLayout::InstrumentSlot::ArticulationTrigger& layoutArt : this->instrumentDef.articulations) {
         
-        if (debug) DBG("  layout articulation " + layoutArt.code);
+        if (debug) DBG("  layout articulation " + layoutArt.codeRaw);
         bool foundKitArt = false;
 
         for (const std::unique_ptr<KitLib::ArticulationSpecs>& kitArtPtr : kitInstrument->articulations) {
 
-            if (layoutArt.code != kitArtPtr->name) continue;
+            if (layoutArt.codeIdx != kitArtPtr->codeIdx) continue;
 
             foundKitArt = true;
-            if (debug) DBG("    instr articulation " + kitArtPtr->name);
+            if (debug) DBG("    instr articulation " + kitArtPtr->codeRaw);
 
+            for (const KitLib::ArticulationSpecs::ExpressionDimension& dimension : kitArtPtr->dimensions) {
+                if (debug) DBG("      dimension " + dimension.codeRaw);
+                for (const auto& value : dimension.values) {
+                    if (debug) DBG("        value " + juce::String(value));
+
+                }
+            }
+            
             auto synthArt = std::make_unique<InstrumentSynth::Articulation>();
             // synthArt-> = layoutArt.code;
             // mArticulations.emplace(layoutArt.code, std::move(synthArt));
@@ -566,13 +589,6 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* kitInstrument) { /
                 if (debug) DBG("      velocity " + juce::String(velPtr->velocity) + " (" + juce::String(velPtr->sampleVariants.size()) + " samples)");
                 for (const auto& variantPtr : velPtr->sampleVariants) {
 
-                    
-                    for (const KitLib::ArticulationSpecs::Dimension& dimension : kitArtPtr->dimensions) {
-                        if (debug) DBG("      dimension " + dimension.code);
-                        for (const auto& value : dimension.values) {
-                            if (debug) DBG("        value " + juce::String(value));
-                        }
-                    }
                     auto* sound = new SampledSound(kitInstrument, variantPtr.get(), variantPtr->sampleFile, layoutArt.notes);
                     
                     this->addSound(sound); // add to synth immediately; buffer will be filled asynchronously
@@ -588,11 +604,11 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* kitInstrument) { /
                 }
             }
         }
-        if (!foundKitArt) DBG("WARN: no kit articulation found for layout art: " + layoutArt.code);
+        if (!foundKitArt) DBG("WARN: no kit articulation found for layout art: " + layoutArt.codeRaw);
     }
 
     for (const auto& cc : this->instrumentDef.controllers) {
-        if (debug) DBG("  layout CC " + cc.code);
+        if (debug) DBG("  layout CC " + cc.codeRaw);
         // cc.id
         
     }
@@ -605,23 +621,21 @@ void InstrumentSynth::handleMidiEvent(const MidiMessage& midiMessage) {
     //TODO: from KitLayout::InstrumentSlot instrumentDef get CC and notes to subscribe to
 
     
-    
     if (midiMessage.isNoteOn()) {
         if (! this->playNote(channel, midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1))
             this->noteOn(channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
     }
     
-    
     //TODO: common realistic choke (volume change) on aftertouch: with some custom decay timeout, if aftertouch value became less in that timeout, volume should return back by some percent
+    else if (midiMessage.isAftertouch())
+        this->handleAftertouch(channel, midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
     
-    else if (midiMessage.isAftertouch()) this->handleAftertouch(channel, midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
-    
-    else if (midiMessage.isController()) this->handleController(channel, midiMessage.getControllerNumber(), midiMessage.getControllerValue());
-    
+        
     else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(channel, true);
-    
-    
-    
+        
+        
+        
+    // else if (midiMessage.isController()) this->handleController(channel, midiMessage.getControllerNumber(), midiMessage.getControllerValue());
 
     // else if (midiMessage.isNoteOff()) this->noteOff (channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity(), true);
     // else if (midiMessage.isChannelPressure()) this->handleChannelPressure(channel, midiMessage.getChannelPressureValue());
@@ -663,7 +677,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
     // otherwise fall back to first known articulation that has samples.
     juce::String targetArt;
     if (!this->instrumentDef.articulations.empty())
-        targetArt = this->instrumentDef.articulations.front().code;
+        targetArt = this->instrumentDef.articulations.front().codeRaw;
     else if (!this->mArticulations.empty())
         targetArt = this->mArticulations.begin()->first;
 
