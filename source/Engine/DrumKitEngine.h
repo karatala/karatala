@@ -7,6 +7,9 @@
 #include "SampleSelector.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <unordered_map>
+#include <array>
+#include <atomic>
+#include <memory>
 #include <variant>
 
 
@@ -70,6 +73,30 @@ class InstrumentSynth : public juce::Synthesiser {
 public:
     struct Articulation {}; //TODO
 
+    // Runtime data structures built at loadInstrument() (non-realtime)
+    struct SampleEntry {
+        SampledSound* sound = nullptr; // non-owning pointer into Synth::sounds
+        uint8_t variantIdx = 0; // variant index (optional)
+    };
+
+    struct VelocityLayerRuntime {
+        uint8_t velocity = 0; // base velocity for layer
+        std::vector<SampleEntry> samples; // contiguous sample entries
+        // Use shared_ptr to an atomic so the runtime struct remains copyable/movable
+        std::shared_ptr<std::atomic<uint32_t>> roundRobinCounter = std::make_shared<std::atomic<uint32_t>>(0);
+    };
+
+    struct ArticulationRuntime {
+        juce::String codeRaw; // used only outside audio thread
+        // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
+        std::array<int8_t, 128> velocityToLayer; // -1 means no layer
+        std::vector<VelocityLayerRuntime> layers;
+
+        ArticulationRuntime() {
+            velocityToLayer.fill(-1);
+        }
+    };
+
     InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrument
         //DUNNO: add params to instrument or do it somewhere else?
         // ,juce::RangedAudioParameter& gainParameter
@@ -87,9 +114,10 @@ public:
 
     void unloadInstrument();
     void loadInstrument(KitLib::InstrumentSpecs* kitInstrument);
-    bool isLoaded() { return mDrumKitInstrumentPtr != nullptr; }
+    bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     
-    SampledSound* selectSampleFor(const juce::String& articulation, int midiVel);
+    // Select best SampledSound for given articulation index (index into runtimeArticulations) and velocity
+    SampledSound* selectSampleFor(int articulationIdx, int midiVel, int micIdx = -1);
     
     void handleMidiEvent(const MidiMessage& midiMessage) override;
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions);
@@ -105,20 +133,33 @@ public:
     int getMicChannelCount() const { return mMicChannelCount; }
 
     void setMicChannelCount(int channels) { mMicChannelCount = channels; }
-    juce::AudioBuffer<float>& getMicBuffer() { return mMicBuffer; }
+    juce::AudioBuffer<float>& getMicBuffer() { return micBuffer; }
 
     const juce::String& getId() const { return id; }
 
 private:
     DrumKitEngine* parent = nullptr;
-    KitLib::InstrumentSpecs* mDrumKitInstrumentPtr = nullptr;
+    KitLib::InstrumentSpecs* instrumentSpecstPtr = nullptr;
     juce::String id;
     KitLib::InstrumentSpecs::Type type;
-    juce::AudioBuffer<float> mMicBuffer;
+    juce::AudioBuffer<float> micBuffer;
     int mMicChannelCount = 2;
     // Keep a copy of the kit layout instrument definition for note->articulation lookup
     KitLayout::InstrumentSlot instrumentDef;
-    std::unordered_map<juce::String, Articulation> mArticulations;
+
+    // Runtime optimized tables for fast selection (populated by loadInstrument)
+    // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
+    std::array<int8_t, 128> noteToArticulation;
+    // Runtime articulations vector, index-stable after load
+    std::vector<ArticulationRuntime> runtimeArticulations;
+    
+    std::unordered_map<int8_t, std::vector<uint8_t>> noteToControllers;
+    // If this articulation subscribes to controllers -> for each CC id store 128-entry mapping to expression index
+    // Stored as map CC -> array[valueIndex for 0..127]
+    std::unordered_map<int, std::array<uint8_t, 128>> ccToArticulation;
+    
+    // Keep a vector of all SampledSound pointers created for this synth (owned by Synth via addSound)
+    std::vector<SampledSound*> sampledSoundPtrs;
 };
 
 class DrumKitEngine {
@@ -165,6 +206,9 @@ public:
     KitLayoutManager* getKitLayoutManager() { return mKitLayoutManager.get(); }
     MicLayoutManager* getMicLayoutManager() { return mMicLayoutManager.get(); }
     SampleLoader* getSampleLoader() { return mSampleLoader.get(); }
+
+    // Realtime-safe accessor: get latest CC values by const-ref (no copy)
+    const std::unordered_map<int, int>& getLatestContinuousControllerValuesRef() const { return this->mContinuousControllerValues; }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);

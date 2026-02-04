@@ -45,35 +45,28 @@ ParseResult<MicSpecs> MicSpecs::parseMicCode(const juce::String& code) {
 ParseResult<std::vector<MicSpecs>> MicSpecs::parseMicCodesChain(const juce::String& codeChain) {
     ParseResult<std::vector<MicSpecs>> result;
 
-    if (codeChain.isEmpty()) {
+    if (codeChain.isEmpty())
         return result.returnWithError("Mic chain code is empty");
-    }
 
-    juce::StringArray tokens;
-    tokens.addTokens(codeChain, "_", "");
-    tokens.removeEmptyStrings();
+    auto parts = juce::StringArray::fromTokens(codeChain, "_", "");
+    parts.removeEmptyStrings();
 
-    for (const auto& token : tokens) {
+    for (const auto& part : parts) {
         MicSpecs mic;
-        juce::String tokenError;
-
-        auto item = MicSpecs::parseMicCode(token);
-        if (item.ok()) {
+        auto item = MicSpecs::parseMicCode(part);
+        if (item.ok())
             result.value.push_back(item.value);
-        } else {
-            result.addWarning("Skipping invalid mic code '" + token + "' in chain '" + codeChain + "': '" + item.error() + "'");
-        }
+        else
+            result.addWarning("Skipping invalid mic code '" + part + "' in chain '" + codeChain + "': '" + item.error() + "'");
     }
-
     return result;
 }
 
 
 ParseResult<InstrumentSpecs::MetaInfo> InstrumentSpecs::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
-    juce::StringArray parts;
     juce::String processed = dirName.trim();
-    parts.addTokens(processed, "-", "");
+    auto parts = juce::StringArray::fromTokens(processed, "-", "");
     result.value.name = parts[0].trim();
     if (parts.size() > 1)
         result.value.size = parts[1].trim();
@@ -104,22 +97,19 @@ int InstrumentSpecs::scanInstrumentSamples() {
             continue;
 
         auto artName = artDir.getFileName();
-        juce::StringArray artParts;
-        artParts.addTokens(artName, "-", "");
+        auto parts = juce::StringArray::fromTokens(artName, "-", "");
+        auto wrapRes = getWrappedValue(parts[0].trim(), "[", "]");
+        ArticulationSpecs* articulationSpecs = this->getOrAddArticulation(wrapRes.cleaned, wrapRes.wrapped);
 
-        juce::String articulation = artParts[0].trim();
-
-        ArticulationSpecs* articulationObj = getOrAddArticulation(articulation);
-
-        for (int i = 1; i < artParts.size(); ++i) {
-            auto dimPart = artParts[i];
+        for (int i = 1; i < parts.size(); ++i) {
+            auto dimPart = parts[i];
             auto dimCodeEnd = dimPart.indexOfAnyOf("0123456789");
             if (dimCodeEnd > 0) {
                 juce::String dimCode = dimPart.substring(0, dimCodeEnd);
                 juce::String dimValue = dimPart.substring(dimCodeEnd);
                 if (KitLib::ArticulationSpecs::ExpressionDimension::stringToType(dimCode) == KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown)
                     DBG("WARN: Unknown dimension code '" + dimCode + "' in articulation folder '" + artDir.getFullPathName() + "'");
-                articulationObj->addDimensionValue(dimCode, static_cast<uint8_t>(dimValue.getIntValue()));
+                articulationSpecs->addDimensionValue(dimCode, static_cast<uint8_t>(dimValue.getIntValue()));
             }
         }
 
@@ -145,7 +135,7 @@ int InstrumentSpecs::scanInstrumentSamples() {
                 continue;
             }
 
-            auto* velocityLayer = articulationObj->getOrAddVelocityLayer(parsedInfo.value.velocity);
+            auto* velocityLayer = articulationSpecs->getOrAddVelocityLayer(parsedInfo.value.velocity);
 
             // Add one sample variant per mic chain
             for (size_t i = 0; i < parsedInfo.value.micDescriptors.size(); i++) {
@@ -220,20 +210,13 @@ ParseResult<DrumKitSpecs::MetaInfo> DrumKitSpecs::parseInfo(const juce::String& 
     result.value.author = "";
     result.value.license = "";
 
-    int lIdx = processed.indexOf("[");
-    int rIdx = processed.indexOf("]");
-    if (lIdx >= 0 && rIdx > lIdx) {
-        result.value.license = processed.substring(lIdx + 1, rIdx).trim();
-        processed = (processed.substring(0, lIdx) + processed.substring(rIdx + 1)).trim();
-    }
+    auto wrapRes = getWrappedValue(processed, "[", "]");
+    result.value.license = wrapRes.wrapped;
+    processed = wrapRes.cleaned;
 
-    int sepIdx = processed.indexOf(" by ");
-    if (sepIdx >= 0) {
-        result.value.name = processed.substring(0, sepIdx).trim();
-        result.value.author = processed.substring(sepIdx + 4).trim();
-    } else {
-        result.value.name = processed.trim();
-    }
+    auto parts = juce::StringArray::fromTokens(processed, " by ", "");
+    result.value.name   = parts[0].trim();
+    result.value.author = parts.size() > 1 ? parts[1].trim() : juce::String();
 
     return result;
 }

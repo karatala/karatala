@@ -2,12 +2,24 @@
 
 #include <juce_core/juce_core.h>
 
-static inline juce::String stringToTitleCase(const juce::String& str) {
-    return str;
+const int MIDI_MIN_VALUE = 0;
+const int MIDI_MAX_VALUE = 127;
+
+static inline bool isValidMidiValue(int value) {
+    return value >= MIDI_MIN_VALUE && value <= MIDI_MAX_VALUE;
 }
 
-static inline juce::String stringsJoinAndSnakeCase(const juce::StringArray& strings) {
-    return strings.joinIntoString("_").toLowerCase().replace(" ", "_").replace("-", "_").replace(".", "_").replace(",", "_");
+template <typename T>
+static inline bool vectorContains(const std::vector<T>& vec, T value) {
+    for (T x : vec) if (x == value) return true;
+    return false;
+}
+
+static inline bool containsSameValue(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b) {
+    std::array<bool, 256> existing{};
+    for (uint8_t x : a) existing[x] = true;
+    for (uint8_t x : b) if (existing[x]) return true;
+    return false;
 }
 
 template <typename T>
@@ -64,6 +76,26 @@ static inline juce::File resolvePathRelOrAbs(const juce::File& base, const juce:
     if (juce::File::isAbsolutePath(path))
         return juce::File(path);
     return base.getChildFile(path);
+}
+
+struct WrappedValueResult {
+    juce::String cleaned;
+    juce::String wrapped;
+};
+
+static inline WrappedValueResult getWrappedValue(const juce::String& input, const juce::String& leftWrapper = "[", const juce::String& rightWrapper = "]") {
+    WrappedValueResult result;
+    juce::String processed = input.trim();
+
+    int lIdx = processed.indexOf(leftWrapper);
+    int rIdx = processed.indexOf(rightWrapper);
+
+    if (lIdx >= 0 && rIdx > lIdx) {
+        result.wrapped = processed.substring(lIdx + leftWrapper.length(),rIdx).trim();
+        processed = (processed.substring(0, lIdx) + processed.substring(rIdx + rightWrapper.length())).trim();
+    }
+    result.cleaned = processed;
+    return result;
 }
 
 enum DebugLevel {

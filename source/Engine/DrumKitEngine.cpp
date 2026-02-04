@@ -4,6 +4,12 @@
 #include "../Config/YamlHelper.h"
 #include <juce_core/juce_core.h>
 #include <cmath>
+#include <algorithm>
+
+// tuning constants
+static constexpr int NAME_IT_BETTER_MIN_VARIANTS = 3;
+static constexpr int NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS = 32;
+static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
 
 void DrumKitEngine::init(const juce::AudioProcessorValueTreeState& treeState) {
     this->initGlobalSettings();
@@ -453,7 +459,7 @@ bool DrumKitEngine::applyKitLayout() {
         this->mInstrumentSynthPtrs.push_back(std::move(slot));
 
         for (const auto& cc : instrumentSlot.controllers) {
-            this->mContinuousControllerValues[cc.id] = 0;
+            this->mContinuousControllerValues[cc.number] = 0;
         }
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
@@ -547,53 +553,50 @@ void DrumKitEngine::saveLatestContinuousControllerValues(const juce::MidiBuffer&
 }
 
 void InstrumentSynth::unloadInstrument() {
+    this->runtimeArticulations.clear();
+    this->sampledSoundPtrs.clear();
+    this->noteToArticulation.fill(-1);
     this->clearSounds();
-    mArticulations.clear();
-    mDrumKitInstrumentPtr = nullptr;
+    this->instrumentSpecstPtr = nullptr;
 }
 
-void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* kitInstrument) { //FIXME: rewrite, simplify
-    if (kitInstrument == nullptr) return;
-    const bool debug = true;
+void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
+    if (instrumentSpecs == nullptr) return;
     this->unloadInstrument();
-    this->mDrumKitInstrumentPtr = kitInstrument;
-    this->type = kitInstrument->meta.type;
+    this->instrumentSpecstPtr = instrumentSpecs;
+    this->type = instrumentSpecs->meta.type;
 
     auto loader = this->getSampleLoader();
 
+    // For each layout articulation create runtime entry
     for (const KitLayout::InstrumentSlot::ArticulationTrigger& layoutArt : this->instrumentDef.articulations) {
-        
-        if (debug) DBG("  layout articulation " + layoutArt.codeRaw);
-        bool foundKitArt = false;
+        InstrumentSynth::ArticulationRuntime artRt;
+        artRt.codeRaw = layoutArt.codeRaw;
 
-        for (const std::unique_ptr<KitLib::ArticulationSpecs>& kitArtPtr : kitInstrument->articulations) {
+        std::unordered_map<int, std::vector<std::pair<int8_t, int>>> foundCcDimensions;
 
-            if (layoutArt.codeIdx != kitArtPtr->codeIdx) continue;
+        bool found = false;
+        for (const auto& instArticulation : instrumentSpecs->articulations) {
+            if (instArticulation->codeIdx != layoutArt.codeIdx) continue;
 
-            foundKitArt = true;
-            if (debug) DBG("    instr articulation " + kitArtPtr->codeRaw);
+            found = true;
 
-            for (const KitLib::ArticulationSpecs::ExpressionDimension& dimension : kitArtPtr->dimensions) {
-                if (debug) DBG("      dimension " + dimension.codeRaw);
-                for (const auto& value : dimension.values) {
-                    if (debug) DBG("        value " + juce::String(value));
+            // ensure velocity layers are sorted
+            instArticulation->sortVelocityLayers();
 
-                }
-            }
-            
-            auto synthArt = std::make_unique<InstrumentSynth::Articulation>();
-            // synthArt-> = layoutArt.code;
-            // mArticulations.emplace(layoutArt.code, std::move(synthArt));
-
-            for (const auto& velPtr : kitArtPtr->velocityLayers) {
-                if (debug) DBG("      velocity " + juce::String(velPtr->velocity) + " (" + juce::String(velPtr->sampleVariants.size()) + " samples)");
+            // Build velocity layers and create SampledSound objects
+            for (const auto& velPtr : instArticulation->velocityLayers) {
+                VelocityLayerRuntime layer;
+                layer.velocity = velPtr->velocity;
+                layer.samples.reserve(velPtr->sampleVariants.size()); //FIXME: sampleVariants here have all posible sample variants for all microphones, need to group them somewhere by letter, so same letter variants play same time from all coresponding mic channels
                 for (const auto& variantPtr : velPtr->sampleVariants) {
-
-                    auto* sound = new SampledSound(kitInstrument, variantPtr.get(), variantPtr->sampleFile, layoutArt.notes);
-                    
-                    this->addSound(sound); // add to synth immediately; buffer will be filled asynchronously
-                    
-                    // this->mArticulations 
+                    auto* sound = new SampledSound(instrumentSpecs, variantPtr.get(), variantPtr->sampleFile, layoutArt.notes); //FIXME: need to thing what params to have in SampledSound constructor, maybe add some and maybe remove
+                    this->addSound(sound);
+                    this->sampledSoundPtrs.push_back(sound);
+                    SampleEntry se;
+                    se.sound = sound;
+                    se.variantIdx = 0;
+                    layer.samples.push_back(se);
 
                     if (loader != nullptr) {
                         loader->requestAsyncLoad(variantPtr->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
@@ -602,36 +605,126 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* kitInstrument) { /
                         });
                     }
                 }
+                artRt.layers.push_back(std::move(layer));
             }
-        }
-        if (!foundKitArt) DBG("WARN: no kit articulation found for layout art: " + layoutArt.codeRaw);
-    }
 
-    for (const auto& cc : this->instrumentDef.controllers) {
-        if (debug) DBG("  layout CC " + cc.codeRaw);
-        // cc.id
+            // Map velocities to layers using upper-bound semantics:
+            if (!artRt.layers.empty()) {
+                // choose the first layer whose configured velocity is >= current velocity.
+                // Example: layers {27,52,77,102,127} -> 0..27->0, 28..52->1, 53..77->2, 78..102->3, 103..127->4
+                const int8_t count = static_cast<int8_t>(artRt.layers.size());
+                for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
+                    int chosen = count - 1; // default to last layer
+                    for (int idx = 0; idx < count; ++idx) {
+                        if (value <= static_cast<int>(artRt.layers[idx].velocity)) {
+                            chosen = idx;
+                            break;
+                        }
+                    }
+                    artRt.velocityToLayer[value] = static_cast<int8_t>(chosen);
+                }
+            }
+            
+
+            // Map layout notes to this articulation index
+            int artIdx = static_cast<int>(runtimeArticulations.size());
+            for (uint8_t note : layoutArt.notes) {
+                this->noteToArticulation[note] = static_cast<int8_t>(artIdx);
+            }
+
+
+
+            // Prepare note -> controller and controllerValue -> articulation mappings per subscribed CC
+            for (const auto& cc : this->instrumentDef.controllers) {
+                // build reverse map of note -> controllers
+                for (uint8_t note : cc.notes) {
+                    auto ccNum = static_cast<uint8_t>(cc.number);
+                    auto& vec = this->noteToControllers[note];
+                    if (std::find(vec.begin(), vec.end(), ccNum) == vec.end()) {
+                        vec.emplace_back(ccNum);
+                    }
+                }
+                
+                // only controllers with notes that are linked to this articulation
+                if (containsSameValue(cc.notes, layoutArt.notes)) {
+                    // store refs for dimensions to process later
+                    for (const auto& dim : instArticulation->dimensions) {
+                        if (dim->type == cc.codeIdx) {
+                            for (const auto& val : dim->values) {
+                                auto ccNum = static_cast<uint8_t>(cc.number);
+                                const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
+                                auto& vec = foundCcDimensions[ccNum];
+                                vec.emplace_back(pair);
+                            }
+                        }
+                    }
+                }
+            }
+
+            runtimeArticulations.push_back(std::move(artRt));
+        }
+
+
         
+
+        for (auto& pair : foundCcDimensions) {
+            auto& ccNum = pair.first;
+            auto& valArtPairVec = pair.second;
+            
+            std::sort(valArtPairVec.begin(), valArtPairVec.end(), [](auto& a, auto& b){
+                return a.first < b.first;
+            });
+
+            std::array<uint8_t, 128> map;
+            const int8_t count = static_cast<uint8_t>(valArtPairVec.size());
+    
+            for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
+                uint8_t chosen = count - 1; // default to last
+                for (uint8_t idx = 0; idx < count; ++idx) {
+                    if (value <= static_cast<int>(valArtPairVec[idx].first)) {
+                        chosen = valArtPairVec[idx].second;
+                        break;
+                    }
+                }
+                map[value] = chosen;
+            }
+            this->ccToArticulation[ccNum] = map;
+        }
+        
+        if (!found) {
+            DBG("WARN: no kit articulation found for layout art: " + layoutArt.codeRaw);
+            // push empty runtime articulation to preserve indices
+            // this->runtimeArticulations.push_back(std::move(artRt));
+            // continue;
+        }
+
     }
 }
 
 void InstrumentSynth::handleMidiEvent(const MidiMessage& midiMessage) {
-    const int channel = midiMessage.getChannel();
+
+
 
 
     //TODO: from KitLayout::InstrumentSlot instrumentDef get CC and notes to subscribe to
 
     
     if (midiMessage.isNoteOn()) {
-        if (! this->playNote(channel, midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1))
-            this->noteOn(channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
+        if (noteToArticulation[midiMessage.getNoteNumber()] == -1) return;
+
+
+        // if (! 
+            this->playNote(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1);
+        // )
+            // this->noteOn(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
     }
     
     //TODO: common realistic choke (volume change) on aftertouch: with some custom decay timeout, if aftertouch value became less in that timeout, volume should return back by some percent
     else if (midiMessage.isAftertouch())
-        this->handleAftertouch(channel, midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
+        this->handleAftertouch(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
     
         
-    else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(channel, true);
+    else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(midiMessage.getChannel(), true);
         
         
         
@@ -673,27 +766,58 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
     
     juce::ignoreUnused(expressions);
 
-    // Choose articulation to play. Prefer layout-defined articulation if present,
-    // otherwise fall back to first known articulation that has samples.
-    juce::String targetArt;
-    if (!this->instrumentDef.articulations.empty())
-        targetArt = this->instrumentDef.articulations.front().codeRaw;
-    else if (!this->mArticulations.empty())
-        targetArt = this->mArticulations.begin()->first;
+    // Choose articulation based on MIDI note mapping
+    int artIdx = -1;
+    if (this->runtimeArticulations.empty()) {
+        // fallback: try to use first layout articulation if any
+        if (!this->instrumentDef.articulations.empty()) {
+            // find index 0
+            artIdx = 0;
+        }
+    } else {
+        if (midiNoteNumber >= 0 && midiNoteNumber < 128) {
+            artIdx = this->noteToArticulation[midiNoteNumber];
+            
+            if (!this->ccToArticulation.empty() && this->parent != nullptr) {
+                // const auto& ccValues = this->parent->getLatestContinuousControllerValuesRef();
+                auto pair = this->noteToControllers.find(static_cast<uint8_t>(midiNoteNumber));
+                if (pair != this->noteToControllers.end()) {
+                    for (auto ccNum : pair->second) {
+                        const auto& ccLatestValues = this->parent->getLatestContinuousControllerValuesRef();
+                        auto it = ccLatestValues.find(ccNum);
+                        if (it == ccLatestValues.end()) continue; //wtf
 
-    if (targetArt.isEmpty()) {
-        DBG("WARN: InstrumentSynth::playNote - no articulation available");
+                        int ccVal = it->second;
+                        if (ccVal < 0) ccVal = 0;
+                        if (ccVal > 127) ccVal = 127;
+
+                        auto artIt = this->ccToArticulation.find(ccNum);
+                        if (artIt == this->ccToArticulation.end()) continue;
+                        const auto& mapArr = artIt->second;
+
+                        artIdx = static_cast<int>(mapArr[ccVal]);
+                        DBG("DEBUG: CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + juce::String(artIdx) + " for note " + juce::String(midiNoteNumber) );
+                    }
+                }
+            }
+        }
+    }
+
+    if (artIdx < 0) {
+        // DBG("WARN: InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
     }
 
-    // Select a sample using the SampleSelector-backed helper
-    SampledSound* chosen = this->selectSampleFor(targetArt, static_cast<int>(velocity));
+    // Select a sample using runtime tables
+    SampledSound* chosen = this->selectSampleFor(artIdx, static_cast<int>(velocity));
     if (chosen == nullptr) {
-        DBG("INFO: Nothing to play for articulation: " + targetArt);
+        DBG("INFO: Nothing to play for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)));
         return false;
+    } else {
+        //  DBG("INFO: play note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)));
     }
 
-    const ScopedLock sl (lock);
+    const ScopedLock sl (this->lock);
 
     const bool stealNotes = true;
     juce::SynthesiserVoice* voice = findFreeVoice(chosen, midiChannel, midiNoteNumber, stealNotes);
@@ -702,7 +826,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
         return false;
     }
     float velf = juce::jlimit(0.0f, 1.0f, static_cast<float>(velocity) / 127.0f);
-    startVoice(voice, chosen, midiChannel, midiNoteNumber, velf);
+    this->startVoice(voice, chosen, midiChannel, midiNoteNumber, velf);
     return true;
 }
 
@@ -728,7 +852,7 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     // Ensure mic buffer has correct size
     if (mMicChannelCount <= 0)
         mMicChannelCount = 2;
-    mMicBuffer.setSize(mMicChannelCount, samplesPerBlock);
+    micBuffer.setSize(mMicChannelCount, samplesPerBlock);
 
     // Configure voices for this synth
     this->clearVoices();
@@ -740,9 +864,63 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     this->setCurrentPlaybackSampleRate(newSampleRate);
 }
 
-SampledSound* InstrumentSynth::selectSampleFor(const juce::String& articulation, int midiVel) {
-    juce::ignoreUnused(articulation, midiVel);
-    return nullptr; //TODO: implement sample selection logic using SampleSelector
+SampledSound* InstrumentSynth::selectSampleFor(int articulationIdx, int midiVel, int micIdx) {
+    if (articulationIdx < 0 || articulationIdx >= static_cast<int>(this->runtimeArticulations.size()))
+        return nullptr;
+
+    auto& art = this->runtimeArticulations[articulationIdx];
+    if (art.layers.empty()) return nullptr;
+
+    // DBG("DEBUG: selectSampleFor " + art.codeRaw + " artIdx=" + juce::String(articulationIdx) + " vel=" + juce::String(midiVel) + " micIdx=" + juce::String(micIdx));
+
+    // clamp midiVel
+    if (midiVel < 0) midiVel = 0;
+    if (midiVel > 127) midiVel = 127;
+
+    int layerIdx = art.velocityToLayer[midiVel];
+    
+    if (layerIdx < 0 || layerIdx >= static_cast<int>(art.layers.size())) return nullptr;
+    // If there are enough variants, do round-robin here
+    auto& layer = art.layers[layerIdx];
+    int sampleCount = static_cast<int>(layer.samples.size());
+    if (sampleCount >= NAME_IT_BETTER_MIN_VARIANTS) {
+        uint32_t rr = layer.roundRobinCounter->fetch_add(1u);
+        int idx = static_cast<int>(rr % static_cast<uint32_t>(sampleCount));
+        return layer.samples[idx].sound;
+    }
+
+    // Otherwise try to find nearby layers within reasonable velocity distance that have samples
+    int bestLayer = -1;
+    int bestDist = 10000;
+    for (int i = 0; i < static_cast<int>(art.layers.size()); ++i) {
+        if (static_cast<int>(art.layers[i].samples.size()) == 0) continue;
+        int dist = std::abs(static_cast<int>(art.layers[i].velocity) - midiVel);
+        if (dist <= NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS && dist < bestDist) {
+            bestDist = dist;
+            bestLayer = i;
+        }
+    }
+
+    if (bestLayer >= 0) {
+        auto& best = art.layers[bestLayer];
+        int sc = static_cast<int>(best.samples.size());
+        if (sc > 0) {
+            uint32_t rr = best.roundRobinCounter->fetch_add(1u);
+            int idx = static_cast<int>(rr % static_cast<uint32_t>(sc));
+            return best.samples[idx].sound;
+        }
+    }
+
+    // fallback: try primary layer even if empty -> try any sample in any layer
+    for (auto& l : art.layers) {
+        if (!l.samples.empty()) {
+            uint32_t rr = l.roundRobinCounter->fetch_add(1u);
+            int idx = static_cast<int>(rr % static_cast<uint32_t>(l.samples.size()));
+            return l.samples[idx].sound;
+        }
+    }
+
+    return nullptr;
 }
 
 InstrumentSynthVoice::InstrumentSynthVoice()

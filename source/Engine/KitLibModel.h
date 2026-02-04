@@ -187,6 +187,7 @@ public:
     };
 
     juce::String codeRaw;
+    juce::String alias;
     StringIdRegistrySingleton::Id codeIdx = 0;
     std::vector<std::unique_ptr<ExpressionDimension>> dimensions;
 
@@ -332,18 +333,26 @@ public:
 
     static ParseResult<InstrumentSpecs::SampleFileInfo> parseSampleFile(const juce::String& fileName);
 
-    ArticulationSpecs* findArticulation(const juce::String& name) const {
+    ArticulationSpecs* findArticulation(const StringIdRegistrySingleton::Id& codeIdx) const {
         for (const auto& existing : this->articulations)
-            if (existing->codeRaw == name)
+            if (existing->codeIdx == codeIdx)
                 return existing.get();
         return nullptr;
     }
 
-    ArticulationSpecs* getOrAddArticulation(const juce::String& name) {
-        auto existing = this->findArticulation(name);
+    ArticulationSpecs* findArticulation(const juce::String& name, const juce::String& alias = "") const {
+        for (const auto& existing : this->articulations)
+            if (existing->codeRaw == name && existing->alias == alias)
+                return existing.get();
+        return nullptr;
+    }
+
+    ArticulationSpecs* getOrAddArticulation(const juce::String& name, const juce::String& alias = "") {
+        auto existing = this->findArticulation(name, alias);
         if (existing != nullptr)
             return existing;
         auto newObj = std::make_unique<ArticulationSpecs>(this, name);
+        newObj->alias = alias;
         auto* ptr = newObj.get();
         this->articulations.push_back(std::move(newObj));
         return ptr;

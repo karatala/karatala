@@ -12,22 +12,25 @@ struct KitLayout {
         struct ArticulationTrigger {
             juce::String codeRaw; // center, rim, edge, bow, pedal, etc.
             std::vector<uint8_t> notes; // midi notes triggering this articulation
-            KitLib::ArticulationSpecs::ExpressionDimension::Type type = KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown;
+            juce::String alias;
+            StringIdRegistrySingleton::Id codeIdx = 0;
+            // KitLib::ArticulationSpecs::ExpressionDimension::Type type = KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown;
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
-            explicit ArticulationTrigger(juce::String codeRaw)
-                : codeRaw(codeRaw)
-                , codeIdx(StringIdRegistrySingleton::getId(codeRaw))
-            {}
-            StringIdRegistrySingleton::Id codeIdx = 0;
+            explicit ArticulationTrigger(juce::String codeRaw) : codeRaw(codeRaw)
+            {
+                auto wrapRes = getWrappedValue(codeRaw.trim(), "[", "]");
+                this->alias = wrapRes.wrapped;
+                this->codeIdx = StringIdRegistrySingleton::getId(wrapRes.cleaned);
+            }
         };
         struct ContinuousController {
-            int id = -1;
+            int number = -1;
             juce::String codeRaw; // pdl_opn_cls, zon_ctr_rim, zon_bow_edg, ...
             std::vector<uint8_t> notes;
             
-            explicit ContinuousController(int id, juce::String codeRaw) : id(id), codeRaw(codeRaw)
+            explicit ContinuousController(int number, juce::String codeRaw) : number(number), codeRaw(codeRaw)
                 , codeIdx(KitLib::ArticulationSpecs::ExpressionDimension::stringToType(codeRaw))
             {}
             KitLib::ArticulationSpecs::ExpressionDimension::Type codeIdx = KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown;
@@ -141,15 +144,18 @@ struct LayoutTraits<KitLayout> {
                 const auto& artsNode = instItem["articulations"];
                 if (artsNode.isSequence()) {
                     for (size_t j = 0; j < artsNode.size(); ++j) {
-                        const auto& artItem = artsNode[j];
-                        KitLayout::InstrumentSlot::ArticulationTrigger art(artItem["code"].asString());
+                        const auto& item = artsNode[j];
+                        KitLayout::InstrumentSlot::ArticulationTrigger art(item["code"].asString());
 
-                        const auto& artNotesNode = artItem["notes"];
-                        if (artNotesNode.isSequence()) {
-                            for (size_t k = 0; k < artNotesNode.size(); ++k)
-                                art.notes.push_back(static_cast<uint8_t>(artNotesNode[k].asInt()));
-                        } else if (artNotesNode.isScalar() && !artNotesNode.asString().isEmpty()) {
-                            art.notes.push_back(static_cast<uint8_t>(artNotesNode.asInt()));
+                        const auto& notesNode = item["notes"];
+                        if (notesNode.isSequence()) {
+                            for (size_t k = 0; k < notesNode.size(); ++k) {
+                                if (!isValidMidiValue(notesNode[k].asInt())) result.addWarning("articulations: invalid midi note " + juce::String(notesNode[k].asInt()) + " for articulation " + art.codeRaw + " in instrument " + inst.id);
+                                else art.notes.push_back(static_cast<uint8_t>(notesNode[k].asInt()));
+                            }
+                        } else if (notesNode.isScalar() && !notesNode.asString().isEmpty()) {
+                            if (!isValidMidiValue(notesNode.asInt())) result.addWarning("articulations: invalid midi note " + juce::String(notesNode.asInt()) + " for articulation " + art.codeRaw + " in instrument " + inst.id);
+                            else art.notes.push_back(static_cast<uint8_t>(notesNode.asInt()));
                         }
 
                         inst.articulations.push_back(art);
@@ -159,15 +165,18 @@ struct LayoutTraits<KitLayout> {
                 const auto& ctrlsNode = instItem["controllers"];
                 if (ctrlsNode.isSequence()) {
                     for (size_t j = 0; j < ctrlsNode.size(); ++j) {
-                        const auto& ctrlItem = ctrlsNode[j];
-                        KitLayout::InstrumentSlot::ContinuousController cc(ctrlItem["id"].asInt(), ctrlItem["code"].asString());
+                        const auto& item = ctrlsNode[j];
+                        KitLayout::InstrumentSlot::ContinuousController cc(item["number"].asInt(), item["code"].asString());
 
-                        const auto& ccNotesNode = ctrlItem["notes"];
-                        if (ccNotesNode.isSequence()) {
-                            for (size_t k = 0; k < ccNotesNode.size(); ++k)
-                                cc.notes.push_back(static_cast<uint8_t>(ccNotesNode[k].asInt()));
-                        } else if (ccNotesNode.isScalar() && !ccNotesNode.asString().isEmpty()) {
-                            cc.notes.push_back(static_cast<uint8_t>(ccNotesNode.asInt()));
+                        const auto& notesNode = item["notes"];
+                        if (notesNode.isSequence()) {
+                            for (size_t k = 0; k < notesNode.size(); ++k) {
+                                if (!isValidMidiValue(notesNode[k].asInt())) result.addWarning("controllers: invalid midi note " + juce::String(notesNode[k].asInt()) + " for controller " + juce::String(cc.number) + " in instrument " + inst.id);
+                                else cc.notes.push_back(static_cast<uint8_t>(notesNode[k].asInt()));
+                            }
+                        } else if (notesNode.isScalar() && !notesNode.asString().isEmpty()) {
+                            if (!isValidMidiValue(notesNode.asInt())) result.addWarning("controllers: invalid midi note " + juce::String(notesNode.asInt()) + " for controller " + juce::String(cc.number) + " in instrument " + inst.id);
+                            else cc.notes.push_back(static_cast<uint8_t>(notesNode.asInt()));
                         }
 
                         inst.controllers.push_back(cc);

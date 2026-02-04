@@ -55,8 +55,8 @@ instruments:
       - code: sidestick
         notes: [37]
     controllers:
-      - id: 16
-        code: zon_ctr_rim
+      - code: zon_ctr_rim
+        number: 16
         notes: [38]
 
   - id: hihat1
@@ -75,14 +75,14 @@ instruments:
       - code: bow[open]
         notes: [46]
     controllers:
-      - id: 4
-        code: pdl_opn_cls
+      - code: pdl_opn_cls
+        number: 4
         notes: [22,46]
-      - id: 19
-        code: zon_bow_edg
+      - code: zon_bow_edg
+        number: 19
         notes: [42,46]
-      - id: 83
-        code: zon_lft_rgt
+      - code: zon_lft_rgt
+        number: 83
         notes: [18,22,42,46]
         
   - id: hihat2
@@ -99,8 +99,8 @@ instruments:
       - code: edge[open]
         notes: []
     controllers:
-      - id: 4
-        code: pdl_opn_cls
+      - code: pdl_opn_cls
+        number: 4
         notes: [22,46]
 
   - id: ride1
@@ -113,8 +113,8 @@ instruments:
       - code: bell
         notes: [53]
     controllers:
-      - id: 17
-        code: zon_bow_edg
+      - code: zon_bow_edg
+        number: 17
         
   - id: tom1
     display: Tom 1
@@ -124,8 +124,8 @@ instruments:
       - code: rim
         notes: [24]
     controllers:
-      - id: 18
-        code: zon_ctr_rim
+      - code: zon_ctr_rim
+        number: 18
 
   - id: tom2
     display: Tom 2
@@ -135,8 +135,8 @@ instruments:
       - code: rim
         notes: [23]
     controllers:
-      - id: 18
-        code: zon_ctr_rim
+      - code: zon_ctr_rim
+        number: 18
         
   - id: tom3
     display: Tom 3
@@ -146,8 +146,8 @@ instruments:
       - code: rim
         notes: [21]
     controllers:
-      - id: 18
-        code: zon_ctr_rim
+      - code: zon_ctr_rim
+        number: 18
 
   - id: tom4
     display: Tom 4
@@ -157,8 +157,8 @@ instruments:
       - code: rim
         notes: [19]
     controllers:
-      - id: 18
-        code: zon_ctr_rim
+      - code: zon_ctr_rim
+        number: 18
         notes: [43]
 
   - id: tom5
@@ -169,8 +169,8 @@ instruments:
       - code: rim
         notes: [17]
     controllers:
-      - id: 18
-        code: zon_ctr_rim
+      - code: zon_ctr_rim
+        number: 18
 
   - id: crash1
     display: Crash 1
