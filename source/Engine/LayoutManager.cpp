@@ -10,6 +10,12 @@ name: default
 mics:
   - name: Overheads
     code: ons
+  - name: Hi-Hat
+    instrument: hihat1
+    code: dtm
+  - name: Ride
+    instrument: ride1
+    code: dtm
   - name: Kick In
     instrument: kick1
     code: dim
@@ -22,6 +28,23 @@ mics:
   - name: Snare Bottom
     instrument: snare1
     code: dbm
+  - name: Tom1
+    instrument: tom1
+    code: dtm
+  - name: Tom2
+    instrument: tom2
+    code: dtm
+  - name: Tom3
+    instrument: tom3
+    code: dtm
+  - name: Tom4
+    instrument: tom4
+    code: dtm
+  - name: Tom5
+    instrument: tom5
+    code: dtm
+  - name: Room Far
+    code: rfs
 )yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
     if (!result.ok()) {

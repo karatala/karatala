@@ -25,15 +25,15 @@ class InstrumentSynth;
 class InstrumentSynthVoice;
 class SampledSound : public juce::SynthesiserSound {
 public:
-    KitLib::InstrumentSpecs* instrumentSpec = nullptr;
-    KitLib::SampleVariantSpecs* sampleVariantSpec = nullptr;
+    KitLib::InstrumentSpec* instrumentSpec = nullptr;
+    KitLib::SampleVariantSpec* sampleVariantSpec = nullptr;
     juce::File sampleFile;
     std::shared_ptr<juce::AudioBuffer<float>> buffer;
     std::vector<uint8_t> notes; 
 
     double sampleRate = 0.0;
 
-    SampledSound(KitLib::InstrumentSpecs* instrumentSpec = nullptr, KitLib::SampleVariantSpecs* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
+    SampledSound(KitLib::InstrumentSpec* instrumentSpec = nullptr, KitLib::SampleVariantSpec* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
         : instrumentSpec(instrumentSpec)
         , sampleVariantSpec(sampleVariantSpec)
         , sampleFile(sampleFile)
@@ -97,29 +97,29 @@ public:
         }
     };
 
-    InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrument
+    InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrumentSlot
         //DUNNO: add params to instrument or do it somewhere else?
         // ,juce::RangedAudioParameter& gainParameter
         // ,juce::RangedAudioParameter& panParameter
         // ,juce::AudioParameterBool& phaseParameter
         )
         : parent(parent)
-        , instrumentDef(instrument)
-        , id(instrument.id)
-        , type(instrument.type)
+        , instrumentSlot(instrumentSlot)
+        , id(instrumentSlot.id)
+        , type(instrumentSlot.type)
     {
-        // this->instrumentDef.controllers
+
     }
     ~InstrumentSynth() {}
 
     void unloadInstrument();
-    void loadInstrument(KitLib::InstrumentSpecs* kitInstrument);
+    void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     
     // Select best SampledSound for given articulation index (index into runtimeArticulations) and velocity
     SampledSound* selectSampleFor(int articulationIdx, int midiVel, int micIdx = -1);
     
-    void handleMidiEvent(const MidiMessage& midiMessage) override;
+    void handleMidiEvent(const juce::MidiMessage& midiMessage) override;
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions);
     virtual void noteOn(int midiChannel, int midiNoteNumber, float velocity) override;
     // virtual void noteOff(int midiChannel, int midiNoteNumber, float velocity, bool allowTailOff) override;
@@ -139,13 +139,13 @@ public:
 
 private:
     DrumKitEngine* parent = nullptr;
-    KitLib::InstrumentSpecs* instrumentSpecstPtr = nullptr;
+    KitLib::InstrumentSpec* instrumentSpecstPtr = nullptr;
     juce::String id;
-    KitLib::InstrumentSpecs::Type type;
+    KitLib::InstrumentSpec::Type type;
     juce::AudioBuffer<float> micBuffer;
     int mMicChannelCount = 2;
     // Keep a copy of the kit layout instrument definition for note->articulation lookup
-    KitLayout::InstrumentSlot instrumentDef;
+    KitLayout::InstrumentSlot instrumentSlot;
 
     // Runtime optimized tables for fast selection (populated by loadInstrument)
     // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
@@ -165,8 +165,8 @@ private:
 class DrumKitEngine {
 public:
     explicit DrumKitEngine() {
-        this->mKitLayoutManager = std::make_unique<KitLayoutManager>();
-        this->mMicLayoutManager = std::make_unique<MicLayoutManager>();
+        this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
+        this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
     }
     ~DrumKitEngine() {};
 
@@ -190,8 +190,8 @@ public:
 
     void reloadAll();
 
-    KitLayout* getKitLayout() { return mKitLayout.get(); }
-    MicLayout* getMicLayout() { return mMicLayout.get(); }
+    KitLayout* getKitLayout() { return this->activeKitLayoutPtr.get(); }
+    MicLayout* getMicLayout() { return this->activeMicLayoutPtr.get(); }
 
     bool useKitLayout(juce::String name);
     bool useMicLayout(juce::String name);
@@ -200,39 +200,39 @@ public:
     static std::vector<std::pair<juce::String, juce::String>> parseInstrumentMapText(const juce::String& text);
 
     void mapDefaultKit();
-    void mapKit(KitLib::DrumKitSpecs& kit);
+    void mapKit(KitLib::DrumKitSpec& kit);
 
-    KitLib::LibraryManager* getInstrumentManager() { return mLibraryManager.get(); }
-    KitLayoutManager* getKitLayoutManager() { return mKitLayoutManager.get(); }
-    MicLayoutManager* getMicLayoutManager() { return mMicLayoutManager.get(); }
-    SampleLoader* getSampleLoader() { return mSampleLoader.get(); }
+    KitLib::LibraryManager* getInstrumentManager() { return this->libraryManagerPtr.get(); }
+    KitLayoutManager* getKitLayoutManager() { return this->kitLayoutManagerPtr.get(); }
+    MicLayoutManager* getMicLayoutManager() { return this->micLayoutManagerPtr.get(); }
+    SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
 
     // Realtime-safe accessor: get latest CC values by const-ref (no copy)
-    const std::unordered_map<int, int>& getLatestContinuousControllerValuesRef() const { return this->mContinuousControllerValues; }
+    const std::unordered_map<int, int>& getLatestContinuousControllerValuesRef() const { return this->latestCcValueMap; }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
     // bool preprocessMidi(juce::MidiMessage msg);
         
-    void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (mDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }
-    DebugLevel mDebugLevel = DebugLevel::Error;
+    void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }
+    DebugLevel maxDebugLevel = DebugLevel::Error;
 
 private:
-    Config mConfig;
+    Config globalConfig;
 
-    std::vector<std::unique_ptr<InstrumentSynth>> mInstrumentSynthPtrs;
-    std::unordered_map<juce::String, InstrumentSynth*> mInstrumentSynthById;
-    std::unordered_map<int, std::vector<InstrumentSynth*>> mInstrumentSynthsByNote;
+    std::vector<std::unique_ptr<InstrumentSynth>> instrumentSynthPtrs;
+    std::unordered_map<juce::String, InstrumentSynth*> instrumentSynthById;
+    std::unordered_map<int, std::vector<InstrumentSynth*>> instrumentSynthsByNote;
 
-    std::unordered_map<int, int> mContinuousControllerValues;
+    std::unordered_map<int, int> latestCcValueMap;
 
-    std::unique_ptr<KitLib::LibraryManager> mLibraryManager;
-    std::unique_ptr<SampleLoader> mSampleLoader;
-    std::unique_ptr<KitLayoutManager> mKitLayoutManager;
-    std::unique_ptr<MicLayoutManager> mMicLayoutManager;
+    std::unique_ptr<KitLib::LibraryManager> libraryManagerPtr;
+    std::unique_ptr<SampleLoader> sampleLoaderPtr;
+    std::unique_ptr<KitLayoutManager> kitLayoutManagerPtr;
+    std::unique_ptr<MicLayoutManager> micLayoutManagerPtr;
 
-    std::unique_ptr<KitLayout> mKitLayout;
-    std::unique_ptr<MicLayout> mMicLayout;
+    std::unique_ptr<KitLayout> activeKitLayoutPtr;
+    std::unique_ptr<MicLayout> activeMicLayoutPtr;
 
     void initGlobalSettings();
     void initDefaultLayouts();
@@ -247,6 +247,6 @@ private:
     bool applyMicLayout();
 
 
-    std::unordered_map<int, int> getLatestContinuousControllerValues() { return this->mContinuousControllerValues; }
+    std::unordered_map<int, int> getLatestContinuousControllerValues() { return this->latestCcValueMap; }
     void saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages);
 };

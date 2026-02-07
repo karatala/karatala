@@ -1,6 +1,6 @@
 #include "YamlHelper.h"
 
-using namespace juce;
+using juce::String, juce::StringArray, juce::juce_wchar;
 
 namespace YamlHelper {
 

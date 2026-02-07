@@ -22,6 +22,35 @@ static inline bool containsSameValue(const std::vector<uint8_t>& a, const std::v
     return false;
 }
 
+static inline juce::StringArray splitByString(const juce::String& text, const juce::String& delimiter, bool keepEmptyTokens = false) {
+    juce::StringArray result;
+
+    if (delimiter.isEmpty()) {
+        result.add (text);
+        return result;
+    }
+
+    int start = 0;
+
+    while (true) {
+        int index = text.indexOf (start, delimiter);
+        if (index < 0) break;
+
+        auto token = text.substring (start, index);
+        if (keepEmptyTokens || token.isNotEmpty())
+            result.add (token);
+
+        start = index + delimiter.length();
+    }
+
+    auto tail = text.substring (start);
+    if (keepEmptyTokens || tail.isNotEmpty())
+        result.add (tail);
+
+    return result;
+}
+
+
 template <typename T>
 struct ParseResult {
     T value;
@@ -145,3 +174,60 @@ private:
     std::unordered_map<Name, Id> map;
     Id nextId;
 };
+
+class GlobalLogger {
+public:
+    static GlobalLogger& instance() {
+        static GlobalLogger inst;
+        return inst;
+    }
+
+    void setLogLevel(DebugLevel level) {
+        const juce::ScopedLock lock(mutex);
+        logLevel = level;
+    }
+
+    DebugLevel getLogLevel() const {
+        return logLevel;
+    }
+
+    void setLogFile(const juce::File& f) {
+        const juce::ScopedLock lock(mutex);
+        logFile = f;
+        if (!logFile.getParentDirectory().exists())
+            logFile.getParentDirectory().createDirectory();
+    }
+
+    void log(DebugLevel level, const juce::String& msg) {
+        // Follow same semantics as other code: only log when logLevel >= level
+        if (logLevel < level) return;
+
+        juce::String line = DebugLevelToString(level) + ": " + msg;
+        DBG(line);
+
+        const juce::ScopedLock lock(mutex);
+        if (logFile.getFullPathName().isNotEmpty()) {
+            if (!logFile.getParentDirectory().exists())
+                logFile.getParentDirectory().createDirectory();
+            juce::String out = juce::Time::getCurrentTime().toISO8601(true) + " " + line + "\n";
+            logFile.appendText(out);
+        }
+    }
+
+private:
+    GlobalLogger() {
+        // Default log file under user's Documents/Karatala/karatala.log
+        juce::File doc = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
+        juce::File dir = doc.getChildFile("Karatala");
+        if (!dir.exists()) dir.createDirectory();
+        logFile = dir.getChildFile("karatala.log");
+    }
+
+    juce::File logFile;
+    mutable juce::CriticalSection mutex;
+    DebugLevel logLevel = DebugLevel::Debug;
+};
+
+#ifndef LOG
+#define LOG(level, msg) GlobalLogger::instance().log(level, msg)
+#endif

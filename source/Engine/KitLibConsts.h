@@ -9,13 +9,13 @@
 namespace KitLib {
 
 /**
- * MicSpecs
+ * MicSpec
  * Represents a parsed mic token from the micChain.
  * Example: "ons" → {type=Overhead, position=Normak, format=Stereo, variant=""}
  * Example: "dtm1" → {type=Direct, position=Top, format=mono, variant="1"}
  * Example: "rfi" → {type=Room, position=Far, format=Mid-Side, variant=""}
  */
-class MicSpecs {
+class MicSpec {
 public:
     enum class Type : char { Unknown = 0,
         Direct = 'd',
@@ -49,8 +49,8 @@ public:
 
     bool isValid() const { return this->type != Type::Unknown && this->position != Position::Unknown && this->format != Format::Unknown; }
 
-    static ParseResult<MicSpecs> parseMicCode(const juce::String& code);
-    static ParseResult<std::vector<MicSpecs>> parseMicCodesChain(const juce::String& codeChain);
+    static ParseResult<MicSpec> parseMicCode(const juce::String& code);
+    static ParseResult<std::vector<MicSpec>> parseMicCodesChain(const juce::String& codeChain);
 
     juce::String getDescription() const {
         juce::StringArray parts;

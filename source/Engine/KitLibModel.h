@@ -9,12 +9,12 @@
 /**
  * Class Hierarchy:
  * LibraryManager
- *   └─ DrumKitSpecs
- *      └─ InstrumentSpecs
- *          └─ ArticulationSpecs
- *              └─ VelocityLayerSpecs
- *                  └─ SampleVariantSpecs
- *                      └─ MicSpecs
+ *   └─ DrumKitSpec
+ *      └─ InstrumentSpec
+ *          └─ ArticulationSpec
+ *              └─ VelocityLayerSpec
+ *                  └─ SampleVariantSpec
+ *                      └─ MicSpec
  * Sample Filename Convention:
  *    <InstrumentsRoot>/
  *       └─ <kitInfo>/
@@ -23,10 +23,10 @@
  *                  └─ <velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
  * Example:
  *     instruments/                                                 LibraryManager
- *       └─ Kit Name by Author Name  [CC-BY-4.0]/                   DrumKitSpecs
- *          └─ kick-22-Tama Starclassic etc/                        InstrumentSpecs
- *              └─ center/                                          ArticulationSpecs
- *                  └─ 127a-dim.flac                                VelocityLayerSpecs, SampleVariantSpecs, MicSpecs
+ *       └─ Kit Name by Author Name  [CC-BY-4.0]/                   DrumKitSpec
+ *          └─ kick-22-Tama Starclassic etc/                        InstrumentSpec
+ *              └─ center/                                          ArticulationSpec
+ *                  └─ 127a-dim.flac                                VelocityLayerSpec, SampleVariantSpec, MicSpec
  *          └─ hihat-14-Sabian HHX/
  *              └─ bow[half]-pdl_opn_cls043-zon_bel_edg085/         
  *                  └─ 043a-oni.flac
@@ -76,19 +76,20 @@
 
 namespace KitLib {
 
-class DrumKitSpecs;
-class InstrumentSpecs;
-class ArticulationSpecs;
-class VelocityLayerSpecs;
-class SampleVariantSpecs;
-class MicSpecs;
+class DrumKitSpec;
+class InstrumentSpec;
+class ArticulationSpec;
+class VelocityLayerSpec;
+class SampleVariantSpec;
+class MicSpec;
 
 /**
- * SampleVariantSpecs
+ * SampleVariantSpec
  * Represents a single audio file for a specific round-robin variation.
  */
-class SampleVariantSpecs {
+class SampleVariantSpec {
 public:
+    VelocityLayerSpec* parent = nullptr;
     uint8_t id;
     juce::juce_wchar letter; // 'a'-'z'
     juce::File sampleFile;
@@ -101,14 +102,14 @@ public:
     int numChannels = 0;
     juce::int64 numSamples = 0;
 
-    MicSpecs micSpecs;
-    VelocityLayerSpecs* parentVelocityLayer = nullptr;
+    MicSpec micSpec;
 
-    explicit SampleVariantSpecs(const juce::File& file, juce::juce_wchar letter, const MicSpecs& micSpecs)
-        : sampleFile(file)
+    explicit SampleVariantSpec(VelocityLayerSpec* parent, const juce::File& file, juce::juce_wchar letter, const MicSpec& micSpec)
+        : parent(parent)
+        , sampleFile(file)
         , letter(letter)
         , sampleFileName(file.getFileName())
-        , micSpecs(micSpecs)
+        , micSpec(micSpec)
     {
     }
 
@@ -127,33 +128,43 @@ public:
 };
 
 /**
- * VelocityLayerSpecs
+ * VelocityLayerSpec
  * Represents a specific velocity level with multiple round-robin samples.
  */
-class VelocityLayerSpecs {
+class VelocityLayerSpec {
 public:
+    ArticulationSpec* parent = nullptr;
     uint8_t velocity;
-    ArticulationSpecs* parentArticulation = nullptr;
-    std::vector<std::unique_ptr<SampleVariantSpecs>> sampleVariants;
+    std::vector<std::unique_ptr<SampleVariantSpec>> sampleVariantSpecs;
 
-    explicit VelocityLayerSpecs(uint8_t velocity)
-        : velocity(velocity) {}
+    explicit VelocityLayerSpec(ArticulationSpec* parent, uint8_t velocity)
+        : parent(parent), velocity(velocity) {}
 
-    void addSampleVariant(std::unique_ptr<SampleVariantSpecs> entry) {
-        entry->parentVelocityLayer = this;
-        this->sampleVariants.push_back(std::move(entry));
+    SampleVariantSpec* findSampleVariant(juce::juce_wchar variantLetter, const MicSpec& micSpec) {
+        for (auto& existing : this->sampleVariantSpecs)
+            if (existing->letter == variantLetter && existing->micSpec.type == micSpec.type && existing->micSpec.position == micSpec.position && existing->micSpec.format == micSpec.format)
+                return existing.get();
+        return nullptr;
+    }    
+    
+    SampleVariantSpec* getOrAddSampleVariant(const juce::File& sampleFile, uint8_t variantIdx, const MicSpec& micSpec) {
+        juce::juce_wchar variantLetter = (variantIdx > 0 && variantIdx <= 26) ? static_cast<juce::juce_wchar>('a' + variantIdx - 1) : '\0';
+        auto existing = this->findSampleVariant(variantLetter, micSpec);
+        if (existing != nullptr) return existing;
+        this->sampleVariantSpecs.push_back(std::make_unique<SampleVariantSpec>(this, sampleFile, variantIdx, micSpec));
+        return this->sampleVariantSpecs.back().get();
     }
 
     bool isEmpty() const {
-        return this->sampleVariants.empty();
+        return this->sampleVariantSpecs.empty();
     }
 };
 
 /**
- * ArticulationSpecs
+ * ArticulationSpec
  * Represents an articulation (e.g., "center", "edge") with multiple velocity levels.
  */
-class ArticulationSpecs {
+class ArticulationSpec {
 public:
     struct ExpressionDimension {
         enum class Type { Unknown, PedalOpenClose, ZoneCenterRim, ZoneBowEdge, ZoneLeftRight }; 
@@ -186,81 +197,74 @@ public:
         Type type;
     };
 
-    juce::String codeRaw;
+    InstrumentSpec* parent = nullptr;
+    juce::String name;
     juce::String alias;
     StringIdRegistrySingleton::Id codeIdx = 0;
-    std::vector<std::unique_ptr<ExpressionDimension>> dimensions;
+    std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
+    std::vector<std::unique_ptr<VelocityLayerSpec>> velocityLayerSpecs;
 
-    std::vector<std::unique_ptr<VelocityLayerSpecs>> velocityLayers;
-
-    InstrumentSpecs* parent = nullptr;
-
-    explicit ArticulationSpecs(InstrumentSpecs* parent, const juce::String& code)
+    explicit ArticulationSpec(InstrumentSpec* parent, const juce::String& name, const juce::String& alias = "")
         : parent(parent)
-        , codeRaw(code)
-        , codeIdx(StringIdRegistrySingleton::getId(code)) {
+        , name(name)
+        , alias(alias)
+        , codeIdx(StringIdRegistrySingleton::getId(name)) {
     }
 
-    const std::vector<std::unique_ptr<VelocityLayerSpecs>>& getVelocityLayers() const { return this->velocityLayers; }
+    const std::vector<std::unique_ptr<VelocityLayerSpec>>& getVelocityLayers() const { return this->velocityLayerSpecs; }
 
     bool isEmpty() const {
-        return this->velocityLayers.empty() || std::all_of(this->velocityLayers.begin(), this->velocityLayers.end(), [](const auto& v) {
+        return this->velocityLayerSpecs.empty() || std::all_of(this->velocityLayerSpecs.begin(), this->velocityLayerSpecs.end(), [](const auto& v) {
             return v->isEmpty();
         });
     }
 
-    void addDimensionValue(const juce::String& code, uint8_t value) {
-        auto* dim = this->getOrAddDimension(code);
-        if (std::find(dim->values.begin(), dim->values.end(), value) == dim->values.end())
-            dim->values.push_back(value);
+    void addExpressionDimensionValue(const juce::String& code, uint8_t value) {
+        auto* expSpec = this->getOrAddExpressionDimension(code);
+        if (std::find(expSpec->values.begin(), expSpec->values.end(), value) == expSpec->values.end())
+            expSpec->values.push_back(value);
     }
 
-    ExpressionDimension* findDimension(const juce::String& code) {
-        for (auto& existing : this->dimensions)
+    ExpressionDimension* findExpressionDimension(const juce::String& code) {
+        for (auto& existing : this->expressionDimensions)
             if (existing->codeRaw == code)
                 return existing.get();
         return nullptr;
     }
 
-    ExpressionDimension* getOrAddDimension(const juce::String& code) {
-        auto existing = this->findDimension(code);
-        if (existing != nullptr)
-            return existing;
-        auto newObj = std::make_unique<ExpressionDimension>(code);
-        auto* ptr = newObj.get();
-        this->dimensions.push_back(std::move(newObj));
-        return ptr;
+    ExpressionDimension* getOrAddExpressionDimension(const juce::String& code) {
+        auto existing = this->findExpressionDimension(code);
+        if (existing != nullptr) return existing;
+        this->expressionDimensions.push_back(std::make_unique<ExpressionDimension>(code));
+        return this->expressionDimensions.back().get();
     }
 
-    VelocityLayerSpecs* findVelocityLayer(uint8_t velocity) {
-        for (auto& existing : this->velocityLayers)
+    VelocityLayerSpec* findVelocityLayer(uint8_t velocity) {
+        for (auto& existing : this->velocityLayerSpecs)
             if (existing->velocity == velocity)
                 return existing.get();
         return nullptr;
     }
 
-    VelocityLayerSpecs* getOrAddVelocityLayer(uint8_t velocity) {
-        auto exist = this->findVelocityLayer(velocity);
-        if (exist != nullptr) return exist;
-        auto newObj = std::make_unique<VelocityLayerSpecs>(velocity);
-        newObj->parentArticulation = this;
-        auto* ptr = newObj.get();
-        this->velocityLayers.push_back(std::move(newObj));
-        return ptr;
+    VelocityLayerSpec* getOrAddVelocityLayer(uint8_t velocity) {
+        auto existing = this->findVelocityLayer(velocity);
+        if (existing != nullptr) return existing;
+        this->velocityLayerSpecs.push_back(std::make_unique<VelocityLayerSpec>(this, velocity));
+        return this->velocityLayerSpecs.back().get();
     }
 
     void sortVelocityLayers() {
-        std::sort(this->velocityLayers.begin(), this->velocityLayers.end(), [](const auto& a, const auto& b) {
+        std::sort(this->velocityLayerSpecs.begin(), this->velocityLayerSpecs.end(), [](const auto& a, const auto& b) {
             return a->velocity < b->velocity;
         });
     }
 };
 
 /**
- * InstrumentSpecs
+ * InstrumentSpec
  * Represents a drum/percussion instrument with articulations and metadata.
  */
-class InstrumentSpecs {
+class InstrumentSpec {
 public:
 
     //TODO: add global config for custom names mapping (like "chopper">"cymbal" "rototom">"tom" "vibraslap">"percussion" etc or maybe better use StringIdRegistrySingleton for new types?
@@ -297,7 +301,7 @@ public:
         juce::File rootDir;
         juce::String code;
         juce::String name;
-        InstrumentSpecs::Type type = InstrumentSpecs::Type::Unknown;
+        InstrumentSpec::Type type = InstrumentSpec::Type::Unknown;
         juce::String size = "";
         juce::String description = "";
     };
@@ -306,16 +310,16 @@ public:
         juce::String articulation;
         uint8_t velocity;
         juce::String sampleVariant;
-        std::vector<MicSpecs> micDescriptors;
+        std::vector<MicSpec> micDescriptors;
         juce::File file;
     };
 
-    DrumKitSpecs* parentKit = nullptr;
+    DrumKitSpec* parent = nullptr;
     MetaInfo meta;
-    std::vector<std::unique_ptr<ArticulationSpecs>> articulations;
+    std::vector<std::unique_ptr<ArticulationSpec>> articulationSpecs;
 
-    InstrumentSpecs(DrumKitSpecs* kit, const MetaInfo& meta)
-        : parentKit(kit)
+    explicit InstrumentSpec(DrumKitSpec* kit, const MetaInfo& meta)
+        : parent(kit)
         , meta(meta) {
     }
 
@@ -331,38 +335,27 @@ public:
      */
     int scanInstrumentSamples();
 
-    static ParseResult<InstrumentSpecs::SampleFileInfo> parseSampleFile(const juce::String& fileName);
+    static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);
 
-    ArticulationSpecs* findArticulation(const StringIdRegistrySingleton::Id& codeIdx) const {
-        for (const auto& existing : this->articulations)
-            if (existing->codeIdx == codeIdx)
+    ArticulationSpec* findArticulation(const juce::String& name, const juce::String& alias = "") const {
+        for (const auto& existing : this->articulationSpecs)
+            if (existing->name == name && existing->alias == alias)
                 return existing.get();
         return nullptr;
     }
 
-    ArticulationSpecs* findArticulation(const juce::String& name, const juce::String& alias = "") const {
-        for (const auto& existing : this->articulations)
-            if (existing->codeRaw == name && existing->alias == alias)
-                return existing.get();
-        return nullptr;
-    }
-
-    ArticulationSpecs* getOrAddArticulation(const juce::String& name, const juce::String& alias = "") {
+    ArticulationSpec* getOrAddArticulation(const juce::String& name, const juce::String& alias = "") {
         auto existing = this->findArticulation(name, alias);
-        if (existing != nullptr)
-            return existing;
-        auto newObj = std::make_unique<ArticulationSpecs>(this, name);
-        newObj->alias = alias;
-        auto* ptr = newObj.get();
-        this->articulations.push_back(std::move(newObj));
-        return ptr;
+        if (existing != nullptr) return existing;
+        this->articulationSpecs.push_back(std::make_unique<ArticulationSpec>(this, name, alias));
+        return this->articulationSpecs.back().get();
     }
 };
 
 /**
  * Represents a complete drum kit with metadata and instruments.
  */
-class DrumKitSpecs {
+class DrumKitSpec {
 public:
     struct MetaInfo {
         juce::File rootDir;
@@ -372,34 +365,36 @@ public:
         juce::String license;
     };
 
-    explicit DrumKitSpecs(const MetaInfo& meta) : meta(meta) {}
+    explicit DrumKitSpec(const MetaInfo& meta) : meta(meta) {}
 
     static ParseResult<MetaInfo> parseInfo(const juce::String& dirName);
 
     int scanInstruments();
-    InstrumentSpecs* findInstrument(const juce::String& code);
-    std::vector<InstrumentSpecs*> getInstrumentsByType(InstrumentSpecs::Type type) const;
+
+    void addInstrument(InstrumentSpec::MetaInfo instMeta) { this->instrumentSpecsMap[instMeta.code] = std::make_unique<InstrumentSpec>(this, instMeta); }
+    InstrumentSpec* findInstrument(const juce::String& id);
+    std::vector<InstrumentSpec*> getInstrumentsByType(InstrumentSpec::Type type) const;
 
     MetaInfo meta;
-    std::unordered_map<juce::String, std::unique_ptr<InstrumentSpecs>> instruments;
+    std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>> instrumentSpecsMap;
 };
 
 
 class LibraryManager {
 public:
-    explicit LibraryManager(const juce::File& kitsDir) : mKitsDir(kitsDir) { this->validateKitsDir(kitsDir); }
+    explicit LibraryManager(const juce::File& rootDir) : rootDir(rootDir) { this->validateKitsDir(rootDir); }
 
     bool validateKitsDir(const juce::File& dir);
     void setKitsDir(const juce::File& dir);
 
     int scanAll();
-    DrumKitSpecs* getKit(int index);
-    DrumKitSpecs* findKit(const juce::String& name);
-    const std::vector<std::unique_ptr<DrumKitSpecs>>& getKits() const { return this->mKits; }
+    DrumKitSpec* getKit(int index);
+    DrumKitSpec* findKit(const juce::String& name);
+    const std::vector<std::unique_ptr<DrumKitSpec>>& getKits() const { return this->kitSpecs; }
 
 private:
-    juce::File mKitsDir;
-    std::vector<std::unique_ptr<DrumKitSpecs>> mKits;
+    juce::File rootDir;
+    std::vector<std::unique_ptr<DrumKitSpec>> kitSpecs;
 };
 
 }

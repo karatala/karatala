@@ -31,14 +31,16 @@
         "type": "cppvsdbg",
         "request": "launch",
         "program": "${env:REAPER_EXE_PATH}",
+        "internalConsoleOptions": "openOnSessionStart",
         "args": [
           "-cfgfile",
           "${env:REAPER_RESOURCE_PATH}\\reaper.ini"
         ],
         "stopAtEntry": false,
         "cwd": "${env:REAPER_RESOURCE_PATH}",
-        // "console": "externalTerminal",
-        "console": "integratedTerminal",
+        "console": "externalTerminal",
+        // "console": "integratedTerminal",
+        // "preLaunchTask": "build",
         "environment": [
           {
             "name": "REAPER_EXE_PATH",

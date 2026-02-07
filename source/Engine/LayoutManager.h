@@ -14,7 +14,7 @@ struct KitLayout {
             std::vector<uint8_t> notes; // midi notes triggering this articulation
             juce::String alias;
             StringIdRegistrySingleton::Id codeIdx = 0;
-            // KitLib::ArticulationSpecs::ExpressionDimension::Type type = KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown;
+            // KitLib::ArticulationSpec::ExpressionDimension::Type type = KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown;
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
@@ -31,14 +31,14 @@ struct KitLayout {
             std::vector<uint8_t> notes;
             
             explicit ContinuousController(int number, juce::String codeRaw) : number(number), codeRaw(codeRaw)
-                , codeIdx(KitLib::ArticulationSpecs::ExpressionDimension::stringToType(codeRaw))
+                , codeIdx(KitLib::ArticulationSpec::ExpressionDimension::stringToType(codeRaw))
             {}
-            KitLib::ArticulationSpecs::ExpressionDimension::Type codeIdx = KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown;
+            KitLib::ArticulationSpec::ExpressionDimension::Type codeIdx = KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown;
         };
 
         juce::String id; // kick1, snare1, hihat1, ...
         juce::String display;
-        KitLib::InstrumentSpecs::Type type = KitLib::InstrumentSpecs::Type::Unknown;
+        KitLib::InstrumentSpec::Type type = KitLib::InstrumentSpec::Type::Unknown;
         std::vector<ArticulationTrigger> articulations;
         std::vector<ContinuousController> controllers;
         // juce::String chokeGroup;
@@ -69,6 +69,8 @@ struct MicLayout {
         juce::String name;
         juce::String instrument;
         juce::String code;
+
+        KitLib::MicSpec specs;
     };
     std::vector<Mic> mics;
 
@@ -101,9 +103,15 @@ struct LayoutTraits<MicLayout> {
                 mic.name = it["name"].asString();
                 mic.instrument = it["instrument"].asString();
                 mic.code = it["code"].asString();
-                if (mic.code.isNotEmpty())
+                if (mic.code.isNotEmpty()) {
+                    auto parsed = KitLib::MicSpec::parseMicCode(mic.code);
+                    if (parsed.ok()) {
+                        mic.specs = parsed.value;
+                    } else {
+                        result.addWarning("mics: invalid mic code for " + mic.name + ": " + parsed.error());
+                    }
                     layout.mics.push_back(mic);
-                else
+                } else
                     result.addWarning("mics: code is empty for " + mic.name);
             }
         }
@@ -139,7 +147,7 @@ struct LayoutTraits<KitLayout> {
 
                 inst.id = instItem["id"].asString();
                 inst.display = instItem["display"].asString();
-                inst.type = KitLib::InstrumentSpecs::typeFromString(inst.id.removeCharacters("0123456789"));
+                inst.type = KitLib::InstrumentSpec::typeFromString(inst.id.removeCharacters("0123456789"));
 
                 const auto& artsNode = instItem["articulations"];
                 if (artsNode.isSequence()) {

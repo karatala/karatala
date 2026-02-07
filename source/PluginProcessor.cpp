@@ -4,32 +4,32 @@
 //==============================================================================
 PluginProcessor::PluginProcessor()
     : AudioProcessor(
-          BusesProperties().withInput("Input", juce::AudioChannelSet::stereo(), true)
-              //
-              .withOutput("Out 01", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 02", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 03", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 04", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 05", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 06", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 07", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 08", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 09", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 10", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 11", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 12", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 13", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 14", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 15", juce::AudioChannelSet::stereo(), true)
-              .withOutput("Out 16", juce::AudioChannelSet::stereo(), true)
+        BusesProperties()
+            // .withInput("Input", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 01", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 02", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 03", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 04", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 05", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 06", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 07", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 08", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 09", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 10", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 11", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 12", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 13", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 14", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 15", juce::AudioChannelSet::stereo(), true)
+            .withOutput("Out 16", juce::AudioChannelSet::stereo(), true)
 
-              )
+    )
 
     , mAudioFormatManagerPtr(std::make_unique<juce::AudioFormatManager>())
     , mAudioProcessorValueTreeStatePtr(std::make_unique<juce::AudioProcessorValueTreeState>(*this, nullptr, juce::Identifier("plugin_params"), createParameterLayout())
 ) {
-    mDrumKitEngine = std::make_unique<DrumKitEngine>();
-    mDrumKitEngine->init(*mAudioProcessorValueTreeStatePtr);
+    this->drumKitEnginePtr = std::make_unique<DrumKitEngine>();
+    this->drumKitEnginePtr->init(*mAudioProcessorValueTreeStatePtr);
 }
 
 PluginProcessor::~PluginProcessor() {
@@ -60,7 +60,7 @@ void PluginProcessor::changeProgramName(int index, const juce::String& newName) 
 
 //==============================================================================
 void PluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    this->mDrumKitEngine->prepareToPlay(sampleRate, samplesPerBlock);
+    this->drumKitEnginePtr->prepareToPlay(sampleRate, samplesPerBlock);
 }
 
 double PluginProcessor::getTailLengthSeconds() const {
@@ -101,8 +101,8 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         // ..do something to the data...
     }
 
-    if (mDrumKitEngine) {
-        mDrumKitEngine->processBlock(buffer, midiMessages);
+    if (this->drumKitEnginePtr) {
+        this->drumKitEnginePtr->processBlock(buffer, midiMessages);
     }
 }
 

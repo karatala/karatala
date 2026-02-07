@@ -23,12 +23,12 @@ public:
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     juce::AudioProcessorEditor* createEditor() override;
-    bool hasEditor() const override { return false; }
+    bool hasEditor() const override { return true; }
 
     const juce::String getName() const override { return JucePlugin_Name; }
 
     bool acceptsMidi() const override { return true; }
-    bool producesMidi() const override { return false; }
+    bool producesMidi() const override { return true; }
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override;
 
@@ -44,7 +44,7 @@ public:
     // juce::AudioProcessorValueTreeState::Listener
     void parameterChanged(const juce::String& parameterId, float newValue) {
         // mPluginParameters->handleParameterChanged(*mAudioProcessorValueTreeStatePtr, parameterId, newValue, *mDSPManager);
-        DBG("CHECK IT OUT parameterChanged: " + parameterId + ": " + juce::String::formatted("%.3f", newValue));
+        LOG(Debug, "CHECK IT OUT parameterChanged: " + parameterId + ": " + juce::String::formatted("%.3f", newValue));
     }
 
 private:
@@ -53,7 +53,7 @@ private:
     // std::unique_ptr<PluginPresetManager> mPresetManagerPtr;
     // std::unique_ptr<PluginParameters> mPluginParameters;
 
-    std::unique_ptr<DrumKitEngine> mDrumKitEngine;
+    std::unique_ptr<DrumKitEngine> drumKitEnginePtr;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

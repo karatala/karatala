@@ -17,17 +17,17 @@
       "problemMatcher": "$gcc",
     },
     
-    {
-      "label": "Run Standalone",
-      "type": "shell",
-      "command": "killall Karatala; ./build/Karatala_artefacts/Standalone/Karatala.app/Contents/MacOS/Karatala",
-      "dependsOn": "Build",
-    },
-    {
-      "label": "Validate plugin using pluginval",
-      "type": "shell",
-      "command": "/Applications/pluginval.app/Contents/MacOS/pluginval --validate ./build/Karatala_artefacts",
-      "dependsOn": "Build",
-    },
+    // {
+    //   "label": "Run Standalone",
+    //   "type": "shell",
+    //   "command": "killall Karatala; ./build/Karatala_artefacts/Standalone/Karatala.app/Contents/MacOS/Karatala",
+    //   "dependsOn": "Build",
+    // },
+    // {
+    //   "label": "Validate plugin using pluginval",
+    //   "type": "shell",
+    //   "command": "/Applications/pluginval.app/Contents/MacOS/pluginval --validate ./build/Karatala_artefacts",
+    //   "dependsOn": "Build",
+    // },
   ]
 }

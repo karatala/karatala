@@ -8,16 +8,16 @@
 using namespace KitLib;
 
 // TEST_CASE("InstrumentSynth - basic velocity selection", "[InstrumentSynth]") {
-//     InstrumentSpecs::MetaInfo meta;
+//     InstrumentSpec::MetaInfo meta;
 //     meta.code = "test";
-//     InstrumentSpecs instr(nullptr, meta);
+//     InstrumentSpec instr(nullptr, meta);
 
 //     auto* art = instr.getOrAddArticulation("center");
 //     auto* l1 = art->getOrAddVelocityLayer(10);
 //     auto* l2 = art->getOrAddVelocityLayer(100);
 
-//     l1->addSampleVariant(std::make_unique<SampleVariantSpecs>(juce::File(), 'a', MicSpecs()));
-//     l2->addSampleVariant(std::make_unique<SampleVariantSpecs>(juce::File(), 'a', MicSpecs()));
+//     l1->addSampleVariant(std::make_unique<SampleVariantSpec>(juce::File(), 'a', MicSpec()));
+//     l2->addSampleVariant(std::make_unique<SampleVariantSpec>(juce::File(), 'a', MicSpec()));
 
 //     InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot());
 //     synth.loadInstrument(&instr);
@@ -32,14 +32,14 @@ using namespace KitLib;
 // }
 
 // TEST_CASE("InstrumentSynth - different round robins", "[InstrumentSynth]") {
-//     InstrumentSpecs::MetaInfo meta;
+//     InstrumentSpec::MetaInfo meta;
 //     meta.code = "test";
-//     InstrumentSpecs instr(nullptr, meta);
+//     InstrumentSpec instr(nullptr, meta);
 
 //     auto* art = instr.getOrAddArticulation("center");
 //     auto* l1 = art->getOrAddVelocityLayer(50);
-//     l1->addSampleVariant(std::make_unique<SampleVariantSpecs>(juce::File(), 'a', MicSpecs()));
-//     l1->addSampleVariant(std::make_unique<SampleVariantSpecs>(juce::File(), 'b', MicSpecs()));
+//     l1->addSampleVariant(std::make_unique<SampleVariantSpec>(juce::File(), 'a', MicSpec()));
+//     l1->addSampleVariant(std::make_unique<SampleVariantSpec>(juce::File(), 'b', MicSpec()));
 
 //     InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot());
 //     synth.loadInstrument(&instr);
@@ -53,19 +53,19 @@ using namespace KitLib;
 // }
 
 // TEST_CASE("InstrumentSynth - HiHat combined 2D selector", "[InstrumentSynth]") { //TODO 
-//     InstrumentSpecs::MetaInfo meta;
+//     InstrumentSpec::MetaInfo meta;
 //     meta.code = "hhat";
-//     InstrumentSpecs instr(nullptr, meta);
-//     instr.meta.type = InstrumentSpecs::Type::HiHat;
+//     InstrumentSpec instr(nullptr, meta);
+//     instr.meta.type = InstrumentSpec::Type::HiHat;
 
 //     auto* artPedal = instr.getOrAddArticulation("pedal");
 //     auto* artOpen = instr.getOrAddArticulation("open");
 
 //     auto* lp = artPedal->getOrAddVelocityLayer(10);
-//     lp->addSampleVariant(std::make_unique<SampleVariantSpecs>(juce::File(), 'a', MicSpecs()));
+//     lp->addSampleVariant(std::make_unique<SampleVariantSpec>(juce::File(), 'a', MicSpec()));
 
 //     auto* lo = artOpen->getOrAddVelocityLayer(10);
-//     lo->addSampleVariant(std::make_unique<SampleVariantSpecs>(juce::File(), 'b', MicSpecs()));
+//     lo->addSampleVariant(std::make_unique<SampleVariantSpec>(juce::File(), 'b', MicSpec()));
 
 //     InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot());
 //     synth.loadInstrument(&instr);

@@ -7,19 +7,17 @@
 #include <mutex>
 #include <unordered_map>
 
-using namespace juce;
-
 // Simple async sample loader with small in-memory cache.
 // Not a production-grade LRU cache — keeps things simple for now.
 class SampleLoader {
 public:
-    using LoadCallback = std::function<void(std::shared_ptr<AudioBuffer<float>> audioBuffer, double sampleRate)>;
+    using LoadCallback = std::function<void(std::shared_ptr<juce::AudioBuffer<float>> audioBuffer, double sampleRate)>;
 
     SampleLoader();
     ~SampleLoader();
 
     // Request asynchronous load. If sample is cached, callback invoked synchronously on message thread.
-    void requestAsyncLoad(const File& file, LoadCallback callback);
+    void requestAsyncLoad(const juce::File& file, LoadCallback callback);
 
     // Set rough cache size limit in bytes (not strict); default 512MB
     void setCacheLimitBytes(size_t bytes) {
@@ -27,10 +25,10 @@ public:
     }
 
 private:
-    AudioFormatManager formatManager;
+    juce::AudioFormatManager formatManager;
 
     std::mutex cacheMutex;
-    std::unordered_map<juce::String, std::shared_ptr<AudioBuffer<float>>> cache;
+    std::unordered_map<juce::String, std::shared_ptr<juce::AudioBuffer<float>>> cache;
     size_t currentCacheBytes = 0;
     size_t cacheLimitBytes = 512ull * 1024ull * 1024ull; // 512 MB
 };

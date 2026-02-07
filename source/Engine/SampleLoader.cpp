@@ -10,9 +10,9 @@ SampleLoader::SampleLoader() {
 SampleLoader::~SampleLoader() {
 }
 
-void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) { //FIXME: review wtf happens here
+void SampleLoader::requestAsyncLoad(const juce::File& file, LoadCallback callback) { //FIXME: review wtf happens here
     if (!file.existsAsFile()) {
-        MessageManager::callAsync([file, callback]() {
+        juce::MessageManager::callAsync([file, callback]() {
             callback(nullptr, 0.0);
         });
         return;
@@ -26,7 +26,7 @@ void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) { /
         auto it = cache.find(path);
         if (it != cache.end()) {
             auto buf = it->second;
-            MessageManager::callAsync([file, buf, this, callback]() {
+            juce::MessageManager::callAsync([file, buf, this, callback]() {
                 callback(buf, 0.0);
             });
             return;
@@ -35,26 +35,26 @@ void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) { /
 
     // Spawn a background thread to decode
     std::thread([this, file, path, callback]() {
-        std::unique_ptr<InputStream> in(file.createInputStream());
+        std::unique_ptr<juce::InputStream> in(file.createInputStream());
         if (!in) {
-            MessageManager::callAsync([file, callback]() {
+            juce::MessageManager::callAsync([file, callback]() {
                 callback(nullptr, 0.0);
             });
             return;
         }
 
-        std::unique_ptr<AudioFormatReader> reader(formatManager.createReaderFor(std::move(in)));
+        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(std::move(in)));
         if (!reader) {
-            MessageManager::callAsync([file, callback]() {
+            juce::MessageManager::callAsync([file, callback]() {
                 callback(nullptr, 0.0);
             });
             return;
         }
 
-        int channels = jmin(2, (int) reader->numChannels);
+        int channels = juce::jmin(2, (int) reader->numChannels);
         int samples = (int) reader->lengthInSamples;
 
-        auto buffer = std::make_shared<AudioBuffer<float>>(channels, samples);
+        auto buffer = std::make_shared<juce::AudioBuffer<float>>(channels, samples);
         reader->read(buffer.get(), 0, samples, 0, true, true);
         double sr = reader->sampleRate;
 
@@ -70,7 +70,7 @@ void SampleLoader::requestAsyncLoad(const File& file, LoadCallback callback) { /
             }
         }
 
-        MessageManager::callAsync([file, buffer, sr, callback]() {
+        juce::MessageManager::callAsync([file, buffer, sr, callback]() {
             callback(buffer, sr);
         });
     }).detach();

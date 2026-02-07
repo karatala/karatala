@@ -29,27 +29,27 @@ void DrumKitEngine::initGlobalSettings() {
     if (envInfo.ok()) {
         this->dataPath = envInfo.value;
     } else {
-        DBG("WARN: " + envInfo.error());
+        LOG(Warning, "" + envInfo.error());
         this->dataPath = defaultDataPath;
     }
 
     if (!this->dataPath.exists()) {
         const auto result = this->dataPath.createDirectory();
         if (result.failed()) {
-            DBG("WARN: Could not create data directory: " + result.getErrorMessage());
+            LOG(Warning, "Could not create data directory: " + result.getErrorMessage());
             jassertfalse;
         }
     }
 
-    File configFile = this->dataPath.getChildFile("config.yaml");
+    juce::File configFile = this->dataPath.getChildFile("config.yaml");
     if (!configFile.existsAsFile()) {
         auto result = configFile.create();
         if (result.failed()) {
-            DBG("WARN: Could not create config file: " + result.getErrorMessage());
+            LOG(Warning, "Could not create config file: " + result.getErrorMessage());
             jassertfalse;
         } else {
             if (!configFile.replaceWithText(this->getDefaultYaml())) {
-                DBG("WARN: Could not write default config.yaml");
+                LOG(Warning, "Could not write default config.yaml");
                 jassertfalse;
             }
         }
@@ -58,57 +58,57 @@ void DrumKitEngine::initGlobalSettings() {
     auto yamlStr = configFile.loadFileAsString();
     auto conf = this->parseConfigYaml(yamlStr);
     if (conf.ok()) {
-        this->mConfig = conf.value;
+        this->globalConfig = conf.value;
     } else {
-        DBG("ERROR: engine config parse error: " + conf.error());
+        LOG(Error, "engine config parse error: " + conf.error());
         jassertfalse;
     }
 }
 
 void DrumKitEngine::initDefaultLayouts() {
-    this->mKitLayoutManager->initDefault();
-    this->mMicLayoutManager->initDefault();
+    this->kitLayoutManagerPtr->initDefault();
+    this->micLayoutManagerPtr->initDefault();
 }
 
 void DrumKitEngine::initKitLayouts() {
-    const File layoutsDir = this->dataPath.getChildFile("kit_layouts");
-    auto result = this->mKitLayoutManager->scanLayouts(layoutsDir);
+    const juce::File layoutsDir = this->dataPath.getChildFile("kit_layouts");
+    auto result = this->kitLayoutManagerPtr->scanLayouts(layoutsDir);
     if (result.ok()) {
-        DBG("INFO: found kit layouts: " + juce::String(result.value));
+        LOG(Info, "found kit layouts: " + juce::String(result.value));
     } else {
-        DBG("WARN: init kit layouts: " + result.error());
+        LOG(Warning, "init kit layouts: " + result.error());
     }
 }
 
 void DrumKitEngine::initMicLayouts() {
-    const File layoutsDir = this->dataPath.getChildFile("mic_layouts");
-    auto result = this->mMicLayoutManager->scanLayouts(layoutsDir);
+    const juce::File layoutsDir = this->dataPath.getChildFile("mic_layouts");
+    auto result = this->micLayoutManagerPtr->scanLayouts(layoutsDir);
     if (result.ok()) {
-        DBG("INFO: found mic layouts: " + juce::String(result.value));
+        LOG(Info, "found mic layouts: " + juce::String(result.value));
     } else {
-        DBG("WARN: init mic layouts: " + result.error());
+        LOG(Warning, "init mic layouts: " + result.error());
     }
 }
 
 void DrumKitEngine::initSampleLibrary() {
-    if (!mConfig.libraryPath.isDirectory()) {
-        DBG("ERROR: Sample library not found under " + mConfig.libraryPath.getFullPathName());
+    if (!this->globalConfig.libraryPath.isDirectory()) {
+        LOG(Error, "Sample library not found under " + this->globalConfig.libraryPath.getFullPathName());
         jassertfalse;
         return;
     }
 
-    this->mLibraryManager = std::make_unique<KitLib::LibraryManager>(mConfig.libraryPath);
-    this->mLibraryManager->scanAll();
+    this->libraryManagerPtr = std::make_unique<KitLib::LibraryManager>(this->globalConfig.libraryPath);
+    this->libraryManagerPtr->scanAll();
 
-    this->mSampleLoader = std::make_unique<SampleLoader>();
-    this->mSampleLoader->setCacheLimitBytes(mConfig.sampleLoaderCacheLimitMegabytes * 1024ull * 1024ull);
+    this->sampleLoaderPtr = std::make_unique<SampleLoader>();
+    this->sampleLoaderPtr->setCacheLimitBytes(this->globalConfig.sampleLoaderCacheLimitMegabytes * 1024ull * 1024ull);
 }
 
 bool DrumKitEngine::useKitLayout(juce::String name) {
     const KitLayout* ptr = this->getKitLayoutManager()->getLayoutById(name);
     if (ptr != nullptr)
         this->setKitLayout(*ptr);
-    if (name != "default") DBG("WARN: KitLayout not found: " + name);
+    if (name != "default") LOG(Warning, "KitLayout not found: " + name);
     return false;
 }
 
@@ -116,24 +116,24 @@ bool DrumKitEngine::useMicLayout(juce::String name) {
     const MicLayout* ptr = this->getMicLayoutManager()->getLayoutById(name);
     if (ptr != nullptr)
         this->setMicLayout(*ptr);
-    if (name != "default") DBG("WARN: MicLayout not found: " + name);
+    if (name != "default") LOG(Warning, "MicLayout not found: " + name);
     return false;
 }
 
 bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
     if (text.trim().isEmpty()) {
-        DBG("WARN: empty instrument map text");
+        LOG(Warning, "empty instrument map text");
         return false;
     }
 
     auto pairs = DrumKitEngine::parseInstrumentMapText(text); //TODO: plan implementation
     if (pairs.empty()) {
-        DBG("WARN: no valid mapping lines found");
+        LOG(Warning, "no valid mapping lines found");
         return false;
     }
 
-    if (this->mLibraryManager == nullptr) {
-        DBG("ERROR: LibraryManager is not initialized");
+    if (this->libraryManagerPtr == nullptr) {
+        LOG(Error, "LibraryManager is not initialized");
         return false;
     }
 
@@ -143,9 +143,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
         const auto rhs = p.second.trim();
 
         // find slot
-        auto sit = mInstrumentSynthById.find(slotId);
-        if (sit == mInstrumentSynthById.end()) {
-            DBG("WARN: instrument slot not found: " + slotId);
+        auto sit = this->instrumentSynthById.find(slotId);
+        if (sit == this->instrumentSynthById.end()) {
+            LOG(Warning, "instrument slot not found: " + slotId);
             continue;
         }
         InstrumentSynth* slot = sit->second;
@@ -160,42 +160,42 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
         }
 
         // find kit (by name or code)
-        KitLib::DrumKitSpecs* kit = nullptr;
-        for (auto& kptr : this->mLibraryManager->getKits()) {
+        KitLib::DrumKitSpec* kitSpec = nullptr;
+        for (auto& kptr : this->libraryManagerPtr->getKits()) {
             if (kptr->meta.name == kitName || kptr->meta.code == kitName) {
-                kit = kptr.get();
+                kitSpec = kptr.get();
                 break;
             }
         }
 
-        if (kit == nullptr) {
-            DBG("WARN: kit not found: " + kitName);
+        if (kitSpec == nullptr) {
+            LOG(Warning, "kit not found: " + kitName);
             continue;
         }
 
         if (instCode.isEmpty()) {
-            this->mapKit(*kit);
+            this->mapKit(*kitSpec);
             applied++;
             continue;
         }
 
-        KitLib::InstrumentSpecs* inst = kit->findInstrument(instCode);
-        if (inst == nullptr) {
-            DBG("WARN: instrument not found in kit '" + kit->meta.name + "': " + instCode);
+        KitLib::InstrumentSpec* instSpec = kitSpec->findInstrument(instCode);
+        if (instSpec == nullptr) {
+            LOG(Warning, "instrument not found in kit '" + kitSpec->meta.name + "': " + instCode);
             continue;
         }
 
-        slot->loadInstrument(inst);
+        slot->loadInstrument(instSpec);
         applied++;
 
         // map midi notes for this slot based on kit layout definition (if present)
-        if (this->mKitLayout != nullptr) {
-            auto it = this->mKitLayout->instrumentsById.find(slotId);
-            if (it != this->mKitLayout->instrumentsById.end()) {
+        if (this->activeKitLayoutPtr != nullptr) {
+            auto it = this->activeKitLayoutPtr->instrumentsById.find(slotId);
+            if (it != this->activeKitLayoutPtr->instrumentsById.end()) {
                 const auto* layoutInst = it->second;
                 for (const auto& art : layoutInst->articulations) {
                     for (int note : art.notes) {
-                        auto& vec = mInstrumentSynthsByNote[note];
+                        auto& vec = this->instrumentSynthsByNote[note];
                         // avoid duplicates
                         if (std::find(vec.begin(), vec.end(), slot) == vec.end())
                             vec.push_back(slot);
@@ -209,22 +209,22 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
 }
 
 bool DrumKitEngine::setKitLayout(KitLayout layout) {
-    mKitLayout = std::make_unique<KitLayout>(layout);
+    this->activeKitLayoutPtr = std::make_unique<KitLayout>(layout);
     return this->applyKitLayout();
 }
 
 bool DrumKitEngine::setMicLayout(MicLayout layout) {
-    mMicLayout = std::make_unique<MicLayout>(layout);
+    this->activeMicLayoutPtr = std::make_unique<MicLayout>(layout);
     return this->applyMicLayout();
 }
 
 void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState) {
     auto kitLayout = treeState.state["kit_layout"].toString();
     if (kitLayout.isEmpty() || !this->useKitLayout(kitLayout)) {
-        if (this->mKitLayout == nullptr) {
-            kitLayout = this->mConfig.kitLayout;
+        if (this->activeKitLayoutPtr == nullptr) {
+            kitLayout = this->globalConfig.kitLayout;
             if (kitLayout.isEmpty() || !this->useKitLayout(kitLayout)) {
-                DBG("WARN: Using default kit layout");
+                LOG(Warning, "Using default kit layout");
                 auto src = this->getKitLayoutManager()->getDefault();
                 this->setKitLayout(src);
             }
@@ -233,10 +233,10 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
 
     auto micLayout = treeState.state["mic_layout"].toString();
     if (micLayout.isEmpty() || !this->useMicLayout(micLayout)) {
-        if (this->mMicLayout == nullptr) {
-            micLayout = this->mConfig.micLayout;
+        if (this->activeMicLayoutPtr == nullptr) {
+            micLayout = this->globalConfig.micLayout;
             if (micLayout.isEmpty() || !this->useMicLayout(micLayout)) {
-                DBG("WARN: Using default mic layout");
+                LOG(Warning, "Using default mic layout");
                 auto src = this->getMicLayoutManager()->getDefault();
                 this->setMicLayout(src);
             }
@@ -252,38 +252,38 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
 }
 
 void DrumKitEngine::mapDefaultKit() {
-    KitLib::DrumKitSpecs* kit = this->getInstrumentManager()->getKit(0); //MAYBE: later use global setting for default kit instead
+    KitLib::DrumKitSpec* kit = this->getInstrumentManager()->getKit(0); //MAYBE: later use global setting for default kit instead
     if (kit != nullptr)
         this->mapKit(*kit);
 }
 
-void DrumKitEngine::mapKit(KitLib::DrumKitSpecs& kit) { //FIXME: review, probably rewrite, simplify
-    if (this->mKitLayout == nullptr) {
-        DBG("WARN: no active kit layout to map to");
+void DrumKitEngine::mapKit(KitLib::DrumKitSpec& kit) { //FIXME: review, probably rewrite, simplify
+    if (this->activeKitLayoutPtr == nullptr) {
+        LOG(Warning, "no active kit layout to map to");
         return;
     }
 
     // simple matching pass: by layout id -> kit instrument code, then fuzzy by name/code containment
-    std::unordered_set<KitLib::InstrumentSpecs*> usedInstruments;
+    std::unordered_set<KitLib::InstrumentSpec*> usedInstSpecSet;
 
-    std::map<KitLib::InstrumentSpecs::Type, int> nextIndexByType; // for sequential assignment when layout uses numbering (kick1, kick2)
+    std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType; // for sequential assignment when layout uses numbering (kick1, kick2)
     
 
-    for (const auto& layoutInstrument : this->mKitLayout->instrumentSlots) { //FIXME: rewrite loop thru mInstrumentSynthById
-        KitLib::InstrumentSpecs* matched = nullptr;
+    for (const auto& layoutInstrument : this->activeKitLayoutPtr->instrumentSlots) { //FIXME: rewrite loop thru instrumentSynthById
+        KitLib::InstrumentSpec* matched = nullptr;
 
-        auto sit = mInstrumentSynthById.find(layoutInstrument.id);
-        if (sit == mInstrumentSynthById.end()) {
-            DBG("WARN: layout instrument slot not present: " + layoutInstrument.id);
+        auto sit = this->instrumentSynthById.find(layoutInstrument.id);
+        if (sit == this->instrumentSynthById.end()) {
+            LOG(Warning, "layout instrument slot not present: " + layoutInstrument.id);
             continue;
         }
         InstrumentSynth* slot = sit->second;
 
-        // resolve layout type to KitLib::InstrumentSpecs::Type
-        KitLib::InstrumentSpecs::Type desiredType = layoutInstrument.type;
+        // resolve layout type to KitLib::InstrumentSpec::Type
+        KitLib::InstrumentSpec::Type desiredType = layoutInstrument.type;
         
         // If we have a valid type, try type-based selection
-        if (desiredType != KitLib::InstrumentSpecs::Type::Unknown) {
+        if (desiredType != KitLib::InstrumentSpec::Type::Unknown) {
             auto candidates = kit.getInstrumentsByType(desiredType);
         
             // parse numeric suffix from layout id (e.g., 'kick1' -> index 1)
@@ -301,7 +301,7 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpecs& kit) { //FIXME: review, probabl
         
             if (requestedIdx >= 0 && requestedIdx < static_cast<int>(candidates.size())) {
                 // pick by explicit position if available and not used
-                if (usedInstruments.find(candidates[requestedIdx]) == usedInstruments.end()) {
+                if (usedInstSpecSet.find(candidates[requestedIdx]) == usedInstSpecSet.end()) {
                     matched = candidates[requestedIdx];
                 }
             }
@@ -310,7 +310,7 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpecs& kit) { //FIXME: review, probabl
             if (matched == nullptr) {
                 int& next = nextIndexByType[layoutInstrument.type];
                 for (int i = next; i < static_cast<int>(candidates.size()); ++i) {
-                    if (usedInstruments.find(candidates[i]) == usedInstruments.end()) {
+                    if (usedInstSpecSet.find(candidates[i]) == usedInstSpecSet.end()) {
                         matched = candidates[i];
                         next = i + 1;
                         break;
@@ -319,7 +319,7 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpecs& kit) { //FIXME: review, probabl
                 // wrap-around search from beginning if none found after 'next'
                 if (matched == nullptr) {
                     for (int i = 0; i < static_cast<int>(candidates.size()); ++i) {
-                        if (usedInstruments.find(candidates[i]) == usedInstruments.end()) {
+                        if (usedInstSpecSet.find(candidates[i]) == usedInstSpecSet.end()) {
                             matched = candidates[i];
                             next = i + 1;
                             break;
@@ -331,35 +331,35 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpecs& kit) { //FIXME: review, probabl
     
         // Fallback: attempt fuzzy match by name/code if still not matched
         if (matched == nullptr) {
-            String needle = layoutInstrument.id.trim().toLowerCase();
-            for (const auto& pair : kit.instruments) {
-                auto* cand = pair.second.get();
-                if (cand == nullptr)
+            juce::String needle = layoutInstrument.id.trim().toLowerCase();
+            for (const auto&[id, instPtr] : kit.instrumentSpecsMap) {
+                auto* candidate = instPtr.get();
+                if (candidate == nullptr)
                     continue;
-                if (usedInstruments.find(cand) != usedInstruments.end())
+                if (usedInstSpecSet.find(candidate) != usedInstSpecSet.end())
                     continue;
-                if (cand->meta.code.trim().toLowerCase().contains(needle) || cand->meta.name.trim().toLowerCase().contains(needle)) {
-                    matched = cand;
-                            break;
-                        }
-                    }
+                if (candidate->meta.code.trim().toLowerCase().contains(needle) || candidate->meta.name.trim().toLowerCase().contains(needle)) {
+                    matched = candidate;
+                    break;
                 }
+            }
+        }
 
         if (matched == nullptr) {
-            DBG("WARN: no matching instrument found in kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
+            LOG(Warning, "no matching instrument found in kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
             slot->unloadInstrument();
             continue;
         }
         
-        DBG("INFO: loading instrument '" + matched->meta.code + "' from kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
+        LOG(Info, "loading instrument '" + matched->meta.code + "' from kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
         
         slot->loadInstrument(matched); //TODO: wrap in performance measuring block
-        usedInstruments.insert(matched);
+        usedInstSpecSet.insert(matched);
 
         //FIXME: map MIDI notes for articulations?? WHY? isnt it already done
         // for (const auto& art : layoutInstrument.articulations) {
         //     for (int note : art.notes) {
-        //         auto& vec = mInstrumentSynthsByNote[note];
+        //         auto& vec = instrumentSynthsByNote[note];
         //         if (std::find(vec.begin(), vec.end(), slot) == vec.end())
         //             vec.push_back(slot);
         //     }
@@ -380,13 +380,13 @@ std::vector<std::pair<juce::String, juce::String>> DrumKitEngine::parseInstrumen
 
         auto colon = line.indexOfChar(':');
         if (colon <= 0) {
-            DBG("WARN: invalid mapping line (no colon): " + line);
+            LOG(Warning, "invalid mapping line (no colon): " + line);
             continue;
         }
         auto left = line.substring(0, colon).trim();
         auto right = line.substring(colon + 1).trim();
         if (left.isEmpty() || right.isEmpty()) {
-            DBG("WARN: invalid mapping line (empty slot or target): " + line);
+            LOG(Warning, "invalid mapping line (empty slot or target): " + line);
             continue;
         }
         result.emplace_back(left, right);
@@ -429,90 +429,95 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "kitLayout: default\n";
     result += "micLayout: default\n";
     result += "sampleLoaderCacheLimitMegabytes: 1024\n";
-    const File libDir = this->dataPath.getChildFile("sample_library");
+    const juce::File libDir = this->dataPath.getChildFile("sample_library");
     if (libDir.exists())
         result += "libraryPath: " + libDir.getFullPathName() + "\n";
     return result;
 }
 
 void DrumKitEngine::saveSettings() {
-    File configFile = dataPath.getChildFile("config.yaml");
+    juce::File configFile = dataPath.getChildFile("config.yaml");
     //TODO: write yaml
     jassertfalse;
 }
 
 bool DrumKitEngine::applyKitLayout() {
-    if (this->mKitLayout == nullptr) {
-        DBG("WARN: kit layout was not set");
+    if (this->activeKitLayoutPtr == nullptr) {
+        LOG(Warning, "kit layout was not set");
         return false;
     }
-    this->mInstrumentSynthPtrs.clear();
-    this->mInstrumentSynthById.clear();
-    this->mInstrumentSynthsByNote.clear();
-    this->mContinuousControllerValues.clear();
+    this->instrumentSynthPtrs.clear();
+    this->instrumentSynthById.clear();
+    this->instrumentSynthsByNote.clear();
+    this->latestCcValueMap.clear();
 
     for (const auto& instrumentSlot : this->getKitLayout()->instrumentSlots) {
         auto slot = std::make_unique<InstrumentSynth>(this, instrumentSlot);
         auto ptr = slot.get();
 
-        this->mInstrumentSynthById[slot->getId()] = ptr;
-        this->mInstrumentSynthPtrs.push_back(std::move(slot));
+        this->instrumentSynthById[slot->getId()] = ptr;
+        this->instrumentSynthPtrs.push_back(std::move(slot));
 
         for (const auto& cc : instrumentSlot.controllers) {
-            this->mContinuousControllerValues[cc.number] = 0;
+            this->latestCcValueMap[cc.number] = 0;
         }
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
-                this->mInstrumentSynthsByNote[note].push_back(ptr);
+                this->instrumentSynthsByNote[note].push_back(ptr);
             }
         }
     }
 
-    DBG("INFO: Applied kit layout: " + this->mKitLayout->id);
+    LOG(Info, "Applied kit layout: " + this->activeKitLayoutPtr->id);
     return true;
 }
 
-bool DrumKitEngine::applyMicLayout() { //TODO: review
-    if (this->mMicLayout == nullptr) {
-        DBG("WARN: mic layout was not set");
+bool DrumKitEngine::applyMicLayout() {
+    if (this->activeMicLayoutPtr == nullptr) {
+        LOG(Warning, "mic layout was not set");
         return false;
     }
 
-    if (this->mInstrumentSynthPtrs.size() == 0) {
-        DBG("WARN: unable to apply mic layout: no instrument slots was defined in kit layout");
+    if (this->instrumentSynthPtrs.size() == 0) {
+        LOG(Warning, "unable to apply mic layout: no instrument slots was defined in kit layout");
         return false;
     }
+    // mic layout is for a mapping of each SampleVariantSpec mic (MicSpec) of InstrumentSynth to coresponding output channel of the plugin
+    // the map (sequence and other params defined in MicSpec) of channels is defined in micLayout.
+    //  MicSpec to determine which of plugin and routing 
+    
+
 
     // For each instrument slot, calculate how many mic channels it should have
-    for (size_t idx = 0; idx < this->mInstrumentSynthPtrs.size(); ++idx) {
-        InstrumentSynth* slotPtr = this->mInstrumentSynthPtrs[idx].get();
-        int totalChannels = 0;
-        const auto slotId = slotPtr->getId();
-        for (const MicLayout::Mic& mic : this->mMicLayout->mics) {
-            // match mic entries that list this slot id in their instrument field
-            if (mic.instrument == slotId) {
-                // parse mic code; try to infer channel count
-                auto prRes = KitLib::MicSpecs::parseMicCode(mic.code);
-                if (prRes.ok()) {
-                    totalChannels += prRes.value.channels;
-                } else {
-                    totalChannels += 1; //FIXME: fallback mono? review, maybe take something from file
-                }
-            }
-        }
+    // for (size_t idx = 0; idx < this->instrumentSynthPtrs.size(); ++idx) {
+    //     InstrumentSynth* slotPtr = this->instrumentSynthPtrs[idx].get();
+    //     int totalChannels = 0;
+    //     const auto slotId = slotPtr->getId();
+    //     for (const MicLayout::Mic& mic : this->activeMicLayoutPtr->mics) {
+    //         // match mic entries that list this slot id in their instrument field
+    //         if (mic.instrument == slotId) {
+    //             // parse mic code; try to infer channel count
+    //             auto prRes = KitLib::MicSpec::parseMicCode(mic.code);
+    //             if (prRes.ok()) {
+    //                 totalChannels += prRes.value.channels;
+    //             } else {
+    //                 totalChannels += 1; //FIXME: fallback mono? review, maybe take something from file
+    //             }
+    //         }
+    //     }
 
-        if (totalChannels <= 0)
-            totalChannels = 2; //FIXME: default to stereo? review, maybe take something from file
+    //     if (totalChannels <= 0)
+    //         totalChannels = 2; //FIXME: default to stereo? review, maybe take something from file
 
-        slotPtr->setMicChannelCount(totalChannels);
-    }
+    //     slotPtr->setMicChannelCount(totalChannels);
+    // }
 
-    DBG("INFO: Applied mic layout: " + this->mMicLayout->id);
+    LOG(Info, "Applied mic layout: " + this->activeMicLayoutPtr->id);
     return true;
 }
 
 void DrumKitEngine::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    for (const auto& instrumentSynthPtr : this->mInstrumentSynthPtrs) {
+    for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
         instrumentSynthPtr->setCurrentPlaybackSampleRate(sampleRate);
         instrumentSynthPtr->prepareToPlay(sampleRate, samplesPerBlock);
     }
@@ -524,7 +529,7 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     
     this->saveLatestContinuousControllerValues(midiMessages);
 
-    for (const auto& instrumentSynthPtr : this->mInstrumentSynthPtrs) {
+    for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
         auto& micBuffer = instrumentSynthPtr->getMicBuffer();
         micBuffer.clear();
 
@@ -546,9 +551,8 @@ void DrumKitEngine::saveLatestContinuousControllerValues(const juce::MidiBuffer&
         const juce::MidiMessage msg = midiMess.getMessage();
         if (!msg.isController()) continue;
         const auto ccNum = msg.getControllerNumber();
-        if (this->mContinuousControllerValues.find(ccNum) == mContinuousControllerValues.end()) continue;
-        
-        this->mContinuousControllerValues[ccNum] = msg.getControllerValue();
+        if (this->latestCcValueMap.find(ccNum) == this->latestCcValueMap.end()) continue;
+        this->latestCcValueMap[ccNum] = msg.getControllerValue();
     }
 }
 
@@ -560,37 +564,39 @@ void InstrumentSynth::unloadInstrument() {
     this->instrumentSpecstPtr = nullptr;
 }
 
-void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
-    if (instrumentSpecs == nullptr) return;
+void InstrumentSynth::loadInstrument(KitLib::InstrumentSpec* instSpec) {
+    if (instSpec == nullptr) return;
     this->unloadInstrument();
-    this->instrumentSpecstPtr = instrumentSpecs;
-    this->type = instrumentSpecs->meta.type;
+    this->instrumentSpecstPtr = instSpec;
+    this->type = instSpec->meta.type;
 
     auto loader = this->getSampleLoader();
 
     // For each layout articulation create runtime entry
-    for (const KitLayout::InstrumentSlot::ArticulationTrigger& layoutArt : this->instrumentDef.articulations) {
+    for (const KitLayout::InstrumentSlot::ArticulationTrigger& layoutArt : this->instrumentSlot.articulations) {
         InstrumentSynth::ArticulationRuntime artRt;
         artRt.codeRaw = layoutArt.codeRaw;
 
-        std::unordered_map<int, std::vector<std::pair<int8_t, int>>> foundCcDimensions;
+        std::unordered_map<int8_t, std::vector<std::pair<int8_t, int8_t>>> foundCcDimensions;
 
         bool found = false;
-        for (const auto& instArticulation : instrumentSpecs->articulations) {
-            if (instArticulation->codeIdx != layoutArt.codeIdx) continue;
+        for (const auto& artSpec : instSpec->articulationSpecs) {
+            if (artSpec->codeIdx != layoutArt.codeIdx) continue;
 
             found = true;
 
             // ensure velocity layers are sorted
-            instArticulation->sortVelocityLayers();
+            artSpec->sortVelocityLayers();
 
             // Build velocity layers and create SampledSound objects
-            for (const auto& velPtr : instArticulation->velocityLayers) {
+            for (const auto& velSpec : artSpec->velocityLayerSpecs) {
                 VelocityLayerRuntime layer;
-                layer.velocity = velPtr->velocity;
-                layer.samples.reserve(velPtr->sampleVariants.size()); //FIXME: sampleVariants here have all posible sample variants for all microphones, need to group them somewhere by letter, so same letter variants play same time from all coresponding mic channels
-                for (const auto& variantPtr : velPtr->sampleVariants) {
-                    auto* sound = new SampledSound(instrumentSpecs, variantPtr.get(), variantPtr->sampleFile, layoutArt.notes); //FIXME: need to thing what params to have in SampledSound constructor, maybe add some and maybe remove
+                layer.velocity = velSpec->velocity;
+                layer.samples.reserve(velSpec->sampleVariantSpecs.size()); 
+                //FIXME: sampleVariantSpecs here have all posible sample variants for all microphones, need to group them somewhere by SampleVariantSpec.letter, so for all coresponding mic channels should play corresponding sample variant
+                for (const auto& varSpec : velSpec->sampleVariantSpecs) {
+
+                    auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, layoutArt.notes); //FIXME: need to think what params to have in SampledSound constructor, maybe add some and maybe remove
                     this->addSound(sound);
                     this->sampledSoundPtrs.push_back(sound);
                     SampleEntry se;
@@ -599,7 +605,7 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
                     layer.samples.push_back(se);
 
                     if (loader != nullptr) {
-                        loader->requestAsyncLoad(variantPtr->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
+                        loader->requestAsyncLoad(varSpec->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
                             sound->buffer = buf;
                             sound->sampleRate = sr;
                         });
@@ -614,28 +620,28 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
                 // Example: layers {27,52,77,102,127} -> 0..27->0, 28..52->1, 53..77->2, 78..102->3, 103..127->4
                 const int8_t count = static_cast<int8_t>(artRt.layers.size());
                 for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
-                    int chosen = count - 1; // default to last layer
-                    for (int idx = 0; idx < count; ++idx) {
+                    int8_t chosen = count - 1; // default to last layer
+                    for (int8_t idx = 0; idx < count; ++idx) {
                         if (value <= static_cast<int>(artRt.layers[idx].velocity)) {
                             chosen = idx;
                             break;
                         }
                     }
-                    artRt.velocityToLayer[value] = static_cast<int8_t>(chosen);
+                    artRt.velocityToLayer[value] = chosen;
                 }
             }
             
 
             // Map layout notes to this articulation index
-            int artIdx = static_cast<int>(runtimeArticulations.size());
+            int8_t artIdx = static_cast<int8_t>(this->runtimeArticulations.size());
             for (uint8_t note : layoutArt.notes) {
-                this->noteToArticulation[note] = static_cast<int8_t>(artIdx);
+                this->noteToArticulation[note] = artIdx;
             }
 
 
 
             // Prepare note -> controller and controllerValue -> articulation mappings per subscribed CC
-            for (const auto& cc : this->instrumentDef.controllers) {
+            for (const auto& cc : this->instrumentSlot.controllers) {
                 // build reverse map of note -> controllers
                 for (uint8_t note : cc.notes) {
                     auto ccNum = static_cast<uint8_t>(cc.number);
@@ -648,9 +654,9 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
                 // only controllers with notes that are linked to this articulation
                 if (containsSameValue(cc.notes, layoutArt.notes)) {
                     // store refs for dimensions to process later
-                    for (const auto& dim : instArticulation->dimensions) {
-                        if (dim->type == cc.codeIdx) {
-                            for (const auto& val : dim->values) {
+                    for (const auto& expDim : artSpec->expressionDimensions) {
+                        if (expDim->type == cc.codeIdx) {
+                            for (const auto& val : expDim->values) {
                                 auto ccNum = static_cast<uint8_t>(cc.number);
                                 const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
                                 auto& vec = foundCcDimensions[ccNum];
@@ -660,29 +666,22 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
                     }
                 }
             }
+            this->runtimeArticulations.push_back(std::move(artRt));
+        } 
 
-            runtimeArticulations.push_back(std::move(artRt));
-        }
-
-
-        
-
-        for (auto& pair : foundCcDimensions) {
-            auto& ccNum = pair.first;
-            auto& valArtPairVec = pair.second;
-            
-            std::sort(valArtPairVec.begin(), valArtPairVec.end(), [](auto& a, auto& b){
+        for (auto&[ccNum, valArtPairs] : foundCcDimensions) {            
+            std::sort(valArtPairs.begin(), valArtPairs.end(), [](auto& a, auto& b){
                 return a.first < b.first;
             });
 
             std::array<uint8_t, 128> map;
-            const int8_t count = static_cast<uint8_t>(valArtPairVec.size());
+            const int8_t count = static_cast<uint8_t>(valArtPairs.size());
     
             for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
                 uint8_t chosen = count - 1; // default to last
                 for (uint8_t idx = 0; idx < count; ++idx) {
-                    if (value <= static_cast<int>(valArtPairVec[idx].first)) {
-                        chosen = valArtPairVec[idx].second;
+                    if (value <= static_cast<int>(valArtPairs[idx].first)) {
+                        chosen = valArtPairs[idx].second;
                         break;
                     }
                 }
@@ -692,7 +691,7 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
         }
         
         if (!found) {
-            DBG("WARN: no kit articulation found for layout art: " + layoutArt.codeRaw);
+            LOG(Warning, "no kit articulation found for layout art: " + layoutArt.codeRaw);
             // push empty runtime articulation to preserve indices
             // this->runtimeArticulations.push_back(std::move(artRt));
             // continue;
@@ -701,22 +700,22 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpecs* instrumentSpecs) {
     }
 }
 
-void InstrumentSynth::handleMidiEvent(const MidiMessage& midiMessage) {
-
-
-
-
-    //TODO: from KitLayout::InstrumentSlot instrumentDef get CC and notes to subscribe to
-
+void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     
+    
+
     if (midiMessage.isNoteOn()) {
         if (noteToArticulation[midiMessage.getNoteNumber()] == -1) return;
 
+        this->playNote(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1);
+        // || this->noteOn(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
+    }
+    else if (midiMessage.isController()) {
+        auto ccNum = static_cast<uint8_t>(midiMessage.getControllerNumber());
+        if (noteToControllers.find(ccNum) == noteToControllers.end()) return;
 
-        // if (! 
-            this->playNote(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1);
-        // )
-            // this->noteOn(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
+
+        // this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue());
     }
     
     //TODO: common realistic choke (volume change) on aftertouch: with some custom decay timeout, if aftertouch value became less in that timeout, volume should return back by some percent
@@ -727,8 +726,6 @@ void InstrumentSynth::handleMidiEvent(const MidiMessage& midiMessage) {
     else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(midiMessage.getChannel(), true);
         
         
-        
-    // else if (midiMessage.isController()) this->handleController(channel, midiMessage.getControllerNumber(), midiMessage.getControllerValue());
 
     // else if (midiMessage.isNoteOff()) this->noteOff (channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity(), true);
     // else if (midiMessage.isChannelPressure()) this->handleChannelPressure(channel, midiMessage.getChannelPressureValue());
@@ -745,7 +742,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
     
     // SampledSound* chosen = this->selectSampleFor(targetArt, midiVel);
     // if (chosen == nullptr) {
-    //     DBG("Nothing to play for " + targetArt);
+    //     LOG(Info, "Nothing to play for " + targetArt);
     //     return;
     // }
 
@@ -770,7 +767,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
     int artIdx = -1;
     if (this->runtimeArticulations.empty()) {
         // fallback: try to use first layout articulation if any
-        if (!this->instrumentDef.articulations.empty()) {
+        if (!this->instrumentSlot.articulations.empty()) {
             // find index 0
             artIdx = 0;
         }
@@ -796,7 +793,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
                         const auto& mapArr = artIt->second;
 
                         artIdx = static_cast<int>(mapArr[ccVal]);
-                        DBG("DEBUG: CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + juce::String(artIdx) + " for note " + juce::String(midiNoteNumber) );
+                        LOG(Debug, "CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + juce::String(artIdx) + " for note " + juce::String(midiNoteNumber) );
                     }
                 }
             }
@@ -804,25 +801,25 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
     }
 
     if (artIdx < 0) {
-        // DBG("WARN: InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
+        // LOG(Warning, "InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
     }
 
     // Select a sample using runtime tables
     SampledSound* chosen = this->selectSampleFor(artIdx, static_cast<int>(velocity));
     if (chosen == nullptr) {
-        DBG("INFO: Nothing to play for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)));
+        LOG(Info, "Nothing to play for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)));
         return false;
     } else {
-        //  DBG("INFO: play note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)));
+        //  LOG(Info, "play note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)));
     }
 
-    const ScopedLock sl (this->lock);
+    const juce::ScopedLock sl (this->lock);
 
     const bool stealNotes = true;
     juce::SynthesiserVoice* voice = findFreeVoice(chosen, midiChannel, midiNoteNumber, stealNotes);
     if (voice == nullptr) {
-        DBG("WARN: InstrumentSynth::playNote - no free voice available");
+        LOG(Warning, "InstrumentSynth::playNote - no free voice available");
         return false;
     }
     float velf = juce::jlimit(0.0f, 1.0f, static_cast<float>(velocity) / 127.0f);
@@ -831,13 +828,13 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
 }
 
 void InstrumentSynth::noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) {
-    const ScopedLock sl (this->lock);
+    const juce::ScopedLock sl (this->lock);
     bool reallyShouldStealNotes = true;
     for (auto* sound : this->sounds) {
         if (auto* sampledSound = dynamic_cast<SampledSound*>(sound)) {
             if (sampledSound->appliesToNote(midiNoteNumber) && sampledSound->appliesToChannel(midiChannel)) {
                 
-                DBG("DEBUG: NoteOn " + juce::String(midiNoteNumber) + " vel " + juce::String(velocity) + " " + sampledSound->sampleVariantSpec->sampleFileName);
+                LOG(Debug, "NoteOn " + juce::String(midiNoteNumber) + " vel " + juce::String(velocity) + " " + sampledSound->sampleVariantSpec->sampleFileName);
                 this->startVoice(this->findFreeVoice (sampledSound, midiChannel, midiNoteNumber, reallyShouldStealNotes), sampledSound, midiChannel, midiNoteNumber, velocity);
             }
         }
@@ -871,7 +868,7 @@ SampledSound* InstrumentSynth::selectSampleFor(int articulationIdx, int midiVel,
     auto& art = this->runtimeArticulations[articulationIdx];
     if (art.layers.empty()) return nullptr;
 
-    // DBG("DEBUG: selectSampleFor " + art.codeRaw + " artIdx=" + juce::String(articulationIdx) + " vel=" + juce::String(midiVel) + " micIdx=" + juce::String(micIdx));
+    // LOG(Debug, "selectSampleFor " + art.codeRaw + " artIdx=" + juce::String(articulationIdx) + " vel=" + juce::String(midiVel) + " micIdx=" + juce::String(micIdx));
 
     // clamp midiVel
     if (midiVel < 0) midiVel = 0;

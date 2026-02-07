@@ -2,8 +2,8 @@
 
 using namespace KitLib;
 
-ParseResult<MicSpecs> MicSpecs::parseMicCode(const juce::String& code) {
-    ParseResult<MicSpecs> result;
+ParseResult<MicSpec> MicSpec::parseMicCode(const juce::String& code) {
+    ParseResult<MicSpec> result;
     const int codelength = code.length();
     if (codelength < 3 || codelength > 4) {
         return result.returnWithError("MIC code must be 3 or 4 characters long: '" + code + "'");
@@ -37,13 +37,13 @@ ParseResult<MicSpecs> MicSpecs::parseMicCode(const juce::String& code) {
     result.value.position = positionFromChar(pos);
     result.value.format = formatFromChar(format);
     result.value.variant = variant;
-    result.value.channels = result.value.format == MicSpecs::Format::Mono ? 1 : 2;
+    result.value.channels = result.value.format == MicSpec::Format::Mono ? 1 : 2;
 
     return result;
 }
 
-ParseResult<std::vector<MicSpecs>> MicSpecs::parseMicCodesChain(const juce::String& codeChain) {
-    ParseResult<std::vector<MicSpecs>> result;
+ParseResult<std::vector<MicSpec>> MicSpec::parseMicCodesChain(const juce::String& codeChain) {
+    ParseResult<std::vector<MicSpec>> result;
 
     if (codeChain.isEmpty())
         return result.returnWithError("Mic chain code is empty");
@@ -52,8 +52,7 @@ ParseResult<std::vector<MicSpecs>> MicSpecs::parseMicCodesChain(const juce::Stri
     parts.removeEmptyStrings();
 
     for (const auto& part : parts) {
-        MicSpecs mic;
-        auto item = MicSpecs::parseMicCode(part);
+        auto item = MicSpec::parseMicCode(part);
         if (item.ok())
             result.value.push_back(item.value);
         else
@@ -63,7 +62,7 @@ ParseResult<std::vector<MicSpecs>> MicSpecs::parseMicCodesChain(const juce::Stri
 }
 
 
-ParseResult<InstrumentSpecs::MetaInfo> InstrumentSpecs::parseInfo(const juce::String& dirName) {
+ParseResult<InstrumentSpec::MetaInfo> InstrumentSpec::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
     juce::String processed = dirName.trim();
     auto parts = juce::StringArray::fromTokens(processed, "-", "");
@@ -74,13 +73,13 @@ ParseResult<InstrumentSpecs::MetaInfo> InstrumentSpecs::parseInfo(const juce::St
         parts.removeRange(0, 2);
         result.value.description = parts.size() > 0 ? parts.joinIntoString(" ").trim() : "";
     }
-    result.value.type = InstrumentSpecs::typeFromString(result.value.name);
+    result.value.type = InstrumentSpec::typeFromString(result.value.name);
     result.value.code = processed;
 
     return result;
 }
 
-bool InstrumentSpecs::isAudioFile(const juce::File& file) {
+bool InstrumentSpec::isAudioFile(const juce::File& file) {
     juce::StringArray audioFileExtensions = { ".wav", ".flac", ".aiff", ".mp3", ".ogg" }; //TODO: refactor dynamical support from plugin's config.yaml
     juce::String ext = file.getFileExtension().toLowerCase();
     for (int i = 0; i < audioFileExtensions.size(); ++i)
@@ -89,7 +88,7 @@ bool InstrumentSpecs::isAudioFile(const juce::File& file) {
     return false;
 }
 
-int InstrumentSpecs::scanInstrumentSamples() {
+int InstrumentSpec::scanInstrumentSamples() {
     const auto articulationDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*.*");
     int sampleCount = 0;
     for (const auto& artDir : articulationDirs) {
@@ -99,30 +98,30 @@ int InstrumentSpecs::scanInstrumentSamples() {
         auto artName = artDir.getFileName();
         auto parts = juce::StringArray::fromTokens(artName, "-", "");
         auto wrapRes = getWrappedValue(parts[0].trim(), "[", "]");
-        ArticulationSpecs* articulationSpecs = this->getOrAddArticulation(wrapRes.cleaned, wrapRes.wrapped);
+        ArticulationSpec* artSpec = this->getOrAddArticulation(wrapRes.cleaned, wrapRes.wrapped);
 
         for (int i = 1; i < parts.size(); ++i) {
-            auto dimPart = parts[i];
-            auto dimCodeEnd = dimPart.indexOfAnyOf("0123456789");
-            if (dimCodeEnd > 0) {
-                juce::String dimCode = dimPart.substring(0, dimCodeEnd);
-                juce::String dimValue = dimPart.substring(dimCodeEnd);
-                if (KitLib::ArticulationSpecs::ExpressionDimension::stringToType(dimCode) == KitLib::ArticulationSpecs::ExpressionDimension::Type::Unknown)
-                    DBG("WARN: Unknown dimension code '" + dimCode + "' in articulation folder '" + artDir.getFullPathName() + "'");
-                articulationSpecs->addDimensionValue(dimCode, static_cast<uint8_t>(dimValue.getIntValue()));
+            auto expDimPart = parts[i];
+            auto expDimCodeEnd = expDimPart.indexOfAnyOf("0123456789");
+            if (expDimCodeEnd > 0) {
+                juce::String expDimCode = expDimPart.substring(0, expDimCodeEnd);
+                juce::String expDimValue = expDimPart.substring(expDimCodeEnd);
+                if (KitLib::ArticulationSpec::ExpressionDimension::stringToType(expDimCode) == KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown)
+                    LOG(Warning, "Unknown dimension code '" + expDimCode + "' in articulation folder '" + artDir.getFullPathName() + "'");
+                artSpec->addExpressionDimensionValue(expDimCode, static_cast<uint8_t>(expDimValue.getIntValue()));
             }
         }
 
         const auto sampleFiles = artDir.findChildFiles(juce::File::findFiles, false, "*.*");
         for (const auto& sampleFile : sampleFiles) {
             if (!sampleFile.existsAsFile()) {
-                DBG("File does not exist: " + sampleFile.getFullPathName());
+                LOG(Info, "File does not exist: " + sampleFile.getFullPathName());
                 continue;
             }
 
             const auto fileName = sampleFile.getFileName();
             if (!isAudioFile(sampleFile)) {
-                DBG("Skipping non-audio file: " + fileName);
+                LOG(Info, "Skipping non-audio file: " + fileName);
                 continue;
             }
 
@@ -131,20 +130,19 @@ int InstrumentSpecs::scanInstrumentSamples() {
             if (parsedInfo.ok()) {
                 parsedInfo.value.file = sampleFile;
             } else {
-                DBG("WARN: Could not parse filename '" + fileName + "': " + parsedInfo.error());
+                LOG(Warning, "Could not parse filename '" + fileName + "': " + parsedInfo.error());
                 continue;
             }
 
-            auto* velocityLayer = articulationSpecs->getOrAddVelocityLayer(parsedInfo.value.velocity);
+            auto* velSpec = artSpec->getOrAddVelocityLayer(parsedInfo.value.velocity);
 
             // Add one sample variant per mic chain
             for (size_t i = 0; i < parsedInfo.value.micDescriptors.size(); i++) {
                 uint8_t variantIdx = 0;
                 if (!parsedInfo.value.sampleVariant.isEmpty())
-                    variantIdx = SampleVariantSpecs::letterToIdx(parsedInfo.value.sampleVariant[0]);
+                    variantIdx = SampleVariantSpec::letterToIdx(parsedInfo.value.sampleVariant[0]);
 
-                auto sampleVariant = std::make_unique<SampleVariantSpecs>(sampleFile, variantIdx, parsedInfo.value.micDescriptors[i]);
-                velocityLayer->addSampleVariant(std::move(sampleVariant));
+                velSpec->getOrAddSampleVariant(sampleFile, variantIdx, parsedInfo.value.micDescriptors[i]);
                 sampleCount++;
             }
         }
@@ -152,8 +150,8 @@ int InstrumentSpecs::scanInstrumentSamples() {
     return sampleCount;
 }
 
-ParseResult<InstrumentSpecs::SampleFileInfo> InstrumentSpecs::parseSampleFile(const juce::String& fileName) {
-    ParseResult<InstrumentSpecs::SampleFileInfo> result;
+ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(const juce::String& fileName) {
+    ParseResult<InstrumentSpec::SampleFileInfo> result;
     const auto fileNameWithoutExt = fileName.upToLastOccurrenceOf(".", false, false);
     juce::StringArray nameParts;
     nameParts.addTokens(fileNameWithoutExt, "-", "");
@@ -189,7 +187,7 @@ ParseResult<InstrumentSpecs::SampleFileInfo> InstrumentSpecs::parseSampleFile(co
         }
     }
 
-    auto parsedMics = MicSpecs::parseMicCodesChain(nameParts[1]);
+    auto parsedMics = MicSpec::parseMicCodesChain(nameParts[1]);
     if (!parsedMics.ok()) {
         result.addWarning("Mic chain parsing failed: " + parsedMics.error() + "; file will use default routing");
     }
@@ -201,7 +199,7 @@ ParseResult<InstrumentSpecs::SampleFileInfo> InstrumentSpecs::parseSampleFile(co
     return result;
 }
 
-ParseResult<DrumKitSpecs::MetaInfo> DrumKitSpecs::parseInfo(const juce::String& dirName) {
+ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
 
     juce::String processed = dirName.trim();
@@ -214,50 +212,49 @@ ParseResult<DrumKitSpecs::MetaInfo> DrumKitSpecs::parseInfo(const juce::String& 
     result.value.license = wrapRes.wrapped;
     processed = wrapRes.cleaned;
 
-    auto parts = juce::StringArray::fromTokens(processed, " by ", "");
+    auto parts = splitByString(processed, " by ");
     result.value.name   = parts[0].trim();
-    result.value.author = parts.size() > 1 ? parts[1].trim() : juce::String();
+    result.value.author = parts.size() > 1 ? parts[1].trim() : "";
 
     return result;
 }
 
-int DrumKitSpecs::scanInstruments() {
+int DrumKitSpec::scanInstruments() {
     const auto subDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*.*");
 
     for (const auto& subDir : subDirs) {
         if (!subDir.isDirectory()) {
-            DBG("Parse InstrumentSpecs failed: rootDir is not a directory: " + subDir.getFullPathName());
+            LOG(Info, "Parse InstrumentSpec failed: rootDir is not a directory: " + subDir.getFullPathName());
             continue;
         }
 
-        auto parsedInfo = InstrumentSpecs::parseInfo(subDir.getFileName());
+        auto parsedInfo = InstrumentSpec::parseInfo(subDir.getFileName());
         if (parsedInfo.ok()) {
             parsedInfo.value.rootDir = subDir;
             if (findInstrument(parsedInfo.value.code) == nullptr) {
-                auto newInst = std::make_unique<InstrumentSpecs>(this, parsedInfo.value);
-                instruments[parsedInfo.value.code] = std::move(newInst);
+                this->addInstrument(parsedInfo.value);
             }
         } else DBG(parsedInfo.error());
     }
 
-    return (int) instruments.size();
+    return (int) this->instrumentSpecsMap.size();
 }
 
-InstrumentSpecs* DrumKitSpecs::findInstrument(const juce::String& code) {
-    auto it = instruments.find(code);
-    if (it != instruments.end())
+InstrumentSpec* DrumKitSpec::findInstrument(const juce::String& id) {
+    auto it = this->instrumentSpecsMap.find(id);
+    if (it != this->instrumentSpecsMap.end())
         return it->second.get();
     return nullptr;
 }
 
-std::vector<InstrumentSpecs*> DrumKitSpecs::getInstrumentsByType(InstrumentSpecs::Type type) const {
-    std::vector<InstrumentSpecs*> result;
-    for (const auto& pair : instruments) {
-        auto* inst = pair.second.get();
+std::vector<InstrumentSpec*> DrumKitSpec::getInstrumentsByType(InstrumentSpec::Type type) const {
+    std::vector<InstrumentSpec*> result;
+    for (const auto&[id, instPtr] : this->instrumentSpecsMap) {
+        auto* inst = instPtr.get();
         if (inst && inst->meta.type == type)
             result.push_back(inst);
     }
-    std::sort(result.begin(), result.end(), [](InstrumentSpecs* a, InstrumentSpecs* b){
+    std::sort(result.begin(), result.end(), [](InstrumentSpec* a, InstrumentSpec* b){
         return a->meta.code < b->meta.code;
     });
     return result;
@@ -267,7 +264,7 @@ std::vector<InstrumentSpecs*> DrumKitSpecs::getInstrumentsByType(InstrumentSpecs
 
 bool LibraryManager::validateKitsDir(const juce::File& dir) {
     if (!dir.isDirectory()) {
-        DBG("Warning: kitsDir is not a directory: " + dir.getFullPathName());
+        LOG(Info, "Warning: kitsDir is not a directory: " + dir.getFullPathName());
         return false;
     }
     return true;
@@ -276,16 +273,16 @@ bool LibraryManager::validateKitsDir(const juce::File& dir) {
 void LibraryManager::setKitsDir(const juce::File& dir) {
     if (!this->validateKitsDir(dir))
         return;
-    this->mKitsDir = dir;
-    this->mKits.clear();
+    this->rootDir = dir;
+    this->kitSpecs.clear();
 }
 
 int LibraryManager::scanAll() {
-    this->mKits.clear();
+    this->kitSpecs.clear();
 
-    if (!this->validateKitsDir(this->mKitsDir)) return 0;
+    if (!this->validateKitsDir(this->rootDir)) return 0;
     
-    DBG("INFO: LibraryManager: Scanning for drum kits in " + this->mKitsDir.getFullPathName());
+    LOG(Info, "LibraryManager: Scanning for drum kits in " + this->rootDir.getFullPathName());
     
     int totalKits = 0;
     int totalInstruments = 0;
@@ -295,74 +292,74 @@ int LibraryManager::scanAll() {
     std::unordered_map<juce::String, int> sampleVariantCounts;
     std::unordered_map<int, int> velocityCounts;
 
-    for (const juce::DirectoryEntry& entry : juce::RangedDirectoryIterator(this->mKitsDir, false, "*", juce::File::TypesOfFileToFind::findDirectories)) {
+    for (const juce::DirectoryEntry& entry : juce::RangedDirectoryIterator(this->rootDir, false, "*", juce::File::TypesOfFileToFind::findDirectories)) {
         const juce::File& kitDir = entry.getFile();
         if (!kitDir.isDirectory()) {
-            DBG("Parse DrumKitSpecs failed: rootDir is not a directory: " + kitDir.getFullPathName());
+            LOG(Info, "Parse DrumKitSpec failed: rootDir is not a directory: " + kitDir.getFullPathName());
             continue;
         }
 
-        auto parsedInfo = DrumKitSpecs::parseInfo(kitDir.getFileName());
+        auto parsedInfo = DrumKitSpec::parseInfo(kitDir.getFileName());
         if (parsedInfo.ok()) {
             parsedInfo.value.rootDir = kitDir;
         } else {
-            DBG("WARN: Could not parse kitDir '" + kitDir.getFullPathName() + "': " + parsedInfo.error());
+            LOG(Warning, "Could not parse kitDir '" + kitDir.getFullPathName() + "': " + parsedInfo.error());
             continue;
         }
 
-        auto kit = std::make_unique<DrumKitSpecs>(parsedInfo.value);
+        auto kit = std::make_unique<DrumKitSpec>(parsedInfo.value);
         int instrsInKit = kit->scanInstruments();
         int samplesInKit = 0;
 
-        for (auto& pair : kit->instruments) {
-            auto samplesInInstr = pair.second->scanInstrumentSamples();
+        for (auto&[id, instPtr] : kit->instrumentSpecsMap) {
+            auto samplesInInstr = instPtr->scanInstrumentSamples();
             if (samplesInInstr > 0) {
                 samplesInKit += samplesInInstr;
                 totalSamples += samplesInInstr;
                 totalInstruments++;
 
-                for (const auto& articulation : pair.second->articulations) {
-                    for (const auto& velocityLayer : articulation->velocityLayers) {
-                        velocityCounts[velocityLayer->velocity]++;
-                        for (const auto& sampleVariant : velocityLayer->sampleVariants) {
-                            micCodeCounts[sampleVariant->micSpecs.raw]++;
-                            sampleVariantCounts[juce::String(sampleVariant->letter)]++;
+                for (const auto& artSpec : instPtr->articulationSpecs) {
+                    for (const auto& velSpec : artSpec->velocityLayerSpecs) {
+                        velocityCounts[velSpec->velocity]++;
+                        for (const auto& varSpec : velSpec->sampleVariantSpecs) {
+                            micCodeCounts[varSpec->micSpec.raw]++;
+                            sampleVariantCounts[juce::String(varSpec->letter)]++;
                         }
                     }
                 }
             }
         }
-        this->mKits.push_back(std::move(kit));
+        this->kitSpecs.push_back(std::move(kit));
         totalKits++;
-        DBG("INFO: Scanned kit: " + kitDir.getFileName() + ", " + juce::String(instrsInKit) + " instruments, " + juce::String(samplesInKit) + " samples");
+        LOG(Info, "Scanned kit: " + kitDir.getFileName() + ", " + juce::String(instrsInKit) + " instruments, " + juce::String(samplesInKit) + " samples");
     
     }
 
-    DBG("INFO: Dimension Code Usage:");
-    for (const auto& [key, count] : dimensionCodeCounts) DBG("  " + key + ": " + juce::String(count));
+    LOG(Info, "Dimension Code Usage:");
+    for (const auto& [key, count] : dimensionCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count));
 
-    DBG("INFO: Mic Code Usage:");
-    for (const auto& [key, count] : micCodeCounts) DBG("  " + key + ": " + juce::String(count));
+    LOG(Info, "Mic Code Usage:");
+    for (const auto& [key, count] : micCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count));
 
-    DBG("INFO: Sample Variant Usage:");
-    for (const auto& [key, count] : sampleVariantCounts) DBG("  " + key + ": " + juce::String(count));
+    LOG(Info, "Sample Variant Usage:");
+    for (const auto& [key, count] : sampleVariantCounts) LOG(Info, "  " + key + ": " + juce::String(count));
 
-    DBG("INFO: Velocity Usage:");
-    for (const auto& [key, count] : velocityCounts) DBG("  " + juce::String(key) + ": " + juce::String(count));
+    LOG(Info, "Velocity Usage:");
+    for (const auto& [key, count] : velocityCounts) LOG(Info, "  " + juce::String(key) + ": " + juce::String(count));
 
-    DBG("INFO: Total: " + juce::String(totalKits) + " kits, " + juce::String(totalInstruments) + " instruments, " + juce::String(totalSamples) + " samples");
+    LOG(Info, "Total: " + juce::String(totalKits) + " kits, " + juce::String(totalInstruments) + " instruments, " + juce::String(totalSamples) + " samples");
 
     return totalKits;
 }
 
-DrumKitSpecs* LibraryManager::getKit(int index) {
-    if (index < 0 || index >= static_cast<int>(this->mKits.size()))
+DrumKitSpec* LibraryManager::getKit(int index) {
+    if (index < 0 || index >= static_cast<int>(this->kitSpecs.size()))
         return nullptr;
-    return this->mKits[index].get();
+    return this->kitSpecs[index].get();
 }
 
-DrumKitSpecs* LibraryManager::findKit(const juce::String& name) {
-    for (auto& kit : this->mKits)
+DrumKitSpec* LibraryManager::findKit(const juce::String& name) {
+    for (auto& kit : this->kitSpecs)
         if (kit->meta.name == name)
             return kit.get();
     return nullptr;
