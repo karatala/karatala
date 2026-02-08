@@ -32,6 +32,10 @@ public:
     std::vector<uint8_t> notes; 
 
     double sampleRate = 0.0;
+    // start channel index inside the owning InstrumentSynth's micBuffer
+    int micBufferChannelStart = 0;
+    // number of mic channels this sound occupies in the mic buffer
+    int micBufferChannelCount = 0;
 
     SampledSound(KitLib::InstrumentSpec* instrumentSpec = nullptr, KitLib::SampleVariantSpec* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
         : instrumentSpec(instrumentSpec)
@@ -135,6 +139,12 @@ public:
     void setMicChannelCount(int channels) { mMicChannelCount = channels; }
     juce::AudioBuffer<float>& getMicBuffer() { return micBuffer; }
 
+    // Per-instrument mapping: mic buffer channel index -> host output channel index
+    void setMicOutputMapping(const std::vector<int>& mapping) { this->micOutputMapping = mapping; }
+    const std::vector<int>& getMicOutputMapping() const { return this->micOutputMapping; }
+
+    KitLib::InstrumentSpec::Type getType() const { return this->type; }
+
     const juce::String& getId() const { return id; }
 
 private:
@@ -160,6 +170,7 @@ private:
     
     // Keep a vector of all SampledSound pointers created for this synth (owned by Synth via addSound)
     std::vector<SampledSound*> sampledSoundPtrs;
+    std::vector<int> micOutputMapping;
 };
 
 class DrumKitEngine {
@@ -233,6 +244,9 @@ private:
 
     std::unique_ptr<KitLayout> activeKitLayoutPtr;
     std::unique_ptr<MicLayout> activeMicLayoutPtr;
+
+    // Last known audio block size (samples per block). Used to size mic buffers when applying layouts.
+    int lastSamplesPerBlock = 0;
 
     void initGlobalSettings();
     void initDefaultLayouts();

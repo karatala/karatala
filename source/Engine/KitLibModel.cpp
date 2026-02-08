@@ -136,14 +136,19 @@ int InstrumentSpec::scanInstrumentSamples() {
 
             auto* velSpec = artSpec->getOrAddVelocityLayer(parsedInfo.value.velocity);
 
-            // Add one sample variant per mic chain
+            // Add one sample variant per mic chain. Track channel cursor for multi-channel files.
+            int channelCursor = 0;
             for (size_t i = 0; i < parsedInfo.value.micDescriptors.size(); i++) {
                 uint8_t variantIdx = 0;
                 if (!parsedInfo.value.sampleVariant.isEmpty())
                     variantIdx = SampleVariantSpec::letterToIdx(parsedInfo.value.sampleVariant[0]);
 
-                velSpec->getOrAddSampleVariant(sampleFile, variantIdx, parsedInfo.value.micDescriptors[i]);
+                const auto& micDesc = parsedInfo.value.micDescriptors[i];
+                velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
                 sampleCount++;
+
+                // Advance cursor by number of channels described by this mic descriptor
+                channelCursor += micDesc.channels;
             }
         }
     }

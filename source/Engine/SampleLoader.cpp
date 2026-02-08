@@ -18,7 +18,7 @@ void SampleLoader::requestAsyncLoad(const juce::File& file, LoadCallback callbac
         return;
     }
 
-    const auto path = file.getFullPathName().toStdString();
+    const juce::String path = file.getFullPathName();
 
     // Check cache
     {
@@ -51,8 +51,8 @@ void SampleLoader::requestAsyncLoad(const juce::File& file, LoadCallback callbac
             return;
         }
 
-        int channels = juce::jmin(2, (int) reader->numChannels);
-        int samples = (int) reader->lengthInSamples;
+        int channels = static_cast<int>(reader->numChannels);
+        int samples = static_cast<int>(reader->lengthInSamples);
 
         auto buffer = std::make_shared<juce::AudioBuffer<float>>(channels, samples);
         reader->read(buffer.get(), 0, samples, 0, true, true);

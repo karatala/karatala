@@ -99,7 +99,7 @@ instruments:
         notes: [46]
     controllers:
       - code: pdl_opn_cls
-        number: 4
+        number: 1
         notes: [22,46]
       - code: zon_bow_edg
         number: 19

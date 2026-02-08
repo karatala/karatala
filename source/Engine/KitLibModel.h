@@ -101,16 +101,22 @@ public:
     int bitDepth = 0;
     int numChannels = 0;
     juce::int64 numSamples = 0;
+    // Start channel index inside the source file (0-based)
+    int fileChannelStart = 0;
+    // Number of channels occupied by this mic inside the source file (usually equals micSpec.channels)
+    int fileChannelCount = 0;
 
     MicSpec micSpec;
 
-    explicit SampleVariantSpec(VelocityLayerSpec* parent, const juce::File& file, juce::juce_wchar letter, const MicSpec& micSpec)
+    explicit SampleVariantSpec(VelocityLayerSpec* parent, const juce::File& file, juce::juce_wchar letter, const MicSpec& micSpec, int fileChannelStart = 0)
         : parent(parent)
         , sampleFile(file)
         , letter(letter)
         , sampleFileName(file.getFileName())
         , micSpec(micSpec)
     {
+        this->fileChannelStart = fileChannelStart;
+        this->fileChannelCount = micSpec.channels;
     }
 
     bool isValid() const { return sampleFile.existsAsFile(); }
@@ -147,11 +153,11 @@ public:
         return nullptr;
     }    
     
-    SampleVariantSpec* getOrAddSampleVariant(const juce::File& sampleFile, uint8_t variantIdx, const MicSpec& micSpec) {
+    SampleVariantSpec* getOrAddSampleVariant(const juce::File& sampleFile, uint8_t variantIdx, const MicSpec& micSpec, int fileChannelStart) {
         juce::juce_wchar variantLetter = (variantIdx > 0 && variantIdx <= 26) ? static_cast<juce::juce_wchar>('a' + variantIdx - 1) : '\0';
         auto existing = this->findSampleVariant(variantLetter, micSpec);
         if (existing != nullptr) return existing;
-        this->sampleVariantSpecs.push_back(std::make_unique<SampleVariantSpec>(this, sampleFile, variantIdx, micSpec));
+        this->sampleVariantSpecs.push_back(std::make_unique<SampleVariantSpec>(this, sampleFile, variantLetter, micSpec, fileChannelStart));
         return this->sampleVariantSpecs.back().get();
     }
 

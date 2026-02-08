@@ -184,34 +184,34 @@ public:
 
     void setLogLevel(DebugLevel level) {
         const juce::ScopedLock lock(mutex);
-        logLevel = level;
+        this->logLevel = level;
     }
 
     DebugLevel getLogLevel() const {
-        return logLevel;
+        return this->logLevel;
     }
 
     void setLogFile(const juce::File& f) {
         const juce::ScopedLock lock(mutex);
-        logFile = f;
-        if (!logFile.getParentDirectory().exists())
-            logFile.getParentDirectory().createDirectory();
+        this->logFile = f;
+        if (!this->logFile.getParentDirectory().exists())
+            this->logFile.getParentDirectory().createDirectory();
     }
 
     void log(DebugLevel level, const juce::String& msg) {
         // Follow same semantics as other code: only log when logLevel >= level
-        if (logLevel < level) return;
+        if (this->logLevel < level) return;
 
         juce::String line = DebugLevelToString(level) + ": " + msg;
         DBG(line);
 
-        const juce::ScopedLock lock(mutex);
-        if (logFile.getFullPathName().isNotEmpty()) {
-            if (!logFile.getParentDirectory().exists())
-                logFile.getParentDirectory().createDirectory();
-            juce::String out = juce::Time::getCurrentTime().toISO8601(true) + " " + line + "\n";
-            logFile.appendText(out);
-        }
+        // const juce::ScopedLock lock(mutex);
+        // if (this->logFile.getFullPathName().isNotEmpty()) {
+        //     if (!this->logFile.getParentDirectory().exists())
+        //         this->logFile.getParentDirectory().createDirectory();
+        //     juce::String out = juce::Time::getCurrentTime().toISO8601(true) + " " + line + "\n";
+        //     this->logFile.appendText(out);
+        // }
     }
 
 private:
@@ -220,7 +220,7 @@ private:
         juce::File doc = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
         juce::File dir = doc.getChildFile("Karatala");
         if (!dir.exists()) dir.createDirectory();
-        logFile = dir.getChildFile("karatala.log");
+        this->logFile = dir.getChildFile("karatala.log");
     }
 
     juce::File logFile;
