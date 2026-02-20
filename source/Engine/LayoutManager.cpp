@@ -8,43 +8,44 @@ MicLayout MicLayout::getDefault() {
 id: default
 name: default
 mics:
-  - name: Overheads
+  - name: Overheads # 1-2
     code: ons
   - name: Hi-Hat
-    instrument: hihat1
+    instrument: hihat1 # 3
     code: dtm
   - name: Ride
-    instrument: ride1
+    instrument: ride1 # 4
     code: dtm
   - name: Kick In
-    instrument: kick1
+    instrument: kick1 # 5
     code: dim
   - name: Kick Out
-    instrument: kick1
+    instrument: kick1 # 6
     code: dom
-  - name: Snare Top
+  - name: Snare Top # 7
     instrument: snare1
     code: dtm
-  - name: Snare Bottom
+  - name: Snare Bottom # 8
     instrument: snare1
     code: dbm
-  - name: Tom1
+  - name: Tom1 # 9
     instrument: tom1
     code: dtm
-  - name: Tom2
+  - name: Tom2 # 10
     instrument: tom2
     code: dtm
-  - name: Tom3
+  - name: Tom3 # 11
     instrument: tom3
     code: dtm
-  - name: Tom4
+  - name: Tom4 # 12
     instrument: tom4
     code: dtm
-  - name: Tom5
+  - name: Tom5 # 13
     instrument: tom5
     code: dtm
-  - name: Room Far
+  - name: Room Far # 14-15
     code: rfs
+  # TODO utilize remaining 17 channels
 )yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
     if (!result.ok()) {
@@ -63,185 +64,188 @@ vendor: Haribol
 version: 1.0
 instruments:
   - id: kick1
-    display: Kick
+    display: Kick 1
     articulations:
-      - code: center
-        notes: [35, 36]
+      - { notes: [36], code: center }
+
+  - id: kick2
+    display: Kick 2
+    articulations:
+      - { notes: [35], code: center }
 
   - id: snare1
-    display: Snare
+    display: Snare 1
     articulations:
-      - code: center
-        notes: [38]
-      - code: rim
-        notes: [40]
-      - code: sidestick
-        notes: [37]
+      - { notes: [38], code: center }
+      - { notes: [40], code: rim }
+      - { notes: [37], code: sidestick }
     controllers:
-      - code: zon_ctr_rim
-        number: 16
-        notes: [38]
+      - { notes: [38], code: zon_ctr_rim, number: 16 }
 
-  - id: hihat1
-    display: Hi-Hat
+  - id: snare2
+    display: Snare 2
     articulations:
-      - code: edge[tight]
-        notes: [18]
-      - code: edge[open]
-        notes: [22]
-      - code: bow[tight]
-        notes: [42]
-      - code: pedal
-        notes: [44]
-      - code: pedal[splash]
-        notes: [44]
-      - code: bow[open]
-        notes: [46]
-    controllers:
-      - code: pdl_opn_cls
-        number: 1
-        notes: [22,46]
-      - code: zon_bow_edg
-        number: 19
-        notes: [42,46]
-      - code: zon_lft_rgt
-        number: 83
-        notes: [18,22,42,46]
-        
-  - id: hihat2
-    display: Hi-Hat Stax
-    articulations:
-      - code: bow[tight]
-        notes: [15]
-      - code: edge[tight]
-        notes: []
-      - code: pedal
-        notes: [20]
-      - code: bow[open]
-        notes: [32]
-      - code: edge[open]
-        notes: []
-    controllers:
-      - code: pdl_opn_cls
-        number: 4
-        notes: [22,46]
+      - { notes: [14], code: center }
+      - { notes: [16], code: rim }
+      - { notes: [13], code: sidestick }
 
-  - id: ride1
-    display: Ride
-    articulations:
-      - code: bow
-        notes: [51]
-      - code: edge
-        notes: [59]
-      - code: bell
-        notes: [53]
-    controllers:
-      - code: zon_bow_edg
-        number: 17
-        
   - id: tom1
     display: Tom 1
     articulations:
-      - code: center
-        notes: [48]
-      - code: rim
-        notes: [24]
+      - { notes: [48], code: center }
+      - { notes: [24], code: rim }
     controllers:
-      - code: zon_ctr_rim
-        number: 18
+      - { notes: [48], code: zon_ctr_rim, number: 18 }
 
   - id: tom2
     display: Tom 2
     articulations:
-      - code: center
-        notes: [47]
-      - code: rim
-        notes: [23]
+      - { notes: [47], code: center }
+      - { notes: [23], code: rim }
     controllers:
-      - code: zon_ctr_rim
-        number: 18
-        
+      - { notes: [47], code: zon_ctr_rim, number: 18 }
+
   - id: tom3
     display: Tom 3
     articulations:
-      - code: center
-        notes: [45]
-      - code: rim
-        notes: [21]
+      - { notes: [45], code: center }
+      - { notes: [21], code: rim }
     controllers:
-      - code: zon_ctr_rim
-        number: 18
+      - { notes: [45], code: zon_ctr_rim, number: 18 }
 
   - id: tom4
     display: Tom 4
     articulations:
-      - code: center
-        notes: [43]
-      - code: rim
-        notes: [19]
+      - { notes: [43], code: center }
+      - { notes: [19], code: rim }
     controllers:
-      - code: zon_ctr_rim
-        number: 18
-        notes: [43]
+      - { notes: [43], code: zon_ctr_rim, number: 18 }
 
   - id: tom5
     display: Tom 5
     articulations:
-      - code: center
-        notes: [41]
-      - code: rim
-        notes: [17]
+      - { notes: [41], code: center }
+      - { notes: [17], code: rim }
     controllers:
-      - code: zon_ctr_rim
-        number: 18
+      - { notes: [41], code: zon_ctr_rim, number: 18 }
+
+
+  - id: drum1
+    display: Octoban 1
+    articulations:
+      - { notes: [50], code: center }
+
+  - id: drum2
+    display: Octoban 2
+    articulations:
+      - { notes: [26], code: center }
+
+
+  - id: hihat1
+    display: Hi-Hat 1
+    articulations:
+      - { notes: [18], code: edge[tight] }
+      - { notes: [22], code: edge[open] }
+      - { notes: [42], code: bow[tight] }
+      - { notes: [44], code: pedal }
+      - { notes: [44], code: pedal[splash] }
+      - { notes: [46], code: bow[open] }
+    controllers:
+      - { notes: [22,46], code: pdl_opn_cls, number: 1 }
+      - { notes: [20,42,46], code: zon_bow_edg, number: 19 }
+      - { notes: [18,22,42,46], code: zon_lft_rgt, number: 83 }
+
+  - id: hihat2
+    display: Hi-Hat Stax
+    articulations:
+      - { notes: [ 6], code: bow[tight] }
+      - { notes: [ 3], code: edge[tight] }
+      - { notes: [ 8], code: pedal }
+      - { notes: [10], code: bow[open] }
+      - { notes: [ 7], code: edge[open] }
+    controllers:
+      - { notes: [ 6,10], code: pdl_opn_cls, number: 4 }
+
+  - id: ride1
+    display: Ride 1
+    articulations:
+      - { notes: [51], code: bow }
+      - { notes: [59], code: edge }
+      - { notes: [53], code: bell }
+    controllers:
+      - { code: zon_bow_edg, number: 17 }
+
+  - id: ride2
+    display: Ride 2
+    articulations:
+      - { notes: [27], code: bow }
+      - { notes: [11], code: edge }
+      - { notes: [29], code: bell }
 
   - id: crash1
     display: Crash 1
     articulations:
-      - code: bow
-        notes: [25]
-      - code: edge
-        notes: [49]
-  
+      - { notes: [25], code: bow }
+      - { notes: [49], code: edge }
+
   - id: crash2
     display: Crash 2
     articulations:
-      - code: bow
-        notes: [33]
-      - code: edge
-        notes: [57]
+      - { notes: [33], code: bow }
+      - { notes: [57], code: edge }
 
   - id: splash1
     display: Splash 1
     articulations:
-      - code: bow
-        notes: [33]
-      - code: edge
-        notes: [57]
+      - { notes: [54], code: bow }
+      - { notes: [55], code: edge }
 
   - id: splash2
     display: Splash 2
     articulations:
-      - code: bow
-        notes: [33]
-      - code: edge
-        notes: [57]
+      - { notes: [30], code: bow }
+      - { notes: [31], code: edge }
 
   - id: china1
     display: China 1
     articulations:
-      - code: bow
-        notes: [30]
-      - code: edge
-        notes: [52]
+      - { notes: [52], code: edge }
 
   - id: china2
     display: China 2
     articulations:
-      - code: bow
-        notes: [33]
-      - code: edge
-        notes: [57]
+      - { notes: [28], code: edge }
+
+
+  - id: perc1
+    display: Snap Clap
+    articulations:
+      - { notes: [15], code: center }
+      - { notes: [39], code: rim }
+    
+  - id: perc2
+    display: Snap/Clap
+    articulations:
+      - { notes: [15], code: center }
+      - { notes: [39], code: rim }
+
+  - id: perc3
+    display: Timbale/Block 1
+    articulations:
+      - { notes: [65], code: center }
+      - { notes: [76], code: rim }
+
+  - id: perc4
+    display: Timbale/Block 2
+    articulations:
+      - { notes: [66], code: center }
+      - { notes: [77], code: rim }
+
+  - id: perc5
+    display: Vibraslap/Sticks
+    articulations:
+      - { notes: [34], code: center }
+      - { notes: [58], code: rim }
 
 
 )yaml";

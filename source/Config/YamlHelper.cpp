@@ -102,6 +102,66 @@ namespace YamlHelper {
         return result;
     }
 
+    // Parse an inline map like "{ code: bow, notes: [28] }"
+    static YamlNode parseInlineMap(const String& s) {
+        YamlNode result(YamlNode::Map);
+        String str = s.trim();
+        if (!str.startsWithChar('{') || !str.endsWithChar('}')) {
+            return result; // not a map
+        }
+        String inner = str.substring(1, str.length() - 1).trim();
+        if (inner.isEmpty())
+            return result;
+
+        std::vector<String> parts;
+        String cur;
+        int bracketDepth = 0;
+        bool inQuote = false;
+        juce_wchar quoteChar = 0;
+
+        for (int i = 0; i < inner.length(); ++i) {
+            juce_wchar c = inner[i];
+            if ((c == '"' || c == '\'') && (i == 0 || inner[i - 1] != '\\')) {
+                if (!inQuote) {
+                    inQuote = true;
+                    quoteChar = c;
+                } else if (quoteChar == c) {
+                    inQuote = false;
+                    quoteChar = 0;
+                }
+            }
+
+            if (!inQuote) {
+                if (c == '[') bracketDepth++;
+                else if (c == ']') bracketDepth--;
+                else if (c == ',' && bracketDepth == 0) {
+                    parts.push_back(cur.trim());
+                    cur = String();
+                    continue;
+                }
+            }
+
+            cur += c;
+        }
+        if (!cur.trim().isEmpty())
+            parts.push_back(cur.trim());
+
+        for (const auto& p : parts) {
+            String key, val;
+            if (tryParseKeyValue(p, key, val)) {
+                if (val.startsWithChar('[')) {
+                    result.mapValue[key] = parseInlineArray(val);
+                } else {
+                    YamlNode n(YamlNode::Scalar);
+                    n.scalarValue = stripSurroundingQuotes(val);
+                    result.mapValue[key] = n;
+                }
+            }
+        }
+
+        return result;
+    }
+
     // Forward declaration for recursive parsing
     static YamlNode parseBlock(const StringArray& lines, int& idx, int minIndent);
 
@@ -157,6 +217,10 @@ namespace YamlHelper {
                 // inline array
                 result.mapValue[key] = parseInlineArray(value);
                 idx++;
+            } else if (value.startsWithChar('{')) {
+                // inline map
+                result.mapValue[key] = parseInlineMap(value);
+                idx++;
             } else {
                 // scalar value
                 YamlNode scalarNode(YamlNode::Scalar);
@@ -199,6 +263,15 @@ namespace YamlHelper {
             }
 
             String itemStr = stripDashAndTrim(trimmed);
+            itemStr = itemStr.trim();
+
+            // handle inline map list items: - { key: value, ... }
+            if (itemStr.startsWithChar('{') && itemStr.endsWithChar('}')) {
+                YamlNode inlineMap = parseInlineMap(itemStr);
+                result.sequenceValue.push_back(inlineMap);
+                idx++;
+                continue;
+            }
 
             // check if this item is a map (has key: value)
             String itemKey, itemValue;

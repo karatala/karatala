@@ -24,25 +24,19 @@ static inline bool containsSameValue(const std::vector<uint8_t>& a, const std::v
 
 static inline juce::StringArray splitByString(const juce::String& text, const juce::String& delimiter, bool keepEmptyTokens = false) {
     juce::StringArray result;
-
     if (delimiter.isEmpty()) {
-        result.add (text);
+        result.add(text);
         return result;
     }
-
     int start = 0;
-
     while (true) {
         int index = text.indexOf (start, delimiter);
         if (index < 0) break;
-
         auto token = text.substring (start, index);
         if (keepEmptyTokens || token.isNotEmpty())
             result.add (token);
-
         start = index + delimiter.length();
     }
-
     auto tail = text.substring (start);
     if (keepEmptyTokens || tail.isNotEmpty())
         result.add (tail);
@@ -107,23 +101,27 @@ static inline juce::File resolvePathRelOrAbs(const juce::File& base, const juce:
     return base.getChildFile(path);
 }
 
-struct WrappedValueResult {
-    juce::String cleaned;
+struct WrappedSegment {
+    juce::String prefix;
     juce::String wrapped;
+    juce::String suffix;
 };
 
-static inline WrappedValueResult getWrappedValue(const juce::String& input, const juce::String& leftWrapper = "[", const juce::String& rightWrapper = "]") {
-    WrappedValueResult result;
+static inline WrappedSegment extractWrappedSegment(const juce::String& input, const juce::String& leftWrapper, const juce::String& rightWrapper) {
+    WrappedSegment result;
     juce::String processed = input.trim();
 
-    int lIdx = processed.indexOf(leftWrapper);
-    int rIdx = processed.indexOf(rightWrapper);
+    const int lIdx = processed.indexOf(leftWrapper);
+    const int rIdx = processed.indexOf(rightWrapper);
 
     if (lIdx >= 0 && rIdx > lIdx) {
-        result.wrapped = processed.substring(lIdx + leftWrapper.length(),rIdx).trim();
-        processed = (processed.substring(0, lIdx) + processed.substring(rIdx + rightWrapper.length())).trim();
+        result.prefix  = processed.substring(0, lIdx).trim();
+        result.wrapped = processed.substring(lIdx + leftWrapper.length(), rIdx).trim();
+        result.suffix  = processed.substring(rIdx + rightWrapper.length()).trim();
+    } else {
+        result.prefix = processed;
     }
-    result.cleaned = processed;
+
     return result;
 }
 
@@ -148,32 +146,50 @@ static inline const juce::String DebugLevelToString(DebugLevel level) {
     }
 }
 
-class StringIdRegistrySingleton {
+class StringsDictSingleton {
 public:
-    using Id = uint32_t;
+    using Id   = std::uint32_t;
     using Name = juce::String;
+    
+    static const Id EMPTY = 0;
 
-    static StringIdRegistrySingleton& instance() {
-        static StringIdRegistrySingleton inst;
+    static StringsDictSingleton& instance() noexcept {
+        static StringsDictSingleton inst;
         return inst;
     }
 
-    static Id getId(const Name& s) { return instance().get(s); }
+    static Id getId(const Name& name) {
+        if (name == "") return StringsDictSingleton::EMPTY;
+        return instance().findOrCreateId(name);
+    }
+    Id findOrCreateId(const Name& name) {
+        std::lock_guard<std::mutex> lock(this->mutex);
 
-    Id get(const Name& s) {
-        auto it = map.find(s);
-        if (it != map.end()) return it->second;
-
-        Id id = nextId++;
-        map.emplace(Name(s), id);
-        return id;
+        auto [it, inserted] = this->nameIdMap.try_emplace(name, nextId);
+        if (inserted) ++nextId;
+        
+        return it->second;
+    }
+    static Name nameOf(Id id) { return instance().findName(id); }
+    Name findName(Id id) const {
+        if (id == StringsDictSingleton::EMPTY) return "";
+        for (const auto& [name, nameId] : this->nameIdMap) {
+            if (nameId == id) return name;
+        }
+        return "";
     }
 
 private:
-    StringIdRegistrySingleton() : nextId(1) {}
-    std::unordered_map<Name, Id> map;
-    Id nextId;
+    StringsDictSingleton() { this->nameIdMap.reserve(1024); }
+
+    StringsDictSingleton(const StringsDictSingleton&) = delete;
+    StringsDictSingleton& operator=(const StringsDictSingleton&) = delete;
+
+    std::unordered_map<Name, Id> nameIdMap;
+    Id nextId { 1 };
+    std::mutex mutex;
 };
+
 
 class GlobalLogger {
 public:

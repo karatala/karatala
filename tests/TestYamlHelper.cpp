@@ -11,27 +11,21 @@ name: default
 description: default layout
 vendor: Haribol
 version: 1.0
-instruments:
+instruments: # comment
   - id: kick1
     display: Kick
     type: kick
     articulations:
-      - code: center
-        notes: [35, 36]
+      - { code: center, notes: [35, 36] }
   - id: snare1
     display: Snare
     type: snare
     articulations:
-      - code: center
-        notes: [38]
-      - code: rim
-        notes: [40]
-      - code: sidestick
-        notes: [37]
+      - { notes: [38], code: center }
+      - { notes: [40], code: rim } # commment
+      - { notes: [37], code: sidestick }
     controllers:
-      - id: 16
-        code: zone-center-rim
-        notes: [38]
+      - { number: 16, code: zone-center-rim, notes: [38] }
 )yaml";
 
     auto root = YamlHelper::parse(yaml);
@@ -66,7 +60,7 @@ instruments:
     REQUIRE(second["controllers"].isSequence());
     REQUIRE(second["controllers"].size() == 1);
     const auto& ctrl = second["controllers"][0];
-    REQUIRE(ctrl["id"].asString() == "16");
+    REQUIRE(ctrl["number"].asString() == "16");
     REQUIRE(ctrl["code"].asString() == "zone-center-rim");
 }
 
@@ -88,5 +82,28 @@ name: "A # B"
     DBG(">"+ r3["name"].asString() + "<");
     REQUIRE(r3["name"].asString() == "A # B");
 }
+
+  TEST_CASE("YamlHelper - inline map in list", "[yaml]") {
+    const juce::String yaml = R"yaml(
+instruments:
+  - { code: bow, notes: [28,29], id: "test,ok" , more: 5 5 }
+  )yaml";
+
+    auto r = YamlHelper::parse(yaml);
+
+    REQUIRE(r.isMap());
+    REQUIRE(r["instruments"].isSequence());
+    REQUIRE(r["instruments"].size() == 1);
+
+    const auto& item = r["instruments"][0];
+    REQUIRE(item.isMap());
+    REQUIRE(item["code"].asString() == "bow");
+    REQUIRE(item["notes"].isSequence());
+    REQUIRE(item["notes"].size() == 2);
+    REQUIRE(item["notes"][0].asString() == "28");
+    REQUIRE(item["notes"][1].asString() == "29");
+    REQUIRE(item["id"].asString() == "test,ok");
+    REQUIRE(item["more"].asString() == "5 5");
+  }
 
 

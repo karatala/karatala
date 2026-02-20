@@ -13,6 +13,7 @@
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
         "environment": [],
+        "preLaunchTask": "Build Standalone",
         "console": "integratedTerminal",
     },
     {
@@ -24,33 +25,24 @@
         "stopAtEntry": false,
         "cwd": "${fileDirname}",
         "environment": [],
-        "console": "integratedTerminal"
+        "preLaunchTask": "Build tests",
+        "console": "integratedTerminal",
     },
     {
         "name": "(Windows) Debug in REAPER",
         "type": "cppvsdbg",
         "request": "launch",
-        "program": "${env:REAPER_EXE_PATH}",
+        "program": "T:\\apps\\MultiMedia\\ReaperPortable\\App\\Reaper\\reaper.exe",
         "internalConsoleOptions": "openOnSessionStart",
         "args": [
           "-cfgfile",
-          "${env:REAPER_RESOURCE_PATH}\\reaper.ini"
+          "t:\\apps\\MultiMedia\\ReaperPortable\\Data\\ReaperPortableConfig\\reaper.ini"
         ],
         "stopAtEntry": false,
-        "cwd": "${env:REAPER_RESOURCE_PATH}",
-        "console": "externalTerminal",
-        // "console": "integratedTerminal",
-        // "preLaunchTask": "build",
-        "environment": [
-          {
-            "name": "REAPER_EXE_PATH",
-            "value": "${env:REAPER_EXE_PATH}"
-          },
-          {
-            "name": "REAPER_RESOURCE_PATH",
-            "value": "${env:REAPER_RESOURCE_PATH}"
-          }
-        ]
+        "cwd": "t:\\apps\\MultiMedia\\ReaperPortable\\Data\\ReaperPortableConfig",
+        // "console": "externalTerminal",
+        "console": "integratedTerminal",
+        "preLaunchTask": "Build VST3",
+        "environment": [],
       }
-    ]
 }

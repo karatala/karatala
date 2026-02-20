@@ -3,9 +3,16 @@
 
 Karatala is a drum kit engine instrument for e-Drummers and everyone.
 
-TODO:
+FIXME: replace std::vector and other std shit like std::move with something better
+FIXME: get rid of static_cast everywhere it is possible, change types
+FIXME: sort properties in classes and structs so 1st go the heaviest for memory optimization
 
-
+            const StringsDictSingleton::Id ID_bell = StringsDictSingleton::getId("bell");
+            const StringsDictSingleton::Id ID_bow = StringsDictSingleton::getId("bow");
+            const StringsDictSingleton::Id ID_edge = StringsDictSingleton::getId("edge");
+            const StringsDictSingleton::Id ID_rim = StringsDictSingleton::getId("rim");
+            const StringsDictSingleton::Id ID_sidestick = StringsDictSingleton::getId("sidestick");
+            const StringsDictSingleton::Id ID_center = StringsDictSingleton::getId("center");
 
 
 // B	59	RD 1 )
@@ -57,6 +64,117 @@ TODO:
 // C#	13	SNR2 ×
 
 
+
+how would be better to implement InstrumentSynth::loadInstrument so it creates very fast data structure that for each InstrumentSynth instance, that later will be queried from InstrumentSynth::handleMidiEvent with next requirements: it should very fast find a sound to play dependeing on several factors:
+ - main factor is note (described in InstrumentSynth.instrumentSlot.articulations.notes), here we decide what articulation (KitLib::ArticulationSpec) to use.
+ - latest cc values (for some instruments might be optional, used if the instrument have cc "subscriptions", that are defined in InstrumentSynth.instrumentSlot.controllers (type KitLayout::InstrumentSlot) - cc number is ContinuousController.id) latest cc values can be find from this->parent->getLatestContinuousControllerValues(), here we decide what KitLib::ArticulationSpec::ExpressionDimension to use if there was at least one defined
+ - midi velocity value to find suitable velocityLayer (and neighbor layers)
+ - and next starts the most difficult part: 
+ -- if we have less then NAME_IT_BETTER_MIN_VARIANTS=3 sampleVariants for the velocityLayer, we need to look to neighbor velocity layers in they are not too far from selected layer velocity (NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS=32 (since midi velocity range is 0-127))
+ --
+
+
+
+
+const Sample* SampleSelection::get(level_t level, std::size_t pos) {
+    const auto& samples = powerlist.getPowerListItems();
+    if (!samples.size()) {
+        return nullptr; // No samples to choose from.
+    }
+
+    std::size_t index_opt = 0;
+    float power_opt { 0.f };
+    float value_opt { std::numeric_limits<float>::max() };
+    // the following three values are mostly for debugging
+    float random_opt = 0.;
+    float close_opt = 0.;
+    float diverse_opt = 0.;
+
+    // Note the magic values in front of the settings factors.
+    const float f_close = 4. * settings.sample_selection_f_close.load();
+    const float f_diverse = (1. / 2.) * settings.sample_selection_f_diverse.load();
+    const float f_random = (1. / 3.) * settings.sample_selection_f_random.load();
+
+    float power_range = powerlist.getMaxPower() - powerlist.getMinPower();
+    // If all power values are the same then power_range is invalid but we want
+    // to avoid division by zero.
+    if (power_range == 0.) { power_range = 1.0; }
+
+    // start with most promising power value and then stop when reaching far values
+    // which cannot become opt anymore
+    auto closest_it = std::lower_bound(samples.begin(), samples.end(), level);
+    std::size_t up_index = std::distance(samples.begin(), closest_it);
+    std::size_t down_index = (up_index == 0 ? 0 : up_index - 1);
+
+    float up_value_lb;
+    if (up_index < samples.size()) {
+        auto const close_up = (samples[up_index].power - level) / power_range;
+        up_value_lb = f_close * pow2(close_up);
+    } else {
+        --up_index;
+        up_value_lb = std::numeric_limits<float>::max();
+    }
+    auto const close_down = (samples[down_index].power - level) / power_range;
+    float down_value_lb = (up_index != 0 ? f_close * pow2(close_down) : std::numeric_limits<float>::max());
+
+    std::size_t count = 0;
+    do {
+        DEBUG(rand, "%d %d", (int) up_index, (int) down_index);
+
+        assert(down_index <= up_index);
+
+        std::size_t current_index;
+        if (up_value_lb < down_value_lb) {
+            current_index = up_index;
+            if (up_index != samples.size() - 1) {
+                ++up_index;
+                up_value_lb = f_close * pow2((samples[up_index].power - level) / power_range);
+            } else {
+                up_value_lb = std::numeric_limits<float>::max();
+            }
+        } else {
+            current_index = down_index;
+            if (down_index != 0) {
+                --down_index;
+                down_value_lb = f_close * pow2((samples[down_index].power - level) / power_range);
+            } else {
+                down_value_lb = std::numeric_limits<float>::max();
+            }
+        }
+
+        auto random = rand.floatInRange(0., 1.);
+        auto close = (samples[current_index].power - level) / power_range;
+        auto diverse = 1. / (1. + (float) (pos - last[current_index]) / settings.samplerate);
+        auto value = f_close * pow2(close) + f_diverse * diverse + f_random * random;
+
+        if (value < value_opt) {
+            index_opt = current_index;
+            power_opt = samples[current_index].power;
+            value_opt = value;
+            random_opt = random;
+            close_opt = close;
+            diverse_opt = diverse;
+        }
+        ++count;
+    } while (up_value_lb <= value_opt || down_value_lb <= value_opt);
+
+    DEBUG(rand, "Chose sample with index: %d, value: %f, power %f, random: %f, close: %f, diverse: %f, count: %d", (int) index_opt, value_opt, power_opt, random_opt, close_opt, diverse_opt, (int) count);
+
+    last[index_opt] = pos;
+    return samples[index_opt].sample;
+}
+
+
+
+
+ 
+
+  how is better, do we need some multidimensional selection class like SampleSelector, or some different approach?
+ 
+
+
+
+
 there will be some special rules for mapping midi notes to articulations per instrument and during play time in order to support choke messages for each cymbal instrument
    or to support hi-hat pedal cc messages to select specific articulation based on cc value+velocity,
    or to support multiple midi notes triggering same articulation (like snare center triggered by 38 and 40 notes should play rimshot articulation when center hit note received in a short window after edge hit note etc)
@@ -73,7 +191,7 @@ there will be some special rules for mapping midi notes to articulations per ins
 
 
 ### MIC
-need to make engine to use MicLayout with definition of mic destinations so any loaded into InstrumentSlot InstrumentSpecs samples can be routed according to that
+need to make engine to use MicLayout with definition of mic destinations so any loaded into InstrumentSlot InstrumentSpec samples can be routed according to that
 
 3) Implement mic-layout → bus routing
 
@@ -94,7 +212,7 @@ mics:
     code: dbm
 
 
-mic code examples (look about code format in MicSpecs in KitLibModel.h):
+mic code examples (look about code format in MicSpec in KitLibModel.h):
 ons=overhead normal stereo
 oni=overhead normal midside
 ows=overhead wide stereo
@@ -106,7 +224,7 @@ rcm=room close mono
 rfs=room far stereo
 
 
- MicLayout describes MicSpecs 
+ MicLayout describes MicSpec 
      map slot outputs to physical outputs.
 samples need to be routed correctly to outputs according to the selected mic placement/layout.
 
@@ -140,7 +258,7 @@ Goal: Allow saving and restoring which kit + instrument is assigned to every ins
 Why: Users want to save and recall instrument assignments with presets or sessions.
 Approach:
 Define a simple format: lines or YAML entries mapping slotId → kitCode/instrumentCode.
-When loading state, parse assignments and call a method on each slot to load the right InstrumentSpecs from the LibraryManager.
+When loading state, parse assignments and call a method on each slot to load the right InstrumentSpec from the LibraryManager.
 Add validation and fallback when assignments reference missing kits or instruments.
 
 

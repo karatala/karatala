@@ -91,12 +91,13 @@ public:
     };
 
     struct ArticulationRuntime {
-        juce::String codeRaw; // used only outside audio thread
+        StringsDictSingleton::Id exprId = 0;
+        StringsDictSingleton::Id codeId = 0;
         // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
         std::array<int8_t, 128> velocityToLayer; // -1 means no layer
         std::vector<VelocityLayerRuntime> layers;
 
-        ArticulationRuntime() {
+        explicit ArticulationRuntime(StringsDictSingleton::Id codeId, StringsDictSingleton::Id exprId) : codeId(codeId), exprId(exprId) {
             velocityToLayer.fill(-1);
         }
     };

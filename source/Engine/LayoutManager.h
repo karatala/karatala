@@ -12,17 +12,17 @@ struct KitLayout {
         struct ArticulationTrigger {
             juce::String codeRaw; // center, rim, edge, bow, pedal, etc.
             std::vector<uint8_t> notes; // midi notes triggering this articulation
-            juce::String alias;
-            StringIdRegistrySingleton::Id codeIdx = 0;
+            StringsDictSingleton::Id exprId = 0;
+            StringsDictSingleton::Id codeId = 0;
             // KitLib::ArticulationSpec::ExpressionDimension::Type type = KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown;
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
             explicit ArticulationTrigger(juce::String codeRaw) : codeRaw(codeRaw)
             {
-                auto wrapRes = getWrappedValue(codeRaw.trim(), "[", "]");
-                this->alias = wrapRes.wrapped;
-                this->codeIdx = StringIdRegistrySingleton::getId(wrapRes.cleaned);
+                auto wrapSegm = extractWrappedSegment(codeRaw.trim(), "[", "]");
+                this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
+                this->codeId = StringsDictSingleton::getId(wrapSegm.prefix);
             }
         };
         struct ContinuousController {
@@ -95,7 +95,7 @@ struct LayoutTraits<MicLayout> {
             return result.returnWithError("Unable to parse empty yaml");
         layout.id = root["id"].asString();
         layout.name = root["name"].asString();
-        const auto arr = root["mics"];
+        const auto& arr = root["mics"];
         if (arr.isSequence()) {
             for (size_t i = 0; i < arr.size(); ++i) {
                 const auto& it = arr[i];
@@ -218,7 +218,7 @@ public:
         if (!directory.exists() || !directory.isDirectory()) {
             return result.returnWithError("Folder not found: " + directory.getFullPathName());
         }
-        mLayouts.clear();
+        layouts.clear();
 
         const auto files = directory.findChildFiles(juce::File::findFiles, false, "*.yml;*.yaml");
 
@@ -230,7 +230,7 @@ public:
                 layout.id = file.getFileNameWithoutExtension();
                 layout.rebuildIndices();
                 layoutsById[layout.id] = layout;
-                mLayouts.push_back(layout);
+                layouts.push_back(layout);
                 result.value++;
             } else {
                 result.addWarning(parsed.error() + " " + file.getFullPathName());
@@ -240,7 +240,7 @@ public:
     }
 
     std::vector<LayoutType> getLayouts() const {
-        return mLayouts;
+        return layouts;
     }
 
     const LayoutType* getLayoutById(const juce::String& id) const {
@@ -250,7 +250,7 @@ public:
     const LayoutType getDefault() const { return this->defautLayout; }
 
 protected:
-    std::vector<LayoutType> mLayouts;
+    std::vector<LayoutType> layouts;
     std::map<juce::String, LayoutType> layoutsById;
     LayoutType defautLayout;
 };

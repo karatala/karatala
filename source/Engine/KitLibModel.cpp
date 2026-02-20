@@ -97,8 +97,8 @@ int InstrumentSpec::scanInstrumentSamples() {
 
         auto artName = artDir.getFileName();
         auto parts = juce::StringArray::fromTokens(artName, "-", "");
-        auto wrapRes = getWrappedValue(parts[0].trim(), "[", "]");
-        ArticulationSpec* artSpec = this->getOrAddArticulation(wrapRes.cleaned, wrapRes.wrapped);
+        auto wrapSegm = extractWrappedSegment(parts[0].trim(), "[", "]");
+        ArticulationSpec* artSpec = this->getOrAddArticulation(wrapSegm.prefix, wrapSegm.wrapped);
 
         for (int i = 1; i < parts.size(); ++i) {
             auto expDimPart = parts[i];
@@ -213,9 +213,9 @@ ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& di
     result.value.author = "";
     result.value.license = "";
 
-    auto wrapRes = getWrappedValue(processed, "[", "]");
-    result.value.license = wrapRes.wrapped;
-    processed = wrapRes.cleaned;
+    auto wrapSegm = extractWrappedSegment(processed, "[", "]");
+    result.value.license = wrapSegm.wrapped;
+    processed = wrapSegm.prefix + " " + wrapSegm.suffix;
 
     auto parts = splitByString(processed, " by ");
     result.value.name   = parts[0].trim();

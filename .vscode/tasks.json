@@ -7,16 +7,29 @@
       "command": "cmake -S . -B build",
     },
     {
-      "label": "Build",
+      "label": "Build Standalone",
       "type": "shell",
-      "command": "cmake --build build --config Debug --target Karatala_Standalone Tests",
-      "dependsOn": "Configure",
-      "group": {
-        "kind": "build"
-      },
+      "command": "cmake --build build --config Debug --target Karatala_Standalone",
+      // "dependsOn": "Configure",
+      "group": { "kind": "build" },
       "problemMatcher": "$gcc",
     },
-    
+    {
+      "label": "Build VST3",
+      "type": "shell",
+      "command": "cmake --build build --config Debug --target Karatala_VST3",
+      // "dependsOn": "Configure",
+      "group": { "kind": "build" },
+      "problemMatcher": "$gcc",
+    },
+    {
+      "label": "Build tests",
+      "type": "shell",
+      "command": "cmake --build build --config Debug --target Tests",
+      // "dependsOn": "Configure",
+      "group": { "kind": "build" },
+      "problemMatcher": "$gcc",
+    },
     // {
     //   "label": "Run Standalone",
     //   "type": "shell",

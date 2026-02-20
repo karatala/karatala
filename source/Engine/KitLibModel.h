@@ -205,16 +205,17 @@ public:
 
     InstrumentSpec* parent = nullptr;
     juce::String name;
-    juce::String alias;
-    StringIdRegistrySingleton::Id codeIdx = 0;
+    StringsDictSingleton::Id exprId = 0;
+    StringsDictSingleton::Id codeId = 0;
     std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
     std::vector<std::unique_ptr<VelocityLayerSpec>> velocityLayerSpecs;
 
-    explicit ArticulationSpec(InstrumentSpec* parent, const juce::String& name, const juce::String& alias = "")
+    explicit ArticulationSpec(InstrumentSpec* parent, const juce::String& name, const juce::String& exprCode = "")
         : parent(parent)
         , name(name)
-        , alias(alias)
-        , codeIdx(StringIdRegistrySingleton::getId(name)) {
+        , exprId(StringsDictSingleton::getId(exprCode))
+        , codeId(StringsDictSingleton::getId(name))
+    {
     }
 
     const std::vector<std::unique_ptr<VelocityLayerSpec>>& getVelocityLayers() const { return this->velocityLayerSpecs; }
@@ -273,7 +274,7 @@ public:
 class InstrumentSpec {
 public:
 
-    //TODO: add global config for custom names mapping (like "chopper">"cymbal" "rototom">"tom" "vibraslap">"percussion" etc or maybe better use StringIdRegistrySingleton for new types?
+    //TODO: add global config for custom names mapping (like "chopper">"cymbal" "rototom">"tom" "vibraslap">"percussion" etc or maybe better use StringsDictSingleton for new types?
     enum class Type { Unknown, Percussion, Drum, Cymbal, Kick, Tom, Snare, Ride, HiHat, Crash, Splash, China }; 
     struct TypeEntry {
         const char* name;
@@ -343,17 +344,18 @@ public:
 
     static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);
 
-    ArticulationSpec* findArticulation(const juce::String& name, const juce::String& alias = "") const {
+    ArticulationSpec* findArticulation(const juce::String& name, const juce::String& exprCode = "") const {
+        const auto exprId = StringsDictSingleton::getId(exprCode);
         for (const auto& existing : this->articulationSpecs)
-            if (existing->name == name && existing->alias == alias)
+            if (existing->name == name && existing->exprId == exprId)
                 return existing.get();
         return nullptr;
     }
 
-    ArticulationSpec* getOrAddArticulation(const juce::String& name, const juce::String& alias = "") {
-        auto existing = this->findArticulation(name, alias);
+    ArticulationSpec* getOrAddArticulation(const juce::String& name, const juce::String& exprCode = "") {
+        auto existing = this->findArticulation(name, exprCode);
         if (existing != nullptr) return existing;
-        this->articulationSpecs.push_back(std::make_unique<ArticulationSpec>(this, name, alias));
+        this->articulationSpecs.push_back(std::make_unique<ArticulationSpec>(this, name, exprCode));
         return this->articulationSpecs.back().get();
     }
 };
