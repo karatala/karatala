@@ -1,48 +1,48 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-    "version": "0.2.0",
-    "configurations": [
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
     {
-        "name": "(Windows) Debug Standalone",
-        "type": "cppvsdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/Karatala_artefacts/Debug/Standalone/Karatala Drum Kit Engine.exe",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${fileDirname}",
-        "environment": [],
-        "preLaunchTask": "Build Standalone",
-        "console": "integratedTerminal",
+      "name": "(Windows) Debug Standalone",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Karatala_artefacts/Debug/Standalone/Karatala Drum Kit Engine.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "preLaunchTask": "Build Standalone",
+      "internalConsoleOptions": "openOnSessionStart",
     },
     {
-        "name": "(Windows) Debug Tests",
-        "type": "cppvsdbg",
-        "request": "launch",
-        "program": "${workspaceFolder}/build/Debug/Tests.exe",
-        "args": [],
-        "stopAtEntry": false,
-        "cwd": "${fileDirname}",
-        "environment": [],
-        "preLaunchTask": "Build tests",
-        "console": "integratedTerminal",
+      "name": "(Windows) Debug Tests",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/Debug/Tests.exe",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "preLaunchTask": "Build tests",
+      "internalConsoleOptions": "openOnSessionStart",
+      // "console": "integratedTerminal",
     },
     {
-        "name": "(Windows) Debug in REAPER",
-        "type": "cppvsdbg",
-        "request": "launch",
-        "program": "T:\\apps\\MultiMedia\\ReaperPortable\\App\\Reaper\\reaper.exe",
-        "internalConsoleOptions": "openOnSessionStart",
-        "args": [
-          "-cfgfile",
-          "t:\\apps\\MultiMedia\\ReaperPortable\\Data\\ReaperPortableConfig\\reaper.ini"
-        ],
-        "stopAtEntry": false,
-        "cwd": "t:\\apps\\MultiMedia\\ReaperPortable\\Data\\ReaperPortableConfig",
-        // "console": "externalTerminal",
-        "console": "integratedTerminal",
-        "preLaunchTask": "Build VST3",
-        "environment": [],
-      }
+      "name": "(Windows) Debug in REAPER",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "T:\\apps\\MultiMedia\\ReaperPortable\\App\\Reaper\\reaper.exe",
+      "args": [
+        "-cfgfile",
+        "t:\\apps\\MultiMedia\\ReaperPortable\\Data\\ReaperPortableConfig\\reaper.ini"
+      ],
+      "stopAtEntry": false,
+      "cwd": "t:\\apps\\MultiMedia\\ReaperPortable\\Data\\ReaperPortableConfig",
+      "internalConsoleOptions": "openOnSessionStart",
+      "preLaunchTask": "Build VST3",
+      "environment": [],
+    },
+  ],
 }

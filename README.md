@@ -14,6 +14,16 @@ FIXME: sort properties in classes and structs so 1st go the heaviest for memory 
             const StringsDictSingleton::Id ID_sidestick = StringsDictSingleton::getId("sidestick");
             const StringsDictSingleton::Id ID_center = StringsDictSingleton::getId("center");
 
+[FAIL] Reduce voices to use one multichannel voice instead of many 1-2 ch, and then cache multichannel variant from n files - FAILED (performance become worse and idea is logically wrong, cause for example, room channers have different attack/length, cannot wait for them)
+
+
+TODO: peak offset for diffenetn mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) smart-parse from samples and save to filename
+
+
+
+
+
+Loading of inst preset ( kick1(slit) kit inst (spec) params , support stacking samples differently to more extend rr variants (option)
 
 // B	59	RD 1 )
 // Bb	58	VSLP

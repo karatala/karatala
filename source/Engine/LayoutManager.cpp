@@ -43,9 +43,11 @@ mics:
   - name: Tom5 # 13
     instrument: tom5
     code: dtm
-  - name: Room Far # 14-15
+  - name: Room Close # 14
+    code: rcm
+  - name: Room Far # 15-16
     code: rfs
-  # TODO utilize remaining 17 channels
+  # TODO utilize remaining 16 channels
 )yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
     if (!result.ok()) {
@@ -66,12 +68,7 @@ instruments:
   - id: kick1
     display: Kick 1
     articulations:
-      - { notes: [36], code: center }
-
-  - id: kick2
-    display: Kick 2
-    articulations:
-      - { notes: [35], code: center }
+      - { notes: [35,36], code: center }
 
   - id: snare1
     display: Snare 1

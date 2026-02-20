@@ -641,10 +641,10 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
                 mappingUsed = true;
             }
             if (dest < 0 || dest >= outCh) {
-                // Log when mapping refers to non-existing host channels
-                if (mappingUsed) {
+                // FIXME: remove logs from loops and audio thread
+                if (mappingUsed && !juce::JUCEApplicationBase::isStandaloneApp())
                     LOG(Warning, "Instrument '" + instrumentSynthPtr->getId() + "' mapping for mic channel " + juce::String(c) + " -> host index " + juce::String(dest) + " is out of range (host channels=" + juce::String(outCh) + "). Falling back to wrap index.");
-                }
+
                 // Fallback: wrap to available outputs
                 dest = c % outCh;
             }
@@ -1138,7 +1138,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
                         const auto& mapArr = artIt->second;
 
                         artIdx = static_cast<int>(mapArr[ccVal]);
-                        LOG(Debug, "CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + juce::String(artIdx) + " for note " + juce::String(midiNoteNumber) );
+                        // LOG(Verbose, "CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + juce::String(artIdx) + " for note " + juce::String(midiNoteNumber) );
                     }
                 }
             }
@@ -1193,10 +1193,10 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
         if (se.variantIdx != chosenKey) continue;
         juce::SynthesiserVoice* voice = findFreeVoice(se.sound, midiChannel, midiNoteNumber, stealNotes);
         if (voice == nullptr) continue;
-        auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.code;
-        auto& artCode = se.sound->sampleVariantSpec->parent->parent->name;
-        auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
-        LOG(Debug, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " inst " + instCode + " art " + artCode + " micBufCh start=" + juce::String(se.sound->micBufferChannelStart) + "x" + juce::String(se.sound->micBufferChannelCount) + " file=" + filePath);
+        // auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.code;
+        // auto& artCode = se.sound->sampleVariantSpec->parent->parent->name;
+        // auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
+        // LOG(Verbose, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " inst " + instCode + " art " + artCode + " micBufCh start=" + juce::String(se.sound->micBufferChannelStart) + "x" + juce::String(se.sound->micBufferChannelCount) + " file=" + filePath);
         this->startVoice(voice, se.sound, midiChannel, midiNoteNumber, velf);
         anyStarted = true;
     }
@@ -1261,6 +1261,10 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     
     // set playback sample rate for voices
     this->setCurrentPlaybackSampleRate(newSampleRate);
+
+    for (auto* voice : this->voices) //TODO: refactor to separate method
+        if (auto* v = dynamic_cast<InstrumentSynthVoice*>(voice))
+            v->chokeProcessor.prepare(newSampleRate);
 }
 
 // SampledSound* InstrumentSynth::selectSampleFor(int articulationIdx, int midiVel, int micIdx) {
@@ -1337,6 +1341,9 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, juce::S
     mAdsr.setSampleRate(getSampleRate());
     mAdsr.noteOn();
 
+    this->chokeProcessor.noteStarted();
+    // LOG(Debug, "InstrumentSynthVoice: startNote velocity=" + juce::String(velocity) + " pitchRatio=" + juce::String(mPitchRatio));
+
     if (auto* sampled = dynamic_cast<SampledSound*>(s)) {
         if (sampled->sampleRate > 0 && getSampleRate() > 0)
             mPitchRatio = sampled->sampleRate / getSampleRate();
@@ -1360,6 +1367,11 @@ void InstrumentSynthVoice::stopNote(float velocity, bool allowTailOff) {
 void InstrumentSynthVoice::pitchWheelMoved(int /*newValue*/) {}
 void InstrumentSynthVoice::controllerMoved(int /*controllerNumber*/, int /*newValue*/) {}
 
+void InstrumentSynthVoice::aftertouchChanged (int newValue) {
+    // LOG(Verbose, "aftertouchChanged value=" + juce::String(newValue));
+    this->chokeProcessor.handlePolyAftertouch(newValue);
+}
+
 void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) {
     if (!isVoiceActive())
         return;
@@ -1382,7 +1394,16 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
 
     const int destChCount = outputBuffer.getNumChannels();
 
+    if (this->chokeProcessor.isMuted()) {
+        this->clearCurrentNote();
+        return;
+    }
     for (int i = 0; i < numSamples; ++i) {
+        
+        //TODO: use peak offset for mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) first makke script to smart-parse from samples and save to filename
+        // Process per-voice ducking for this block and get block gain
+        const float chokeGain = this->chokeProcessor.getNextBlockGain();
+ 
         const double pos = mSourceSamplePosition;
         const int idx = static_cast<int>(pos);
         const double frac = pos - idx;
@@ -1397,7 +1418,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
                 float v0 = buf.getSample(actualSrcCh, idx);
                 float v1 = (idx + 1 < srcLen) ? buf.getSample(actualSrcCh, idx + 1) : 0.0f;
                 float sample = static_cast<float>(v0 + (v1 - v0) * frac);
-                sample *= env * mVelocityGain;
+                sample *= env * mVelocityGain * chokeGain;
 
                 int destCh = s->micBufferChannelStart + sc;
                 if (destCh >= 0 && destCh < destChCount) {
