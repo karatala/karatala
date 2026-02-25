@@ -74,7 +74,7 @@ ParseResult<InstrumentSpec::MetaInfo> InstrumentSpec::parseInfo(const juce::Stri
         result.value.description = parts.size() > 0 ? parts.joinIntoString(" ").trim() : "";
     }
     result.value.type = InstrumentSpec::typeFromString(result.value.name);
-    result.value.code = processed;
+    result.value.codeRaw = processed;
 
     return result;
 }
@@ -88,7 +88,7 @@ bool InstrumentSpec::isAudioFile(const juce::File& file) {
     return false;
 }
 
-int InstrumentSpec::scanInstrumentSamples() {
+int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
     const auto articulationDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*.*");
     int sampleCount = 0;
     for (const auto& artDir : articulationDirs) {
@@ -97,8 +97,8 @@ int InstrumentSpec::scanInstrumentSamples() {
 
         auto artName = artDir.getFileName();
         auto parts = juce::StringArray::fromTokens(artName, "-", "");
-        auto wrapSegm = extractWrappedSegment(parts[0].trim(), "[", "]");
-        ArticulationSpec* artSpec = this->getOrAddArticulation(wrapSegm.prefix, wrapSegm.wrapped);
+
+        ArticulationSpec* artSpec = this->getOrAddArticulation(parts[0].trim());
 
         for (int i = 1; i < parts.size(); ++i) {
             auto expDimPart = parts[i];
@@ -109,6 +109,9 @@ int InstrumentSpec::scanInstrumentSamples() {
                 if (KitLib::ArticulationSpec::ExpressionDimension::stringToType(expDimCode) == KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown)
                     LOG(Warning, "Unknown dimension code '" + expDimCode + "' in articulation folder '" + artDir.getFullPathName() + "'");
                 artSpec->addExpressionDimensionValue(expDimCode, static_cast<uint8_t>(expDimValue.getIntValue()));
+                // update global dimension usage counts (one per observed value)
+                if (stats)
+                    stats->dimensionCodeCounts[expDimCode] += 1;
             }
         }
 
@@ -146,6 +149,14 @@ int InstrumentSpec::scanInstrumentSamples() {
                 const auto& micDesc = parsedInfo.value.micDescriptors[i];
                 velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
                 sampleCount++;
+
+                // update global counters per actual file+mic occurrence (reflects sample files counted per mic)
+                if (stats) {
+                    stats->micCodeCounts[micDesc.raw]++;
+                    juce::String variantLetter = parsedInfo.value.sampleVariant.isEmpty() ? juce::String("") : juce::String::charToString(parsedInfo.value.sampleVariant[0]);
+                    stats->sampleVariantCounts[variantLetter]++;
+                    stats->velocityCounts[parsedInfo.value.velocity]++;
+                }
 
                 // Advance cursor by number of channels described by this mic descriptor
                 channelCursor += micDesc.channels;
@@ -208,7 +219,7 @@ ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& di
     ParseResult<MetaInfo> result;
 
     juce::String processed = dirName.trim();
-    result.value.code = processed;
+    result.value.codeRaw = processed;
     result.value.name = processed;
     result.value.author = "";
     result.value.license = "";
@@ -236,7 +247,7 @@ int DrumKitSpec::scanInstruments() {
         auto parsedInfo = InstrumentSpec::parseInfo(subDir.getFileName());
         if (parsedInfo.ok()) {
             parsedInfo.value.rootDir = subDir;
-            if (findInstrument(parsedInfo.value.code) == nullptr) {
+            if (findInstrument(parsedInfo.value.codeRaw) == nullptr) {
                 this->addInstrument(parsedInfo.value);
             }
         } else DBG(parsedInfo.error());
@@ -260,7 +271,7 @@ std::vector<InstrumentSpec*> DrumKitSpec::getInstrumentsByType(InstrumentSpec::T
             result.push_back(inst);
     }
     std::sort(result.begin(), result.end(), [](InstrumentSpec* a, InstrumentSpec* b){
-        return a->meta.code < b->meta.code;
+        return a->meta.codeRaw < b->meta.codeRaw;
     });
     return result;
 }
@@ -292,10 +303,7 @@ int LibraryManager::scanAll() {
     int totalKits = 0;
     int totalInstruments = 0;
     int totalSamples = 0;
-    std::unordered_map<juce::String, int> dimensionCodeCounts;
-    std::unordered_map<juce::String, int> micCodeCounts;
-    std::unordered_map<juce::String, int> sampleVariantCounts;
-    std::unordered_map<int, int> velocityCounts;
+    InstrumentSpec::ScanStats globalStats;
 
     for (const juce::DirectoryEntry& entry : juce::RangedDirectoryIterator(this->rootDir, false, "*", juce::File::TypesOfFileToFind::findDirectories)) {
         const juce::File& kitDir = entry.getFile();
@@ -316,43 +324,38 @@ int LibraryManager::scanAll() {
         int instrsInKit = kit->scanInstruments();
         int samplesInKit = 0;
 
+        InstrumentSpec::ScanStats stats;
         for (auto&[id, instPtr] : kit->instrumentSpecsMap) {
-            auto samplesInInstr = instPtr->scanInstrumentSamples();
+            auto samplesInInstr = instPtr->scanInstrumentSamples(&stats);
             if (samplesInInstr > 0) {
                 samplesInKit += samplesInInstr;
                 totalSamples += samplesInInstr;
                 totalInstruments++;
-
-                for (const auto& artSpec : instPtr->articulationSpecs) {
-                    for (const auto& velSpec : artSpec->velocityLayerSpecs) {
-                        velocityCounts[velSpec->velocity]++;
-                        for (const auto& varSpec : velSpec->sampleVariantSpecs) {
-                            micCodeCounts[varSpec->micSpec.raw]++;
-                            sampleVariantCounts[juce::String(varSpec->letter)]++;
-                        }
-                    }
-                }
             }
         }
         this->kitSpecs.push_back(std::move(kit));
+
+        for (const auto& [k, v] : stats.dimensionCodeCounts) globalStats.dimensionCodeCounts[k] += v;
+        for (const auto& [k, v] : stats.micCodeCounts) globalStats.micCodeCounts[k] += v;
+        for (const auto& [k, v] : stats.sampleVariantCounts) globalStats.sampleVariantCounts[k] += v;
+        for (const auto& [k, v] : stats.velocityCounts) globalStats.velocityCounts[k] += v;
         totalKits++;
         LOG(Info, "Scanned kit: " + kitDir.getFileName() + ", " + juce::String(instrsInKit) + " instruments, " + juce::String(samplesInKit) + " samples");
-    
     }
 
     LOG(Info, "Dimension Code Usage:");
-    for (const auto& [key, count] : dimensionCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count));
+    for (const auto& [key, count] : globalStats.dimensionCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " articulation folders");
 
     LOG(Info, "Mic Code Usage:");
-    for (const auto& [key, count] : micCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count));
+    for (const auto& [key, count] : globalStats.micCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
 
     LOG(Info, "Sample Variant Usage:");
-    for (const auto& [key, count] : sampleVariantCounts) LOG(Info, "  " + key + ": " + juce::String(count));
+    for (const auto& [key, count] : globalStats.sampleVariantCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
 
     LOG(Info, "Velocity Usage:");
-    for (const auto& [key, count] : velocityCounts) LOG(Info, "  " + juce::String(key) + ": " + juce::String(count));
+    for (const auto& [key, count] : globalStats.velocityCounts) LOG(Info, "  " + juce::String(key) + ": " + juce::String(count) + " sample files");
 
-    LOG(Info, "Total: " + juce::String(totalKits) + " kits, " + juce::String(totalInstruments) + " instruments, " + juce::String(totalSamples) + " samples");
+    LOG(Info, "Total: " + juce::String(totalKits) + " kits, " + juce::String(totalInstruments) + " instruments, " + juce::String(totalSamples) + " sample files");
 
     return totalKits;
 }

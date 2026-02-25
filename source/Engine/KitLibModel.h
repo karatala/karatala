@@ -3,6 +3,7 @@
 #include <juce_core/juce_core.h>
 #include <regex>
 #include <vector>
+#include <map>
 #include "../Config/Helpers.h"
 #include "KitLibConsts.h"
 
@@ -202,20 +203,21 @@ public:
         std::vector<uint8_t> values;
         Type type;
     };
-
+    
+    juce::String codeRaw;
     InstrumentSpec* parent = nullptr;
-    juce::String name;
+    StringsDictSingleton::Id nameId = 0;
     StringsDictSingleton::Id exprId = 0;
-    StringsDictSingleton::Id codeId = 0;
     std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
     std::vector<std::unique_ptr<VelocityLayerSpec>> velocityLayerSpecs;
 
-    explicit ArticulationSpec(InstrumentSpec* parent, const juce::String& name, const juce::String& exprCode = "")
+    explicit ArticulationSpec(InstrumentSpec* parent, const juce::String& codeRaw)
         : parent(parent)
-        , name(name)
-        , exprId(StringsDictSingleton::getId(exprCode))
-        , codeId(StringsDictSingleton::getId(name))
+        , codeRaw(codeRaw)
     {
+        auto wrapSegm = extractWrappedSegment(codeRaw, "[", "]");
+        this->nameId = StringsDictSingleton::getId(wrapSegm.prefix);
+        this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
     }
 
     const std::vector<std::unique_ptr<VelocityLayerSpec>>& getVelocityLayers() const { return this->velocityLayerSpecs; }
@@ -306,7 +308,7 @@ public:
     
     struct MetaInfo {
         juce::File rootDir;
-        juce::String code;
+        juce::String codeRaw;
         juce::String name;
         InstrumentSpec::Type type = InstrumentSpec::Type::Unknown;
         juce::String size = "";
@@ -340,22 +342,28 @@ public:
      *
      * @return number of samples loaded
      */
-    int scanInstrumentSamples();
+    struct ScanStats {
+        std::map<juce::String, int> dimensionCodeCounts;
+        std::map<juce::String, int> micCodeCounts;
+        std::map<juce::String, int> sampleVariantCounts;
+        std::map<int, int> velocityCounts;
+    };
+
+    int scanInstrumentSamples(ScanStats* stats = nullptr);
 
     static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);
 
-    ArticulationSpec* findArticulation(const juce::String& name, const juce::String& exprCode = "") const {
-        const auto exprId = StringsDictSingleton::getId(exprCode);
+    ArticulationSpec* findArticulation(const juce::String& codeRaw) const {
         for (const auto& existing : this->articulationSpecs)
-            if (existing->name == name && existing->exprId == exprId)
+            if (existing->codeRaw == codeRaw)
                 return existing.get();
         return nullptr;
     }
 
-    ArticulationSpec* getOrAddArticulation(const juce::String& name, const juce::String& exprCode = "") {
-        auto existing = this->findArticulation(name, exprCode);
+    ArticulationSpec* getOrAddArticulation(const juce::String& codeRaw) {
+        auto existing = this->findArticulation(codeRaw);
         if (existing != nullptr) return existing;
-        this->articulationSpecs.push_back(std::make_unique<ArticulationSpec>(this, name, exprCode));
+        this->articulationSpecs.push_back(std::make_unique<ArticulationSpec>(this, codeRaw));
         return this->articulationSpecs.back().get();
     }
 };
@@ -367,7 +375,7 @@ class DrumKitSpec {
 public:
     struct MetaInfo {
         juce::File rootDir;
-        juce::String code;
+        juce::String codeRaw;
         juce::String name;
         juce::String author;
         juce::String license;
@@ -379,7 +387,7 @@ public:
 
     int scanInstruments();
 
-    void addInstrument(InstrumentSpec::MetaInfo instMeta) { this->instrumentSpecsMap[instMeta.code] = std::make_unique<InstrumentSpec>(this, instMeta); }
+    void addInstrument(InstrumentSpec::MetaInfo instMeta) { this->instrumentSpecsMap[instMeta.codeRaw] = std::make_unique<InstrumentSpec>(this, instMeta); }
     InstrumentSpec* findInstrument(const juce::String& id);
     std::vector<InstrumentSpec*> getInstrumentsByType(InstrumentSpec::Type type) const;
 

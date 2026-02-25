@@ -15,6 +15,7 @@ static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
 void DrumKitEngine::init(const juce::AudioProcessorValueTreeState& treeState) {
     this->initGlobalSettings();
     this->initDefaultLayouts();
+    this->initArticulationFallbackMap();
     this->reloadAll();
     this->useState(treeState);
 }
@@ -30,7 +31,7 @@ void DrumKitEngine::initGlobalSettings() {
     if (envInfo.ok()) {
         this->dataPath = envInfo.value;
     } else {
-        LOG(Warning, "" + envInfo.error());
+        LOG(Notice, "" + envInfo.error());
         this->dataPath = defaultDataPath;
     }
 
@@ -69,6 +70,19 @@ void DrumKitEngine::initGlobalSettings() {
 void DrumKitEngine::initDefaultLayouts() {
     this->kitLayoutManagerPtr->initDefault();
     this->micLayoutManagerPtr->initDefault();
+}
+
+void DrumKitEngine::initArticulationFallbackMap() {
+    this->articulationFallbackIdMap.clear();
+
+    auto& dict = StringsDictSingleton::instance();
+    //TODO: move fallback map to global config and fill dynamically from it
+    this->articulationFallbackIdMap[dict.getId("bell")] = { dict.getId("bow"), dict.getId("edge") };
+    this->articulationFallbackIdMap[dict.getId("bow")] = { dict.getId("edge"), dict.getId("bell") };
+    this->articulationFallbackIdMap[dict.getId("edge")] = { dict.getId("bow"), dict.getId("bell") };
+    this->articulationFallbackIdMap[dict.getId("rim")] = { dict.getId("center") };
+    this->articulationFallbackIdMap[dict.getId("center")] = { dict.getId("rim") };
+    this->articulationFallbackIdMap[dict.getId("sidestick")] = { dict.getId("rim"), dict.getId("center") };
 }
 
 void DrumKitEngine::initKitLayouts() {
@@ -163,7 +177,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
         // find kit (by name or code)
         KitLib::DrumKitSpec* kitSpec = nullptr;
         for (auto& kptr : this->libraryManagerPtr->getKits()) {
-            if (kptr->meta.name == kitName || kptr->meta.code == kitName) {
+            if (kptr->meta.name == kitName || kptr->meta.codeRaw == kitName) {
                 kitSpec = kptr.get();
                 break;
             }
@@ -225,7 +239,7 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
         if (this->activeKitLayoutPtr == nullptr) {
             kitLayout = this->globalConfig.kitLayout;
             if (kitLayout.isEmpty() || !this->useKitLayout(kitLayout)) {
-                LOG(Warning, "Using default kit layout");
+                LOG(Notice, "Using default kit layout");
                 auto src = this->getKitLayoutManager()->getDefault();
                 this->setKitLayout(src);
             }
@@ -237,7 +251,7 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
         if (this->activeMicLayoutPtr == nullptr) {
             micLayout = this->globalConfig.micLayout;
             if (micLayout.isEmpty() || !this->useMicLayout(micLayout)) {
-                LOG(Warning, "Using default mic layout");
+                LOG(Notice, "Using default mic layout");
                 auto src = this->getMicLayoutManager()->getDefault();
                 this->setMicLayout(src);
             }
@@ -339,7 +353,7 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpec& kit) { //FIXME: review, probably
                     continue;
                 if (usedInstSpecSet.find(candidate) != usedInstSpecSet.end())
                     continue;
-                if (candidate->meta.code.trim().toLowerCase().contains(needle) || candidate->meta.name.trim().toLowerCase().contains(needle)) {
+                if (candidate->meta.codeRaw.trim().toLowerCase().contains(needle) || candidate->meta.name.trim().toLowerCase().contains(needle)) {
                     matched = candidate;
                     break;
                 }
@@ -351,9 +365,9 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpec& kit) { //FIXME: review, probably
             slot->unloadInstrument();
             continue;
         }
-        
-        LOG(Info, "loading instrument '" + matched->meta.code + "' from kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
-        
+
+        LOG(Info, "Loading instrument '" + matched->meta.codeRaw + "' from kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
+
         slot->loadInstrument(matched); //TODO: wrap in performance measuring block
         usedInstSpecSet.insert(matched);
 
@@ -450,7 +464,8 @@ bool DrumKitEngine::applyKitLayout() {
     this->instrumentSynthPtrs.clear();
     this->instrumentSynthById.clear();
     this->instrumentSynthsByNote.clear();
-    this->latestCcValueMap.clear();
+    this->latestCCValueMap.clear();
+    this->latestPAValueMap.clear();
 
     for (const auto& instrumentSlot : this->getKitLayout()->instrumentSlots) {
         auto slot = std::make_unique<InstrumentSynth>(this, instrumentSlot);
@@ -460,17 +475,48 @@ bool DrumKitEngine::applyKitLayout() {
         this->instrumentSynthPtrs.push_back(std::move(slot));
 
         for (const auto& cc : instrumentSlot.controllers) {
-            this->latestCcValueMap[cc.number] = 0;
+            this->latestCCValueMap[cc.number] = 0;
         }
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
-                this->instrumentSynthsByNote[note].push_back(ptr);
+                this->latestPAValueMap[note] = 0;
+                this->instrumentSynthsByNote[note].push_back(ptr); //TODO: check ptr safety
             }
         }
     }
 
     LOG(Info, "Applied kit layout: " + this->activeKitLayoutPtr->id);
+
+    this->buildNoteNameCache();
     return true;
+}
+
+void DrumKitEngine::buildNoteNameCache() {
+    for (int i = 0; i < 128; ++i) this->noteNameCache[i].clear();
+
+    if (this->activeKitLayoutPtr == nullptr) return;
+
+    auto& layout = *this->activeKitLayoutPtr;
+    auto& dict = StringsDictSingleton::instance();
+
+    for (const auto& inst : layout.instrumentSlots) {
+        juce::String instName = inst.display.isNotEmpty() ? inst.display : inst.id;
+        for (const auto& art : inst.articulations) {
+
+            juce::String artName = dict.findName(art.nameId);
+            if (artName.isEmpty()) artName = art.codeRaw;
+
+            juce::String finalName = instName;
+            if (artName.isNotEmpty()) finalName += " " + artName;
+            
+            for (uint8_t note : art.notes) {
+                if (note < 0 || note > 127) continue;
+                
+                if (this->noteNameCache[note].isEmpty())
+                    this->noteNameCache[note] = finalName + " (" + juce::String(note) + ")";
+            }
+        }
+    }
 }
 
 bool DrumKitEngine::applyMicLayout() {
@@ -531,7 +577,7 @@ bool DrumKitEngine::applyMicLayout() {
             break;
         }
 
-        // Determine target instrument synths //FIXME: move to loadInstrument
+        // Determine target instrument synths //FIXME: move to loadInstrument?
         std::vector<InstrumentSynth*> targets;
         if (mic.instrument.isEmpty()) {
             // assign to all instruments
@@ -556,11 +602,11 @@ bool DrumKitEngine::applyMicLayout() {
         }
 
         if (targets.empty()) {
-            LOG(Warning, "Mic '" + mic.name + "' with instrument '" + mic.instrument + "' could not be assigned to any instrument slot");
+            LOG(Warning,  "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "' FAILED: no coresponding instrument slots found in your kit layout");
             outCursor += channelCount; // still reserve host channels
             continue;
         } else {
-            LOG(Debug, "Assigned mic for " + mic.instrument + " '" + mic.name + " (" + juce::String(mic.specs.channels) + "ch)");
+            LOG(Debug, "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "'");
         }
 
         // Host channel indices for this mic
@@ -601,7 +647,7 @@ bool DrumKitEngine::applyMicLayout() {
             mapStr += juce::String(map[i]);
         }
         if (mapStr.isEmpty()) mapStr = "(none)";
-        LOG(Info, "Instrument '" + instPtr->getId() + "' mapping -> " + mapStr + " (mic channels: " + juce::String(instPtr->getMicChannelCount()) + ")");
+        LOG(Debug, "Mic mapping " + mapStr + " (" + juce::String(instPtr->getMicChannelCount()) + " ch) used for instrument '" + instPtr->getId() + "'");
     }
 
     LOG(Info, "Applied mic layout: " + this->activeMicLayoutPtr->id + " (assigned host channels: " + juce::String(outCursor) + ")");
@@ -621,6 +667,7 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     const auto outputBufferNumSamples = outputBuffer.getNumSamples();
     
     this->saveLatestContinuousControllerValues(midiMessages);
+    this->saveLatestPolyphonicAftertouchValues(midiMessages);
 
     for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
         auto& micBuffer = instrumentSynthPtr->getMicBuffer();
@@ -654,12 +701,30 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     }
 }
 
+std::optional<juce::String> DrumKitEngine::getNameForMidiNoteNumber(int note, int /* midiChannel */) {
+    if (note < 0 || note > 127) return {};
+
+    const auto& name = this->noteNameCache[note];
+    if (name.isNotEmpty()) return name;
+    return {};
+}
+
+
 void DrumKitEngine::saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages) {
     for (const auto& midiMess : midiMessages) {
         const juce::MidiMessage msg = midiMess.getMessage();
         if (!msg.isController()) continue;
         const auto ccNum = msg.getControllerNumber();
-        if (this->latestCcValueMap.find(ccNum) == this->latestCcValueMap.end()) continue;
-        this->latestCcValueMap[ccNum] = msg.getControllerValue();
+        if (this->latestCCValueMap.find(ccNum) == this->latestCCValueMap.end()) continue;
+        this->latestCCValueMap[ccNum] = msg.getControllerValue();
+    }
+}
+void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer& midiMessages) {
+    for (const auto& midiMess : midiMessages) {
+        const juce::MidiMessage msg = midiMess.getMessage();
+        if (!msg.isAftertouch()) continue;
+        const auto note = msg.getNoteNumber();
+        if (this->latestPAValueMap.find(note) == this->latestPAValueMap.end()) continue;
+        this->latestPAValueMap[note] = msg.getAfterTouchValue();
     }
 }

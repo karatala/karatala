@@ -65,8 +65,8 @@ description: default layout
 vendor: Haribol
 version: 1.0
 instruments:
-  - id: kick1
-    display: Kick 1
+  - id: kick
+    display: Kick
     articulations:
       - { notes: [35,36], code: center }
 

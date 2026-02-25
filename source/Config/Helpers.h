@@ -44,6 +44,15 @@ static inline juce::StringArray splitByString(const juce::String& text, const ju
     return result;
 }
 
+static inline juce::String midiVectorToString(const std::vector<uint8_t>& v) {
+    juce::String s = "[";
+    for (size_t i = 0; i < v.size(); ++i) {
+        if (i > 0) s += ", ";
+        s += juce::String((int)v[i]);
+    }
+    s += "]";
+    return s;
+}
 
 template <typename T>
 struct ParseResult {
@@ -162,32 +171,29 @@ public:
         if (name == "") return StringsDictSingleton::EMPTY;
         return instance().findOrCreateId(name);
     }
+    static Name nameOf(Id id) { return instance().findName(id); }
+
     Id findOrCreateId(const Name& name) {
         std::lock_guard<std::mutex> lock(this->mutex);
-
         auto [it, inserted] = this->nameIdMap.try_emplace(name, nextId);
         if (inserted) ++nextId;
-        
         return it->second;
     }
-    static Name nameOf(Id id) { return instance().findName(id); }
     Name findName(Id id) const {
         if (id == StringsDictSingleton::EMPTY) return "";
-        for (const auto& [name, nameId] : this->nameIdMap) {
+        for (const auto& [name, nameId] : this->nameIdMap)
             if (nameId == id) return name;
-        }
         return "";
     }
 
 private:
-    StringsDictSingleton() { this->nameIdMap.reserve(1024); }
-
-    StringsDictSingleton(const StringsDictSingleton&) = delete;
-    StringsDictSingleton& operator=(const StringsDictSingleton&) = delete;
-
     std::unordered_map<Name, Id> nameIdMap;
     Id nextId { 1 };
     std::mutex mutex;
+
+    StringsDictSingleton() { this->nameIdMap.reserve(1024); }
+    StringsDictSingleton(const StringsDictSingleton&) = delete;
+    StringsDictSingleton& operator=(const StringsDictSingleton&) = delete;
 };
 
 

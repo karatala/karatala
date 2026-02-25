@@ -2,8 +2,20 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
+/**
+ *  realistic cymbal choke using Polyphonic Aftertouch: with mute timeout, if aftertouch value became less in that timeout, volume return back by some percent
+ */
 class AftertouchChokeProcessor {
 public:
+    static constexpr float maxDuckDepth = 0.7f;       // 70%
+    static constexpr float duckTimeSec = 0.15f;       // 150 ms
+    static constexpr float releaseTimeSec = 0.05f;    // 50 ms
+    static constexpr float muteTailSec = 0.04f;       // 40 ms
+    static constexpr float releaseBoost = 0.1f;       // +10%
+    static constexpr float muteThresholdRatio = 0.5f; // 50% of maxPA
+    
+    enum class State { Idle, Ducking, Releasing, Muted };
+
     void prepare(double sr) {
         this->sampleRate = sr;
         this->reset();
@@ -100,21 +112,6 @@ public:
     }
 
 private:
-    enum class State { Idle, Ducking, Releasing, Muted };
-
-    float applyCurve(float x) const {
-        return x * std::sqrt(x);
-    }
-
-    void moveTowards(float newTarget, float timeSec) {
-        if (timeSec <= 0.0f) {
-            this->currentGain = newTarget; //FIXME: why never reached?
-            return;
-        }
-        const float step = (newTarget - this->currentGain) / (timeSec * static_cast<float>(this->sampleRate));
-        this->currentGain += step;
-    }
-
     State state = State::Idle;
 
     double sampleRate = 44100.0;
@@ -129,10 +126,16 @@ private:
     float releaseElapsed = 0.0f;
     float muteElapsed = 0.0f;
 
-    static constexpr float maxDuckDepth = 0.7f;          // 70%
-    static constexpr float duckTimeSec = 0.2f;           // 200 ms
-    static constexpr float releaseTimeSec = 0.05f;       // 50 ms
-    static constexpr float muteTailSec = 0.04f;          // 40 ms
-    static constexpr float releaseBoost = 0.1f;          // +10%
-    static constexpr float muteThresholdRatio = 0.5f;    // 50% of maxPA
+    float applyCurve(float x) const {
+        return x * std::sqrt(x);
+    }
+
+    void moveTowards(float newTarget, float timeSec) {
+        if (timeSec <= 0.0f) {
+            this->currentGain = newTarget; //FIXME: why never reached?
+            return;
+        }
+        const float step = (newTarget - this->currentGain) / (timeSec * static_cast<float>(this->sampleRate));
+        this->currentGain += step;
+    }
 };

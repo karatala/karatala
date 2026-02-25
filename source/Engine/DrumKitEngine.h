@@ -4,6 +4,7 @@
 #include "InstrumentSynth.h"
 #include "LayoutManager.h"
 #include "SampleLoader.h"
+#include <array>
 
 class DrumKitEngine {
 public:
@@ -50,15 +51,34 @@ public:
     MicLayoutManager* getMicLayoutManager() { return this->micLayoutManagerPtr.get(); }
     SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
 
-    // Realtime-safe accessor: get latest CC values by const-ref (no copy)
-    const std::unordered_map<int, int>& getLatestContinuousControllerValuesRef() const { return this->latestCcValueMap; }
+    const int getLatestContinuousControllerValue(const int ccNum) const {
+        const auto& it = this->latestCCValueMap.find(ccNum);
+        if (it == this->latestCCValueMap.end()) return 0; //FIXME?
+        const int& value = it->second;
+        if (value < 0) return 0;
+        if (value > 127) return 127;
+        return value;
+    }
+    const int getLatestPolyphonicAftertouchValue(const int note) const {
+        const auto& it = this->latestPAValueMap.find(note);
+        if (it == this->latestPAValueMap.end()) return 0; //FIXME?
+        const int& value = it->second;
+        if (value < 0) return 0;
+        if (value > 127) return 127;
+        return value;
+    }
+    // Realtime-safe accessor: get latest CC values by const-ref (no copy) //FIXME: check the codebase and make it use similar 'no copy' pattern whereever possible
+    const std::unordered_map<int, int>& getLatestContinuousControllerValuesRef() const { return this->latestCCValueMap; } //TODO: delete, probably will be unused
+    const std::unordered_map<int, int>& getLatestPolyphonicAftertouchValuesRef() const { return this->latestPAValueMap; } //TODO: delete, probably will be unused
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
-    // bool preprocessMidi(juce::MidiMessage msg);
-        
+    std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
+    
     void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }
     DebugLevel maxDebugLevel = DebugLevel::Error;
+
+    std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>>& getArticulationFallbackIdMap() { return this->articulationFallbackIdMap; }
 
 private:
     Config globalConfig;
@@ -67,7 +87,9 @@ private:
     std::unordered_map<juce::String, InstrumentSynth*> instrumentSynthById;
     std::unordered_map<int, std::vector<InstrumentSynth*>> instrumentSynthsByNote;
 
-    std::unordered_map<int, int> latestCcValueMap;
+    //TODO: maybe no need in unordered_map and make it std::array<int, 128> or what will be faster/lighter/safer?
+    std::unordered_map<int, int> latestCCValueMap;
+    std::unordered_map<int, int> latestPAValueMap;
 
     std::unique_ptr<KitLib::LibraryManager> libraryManagerPtr;
     std::unique_ptr<SampleLoader> sampleLoaderPtr;
@@ -77,11 +99,16 @@ private:
     std::unique_ptr<KitLayout> activeKitLayoutPtr;
     std::unique_ptr<MicLayout> activeMicLayoutPtr;
 
+    std::array<juce::String, 128> noteNameCache;
+
+    std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>> articulationFallbackIdMap;
+
     // Last known audio block size (samples per block). Used to size mic buffers when applying layouts.
     int lastSamplesPerBlock = 0;
 
     void initGlobalSettings();
     void initDefaultLayouts();
+    void initArticulationFallbackMap();
     void initKitLayouts();
     void initMicLayouts();
     void initSampleLibrary();
@@ -91,8 +118,8 @@ private:
 
     bool applyKitLayout();
     bool applyMicLayout();
+    void buildNoteNameCache();
 
-
-    std::unordered_map<int, int> getLatestContinuousControllerValues() { return this->latestCcValueMap; }
     void saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages);
+    void saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer& midiMessages);
 };

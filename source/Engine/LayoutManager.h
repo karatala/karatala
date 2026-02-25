@@ -13,16 +13,15 @@ struct KitLayout {
             juce::String codeRaw; // center, rim, edge, bow, pedal, etc.
             std::vector<uint8_t> notes; // midi notes triggering this articulation
             StringsDictSingleton::Id exprId = 0;
-            StringsDictSingleton::Id codeId = 0;
+            StringsDictSingleton::Id nameId = 0;
             // KitLib::ArticulationSpec::ExpressionDimension::Type type = KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown;
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
-            explicit ArticulationTrigger(juce::String codeRaw) : codeRaw(codeRaw)
-            {
+            explicit ArticulationTrigger(juce::String codeRaw) : codeRaw(codeRaw) {
                 auto wrapSegm = extractWrappedSegment(codeRaw.trim(), "[", "]");
+                this->nameId = StringsDictSingleton::getId(wrapSegm.prefix);
                 this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
-                this->codeId = StringsDictSingleton::getId(wrapSegm.prefix);
             }
         };
         struct ContinuousController {
@@ -143,7 +142,9 @@ struct LayoutTraits<KitLayout> {
         if (instsNode.isSequence()) {
             for (size_t i = 0; i < instsNode.size(); ++i) {
                 const auto& instItem = instsNode[i];
-                KitLayout::InstrumentSlot inst;
+                layout.instrumentSlots.emplace_back();
+                auto& inst = layout.instrumentSlots.back();
+                
 
                 inst.id = instItem["id"].asString();
                 inst.display = instItem["display"].asString();
@@ -190,8 +191,6 @@ struct LayoutTraits<KitLayout> {
                         inst.controllers.push_back(cc);
                     }
                 }
-
-                layout.instrumentSlots.push_back(inst);
             }
         }
 

@@ -14,404 +14,403 @@ void InstrumentSynth::unloadInstrument() {
 void InstrumentSynth::loadInstrument(KitLib::InstrumentSpec* instSpec) {
     if (instSpec == nullptr) return;
     this->unloadInstrument();
-    LOG(Debug, "INSTRUMENT: " + instSpec->meta.code + " (" + instSpec->meta.name + ")");
+
     this->instrumentSpecstPtr = instSpec;
     this->type = instSpec->meta.type;
 
-    auto loader = this->getEngine()->getSampleLoader();
+    this->processLayoutArticulations(instSpec);
+}
 
-    // For each layout articulation create runtime entry
-    struct MissingArt { juce::String codeRaw; std::vector<uint8_t> notes; };
-    std::vector<MissingArt> missingArts;
+int8_t InstrumentSynth::findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const {
+    const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
+    for (int8_t i = 0; i < count; ++i) {
+        const auto& artRt = this->runtimeArticulations[i];
+        if (artRt.nameId == nameId && artRt.exprId == exprId)
+            return i;
+    }
+    return -1;
+}
 
+void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpec) {
     for (const auto& layoutArt : this->instrumentSlot.articulations) {
-        InstrumentSynth::ArticulationRuntime artRt(layoutArt.codeId, layoutArt.exprId);
+        LOG(Info, "  Loading articulation: " + layoutArt.codeRaw + " (notes " + midiVectorToString(layoutArt.notes) + ")");
 
-        LOG(Debug, "  ARTICULATION: " + layoutArt.codeRaw);
-        std::unordered_map<int8_t, std::vector<std::pair<int8_t, int8_t>>> foundCcDimensions;
+        InstrumentSynth::ArticulationRuntime artRt(layoutArt.nameId, layoutArt.exprId);
+        CcDimensionsMap foundCcDimensions;
+        KitLib::ArticulationSpec* resolvedArtSpec = this->resolveArticulationSpec(instSpec, layoutArt);
+        if (resolvedArtSpec != nullptr) {
+            resolvedArtSpec->sortVelocityLayers();
+            this->processArticulationSpec(instSpec, layoutArt, resolvedArtSpec, artRt, foundCcDimensions);
+        } else {
+            LOG(Warning, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no suitable articulations for '" + this->instrumentSlot.id + "' '" + layoutArt.codeRaw + "'");
+        }
+        this->processCcDimensions(foundCcDimensions);
+    }
+}
 
-        bool found = false;
-        int unmatchedStart = 0;
-        for (const auto& artSpec : instSpec->articulationSpecs) {
-            if (artSpec->codeId != layoutArt.codeId) continue;
+void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, ArticulationRuntime& artRt, CcDimensionsMap& foundCcDimensions) {
+    std::vector<int> micBufStartChannels; // start channel in micBuffer for each mic entry assigned to this instrument
+    std::vector<int> micEntryChannelSizes; // number of channels for each mic entry
+    std::vector<const MicLayout::Mic*> micEntriesForInst;
+    int unmatchedStart = 0;
 
-            found = true;
+    MicRoutingBuilder micRouting(this);
 
-            // ensure velocity layers are sorted
-            artSpec->sortVelocityLayers();
+    micRouting.build(artSpec, micBufStartChannels, micEntryChannelSizes, unmatchedStart);
 
-            // Build velocity layers and create SampledSound objects
-            // We want each mic (as defined in active mic layout) to occupy a contiguous block
-            // in the synth's micBuffer. We'll group sampleVariantSpecs by matching mic entry
-            // (type+position+format) and assign starts accordingly.
-            std::vector<int> micStarts; // start channel in micBuffer for each mic entry assigned to this instrument
-            std::vector<int> micChannels; // number of channels for each mic entry
-            std::vector<const MicLayout::Mic*> micEntriesForInst;
+    this->createVelocityLayers(instSpec, layoutArt, artSpec, artRt, micBufStartChannels, micEntryChannelSizes, unmatchedStart, micRouting);
+    this->buildVelocityMapping(artRt);
+    this->mapNotesToArticulation(layoutArt);
+    this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
+    this->runtimeArticulations.push_back(std::move(artRt));
+}
 
-            // Gather mic layout entries that apply to this instrument in the same order as applyMicLayout()
-            if (this->parent && this->parent->getMicLayout() != nullptr) {
-                const MicLayout* ml = this->parent->getMicLayout();
+void MicRoutingBuilder::build(KitLib::ArticulationSpec* artSpec, std::vector<int>& micBufStartChannels, std::vector<int>& micEntryChannelSizes, int& unmatchedStart) {
+    this->collectMicEntries();
+    this->assignVariants(artSpec);
+    this->computeMicGroups(micBufStartChannels, micEntryChannelSizes, unmatchedStart);
+}
 
-                std::vector<const MicLayout::Mic*> globals;
-                std::vector<const MicLayout::Mic*> exactMatches;
-                std::vector<const MicLayout::Mic*> typeMatches;
+void MicRoutingBuilder::collectMicEntries() {
+    this->micEntriesForInst.clear();
 
-                for (const auto& mic : ml->mics) {
-                    // 1. Global mics
-                    if (mic.instrument.isEmpty()) {
-                        globals.push_back(&mic);
-                        continue;
-                    }
+    const MicLayout* micLayout = this->synth->getEngine()->getMicLayout();
 
-                    // 2. Exact match (tom1 == tom1)
-                    if (mic.instrument == this->getId()) {
-                        exactMatches.push_back(&mic);
-                        continue;
-                    }
+    if (micLayout == nullptr) return;
 
-                    // 3. Type fallback candidate
-                    juce::String typeStr = mic.instrument;
+    std::vector<const MicLayout::Mic*> commonMics;
+    std::vector<const MicLayout::Mic*> sameCodeMics;
+    std::vector<const MicLayout::Mic*> sameTypeMics;
 
-                    while (typeStr.length() > 0 && juce::CharacterFunctions::isDigit(typeStr.getLastCharacter())) {
-                        typeStr = typeStr.dropLastCharacters(1);
-                    }
+    for (const auto& mic : micLayout->mics) {
+        if (mic.instrument.isEmpty()) {
+            commonMics.push_back(&mic);
+            continue;
+        }
+        if (mic.instrument == synth->getId()) {
+            sameCodeMics.push_back(&mic);
+            continue;
+        }
+        juce::String typeStr = mic.instrument;
+        while (typeStr.length() > 0 && juce::CharacterFunctions::isDigit(typeStr.getLastCharacter())) {
+            typeStr = typeStr.dropLastCharacters(1);
+        }
+        auto instType = KitLib::InstrumentSpec::typeFromString(typeStr);
+        if (instType != KitLib::InstrumentSpec::Type::Unknown && instType == synth->getType()) {
+            sameTypeMics.push_back(&mic);
+        }
+    }
+    this->micEntriesForInst.insert(this->micEntriesForInst.end(), commonMics.begin(), commonMics.end());
 
-                    auto instType = KitLib::InstrumentSpec::typeFromString(typeStr);
+    if (!sameCodeMics.empty()) {
+        this->micEntriesForInst.insert(this->micEntriesForInst.end(), sameCodeMics.begin(), sameCodeMics.end());
+    } else {
+        this->micEntriesForInst.insert(this->micEntriesForInst.end(), sameTypeMics.begin(), sameTypeMics.end());
+    }
+    juce::String debug = "    MicLayout entries that apply to this instrument: ";
+    for (size_t i = 0; i < this->micEntriesForInst.size(); ++i) {
+        if (i > 0) debug += ", ";
+        const auto* mic = this->micEntriesForInst[i];
+        debug += "[" + juce::String(i) + "]: " + mic->name + " (" + juce::String(mic->specs.channels) + "ch)";
+    }
+    LOG(Debug, debug);
+}
 
-                    if (instType != KitLib::InstrumentSpec::Type::Unknown && instType == this->getType()) {
-                        typeMatches.push_back(&mic);
-                    }
-                }
+void MicRoutingBuilder::assignVariants(KitLib::ArticulationSpec* artSpec) {
+    this->variantsPerMic.clear();
+    this->allVariants.clear();
 
-                // Always include globals
-                micEntriesForInst.insert(micEntriesForInst.end(), globals.begin(), globals.end());
+    // Helper to compare mic specs (ignore variant suffix)
+    auto micKeyEq = [](const KitLib::MicSpec& a, const KitLib::MicSpec& b) {
+        return a.type == b.type && a.position == b.position && a.format == b.format;
+    };
 
-                // Prefer exact matches
-                if (!exactMatches.empty()) {
-                    micEntriesForInst.insert(micEntriesForInst.end(), exactMatches.begin(), exactMatches.end());
-                } else {
-                    micEntriesForInst.insert(micEntriesForInst.end(), typeMatches.begin(), typeMatches.end());
-                }
+    // Count how many variants belong to each mic entry across all velocity layers
+    for (const auto& velSpec : artSpec->velocityLayerSpecs) {
+        for (const auto& varSpec : velSpec->sampleVariantSpecs) {
+            this->allVariants.emplace_back(varSpec.get(), -1); //FIXME: 0?
+        }
+    }
+
+    for (size_t vi = 0; vi < this->allVariants.size(); ++vi) {
+        const KitLib::SampleVariantSpec* var = this->allVariants[vi].first;
+        bool matched = false;
+
+        for (size_t mi = 0; mi < micEntriesForInst.size(); ++mi) {
+            const auto* mic = micEntriesForInst[mi];
+
+            if (micKeyEq(var->micSpec, mic->specs)) {
+                this->variantsPerMic[mi] += 1;
+                this->allVariants[vi].second = static_cast<int>(mi);
+                matched = true;
+                break;
             }
+        }
 
+        if (!matched) {
+             // assign fallback: try to match by mic type, else use first mic entry
+            int fallback = -1;
 
-            // Debug: list mic entries that apply to this instrument
-            {
-                juce::String s = "    MicLayout entries: ";
-                for (size_t i = 0; i < micEntriesForInst.size(); ++i) {
-                    const auto* m = micEntriesForInst[i];
-                    s += "[" + juce::String(i) + ":" + m->name + " (" + juce::String(m->specs.channels) + "ch)] ";
-                }
-                LOG(Debug, s);
-            }
-
-            // Helper to compare mic specs (ignore variant suffix)
-            auto micKeyEq = [](const KitLib::MicSpec& a, const KitLib::MicSpec& b) {
-                return a.type == b.type && a.position == b.position && a.format == b.format; // ignore variant
-            };
-
-            // Count how many variants belong to each mic entry across all velocity layers
-            std::unordered_map<size_t, int> variantsPerMic; // index in micEntriesForInst -> count
-            std::vector<std::pair<const KitLib::SampleVariantSpec*, int>> allVariants; // keep order for assignment
-            for (const auto& velSpec : artSpec->velocityLayerSpecs) {
-                for (const auto& varSpec : velSpec->sampleVariantSpecs) {
-                    allVariants.emplace_back(varSpec.get(), 0);
-                }
-            }
-
-            for (size_t vi = 0; vi < allVariants.size(); ++vi) {
-                const KitLib::SampleVariantSpec* var = allVariants[vi].first;
-                bool matched = false;
-                for (size_t mi = 0; mi < micEntriesForInst.size(); ++mi) {
-                    const auto* mic = micEntriesForInst[mi];
-                    if (micKeyEq(var->micSpec, mic->specs)) {
-                        variantsPerMic[mi] += 1;
-                        allVariants[vi].second = static_cast<int>(mi);
-                        matched = true;
-                        break;
-                    }
-                }
-                if (!matched) {
-                    // assign fallback: try to match by mic type, else use first mic entry
-                    int fallback = -1;
-                    for (size_t mi = 0; mi < micEntriesForInst.size(); ++mi) {
-                        if (micEntriesForInst[mi]->specs.type == var->micSpec.type) {
-                            fallback = static_cast<int>(mi);
-                            break;
-                        }
-                    }
-                    if (fallback == -1 && !micEntriesForInst.empty()) fallback = 0;
-                    if (fallback >= 0) {
-                        variantsPerMic[fallback] += 1;
-                        allVariants[vi].second = fallback;
-                    } else {
-                        // no mic entries at all: mark as unmatched
-                        variantsPerMic[SIZE_MAX] += 1;
-                        allVariants[vi].second = -1;
-                    }
-                }
-            }
-
-            // Debug: show how many variants matched each mic and unmatched count
-            {
-                juce::String s = "    Variants per mic: ";
-                for (size_t mi = 0; mi < micEntriesForInst.size(); ++mi) {
-                    int cnt = variantsPerMic.count(mi) ? variantsPerMic[mi] : 0;
-                    s += "[" + juce::String(mi) + ":" + juce::String(cnt) + "] ";
-                }
-                int unmatched = variantsPerMic.count(SIZE_MAX) ? variantsPerMic[SIZE_MAX] : 0;
-                s += "unmatched=" + juce::String(unmatched);
-                LOG(Debug, s);
-            }
-
-            // Build micStarts using the instrument's actual host mapping so that
-            // mic-buffer indices align with the host-output mapping assigned earlier
-
-            int mappingCursor = 0;
             for (size_t mi = 0; mi < micEntriesForInst.size(); ++mi) {
-                micStarts.push_back(mappingCursor);
-                int ch = micEntriesForInst[mi]->specs.channels;
-                micChannels.push_back(ch);
-                mappingCursor += ch;
-            }
-
-            // Debug: show computed micStarts/micChannels
-            {
-                juce::String s2 = "    micStarts: ";
-                for (size_t i = 0; i < micStarts.size(); ++i) {
-                    if (i) s2 += ",";
-                    s2 += "[" + juce::String(micStarts[i]) + ", " + juce::String(micChannels[i]) + "ch] ";
-                }
-                s2 += " mappingCursor=" + juce::String(mappingCursor);
-                LOG(Debug, s2);
-            }
-            // unmatched variants (if any) go after mapped region
-            unmatchedStart = mappingCursor;
-            // int unmatchedCount = variantsPerMic.count(SIZE_MAX) ? variantsPerMic[SIZE_MAX] : 0;
-            // We'll use each variant's own channel count for unmatched variants.
-
-            // Now create sounds and assign micBufferChannelStart according to grouping
-            size_t variantIdx = 0;
-            for (const auto& velSpec : artSpec->velocityLayerSpecs) {
-                VelocityLayerRuntime layer;
-                layer.velocity = velSpec->velocity;
-                layer.samples.reserve(velSpec->sampleVariantSpecs.size());
-                for (const auto& varSpec : velSpec->sampleVariantSpecs) {
-                    auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, layoutArt.notes);
-                    int fileChannelCount = varSpec->fileChannelCount > 0 ? varSpec->fileChannelCount : varSpec->micSpec.channels;
-
-                    int assignedMicIndex = allVariants[variantIdx].second;
-                    if (assignedMicIndex >= 0) {
-                        int start = micStarts[assignedMicIndex];
-                        int ch = micChannels[assignedMicIndex];
-                        // All variants for the same mic map to the same mic buffer group
-                        sound->micBufferChannelStart = start;
-                        sound->micBufferChannelCount = ch;
-                    } else {
-                        // unmatched: append after mic blocks, allocate sequentially using fileChannelCount
-                        sound->micBufferChannelStart = unmatchedStart;
-                        sound->micBufferChannelCount = fileChannelCount;
-                        unmatchedStart += fileChannelCount;
-                    }
-
-                    // Debug log: show mapping of this SampledSound -> mic buffer channels and file channel ranges
-                    // if (sound->sampleVariantSpec) {
-                    //     juce::String sname = sound->sampleVariantSpec->sampleFileName;
-                    //     int fileStart = sound->sampleVariantSpec->fileChannelStart;
-                    //     int fileCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
-                    //     LOG(Debug, "channels for " + sname + " -> micBuf: start=" + juce::String(sound->micBufferChannelStart) + " count=" + juce::String(sound->micBufferChannelCount) 
-                    //         + ", file: start=" + juce::String(fileStart) + ", count=" + juce::String(fileCount));
-                    // }
-
-                    this->addSound(sound);
-                    this->sampledSoundPtrs.push_back(sound);
-                    SampleEntry se;
-                    se.sound = sound;
-                    // Store variant key (1..26) as returned by SampleVariantSpec::letterToIdx
-                    // If no letter, value will be 0.
-                    se.variantIdx = static_cast<uint8_t>(KitLib::SampleVariantSpec::letterToIdx(varSpec->letter));
-                    layer.samples.push_back(se);
-
-                    if (loader != nullptr) {
-                        loader->requestAsyncLoad(varSpec->sampleFile, [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
-                            sound->buffer = buf;
-                            sound->sampleRate = sr;
-                        });
-                    }
-                    ++variantIdx;
-                }
-                artRt.layers.push_back(std::move(layer));
-            }
-
-            // Before mapping velocities, log computed mic buffer requirements vs host mapping
-            int computedMicChannels = unmatchedStart;
-            const auto& hostMapForInst = this->getMicOutputMapping();
-            int assignedHostChannels = static_cast<int>(hostMapForInst.size());
-            LOG(Debug, "    computed mics/assigned host mapping channels=" + juce::String(computedMicChannels) + "/" + juce::String(assignedHostChannels));
-            if (assignedHostChannels > 0 && computedMicChannels != assignedHostChannels) {
-                LOG(Warning, "Instrument '" + this->getId() + "' computed mic channels (" + juce::String(computedMicChannels) + ") differs from host mapping channels (" + juce::String(assignedHostChannels) + "). This may cause out-of-range writes.");
-            }
-
-            // Map velocities to layers using upper-bound semantics:
-            if (!artRt.layers.empty()) {
-                // choose the first layer whose configured velocity is >= current velocity.
-                // Example: layers {27,52,77,102,127} -> 0..27->0, 28..52->1, 53..77->2, 78..102->3, 103..127->4
-                const int8_t count = static_cast<int8_t>(artRt.layers.size());
-                for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
-                    int8_t chosen = count - 1; // default to last layer
-                    for (int8_t idx = 0; idx < count; ++idx) {
-                        if (value <= static_cast<int>(artRt.layers[idx].velocity)) {
-                            chosen = idx;
-                            break;
-                        }
-                    }
-                    artRt.velocityToLayer[value] = chosen;
-                }
-            }
-            
-
-            // Map layout notes to this articulation index
-            int8_t artIdx = static_cast<int8_t>(this->runtimeArticulations.size());
-            for (uint8_t note : layoutArt.notes) {
-                this->noteToArticulation[note] = artIdx;
-            }
-
-
-
-            // Prepare note -> controller and controllerValue -> articulation mappings per subscribed CC
-            for (const auto& cc : this->instrumentSlot.controllers) {
-                // build reverse map of note -> controllers
-                for (uint8_t note : cc.notes) {
-                    auto ccNum = static_cast<uint8_t>(cc.number);
-                    auto& vec = this->noteToControllers[note];
-                    if (std::find(vec.begin(), vec.end(), ccNum) == vec.end()) {
-                        vec.emplace_back(ccNum);
-                    }
-                }
-                
-                // only controllers with notes that are linked to this articulation
-                if (containsSameValue(cc.notes, layoutArt.notes)) {
-                    // store refs for dimensions to process later
-                    for (const auto& expDim : artSpec->expressionDimensions) {
-                        if (expDim->type == cc.codeIdx) {
-                            for (const auto& val : expDim->values) {
-                                auto ccNum = static_cast<uint8_t>(cc.number);
-                                const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
-                                auto& vec = foundCcDimensions[ccNum];
-                                vec.emplace_back(pair);
-                            }
-                        }
-                    }
-                }
-            }
-            this->runtimeArticulations.push_back(std::move(artRt));
-        } 
-
-        for (auto&[ccNum, valArtPairs] : foundCcDimensions) {            
-            std::sort(valArtPairs.begin(), valArtPairs.end(), [](auto& a, auto& b){
-                return a.first < b.first;
-            });
-
-            std::array<uint8_t, 128> map;
-            const int8_t count = static_cast<uint8_t>(valArtPairs.size());
-    
-            for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
-                uint8_t chosen = count - 1; // default to last
-                for (uint8_t idx = 0; idx < count; ++idx) {
-                    if (value <= static_cast<int>(valArtPairs[idx].first)) {
-                        chosen = valArtPairs[idx].second;
-                        break;
-                    }
-                }
-                map[value] = chosen;
-            }
-            this->ccToArticulation[ccNum] = map;
-        }
-
-        if (!found) {
-            // Defer fallback handling until we've processed all layout articulations so
-            // that a later layout articulation can serve as a fallback for an earlier one.
-            MissingArt ma;
-            ma.codeRaw = layoutArt.codeRaw;
-            for (int note : layoutArt.notes) ma.notes.push_back(static_cast<uint8_t>(note));
-            missingArts.push_back(std::move(ma));
-        }
-    }
-
-    // Second pass: attempt fallbacks for any layout articulations that remained unresolved.
-    if (!missingArts.empty()) {
-
-        static const std::unordered_map<std::string, std::vector<std::string>> fallbackMap = {
-            {"bell", {"bow", "edge"}},
-            {"edge", {"bow"}},
-            {"bow", {"edge"}},
-            {"rim", {"center"}},
-            {"sidestick", {"rim"}},
-        };
-
-        for (const auto& ma : missingArts) {
-            const auto wrapSegm = extractWrappedSegment(ma.codeRaw, "[", "]");
-            const std::string missing = wrapSegm.prefix.toStdString();
-            const auto& exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
-            int8_t artIdx = -1;
-
-            auto it = fallbackMap.find(missing);
-            if (it != fallbackMap.end()) {
-                const auto& replacements = it->second;
-                const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
-                for (int8_t i = 0; i < count && artIdx == -1; ++i) {
-                    const auto& artRt = this->runtimeArticulations[i];
-                    if (artRt.exprId != exprId) continue;
-
-                    for (const auto& replacement : replacements) {
-                        const auto codeId = StringsDictSingleton::getId(replacement);
-                        if (artRt.codeId == codeId) {
-                            LOG(Info, "Using fallback articulation '" + juce::String(replacement) + "' for '" + ma.codeRaw + "'");
-                            artIdx = i;
-                            break;
-                        }
-                    }
+                if (micEntriesForInst[mi]->specs.type == var->micSpec.type) {
+                    fallback = static_cast<int>(mi);
+                    break;
                 }
             }
 
-            if (artIdx < 0) {
-                LOG(Warning, "kit instrument " + instSpec->meta.code + " (" + instSpec->meta.name + ") has no articulations for '" + ma.codeRaw + "'");
+            if (fallback == -1 && !micEntriesForInst.empty()) {
+                fallback = 0;
+            }
+            if (fallback >= 0) {
+                this->variantsPerMic[fallback] += 1;
+                this->allVariants[vi].second = fallback;
             } else {
-                for (uint8_t note : ma.notes) this->noteToArticulation[note] = artIdx;
+                //FIXME: ? no mic entries at all: mark as unmatched
+                this->unmatchedVariantCount += 1;
+                this->allVariants[vi].second = -1;
             }
         }
     }
 
+    juce::String debug = "    Variants per mic: ";
+    for (size_t i = 0; i < this->micEntriesForInst.size(); ++i) {
+        if (i > 0) debug += ", ";
+        int cnt = this->variantsPerMic.count(i) ? this->variantsPerMic[i] : 0;
+        debug += "[" + juce::String(i) + "]:" + juce::String(cnt);
+    }
+    debug += "unmatched=" + juce::String(this->unmatchedVariantCount);
+    LOG(Debug, debug);
+}
+
+void MicRoutingBuilder::computeMicGroups(std::vector<int>& micBufStartChannels, std::vector<int>& micEntryChannelSizes, int& unmatchedStart) {
+    micBufStartChannels.clear();
+    micEntryChannelSizes.clear();
+
+    // Build micBufStartChannels using the instrument's actual host mapping so that
+    // mic-buffer indices align with the host-output mapping assigned earlier
+
+    int mappingCursor = 0;
+
+    for (size_t i = 0; i < micEntriesForInst.size(); ++i) {
+        micBufStartChannels.push_back(mappingCursor);
+        int ch = micEntriesForInst[i]->specs.channels;
+        micEntryChannelSizes.push_back(ch);
+        mappingCursor += ch;
+    }
     
+    juce::String debug = "    Mic Starts: ";
+    for (size_t i = 0; i < micBufStartChannels.size(); ++i) {
+        if (i > 0) debug += ", ";
+        debug += "" + juce::String(micBufStartChannels[i]) + " (" + juce::String(micEntryChannelSizes[i]) + "ch)";
+    }
+    debug += ". Total: " + juce::String(mappingCursor);
+    LOG(Debug, debug);
+    
+    // unmatched variants (if any) go after mapped region
+    unmatchedStart = mappingCursor;
+}
+
+void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
+, const LayoutArticulation& layoutArt
+, KitLib::ArticulationSpec* artSpec
+, ArticulationRuntime& artRt
+, const std::vector<int>& micBufStartChannels
+, const std::vector<int>& micEntryChannelSizes
+, int& unmatchedStart
+, MicRoutingBuilder& micRouting
+) {
+    size_t variantIdx = 0;
+
+    for (const auto& velSpec : artSpec->velocityLayerSpecs) {
+        VelocityLayerRuntime layer;
+        layer.velocity = velSpec->velocity;
+        layer.samples.reserve(velSpec->sampleVariantSpecs.size());
+
+        for (const auto& varSpec : velSpec->sampleVariantSpecs) {
+            auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, layoutArt.notes);
+            int fileChannelCount = varSpec->fileChannelCount > 0
+                ? varSpec->fileChannelCount
+                : varSpec->micSpec.channels
+            ;
+            int assignedMicIndex = micRouting.getVariant(variantIdx);
+
+            // if (variantIdx < micBufStartChannels.size()) //TODO: verify/test this is not needed
+            //     assignedMicIndex = static_cast<int>(variantIdx);
+
+            if (assignedMicIndex >= 0 && assignedMicIndex < static_cast<int>(micBufStartChannels.size())) {
+                // All variants for the same mic map to the same mic buffer group
+                sound->micBufferChannelStart = micBufStartChannels[assignedMicIndex];
+                sound->micBufferChannelCount = micEntryChannelSizes[assignedMicIndex];
+            } else {
+                // unmatched: append after mic blocks, allocate sequentially using fileChannelCount
+                sound->micBufferChannelStart = unmatchedStart;
+                sound->micBufferChannelCount = fileChannelCount;
+                unmatchedStart += fileChannelCount;
+            }
+
+            this->addSound(sound);
+            this->sampledSoundPtrs.push_back(sound);
+
+            SampleEntry se;
+            se.sound = sound;
+
+            // Store variant key (1..26) as returned by SampleVariantSpec::letterToIdx (0 if no letter)
+            se.variantIdx = static_cast<uint8_t>(KitLib::SampleVariantSpec::letterToIdx(varSpec->letter));
+
+            layer.samples.push_back(se);
+
+            const auto loader = this->getEngine()->getSampleLoader();
+            if (loader != nullptr) {
+                loader->requestAsyncLoad(
+                    varSpec->sampleFile, 
+                    [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
+                        sound->buffer = buf;
+                        sound->sampleRate = sr;
+                    }
+                );
+            }
+            ++variantIdx;
+        }
+
+        artRt.layers.push_back(std::move(layer));
+    }
+
+    int computedMicChannels = unmatchedStart;
+
+    const auto& hostMapForInst = this->getMicOutputMapping();
+    int assignedHostChannels = static_cast<int>(hostMapForInst.size());
+    if (assignedHostChannels > 0 && computedMicChannels > assignedHostChannels) {//TODO: give more channels?
+        LOG(Warning, "Instrument '" + this->getId() + "' mic channels number (" + juce::String(computedMicChannels) + ") is greater than channel number we got from host mapping channels (" + juce::String(assignedHostChannels) + "). This may cause out-of-range writes.");
+        // jassertfalse;
+    }
+}
+
+void InstrumentSynth::buildVelocityMapping(ArticulationRuntime& artRt) {
+    if (artRt.layers.empty()) return;
+    // choose the first layer whose configured velocity is >= current velocity.
+    // Example: layers {27,52,77,102,127} -> 0..27->0, 28..52->1, 53..77->2, 78..102->3, 103..127->4
+    const int8_t count = static_cast<int8_t>(artRt.layers.size());
+    for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
+        int8_t chosen = count - 1; // default to last layer
+        for (int8_t idx = 0; idx < count; ++idx) {
+            if (value <= static_cast<int>(artRt.layers[idx].velocity)) {
+                chosen = idx;
+                break;
+            }
+        }
+        artRt.velocityToLayer[value] = chosen;
+    }
+}
+
+void InstrumentSynth::mapNotesToArticulation(const LayoutArticulation& layoutArt) {
+    int8_t artIdx = static_cast<int8_t>(this->runtimeArticulations.size());
+    for (uint8_t note : layoutArt.notes)
+        this->noteToArticulation[note] = artIdx;
+}
+
+void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions) {
+    for (const auto& cc : this->instrumentSlot.controllers) {
+        for (uint8_t note : cc.notes) {
+            auto ccNum = static_cast<uint8_t>(cc.number);
+            auto& vec = this->noteToControllers[note];
+
+            if (std::find(vec.begin(), vec.end(), ccNum) == vec.end())
+                vec.emplace_back(ccNum);
+        }
+
+        // only controllers with notes that are linked to this articulation
+        if (containsSameValue(cc.notes, layoutArt.notes)) {
+            // store refs for dimensions to process later
+            for (const auto& expDim : artSpec->expressionDimensions) {
+                if (expDim->type == cc.codeIdx) {
+                    for (const auto& val : expDim->values) {
+                        auto ccNum = static_cast<uint8_t>(cc.number);
+                        const auto pair = std::make_pair(
+                            static_cast<int8_t>(val),
+                            static_cast<int8_t>(this->runtimeArticulations.size())
+                        );
+                        auto& vec = foundCcDimensions[ccNum];
+                        vec.emplace_back(pair);
+                    }
+                }
+            }
+        }
+    }
+}
+
+void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
+    for (auto&[ccNum, valArtPairs] : foundCcDimensions) {            
+        std::sort(valArtPairs.begin(), valArtPairs.end(), [](auto& a, auto& b){
+            return a.first < b.first;
+        });
+        std::array<uint8_t, 128> map;
+        const int8_t count = static_cast<uint8_t>(valArtPairs.size());
+
+        for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
+            uint8_t chosen = count - 1; // default to last
+            for (uint8_t idx = 0; idx < count; ++idx) {
+                if (value <= static_cast<int>(valArtPairs[idx].first)) {
+                    chosen = valArtPairs[idx].second;
+                    break;
+                }
+            }
+            map[value] = chosen;
+        }
+        this->ccToArticulation[ccNum] = map;
+    }
+}
+
+
+KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt) {
+    // Exact match
+    for (const auto& artSpec : instSpec->articulationSpecs) {
+        if (artSpec->nameId == layoutArt.nameId && artSpec->exprId == layoutArt.exprId) {
+            return artSpec.get();
+        }
+    }
+
+    if (this->getEngine() == nullptr) return nullptr;
+    const auto fallbackIdMap = this->getEngine()->getArticulationFallbackIdMap();
+
+    // fallback
+    auto it = fallbackIdMap.find(layoutArt.nameId);
+    if (it == fallbackIdMap.end())
+        return nullptr;
+    for (auto& fallbackId : it->second) {
+        for (const auto& artSpec : instSpec->articulationSpecs) {
+            if (artSpec->nameId != fallbackId || artSpec->exprId != layoutArt.exprId)
+                continue;
+            auto codeRaw = StringsDictSingleton::nameOf(artSpec->nameId);
+            if (layoutArt.exprId != 0)
+                codeRaw += "[" + StringsDictSingleton::nameOf(artSpec->exprId) + "]";
+            LOG(Notice, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no articulation '" + layoutArt.codeRaw + "' for '" + this->instrumentSlot.id + "'. Using '" + codeRaw + "' instead");
+            return artSpec.get();
+        }
+    }
+    return nullptr;
 }
 
 void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     
-    
-
     if (midiMessage.isNoteOn()) {
-        if (noteToArticulation[midiMessage.getNoteNumber()] == -1) return;
+        const int note = midiMessage.getNoteNumber();
+        if (noteToArticulation[note] == -1) return;
 
-        this->playNote(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getVelocity(), 1);
-        // || this->noteOn(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getFloatVelocity());
+        this->playNote(midiMessage.getChannel(), note, midiMessage.getVelocity(), 1);
+        // || this->noteOn(midiMessage.getChannel(), note, midiMessage.getFloatVelocity());
     }
     else if (midiMessage.isController()) {
         auto ccNum = static_cast<uint8_t>(midiMessage.getControllerNumber());
         if (noteToControllers.find(ccNum) == noteToControllers.end()) return;
-
-
         // this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue());
     }
     
-    //TODO: common realistic choke (volume change) on aftertouch: with some custom decay timeout, if aftertouch value became less in that timeout, volume should return back by some percent
     else if (midiMessage.isAftertouch())
         this->handleAftertouch(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
     
         
     else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(midiMessage.getChannel(), true);
         
-        
-
     // else if (midiMessage.isNoteOff()) this->noteOff (channel, midiMessage.getNoteNumber(), midiMessage.getFloatVelocity(), true);
     // else if (midiMessage.isChannelPressure()) this->handleChannelPressure(channel, midiMessage.getChannelPressureValue());
     // else if (midiMessage.isProgramChange()) this->handleProgramChange(channel, midiMessage.getProgramChangeNumber());
@@ -424,20 +423,18 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity, int expressions) {
-    
-    // SampledSound* chosen = this->selectSampleFor(targetArt, midiVel);
-    // if (chosen == nullptr) {
-    //     LOG(Info, "Nothing to play for " + targetArt);
-    //     return;
-    // }
+    /* TODO: need to plan a fix for next problems:
+        1. currently if playing cymbal loudly and fast (swell many times) it launches many voices, and then if suddenly start doing it very quietly, it will mute loud voices at some point (when ran out of voices) and play only quiet samples, which sounds unrealistic.
+        2. if playing more closed hihat articulation right after more opened, opened keep sounding.
+        3. when loud notes played fast, sometimes waveforms can counterphase/double volume of each other.
 
+        if new note louder then ol -> fast fade out and mark old note's voice to this->stopNote, or maybe even better crossfade old and new notes by POLYPHONY_CROSFADE_TIMEOUT_MS=20
+        according some dynamic hardcoded mapping that shows which articulation can mute another, like cymbal bow/edge can mute each other and self (if last is louder)
+                
+        For hihat pedal state without note should crossfade changes, like if hitted closed hat and start opening pedal it should crossfade to more opened sound (new more open sample plays from small offset so it is without attack) so more opened starts from time offset when pedal changestarted with HIHAT_PEDAL_CROSSFADE_TIMEOUT_MS=50
+        Maybe we have to use juces shouldStealNotes and override findVoiceToSteal - idk.
 
-    /* TODO: 
-        if note louder then last > choke (kill or fast fade? using NAME_THIS_VAR_RIGHT_CHOKED_BY_LOUDER_TIMEOUT_MS) playing notes of this instrument's articulations that are chokable for this articulation. 
-        create and define logic for what instruments articulation can choke other articulation, like cymbal bow/edge can choke each other and self (if last is louder)
-        for hihat pedal state without note should crossfade changes, like if hitted closed hat and start opening pedal it should crossfade to more opened sound (without attack of course) so more opened starts from time offset when pedal changestarted with NAME_THIS_VAR_RIGHT_HIHAT_PEDAL_CHANGE_CROSSFADE_MS
-        probably have to use juces shouldStealNotes and override findVoiceToSteal 
-        need to make InstrumentSynth abstract and extend with several classes like InstrumentSynthCymbal, InstrumentSynthDrum and for special cases InstrumentSynthHiHat, 
+        ??? do we need to make InstrumentSynth abstract and extend with several classes like InstrumentSynthCymbal, InstrumentSynthDrum and for special cases InstrumentSynthHiHat, 
     */
 
 
@@ -461,20 +458,12 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
             artIdx = this->noteToArticulation[midiNoteNumber];
             
             if (!this->ccToArticulation.empty() && this->parent != nullptr) {
-                // const auto& ccValues = this->parent->getLatestContinuousControllerValuesRef();
                 auto pair = this->noteToControllers.find(static_cast<uint8_t>(midiNoteNumber));
                 if (pair != this->noteToControllers.end()) {
                     for (auto ccNum : pair->second) {
-                        const auto& ccLatestValues = this->parent->getLatestContinuousControllerValuesRef();
-                        auto it = ccLatestValues.find(ccNum);
-                        if (it == ccLatestValues.end()) continue; //wtf
-
-                        int ccVal = it->second;
-                        if (ccVal < 0) ccVal = 0;
-                        if (ccVal > 127) ccVal = 127;
-
                         auto artIt = this->ccToArticulation.find(ccNum);
                         if (artIt == this->ccToArticulation.end()) continue;
+                        const auto ccVal = this->parent->getLatestContinuousControllerValue(ccNum);
                         const auto& mapArr = artIt->second;
 
                         artIdx = static_cast<int>(mapArr[ccVal]);
@@ -533,10 +522,10 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
         if (se.variantIdx != chosenKey) continue;
         juce::SynthesiserVoice* voice = findFreeVoice(se.sound, midiChannel, midiNoteNumber, stealNotes);
         if (voice == nullptr) continue;
-        // auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.code;
-        // auto& artCode = se.sound->sampleVariantSpec->parent->parent->name;
-        // auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
-        // LOG(Verbose, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " inst " + instCode + " art " + artCode + " micBufCh start=" + juce::String(se.sound->micBufferChannelStart) + "x" + juce::String(se.sound->micBufferChannelCount) + " file=" + filePath);
+        auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.codeRaw;
+        auto& artCode = se.sound->sampleVariantSpec->parent->parent->codeRaw;
+        auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
+        LOG(Debug, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " inst " + instCode + " art " + artCode + " micBuf(" + juce::String(se.sound->micBufferChannelStart) + "," + juce::String(se.sound->micBufferChannelCount) + ") file=" + filePath);
         this->startVoice(voice, se.sound, midiChannel, midiNoteNumber, velf);
         anyStarted = true;
     }
@@ -544,21 +533,16 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
         LOG(Warning, "InstrumentSynth::playNote - no free voice available for any sample in layer");
         return false;
     }
+    const auto& paVal = this->parent->getLatestPolyphonicAftertouchValue(midiNoteNumber);
+    if (paVal > 0)
+        this->handleAftertouch(midiChannel, midiNoteNumber, paVal);       
+            
     return true;
 }
 
 void InstrumentSynth::noteOn (const int midiChannel, const int midiNoteNumber, const float velocity) {
-    const juce::ScopedLock sl (this->lock);
-    bool reallyShouldStealNotes = true;
-    for (auto* sound : this->sounds) {
-        if (auto* sampledSound = dynamic_cast<SampledSound*>(sound)) {
-            if (sampledSound->appliesToNote(midiNoteNumber) && sampledSound->appliesToChannel(midiChannel)) {
-                
-                LOG(Debug, "NoteOn " + juce::String(midiNoteNumber) + " vel " + juce::String(velocity) + " " + sampledSound->sampleVariantSpec->sampleFileName);
-                this->startVoice(this->findFreeVoice (sampledSound, midiChannel, midiNoteNumber, reallyShouldStealNotes), sampledSound, midiChannel, midiNoteNumber, velocity);
-            }
-        }
-    }
+    juce::ignoreUnused(midiChannel, midiNoteNumber, velocity);
+    jassertfalse;
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
@@ -598,105 +582,45 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     // set playback sample rate for voices
     this->setCurrentPlaybackSampleRate(newSampleRate);
 
-    for (auto* voice : this->voices) //TODO: refactor to separate method
+    for (auto* voice : this->voices) //TODO: maybe refactor to separate method
         if (auto* v = dynamic_cast<InstrumentSynthVoice*>(voice))
             v->chokeProcessor.prepare(newSampleRate);
 }
 
-// SampledSound* InstrumentSynth::selectSampleFor(int articulationIdx, int midiVel, int micIdx) {
-//     if (articulationIdx < 0 || articulationIdx >= static_cast<int>(this->runtimeArticulations.size()))
-//         return nullptr;
-
-//     auto& art = this->runtimeArticulations[articulationIdx];
-//     if (art.layers.empty()) return nullptr;
-
-//     // LOG(Debug, "selectSampleFor " + art.codeRaw + " artIdx=" + juce::String(articulationIdx) + " vel=" + juce::String(midiVel) + " micIdx=" + juce::String(micIdx));
-
-//     // clamp midiVel
-//     if (midiVel < 0) midiVel = 0;
-//     if (midiVel > 127) midiVel = 127;
-
-//     int layerIdx = art.velocityToLayer[midiVel];
-    
-//     if (layerIdx < 0 || layerIdx >= static_cast<int>(art.layers.size())) return nullptr;
-//     // If there are enough variants, do round-robin here
-//     auto& layer = art.layers[layerIdx];
-//     int sampleCount = static_cast<int>(layer.samples.size());
-//     if (sampleCount >= NAME_IT_BETTER_MIN_VARIANTS) {
-//         uint32_t rr = layer.roundRobinCounter->fetch_add(1u);
-//         int idx = static_cast<int>(rr % static_cast<uint32_t>(sampleCount));
-//         return layer.samples[idx].sound;
-//     }
-
-//     // Otherwise try to find nearby layers within reasonable velocity distance that have samples
-//     int bestLayer = -1;
-//     int bestDist = 10000;
-//     for (int i = 0; i < static_cast<int>(art.layers.size()); ++i) {
-//         if (static_cast<int>(art.layers[i].samples.size()) == 0) continue;
-//         int dist = std::abs(static_cast<int>(art.layers[i].velocity) - midiVel);
-//         if (dist <= NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS && dist < bestDist) {
-//             bestDist = dist;
-//             bestLayer = i;
-//         }
-//     }
-
-//     if (bestLayer >= 0) {
-//         auto& best = art.layers[bestLayer];
-//         int sc = static_cast<int>(best.samples.size());
-//         if (sc > 0) {
-//             uint32_t rr = best.roundRobinCounter->fetch_add(1u);
-//             int idx = static_cast<int>(rr % static_cast<uint32_t>(sc));
-//             return best.samples[idx].sound;
-//         }
-//     }
-
-//     // fallback: try primary layer even if empty -> try any sample in any layer
-//     for (auto& l : art.layers) {
-//         if (!l.samples.empty()) {
-//             uint32_t rr = l.roundRobinCounter->fetch_add(1u);
-//             int idx = static_cast<int>(rr % static_cast<uint32_t>(l.samples.size()));
-//             return l.samples[idx].sound;
-//         }
-//     }
-
-//     return nullptr;
-// }
-
-InstrumentSynthVoice::InstrumentSynthVoice()
-    : mGainParameter(nullptr), mPanParameter(nullptr), mInvertPhaseParameter(nullptr) {
-    mPitchRatio = 1.0;
-    mVelocityGain = 1.0f;
-    mSourceSamplePosition = 0.0;
+InstrumentSynthVoice::InstrumentSynthVoice() : gainParam(nullptr), panParam(nullptr), invertPhaseParam(nullptr) {
+    this->pitchRatio = 1.0;
+    this->velocityGain = 1.0f;
+    this->sourceSamplePosition = 0.0;
 }
 
 void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* s, int /*pitchWheel*/) {
     juce::ignoreUnused(midiNoteNumber);
-    mVelocityGain = velocity;
-    mSourceSamplePosition = 0.0;
-    mAdsr.setParameters({0.005f, 0.05f, 0.8f, 0.08f});
-    mAdsr.setSampleRate(getSampleRate());
-    mAdsr.noteOn();
+    this->velocityGain = velocity;
+    this->sourceSamplePosition = 0.0;
+    this->adsr.setParameters({0.005f, 0.05f, 0.8f, 0.08f});
+    this->adsr.setSampleRate(getSampleRate());
+    this->adsr.noteOn();
 
     this->chokeProcessor.noteStarted();
-    // LOG(Debug, "InstrumentSynthVoice: startNote velocity=" + juce::String(velocity) + " pitchRatio=" + juce::String(mPitchRatio));
+    // LOG(Debug, "InstrumentSynthVoice: startNote velocity=" + juce::String(velocity) + " pitchRatio=" + juce::String(this->pitchRatio));
 
     if (auto* sampled = dynamic_cast<SampledSound*>(s)) {
         if (sampled->sampleRate > 0 && getSampleRate() > 0)
-            mPitchRatio = sampled->sampleRate / getSampleRate();
+            this->pitchRatio = sampled->sampleRate / getSampleRate();
         else
-            mPitchRatio = 1.0;
+            this->pitchRatio = 1.0;
     } else {
-        mPitchRatio = 1.0;
+        this->pitchRatio = 1.0;
     }
 }
 
 void InstrumentSynthVoice::stopNote(float velocity, bool allowTailOff) {
     juce::ignoreUnused(velocity);
     if (allowTailOff) {
-        mAdsr.noteOff();
+        this->adsr.noteOff();
     } else {
-        mAdsr.reset();
-        clearCurrentNote();
+        this->adsr.reset();
+        this->clearCurrentNote();
     }
 }
 
@@ -704,7 +628,7 @@ void InstrumentSynthVoice::pitchWheelMoved(int /*newValue*/) {}
 void InstrumentSynthVoice::controllerMoved(int /*controllerNumber*/, int /*newValue*/) {}
 
 void InstrumentSynthVoice::aftertouchChanged (int newValue) {
-    // LOG(Verbose, "aftertouchChanged value=" + juce::String(newValue));
+    LOG(Debug, "aftertouchChanged " + juce::String(newValue));
     this->chokeProcessor.handlePolyAftertouch(newValue);
 }
 
@@ -731,7 +655,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     const int destChCount = outputBuffer.getNumChannels();
 
     if (this->chokeProcessor.isMuted()) {
-        this->clearCurrentNote();
+        this->stopNote(0, false);
         return;
     }
     for (int i = 0; i < numSamples; ++i) {
@@ -740,21 +664,21 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         // Process per-voice ducking for this block and get block gain
         const float chokeGain = this->chokeProcessor.getNextBlockGain();
  
-        const double pos = mSourceSamplePosition;
+        const double pos = this->sourceSamplePosition;
         const int idx = static_cast<int>(pos);
         const double frac = pos - idx;
 
         // For each source channel in this sample variant, fetch interpolated sample
         // and write to corresponding destination channel (offset by srcStart).
         if (idx >= 0 && idx < srcLen) {
-            const float env = mAdsr.getNextSample();
+            const float env = this->adsr.getNextSample();
 
             for (int sc = 0; sc < srcCount; ++sc) {
                 int actualSrcCh = juce::jlimit(0, srcChannels - 1, srcStart + sc);
                 float v0 = buf.getSample(actualSrcCh, idx);
                 float v1 = (idx + 1 < srcLen) ? buf.getSample(actualSrcCh, idx + 1) : 0.0f;
                 float sample = static_cast<float>(v0 + (v1 - v0) * frac);
-                sample *= env * mVelocityGain * chokeGain;
+                sample *= env * this->velocityGain * chokeGain;
 
                 int destCh = s->micBufferChannelStart + sc;
                 if (destCh >= 0 && destCh < destChCount) {
@@ -770,14 +694,14 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             }
         } else {
             // still advance envelope even if out of source range
-            (void)mAdsr.getNextSample();
+            (void) this->adsr.getNextSample();
         }
 
-        mSourceSamplePosition += mPitchRatio;
-        if (mSourceSamplePosition >= srcLen) {
+        this->sourceSamplePosition += this->pitchRatio;
+        if (this->sourceSamplePosition >= srcLen) {
             // reached end
-            mAdsr.reset();
-            clearCurrentNote();
+            this->adsr.reset();
+            this->clearCurrentNote();
             break;
         }
     }

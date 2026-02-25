@@ -35,6 +35,10 @@ PluginProcessor::PluginProcessor()
 PluginProcessor::~PluginProcessor() {
 }
 
+std::optional<juce::String> PluginProcessor::getNameForMidiNoteNumber(int note, int midiChannel) {
+    return this->drumKitEnginePtr->getNameForMidiNoteNumber(note, midiChannel);
+}
+
 //==============================================================================
 int PluginProcessor::getNumPrograms() {
     return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,

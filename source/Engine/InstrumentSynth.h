@@ -49,17 +49,19 @@ public:
     using SynthesiserVoice::renderNextBlock;
     AftertouchChokeProcessor chokeProcessor;
 private:
-    juce::RangedAudioParameter* mGainParameter = nullptr;
-    juce::RangedAudioParameter* mPanParameter = nullptr;
-    juce::AudioParameterBool* mInvertPhaseParameter = nullptr;
+    juce::RangedAudioParameter* gainParam = nullptr;
+    juce::RangedAudioParameter* panParam = nullptr;
+    juce::AudioParameterBool* invertPhaseParam = nullptr;
 
-    double mPitchRatio = 0;
-    float mVelocityGain = 0;
-    double mSourceSamplePosition = 0;
-    juce::ADSR mAdsr;
+    double pitchRatio = 0;
+    float velocityGain = 0;
+    double sourceSamplePosition = 0;
+    juce::ADSR adsr;
 
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
 };
+
+class MicRoutingBuilder;
 
 class InstrumentSynth : public juce::Synthesiser {
 public:
@@ -79,13 +81,13 @@ public:
     };
 
     struct ArticulationRuntime {
+        StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
-        StringsDictSingleton::Id codeId = 0;
         // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
         std::array<int8_t, 128> velocityToLayer; // -1 means no layer
         std::vector<VelocityLayerRuntime> layers;
 
-        explicit ArticulationRuntime(StringsDictSingleton::Id codeId, StringsDictSingleton::Id exprId) : codeId(codeId), exprId(exprId) {
+        explicit ArticulationRuntime(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) : nameId(nameId), exprId(exprId) {
             velocityToLayer.fill(-1);
         }
     };
@@ -95,7 +97,7 @@ public:
         // ,juce::RangedAudioParameter& gainParameter
         // ,juce::RangedAudioParameter& panParameter
         // ,juce::AudioParameterBool& phaseParameter
-        )
+    )
         : parent(parent)
         , instrumentSlot(instrumentSlot)
         , id(instrumentSlot.id)
@@ -136,6 +138,8 @@ public:
 
     const juce::String& getId() const { return id; }
 
+    int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const;
+
 private:
     DrumKitEngine* parent = nullptr;
     KitLib::InstrumentSpec* instrumentSpecstPtr = nullptr;
@@ -160,4 +164,51 @@ private:
     // Keep a vector of all SampledSound pointers created for this synth (owned by Synth via addSound)
     std::vector<SampledSound*> sampledSoundPtrs;
     std::vector<int> micOutputMapping;
+
+    using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
+    using CcDimensionsMap = std::unordered_map<int8_t, std::vector<std::pair<int8_t, int8_t>>>;
+
+    void processLayoutArticulations(KitLib::InstrumentSpec* instSpec);
+    void processArticulationSpec(KitLib::InstrumentSpec* instSpec
+        , const LayoutArticulation& layoutArt
+        , KitLib::ArticulationSpec* artSpec
+        , ArticulationRuntime& artRt
+        , CcDimensionsMap& foundCcDimensions
+    );
+    void createVelocityLayers(KitLib::InstrumentSpec* instSpec
+        , const LayoutArticulation& layoutArt
+        , KitLib::ArticulationSpec* artSpec
+        , ArticulationRuntime& artRt
+        , const std::vector<int>& micStarts
+        , const std::vector<int>& micChannels
+        , int& unmatchedStart
+        , MicRoutingBuilder& micRouting
+    );
+    void buildVelocityMapping(ArticulationRuntime& artRt);
+    void mapNotesToArticulation(const LayoutArticulation& layoutArt);
+    void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions);
+    void processCcDimensions(CcDimensionsMap& foundCcDimensions);
+
+    KitLib::ArticulationSpec* resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt);
+};
+
+
+class MicRoutingBuilder {
+public:
+    MicRoutingBuilder(InstrumentSynth* synth) : synth(synth) {}
+    void build(KitLib::ArticulationSpec* artSpec, std::vector<int>& micStarts, std::vector<int>& micChannels, int& unmatchedStart);
+    int getVariant(size_t& index) {
+        if (index >= this->allVariants.size()) return -1;
+        return this->allVariants[index].second; 
+    }
+private:
+    void collectMicEntries();
+    void assignVariants(KitLib::ArticulationSpec* artSpec);
+    void computeMicGroups(std::vector<int>& micStarts, std::vector<int>& micChannels, int& unmatchedStart);
+
+    InstrumentSynth* synth = nullptr;
+    std::vector<const MicLayout::Mic*> micEntriesForInst;
+    std::vector<std::pair<const KitLib::SampleVariantSpec*, int>> allVariants; // keep order for assignment
+    std::unordered_map<size_t, int> variantsPerMic; // index in micEntriesForInst -> count
+    int unmatchedVariantCount = 0;
 };

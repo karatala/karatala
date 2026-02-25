@@ -47,6 +47,8 @@ public:
         LOG(Debug, "CHECK IT OUT parameterChanged: " + parameterId + ": " + juce::String::formatted("%.3f", newValue));
     }
 
+    std::optional<juce::String> getNameForMidiNoteNumber (int note, int midiChannel) override;
+
 private:
     std::unique_ptr<juce::AudioFormatManager> mAudioFormatManagerPtr;
     std::unique_ptr<juce::AudioProcessorValueTreeState> mAudioProcessorValueTreeStatePtr;
