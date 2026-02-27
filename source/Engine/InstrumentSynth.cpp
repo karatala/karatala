@@ -3,8 +3,8 @@
 #include "DrumKitEngine.h"
 #include "InstrumentSynth.h"
 
-static constexpr float POLYPHONY_CROSFADE_TIMEOUT_MS = 20.0f;
-static constexpr float HIHAT_PEDAL_CROSSFADE_TIMEOUT_MS = 50.0f;
+static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.020f;
+static constexpr float HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC = 0.050f;
 
 void InstrumentSynth::unloadInstrument() {
     this->runtimeArticulations.clear();
@@ -431,10 +431,10 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
         2. if playing more closed hihat articulation right after more opened, opened keep sounding.
         3. when loud notes played fast, sometimes waveforms can counterphase/double volume of each other.
 
-        if new note louder then ol -> fast fade out and mark old note's voice to this->stopNote, or maybe even better crossfade old and new notes by POLYPHONY_CROSFADE_TIMEOUT_MS=20
+        if new note louder then ol -> fast fade out and mark old note's voice to this->stopNote, or maybe even better crossfade old and new notes by POLYPHONY_CROSFADE_TIMEOUT_SEC=20
         according some dynamic hardcoded mapping that shows which articulation can mute another, like cymbal bow/edge can mute each other and self (if last is louder)
                 
-        For hihat pedal state without note should crossfade changes, like if hitted closed hat and start opening pedal it should crossfade to more opened sound (new more open sample plays from small offset so it is without attack) so more opened starts from time offset when pedal changestarted with HIHAT_PEDAL_CROSSFADE_TIMEOUT_MS=50
+        For hihat pedal state without note should crossfade changes, like if hitted closed hat and start opening pedal it should crossfade to more opened sound (new more open sample plays from small offset so it is without attack) so more opened starts from time offset when pedal changestarted with HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC=50
         Maybe we have to use juces shouldStealNotes and override findVoiceToSteal - idk.
 
         ??? do we need to make InstrumentSynth abstract and extend with several classes like InstrumentSynthCymbal, InstrumentSynthDrum and for special cases InstrumentSynthHiHat, 
@@ -501,8 +501,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
     // Crossfade older voices of the same articulation if the new note is louder.
     // This reduces unrealistic sudden muting when many loud voices were previously started.
     // try {
-        for (auto* baseVoice : this->voices) {
-            auto* instVoice = dynamic_cast<InstrumentSynthVoice*>(baseVoice);
+        for (auto* instVoice : this->voices) {
             if (instVoice == nullptr) continue;
             if (!instVoice->isVoiceActive()) continue;
 
@@ -518,7 +517,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
                 // If new note is significantly louder than existing voice, fade the old one
                 const float existingGain = instVoice->getVelocityGain();
                 if (velf > existingGain + 0.05f) {
-                    // instVoice->crossfadeOutMs(POLYPHONY_CROSFADE_TIMEOUT_MS);
+                    // instVoice->crossfadeOutSec(POLYPHONY_CROSFADE_TIMEOUT_SEC);
                 }
             }
         }
@@ -722,11 +721,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(SampledSound* soundToPla
         if (voice == low || voice == top) continue;
         if (!voice->isPlayingButReleased()) continue;
         // try to inspect velocity -- downcast to our voice type
-        if (auto* isv = dynamic_cast<InstrumentSynthVoice*>(voice)) {
-            if (isv->getVelocityGain() <= reqVel + threshold) {
-                candidate = voice; break;
-            }
-        } else {
+        if (voice->getVelocityGain() <= reqVel + threshold) {
             candidate = voice; break;
         }
     }
@@ -736,9 +731,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(SampledSound* soundToPla
         for (auto* voice : usable) {
             if (voice == low || voice == top) continue;
             if (voice->isAttackHold()) continue;
-            if (auto* isv = dynamic_cast<InstrumentSynthVoice*>(voice)) {
-                if (isv->getVelocityGain() <= reqVel + threshold) { candidate = voice; break; }
-            } else { candidate = voice; break; }
+            if (voice->getVelocityGain() <= reqVel + threshold) { candidate = voice; break; }
         }
     }
 
@@ -746,9 +739,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(SampledSound* soundToPla
     if (candidate == nullptr) {
         for (auto* voice : usable) {
             if (voice == low || voice == top) continue;
-            if (auto* isv = dynamic_cast<InstrumentSynthVoice*>(voice)) {
-                if (isv->getVelocityGain() <= reqVel + threshold) { candidate = voice; break; }
-            } else { candidate = voice; break; }
+            if (voice->getVelocityGain() <= reqVel + threshold) { candidate = voice; break; }
         }
     }
 
@@ -817,7 +808,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         if (targetSe == nullptr || targetSe->sound == nullptr) continue;
 
         // Fade out the old voice
-        instVoice->crossfadeOutMs(HIHAT_PEDAL_CROSSFADE_TIMEOUT_MS);
+        instVoice->crossfadeOutSec(HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC);
 
         // Start replacement voice with small offset to avoid attack transient
         auto* newVoice = findFreeVoice(targetSe->sound, midiChannel, instVoice->getCurrentlyPlayingNote(), true);
@@ -912,9 +903,9 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
 
 }
 
-void InstrumentSynthVoice::crossfadeOutMs(float ms) {
+void InstrumentSynthVoice::crossfadeOutSec(float sec) {
     // set a very short release and trigger noteOff so the ADSR will fade quickly
-    const float releaseSec = juce::jmax(0.001f, ms / 1000.0f);
+    const float releaseSec = juce::jmax(0.001f, sec);
     // keep existing attack/decay/sustain aggressive for quick fade
     this->adsr.setParameters({0.001f, 0.01f, 0.0f, releaseSec});
     this->adsr.noteOff();
@@ -941,12 +932,12 @@ void InstrumentSynthVoice::aftertouchChanged (int newValue) {
     this->chokeProcessor.handlePolyAftertouch(newValue);
 }
 
-
-void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) {
-    if (!isVoiceActive())
+template <typename floatType>
+void renderNextBlockImpl(InstrumentSynthVoice& voice, juce::AudioBuffer<floatType>& outputBuffer, int startSample, int numSamples) {
+    if (!voice.isVoiceActive())
         return;
 
-    SampledSound* s = getCurrentlyPlayingSound();
+    SampledSound* s = voice.getCurrentlyPlayingSound();
     if (s == nullptr || !s->buffer)
         return;
 
@@ -963,31 +954,31 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
 
     const int destChCount = outputBuffer.getNumChannels();
 
-    if (this->chokeProcessor.isMuted()) {
-        this->stopNote(0, false);
+    if (voice.chokeProcessor.isMuted()) {
+        voice.stopNote(0, false);
         return;
     }
     for (int i = 0; i < numSamples; ++i) {
         
         //TODO: use peak offset for mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) first makke script to smart-parse from samples and save to filename
         // Process per-voice ducking for this block and get block gain
-        const float chokeGain = this->chokeProcessor.getNextBlockGain();
+        const float chokeGain = voice.chokeProcessor.getNextBlockGain();
  
-        const double pos = this->sourceSamplePosition;
+        const double pos = voice.sourceSamplePosition;
         const int idx = static_cast<int>(pos);
         const double frac = pos - idx;
 
         // For each source channel in this sample variant, fetch interpolated sample
         // and write to corresponding destination channel (offset by srcStart).
         if (idx >= 0 && idx < srcLen) {
-            const float env = this->adsr.getNextSample();
+            const auto env = voice.adsr.getNextSample();
 
             for (int sc = 0; sc < srcCount; ++sc) {
                 int actualSrcCh = juce::jlimit(0, srcChannels - 1, srcStart + sc);
                 float v0 = buf.getSample(actualSrcCh, idx);
                 float v1 = (idx + 1 < srcLen) ? buf.getSample(actualSrcCh, idx + 1) : 0.0f;
-                float sample = static_cast<float>(v0 + (v1 - v0) * frac);
-                sample *= env * this->velocityGain * chokeGain;
+                auto sample = static_cast<floatType>(v0 + (v1 - v0) * frac);
+                sample *= env * voice.velocityGain * chokeGain;
 
                 int destCh = s->micBufferChannelStart + sc;
                 if (destCh >= 0 && destCh < destChCount) {
@@ -1003,74 +994,18 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             }
         } else {
             // still advance envelope even if out of source range
-            (void) this->adsr.getNextSample();
+            (void) voice.adsr.getNextSample();
         }
 
-        this->sourceSamplePosition += this->pitchRatio;
-        if (this->sourceSamplePosition >= srcLen) {
+        voice.sourceSamplePosition += voice.pitchRatio;
+        if (voice.sourceSamplePosition >= srcLen) {
             // reached end
-            this->adsr.reset();
-            this->clearCurrentNote();
+            voice.adsr.reset();
+            voice.clearCurrentNote();
             break;
         }
     }
 }
 
-void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<double>& outputBuffer, int startSample, int numSamples) {
-    if (!isVoiceActive())
-        return;
-
-    SampledSound* s = getCurrentlyPlayingSound();
-    if (s == nullptr || !s->buffer)
-        return;
-
-    auto& buf = *s->buffer;
-    const int srcChannels = buf.getNumChannels();
-    const int srcLen = buf.getNumSamples();
-    int srcStart = 0;
-    int srcCount = srcChannels;
-    if (s->sampleVariantSpec) {
-        srcStart = s->sampleVariantSpec->fileChannelStart;
-        srcCount = s->sampleVariantSpec->fileChannelCount > 0 ? s->sampleVariantSpec->fileChannelCount : srcChannels;
-    }
-
-    const int destChCount = outputBuffer.getNumChannels();
-
-    if (this->chokeProcessor.isMuted()) {
-        this->stopNote(0, false);
-        return;
-    }
-    for (int i = 0; i < numSamples; ++i) {
-        const float chokeGain = this->chokeProcessor.getNextBlockGain();
-
-        const double pos = this->sourceSamplePosition;
-        const int idx = static_cast<int>(pos);
-        const double frac = pos - idx;
-
-        if (idx >= 0 && idx < srcLen) {
-            const double env = this->adsr.getNextSample();
-
-            for (int sc = 0; sc < srcCount; ++sc) {
-                int actualSrcCh = juce::jlimit(0, srcChannels - 1, srcStart + sc);
-                float v0 = buf.getSample(actualSrcCh, idx);
-                float v1 = (idx + 1 < srcLen) ? buf.getSample(actualSrcCh, idx + 1) : 0.0f;
-                double sample = static_cast<double>(v0 + (v1 - v0) * frac);
-                sample *= env * this->velocityGain * chokeGain;
-
-                int destCh = s->micBufferChannelStart + sc;
-                if (destCh >= 0 && destCh < destChCount) {
-                    outputBuffer.addSample(destCh, startSample + i, sample);
-                }
-            }
-        } else {
-            (void) this->adsr.getNextSample();
-        }
-
-        this->sourceSamplePosition += this->pitchRatio;
-        if (this->sourceSamplePosition >= srcLen) {
-            this->adsr.reset();
-            this->clearCurrentNote();
-            break;
-        }
-    }
-}
+void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) { renderNextBlockImpl(*this, outputBuffer, startSample, numSamples); }
+void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<double>& outputBuffer, int startSample, int numSamples) { renderNextBlockImpl(*this, outputBuffer, startSample, numSamples); }

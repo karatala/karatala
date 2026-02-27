@@ -68,7 +68,7 @@ public:
     // Helpers for crossfade/voice management
     float getVelocityGain() const { return this->velocityGain; }
     void setVelocityGain(float value) { this->velocityGain = value; }
-    void crossfadeOutMs(float ms);
+    void crossfadeOutSec(float ms);
 
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
 
@@ -128,7 +128,6 @@ class MicRoutingBuilder;
 
 class InstrumentSynth {
 public:
-    struct Articulation {}; //TODO
 
     // Runtime data structures built at loadInstrument() (non-realtime)
     struct SampleEntry {
