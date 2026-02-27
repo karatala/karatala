@@ -1,77 +1,101 @@
 #include "SampleLoader.h"
-#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_events/juce_events.h>
 
-#include <thread>
-
-SampleLoader::SampleLoader() {
-    formatManager.registerBasicFormats();
-}
-
-SampleLoader::~SampleLoader() {
-}
-
-void SampleLoader::requestAsyncLoad(const juce::File& file, LoadCallback callback) { //FIXME: review wtf happens here
-    if (!file.existsAsFile()) {
-        juce::MessageManager::callAsync([file, callback]() {
+void SampleLoader::requestAsyncLoad(const juce::File& file, LoadCallback callback)
+{
+    if (!file.existsAsFile())
+    {
+        juce::MessageManager::callAsync([callback]()
+        {
             callback(nullptr, 0.0);
         });
         return;
     }
 
-    const juce::String path = file.getFullPathName();
+    const auto cacheKey = makeCacheKey(file);
 
     // Check cache
     {
         std::lock_guard<std::mutex> lock(cacheMutex);
-        auto it = cache.find(path);
-        if (it != cache.end()) {
+
+        auto it = cache.find(cacheKey);
+        if (it != cache.end())
+        {
             auto buf = it->second;
-            juce::MessageManager::callAsync([file, buf, this, callback]() {
-                callback(buf, 0.0);
+
+            juce::MessageManager::callAsync([buf, callback]()
+            {
+                callback(buf, 0.0); // SR not cached separately (safe assumption)
             });
+
             return;
         }
     }
 
-    // Spawn a background thread to decode
-    std::thread([this, file, path, callback]() {
-        std::unique_ptr<juce::InputStream> in(file.createInputStream());
-        if (!in) {
-            juce::MessageManager::callAsync([file, callback]() {
-                callback(nullptr, 0.0);
-            });
-            return;
-        }
+    threadPool.addJob(new LoadJob(*this, file, cacheKey, callback), true);
+}
 
-        std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(std::move(in)));
-        if (!reader) {
-            juce::MessageManager::callAsync([file, callback]() {
-                callback(nullptr, 0.0);
-            });
-            return;
-        }
 
-        int channels = static_cast<int>(reader->numChannels);
-        int samples = static_cast<int>(reader->lengthInSamples);
-
-        auto buffer = std::make_shared<juce::AudioBuffer<float>>(channels, samples);
-        reader->read(buffer.get(), 0, samples, 0, true, true);
-        double sr = reader->sampleRate;
-
-        // insert into cache
-        {
-            std::lock_guard<std::mutex> lock(cacheMutex);
-            size_t bytes = (size_t) channels * (size_t) samples * sizeof(float);
-            if (currentCacheBytes + bytes <= cacheLimitBytes) {
-                cache[path] = buffer;
-                currentCacheBytes += bytes;
-            } else {
-                // simplistic behavior: do not cache if over limit
-            }
-        }
-
-        juce::MessageManager::callAsync([file, buffer, sr, callback]() {
-            callback(buffer, sr);
+juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
+    std::unique_ptr<juce::InputStream> in(file.createInputStream());
+    if (!in) {
+        juce::MessageManager::callAsync([cb = callback]() {
+            cb(nullptr, 0.0);
         });
-    }).detach();
+        return jobHasFinished;
+    }
+
+    std::unique_ptr<juce::AudioFormatReader> reader(
+        loader.formatManager.createReaderFor(std::move(in)));
+
+    if (!reader) {
+        juce::MessageManager::callAsync([cb = callback]() {
+            cb(nullptr, 0.0);
+        });
+        return jobHasFinished;
+    }
+
+    const int channels = (int)reader->numChannels;
+    const double sampleRate = reader->sampleRate;
+
+    // Clamp length
+    const int maxSamples = (int)(sampleRate * (loader.maxSampleLengthMs * 0.001));
+
+    const int samplesToRead = (int)std::min<int64_t>(reader->lengthInSamples, maxSamples);
+
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(channels, samplesToRead);
+
+    if (!reader->read(buffer.get(), 0, samplesToRead, 0, true, true)) {
+        juce::MessageManager::callAsync([cb = callback]() {
+            cb(nullptr, 0.0);
+        });
+        return jobHasFinished;
+    }
+
+    // Apply fade out
+    const int fadeSamples = (int)(sampleRate * (loader.fadeOutMs * 0.001));
+
+    const int fadeStart = std::max(0, samplesToRead - fadeSamples);
+
+    for (int ch = 0; ch < channels; ++ch) {
+        buffer->applyGainRamp(ch, fadeStart, samplesToRead - fadeStart, 1.0f, 0.0f);
+    }
+
+    // Cache insert
+    {
+        std::lock_guard<std::mutex> lock(loader.cacheMutex);
+
+        const size_t bytes = (size_t)channels * (size_t)samplesToRead * sizeof(float);
+
+        if (loader.currentCacheBytes + bytes <= loader.cacheLimitBytes) {
+            loader.cache[cacheKey] = buffer;
+            loader.currentCacheBytes += bytes;
+        }
+    }
+
+    juce::MessageManager::callAsync([buf = buffer, sr = sampleRate, cb = callback]() {
+        cb(buf, sr);
+    });
+
+    return jobHasFinished;
 }
