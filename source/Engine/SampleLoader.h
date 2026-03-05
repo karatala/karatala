@@ -2,8 +2,91 @@
 
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_core/juce_core.h>
+#include <functional>
 #include <unordered_map>
 #include <mutex>
+#include <thread>
+#include <deque>
+#include <atomic>
+#include <array>
+#include <chrono>
+#include "KitLibModel.h"
+
+class SampleLoader;
+
+class SampleLoaderQueue {
+public:
+    using LoadCallback = std::function<void(std::shared_ptr<juce::AudioBuffer<float>>, double)>;
+
+    explicit SampleLoaderQueue(SampleLoader& loader) : loader(loader) {
+        this->stopFlag.store(false);
+        for (auto &a : stageInFlightCount) a.store(0);
+        for (auto &a : stageDispatchedCount) a.store(0);
+        for (auto &t : stageFirstDispatchTime) t = std::chrono::steady_clock::time_point();
+    }
+    ~SampleLoaderQueue() { this->stopProcessing(); }
+
+    // Enqueue a sample candidate for progressive staged loading.
+    // - `instType` is the instrument type (Kick, Snare, HiHat, ...)
+    // - `artId` is the articulation id (StringsDictSingleton::Id)
+    // - `velocity` is the velocity layer value (1..127)
+    // - `rrIndex` is the round-robin index (1..26)
+    void enqueueCandidate(const juce::File& file, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, LoadCallback cb);
+
+    // Attempt to mark the worker as started. Returns true if the worker
+    // was already started, false if we successfully marked it started.
+    bool isStarted() {
+        bool expected = false;
+        return !this->workerStarted.compare_exchange_strong(expected, true);
+    }
+private:
+    struct Candidate {
+        juce::File file;
+        KitLib::InstrumentSpec::Type instType;
+        StringsDictSingleton::Id artId;
+        uint8_t velocity;
+        uint8_t rrIndex;
+        int priority; // lower is higher priority
+    };
+
+    SampleLoader& loader;
+    std::mutex lock;
+    std::deque<Candidate> stageQueues[4]; // index 0->stage1, 1->stage2, ...
+    // map file path -> pending callbacks (used to attach multiple callbacks for the same file)
+    std::unordered_map<juce::String, std::vector<LoadCallback>> pendingCallbacks;
+
+    std::thread workerThread;
+    std::atomic<bool> stopFlag{false};
+    std::atomic<bool> workerStarted{false};
+
+    // Stats
+    std::atomic<uint32_t> queuedCount{0};
+    std::atomic<uint32_t> dispatchedCount{0};
+    std::atomic<uint32_t> loadedCount{0};
+    std::atomic<uint32_t> inFlightCount{0};
+
+    // concurrency
+    std::atomic<uint32_t> maxInFlight{3};
+
+    // Per-stage in-flight counters and first-dispatch timestamps used to
+    // aggregate logs so we only emit one message per stage (not per file).
+    std::array<std::atomic<int>, 4> stageInFlightCount;
+    std::array<std::atomic<int>, 4> stageDispatchedCount;
+    std::array<std::chrono::steady_clock::time_point, 4> stageFirstDispatchTime;
+    std::mutex stageTimeMutex;
+
+public:
+    void startProcessing();
+    void stopProcessing();
+
+    void setMaxInFlight(uint32_t n) { this->maxInFlight.store(n); }
+    uint32_t getQueuedCount() const { return this->queuedCount.load(); }
+    uint32_t getLoadedCount() const { return this->loadedCount.load(); }
+
+    void workerLoop();
+    int computeInstrumentPriority(KitLib::InstrumentSpec::Type t) const;
+    int determineStage(const Candidate& c) const;
+};
 
 class SampleLoader {
 public:
@@ -12,12 +95,15 @@ public:
 
     SampleLoader() {
         formatManager.registerBasicFormats();
+        this->queuePtr = std::make_unique<SampleLoaderQueue>(*this);
     }
     ~SampleLoader() {
         threadPool.removeAllJobs(true, 5000);
     }
 
     void requestAsyncLoad(const juce::File& file, LoadCallback callback);
+
+    SampleLoaderQueue* getQueue() { return this->queuePtr.get(); }
 
     void setCacheLimitBytes(size_t bytes) {
         std::lock_guard<std::mutex> lock(this->cacheMutex);
@@ -51,6 +137,8 @@ private:
     //========================================================
     juce::AudioFormatManager formatManager;
     juce::ThreadPool threadPool;
+
+    std::unique_ptr<SampleLoaderQueue> queuePtr;
 
     std::mutex cacheMutex;
     std::unordered_map<juce::String, BufferPtr> cache;

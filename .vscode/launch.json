@@ -13,7 +13,7 @@
       "stopAtEntry": false,
       "cwd": "${fileDirname}",
       "environment": [],
-      "preLaunchTask": "Build Standalone",
+      // "preLaunchTask": "Build Standalone",
       "internalConsoleOptions": "openOnSessionStart",
     },
     {
@@ -41,7 +41,7 @@
       "stopAtEntry": false,
       "cwd": "t:\\apps\\MultiMedia\\ReaperPortable\\Data\\ReaperPortableConfig",
       "internalConsoleOptions": "openOnSessionStart",
-      "preLaunchTask": "Build VST3",
+      // "preLaunchTask": "Build VST3",
       "environment": [],
     },
   ],

@@ -21,6 +21,7 @@ TODO: peak offset for diffenetn mics (found minimal for example di and take it a
 
 
 
+python .\scripts\analyze_drum_samples.py -i C:\Users\Public\Documents\Karatala\sample_library 
 
 
 Loading of inst preset ( kick1(slit) kit inst (spec) params , support stacking samples differently to more extend rr variants (option)

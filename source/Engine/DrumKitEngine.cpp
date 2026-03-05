@@ -135,94 +135,6 @@ bool DrumKitEngine::useMicLayout(juce::String name) {
     return false;
 }
 
-bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
-    if (text.trim().isEmpty()) {
-        LOG(Warning, "empty instrument map text");
-        return false;
-    }
-
-    auto pairs = DrumKitEngine::parseInstrumentMapText(text); //TODO: plan implementation
-    if (pairs.empty()) {
-        LOG(Warning, "no valid mapping lines found");
-        return false;
-    }
-
-    if (this->libraryManagerPtr == nullptr) {
-        LOG(Error, "LibraryManager is not initialized");
-        return false;
-    }
-
-    int applied = 0;
-    for (const auto& p : pairs) {
-        const auto slotId = p.first.trim();
-        const auto rhs = p.second.trim();
-
-        // find slot
-        auto sit = this->instrumentSynthById.find(slotId);
-        if (sit == this->instrumentSynthById.end()) {
-            LOG(Warning, "instrument slot not found: " + slotId);
-            continue;
-        }
-        InstrumentSynth* slot = sit->second;
-
-        // parse kit and optional instrument code
-        auto slashPos = rhs.indexOfChar('/');
-        juce::String kitName = rhs;
-        juce::String instCode;
-        if (slashPos >= 0) {
-            kitName = rhs.substring(0, slashPos).trim();
-            instCode = rhs.substring(slashPos + 1).trim();
-        }
-
-        // find kit (by name or code)
-        KitLib::DrumKitSpec* kitSpec = nullptr;
-        for (auto& kptr : this->libraryManagerPtr->getKits()) {
-            if (kptr->meta.name == kitName || kptr->meta.codeRaw == kitName) {
-                kitSpec = kptr.get();
-                break;
-            }
-        }
-
-        if (kitSpec == nullptr) {
-            LOG(Warning, "kit not found: " + kitName);
-            continue;
-        }
-
-        if (instCode.isEmpty()) {
-            this->mapKit(*kitSpec);
-            applied++;
-            continue;
-        }
-
-        KitLib::InstrumentSpec* instSpec = kitSpec->findInstrument(instCode);
-        if (instSpec == nullptr) {
-            LOG(Warning, "instrument not found in kit '" + kitSpec->meta.name + "': " + instCode);
-            continue;
-        }
-
-        slot->loadInstrument(instSpec);
-        applied++;
-
-        // map midi notes for this slot based on kit layout definition (if present)
-        if (this->activeKitLayoutPtr != nullptr) {
-            auto it = this->activeKitLayoutPtr->instrumentsById.find(slotId);
-            if (it != this->activeKitLayoutPtr->instrumentsById.end()) {
-                const auto* layoutInst = it->second;
-                for (const auto& art : layoutInst->articulations) {
-                    for (int note : art.notes) {
-                        auto& vec = this->instrumentSynthsByNote[note];
-                        // avoid duplicates
-                        if (std::find(vec.begin(), vec.end(), slot) == vec.end())
-                            vec.push_back(slot);
-                    }
-                }
-            }
-        }
-    }
-
-    return applied > 0;
-}
-
 bool DrumKitEngine::setKitLayout(KitLayout layout) {
     this->activeKitLayoutPtr = std::make_unique<KitLayout>(layout);
     return this->applyKitLayout();
@@ -262,7 +174,7 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
     if (instrumentMap.isEmpty()) {
         this->mapDefaultKit();
     } else {
-        this->useInstrumentMap(instrumentMap);
+        // this->useInstrumentMap(instrumentMap);
     }
 }
 
@@ -379,6 +291,10 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpec& kit) { //FIXME: review, probably
         //             vec.push_back(slot);
         //     }
         // }
+    }
+    // Start staged sample loading only after all instruments/articulations were enqueued
+    if (this->sampleLoaderPtr != nullptr && this->sampleLoaderPtr->getQueue() != nullptr) {
+        this->sampleLoaderPtr->getQueue()->startProcessing();
     }
 }
 
@@ -728,3 +644,92 @@ void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer&
         this->latestPAValueMap[note] = msg.getAfterTouchValue();
     }
 }
+
+
+// bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
+//     if (text.trim().isEmpty()) {
+//         LOG(Warning, "empty instrument map text");
+//         return false;
+//     }
+
+//     auto pairs = DrumKitEngine::parseInstrumentMapText(text); //TODO: plan implementation
+//     if (pairs.empty()) {
+//         LOG(Warning, "no valid mapping lines found");
+//         return false;
+//     }
+
+//     if (this->libraryManagerPtr == nullptr) {
+//         LOG(Error, "LibraryManager is not initialized");
+//         return false;
+//     }
+
+//     int applied = 0;
+//     for (const auto& p : pairs) {
+//         const auto slotId = p.first.trim();
+//         const auto rhs = p.second.trim();
+
+//         // find slot
+//         auto sit = this->instrumentSynthById.find(slotId);
+//         if (sit == this->instrumentSynthById.end()) {
+//             LOG(Warning, "instrument slot not found: " + slotId);
+//             continue;
+//         }
+//         InstrumentSynth* slot = sit->second;
+
+//         // parse kit and optional instrument code
+//         auto slashPos = rhs.indexOfChar('/');
+//         juce::String kitName = rhs;
+//         juce::String instCode;
+//         if (slashPos >= 0) {
+//             kitName = rhs.substring(0, slashPos).trim();
+//             instCode = rhs.substring(slashPos + 1).trim();
+//         }
+
+//         // find kit (by name or code)
+//         KitLib::DrumKitSpec* kitSpec = nullptr;
+//         for (auto& kptr : this->libraryManagerPtr->getKits()) {
+//             if (kptr->meta.name == kitName || kptr->meta.codeRaw == kitName) {
+//                 kitSpec = kptr.get();
+//                 break;
+//             }
+//         }
+
+//         if (kitSpec == nullptr) {
+//             LOG(Warning, "kit not found: " + kitName);
+//             continue;
+//         }
+
+//         if (instCode.isEmpty()) {
+//             this->mapKit(*kitSpec);
+//             applied++;
+//             continue;
+//         }
+
+//         KitLib::InstrumentSpec* instSpec = kitSpec->findInstrument(instCode);
+//         if (instSpec == nullptr) {
+//             LOG(Warning, "instrument not found in kit '" + kitSpec->meta.name + "': " + instCode);
+//             continue;
+//         }
+
+//         slot->loadInstrument(instSpec);
+//         applied++;
+
+//         // map midi notes for this slot based on kit layout definition (if present)
+//         if (this->activeKitLayoutPtr != nullptr) {
+//             auto it = this->activeKitLayoutPtr->instrumentsById.find(slotId);
+//             if (it != this->activeKitLayoutPtr->instrumentsById.end()) {
+//                 const auto* layoutInst = it->second;
+//                 for (const auto& art : layoutInst->articulations) {
+//                     for (int note : art.notes) {
+//                         auto& vec = this->instrumentSynthsByNote[note];
+//                         // avoid duplicates
+//                         if (std::find(vec.begin(), vec.end(), slot) == vec.end())
+//                             vec.push_back(slot);
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     return applied > 0;
+// }
