@@ -179,12 +179,13 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
 }
 
 void DrumKitEngine::mapDefaultKit() {
-    KitLib::DrumKitSpec* kit = this->getInstrumentManager()->getKit(0); //MAYBE: later use global setting for default kit instead
+    const auto& kits = this->getInstrumentManager()->getKits();
+    const KitLib::DrumKitSpec* kit = kits.empty() ? nullptr : kits[0].get(); //MAYBE: later use global setting for default kit instead
     if (kit != nullptr)
         this->mapKit(*kit);
 }
 
-void DrumKitEngine::mapKit(KitLib::DrumKitSpec& kit) { //FIXME: review, probably rewrite, simplify
+void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, probably rewrite, simplify
     if (this->activeKitLayoutPtr == nullptr) {
         LOG(Warning, "no active kit layout to map to");
         return;
@@ -259,7 +260,7 @@ void DrumKitEngine::mapKit(KitLib::DrumKitSpec& kit) { //FIXME: review, probably
         // Fallback: attempt fuzzy match by name/code if still not matched
         if (matched == nullptr) {
             juce::String needle = layoutInstrument.id.trim().toLowerCase();
-            for (const auto&[id, instPtr] : kit.instrumentSpecsMap) {
+            for (const auto&[id, instPtr] : kit.getInstrumentSpecsMap()) {
                 auto* candidate = instPtr.get();
                 if (candidate == nullptr)
                     continue;

@@ -1,11 +1,19 @@
 #pragma once
 
 #include "InstrumentSynth.h"
+#include "DrumKitEngine.h"
 #include "MicRoutingBuilder.h"
+#include "SampleLoader.h"
 
+const MicLayout* InstrumentSynth::getMicLayout() const { return this->parent ? this->parent->getMicLayout() : nullptr; }
+const SampleLoader* InstrumentSynth::getSampleLoader() const { return this->parent ? this->parent->getSampleLoader() : nullptr; }
 
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.100f;
 static constexpr float HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC = 0.050f;
+
+/*================================================================
+   instrument loading / assigning
+================================================================*/
 
 void InstrumentSynth::unloadInstrument() {
     this->runtimeArticulations.clear();
@@ -118,7 +126,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
 
             layer.samples.push_back(se);
 
-            const auto loader = this->getEngine()->getSampleLoader();
+            const SampleLoader* loader = this->getSampleLoader();
             if (loader != nullptr) {
                 auto* q = loader->getQueue();
                 if (q != nullptr) {
@@ -250,6 +258,12 @@ KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::Instr
     return nullptr;
 }
 
+
+/*================================================================
+   instrument runtime
+================================================================*/
+
+
 void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     
     if (midiMessage.isNoteOn()) {
@@ -257,7 +271,6 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
         if (noteToArticulation[note] == -1) return;
 
         this->playNote(midiMessage.getChannel(), note, midiMessage.getVelocity());
-        // || this->noteOn(midiMessage.getChannel(), note, midiMessage.getFloatVelocity());
     }
     else if (midiMessage.isController()) {
         auto ccNum = static_cast<uint8_t>(midiMessage.getControllerNumber());
@@ -487,7 +500,7 @@ void InstrumentSynth::renderNextBlock(juce::AudioBuffer<float>& outputAudio, con
 }
 
 void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSample, int numSamples) {
-    this->applyAdaptiveTailCompression();
+    this->applyAdaptiveTailCompression(); //FIXME: wtf this even doing?
     for (auto* voice : this->voices) voice->renderNextBlock(buffer, startSample, numSamples);
 }
 
@@ -571,36 +584,30 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(SampledSound* soundToPla
 }
 
 InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(SampledSound* soundToPlay, int /*midiChannel*/, int /*midiNoteNumber*/, int groupId) const {
-    std::vector<InstrumentSynthVoice*> candidates;
+    std::vector<InstrumentSynthVoice*> voiceCandidates;
 
     for (auto* voice : this->voices) {
-        if (!voice->isVoiceActive())
-            continue;
+        if (!voice->isVoiceActive()) continue;
+        if (!voice->canPlaySound(soundToPlay)) continue;
+        if (voice->hitGroupId != groupId) continue;
 
-        if (!voice->canPlaySound(soundToPlay))
-            continue;
-
-        if (voice->hitGroupId != groupId)
-            continue;
-
-        candidates.push_back(voice);
+        voiceCandidates.push_back(voice);
     }
 
-    if (candidates.empty())
-        return nullptr;
+    if (voiceCandidates.empty()) return nullptr;
 
     // Determine protected voice: loudest amplitude, tie-breaker newest noteOnTime
     InstrumentSynthVoice* protectedVoice = nullptr;
     float protectedAmp = -1.0f;
     uint32_t protectedTime = 0;
 
-    for (auto* v : candidates) {
-        const float amp = v->getCurrentAmplitude();
-        const uint32_t t = v->noteOnTime;
-        if (protectedVoice == nullptr || amp > protectedAmp || (amp == protectedAmp && t > protectedTime)) {
-            protectedVoice = v;
+    for (auto* candidate : voiceCandidates) {
+        const float amp = candidate->getCurrentAmplitude();
+        const uint32_t started = candidate->noteOnTime;
+        if (protectedVoice == nullptr || amp > protectedAmp || (amp == protectedAmp && started > protectedTime)) {
+            protectedVoice = candidate;
             protectedAmp = amp;
-            protectedTime = t;
+            protectedTime = started;
         }
     }
 
@@ -608,15 +615,15 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(SampledSound* soundToPla
     InstrumentSynthVoice* best = nullptr;
     float bestScore = std::numeric_limits<float>::max();
 
-    for (auto* v : candidates) {
-        if (v == protectedVoice) continue;
+    for (auto* candidate : voiceCandidates) {
+        if (candidate == protectedVoice) continue;
 
-        const float ageFactor = static_cast<float>(lastNoteOnCounter - v->noteOnTime) * 0.0001f;
-        const float score = v->getCurrentAmplitude() + ageFactor;
+        const float ageFactor = static_cast<float>(lastNoteOnCounter - candidate->noteOnTime) * 0.0001f;
+        const float score = candidate->getCurrentAmplitude() + ageFactor;
 
         if (score < bestScore) {
             bestScore = score;
-            best = v;
+            best = candidate;
         }
     }
 
@@ -631,86 +638,9 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(SampledSound* soundToPla
         return protectedVoice;
 
     // Fallback - return oldest candidate
-    auto* oldest = candidates.front();
-    for (auto* v : candidates) if (v->wasStartedBefore(*oldest)) oldest = v;
+    auto* oldest = voiceCandidates.front();
+    for (auto* candidate : voiceCandidates) if (candidate->wasStartedBefore(*oldest)) oldest = candidate;
     return oldest;
-}
-
-void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
-    // Only handle hi-hat pedal crossfades here for now
-    if (this->getType() != KitLib::InstrumentSpec::Type::HiHat) return;
-
-    auto it = this->ccToArticulation.find(static_cast<int>(controllerNumber));
-    if (it == this->ccToArticulation.end()) return;
-
-    const auto& mapArr = it->second;
-    uint8_t newArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
-
-    // For each active voice, if its articulation differs from newArtIdx, crossfade
-    for (auto* voice : this->voices) {
-        if (voice == nullptr) continue;
-        if (!voice->isVoiceActive()) continue;
-
-        auto* ss = voice->getCurrentlyPlayingSound();
-        if (ss == nullptr || ss->sampleVariantSpec == nullptr) continue;
-
-        // Find articulation index for this voice by matching nameId/exprId
-        int currentArtIdx = -1;
-        for (size_t ai = 0; ai < this->runtimeArticulations.size(); ++ai) {
-            const auto& art = this->runtimeArticulations[ai];
-            if (art.nameId == ss->sampleVariantSpec->parent->parent->nameId && art.exprId == ss->sampleVariantSpec->parent->parent->exprId) {
-                currentArtIdx = static_cast<int>(ai);
-                break;
-            }
-        }
-        if (currentArtIdx == -1) continue;
-
-        if (currentArtIdx == static_cast<int>(newArtIdx)) continue; // already correct
-
-        // Now prepare to start a replacement voice from new articulation
-        const auto& newArt = this->runtimeArticulations[newArtIdx];
-        // choose layer by current voice velocity
-        int midiVel = static_cast<int>(juce::jlimit(0.0f, 1.0f, voice->getVelocityGain()) * 127.0f);
-        int layerIdx = newArt.velocityToLayer[midiVel];
-        if (layerIdx < 0 || layerIdx >= static_cast<int>(newArt.layers.size())) continue;
-        const auto& layer = newArt.layers[layerIdx];
-
-        // find variant index of current voice
-        uint8_t curVariant = 0;
-        if (ss->sampleVariantSpec) curVariant = KitLib::SampleVariantSpec::letterToIdx(ss->sampleVariantSpec->letter);
-
-        // find sample entry in target layer matching variant or fallback to first
-        const InstrumentSynth::SampleEntry* targetSe = nullptr;
-        for (const auto& se : layer.samples) {
-            if (se.variantIdx == curVariant) { targetSe = &se; break; }
-        }
-        if (targetSe == nullptr && !layer.samples.empty()) targetSe = &layer.samples.front();
-        if (targetSe == nullptr || targetSe->sound == nullptr) continue;
-
-        // Fade out the old voice
-        voice->crossfadeOutSec(HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC);
-
-        // Start replacement voice with small offset to avoid attack transient
-        auto* newVoice = this->findFreeVoice(targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), voice->hitGroupId);
-        if (newVoice == nullptr) continue;
-        float vel = voice->getVelocityGain();
-        // Start voice; this will call startNote and set ADSR
-        this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
-
-        // skip initial attack portion of sample (start from small offset)
-        const double offsetSec = 0.02; // 20 ms offset to skip attack
-        double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-        const double offsetSamples = offsetSec * srcRate;
-        newVoice->setSourceSamplePosition(offsetSamples);
-        // set ADSR to minimal attack so it sounds continuous
-        newVoice->setAdsrParameters(0.001f, 0.01f, 0.9f, 0.05f);
-
-    }
-}
-
-void InstrumentSynth::noteOn(const int midiChannel, const int midiNoteNumber, const float velocity) {
-    juce::ignoreUnused(midiChannel, midiNoteNumber, velocity);
-    jassertfalse;
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
@@ -828,7 +758,6 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         return;
     }
     for (int i = 0; i < numSamples; ++i) {
-        
         //TODO: use peak offset for mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) first makke script to smart-parse from samples and save to filename
         // Process per-voice ducking for this block and get block gain
         const float chokeGain = this->chokeProcessor.getNextBlockGain();
@@ -878,5 +807,78 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     if (!this->adsr.isActive()) {
         // LOG(Debug, "adsr ended for sample " + (s->sampleVariantSpec ? s->sampleVariantSpec->sampleFile.getFileName() : "unknown") + " at pos " + juce::String(this->sourceSamplePosition) + " srcLen=" + juce::String(srcLen));
         this->clearCurrentNote();
+    }
+}
+
+
+void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) { //FIXME: this does not work
+    // Only handle hi-hat pedal crossfades here for now
+    if (this->getType() != KitLib::InstrumentSpec::Type::HiHat) return;
+
+    auto it = this->ccToArticulation.find(static_cast<int>(controllerNumber));
+    if (it == this->ccToArticulation.end()) return;
+
+    const auto& mapArr = it->second;
+    uint8_t newArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
+
+    // For each active voice, if its articulation differs from newArtIdx, crossfade
+    for (auto* voice : this->voices) {
+        if (voice == nullptr) continue;
+        if (!voice->isVoiceActive()) continue;
+
+        auto* ss = voice->getCurrentlyPlayingSound();
+        if (ss == nullptr || ss->sampleVariantSpec == nullptr) continue;
+
+        // Find articulation index for this voice by matching nameId/exprId
+        int currentArtIdx = -1;
+        for (size_t ai = 0; ai < this->runtimeArticulations.size(); ++ai) {
+            const auto& art = this->runtimeArticulations[ai];
+            if (art.nameId == ss->sampleVariantSpec->parent->parent->nameId && art.exprId == ss->sampleVariantSpec->parent->parent->exprId) {
+                currentArtIdx = static_cast<int>(ai);
+                break;
+            }
+        }
+        if (currentArtIdx == -1) continue;
+
+        if (currentArtIdx == static_cast<int>(newArtIdx)) continue; // already correct
+
+        // Now prepare to start a replacement voice from new articulation
+        const auto& newArt = this->runtimeArticulations[newArtIdx];
+        // choose layer by current voice velocity
+        int midiVel = static_cast<int>(juce::jlimit(0.0f, 1.0f, voice->getVelocityGain()) * 127.0f);
+        int layerIdx = newArt.velocityToLayer[midiVel];
+        if (layerIdx < 0 || layerIdx >= static_cast<int>(newArt.layers.size())) continue;
+        const auto& layer = newArt.layers[layerIdx];
+
+        // find variant index of current voice
+        uint8_t curVariant = 0;
+        if (ss->sampleVariantSpec) curVariant = KitLib::SampleVariantSpec::letterToIdx(ss->sampleVariantSpec->letter);
+
+        // find sample entry in target layer matching variant or fallback to first
+        const InstrumentSynth::SampleEntry* targetSe = nullptr;
+        for (const auto& se : layer.samples) {
+            if (se.variantIdx == curVariant) { targetSe = &se; break; }
+        }
+        if (targetSe == nullptr && !layer.samples.empty()) targetSe = &layer.samples.front();
+        if (targetSe == nullptr || targetSe->sound == nullptr) continue;
+
+        // Fade out the old voice
+        voice->crossfadeOutSec(HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC);
+
+        // Start replacement voice with small offset to avoid attack transient
+        auto* newVoice = this->findFreeVoice(targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), voice->hitGroupId);
+        if (newVoice == nullptr) continue;
+        float vel = voice->getVelocityGain();
+        // Start voice; this will call startNote and set ADSR
+        this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
+
+        // skip initial attack portion of sample (start from small offset)
+        const double offsetSec = 0.02; // 20 ms offset to skip attack
+        double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
+        const double offsetSamples = offsetSec * srcRate;
+        newVoice->setSourceSamplePosition(offsetSamples);
+        // set ADSR to minimal attack so it sounds continuous
+        newVoice->setAdsrParameters(0.001f, 0.01f, 0.9f, 0.05f);
+
     }
 }

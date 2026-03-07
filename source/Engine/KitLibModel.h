@@ -393,6 +393,7 @@ public:
 
     MetaInfo meta;
     std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>> instrumentSpecsMap;
+    const std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>>& getInstrumentSpecsMap() const { return this->instrumentSpecsMap; }
 };
 
 

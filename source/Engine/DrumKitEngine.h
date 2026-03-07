@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <memory>
 #include "InstrumentSynth.h"
 #include "LayoutManager.h"
 #include "SampleLoader.h"
@@ -44,12 +45,12 @@ public:
     static std::vector<std::pair<juce::String, juce::String>> parseInstrumentMapText(const juce::String& text);
 
     void mapDefaultKit();
-    void mapKit(KitLib::DrumKitSpec& kit);
+    void mapKit(const KitLib::DrumKitSpec& kit);
 
-    KitLib::LibraryManager* getInstrumentManager() { return this->libraryManagerPtr.get(); }
-    KitLayoutManager* getKitLayoutManager() { return this->kitLayoutManagerPtr.get(); }
-    MicLayoutManager* getMicLayoutManager() { return this->micLayoutManagerPtr.get(); }
-    SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
+    const KitLib::LibraryManager* getInstrumentManager() const { return this->libraryManagerPtr.get(); }
+    const KitLayoutManager* getKitLayoutManager() const { return this->kitLayoutManagerPtr.get(); }
+    const MicLayoutManager* getMicLayoutManager() const { return this->micLayoutManagerPtr.get(); }
+    const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
 
     const int getLatestContinuousControllerValue(const int ccNum) const {
         const auto& it = this->latestCCValueMap.find(ccNum);
@@ -78,7 +79,7 @@ public:
     void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }
     DebugLevel maxDebugLevel = DebugLevel::Error;
 
-    std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>>& getArticulationFallbackIdMap() { return this->articulationFallbackIdMap; }
+    const std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>>& getArticulationFallbackIdMap() const { return this->articulationFallbackIdMap; }
 
 private:
     Config globalConfig;

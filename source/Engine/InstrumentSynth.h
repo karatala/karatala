@@ -7,7 +7,9 @@
 #include "AftertouchChokeProcessor.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
-#include "DrumKitEngine.h"
+
+class DrumKitEngine;
+class SampleLoader;
 
 class SampledSound {
 public:
@@ -196,7 +198,6 @@ public:
     
     void handleMidiEvent(const juce::MidiMessage& midiMessage);
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
-    virtual void noteOn(int midiChannel, int midiNoteNumber, float velocity);
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
     void handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue) {
         const juce::ScopedLock sl(this->lock);
@@ -269,7 +270,8 @@ public:
     }
 
     const DrumKitEngine* getEngine() const { return this->parent; }
-    const MicLayout* getMicLayout() const { return this->parent->getMicLayout(); }
+    const MicLayout* getMicLayout() const;
+    const SampleLoader* getSampleLoader() const;
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
 
