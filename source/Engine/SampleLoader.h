@@ -103,8 +103,7 @@ public:
 
     void requestAsyncLoad(const juce::File& file, LoadCallback callback);
 
-    SampleLoaderQueue* getQueue() { return this->queuePtr.get(); }
-    SampleLoaderQueue* getQueue() const { return this->queuePtr.get(); }
+    SampleLoaderQueue& getQueue() { return *this->queuePtr; }
 
     void setCacheLimitBytes(size_t bytes) {
         std::lock_guard<std::mutex> lock(this->cacheMutex);

@@ -294,8 +294,8 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
         // }
     }
     // Start staged sample loading only after all instruments/articulations were enqueued
-    if (this->sampleLoaderPtr != nullptr && this->sampleLoaderPtr->getQueue() != nullptr) {
-        this->sampleLoaderPtr->getQueue()->startProcessing();
+    if (this->sampleLoaderPtr != nullptr) {
+        this->sampleLoaderPtr->getQueue().startProcessing();
     }
 }
 

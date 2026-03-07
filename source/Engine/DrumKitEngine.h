@@ -50,6 +50,7 @@ public:
     const KitLib::LibraryManager* getInstrumentManager() const { return this->libraryManagerPtr.get(); }
     const KitLayoutManager* getKitLayoutManager() const { return this->kitLayoutManagerPtr.get(); }
     const MicLayoutManager* getMicLayoutManager() const { return this->micLayoutManagerPtr.get(); }
+    SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
     const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
 
     const int getLatestContinuousControllerValue(const int ccNum) const {

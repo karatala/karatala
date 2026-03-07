@@ -32,6 +32,16 @@ public:
 };
 
 
+/**
+ Lifecycle note for voices:
+    - If `stopNote(true)` is called the voice will be placed into its ADSR release
+    phase (via `adsr.noteOff()`) and will remain "active" until the ADSR reports
+    it is no longer active. The voice is actually freed (marked available) when
+    the subclass/voice rendering loop detects `adsr.isActive()` == false and
+    calls `clearCurrentNote()` (see `InstrumentSynthVoice::renderNextBlock`).
+    - If `stopNote(false)` is called the ADSR is reset and `clearCurrentNote()`
+    is called immediately, so the voice becomes available right away.
+*/
 class InstrumentSynthVoice {
 public:
     InstrumentSynthVoice() {}
@@ -50,12 +60,12 @@ public:
     void aftertouchChanged (int newValue);
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples);
     AftertouchChokeProcessor chokeProcessor;
-    void setSourceSamplePosition(double pos) { this->sourceSamplePosition = pos; }
     void setAdsrParameters(float attack, float decay, float sustain, float release) { this->adsr.setParameters({attack, decay, sustain, release}); }
-    // Helpers for crossfade/voice management
+
+    
     float getVelocityGain() const { return this->velocityGain; }
     void setVelocityGain(float value) { this->velocityGain = value; }
-    void crossfadeOutSec(float ms);
+    void fadeOutSec(float ms);
 
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
 
@@ -80,7 +90,7 @@ public:
         this->currentPlayingMidiChannel = 0;
     }
 
-    void applyTailShortening(float factor) {
+    void applyTailShortening(float factor) {//FIXME ADSR
         // clamp 0.1 .. 1.0
         factor = juce::jlimit(0.1f, 1.0f, factor);
         if (factor >= this->tailShortenFactor)
@@ -89,7 +99,7 @@ public:
 
         juce::ADSR::Parameters p = this->adsr.getParameters();
         p.release = this->releaseTimeSec * this->tailShortenFactor;
-        this->adsr.setParameters(p);
+        this->adsr.setParameters(p);//FIXME ADSR
     }
 
 private:
@@ -107,10 +117,10 @@ private:
 
     double noteOnTimeMs = 0.0;//TODO: RM
 
-    double releaseStartTimeMs = 0.0;
+    // double releaseStartTimeMs = 0.0;
     SampledSound* currentlyPlayingSound = nullptr;
 
-    float attackTimeSec = 0.005f;
+    float attackTimeSec = 0.001f;
     float releaseTimeSec = 0.1f;
 
 public:
@@ -198,6 +208,13 @@ public:
     
     void handleMidiEvent(const juce::MidiMessage& midiMessage);
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
+    int resolveArticulation(int midiNoteNumber);
+    int resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity);
+    bool startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
+    void fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity);
+    void startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity);
+    void applyAftertouch(int midiChannel, int midiNoteNumber);
+
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
     void handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue) {
         const juce::ScopedLock sl(this->lock);
@@ -246,10 +263,9 @@ public:
         voice->startNote(midiNoteNumber, velocity, sound);
     }
     
-    void stopVoice(InstrumentSynthVoice* voice, const bool allowTailOff) {
+    void stopVoice(InstrumentSynthVoice* voice, const bool allowTailOff) { //unused
         jassert(voice != nullptr);
         voice->stopNote(allowTailOff);
-        // the subclass MUST call clearCurrentNote() if it's not tailing off! RTFM for stopNote()!
         jassert(allowTailOff || (voice->getCurrentlyPlayingNote() < 0 && voice->getCurrentlyPlayingSound() == nullptr));
     }
     void setCurrentPlaybackSampleRate(const double newRate) {
@@ -271,7 +287,7 @@ public:
 
     const DrumKitEngine* getEngine() const { return this->parent; }
     const MicLayout* getMicLayout() const;
-    const SampleLoader* getSampleLoader() const;
+    SampleLoader* getSampleLoader();
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
 
@@ -298,7 +314,7 @@ public:
 
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const;
 
-    void applyAdaptiveTailCompression() {
+    void applyAdaptiveTailCompression() { //unused
         const int activeVoices = [&]() {
             int c = 0;
             for (auto* v : this->voices)
@@ -396,6 +412,8 @@ private:
     void mapNotesToArticulation(const LayoutArticulation& layoutArt);
     void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
+
+    uint8_t chooseVariantGroup(VelocityLayerRuntime& layer);
 
     KitLib::ArticulationSpec* resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt);
 };
