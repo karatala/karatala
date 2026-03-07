@@ -23,7 +23,7 @@ parser = argparse.ArgumentParser(
     formatter_class=argparse.RawTextHelpFormatter,
     epilog=textwrap.dedent("""
     Example:
-      python analyze_drum_samples.py -i "C:\\samples"
+      python .\\scripts\\analyze_drum_samples.py -i C:\\Users\\Public\\Documents\\Karatala\\sample_library
       python analyze_drum_samples.py -i "./samples" -o results.csv
 
     If required packages are missing, install them with:
@@ -71,6 +71,7 @@ def dbfs(x: np.ndarray) -> np.ndarray:
 def get_envelope(signal: np.ndarray) -> np.ndarray:
     return np.abs(hilbert(signal))
 
+
 def smooth_envelope(env: np.ndarray, sr: int, window_ms: float = 5.0):
     win = int(sr * window_ms / 1000.0)
     if win < 1:
@@ -79,23 +80,44 @@ def smooth_envelope(env: np.ndarray, sr: int, window_ms: float = 5.0):
     return np.convolve(env, kernel, mode="same")
 
 
+def detect_transient_sample(signal: np.ndarray, sr: int):
+    hop = 256
+    n_fft = 1024
+
+    stft = np.abs(librosa.stft(signal, n_fft=n_fft, hop_length=hop))
+
+    flux = np.diff(stft, axis=1)
+    flux = np.maximum(flux, 0)
+    flux = np.sum(flux, axis=0)
+
+    flux /= np.max(flux) + 1e-9
+
+    thresh = 0.3
+
+    for i, v in enumerate(flux):
+        if v > thresh:
+            return i * hop
+
+    return 0
+
+
 def analyze_adsr(signal: np.ndarray, sr: int):
+
+    transient_idx = detect_transient_sample(signal, sr)
+
     env = get_envelope(signal)
-
     env = smooth_envelope(env, sr)
-
     env /= np.max(env) + 1e-9
 
     peak_idx = int(np.argmax(env))
 
-    # attack = start → 90% peak
-    attack_end = 0
-    for i in range(peak_idx + 1):
+    attack_end = peak_idx
+    for i in range(transient_idx, peak_idx):
         if env[i] >= 0.9:
             attack_end = i
             break
 
-    attack_ms = attack_end / sr * 1000.0
+    attack_ms = (attack_end - transient_idx) / sr * 1000.0
 
     silence_thresh = 10 ** (SILENCE_THRESHOLD_DB / 20.0)
 
@@ -112,7 +134,8 @@ def analyze_adsr(signal: np.ndarray, sr: int):
 
     return attack_ms, decay_ms, peak_idx
 
-def dominant_frequency(signal: np.ndarray, sr: int) -> float:
+
+def dominant_frequency(signal: np.ndarray, sr: int):
     if len(signal) < 512:
         return 0.0
 
@@ -123,16 +146,9 @@ def dominant_frequency(signal: np.ndarray, sr: int) -> float:
     return float(freqs[np.argmax(spectrum)])
 
 
-def detect_resonance_frequency(
-    signal: np.ndarray,
-    sr: int,
-    start_idx: int,
-    min_freq: float = RESONANCE_MIN_HZ,
-    max_freq: float = RESONANCE_MAX_HZ,
-    window_ms: float = RESONANCE_WINDOW_MS,
-):
-    n_samples = int(sr * window_ms / 1000.0)
-    tail = signal[start_idx : start_idx + n_samples]
+def detect_resonance_frequency(signal, sr, start_idx):
+    n_samples = int(sr * RESONANCE_WINDOW_MS / 1000.0)
+    tail = signal[start_idx:start_idx + n_samples]
 
     if len(tail) < 512:
         return None
@@ -141,12 +157,13 @@ def detect_resonance_frequency(
     spectrum = np.abs(np.fft.rfft(tail * window))
     freqs = np.fft.rfftfreq(len(tail), 1.0 / sr)
 
-    band_mask = (freqs >= min_freq) & (freqs <= max_freq)
-    if not np.any(band_mask):
+    mask = (freqs >= RESONANCE_MIN_HZ) & (freqs <= RESONANCE_MAX_HZ)
+
+    if not np.any(mask):
         return None
 
-    spectrum = spectrum[band_mask]
-    freqs = freqs[band_mask]
+    spectrum = spectrum[mask]
+    freqs = freqs[mask]
 
     return float(freqs[np.argmax(spectrum)])
 
@@ -155,6 +172,7 @@ def detect_resonance_frequency(
 # =========================
 
 files = []
+
 for root, _, filenames in os.walk(INPUT_FOLDER, followlinks=True):
     print(f"[DEBUG] Checking folder: {root}")
     for fname in filenames:
@@ -174,6 +192,7 @@ for path in files:
         audio = np.mean(audio, axis=1)
 
     meter = pyln.Meter(sr)
+
     try:
         lufs = meter.integrated_loudness(audio)
     except ValueError:

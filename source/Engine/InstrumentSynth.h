@@ -7,9 +7,7 @@
 #include "AftertouchChokeProcessor.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
-
-
-class DrumKitEngine;
+#include "DrumKitEngine.h"
 
 class SampledSound {
 public:
@@ -270,7 +268,8 @@ public:
                 voice->stopNote(allowTailOff);
     }
 
-    DrumKitEngine* getEngine() { return this->parent; }
+    const DrumKitEngine* getEngine() const { return this->parent; }
+    const MicLayout* getMicLayout() const { return this->parent->getMicLayout(); }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
 
@@ -400,22 +399,3 @@ private:
 };
 
 
-class MicRoutingBuilder {
-public:
-    MicRoutingBuilder(InstrumentSynth* synth) : synth(synth) {}
-    void build(KitLib::ArticulationSpec* artSpec, std::vector<int>& micStarts, std::vector<int>& micChannels, int& unmatchedStart);
-    int getVariant(size_t& index) {
-        if (index >= this->allVariants.size()) return -1;
-        return this->allVariants[index].second; 
-    }
-private:
-    void collectMicEntries();
-    void assignVariants(KitLib::ArticulationSpec* artSpec);
-    void computeMicGroups(std::vector<int>& micStarts, std::vector<int>& micChannels, int& unmatchedStart);
-
-    InstrumentSynth* synth = nullptr;
-    std::vector<const MicLayout::Mic*> micEntriesForInst;
-    std::vector<std::pair<const KitLib::SampleVariantSpec*, int>> allVariants; // keep order for assignment
-    std::unordered_map<size_t, int> variantsPerMic; // index in micEntriesForInst -> count
-    int unmatchedVariantCount = 0;
-};
