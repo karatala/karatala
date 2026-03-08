@@ -44,7 +44,17 @@ int8_t InstrumentSynth::findArticulationIndex(StringsDictSingleton::Id nameId, S
     return -1;
 }
 
+
 void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpec) {
+
+    LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + instSpec->meta.codeRaw + ":");
+    for (const auto& artSpec : instSpec->articulationSpecs) {
+        juce::String dims;
+        for (const auto& dim : artSpec->expressionDimensions)
+            dims += "[" + dim->typeToString(dim->type) + ", " + midiVectorToString(dim->values) + "]";
+        LOG(Debug, "  nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " exprDims=" + dims + " artSpec=" + artSpec->codeRaw);
+    }
+
     for (const auto& layoutArt : this->instrumentSlot.articulations) {
         LOG(Info, "  Loading articulation: " + layoutArt.codeRaw + " (notes " + midiVectorToString(layoutArt.notes) + ")");
 
@@ -57,7 +67,7 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
         } else {
             LOG(Warning, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no suitable articulations for '" + this->instrumentSlot.id + "' '" + layoutArt.codeRaw + "'");
         }
-    this->processCcDimensions(foundCcDimensions);
+        this->processCcDimensions(foundCcDimensions);
     }
 }
 
@@ -180,42 +190,68 @@ void InstrumentSynth::mapNotesToArticulation(const LayoutArticulation& layoutArt
 }
 
 void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions) {
+
+    { // Debug: report articulation and its expression dimensions
+        auto code = artSpec->codeRaw;
+        LOG(Debug, "buildCcMappings: processing artSpec=" + code + " nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " layoutArt=" + layoutArt.codeRaw);
+        if (artSpec->expressionDimensions.empty()) {
+            LOG(Debug, "buildCcMappings: artSpec has no expressionDimensions");
+        } else {
+            juce::String dims;
+            for (const auto& dim : artSpec->expressionDimensions)
+                dims += "[" + dim->typeToString(dim->type) + ", " + midiVectorToString(dim->values) + "]";
+            LOG(Debug, "buildCcMappings: expressionDimensions=" + dims);
+        }
+    }
+
     for (const auto& cc : this->instrumentSlot.controllers) {
         for (uint8_t note : cc.notes) {
             auto ccNum = static_cast<uint8_t>(cc.number);
             auto& vec = this->noteToControllers[note];
-
             if (std::find(vec.begin(), vec.end(), ccNum) == vec.end())
                 vec.emplace_back(ccNum);
         }
 
         // only controllers with notes that are linked to this articulation
         if (containsSameValue(cc.notes, layoutArt.notes)) {
+            LOG(Debug, "buildCcMappings: controller " + juce::String((int)cc.number) + " {num=" + juce::String((int)cc.number) + ",codeIdx=" + juce::String((int)cc.codeIdx) + ", notes=" + midiVectorToString(cc.notes) + "} applies to articulation " + layoutArt.codeRaw + " (layoutArt.notes=" + midiVectorToString(layoutArt.notes) + ")");
             // store refs for dimensions to process later
             for (const auto& expDim : artSpec->expressionDimensions) {
                 if (expDim->type == cc.codeIdx) {
                     for (const auto& val : expDim->values) {
                         auto ccNum = static_cast<uint8_t>(cc.number);
-                        const auto pair = std::make_pair(
-                            static_cast<int8_t>(val),
-                            static_cast<int8_t>(this->runtimeArticulations.size())
-                        );
+                        const auto artIdx = static_cast<int8_t>(this->runtimeArticulations.size());
+                        const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
                         auto& vec = foundCcDimensions[ccNum];
-                        vec.emplace_back(pair);
-                        LOG(Debug, "buildCcMappings: cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " artIdx=" + juce::String((int)this->runtimeArticulations.size()) + " layoutArt=" + layoutArt.codeRaw);
+                        // avoid inserting identical (value,artIdx) duplicates
+                        // if (std::find(vec.begin(), vec.end(), pair) == vec.end()) {
+                            vec.emplace_back(pair);
+                            LOG(Debug, "buildCcMappings: cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " (artIdx=" + juce::String(artIdx) + ") layoutArt=" + layoutArt.codeRaw);
+                        // } else {
+                        //     LOG(Warning, "buildCcMappings: skipping duplicate mapping cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " (artIdx=" + juce::String(artIdx) + ") layoutArt=" + layoutArt.codeRaw);
+                        // }
                     }
                 }
             }
+        // } else {
+        //     LOG(Debug, "buildCcMappings: controller " + juce::String((int)cc.number) + " does NOT apply to articulation " + layoutArt.codeRaw);
         }
     }
 }
-
 void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
     for (auto&[ccNum, valArtPairs] : foundCcDimensions) {
         LOG(Debug, "processCcDimensions: CC " + juce::String((int)ccNum) + " has " + juce::String((int)valArtPairs.size()) + " mappings");
         std::sort(valArtPairs.begin(), valArtPairs.end(), [](auto& a, auto& b){
             return a.first < b.first;
         });
+        // std::sort(valArtPairs.begin(), valArtPairs.end(), [](auto& a, auto& b){
+        //     if (a.first != b.first) return a.first < b.first;
+        //     return a.second < b.second; // tie-breaker by articulation index for determinism
+        // });
+        // // remove exact duplicates (same threshold and same artIdx)
+        // valArtPairs.erase(std::unique(valArtPairs.begin(), valArtPairs.end(), [](const auto& a, const auto& b){
+        //     return a.first == b.first && a.second == b.second;
+        // }), valArtPairs.end());
         std::array<uint8_t, 128> map;
         const int8_t count = static_cast<uint8_t>(valArtPairs.size());
 
@@ -231,10 +267,10 @@ void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
         }
         this->ccToArticulation[ccNum] = map;
         // log condensed mapping: thresholds -> articulation index
-        std::string summary;
+        juce::String summary;
         for (size_t i = 0; i < valArtPairs.size(); ++i) {
             if (i) summary += ",";
-            summary += "(" + std::to_string((int)valArtPairs[i].first) + ":" + std::to_string((int)valArtPairs[i].second) + ")";
+            summary += "(" + juce::String((int)valArtPairs[i].first) + ":" + this->getArtName(valArtPairs[i].second) + " (artIdx=" + juce::String(valArtPairs[i].second) + "))";
         }
         LOG(Debug, "processCcDimensions: CC " + juce::String((int)ccNum) + " thresholds: " + summary);
     }
@@ -271,6 +307,8 @@ KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::Instr
 }
 
 
+
+
 /*================================================================
    instrument runtime
 ================================================================*/
@@ -288,7 +326,7 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
         auto ccNum = static_cast<uint8_t>(midiMessage.getControllerNumber());
 
         if (this->ccToArticulation.find(ccNum) == this->ccToArticulation.end()) return;
-        this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue());
+        // this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue()); //FIXME: tmp disabled
     }
 
     else if (midiMessage.isAftertouch())
@@ -321,7 +359,9 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
     int artIdx = this->resolveArticulation(midiNoteNumber);
-    if (artIdx < 0 || artIdx >= static_cast<int>(this->runtimeArticulations.size())) {
+    if (artIdx >= 0 && artIdx < static_cast<int>(this->runtimeArticulations.size())) {
+        LOG(Debug, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
+    } else {
         // LOG(Warning, "InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
     }
@@ -369,7 +409,7 @@ int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
                 const auto& mapArr = artIt->second;
 
                 artIdx = (int)mapArr[ccVal];
-                LOG(Debug, "CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + juce::String(artIdx) + " for note " + juce::String(midiNoteNumber) );
+                LOG(Debug, "CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ") for note " + juce::String(midiNoteNumber) );
             }
         }
     }

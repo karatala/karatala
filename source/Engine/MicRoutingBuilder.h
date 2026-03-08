@@ -133,7 +133,7 @@ private:
             int cnt = this->variantsPerMic.count(i) ? this->variantsPerMic[i] : 0;
             debug += "[" + juce::String(i) + "]:" + juce::String(cnt);
         }
-        debug += "unmatched=" + juce::String(this->unmatchedVariantCount);
+        debug += ". " + juce::String(this->unmatchedVariantCount) + " unmatched";
         LOG(Debug, debug);
     }
 

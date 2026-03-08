@@ -184,23 +184,23 @@ void SampleLoaderQueue::workerLoop() {
 
             // Decrement per-stage in-flight counter and if this was the last
             // in-flight task for the stage, emit a single aggregated log.
-            try {
-                const int prev = this->stageInFlightCount[stageIdx].fetch_sub(1);
-                if (prev == 1) {
-                    std::chrono::steady_clock::time_point start;
-                    int dispatched = 0;
-                    {
-                        std::lock_guard<std::mutex> g(this->stageTimeMutex);
-                        start = this->stageFirstDispatchTime[stageIdx];
-                        this->stageFirstDispatchTime[stageIdx] = std::chrono::steady_clock::time_point();
-                    }
-                    dispatched = this->stageDispatchedCount[stageIdx].exchange(0);
-                    if (start != std::chrono::steady_clock::time_point()) {
-                        const double secs = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - start).count();
-                        LOG(Info, "SampleLoaderQueue: stage " + juce::String((int)taskStage) + " finished " + juce::String(secs, 3) + "s for " + juce::String(dispatched) + " files");
-                    }
-                }
-            } catch (...) {}
+            // try {
+            //     const int prev = this->stageInFlightCount[stageIdx].fetch_sub(1);
+            //     if (prev == 1) {
+            //         std::chrono::steady_clock::time_point start;
+            //         int dispatched = 0;
+            //         {
+            //             std::lock_guard<std::mutex> g(this->stageTimeMutex);
+            //             start = this->stageFirstDispatchTime[stageIdx];
+            //             this->stageFirstDispatchTime[stageIdx] = std::chrono::steady_clock::time_point();
+            //         }
+            //         dispatched = this->stageDispatchedCount[stageIdx].exchange(0);
+            //         if (start != std::chrono::steady_clock::time_point()) {
+            //             const double secs = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - start).count();
+            //             LOG(Info, "SampleLoaderQueue: stage " + juce::String((int)taskStage) + " finished " + juce::String(secs, 3) + "s for " + juce::String(dispatched) + " files");
+            //         }
+            //     }
+            // } catch (...) {}
         });
 
         // small pause to avoid saturating threadpool instantly
@@ -283,7 +283,7 @@ juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
         if (loader.currentCacheBytes + bytes <= loader.cacheLimitBytes) {
             loader.cache[cacheKey] = buffer;
             loader.currentCacheBytes += bytes;
-            LOG(Debug, "SampleLoader::LoadJob: cached " + file.getFullPathName() + " (" + juce::String(bytes) + " bytes)");
+            // LOG(Debug, "SampleLoader::LoadJob: cached " + file.getFullPathName() + " (" + juce::String(bytes) + " bytes)");
         }
     }
 

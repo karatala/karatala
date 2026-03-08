@@ -312,7 +312,14 @@ public:
 
     const juce::String& getId() const { return id; }
 
-    int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const;
+    int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const; //FIXME: unused
+
+    juce::String getArtName(const int artIdx) const {
+        const auto& art = this->runtimeArticulations[artIdx];
+        juce::String artLabel = StringsDictSingleton::nameOf(art.nameId);
+        if (art.exprId != 0) artLabel += "[" + StringsDictSingleton::nameOf(art.exprId) + "]";
+        return artLabel;
+    }
 
     void applyAdaptiveTailCompression() { //unused
         const int activeVoices = [&]() {
