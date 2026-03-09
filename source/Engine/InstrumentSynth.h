@@ -152,6 +152,8 @@ class MicRoutingBuilder;
 
 class InstrumentSynth {
 public:
+    using ArtRtIdx = int8_t;
+    using VelLayerIdx = int8_t;
 
     // Runtime data structures built at loadInstrument() (non-realtime)
     struct SampleEntry {
@@ -167,14 +169,36 @@ public:
     };
 
     struct ArticulationRuntime {
+        juce::String codeRaw; //FIXME: remove after debugged or hide under something like ifdef DEBUG_SOMETHING
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
         // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
-        std::array<int8_t, 128> velocityToLayer; // -1 means no layer
+        std::array<VelLayerIdx, 128> velocityToLayer; // -1 means no layer
         std::vector<VelocityLayerRuntime> layers;
 
         explicit ArticulationRuntime(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) : nameId(nameId), exprId(exprId) {
             velocityToLayer.fill(-1);
+            
+            //FIXME: remove after debugged or hide under something like ifdef DEBUG_SOMETHING
+            this->codeRaw = StringsDictSingleton::nameOf(nameId);
+            if (exprId != 0) this->codeRaw += "[" + StringsDictSingleton::nameOf(exprId) + "]";
+        }
+
+        // choose the first layer whose configured velocity is >= current velocity.
+        // Example: layers {27,52,77,102,127} -> 0..27->0, 28..52->1, 53..77->2, 78..102->3, 103..127->4
+        void buildVelocityMapping() {
+            if (this->layers.empty()) return;
+            const auto count = static_cast<VelLayerIdx>(this->layers.size());
+            for (uint8_t value = 0; value <= MIDI_MAX_VALUE; ++value) {
+                VelLayerIdx chosen = this->layers[count - 1].velocity == 0; // default to last layer
+                for (VelLayerIdx idx = 0; idx < count; ++idx) {
+                    if (value <= this->layers[idx].velocity) {
+                        chosen = idx;
+                        break;
+                    }
+                }
+                this->velocityToLayer[value] = chosen;
+            }
         }
     };
 
@@ -320,6 +344,13 @@ public:
         if (art.exprId != 0) artLabel += "[" + StringsDictSingleton::nameOf(art.exprId) + "]";
         return artLabel;
     }
+    ArtRtIdx getOrAddRuntimeArticulationIdx(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) {
+        for (size_t i = 0; i < this->runtimeArticulations.size(); ++i)
+            if (this->runtimeArticulations[i].nameId == nameId && this->runtimeArticulations[i].exprId == exprId)
+                return static_cast<ArtRtIdx>(i);
+        this->runtimeArticulations.emplace_back(nameId, exprId);
+        return static_cast<ArtRtIdx>(this->runtimeArticulations.size() - 1);
+    }
 
     void applyAdaptiveTailCompression() { //unused
         const int activeVoices = [&]() {
@@ -378,9 +409,13 @@ private:
 
     juce::AudioBuffer<float> tempBuffer;
 
+
+    using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
+    using CcDimensionsMap = std::unordered_map<int8_t, std::vector<std::pair<int8_t, int8_t>>>;
+
     // Runtime optimized tables for fast selection (populated by loadInstrument)
     // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
-    std::array<int8_t, 128> noteToArticulation;
+    std::array<ArtRtIdx, 128> noteToArticulation;
     // Runtime articulations vector, index-stable after load
     std::vector<ArticulationRuntime> runtimeArticulations;
     
@@ -396,18 +431,17 @@ private:
     // Velocity of the note currently being requested (0..1). Used by custom stealing logic.
     mutable std::atomic<float> lastRequestedVelocity{0.0f};
 
-    using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
-    using CcDimensionsMap = std::unordered_map<int8_t, std::vector<std::pair<int8_t, int8_t>>>;
 
     void processLayoutArticulations(KitLib::InstrumentSpec* instSpec);
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec
         , ArticulationRuntime& artRt
+        , ArtRtIdx artRtIdx
         , CcDimensionsMap& foundCcDimensions
     );
     void createVelocityLayers(KitLib::InstrumentSpec* instSpec
-        , const LayoutArticulation& layoutArt
+        , const KitLayout::MidiNotes& notes
         , KitLib::ArticulationSpec* artSpec
         , ArticulationRuntime& artRt
         , const std::vector<int>& micStarts
@@ -415,8 +449,6 @@ private:
         , int& unmatchedStart
         , MicRoutingBuilder& micRouting
     );
-    void buildVelocityMapping(ArticulationRuntime& artRt);
-    void mapNotesToArticulation(const LayoutArticulation& layoutArt);
     void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
 

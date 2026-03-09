@@ -76,6 +76,7 @@ public:
                         this->targetGain = 0.0f;
                     } else {
                         this->state = State::Idle; //FIXME: why never reached?
+                        jassertfalse;
                     }
                 }
                 break;
@@ -133,6 +134,7 @@ private:
     void moveTowards(float newTarget, float timeSec) {
         if (timeSec <= 0.0f) {
             this->currentGain = newTarget; //FIXME: why never reached?
+            jassertfalse;
             return;
         }
         const float step = (newTarget - this->currentGain) / (timeSec * static_cast<float>(this->sampleRate));

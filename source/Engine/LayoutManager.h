@@ -8,10 +8,11 @@
 #include <map>
 
 struct KitLayout {
+    using MidiNotes = std::vector<uint8_t>;
     struct InstrumentSlot {
         struct ArticulationTrigger {
             juce::String codeRaw; // center, rim, edge, bow, pedal, etc.
-            std::vector<uint8_t> notes; // midi notes triggering this articulation
+            MidiNotes notes; // midi notes triggering this articulation
             StringsDictSingleton::Id exprId = 0;
             StringsDictSingleton::Id nameId = 0;
             // KitLib::ArticulationSpec::ExpressionDimension::Type type = KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown;
@@ -27,7 +28,7 @@ struct KitLayout {
         struct ContinuousController {
             int number = -1;
             juce::String codeRaw; // pdl_opn_cls, zon_ctr_rim, zon_bow_edg, ...
-            std::vector<uint8_t> notes;
+            MidiNotes notes;
             
             explicit ContinuousController(int number, juce::String codeRaw) : number(number), codeRaw(codeRaw)
                 , codeIdx(KitLib::ArticulationSpec::ExpressionDimension::stringToType(codeRaw))

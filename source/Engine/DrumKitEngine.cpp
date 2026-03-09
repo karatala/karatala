@@ -174,7 +174,8 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
     if (instrumentMap.isEmpty()) {
         this->mapDefaultKit();
     } else {
-        // this->useInstrumentMap(instrumentMap);
+        // this->useInstrumentMap(instrumentMap); //TODO: implement
+         LOG(Warning, "Custom instrument map not supported yet, ignoring");
     }
 }
 
@@ -283,15 +284,6 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
 
         slot->loadInstrument(matched); //TODO: wrap in performance measuring block
         usedInstSpecSet.insert(matched);
-
-        //FIXME: map MIDI notes for articulations?? WHY? isnt it already done
-        // for (const auto& art : layoutInstrument.articulations) {
-        //     for (int note : art.notes) {
-        //         auto& vec = instrumentSynthsByNote[note];
-        //         if (std::find(vec.begin(), vec.end(), slot) == vec.end())
-        //             vec.push_back(slot);
-        //     }
-        // }
     }
     // Start staged sample loading only after all instruments/articulations were enqueued
     if (this->sampleLoaderPtr != nullptr) {
@@ -299,7 +291,8 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
     }
 }
 
-//TODO: Each non-empty, non-comment line should be: <slotId>:<KitName>/<InstrumentCode>:<params? like tuning, fx chain, etc> //FIXME: make parser return structured ParseResult<DataObjectToBeDefined> 
+//TODO: Each non-empty, non-comment line should be: <slotId>:<KitName>/<InstrumentCode>:<params? like tuning, fx chain, etc>
+//FIXME: make parser return structured ParseResult<DataObjectToBeDefined> 
 std::vector<std::pair<juce::String, juce::String>> DrumKitEngine::parseInstrumentMapText(const juce::String& text) { 
     std::vector<std::pair<juce::String, juce::String>> result;
     const juce::StringArray lines = juce::StringArray::fromLines(text);
@@ -606,7 +599,7 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
                 mappingUsed = true;
             }
             if (dest < 0 || dest >= outCh) {
-                // FIXME: remove logs from loops and audio thread
+                // FIXME: remove logs from loops in audio thread
                 if (mappingUsed && !juce::JUCEApplicationBase::isStandaloneApp())
                     LOG(Warning, "Instrument '" + instrumentSynthPtr->getId() + "' mapping for mic channel " + juce::String(c) + " -> host index " + juce::String(dest) + " is out of range (host channels=" + juce::String(outCh) + "). Falling back to wrap index.");
 
@@ -645,7 +638,6 @@ void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer&
         this->latestPAValueMap[note] = msg.getAfterTouchValue();
     }
 }
-
 
 // bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
 //     if (text.trim().isEmpty()) {
