@@ -8,6 +8,13 @@
 #include "KitLibModel.h"
 #include "LayoutManager.h"
 
+// Tail-shortening / adaptive release control tuning constants
+static constexpr float INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD = 0.5f; // start applying when load >= 70%
+static constexpr float INSTRUMENT_TAIL_SHORTEN_AGE_MULTIPLIER = 0.02f; // age multiplier (note-on count -> 0..1)
+static constexpr float INSTRUMENT_TAIL_SHORTEN_AMP_PROTECT = 0.6f; // voices louder than this are protected
+static constexpr float INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR = 0.3f; // minimum shorten factor at full load
+static constexpr float VOICE_TAIL_SHORTEN_MIN_CLAMP = 0.1f; // voice-level clamp for shortening factor
+
 class DrumKitEngine;
 class SampleLoader;
 
@@ -53,7 +60,6 @@ public:
     void setCurrentPlaybackSampleRate (const double newRate) { this->currentSampleRate = newRate; }
     void stopNote(bool allowTailOff);
 
-    bool canPlaySound(SampledSound* sound) { return sound != nullptr; }
     void startNote(int midiNoteNumber, float velocity, SampledSound* sound);
     bool isPlayingChannel (const int midiChannel) const { return this->currentPlayingMidiChannel == midiChannel; }
 
@@ -70,14 +76,6 @@ public:
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
 
     bool wasStartedBefore(const InstrumentSynthVoice& other) const noexcept { return this->noteOnTime < other.noteOnTime; }
-    
-    // True while the voice is in the initial attack portion after a note-on
-    bool isAttackHold() const noexcept {
-        if (!this->isVoiceActive()) return false;
-        const double nowMs = juce::Time::getMillisecondCounterHiRes();
-        return (nowMs - this->noteOnTimeMs) < this->attackTimeSec;
-    }
-
 
     bool isPlayingButReleased() const noexcept {
         if (!this->isVoiceActive()) return false;
@@ -90,16 +88,15 @@ public:
         this->currentPlayingMidiChannel = 0;
     }
 
-    void applyTailShortening(float factor) {//FIXME ADSR
-        // clamp 0.1 .. 1.0
-        factor = juce::jlimit(0.1f, 1.0f, factor);
+    void setTailShorteningFactor(float factor) {
+        factor = juce::jlimit(VOICE_TAIL_SHORTEN_MIN_CLAMP, 1.0f, factor);
         if (factor >= this->tailShortenFactor)
             return; // never lengthen here, only shorten
         this->tailShortenFactor = factor;
 
         juce::ADSR::Parameters p = this->adsr.getParameters();
         p.release = this->releaseTimeSec * this->tailShortenFactor;
-        this->adsr.setParameters(p);//FIXME ADSR
+        this->adsr.setParameters(p); //FIXME ADSR
     }
 
 private:
@@ -113,9 +110,6 @@ private:
 
     double currentSampleRate = 44100.0;
     juce::uint32 noteOnTime = 0;
-
-
-    double noteOnTimeMs = 0.0;//TODO: RM
 
     // double releaseStartTimeMs = 0.0;
     SampledSound* currentlyPlayingSound = nullptr;
@@ -265,13 +259,12 @@ public:
         }
         return voice;
     }
-    InstrumentSynthVoice* findFreeVoice(SampledSound* soundToPlay, int midiChannel, int midiNoteNumber, const int groupId) const {
+    InstrumentSynthVoice* findFreeVoice(int midiChannel, int midiNoteNumber, const int groupId) const {
         const juce::ScopedLock sl(this->lock);
         for (auto* voice : this->voices)
-            if ((!voice->isVoiceActive()) && voice->canPlaySound(soundToPlay))
-                return voice;
+            if (!voice->isVoiceActive()) return voice;
         // LOG(Debug, "No free voice -> attempting steal for note " + juce::String(midiNoteNumber));
-        return this->findVoiceToSteal(soundToPlay, midiChannel, midiNoteNumber, groupId);
+        return this->findVoiceToSteal(midiChannel, midiNoteNumber, groupId);
     }
 
     void startVoice(InstrumentSynthVoice* const voice, SampledSound* const sound, const int midiChannel, const int midiNoteNumber, const float velocity) {
@@ -318,10 +311,7 @@ public:
     void renderNextBlock(juce::AudioBuffer<float>& outputAudio, const juce::MidiBuffer& inputMidi, int startSample, int numSamples);
     void renderVoices(juce::AudioBuffer<float>& buffer, int startSample, int numSamples);
 
-    // Custom voice stealing logic: we use lastRequestedVelocity to prefer stealing
-    // quiet/released voices over loud ones when deciding which voice to steal.
-    InstrumentSynthVoice* findVoiceToSteal(SampledSound* soundToPlay, int midiNoteNumber) const;
-    InstrumentSynthVoice* findVoiceToSteal(SampledSound* soundToPlay, int midiChannel, int midiNoteNumber, int groupId) const;
+    InstrumentSynthVoice* findVoiceToSteal(int midiChannel, int midiNoteNumber, int groupId) const;
 
     int getMicChannelCount() const { return mMicChannelCount; }
 
@@ -336,8 +326,15 @@ public:
 
     const juce::String& getId() const { return id; }
 
-    int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const; //FIXME: unused
-
+    int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
+        const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
+        for (int8_t i = 0; i < count; ++i) {
+            const auto& artRt = this->runtimeArticulations[i];
+            if (artRt.nameId == nameId && artRt.exprId == exprId)
+                return i;
+        }
+        return -1;
+    }
     juce::String getArtName(const int artIdx) const {
         const auto& art = this->runtimeArticulations[artIdx];
         juce::String artLabel = StringsDictSingleton::nameOf(art.nameId);
@@ -352,7 +349,7 @@ public:
         return static_cast<ArtRtIdx>(this->runtimeArticulations.size() - 1);
     }
 
-    void applyAdaptiveTailCompression() { //unused
+    void applyAdaptiveTailShortening() {
         const int activeVoices = [&]() {
             int c = 0;
             for (auto* v : this->voices)
@@ -362,31 +359,24 @@ public:
         }();
 
         const int maxVoices = this->voices.size();
-
-        if (activeVoices < maxVoices * 0.7f)
-            return; // no need
-
+        if (activeVoices < maxVoices * INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD) return; // no need
         const float load = static_cast<float>(activeVoices) / static_cast<float>(maxVoices);
-
-        // load 0.7 → 1.0 maps to compression 1.0 → 0.3
-        const float compression = juce::jmap(load, 0.7f, 1.0f, 1.0f, 0.3f);
-
+        // load TAIL_SHORTEN_LOAD_THRESHOLD → 1.0 maps to factor 1.0 → INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR
+        const float minTailShortenFactor = juce::jmap(load, INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD, 1.0f, 1.0f, INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR);
         for (auto* voice : this->voices) {
-            if (!voice->isVoiceActive())
-                continue;
-
+            if (!voice->isVoiceActive()) continue;
             const float amp = voice->getCurrentAmplitude();
             // Do NOT shorten loud fresh hits
-            if (amp > 0.6f) continue;
-
-            // Older voices get more compression
+            if (amp > INSTRUMENT_TAIL_SHORTEN_AMP_PROTECT) continue;
+            // Older voices get more shortening
             const float age = static_cast<float>(lastNoteOnCounter - voice->noteOnTime);
-            const float ageFactor = juce::jlimit(0.0f, 1.0f, age * 0.02f);
-            const float finalFactor = juce::jmap(ageFactor, 0.0f, 1.0f, 1.0f, compression);
-            // LOG(Debug, "Applying tail shortening to voice " + juce::String(voice->currentlyPlayingNote) + " age=" + juce::String(age) + " ageFactor=" + juce::String(ageFactor) + " load=" + juce::String(load) + " compression=" + juce::String(compression) + " finalFactor=" + juce::String(finalFactor));
-            voice->applyTailShortening(finalFactor);
+            const float ageFactor = juce::jlimit(0.0f, 1.0f, age * INSTRUMENT_TAIL_SHORTEN_AGE_MULTIPLIER);
+            const float finalFactor = juce::jmap(ageFactor, 0.0f, 1.0f, 1.0f, minTailShortenFactor);
+            // LOG(Debug, "Applying tail shortening to voice " + juce::String(voice->currentlyPlayingNote) + " age=" + juce::String(age) + " ageFactor=" + juce::String(ageFactor) + " load=" + juce::String(load) + " minTailShortenFactor=" + juce::String(minTailShortenFactor) + " finalFactor=" + juce::String(finalFactor));
+            voice->setTailShorteningFactor(finalFactor);
         }
     }
+
 private:
     DrumKitEngine* parent = nullptr;
     KitLib::InstrumentSpec* instrumentSpecstPtr = nullptr;

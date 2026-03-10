@@ -27,16 +27,6 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpec* instSpec) {
     this->processLayoutArticulations(instSpec);
 }
 
-int8_t InstrumentSynth::findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const {
-    const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
-    for (int8_t i = 0; i < count; ++i) {
-        const auto& artRt = this->runtimeArticulations[i];
-        if (artRt.nameId == nameId && artRt.exprId == exprId)
-            return i;
-    }
-    return -1;
-}
-
 
 void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpec) {
     LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + instSpec->meta.codeRaw + ":");
@@ -98,14 +88,23 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
         }
 
         // 4. ALSO collect CC thresholds from sibling exprIds
-
+        
         for (const auto& artSpec : instSpec->articulationSpecs) {
             if (artSpec->nameId != layoutArt.nameId) continue;
             if (artSpec->exprId == layoutArt.exprId) continue; // already processed
+            bool hasMatchingController = false;
+            for (const auto& dim : artSpec->expressionDimensions) {
+                for (const auto& controller : this->instrumentSlot.controllers) {
+                    if (dim->type == controller.codeIdx && containsSameValue(controller.notes, layoutArt.notes)) {
+                        hasMatchingController = true;
+                        break;
+                    }
+                }
+                if (hasMatchingController) break;
+            }
+            if (!hasMatchingController) continue;
             const auto artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
-            
             this->processArticulationSpec(instSpec, layoutArt, artSpec.get(), this->runtimeArticulations[artIdx], artIdx, foundCcDimensions);
-            // this->buildCcMappings(layoutArt, artSpec.get(), foundCcDimensions);
         }
     }
 

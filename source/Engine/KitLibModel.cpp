@@ -107,7 +107,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 juce::String expDimCode = expDimPart.substring(0, expDimCodeEnd);
                 juce::String expDimValue = expDimPart.substring(expDimCodeEnd);
                 if (KitLib::ArticulationSpec::ExpressionDimension::stringToType(expDimCode) == KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown)
-                    LOG(Warning, "Unknown dimension code '" + expDimCode + "' in articulation folder '" + artDir.getFullPathName() + "'");
+                    LOG(Warning, "Unknown dimension code '" + expDimCode + "' for instrument '" + this->meta.name + "' (folder '" + artDir.getFullPathName() + "')");
                 artSpec->addExpressionDimensionValue(expDimCode, static_cast<uint8_t>(expDimValue.getIntValue()));
                 // update global dimension usage counts (one per observed value)
                 if (stats)
