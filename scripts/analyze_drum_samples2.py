@@ -8,13 +8,14 @@ import soundfile as sf
 import librosa
 import pyloudnorm as pyln
 import re
+import time
 from typing import List, Tuple, Optional
 from scipy.signal import hilbert
 from scipy.ndimage import uniform_filter1d
 from pathlib import Path
 
 
-SUPPORTED_EXTS: Tuple[str, ...] = (
+SUPPORTED_AUDIO_EXTENSIONS: Tuple[str, ...] = (
     ".wav", ".bwf", ".flac", ".aif", ".aiff",
     ".ogg", ".m4a", ".mp3", ".wmv", ".asf", ".wm", ".wma"
 )
@@ -22,9 +23,9 @@ SUPPORTED_EXTS: Tuple[str, ...] = (
 RESONANCE_MIN_HZ: float = 80.0
 RESONANCE_MAX_HZ: float = 18000.0
 RESONANCE_WINDOW_MS: float = 200.0
-WINDOW_MS: int = 10
+RMS_ANALYSIS_WINDOW_MS: int = 10
 
-BASE62_CHARACTERS: str = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+BASE62_DIGIT_MAP: str = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 
 # =========================
@@ -37,7 +38,7 @@ parser = argparse.ArgumentParser(
     epilog=textwrap.dedent("""
 Example:
   python .\\scripts\\analyze_drum_samples.py -i C:\\Users\\Public\\Documents\\Karatala\\sample_library
-  python analyze_drum_samples.py -i "./samples" -o results.csv
+  python analyze_drum_samples.py -i "./samples" -o results.csv -f 127a-
 
 If required packages are missing, install them with:
   pip install numpy librosa soundfile pyloudnorm scipy
@@ -80,63 +81,61 @@ NAME_FILTER: Optional[str] = args.name_filter
 # HELPERS
 # =========================
 
-def convert_number_to_base62(number: int) -> str:
+def number_to_base62(number: int) -> str:
+    """Converts an integer to Base-62 representation."""
     result: str = ""
     while number > 0:
-        result = BASE62_CHARACTERS[number % 62] + result
+        result = BASE62_DIGIT_MAP[number % 62] + result
         number //= 62
     return result or "0"
 
 
-def dbfs(values: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+def amplitude_to_decibels(values: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """Converts amplitude values to decibels (dB) scale."""
     return 20 * np.log10(np.maximum(np.abs(values), 1e-9))
 
 
-def get_amplitude_envelope(signal: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+def extract_amplitude_envelope(signal: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+    """Extracts the amplitude envelope from a signal using the Hilbert transform."""
     return np.abs(hilbert(signal))
 
 
-def smooth_envelope(
-    amplitude_envelope: npt.NDArray[np.float64],
-    sample_rate: int,
-    window_ms: float = 5.0
-) -> npt.NDArray[np.float64]:
-    window_size: int = int(sample_rate * window_ms / 1000)
+def smooth_envelope(envelope: npt.NDArray[np.float64], sample_rate: int, window_ms: float = 5.0) -> npt.NDArray[np.float64]:
+    """Smooths the amplitude envelope using a uniform filter."""
+    window_size = int(sample_rate * window_ms / 1000)
     if window_size < 1:
-        return amplitude_envelope
-    smoothing_kernel: npt.NDArray[np.float64] = np.ones(window_size) / window_size
-    return np.convolve(amplitude_envelope, smoothing_kernel, mode="same")
+        return envelope
+    return uniform_filter1d(envelope, size=window_size)
 
 
 def calculate_rms_envelope(signal: npt.NDArray[np.float64], sample_rate: int) -> Tuple[npt.NDArray[np.float64], int]:
-    window_size: int = int(sample_rate * WINDOW_MS / 1000)
-    envelope_values: List[float] = []
-    for start_idx in range(0, len(signal), window_size):
-        chunk: npt.NDArray[np.float64] = signal[start_idx:start_idx + window_size]
-        if chunk.size == 0:
-            break
-        rms_values: float = float(np.sqrt(np.mean(chunk ** 2)))
-        envelope_values.append(rms_values)
-    return np.array(envelope_values), window_size
+    """Calculates RMS envelope of the signal in time windows."""
+    window_size: int = int(sample_rate * RMS_ANALYSIS_WINDOW_MS / 1000)
+    padded = np.pad(signal, (0, window_size - len(signal) % window_size), mode="constant")
+    reshaped = padded.reshape(-1, window_size)
+    rms = np.sqrt(np.mean(reshaped ** 2, axis=1))
+    return rms, window_size
 
 
 def extract_decay_points(envelope: npt.NDArray[np.float64], window_ms: float = 10) -> Tuple[List[float], float, float]:
-    envelope_db: npt.NDArray[np.float64] = dbfs(envelope)
-    peak_index: int = int(np.argmax(envelope_db))
-    peak_level_db: float = float(envelope_db[peak_index])
-    decay_levels_db: List[int] = [-6, -12, -18, -24, -30, -36, -42, -48, -54, -60]
-    decay_times_ms: List[float] = []
-    for level_db in decay_levels_db:
-        target_db: float = peak_level_db + level_db
-        for idx in range(peak_index, len(envelope_db)):
-            if envelope_db[idx] <= target_db:
-                decay_times_ms.append(idx * window_ms)
-                break
-    peak_time_ms: float = peak_index * window_ms
-    return decay_times_ms, peak_time_ms, peak_level_db
+    """Extracts decay time points at regular dB intervals from the amplitude envelope."""
+    env_db = amplitude_to_decibels(envelope)
+    peak_idx = int(np.argmax(env_db))
+    peak_db = float(env_db[peak_idx])
+    decay_levels = np.array([-6,-12,-18,-24,-30,-36,-42,-48,-54,-60])
+    targets = peak_db + decay_levels
+    tail = env_db[peak_idx:]
+    decay_times: list[float] = []
+    for t in targets:
+        idx = np.argmax(tail <= t)
+        if tail[idx] <= t:
+            decay_times.append((idx + peak_idx) * window_ms)
+    peak_time = peak_idx * window_ms
+    return decay_times, peak_time, peak_db
 
 
-def detect_transient_sample(signal: npt.NDArray[np.float64], sample_rate: int) -> int:
+def detect_transient_index(signal: npt.NDArray[np.float64]) -> int:
+    """Detects the sample index where the transient (attack) begins."""
     hop_size: int = 256
     stft_magnitude: npt.NDArray[np.float64] = np.abs(
         librosa.stft(signal, n_fft=1024, hop_length=hop_size)
@@ -152,9 +151,10 @@ def detect_transient_sample(signal: npt.NDArray[np.float64], sample_rate: int) -
     return 0
 
 
-def analyze_adsr(signal: npt.NDArray[np.float64], sample_rate: int) -> Tuple[float, float, int, int]:
-    transient_index: int = detect_transient_sample(signal, sample_rate)
-    amplitude_envelope: npt.NDArray[np.float64] = get_amplitude_envelope(signal)
+def analyze_attack_and_decay(signal: npt.NDArray[np.float64], sample_rate: int) -> Tuple[float, float, int, int]:
+    """Analyzes attack time, decay time, peak index, and transient index of audio signal."""
+    transient_index: int = detect_transient_index(signal)
+    amplitude_envelope: npt.NDArray[np.float64] = extract_amplitude_envelope(signal)
     amplitude_envelope = smooth_envelope(amplitude_envelope, sample_rate)
     amplitude_envelope /= np.max(amplitude_envelope) + 1e-9
     peak_index: int = int(np.argmax(amplitude_envelope))
@@ -176,7 +176,8 @@ def analyze_adsr(signal: npt.NDArray[np.float64], sample_rate: int) -> Tuple[flo
     return attack_time_ms, decay_time_ms, peak_index, transient_index
 
 
-def dominant_frequency(signal: npt.NDArray[np.float64], sample_rate: int) -> float:
+def find_dominant_frequency(signal: npt.NDArray[np.float64], sample_rate: int) -> float:
+    """Finds the frequency with the highest amplitude in the signal."""
     if len(signal) < 512:
         return 0.0
     window: npt.NDArray[np.float64] = np.hanning(len(signal))
@@ -186,35 +187,53 @@ def dominant_frequency(signal: npt.NDArray[np.float64], sample_rate: int) -> flo
 
 
 def detect_resonance_frequency(signal: npt.NDArray[np.float64], sample_rate: int, start_index: int) -> Optional[float]:
-    num_samples: int = int(sample_rate * RESONANCE_WINDOW_MS / 1000)
-    signal_tail: npt.NDArray[np.float64] = signal[start_index:start_index + num_samples]
-    if len(signal_tail) < 512:
+    """Detects the resonant frequency of the signal starting from a given index."""
+    window_samples = int(sample_rate * RESONANCE_WINDOW_MS / 1000)
+    segment = signal[start_index:start_index + window_samples]
+    if len(segment) < 512:
         return None
-    window: npt.NDArray[np.float64] = np.hanning(len(signal_tail))
-    spectrum: npt.NDArray[np.float64] = np.abs(np.fft.rfft(signal_tail * window))
-    frequencies: npt.NDArray[np.float64] = np.fft.rfftfreq(len(signal_tail), 1.0 / sample_rate)
-    valid_range_mask: npt.NDArray[np.bool_] = (frequencies >= RESONANCE_MIN_HZ) & (frequencies <= RESONANCE_MAX_HZ)
-    if not np.any(valid_range_mask):
+    window = np.hanning(len(segment))
+    spectrum = np.abs(np.fft.rfft(segment * window))
+    freqs = np.fft.rfftfreq(len(segment), 1 / sample_rate)
+    mask = (freqs >= RESONANCE_MIN_HZ) & (freqs <= RESONANCE_MAX_HZ)
+    if not np.any(mask):
         return None
-    filtered_spectrum = spectrum[valid_range_mask]
-    filtered_frequencies = frequencies[valid_range_mask]
-    peak_idx: int = int(np.argmax(filtered_spectrum))
-    return float(filtered_frequencies[peak_idx])
+    spec = spectrum[mask]
+    freq = freqs[mask]
+    peak = int(np.argmax(spec))
+    interp = refine_peak_index_via_quadratic_interpolation(spec, peak)
+    freq_step = freq[1] - freq[0]
+    return float(freq[0] + interp * freq_step)
 
 
-def encode_relative_times(times: List[float]) -> str:
+def refine_peak_index_via_quadratic_interpolation(magnitude: np.ndarray, peak_index: int) -> float:
+    """Refines peak frequency index using quadratic interpolation for better accuracy."""
+    if peak_index <= 0 or peak_index >= len(magnitude) - 1:
+        return float(peak_index)
+    left_mag = magnitude[peak_index - 1]
+    center_mag = magnitude[peak_index]
+    right_mag = magnitude[peak_index + 1]
+    denominator = left_mag - 2 * center_mag + right_mag
+    if denominator == 0:
+        return float(peak_index)
+    shift = 0.5 * (left_mag - right_mag) / denominator
+    return peak_index + shift
+
+def encode_time_intervals_as_base62(times: List[float]) -> str:
+    """Encodes time intervals as Base-62 deltas for compact storage."""
     if not times:
         return ""
     deltas: List[float] = [times[0]]
     for i in range(1, len(times)):
         deltas.append(times[i] - times[i - 1])
     return "_".join(
-        convert_number_to_base62(int(t))
+        number_to_base62(int(t))
         for t in deltas
     )
 
 
-def parse_sample_params(path: str, input_root: str) -> Tuple[str, str, int, str, str]:
+def extract_sample_metadata_from_path(path: str, input_root: str) -> Tuple[str, str, int, str, str]:
+    """Extracts instrument, articulation, velocity, and other metadata from file path structure."""
     rel: str = os.path.relpath(path, input_root)
     parts = Path(rel).parts
     instrument = ""
@@ -239,7 +258,6 @@ def parse_sample_params(path: str, input_root: str) -> Tuple[str, str, int, str,
         mic_chain = m.group(3)
     return instrument, articulation, velocity, sample_variant, mic_chain
 
-
 # =========================
 # MAIN
 # =========================
@@ -251,7 +269,7 @@ for root, _, filenames in os.walk(INPUT_FOLDER, followlinks=True):
     print(f"[DEBUG] Checking folder: {root}")
     for fname in filenames:
         fname_lower: str = fname.lower()
-        if not fname_lower.endswith(SUPPORTED_EXTS):
+        if not fname_lower.endswith(SUPPORTED_AUDIO_EXTENSIONS):
             continue
         if NAME_FILTER and NAME_FILTER not in fname_lower:
             continue
@@ -259,12 +277,14 @@ for root, _, filenames in os.walk(INPUT_FOLDER, followlinks=True):
 
 files.sort()
 
-print(f"Found {len(files)} audio files")
 
+start_time: float = time.perf_counter()
+total_files: int = len(files)
 
+print(f"Found {total_files} audio files")
 
-for path in files:
-    print(f"Processing: {path}")
+for n, path in enumerate(files, start=1):
+    print(f"Processing ({n}/{total_files}): {path}")
 
     audio: npt.NDArray[np.float64]
     sample_rate: int
@@ -280,9 +300,9 @@ for path in files:
     except ValueError:
         lufs = float("-inf")
 
-    peak_db: float = float(np.max(dbfs(audio)))
+    peak_db: float = float(np.max(amplitude_to_decibels(audio)))
 
-    attack_ms, decay_ms, peak_idx, transient_idx = analyze_adsr(audio, sample_rate)
+    attack_ms, decay_ms, peak_idx, transient_idx = analyze_attack_and_decay(audio, sample_rate)
 
     env: np.ndarray
     win: int
@@ -290,24 +310,15 @@ for path in files:
 
     decay_points, peak_time, peak_level_db = extract_decay_points(env)
 
-    decay_code: str = encode_relative_times(decay_points)
+    decay_code: str = encode_time_intervals_as_base62(decay_points)
 
-    res_freq_hz = detect_resonance_frequency(audio, sample_rate, peak_idx)
-    if res_freq_hz is None:
-        res_freq_hz = dominant_frequency(audio[peak_idx:], sample_rate)
-
-    centroid_hz: float = float(
-        np.mean(
-            librosa.feature.spectral_centroid(
-                y=audio[: int(sample_rate * 0.5)],
-                sr=sample_rate
-            )
-        )
-    )
+    resonance_hz = detect_resonance_frequency(audio, sample_rate, peak_idx)
+    if resonance_hz is None:
+        resonance_hz = find_dominant_frequency(audio[peak_idx:], sample_rate)
 
     length_ms: float = len(audio) / sample_rate * 1000
 
-    instrument, articulation, velocity, sample_variant, mic_chain = parse_sample_params(path, INPUT_FOLDER)
+    instrument, articulation, velocity, sample_variant, mic_chain = extract_sample_metadata_from_path(path, INPUT_FOLDER)
 
     row: List[float | int | str] = [
         os.path.relpath(path, INPUT_FOLDER),
@@ -322,8 +333,7 @@ for path in files:
         round(lufs, 2),
         round(peak_db, 2),
         round(peak_level_db, 2),
-        round(res_freq_hz, 1),
-        round(centroid_hz, 1),
+        round(resonance_hz, 1),
         decay_code,
         *decay_points
     ]
@@ -333,20 +343,19 @@ with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
     writer.writerow([
         "file",
-        "instrumentId",
+        "instrument",
         "articulation",
         "velocity",
-        "sampleVariant",
-        "micChain",
-        "Length_ms",
-        "Attack_ms",
-        "Decay_ms",
-        "LUFS",
-        "Peak_dBFS",
-        "Peak_dB",
-        "Resonance_Hz",
-        "SpectralCentroid_Hz",
-        "Decay_code",
+        "sample_variant",
+        "mic_chain",
+        "length_ms",
+        "attack_ms",
+        "decay_ms",
+        "lufs",
+        "peak_db",
+        "peak_level_db",
+        "resonance_hz",
+        "decay_code",
         "-6dB",
         "-12dB",
         "-18dB",
@@ -360,4 +369,8 @@ with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
     ])
     writer.writerows(rows)
 
+end_time: float = time.perf_counter()
+elapsed: float = end_time - start_time
+
 print(f"\nDone → {OUTPUT_CSV}")
+print(f"Processed {total_files} files in {elapsed:.2f} seconds ({elapsed/60:.2f} minutes)")
