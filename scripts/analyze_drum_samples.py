@@ -99,10 +99,10 @@ def number_to_base62(number: int) -> str:
 
 def amplitude_to_decibels(values: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     """Converts amplitude values to decibels (dB) scale."""
-    return 20 * np.log10(np.maximum(np.abs(values), 1e-9))
+    return 20 * np.log10(np.maximum(np.abs(values), 1e-12))
 
 
-def extract_amplitude_envelope(signal: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
+def extract_amplitude_envelope_hilbert(signal: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
     """Extracts the amplitude envelope from a signal using the Hilbert transform."""
     return np.abs(hilbert(signal))
 
@@ -132,16 +132,59 @@ def extract_decay_points(envelope: npt.NDArray[np.float64], window_ms: float = 1
     decay_levels = np.array([-6,-12,-18,-24,-30,-36,-42,-48,-54,-60])
     targets = peak_db + decay_levels
     tail = env_db[peak_idx:]
-    decay_times: list[float] = []
-    for t in targets:
-        idx = np.argmax(tail <= t)
-        if tail[idx] <= t:
+    decay_times: List[float] = []
+    for target in targets:
+        hits = np.where(tail <= target)[0]
+        if len(hits) > 0:
+            idx = hits[0]
             decay_times.append((idx + peak_idx) * window_ms)
     peak_time = peak_idx * window_ms
     return decay_times, peak_time, peak_db
 
+def detect_transient_index_impact(signal: npt.NDArray[np.float64], sample_rate: int) -> int:
+    """Detect main drum impact (largest energy slope)."""
+    window = int(sample_rate * 0.002)  # 2 ms smoothing
+    if window < 1:
+        return 0
+    energy = uniform_filter1d(signal**2, size=window)
+    slope = np.diff(energy)
+    # smooth slope to suppress noise
+    slope = uniform_filter1d(slope, size=window)
+    idx = int(np.argmax(slope))
+    return idx
 
-def detect_transient_index(signal: npt.NDArray[np.float64]) -> int:
+
+def detect_transient_index(signal: npt.NDArray[np.float64], sample_rate: int) -> int:
+    """Detect transient start using energy rise + adaptive threshold."""
+
+    # short window for energy analysis
+    window_size = int(sample_rate * 0.002)  # 2 ms
+    if window_size < 1:
+        return 0
+    # smoothed energy
+    energy = uniform_filter1d(signal**2, size=window_size)
+    # energy derivative (onset strength)
+    diff = np.diff(energy)
+    # normalize
+    diff /= np.max(np.abs(diff)) + 1e-12
+    # adaptive threshold
+    threshold = np.mean(diff) + 3 * np.std(diff)
+    hits = np.where(diff > threshold)[0]
+    if len(hits) == 0:
+        return int(np.argmax(diff))
+    return int(hits[0])
+
+
+def detect_transient_index_energy(signal: np.ndarray, sample_rate: int) -> int:
+    """Detects the sample index where the transient (attack) begins using energy-based method."""
+    window_size_sec = 0.002
+    frame = int(sample_rate * window_size_sec)
+    energy = uniform_filter1d(signal**2, size=frame)
+    diff = np.diff(energy)
+    idx = np.argmax(diff)
+    return int(idx)
+
+def detect_transient_index_stft(signal: npt.NDArray[np.float64], sample_rate: int) -> int:
     """Detects the sample index where the transient (attack) begins."""
     hop_size: int = 256
     stft_magnitude: npt.NDArray[np.float64] = np.abs(
@@ -157,19 +200,41 @@ def detect_transient_index(signal: npt.NDArray[np.float64]) -> int:
             return index * hop_size
     return 0
 
-
 def analyze_attack_and_decay(signal: npt.NDArray[np.float64], sample_rate: int) -> Tuple[float, float, int, int]:
     """Analyzes attack time, decay time, peak index, and transient index of audio signal."""
-    transient_index: int = detect_transient_index(signal)
-    amplitude_envelope: npt.NDArray[np.float64] = extract_amplitude_envelope(signal)
+
+    amplitude_envelope: npt.NDArray[np.float64] = extract_amplitude_envelope_hilbert(signal)
     amplitude_envelope = smooth_envelope(amplitude_envelope, sample_rate)
-    amplitude_envelope /= np.max(amplitude_envelope) + 1e-9
+    amplitude_envelope /= np.max(amplitude_envelope) + 1e-12
     peak_index: int = int(np.argmax(amplitude_envelope))
+
+    
+    transient_index = detect_transient_index(signal, sample_rate)
+    transient_index_energy = detect_transient_index_energy(signal, sample_rate)
+    transient_index_impact = detect_transient_index_impact(signal, sample_rate)
+    transient_index_stft = detect_transient_index_stft(signal, sample_rate)
+    # find 10% rise
+    transient_index_raise: int = 0
+    for index in range(peak_index):
+        if amplitude_envelope[index] >= 0.1:
+            transient_index_raise = index
+            break
+
+    # find 90% rise
     attack_end_index: int = peak_index
     for index in range(transient_index, peak_index):
         if amplitude_envelope[index] >= 0.9:
             attack_end_index = index
             break
+
+    transient = round(transient_index / sample_rate * 1000.0, 1)
+    transient_energy = round(transient_index_energy / sample_rate * 1000.0, 1)
+    transient_impact = round(transient_index_impact / sample_rate * 1000.0, 1)
+    transient_stft = round(transient_index_stft / sample_rate * 1000.0, 1)
+    transient_raise = round(transient_index_raise / sample_rate * 1000.0, 1)
+    attack_end = round(attack_end_index / sample_rate * 1000.0, 1)
+    print(f"\tTransient indices: energy={transient_energy}, impact={transient_impact}, stft={transient_stft}, raise={transient_raise}. attack_end={attack_end}")
+    
     attack_time_ms: float = (attack_end_index - transient_index) / sample_rate * 1000.0
     silence_threshold_linear: float = 10 ** (SILENCE_THRESHOLD_DB / 20.0)
     decay_index: Optional[int] = None
@@ -189,12 +254,14 @@ def find_dominant_frequency(signal: npt.NDArray[np.float64], sample_rate: int) -
         return 0.0
     window: npt.NDArray[np.float64] = np.hanning(len(signal))
     spectrum: npt.NDArray[np.float64] = np.abs(np.fft.rfft(signal * window))
+    spectrum = uniform_filter1d(spectrum, size=3)
     freqs: npt.NDArray[np.float64] = np.fft.rfftfreq(len(signal), 1.0 / sample_rate)
     return float(freqs[int(np.argmax(spectrum))])
 
 
 def detect_resonance_frequency(signal: npt.NDArray[np.float64], sample_rate: int, start_index: int) -> Optional[float]:
     """Detects the resonant frequency of the signal starting from a given index."""
+    start_index = start_index + int(sample_rate * 0.01) # Skip transient (10 ms)
     window_samples = int(sample_rate * RESONANCE_WINDOW_MS / 1000)
     segment = signal[start_index:start_index + window_samples]
     if len(segment) < 512:
@@ -239,7 +306,7 @@ def encode_time_intervals_as_base62(times: List[float]) -> str:
     )
 
 
-def construct_new_filename(fileName: str, attack_ms: float, decay_ms: float, peak_db: float, decay_code: str) -> str:
+def construct_new_filename(fileName: str, attack_ms: float, decay_ms: float, peak_ms: float, peak_db: float, decay_code: str) -> str:
     """Constructs new filename with encoded sample analysis metadata.
     
     Format: <velocity><sampleVariant>-<micChain>-a{attack}-d{decay}-p{peak}-c{decay_code}.<ext>
@@ -247,7 +314,7 @@ def construct_new_filename(fileName: str, attack_ms: float, decay_ms: float, pea
     Preserves base name (<velocity><sampleVariant>-<micChain>) in correct order.
     Updates existing metadata if file was already renamed.
     
-    Example: 043a-oni-a38-d4960-p19-c34_5a_2U_76_6i_em_d4_kY_7K_0.flac
+    Example: 043a-ons-a38-d4960-p19-c34_5a_2U_76_6i_em_d4_kY_7K_0.flac
     """
     # Extract extension
     parts = fileName.rsplit(".", 1)
@@ -266,11 +333,12 @@ def construct_new_filename(fileName: str, attack_ms: float, decay_ms: float, pea
         base_name = name_without_ext
     
     # Build optional params with latest values
-    attack_int = int(round(attack_ms))
-    decay_int = int(round(decay_ms))
-    peak_int = int(round(abs(peak_db*10)))
+    attack_ms_int = int(round(attack_ms))
+    decay_ms_int = int(round(decay_ms))
+    peak_db_int = int(round(abs(peak_db*10)))
+    peak_ms_int = int(round(peak_ms))
     
-    optional_params = f"a{attack_int}-d{decay_int}-p{peak_int}-c{decay_code}"
+    optional_params = f"a{attack_ms_int}-d{decay_ms_int}-p{peak_db_int}_{peak_ms_int}-c{decay_code}"
     
     new_name = f"{base_name}-{optional_params}"
     if ext:
@@ -337,8 +405,8 @@ for n, path in enumerate(files, start=1):
     sample_rate: int
     audio, sample_rate = sf.read(path)
 
-    if audio.ndim > 1:
-        audio = np.mean(audio, axis=1)
+    if audio.ndim > 1: # convert to mono if multi-channel
+        audio = np.sqrt(np.mean(audio**2, axis=1)) #np.mean(audio, axis=1)
 
     meter: pyln.Meter = pyln.Meter(sample_rate)
 
@@ -347,19 +415,24 @@ for n, path in enumerate(files, start=1):
     except ValueError:
         lufs = float("-inf")
 
-    peak_db: float = float(np.max(amplitude_to_decibels(audio)))
+    amplitude_envelope: npt.NDArray[np.float64] = extract_amplitude_envelope_hilbert(audio)
+    # amplitude_envelope = smooth_envelope(amplitude_envelope, sample_rate)
+    # amplitude_envelope /= np.max(amplitude_envelope) + 1e-9
+    envelope_db = amplitude_to_decibels(amplitude_envelope)
+    peak_db: float = float(np.max(envelope_db))
+    peak_ms: float = (np.argmax(envelope_db)) / sample_rate * 1000.0
 
     attack_ms, decay_ms, peak_idx, transient_idx = analyze_attack_and_decay(audio, sample_rate)
 
-    env: np.ndarray
-    win: int
-    env, win = calculate_rms_envelope(audio, sample_rate)
+    envelope_rms_db: np.ndarray
+    window_rms_ms: int
+    envelope_rms_db, window_rms_ms = calculate_rms_envelope(audio, sample_rate)
 
-    decay_points, peak_time, peak_level_db = extract_decay_points(env)
+    decay_points, peak_rms_ms, peak_rms_db = extract_decay_points(envelope_rms_db)
 
     decay_code: str = encode_time_intervals_as_base62(decay_points)
 
-    resonance_hz = detect_resonance_frequency(audio, sample_rate, peak_idx)
+    resonance_hz = detect_resonance_frequency(audio, sample_rate, peak_idx + int(0.1 * sample_rate))
     if resonance_hz is None:
         resonance_hz = find_dominant_frequency(audio[peak_idx:], sample_rate)
 
@@ -368,7 +441,7 @@ for n, path in enumerate(files, start=1):
     instrument, articulation, velocity, sample_variant, mic_chain = extract_sample_metadata_from_path(path, INPUT_FOLDER)
 
     row: List[float | int | str] = [
-        os.path.relpath(path, INPUT_FOLDER),
+        # os.path.relpath(path, INPUT_FOLDER),
         instrument,
         articulation,
         velocity,
@@ -377,9 +450,11 @@ for n, path in enumerate(files, start=1):
         round(length_ms, 1),
         round(attack_ms, 1),
         round(decay_ms, 1),
-        round(lufs, 2),
+        round(peak_ms, 1),
+        round(peak_rms_ms, 1),
+        round(peak_rms_db, 2),
         round(peak_db, 2),
-        round(peak_level_db, 2),
+        round(lufs, 2),
         round(resonance_hz, 1),
         decay_code,
         *decay_points
@@ -390,7 +465,7 @@ for n, path in enumerate(files, start=1):
     if RENAME_FILES:
         file_dir = os.path.dirname(path)
         old_filename = os.path.basename(path)
-        new_filename = construct_new_filename(old_filename, attack_ms, decay_ms, peak_db, decay_code)
+        new_filename = construct_new_filename(old_filename, attack_ms, decay_ms, peak_rms_ms, peak_db, decay_code)
         
         if new_filename != old_filename:
             new_path = os.path.join(file_dir, new_filename)
@@ -406,18 +481,20 @@ for n, path in enumerate(files, start=1):
 with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
     writer.writerow([
-        "file",
-        "instrument",
-        "articulation",
-        "velocity",
-        "sample_variant",
-        "mic_chain",
+        # "file",
+        "instr",
+        "art",
+        "vel",
+        "rr",
+        "mic",
         "length_ms",
         "attack_ms",
         "decay_ms",
-        "lufs",
+        "peak_ms",
+        "peak_rms_ms",
+        "peak_rms_db",
         "peak_db",
-        "peak_level_db",
+        "lufs",
         "resonance_hz",
         "decay_code",
         "-6dB",
