@@ -173,7 +173,7 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     nameParts.addTokens(fileNameWithoutExt, "-", "");
 
     if (nameParts.size() < 2) {
-        return result.returnWithError("Filename must be in format {velocity}{sampleVariant}-{micChain}: " + fileNameWithoutExt);
+        return result.returnWithError("Filename must be in format {velocity}{sampleVariant}-{micChain}-{otherOptionalParams}: " + fileNameWithoutExt);
     }
 
     juce::String velRRCode = nameParts[0];
@@ -211,6 +211,37 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     result.value.velocity = velocity;
     result.value.sampleVariant = sampleVariant;
     result.value.micDescriptors = parsedMics.value;
+
+    // Parse optional metadata parameters if present (format: a{attack}-d{decay}-p{peak}-c{decay_code})
+    // Example: 043a-oni-a38-d4960-p19-c34_5a_2U_76_6i_em_d4_kY_7K_0
+    if (nameParts.size() > 2) {
+        // Parts after micChain contain optional parameters
+        for (int i = 2; i < nameParts.size(); ++i) {
+            const juce::String& part = nameParts[i];
+            if (part.isEmpty()) continue;
+            
+            const juce::juce_wchar paramType = part[0];
+            const juce::String paramValue = part.substring(1);
+            
+            switch (paramType) {
+                case 'a': // attack in milliseconds
+                    result.value.attackMs = static_cast<float>(paramValue.getIntValue());
+                    break;
+                case 'd': // decay in milliseconds
+                    result.value.decayMs = static_cast<float>(paramValue.getIntValue());
+                    break;
+                case 'p': // peak in dB*10 (negative value, e.g., p19 means -1.9dB)
+                    result.value.peakDb = -static_cast<float>(paramValue.getIntValue() / 10);
+                    break;
+                case 'c': // decay code (base62 encoded)
+                    result.value.decayCode = paramValue;
+                    break;
+                default:
+                    LOG(Notice, "Unknown parameter type '" + juce::String::charToString(paramType) + "' in optional parameters of file '" + fileNameWithoutExt + "': '" + part + "'; skipping this parameter");
+                    break;
+            }
+        }
+    }
 
     return result;
 }

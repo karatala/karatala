@@ -321,6 +321,12 @@ public:
         juce::String sampleVariant;
         std::vector<MicSpec> micDescriptors;
         juce::File file;
+        
+        // Optional metadata (encoded in filename as a{attack}-d{decay}-p{peak}-c{decay_code})
+        float attackMs = 0.0f;
+        float decayMs = 0.0f;
+        float peakDb = 0.0f;
+        juce::String decayCode; // base62-encoded decay curve code for more precise envelope reconstruction.  refer to scripts\analyze_drum_samples.py line decay_code: str = encode_time_intervals_as_base62(decay_points)
     };
 
     DrumKitSpec* parent = nullptr;

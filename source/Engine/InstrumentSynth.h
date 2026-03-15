@@ -413,6 +413,11 @@ private:
     // If this articulation subscribes to controllers -> for each CC id store 128-entry mapping to expression index
     // Stored as map CC -> array[valueIndex for 0..127]
     std::unordered_map<int, std::array<uint8_t, 128>> ccToArticulation;
+    // Cache last seen controller value and resulting articulation index to avoid
+    // spamming articulation change logic when controller jitters around a
+    // threshold.
+    std::unordered_map<int, int> lastCcValue; // controller -> last 0..127 value
+    std::unordered_map<int, uint8_t> lastCcArticulation; // controller -> last applied articulation index
     
     // (owned) storage for all SampledSound instances created for this synth
     // (use `sampledSoundPtrs` above which holds unique_ptrs)

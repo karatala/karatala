@@ -5,6 +5,9 @@
 
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.1f;
 static constexpr float HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC = 0.050f;
+// Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
+// value jitters around an articulation boundary.
+static constexpr int HIHAT_PEDAL_CC_HYSTERESIS = 2;
 
 void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     if (midiMessage.isNoteOn()) {
@@ -15,7 +18,7 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     else if (midiMessage.isController()) {
         auto ccNum = static_cast<uint8_t>(midiMessage.getControllerNumber());
         if (this->ccToArticulation.find(ccNum) == this->ccToArticulation.end()) return;
-        // this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue());
+        this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue());
     }
     else if (midiMessage.isAftertouch())
         this->handleAftertouch(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
@@ -51,6 +54,27 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
     const auto& mapArr = it->second;
     uint8_t newArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
+
+    // Check cached last seen value/articulation for this CC to avoid spamming
+    // articulation change logic on tiny controller changes.
+    const auto lastValIt = this->lastCcValue.find(controllerNumber);
+    const auto lastArtIt = this->lastCcArticulation.find(controllerNumber);
+
+    if (lastArtIt != this->lastCcArticulation.end() && lastArtIt->second == newArtIdx) {
+        // Articulation already applied for this controller; just remember latest value
+        this->lastCcValue[controllerNumber] = controllerValue;
+        return;
+    }
+
+    if (lastValIt != this->lastCcValue.end()) {
+        const int lastVal = lastValIt->second;
+        if (std::abs(controllerValue - lastVal) < HIHAT_PEDAL_CC_HYSTERESIS) {
+            // Value changed only slightly within hysteresis window — skip processing
+            // but keep cached last value up-to-date.
+            this->lastCcValue[controllerNumber] = controllerValue;
+            return;
+        }
+    }
 
     // For each active voice, if its articulation differs from newArtIdx, crossfade
     for (auto* voice : this->voices) {
@@ -111,6 +135,11 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         newVoice->adsr.setParameters({0.01f, 0.0f, 0.5f, newVoice->releaseTimeSec}); //FIXME ADSR
 
     }
+
+    // Remember that we've applied this articulation for this controller and
+    // the last seen value, so small jitter won't retrigger immediately.
+    this->lastCcArticulation[controllerNumber] = newArtIdx;
+    this->lastCcValue[controllerNumber] = controllerValue;
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
