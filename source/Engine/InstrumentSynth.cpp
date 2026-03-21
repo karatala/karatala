@@ -2,6 +2,7 @@
 
 #include "InstrumentSynth.h"
 #include "DrumKitEngine.h"
+#include <unordered_set>
 
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.1f;
 // Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
@@ -52,13 +53,6 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     // so if we have played closed hat for 200ms (rms level at that time 20+170 < 300 < 20+190 was between -24 and -30 db from its peak -15.76-27 = about -42dB)
     // then when we start opening pedal, and we know that half-open hat has -42dB at about 50+2800ms, we can start new half-open sample from offset around 2850ms, (question what will be faster and seamless, phase align or crossfade) 
     // so it need to sound seamless and natural, without noticeable attack transient if thing is happened early or unnatural choke+fadein effect that happens when you just stop one sample and start another from the beginning.
-    // TODO02: then need to review current logic of voice freeing and stealing, looks like we have many methods with repeating code like fadeOutSec, stopNote, also check all //FIXME ADSR comments and plan how to unify logic and same time change freeing logic based on mic, decay level and time, 
-    // so for example instrument have 3 micChains (ons - overhead normal stereo, dtm - direct top mono, rfs - room far stereo), so 3 voices will start playing 3 SampledSound but we might have some other voices for those micChains active,
-    // so maybe if current volume level of corresponding mic old SampledSounds based on decayCode data is already var=~12db+ lower then new corresponding sound's peak volume (*do we need to consider velocity multiplier?),
-    // then we can stop those old voices and save processing cpu
-    // and maybe it will sound more natural compare to current  hard stealing the oldest voice logic. also need to consider how to implement this logic in a way that will be efficient and not cause performance issues so it should precalculate as much as possible of needed in runtime decay data, and in not use costy calculation algos in runtime 
-
-
     // Only handle hi-hat pedal crossfades here for now
     if (this->getType() != KitLib::InstrumentSpec::Type::HiHat) return;
 
@@ -198,7 +192,6 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         const auto& targetBuffer = *targetSe->sound->buffer;
         const double offsetSamples = (state.offsetMs / 1000.0) * srcRate;
         newVoice->sourceSamplePosition = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
-        newVoice->adsr.setParameters({fadeInSec, 0.0f, 1.0f, newVoice->releaseTimeSec}); //FIXME ADSR
         newVoice->setVelocityGain(vel);
 
     }
@@ -232,8 +225,6 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
 
     bool anyStarted = this->startLayerVoices(art, layer, chosenVariant, midiChannel, midiNoteNumber, velf);
     if (!anyStarted) return false;
-
-    //FIXME: if playing more closed hihat articulation right after more opened, opened keep sounding.
 
     this->applyAftertouch(midiChannel, midiNoteNumber);
 
@@ -294,6 +285,7 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
 bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
     const juce::ScopedLock sl(this->lock);
 
+    this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
     this->fadeOutExistingVoices(art, midiChannel, midiNoteNumber, velocity);
 
     bool anyStarted = false;
@@ -321,6 +313,79 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
         if (voice->artNameId == art.nameId && voice->artExprId == art.exprId) {
             if (newVelocity >= voice->getVelocityGain() - 0.05f)
                 voice->fadeOutSec(POLYPHONY_CROSFADE_TIMEOUT_SEC);
+            continue;
+        }
+
+        if (this->type == KitLib::InstrumentSpec::Type::HiHat) {
+            voice->fadeOutSec(POLYPHONY_CROSFADE_TIMEOUT_SEC);
+        }
+    }
+}
+
+void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity) {
+    float newPeakDb = -100.0f;
+    bool hasPeak = false;
+    bool hasDirectPeak = false;
+    const float newVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, newVelocity), -100.0f);
+
+    for (const auto& se : layer.samples) {
+        if (!se.sound || se.variantIdx != chosenVariant)
+            continue;
+
+        const auto& env = se.sound->decayEnvelope;
+        if (!env.isValid())
+            continue;
+
+        const bool isDirect = se.sound->sampleVariantSpec
+            && se.sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
+        const float candidatePeakDb = env.peakDb + newVelocityDb;
+
+        if (!hasPeak || (isDirect && !hasDirectPeak) || (isDirect == hasDirectPeak && candidatePeakDb > newPeakDb)) {
+            newPeakDb = candidatePeakDb;
+            hasPeak = true;
+            hasDirectPeak = isDirect;
+        }
+    }
+
+    if (!hasPeak)
+        return;
+
+    std::unordered_set<juce::uint32> noteOnTimesToCull;
+    for (auto* voice : this->voices) {
+        if (!voice || !voice->isVoiceActive())
+            continue;
+        if (voice->getCurrentlyPlayingNote() != midiNoteNumber)
+            continue;
+        if (!(midiChannel <= 0 || voice->isPlayingChannel(midiChannel)))
+            continue;
+
+        auto* oldSound = voice->getCurrentlyPlayingSound();
+        if (oldSound == nullptr)
+            continue;
+
+        const auto& oldEnv = oldSound->decayEnvelope;
+        if (!oldEnv.isValid())
+            continue;
+
+        const double oldSrcRate = oldSound->sampleRate > 0.0 ? oldSound->sampleRate : 44100.0;
+        const float elapsedMs = static_cast<float>((voice->sourceSamplePosition / oldSrcRate) * 1000.0);
+        const float oldVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->velocityGain), -100.0f);
+        const float oldAbsDb = oldEnv.getAbsoluteDbAtMs(elapsedMs) + oldVelocityDb;
+
+        if (oldAbsDb < (newPeakDb - VOICE_CULL_THRESHOLD_DB))
+            noteOnTimesToCull.insert(voice->noteOnTime);
+    }
+
+    if (noteOnTimesToCull.empty())
+        return;
+
+    for (auto* voice : this->voices) {
+        if (!voice || !voice->isVoiceActive())
+            continue;
+
+        if (noteOnTimesToCull.find(voice->noteOnTime) != noteOnTimesToCull.end()) {
+            voice->envelopeState = InstrumentSynthVoice::EnvelopeState::Dying;
+            voice->killImmediately();
         }
     }
 }
@@ -407,51 +472,96 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
 
     if (voiceCandidates.empty()) return nullptr;
 
-    // Determine protected voice: loudest amplitude, tie-breaker newest noteOnTime
-    InstrumentSynthVoice* protectedVoice = nullptr;
-    float protectedAmp = -1.0f;
-    uint32_t protectedTime = 0;
+    auto pickOldest = [](const std::vector<InstrumentSynthVoice*>& arr) -> InstrumentSynthVoice* {
+        if (arr.empty())
+            return nullptr;
+        auto* oldest = arr.front();
+        for (auto* v : arr)
+            if (v->wasStartedBefore(*oldest))
+                oldest = v;
+        return oldest;
+    };
 
-    for (auto* candidate : voiceCandidates) {
-        const float amp = candidate->getCurrentAmplitude();
-        const uint32_t started = candidate->noteOnTime;
-        if (protectedVoice == nullptr || amp > protectedAmp || (amp == protectedAmp && started > protectedTime)) {
-            protectedVoice = candidate;
-            protectedAmp = amp;
-            protectedTime = started;
+    auto collectByState = [&](InstrumentSynthVoice::EnvelopeState state) {
+        std::vector<InstrumentSynthVoice*> result;
+        for (auto* v : voiceCandidates)
+            if (v->getEnvelopeState() == state)
+                result.push_back(v);
+        return result;
+    };
+
+    auto dying = collectByState(InstrumentSynthVoice::EnvelopeState::Dying);
+    if (!dying.empty())
+        return pickOldest(dying);
+
+    auto fading = collectByState(InstrumentSynthVoice::EnvelopeState::FadingOut);
+    if (!fading.empty()) {
+        InstrumentSynthVoice* best = nullptr;
+        float bestDb = std::numeric_limits<float>::infinity();
+        for (auto* v : fading) {
+            const float db = v->getEstimatedCurrentDb();
+            if (!best || db < bestDb) {
+                best = v;
+                bestDb = db;
+            }
         }
+        if (best) return best;
     }
 
-    // Choose best non-protected voice by score = amplitude + ageFactor
-    InstrumentSynthVoice* best = nullptr;
-    float bestScore = std::numeric_limits<float>::max();
-
-    for (auto* candidate : voiceCandidates) {
-        if (candidate == protectedVoice) continue;
-
-        const float ageFactor = static_cast<float>(lastNoteOnCounter - candidate->noteOnTime) * 0.0001f;
-        const float score = candidate->getCurrentAmplitude() + ageFactor;
-
-        if (score < bestScore) {
-            bestScore = score;
-            best = candidate;
+    auto releasing = collectByState(InstrumentSynthVoice::EnvelopeState::Releasing);
+    if (!releasing.empty()) {
+        InstrumentSynthVoice* best = nullptr;
+        float bestDb = std::numeric_limits<float>::infinity();
+        for (auto* v : releasing) {
+            const float db = v->getEstimatedCurrentDb();
+            if (!best || db < bestDb) {
+                best = v;
+                bestDb = db;
+            }
         }
+        if (best) return best;
     }
 
-    if (best != nullptr) {
-        // LOG(Debug, "Stealing voice (non-protected) in group " + juce::String(groupId) + " amp=" + juce::String(best->getCurrentAmplitude()));
-        return best;
+    std::vector<InstrumentSynthVoice*> playing;
+    for (auto* v : voiceCandidates)
+        if (v->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing)
+            playing.push_back(v);
+
+    if (!playing.empty()) {
+        InstrumentSynthVoice* protectedVoice = nullptr;
+        float protectedDb = -std::numeric_limits<float>::infinity();
+        uint32_t protectedTime = 0;
+
+        for (auto* candidate : playing) {
+            const float db = candidate->getEstimatedCurrentDb();
+            if (!protectedVoice || db > protectedDb || (juce::approximatelyEqual(db, protectedDb) && candidate->noteOnTime > protectedTime)) {
+                protectedVoice = candidate;
+                protectedDb = db;
+                protectedTime = candidate->noteOnTime;
+            }
+        }
+
+        InstrumentSynthVoice* best = nullptr;
+        float bestDb = std::numeric_limits<float>::infinity();
+        for (auto* candidate : playing) {
+            if (playing.size() > 1 && candidate == protectedVoice)
+                continue;
+
+            const float db = candidate->getEstimatedCurrentDb();
+            if (!best || db < bestDb) {
+                best = candidate;
+                bestDb = db;
+            }
+        }
+
+        if (best != nullptr)
+            return best;
+
+        if (protectedVoice != nullptr)
+            return protectedVoice;
     }
 
-    // No non-protected candidate found. Return protected voice as last resort,
-    // but prefer the oldest candidate if multiple voices share the protected identity.
-    if (protectedVoice != nullptr)
-        return protectedVoice;
-
-    // Fallback - return oldest candidate
-    auto* oldest = voiceCandidates.front();
-    for (auto* candidate : voiceCandidates) if (candidate->wasStartedBefore(*oldest)) oldest = candidate;
-    return oldest;
+    return pickOldest(voiceCandidates);
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
@@ -499,8 +609,9 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     juce::ignoreUnused(midiNoteNumber);
     this->velocityGain = velocity;
     this->sourceSamplePosition = 0.0;
+    this->envelopeState = EnvelopeState::Playing;
     // Apply ADSR using configured attack/release
-    this->adsr.setParameters({ this->attackTimeSec, 0.0f, 0.5f, this->releaseTimeSec }); //FIXME ADSR
+    this->adsr.setParameters({ this->attackTimeSec, 0.0f, 1.0f, this->releaseTimeSec });
     this->adsr.setSampleRate(this->getSampleRate());
     this->adsr.noteOn();
 
@@ -517,25 +628,57 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
 }
 
 void InstrumentSynthVoice::fadeOutSec(float sec) {
-    // set a very short release and trigger noteOff so the ADSR will fade quickly
-    const float releaseSec = juce::jmax(0.001f, sec);
-    // keep existing attack/decay/sustain aggressive for quick fade
-    this->adsr.setParameters({ this->attackTimeSec, 0.0f, 0.0f, releaseSec }); //FIXME ADSR
+    this->requestFadeOut(sec);
+}
+
+void InstrumentSynthVoice::requestFadeOut(float durationSec) {
+    if (this->envelopeState == EnvelopeState::Idle)
+        return;
+    this->envelopeState = EnvelopeState::FadingOut;
+    const float releaseSec = juce::jmax(0.001f, durationSec);
+    juce::ADSR::Parameters p = this->adsr.getParameters();
+    p.release = releaseSec;
+    this->adsr.setParameters(p);
     this->adsr.noteOff();
+}
+
+void InstrumentSynthVoice::requestRelease() {
+    if (this->envelopeState == EnvelopeState::Idle)
+        return;
+    this->envelopeState = EnvelopeState::Releasing;
+    juce::ADSR::Parameters p = this->adsr.getParameters();
+    p.release = this->releaseTimeSec * this->tailShortenFactor;
+    this->adsr.setParameters(p);
+    this->adsr.noteOff();
+}
+
+void InstrumentSynthVoice::killImmediately() {
+    this->envelopeState = EnvelopeState::Dying;
+    this->adsr.reset();
+    this->clearCurrentNote();
+}
+
+float InstrumentSynthVoice::getEstimatedCurrentDb() const {
+    if (!this->isVoiceActive())
+        return -100.0f;
+
+    auto* s = this->currentlyPlayingSound;
+    if (s == nullptr || !s->decayEnvelope.isValid()) {
+        const float gain = juce::jmax(0.0001f, this->getCurrentAmplitude());
+        return juce::Decibels::gainToDecibels(gain, -100.0f);
+    }
+
+    const double srcRate = s->sampleRate > 0.0 ? s->sampleRate : 44100.0;
+    const float elapsedMs = static_cast<float>((this->sourceSamplePosition / srcRate) * 1000.0);
+    const float velDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, this->velocityGain), -100.0f);
+    return s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb;
 }
 
 void InstrumentSynthVoice::stopNote(bool allowTailOff) {
     if (allowTailOff) {
-        // keep decay/sustain as-is-ish, but ensure release matches configured value
-        this->adsr.setParameters({ this->attackTimeSec, 0.0f, 0.0f, this->releaseTimeSec }); //FIXME ADSR
-        this->adsr.noteOff();
-        // record when release started (currently unused elsewhere) — kept for
-        // potential timing/analysis or future features like adaptive tail shortening
-        // based on real wall-clock time.
-        // this->releaseStartTimeMs = juce::Time::getMillisecondCounterHiRes();
+        this->requestRelease();
     } else {
-        this->adsr.reset();
-        this->clearCurrentNote();
+        this->killImmediately();
     }
 }
 
@@ -621,4 +764,3 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         // LOG(Debug, "ADSR release finished for voice note " + juce::String(this->currentlyPlayingNote) + " sample=" + (s->sampleVariantSpec ? s->sampleVariantSpec->sampleFile.getFileName() : juce::String("unknown")) + " pos=" + juce::String(this->sourceSamplePosition) + " srcLen=" + juce::String(srcLen));
     }
 }
-

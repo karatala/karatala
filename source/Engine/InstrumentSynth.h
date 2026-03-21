@@ -14,6 +14,7 @@ static constexpr float INSTRUMENT_TAIL_SHORTEN_AGE_MULTIPLIER = 0.02f; // age mu
 static constexpr float INSTRUMENT_TAIL_SHORTEN_AMP_PROTECT = 0.6f; // voices louder than this are protected
 static constexpr float INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR = 0.3f; // minimum shorten factor at full load
 static constexpr float VOICE_TAIL_SHORTEN_MIN_CLAMP = 0.1f; // voice-level clamp for shortening factor
+static constexpr float VOICE_CULL_THRESHOLD_DB = 12.0f; // cull old voice if this much lower than new peak estimate
 
 class DrumKitEngine;
 class SampleLoader;
@@ -52,6 +53,14 @@ public:
 */
 class InstrumentSynthVoice {
 public:
+    enum class EnvelopeState {
+        Idle,
+        Playing,
+        FadingOut,
+        Releasing,
+        Dying
+    };
+
     InstrumentSynthVoice() {}
     ~InstrumentSynthVoice() {};
 
@@ -73,6 +82,11 @@ public:
     float getVelocityGain() const { return this->velocityGain; }
     void setVelocityGain(float value) { this->velocityGain = value; }
     void fadeOutSec(float ms);
+    void requestFadeOut(float durationSec);
+    void requestRelease();
+    void killImmediately();
+    float getEstimatedCurrentDb() const;
+    EnvelopeState getEnvelopeState() const noexcept { return this->envelopeState; }
 
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
 
@@ -80,13 +94,14 @@ public:
 
     bool isPlayingButReleased() const noexcept {
         if (!this->isVoiceActive()) return false;
-        return this->adsr.isActive();
+        return this->adsr.isActive() && (this->envelopeState == EnvelopeState::Releasing || this->envelopeState == EnvelopeState::FadingOut);
     }
 
     void clearCurrentNote() {
         this->currentlyPlayingNote = -1;
         this->currentlyPlayingSound = nullptr;
         this->currentPlayingMidiChannel = 0;
+        this->envelopeState = EnvelopeState::Idle;
     }
 
     void setTailShorteningFactor(float factor) {
@@ -97,7 +112,7 @@ public:
 
         juce::ADSR::Parameters p = this->adsr.getParameters();
         p.release = this->releaseTimeSec * this->tailShortenFactor;
-        this->adsr.setParameters(p); //FIXME ADSR
+        this->adsr.setParameters(p);
     }
 
 private:
@@ -111,6 +126,7 @@ private:
 
     double currentSampleRate = 44100.0;
     juce::uint32 noteOnTime = 0;
+    EnvelopeState envelopeState = EnvelopeState::Idle;
 
     // double releaseStartTimeMs = 0.0;
     SampledSound* currentlyPlayingSound = nullptr;
@@ -365,11 +381,18 @@ public:
         const float load = static_cast<float>(activeVoices) / static_cast<float>(maxVoices);
         // load TAIL_SHORTEN_LOAD_THRESHOLD → 1.0 maps to factor 1.0 → INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR
         const float minTailShortenFactor = juce::jmap(load, INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD, 1.0f, 1.0f, INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR);
+        const float protectDb = juce::Decibels::gainToDecibels(INSTRUMENT_TAIL_SHORTEN_AMP_PROTECT, -100.0f);
         for (auto* voice : this->voices) {
             if (!voice->isVoiceActive()) continue;
-            const float amp = voice->getCurrentAmplitude();
+            const auto state = voice->getEnvelopeState();
+            if (state == InstrumentSynthVoice::EnvelopeState::FadingOut
+                || state == InstrumentSynthVoice::EnvelopeState::Releasing
+                || state == InstrumentSynthVoice::EnvelopeState::Dying)
+                continue;
+
+            const float estimatedDb = voice->getEstimatedCurrentDb();
             // Do NOT shorten loud fresh hits
-            if (amp > INSTRUMENT_TAIL_SHORTEN_AMP_PROTECT) continue;
+            if (estimatedDb > protectDb) continue;
             // Older voices get more shortening
             const float age = static_cast<float>(lastNoteOnCounter - voice->noteOnTime);
             const float ageFactor = juce::jlimit(0.0f, 1.0f, age * INSTRUMENT_TAIL_SHORTEN_AGE_MULTIPLIER);
@@ -450,6 +473,7 @@ private:
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
 
     uint8_t chooseVariantGroup(VelocityLayerRuntime& layer);
+    void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
 
     KitLib::ArticulationSpec* resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt);
 };
