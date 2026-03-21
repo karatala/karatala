@@ -157,6 +157,10 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
 
         for (const auto& varSpec : velSpec->sampleVariantSpecs) {
             auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, notes);
+            sound->decayEnvelope = KitLib::DecayEnvelope::decode(varSpec->decayCode, varSpec->peakDb, varSpec->peakMs);
+            if (!sound->decayEnvelope.isValid()) {
+                LOG(Warning, "Missing or invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
+            }
             int fileChannelCount = varSpec->fileChannelCount > 0
                 ? varSpec->fileChannelCount
                 : varSpec->micSpec.channels

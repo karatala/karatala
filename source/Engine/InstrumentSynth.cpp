@@ -4,7 +4,6 @@
 #include "DrumKitEngine.h"
 
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.1f;
-static constexpr float HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC = 0.050f;
 // Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
 // value jitters around an articulation boundary.
 static constexpr int HIHAT_PEDAL_CC_HYSTERESIS = 2;
@@ -90,6 +89,14 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         }
     }
 
+    struct PedalReplacementState {
+        bool decided = false;
+        bool skip = false;
+        bool hasDirectMicAnchor = false;
+        double offsetMs = 0.0;
+    };
+    std::unordered_map<int, PedalReplacementState> replacementStates;
+
     // For each active voice, if its articulation differs from newArtIdx, crossfade
     for (auto* voice : this->voices) {
         if (voice == nullptr) continue;
@@ -131,8 +138,54 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         if (targetSe == nullptr && !layer.samples.empty()) targetSe = &layer.samples.front();
         if (targetSe == nullptr || targetSe->sound == nullptr) continue;
 
-        // Fade out the old voice
-        voice->fadeOutSec(HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC);
+        if (targetSe->sound->buffer == nullptr) continue;
+
+        const int replacementKey =
+            ((voice->getCurrentlyPlayingNote() & 0xFF) << 16)
+            | ((currentArtIdx & 0xFF) << 8)
+            | (static_cast<int>(newArtIdx) & 0xFF);
+        auto& state = replacementStates[replacementKey];
+
+        const bool isDirectMic = ss->sampleVariantSpec && ss->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
+        const bool shouldRecomputeForDirect = !state.skip && state.decided && isDirectMic && !state.hasDirectMicAnchor;
+
+        if (!state.decided || shouldRecomputeForDirect) {
+            const auto& oldEnv = ss->decayEnvelope;
+            const auto& newEnv = targetSe->sound->decayEnvelope;
+            if (!oldEnv.isValid() || !newEnv.isValid()) {
+                state.skip = true;
+                state.decided = true;
+                continue;
+            }
+
+            const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
+            const double elapsedMs = (voice->sourceSamplePosition / oldSrcRate) * 1000.0;
+            const float currentAbsDb = oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs));
+            float targetMs = newEnv.getMsAtAbsoluteDb(currentAbsDb);
+
+            if (targetMs < 0.0f) {
+                state.skip = true;
+                state.decided = true;
+                continue;
+            }
+
+            const auto& targetBuffer = *targetSe->sound->buffer;
+            const double targetSrcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
+            const double sampleLengthMs = targetSrcRate > 0.0
+                ? (static_cast<double>(targetBuffer.getNumSamples()) / targetSrcRate) * 1000.0
+                : 0.0;
+
+            const float clampedMs = juce::jlimit(newEnv.peakMs, static_cast<float>(sampleLengthMs), targetMs);
+            state.offsetMs = static_cast<double>(clampedMs);
+            state.decided = true;
+            state.skip = false;
+            state.hasDirectMicAnchor = isDirectMic;
+        }
+
+        if (state.skip) continue;
+
+        const float fadeInSec = 0.005f;
+        voice->fadeOutSec(fadeInSec);
 
         // Start replacement voice with small offset to avoid attack transient
         auto* newVoice = this->findFreeVoice(midiChannel, voice->getCurrentlyPlayingNote(), voice->hitGroupId);
@@ -141,12 +194,12 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         // Start voice; this will call startNote and set ADSR
         this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
 
-        // skip initial attack portion of sample (start from small offset)
-        const double offsetSec = HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC;
-        double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-        const double offsetSamples = offsetSec * srcRate;
-        newVoice->sourceSamplePosition = offsetSamples;
-        newVoice->adsr.setParameters({0.01f, 0.0f, 0.5f, newVoice->releaseTimeSec}); //FIXME ADSR
+        const double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
+        const auto& targetBuffer = *targetSe->sound->buffer;
+        const double offsetSamples = (state.offsetMs / 1000.0) * srcRate;
+        newVoice->sourceSamplePosition = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
+        newVoice->adsr.setParameters({fadeInSec, 0.0f, 1.0f, newVoice->releaseTimeSec}); //FIXME ADSR
+        newVoice->setVelocityGain(vel);
 
     }
 

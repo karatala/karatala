@@ -2,6 +2,105 @@
 
 using namespace KitLib;
 
+int DecayEnvelope::base62ToInt(const juce::String& s) {
+    if (s.isEmpty())
+        return -1;
+
+    int result = 0;
+    for (int i = 0; i < s.length(); ++i) {
+        const juce::juce_wchar c = s[i];
+        int value = -1;
+        if (c >= '0' && c <= '9') value = static_cast<int>(c - '0');
+        else if (c >= 'a' && c <= 'z') value = 10 + static_cast<int>(c - 'a');
+        else if (c >= 'A' && c <= 'Z') value = 36 + static_cast<int>(c - 'A');
+
+        if (value < 0)
+            return -1;
+
+        result = result * 62 + value;
+    }
+    return result;
+}
+
+DecayEnvelope DecayEnvelope::decode(const juce::String& decayCode, float peakDb, float peakMs) {
+    DecayEnvelope env;
+    env.peakDb = peakDb;
+    env.peakMs = peakMs;
+
+    if (decayCode.isEmpty())
+        return env;
+
+    auto parts = juce::StringArray::fromTokens(decayCode, "_", "");
+    parts.removeEmptyStrings();
+
+    float absoluteMs = 0.0f;
+    for (int i = 0; i < parts.size() && i < NUM_POINTS; ++i) {
+        const int deltaMs = base62ToInt(parts[i]);
+        if (deltaMs < 0)
+            break;
+
+        if (i == 0)
+            absoluteMs = static_cast<float>(deltaMs);
+        else
+            absoluteMs += static_cast<float>(deltaMs);
+
+        env.points[static_cast<size_t>(i)] = absoluteMs;
+        env.validPoints = i + 1;
+    }
+
+    return env;
+}
+
+float DecayEnvelope::getAbsoluteDbAtMs(float elapsedMs) const {
+    if (!this->isValid())
+        return -100.0f;
+
+    if (elapsedMs <= this->peakMs)
+        return this->peakDb;
+
+    for (int i = 0; i < this->validPoints; ++i) {
+        const float pointMs = this->points[static_cast<size_t>(i)];
+        if (pointMs < 0.0f)
+            break;
+
+        const float pointRelDb = static_cast<float>(i + 1) * DB_STEP;
+        if (elapsedMs <= pointMs) {
+            const float prevMs = (i == 0 ? this->peakMs : this->points[static_cast<size_t>(i - 1)]);
+            const float prevRelDb = (i == 0 ? 0.0f : static_cast<float>(i) * DB_STEP);
+            const float denom = juce::jmax(0.001f, pointMs - prevMs);
+            const float t = juce::jlimit(0.0f, 1.0f, (elapsedMs - prevMs) / denom);
+            const float relDb = prevRelDb + t * (pointRelDb - prevRelDb);
+            return this->peakDb + relDb;
+        }
+    }
+
+    const float lastRelDb = static_cast<float>(this->validPoints) * DB_STEP;
+    return this->peakDb + lastRelDb;
+}
+
+float DecayEnvelope::getMsAtAbsoluteDb(float targetAbsDb) const {
+    if (!this->isValid())
+        return -1.0f;
+
+    const float targetRelDb = targetAbsDb - this->peakDb;
+    if (targetRelDb >= 0.0f)
+        return this->peakMs;
+
+    for (int i = 0; i < this->validPoints; ++i) {
+        const float pointRelDb = static_cast<float>(i + 1) * DB_STEP;
+        if (targetRelDb >= pointRelDb) {
+            const float prevMs = (i == 0 ? this->peakMs : this->points[static_cast<size_t>(i - 1)]);
+            const float prevRelDb = (i == 0 ? 0.0f : static_cast<float>(i) * DB_STEP);
+            const float denom = juce::jmax(0.001f, pointRelDb - prevRelDb);
+            const float t = juce::jlimit(0.0f, 1.0f, (targetRelDb - prevRelDb) / denom);
+            const float pointMs = this->points[static_cast<size_t>(i)];
+            return prevMs + t * (pointMs - prevMs);
+        }
+    }
+
+    return -1.0f;
+}
+
 ParseResult<MicSpec> MicSpec::parseMicCode(const juce::String& code) {
     ParseResult<MicSpec> result;
     const int codelength = code.length();
@@ -147,7 +246,11 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                     variantIdx = SampleVariantSpec::letterToIdx(parsedInfo.value.sampleVariant[0]);
 
                 const auto& micDesc = parsedInfo.value.micDescriptors[i];
-                velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
+                auto* sv = velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
+                sv->peakDb = parsedInfo.value.peakDb;
+                sv->peakMs = parsedInfo.value.peakMs;
+                sv->decayMs = parsedInfo.value.decayMs;
+                sv->decayCode = parsedInfo.value.decayCode;
                 sampleCount++;
 
                 // update global counters per actual file+mic occurrence (reflects sample files counted per mic)
@@ -226,8 +329,10 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
                 case 'p': { // peak in dB*-10 (negative value, e.g., p19 means -1.9dB)
                     juce::StringArray peakParts;
                     peakParts.addTokens(paramValue, "_", "");
-                    result.value.peakDb = static_cast<float>(peakParts[0].getIntValue() / -10);
-                    result.value.peakMs = static_cast<float>(peakParts[1].getIntValue());
+                    if (peakParts.size() >= 1)
+                        result.value.peakDb = static_cast<float>(peakParts[0].getIntValue()) / -10.0f;
+                    if (peakParts.size() >= 2)
+                        result.value.peakMs = static_cast<float>(peakParts[1].getIntValue());
                     break;
                 }
                 case 'd':

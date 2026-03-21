@@ -4,6 +4,7 @@
 #include <regex>
 #include <vector>
 #include <map>
+#include <array>
 #include "../Config/Helpers.h"
 #include "KitLibConsts.h"
 
@@ -80,6 +81,28 @@
 
 namespace KitLib {
 
+struct DecayEnvelope {
+    static constexpr int NUM_POINTS = 10;
+    static constexpr float DB_STEP = -6.0f;
+
+    float peakDb = 0.0f;
+    float peakMs = 0.0f;
+    std::array<float, NUM_POINTS> points;
+    int validPoints = 0;
+
+    DecayEnvelope() {
+        this->points.fill(-1.0f);
+    }
+
+    bool isValid() const { return this->validPoints > 0 && this->peakDb < 0.0f; }
+
+    float getAbsoluteDbAtMs(float elapsedMs) const;
+    float getMsAtAbsoluteDb(float targetAbsDb) const;
+
+    static int base62ToInt(const juce::String& s);
+    static DecayEnvelope decode(const juce::String& decayCode, float peakDb, float peakMs);
+};
+
 class DrumKitSpec;
 class InstrumentSpec;
 class ArticulationSpec;
@@ -109,6 +132,11 @@ public:
     int fileChannelStart = 0;
     // Number of channels occupied by this mic inside the source file (usually equals micSpec.channels)
     int fileChannelCount = 0;
+
+    float peakDb = 0.0f;
+    float peakMs = 0.0f;
+    float decayMs = 0.0f;
+    juce::String decayCode;
 
     MicSpec micSpec;
 

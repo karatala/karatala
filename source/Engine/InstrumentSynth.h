@@ -29,6 +29,7 @@ public:
     double sampleRate = 0.0;
     int micBufferChannelStart = 0;
     int micBufferChannelCount = 0;
+    KitLib::DecayEnvelope decayEnvelope;
 
     SampledSound(KitLib::InstrumentSpec* instrumentSpec = nullptr, KitLib::SampleVariantSpec* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
         : instrumentSpec(instrumentSpec)
@@ -285,6 +286,7 @@ public:
         voice->stopNote(allowTailOff);
         jassert(allowTailOff || (voice->getCurrentlyPlayingNote() < 0 && voice->getCurrentlyPlayingSound() == nullptr));
     }
+    
     void setCurrentPlaybackSampleRate(const double newRate) {
         if (!juce::approximatelyEqual(sampleRate, newRate)) {
             const juce::ScopedLock sl(this->lock);
@@ -451,5 +453,3 @@ private:
 
     KitLib::ArticulationSpec* resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt);
 };
-
-

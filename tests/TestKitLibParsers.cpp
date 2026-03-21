@@ -1,5 +1,6 @@
 #include "../source/Engine/KitLibModel.h"
 #include "catch2/catch_test_macros.hpp"
+#include "catch2/matchers/catch_matchers_floating_point.hpp"
 
 using namespace KitLib;
 
@@ -126,4 +127,41 @@ TEST_CASE("KitLib - MicSpec::parseMicCodesChain parses chains and skips invalid 
     REQUIRE(r.value.size() == 2);
     REQUIRE(r.value[0].raw == "dsm");
     REQUIRE(r.value[1].raw == "onm");
+}
+
+TEST_CASE("KitLib - DecayEnvelope base62 decode", "[DecayEnvelope]") {
+    REQUIRE(DecayEnvelope::base62ToInt("0") == 0);
+    REQUIRE(DecayEnvelope::base62ToInt("9") == 9);
+    REQUIRE(DecayEnvelope::base62ToInt("a") == 10);
+    REQUIRE(DecayEnvelope::base62ToInt("Z") == 61);
+    REQUIRE(DecayEnvelope::base62ToInt("10") == 62);
+    REQUIRE(DecayEnvelope::base62ToInt("!") == -1);
+}
+
+TEST_CASE("KitLib - DecayEnvelope decode accumulates deltas", "[DecayEnvelope]") {
+    const auto env = DecayEnvelope::decode("A_2_3", -20.0f, 10.0f);
+    REQUIRE(env.validPoints == 3);
+    REQUIRE(env.points[0] == 36.0f);
+    REQUIRE(env.points[1] == 38.0f);
+    REQUIRE(env.points[2] == 41.0f);
+}
+
+TEST_CASE("KitLib - DecayEnvelope level and inverse lookups", "[DecayEnvelope]") {
+    DecayEnvelope env;
+    env.peakDb = -20.0f;
+    env.peakMs = 10.0f;
+    env.validPoints = 3;
+    env.points[0] = 20.0f; // -6dB
+    env.points[1] = 40.0f; // -12dB
+    env.points[2] = 60.0f; // -18dB
+
+    CHECK_THAT(env.getAbsoluteDbAtMs(10.0f), Catch::Matchers::WithinAbs(-20.0f, 0.001f));
+    CHECK_THAT(env.getAbsoluteDbAtMs(15.0f), Catch::Matchers::WithinAbs(-23.0f, 0.001f));
+    CHECK_THAT(env.getAbsoluteDbAtMs(30.0f), Catch::Matchers::WithinAbs(-29.0f, 0.001f));
+    CHECK_THAT(env.getAbsoluteDbAtMs(100.0f), Catch::Matchers::WithinAbs(-38.0f, 0.001f));
+
+    CHECK_THAT(env.getMsAtAbsoluteDb(-19.0f), Catch::Matchers::WithinAbs(10.0f, 0.001f));
+    CHECK_THAT(env.getMsAtAbsoluteDb(-23.0f), Catch::Matchers::WithinAbs(15.0f, 0.001f));
+    CHECK_THAT(env.getMsAtAbsoluteDb(-29.0f), Catch::Matchers::WithinAbs(30.0f, 0.001f));
+    CHECK(env.getMsAtAbsoluteDb(-50.0f) < 0.0f);
 }
