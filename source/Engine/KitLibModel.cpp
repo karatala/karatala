@@ -172,11 +172,11 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     juce::StringArray nameParts;
     nameParts.addTokens(fileNameWithoutExt, "-", "");
 
-    if (nameParts.size() < 2) {
-        return result.returnWithError("Filename must be in format {velocity}{sampleVariant}-{micChain}-{otherOptionalParams}: " + fileNameWithoutExt);
+    if (nameParts.size() < 5) {
+        return result.returnWithError("Filename must be in format <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{sampleVariant}-{micChain}-{otherOptionalParams}: " + fileNameWithoutExt);
     }
 
-    juce::String velRRCode = nameParts[0];
+    juce::String velRRCode = nameParts[3];
     int splitIndex = 0;
     while (splitIndex < velRRCode.length() && juce::CharacterFunctions::isDigit(velRRCode[splitIndex])) {
         splitIndex++;
@@ -203,7 +203,7 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
         }
     }
 
-    auto parsedMics = MicSpec::parseMicCodesChain(nameParts[1]);
+    auto parsedMics = MicSpec::parseMicCodesChain(nameParts[4]);
     if (!parsedMics.ok()) {
         result.addWarning("Mic chain parsing failed: " + parsedMics.error() + "; file will use default routing");
     }
@@ -212,11 +212,10 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     result.value.sampleVariant = sampleVariant;
     result.value.micDescriptors = parsedMics.value;
 
-    // Parse optional metadata parameters if present (format: a{attack}-d{decay}-p{peak}-c{decay_code})
-    // Example: 043a-oni-a38-d4960-p19-c34_5a_2U_76_6i_em_d4_kY_7K_0
-    if (nameParts.size() > 2) {
-        // Parts after micChain contain optional parameters
-        for (int i = 2; i < nameParts.size(); ++i) {
+    // Parse optional metadata parameters if present (format: p{peak_db*-10}_{peak_ms}-d{decay_ms}-c{decay_code})
+    // Example: hihat-14-bow[half]-p556_51-d1650-2U_c26_2g_3S_1s_1C_26_42_6s_3S.flac
+    if (nameParts.size() > 5) {
+        for (int i = 5; i < nameParts.size(); ++i) {
             const juce::String& part = nameParts[i];
             if (part.isEmpty()) continue;
             
@@ -224,14 +223,15 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
             const juce::String paramValue = part.substring(1);
             
             switch (paramType) {
-                case 'a': // attack in milliseconds
-                    result.value.attackMs = static_cast<float>(paramValue.getIntValue());
+                case 'p': { // peak in dB*-10 (negative value, e.g., p19 means -1.9dB)
+                    juce::StringArray peakParts;
+                    peakParts.addTokens(paramValue, "_", "");
+                    result.value.peakDb = static_cast<float>(peakParts[0].getIntValue() / -10);
+                    result.value.peakMs = static_cast<float>(peakParts[1].getIntValue());
                     break;
-                case 'd': // decay in milliseconds
+                }
+                case 'd':
                     result.value.decayMs = static_cast<float>(paramValue.getIntValue());
-                    break;
-                case 'p': // peak in dB*10 (negative value, e.g., p19 means -1.9dB)
-                    result.value.peakDb = -static_cast<float>(paramValue.getIntValue() / 10);
                     break;
                 case 'c': // decay code (base62 encoded)
                     result.value.decayCode = paramValue;

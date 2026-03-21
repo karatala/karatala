@@ -251,29 +251,46 @@ def extract_decay_points(envelope_db: npt.NDArray[np.float64], window_ms: float 
 def compute_decay_time_ms_from_envelope_frames(
     envelope_db: npt.NDArray[np.float64],
     frame_duration_ms: float,
-    silence_threshold_db: float
+    decay_range_db: float = 60.0
 ) -> float:
     """
-    Measures decay time until envelope falls below silence threshold.
+    Measures decay time relative to the signal's own peak.
 
+    Decay time = time until envelope falls (decay_range_db)
+    below its peak level.
+
+    Example:
+        If peak = -3 dB and decay_range_db = 60,
+        target level = -63 dB.
+
+    Parameters
+    ----------
     envelope_db
-        Envelope in decibels.
+        Envelope in dB.
 
     frame_duration_ms
         Duration of each frame in milliseconds.
 
-    silence_threshold_db
-        Absolute silence threshold (e.g. -60 dB)
+    decay_range_db
+        How far below peak to measure decay (default: 60 dB).
 
     Returns
     -------
     decay_time_ms
     """
-    for sample_index in range(0, len(envelope_db)):
-        if envelope_db[sample_index] <= silence_threshold_db:
-            decay_time_ms = sample_index * frame_duration_ms
-            return decay_time_ms
-    return len(envelope_db) * frame_duration_ms
+
+    peak_index = int(np.argmax(envelope_db))
+    peak_db = float(envelope_db[peak_index])
+
+    target_db = peak_db - decay_range_db
+
+    tail = envelope_db[peak_index:]
+
+    for i in range(len(tail)):
+        if tail[i] <= target_db:
+            return i * frame_duration_ms
+
+    return len(tail) * frame_duration_ms
 
 
 def encode_time_intervals_as_base62(times: List[float]) -> str:
@@ -389,6 +406,7 @@ for n, path in enumerate(files, start=1):
 
     amp_envelope_linear: npt.NDArray[np.float64]
     amp_envelope_linear = compute_amplitude_envelope_via_hilbert(audio_waveform)
+    amp_envelope_linear = smooth_amplitude_envelope(amp_envelope_linear, sample_rate)
     # amp_envelope = smooth_amplitude_envelope(amp_envelope, sample_rate)
     # amp_envelope /= np.max(amp_envelope) + 1e-9
     amp_envelope_db: npt.NDArray[np.float64] = convert_linear_amplitude_to_db(amp_envelope_linear)
@@ -399,8 +417,9 @@ for n, path in enumerate(files, start=1):
 
     amp_peak_db: float = float(np.max(amp_envelope_db))
     amp_peak_ms: float = amp_peak_index * amp_frame_ms
-    amp_decay_ms: float = compute_decay_time_ms_from_envelope_frames(amp_envelope_db, amp_frame_ms, SILENCE_THRESHOLD_DB)
-
+    amp_decay_ms: float = compute_decay_time_ms_from_envelope_frames(amp_envelope_db, amp_frame_ms, -SILENCE_THRESHOLD_DB)
+    
+    amp_decay_points_db, _, _ = extract_decay_points(amp_envelope_db, amp_frame_ms)
 
 
     rms_window_samples: int
@@ -416,12 +435,9 @@ for n, path in enumerate(files, start=1):
 
     rms_peak_db: float = float(rms_envelope_db[rms_peak_index])
     rms_peak_ms: float = rms_peak_index * rms_window_ms
-    rms_decay_ms: float = compute_decay_time_ms_from_envelope_frames(rms_envelope_db, rms_window_ms, SILENCE_THRESHOLD_DB)
+    rms_decay_ms: float = compute_decay_time_ms_from_envelope_frames(rms_envelope_db, rms_window_ms, -SILENCE_THRESHOLD_DB)
 
-
-    
-    amp_decay_points_db = extract_decay_points(amp_envelope_db)
-    rms_decay_points_db = extract_decay_points(rms_envelope_db)
+    rms_decay_points_db, _, _ = extract_decay_points(rms_envelope_db, rms_window_ms)
     # print(f"  2Peak: {amp_peak_db:.1f} dB @ {amp_peak_ms:.1f}ms   Decay: {amp_decay_ms:.1f}ms. RMS Peak: {rms_peak_db:.1f} dB @ {rms_peak_ms:.1f}ms   RMS Decay: {rms_decay_ms:.1f}ms")
 
     # print(f"\n Decay points (dB): {[float(x) for x in amp_decay_points_db]}\n\n")
@@ -441,16 +457,16 @@ for n, path in enumerate(files, start=1):
         sample_variant,
         mic_chain,
         round(length_ms, 0),
-        round(amp_peak_ms, 0),
         round(rms_peak_ms, 0),
-        round(amp_decay_ms, 0),
         round(rms_decay_ms, 0),
-        round(amp_peak_db, 2),
         round(rms_peak_db, 2),
         round(lufs, 2),
         decay_code,
-        *[float(x) for x in amp_decay_points_db],
         *[float(x) for x in rms_decay_points_db],
+        round(amp_peak_ms, 0),
+        round(amp_decay_ms, 0),
+        round(amp_peak_db, 2),
+        *[round(float(x),0) for x in amp_decay_points_db],
     ]
     # print("  " + "\t".join(str(x) for x in row))
 
@@ -483,11 +499,8 @@ with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
         "rr",
         "mic",
         "length_ms",
-        "amp_peak_ms",
         "rms_peak_ms",
-        "amp_decay_ms",
         "rms_decay_ms",
-        "amp_peak_db",
         "rms_peak_db",
         "lufs",
         "decay_code",
@@ -501,7 +514,10 @@ with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
         "-48dB",
         "-54dB",
         "-60dB",
-        "RMS-6dB",
+        "amp_peak_ms",
+        "amp_decay_ms",
+        "amp_peak_db",
+        "-6dB",
         "-12dB",
         "-18dB",
         "-24dB",

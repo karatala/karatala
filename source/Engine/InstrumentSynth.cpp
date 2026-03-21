@@ -42,9 +42,23 @@ void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
 }
 
 void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
-    //FIXME: currently this spams sample change on each tiny change of controller, need to make it make change only if articulation index actually changes, and also add some hysteresis maybe to avoid spamming when controller value is around articulation change threshold
+    //FIXME: currently this spams sample change on each tiny change of controller, need to make it make change only if articulation index actually changes, and also avoid spamming when controller value is around articulation change threshold +-
     
-    // pedal state without note should crossfade changes, like if hitted closed hat and start opening pedal it should crossfade to more opened sound (new more open sample plays from small offset so it is without attack) so more opened starts from time offset when pedal changestarted with HIHAT_PEDAL_CROSSFADE_TIMEOUT_SEC
+    // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
+    // so new more open sample plays from offset based on rms level, for example we have analyzed data
+    // instr,art,vel,rr,mic,rms_peak_ms, rms_peak_db, rms_decayed_ms-6dB,-12dB,-18dB,-24dB,-30dB,-36dB,-42dB,-48dB,-54dB,-60dB
+    // hihat-X,edge[close],127,a,dtm,20, -15.76, 80,120,150,170,190,210,240,270,320,400 
+    // hihat-X,edge[half],127,a,dtm,50, -20.89, 250,380,550,720,800,860,930,1020,1180,1400
+    // hihat-X,edge[open],127,a,dtm,40, -22.52, 210,380,590,930,1680,2320,2800,3530,3760,4050
+    // so if we have played closed hat for 200ms (rms level at that time 20+170 < 300 < 20+190 was between -24 and -30 db from its peak -15.76-27 = about -42dB)
+    // then when we start opening pedal, and we know that half-open hat has -42dB at about 50+2800ms, we can start new half-open sample from offset around 2850ms, (question what will be faster and seamless, phase align or crossfade) 
+    // so it need to sound seamless and natural, without noticeable attack transient if thing is happened early or unnatural choke+fadein effect that happens when you just stop one sample and start another from the beginning.
+    // TODO02: then need to review current logic of voice freeing and stealing, looks like we have many methods with repeating code like fadeOutSec, stopNote, also check all //FIXME ADSR comments and plan how to unify logic and same time change freeing logic based on mic, decay level and time, 
+    // so for example instrument have 3 micChains (ons - overhead normal stereo, dtm - direct top mono, rfs - room far stereo), so 3 voices will start playing 3 SampledSound but we might have some other voices for those micChains active,
+    // so maybe if current volume level of corresponding mic old SampledSounds based on decayCode data is already var=~12db+ lower then new corresponding sound's peak volume (*do we need to consider velocity multiplier?),
+    // then we can stop those old voices and save processing cpu
+    // and maybe it will sound more natural compare to current  hard stealing the oldest voice logic. also need to consider how to implement this logic in a way that will be efficient and not cause performance issues so it should precalculate as much as possible of needed in runtime decay data, and in not use costy calculation algos in runtime 
+
 
     // Only handle hi-hat pedal crossfades here for now
     if (this->getType() != KitLib::InstrumentSpec::Type::HiHat) return;

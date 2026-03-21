@@ -21,17 +21,20 @@
  *       └─ <kitInfo>/
  *          └─ <instrumentType>-<size>[-<description>]/
  *              └─ <articulation>[optionalExpressionShortName]-<optionalExpressionCode><value>-<anotherExpressionCode><value>/
- *                  └─ <velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
- * Example:
+ *                  └─ <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
+ * otherOptionalSampleParams: includes RMS values for p{peak_db*-10}_{peak_ms}-d{decay_ms}-c{decay_code}), 
+ * where decay_code is a base62-encoded string representing the decay curve of relative interval in ms from peak to -60dB with 6dB steps (can have less then 10 steps for quiet samples!)
+ * (refer to scripts\analyze_drum_samples.py line decay_code: str = encode_time_intervals_as_base62(decay_points))
+ * 
  *     instruments/                                                 LibraryManager
  *       └─ Kit Name by Author Name  [CC-BY-4.0]/                   DrumKitSpec
  *          └─ kick-22-Tama Starclassic etc/                        InstrumentSpec
  *              └─ center/                                          ArticulationSpec
- *                  └─ 127a-dim.flac                                VelocityLayerSpec, SampleVariantSpec, MicSpec
+ *                  └─ kick-22-center-127a-dim.flac                                VelocityLayerSpec, SampleVariantSpec, MicSpec
  *          └─ hihat-14-Sabian HHX/
- *              └─ bow[half]-pdl_opn_cls043-zon_bel_edg085/         
- *                  └─ 043a-oni.flac
- *                  └─ 085a-oni.flac
+ *              └─ bow[half]-pdl_opn_cls043-zon_bel_edg085/
+ *                  └─ hihat-14-bow[half]-043a-oni-p556_51-d1650-2U_c26_2g_3S_1s_1C_26_42_6s_3S.flac
+ *                  └─ hihat-14-bow[half]-085a-oni-p396_70-d2078-3y_2q_2g_2U_2g_26_2q_34_7K_2U.flac
  *                  ...
  *              └─ bow[close]-pdl_opn_cls085/
  *                  ...
@@ -39,8 +42,8 @@
  *              ...
  *          └─ snare-X1/
  *              └─ center-zon_ctr_rim043/
- *                  └─ 043a-dtm_dbm_ons.flac
- *                  └─ 085a-dtm_dbm_ons.flac
+ *                  └─ snare-X1-center-043a-dtm_dbm_ons.flac
+ *                  └─ snare-X1-center-085a-dtm_dbm_ons.flac
  *              └─ center-zon_ctr_rim085/
  *                  ...
  *              └─ edge/
@@ -322,10 +325,10 @@ public:
         std::vector<MicSpec> micDescriptors;
         juce::File file;
         
-        // Optional metadata (encoded in filename as a{attack}-d{decay}-p{peak}-c{decay_code})
-        float attackMs = 0.0f;
-        float decayMs = 0.0f;
         float peakDb = 0.0f;
+        float peakMs = 0.0f;
+        float decayMs = 0.0f;
+        float offsetMs = 0.0f; //TODO: calculated offset for distant mics based on peakMs difference with closest mic, used for making choke more realistic by delaying the choke for distant mics 
         juce::String decayCode; // base62-encoded decay curve code for more precise envelope reconstruction.  refer to scripts\analyze_drum_samples.py line decay_code: str = encode_time_intervals_as_base62(decay_points)
     };
 
