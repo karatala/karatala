@@ -9,6 +9,11 @@
 
 class DrumKitEngine {
 public:
+    // All output buses are stereo for maximum DAW host compatibility
+    static constexpr int TOTAL_HOST_OUTPUT_CHANNELS = 32;
+    static constexpr int HOST_OUTPUT_BUS_WIDTH = 2; // stereo
+    static constexpr int MAX_OUTPUT_BUSES = TOTAL_HOST_OUTPUT_CHANNELS / HOST_OUTPUT_BUS_WIDTH;
+
     explicit DrumKitEngine() {
         this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
         this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
@@ -109,6 +114,9 @@ private:
 
     // Last known audio block size (samples per block). Used to size mic buffers when applying layouts.
     int lastSamplesPerBlock = 0;
+
+    // One-shot flag for out-of-range mapping warning (avoid audio-thread log spam)
+    bool micMappingWarningLogged = false;
 
     void initGlobalSettings();
     void initDefaultLayouts();

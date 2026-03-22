@@ -11,7 +11,7 @@
 static constexpr int NAME_IT_BETTER_MIN_VARIANTS = 3;
 static constexpr int NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS = 32;
 static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
-static constexpr int TOTAL_HOST_OUTPUT_CHANNELS = 32;
+// TOTAL_HOST_OUTPUT_CHANNELS and HOST_OUTPUT_BUS_WIDTH are defined in DrumKitEngine.h
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
@@ -513,6 +513,7 @@ bool DrumKitEngine::applyMicLayout() {
     // }
 
     // Build per-instrument mapping using expected host channel count (defined by plugin outputs)
+    // All output buses are stereo, so each mic occupies HOST_OUTPUT_BUS_WIDTH channels
     const int expectedHostChannels = TOTAL_HOST_OUTPUT_CHANNELS;
 
     // Initialize empty mapping for each synth
@@ -520,12 +521,14 @@ bool DrumKitEngine::applyMicLayout() {
         instPtr->setMicOutputMapping({});
     }
 
+    this->micMappingWarningLogged = false;
+
     int outCursor = 0;
     for (const auto& mic : this->activeMicLayoutPtr->mics) {
         int channelCount = mic.specs.channels;
         if (channelCount <= 0) channelCount = 1;
 
-        if (outCursor + channelCount > expectedHostChannels) {
+        if (outCursor + HOST_OUTPUT_BUS_WIDTH > expectedHostChannels) {
             LOG(Warning, "Not enough host output channels to assign mic '" + mic.name + "' with " + juce::String(channelCount) + " channels. Skipping remaining mics.");
             break;
         }
@@ -556,13 +559,14 @@ bool DrumKitEngine::applyMicLayout() {
 
         if (targets.empty()) {
             LOG(Warning,  "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "' FAILED: no coresponding instrument slots found in your kit layout");
-            outCursor += channelCount; // still reserve host channels
+            outCursor += HOST_OUTPUT_BUS_WIDTH; // still reserve host channels (one stereo bus)
             continue;
         } else {
             LOG(Debug, "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "'");
         }
 
-        // Host channel indices for this mic
+        // Host channel indices for this mic (within the stereo bus)
+        // Mono mics use only the left channel; stereo mics use both
         std::vector<int> hostIdx;
         for (int i = 0; i < channelCount; ++i) hostIdx.push_back(outCursor + i);
 
@@ -574,7 +578,7 @@ bool DrumKitEngine::applyMicLayout() {
             t->setMicOutputMapping(merged);
         }
 
-        outCursor += channelCount;
+        outCursor += HOST_OUTPUT_BUS_WIDTH; // always advance by stereo bus width
     }
 
     // Apply mapped mic channel counts to synths and size mic buffers if we know the block size
@@ -642,11 +646,13 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
                 mappingUsed = true;
             }
             if (dest < 0 || dest >= outCh) {
-                // FIXME: remove logs from loops in audio thread
-                // if (mappingUsed && !juce::JUCEApplicationBase::isStandaloneApp()) //FIXME: after TODO03 - mic layout output busses this triggers all the time
-                //     LOG(Warning, "Instrument '" + instrumentSynthPtr->getId() + "' mapping for mic channel " + juce::String(c) + " -> host index " + juce::String(dest) + " is out of range (host channels=" + juce::String(outCh) + "). Falling back to wrap index.");
+                // FIXME: remove logs from loops in audio thread!
+                if (mappingUsed && !this->micMappingWarningLogged) {
+                    LOG(Warning, "Instrument '" + instrumentSynthPtr->getId() + "' mapping for mic channel " + juce::String(c) + " -> host index " + juce::String(dest) + " is out of range (host channels=" + juce::String(outCh) + "). Falling back to wrap index.");
+                    this->micMappingWarningLogged = true;
+                }
 
-                // Fallback: wrap to available outputs
+                // Fallback: wrap to available outputs (e.g. standalone mode with 2 channels)
                 dest = c % outCh;
             }
             outputBuffer.addFrom(dest, outputBufferStartSample, micBuffer, c, outputBufferStartSample, outputBufferNumSamples, 1.0f);

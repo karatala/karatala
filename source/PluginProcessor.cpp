@@ -3,8 +3,6 @@
 #include <algorithm>
 
 namespace {
-    static constexpr int TOTAL_HOST_CHANNELS = 32;
-
     void logOutputBusTopology(juce::AudioProcessor& processor) {
         juce::String summary = "Output buses:";
         const int outputBusCount = processor.getBusCount(false);
@@ -22,32 +20,28 @@ PluginProcessor::PluginProcessor()
     : AudioProcessor([&]() {
         const auto layout = DrumKitEngine::resolveMicLayoutFromConfig();
         BusesProperties props;
-        int usedChannels = 0;
+        int busCount = 0;
 
+        // Each mic gets one stereo bus (all buses uniform stereo for DAW compatibility)
         for (const auto& mic : layout.mics) {
-            int channelCount = std::max(1, mic.specs.channels);
-
-            if (usedChannels + channelCount > TOTAL_HOST_CHANNELS) {
-                LOG(Warning, "buildBusesFromMicLayout: MicLayout exceeds 32 host channels; truncating at '" + mic.name + "'.");
+            if (busCount >= DrumKitEngine::MAX_OUTPUT_BUSES) {
+                LOG(Warning, "buildBusesFromMicLayout: MicLayout exceeds " + juce::String(DrumKitEngine::MAX_OUTPUT_BUSES) + " buses; truncating at '" + mic.name + "'.");
                 break;
             }
 
             const juce::String busName = mic.name.isNotEmpty()
                 ? mic.name
-                : ("Mic " + juce::String(usedChannels + 1));
+                : ("Mic " + juce::String(busCount + 1));
 
-            const auto channelSet = (channelCount == 2)
-                ? juce::AudioChannelSet::stereo()
-                : juce::AudioChannelSet::mono();
-
-            props = props.withOutput(busName, channelSet, true);
-            usedChannels += channelCount;
+            props = props.withOutput(busName, juce::AudioChannelSet::stereo(), true);
+            ++busCount;
         }
 
+        // Pad remaining slots with stereo AUX buses to fill all 32 host channels
         int auxIndex = 1;
-        while (usedChannels < TOTAL_HOST_CHANNELS) {
-            props = props.withOutput("AUX " + juce::String(auxIndex++), juce::AudioChannelSet::mono(), true);
-            ++usedChannels;
+        while (busCount < DrumKitEngine::MAX_OUTPUT_BUSES) {
+            props = props.withOutput("AUX " + juce::String(auxIndex++), juce::AudioChannelSet::stereo(), true);
+            ++busCount;
         }
 
         return props;
