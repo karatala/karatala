@@ -7,6 +7,7 @@
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.1f;
 static constexpr float HIHAT_PEDAL_CROSSFADE_SEC = 0.030f; // 30ms crossfade for pedal transitions
 static constexpr float HIHAT_PEDAL_MIN_REMAINING_SEC = 0.050f; // skip replacement if < 50ms of audio remaining
+static constexpr float HIHAT_CROSS_ART_CHOKE_DB_MARGIN = 3.0f;
 // Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
 // value jitters around an articulation boundary.
 static constexpr int HIHAT_PEDAL_CC_HYSTERESIS = 2;
@@ -63,6 +64,13 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
     const auto& mapArr = it->second;
     uint8_t newArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
+    if (newArtIdx >= this->runtimeArticulations.size()) {
+        LOG(Warning, "handleController: CC " + juce::String(controllerNumber)
+            + " mapped to out-of-range articulation idx=" + juce::String((int)newArtIdx)
+            + " (runtime size=" + juce::String((int)this->runtimeArticulations.size()) + ")");
+        this->lastCcValue[controllerNumber] = controllerValue;
+        return;
+    }
 
     // Check cached last seen value/articulation for this CC to avoid spamming
     // articulation change logic on tiny controller changes.
@@ -93,6 +101,15 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     };
     std::unordered_map<int, PedalReplacementState> replacementStates;
 
+    int activeMismatchedVoices = 0;
+    int replacementsStarted = 0;
+    int skippedNoEnvelope = 0;
+    int skippedNoTarget = 0;
+    int skippedNoVoice = 0;
+    int skippedTooLate = 0;
+    int skippedNoDbMatch = 0;
+    int skippedOther = 0;
+
     // For each active voice, if its articulation differs from newArtIdx, crossfade
     for (auto* voice : this->voices) {
         if (voice == nullptr) continue;
@@ -113,6 +130,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         if (currentArtIdx == -1) continue;
 
         if (currentArtIdx == static_cast<int>(newArtIdx)) continue; // already correct
+        ++activeMismatchedVoices;
 
         // Now prepare to start a replacement voice from new articulation
         const auto& newArt = this->runtimeArticulations[newArtIdx];
@@ -132,9 +150,15 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             if (se.variantIdx == curVariant) { targetSe = &se; break; }
         }
         if (targetSe == nullptr && !layer.samples.empty()) targetSe = &layer.samples.front();
-        if (targetSe == nullptr || targetSe->sound == nullptr) continue;
+        if (targetSe == nullptr || targetSe->sound == nullptr) {
+            ++skippedNoTarget;
+            continue;
+        }
 
-        if (targetSe->sound->buffer == nullptr) continue;
+        if (targetSe->sound->buffer == nullptr) {
+            ++skippedNoTarget;
+            continue;
+        }
 
         const int replacementKey =
             ((voice->getCurrentlyPlayingNote() & 0xFF) << 16)
@@ -151,17 +175,23 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             if (!oldEnv.isValid() || !newEnv.isValid()) {
                 state.skip = true;
                 state.decided = true;
+                ++skippedNoEnvelope;
                 continue;
             }
 
             const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
             const double elapsedMs = (voice->sourceSamplePosition / oldSrcRate) * 1000.0;
-            const float currentAbsDb = oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs));
-            float targetMs = newEnv.getMsAtAbsoluteDb(currentAbsDb);
+            const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
+            const float currentAudibleDb = oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs)) + oldVelDb;
+
+            const float replacementVelDb = oldVelDb;
+            const float targetRelativeDb = currentAudibleDb - replacementVelDb;
+            float targetMs = newEnv.getMsAtAbsoluteDb(targetRelativeDb);
 
             if (targetMs < 0.0f) {
                 state.skip = true;
                 state.decided = true;
+                ++skippedNoDbMatch;
                 continue;
             }
 
@@ -178,6 +208,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             if (remainingMs < HIHAT_PEDAL_MIN_REMAINING_SEC * 1000.0f) {
                 state.skip = true;
                 state.decided = true;
+                ++skippedTooLate;
                 continue;
             }
 
@@ -191,7 +222,37 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
         // Find replacement voice BEFORE fading old one — if no voice available, keep old sound
         auto* newVoice = this->findFreeVoice(midiChannel, voice->getCurrentlyPlayingNote(), voice->hitGroupId);
-        if (newVoice == nullptr) continue;
+        if (newVoice == voice) {
+            newVoice = nullptr;
+            for (auto* candidate : this->voices) {
+                if (candidate == nullptr || candidate == voice) continue;
+                if (!candidate->isVoiceActive()) {
+                    newVoice = candidate;
+                    break;
+                }
+            }
+
+            if (newVoice == nullptr) {
+                InstrumentSynthVoice* best = nullptr;
+                float bestDb = std::numeric_limits<float>::infinity();
+                for (auto* candidate : this->voices) {
+                    if (candidate == nullptr || candidate == voice || !candidate->isVoiceActive()) continue;
+                    if (candidate->hitGroupId != voice->hitGroupId) continue;
+
+                    const float db = candidate->getEstimatedCurrentDb();
+                    if (best == nullptr || db < bestDb) {
+                        best = candidate;
+                        bestDb = db;
+                    }
+                }
+                newVoice = best;
+            }
+        }
+
+        if (newVoice == nullptr) {
+            ++skippedNoVoice;
+            continue;
+        }
 
         const double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
         const auto& targetBuffer = *targetSe->sound->buffer;
@@ -205,13 +266,54 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
         newVoice->sourceSamplePosition = clampedOffset;
         newVoice->setVelocityGain(vel);
+        ++replacementsStarted;
+
+        juce::String oldArtCode = "unknown";
+        if (ss->sampleVariantSpec != nullptr && ss->sampleVariantSpec->parent != nullptr && ss->sampleVariantSpec->parent->parent != nullptr)
+            oldArtCode = ss->sampleVariantSpec->parent->parent->codeRaw;
+
+        juce::String newArtCode = "unknown";
+        if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr
+            && targetSe->sound->sampleVariantSpec->parent != nullptr
+            && targetSe->sound->sampleVariantSpec->parent->parent != nullptr)
+            newArtCode = targetSe->sound->sampleVariantSpec->parent->parent->codeRaw;
+
+        juce::String sampleName = "unknown";
+        if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr)
+            sampleName = targetSe->sound->sampleVariantSpec->sampleFile.getFileName();
+
+        LOG(Debug, "PedalVoiceStart inst=" + this->getId()
+            + " ch=" + juce::String(midiChannel)
+            + " note=" + juce::String(voice->getCurrentlyPlayingNote())
+            + " vel=" + juce::String(vel, 3)
+            + " fromArt=" + oldArtCode
+            + " toArt=" + newArtCode
+            + " micStart=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelStart : -1)
+            + " micCount=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelCount : 0)
+            + " offsetMs=" + juce::String(state.offsetMs, 2)
+            + " offsetSamples=" + juce::String(clampedOffset, 2)
+            + " sample=" + sampleName);
 
     }
 
-    // Remember that we've applied this articulation for this controller and
-    // the last seen value, so small jitter won't retrigger immediately.
-    this->lastCcArticulation[controllerNumber] = newArtIdx;
+    // Only cache new articulation once at least one replacement starts, or when
+    // there were no active mismatched voices to transition.
+    if (replacementsStarted > 0 || activeMismatchedVoices == 0)
+        this->lastCcArticulation[controllerNumber] = newArtIdx;
     this->lastCcValue[controllerNumber] = controllerValue;
+
+    if (activeMismatchedVoices > 0 && replacementsStarted == 0) {
+        LOG(Debug, "HiHat pedal transition skipped: cc=" + juce::String(controllerNumber)
+            + " value=" + juce::String(controllerValue)
+            + " targetArt=" + juce::String((int)newArtIdx)
+            + " activeMismatchedVoices=" + juce::String(activeMismatchedVoices)
+            + " reasons{noEnv=" + juce::String(skippedNoEnvelope)
+            + ", noTarget=" + juce::String(skippedNoTarget)
+            + ", noVoice=" + juce::String(skippedNoVoice)
+            + ", tooLate=" + juce::String(skippedTooLate)
+            + ", noDbMatch=" + juce::String(skippedNoDbMatch)
+            + ", other=" + juce::String(skippedOther) + "}");
+    }
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
@@ -297,8 +399,8 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
 bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
     const juce::ScopedLock sl(this->lock);
 
-    this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
-    this->fadeOutExistingVoices(art, midiChannel, midiNoteNumber, velocity);
+    // this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
+    // this->fadeOutExistingVoices(art, midiChannel, midiNoteNumber, velocity);
 
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
@@ -317,6 +419,8 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
 }
 
 void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity) {
+    const float newVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, newVelocity), -100.0f);
+
     for (auto* voice : voices) {
         if (!voice || !voice->isVoiceActive()) continue;
         if (voice->getCurrentlyPlayingNote() != midiNoteNumber) continue;
@@ -332,7 +436,13 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
         // but only if the new hit is loud enough relative to the old voice.
         // A quiet ghost note should not fully choke a loud ringing cymbal.
         if (this->type == KitLib::InstrumentSpec::Type::HiHat) {
-            if (newVelocity >= voice->getVelocityGain() * 0.5f) {
+            float newHitPeakDbEstimate = newVelocityDb;
+            if (auto* currentSound = voice->getCurrentlyPlayingSound(); currentSound != nullptr && currentSound->decayEnvelope.isValid()) {
+                newHitPeakDbEstimate = currentSound->decayEnvelope.peakDb + newVelocityDb;
+            }
+
+            const float oldCurrentDb = voice->getEstimatedCurrentDb();
+            if (newHitPeakDbEstimate >= oldCurrentDb - HIHAT_CROSS_ART_CHOKE_DB_MARGIN) {
                 voice->requestFadeOut(POLYPHONY_CROSFADE_TIMEOUT_SEC);
             }
         }
@@ -367,7 +477,7 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     if (!hasPeak)
         return;
 
-    std::unordered_set<juce::uint32> noteOnTimesToCull;
+    std::unordered_map<juce::uint32, float> oldGroupPeakDbByNoteOn;
     for (auto* voice : this->voices) {
         if (!voice || !voice->isVoiceActive())
             continue;
@@ -389,8 +499,18 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
         const float oldVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->velocityGain), -100.0f);
         const float oldAbsDb = oldEnv.getAbsoluteDbAtMs(elapsedMs) + oldVelocityDb;
 
-        if (oldAbsDb < (newPeakDb - VOICE_CULL_THRESHOLD_DB))
-            noteOnTimesToCull.insert(voice->noteOnTime);
+        auto it = oldGroupPeakDbByNoteOn.find(voice->noteOnTime);
+        if (it == oldGroupPeakDbByNoteOn.end()) {
+            oldGroupPeakDbByNoteOn[voice->noteOnTime] = oldAbsDb;
+        } else {
+            it->second = juce::jmax(it->second, oldAbsDb);
+        }
+    }
+
+    std::unordered_set<juce::uint32> noteOnTimesToCull;
+    for (const auto& [noteOnTime, oldGroupPeakDb] : oldGroupPeakDbByNoteOn) {
+        if (oldGroupPeakDb < (newPeakDb - VOICE_CULL_THRESHOLD_DB))
+            noteOnTimesToCull.insert(noteOnTime);
     }
 
     if (noteOnTimesToCull.empty())

@@ -10,6 +10,10 @@ SampleLoader* InstrumentSynth::getSampleLoader() { return this->parent ? this->p
 
 void InstrumentSynth::unloadInstrument() {
     this->runtimeArticulations.clear();
+    this->noteToControllers.clear();
+    this->ccToArticulation.clear();
+    this->lastCcValue.clear();
+    this->lastCcArticulation.clear();
     // stop and clear voices before releasing sounds
     this->clearVoices();
     this->clearSounds();
