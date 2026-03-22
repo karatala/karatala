@@ -1,21 +1,41 @@
-# Decay Code Usage Plan - Implementation Design
+# Decay Code Usage Plan - Implementation Design (Corrected)
 
 ## 1. Overview
 
 This plan outlines how to integrate the new sample metadata (`attackMs`, `decayMs`, `peakDb`, `decayCode`) extracted by `analyze_drum_samples.py` into the sample playback system to enable:
 
-1. **Per-sample accurate decay timing**: Replace generic `maxSampleLengthMs` with sample-specific decay timing
-2. **Predefined decay envelope**: Build a fast lookup structure to query expected dB level at any time offset
-3. **Seamless articulation transitions**: Enable crossfading between articulations by matching decay profiles (e.g., hihat open→half→close, crash→choke)
+1. **Per-sample accurate decay timing** – replace generic `maxSampleLengthMs` with sample-specific decay timing.
+2. **Predefined decay envelope** – build a fast lookup structure to query expected decay level at any time offset.
+3. **Seamless articulation transitions** – enable transitions between articulations (e.g., hihat open → half → close, crash → choke) by aligning decay curves.
+
+Decay envelopes are measured **relative to the peak transient**, not sample start. 
+
+The `peakDb` metadata represents **estimated acoustic peak level relative to the recording reference before normalization**, allowing decay curves from different samples to be mapped into a shared approximate loudness domain.
+
+This metadata is used for **decay curve alignment and articulation matching**, not for runtime gain mixing.
 
 ---
 
-## 2. Current Flow
+# 2. Current Flow
 
-### 2.1 Sample File Parsing (KitLibModel.cpp)
-- `InstrumentSpec::parseSampleFile()` → extracts filename metadata into `SampleFileInfo`
-- Result includes: velocity, sampleVariant, micChain, **attackMs**, **decayMs**, **peakDb**, **decayCode**
-- Currently stored but **not yet used** in `SampleVariantSpec`
+## 2.1 Sample File Parsing (KitLibModel.cpp)
+
+`InstrumentSpec::parseSampleFile()` extracts filename metadata into `SampleFileInfo`.
+
+Result includes:
+
+- velocity
+- sampleVariant
+- micChain
+
+- **peakMs** rms
+- **peakDb** rms
+- **decayMs** rms, until -72dB threshold
+- **decayCode**
+
+These values are currently parsed but **not used by playback logic**.
+
+---
 
 ### 2.2 SampleLoader Processing
 ```
@@ -45,341 +65,361 @@ renderNextBlock():
 
 ---
 
-## 3. Decay Code Format (from Python Script)
+# 3. Decay Code Format
 
-### 3.1 Encoding Process
-```python
-def encode_time_intervals_as_base62(times: List[float]) -> str:
-    """times = [t1, t2, t3, ...] = absolute times in ms to reach -6, -12, -18... -60 dB"""
-    deltas = [times[0], times[1]-times[0], times[2]-times[1], ...]
-    return "_".join(number_to_base62(int(delta)) for delta in deltas)
-```
+## 3.1 Encoding Process
+
+Decay analysis measures the time required for the signal to reach specific decay levels relative to the peak.
+
+
+times = absolute ms to reach -6, -12, -18 ... -60 dB
+
 
 ### 3.2 Example
-```
-Sample decay profile from peak:
-  -6 dB @ 100ms
-  -12 dB @ 250ms  
-  -18 dB @ 420ms
-  ...
-  -60 dB @ 2100ms
 
-Encoded as absolute times: [100, 250, 420, ..., 2100]
-Delta encoding: [100, 150, 170, ..., ...]
-Base62 encoding: "1W_4g_2s_..." 
-```
 
-### 3.3 Base62 Digit Map
-```cpp
-"0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-// 0-9 = 0-9
-// a-z = 10-35
-// A-Z = 36-61
-```
+-6 dB @ 100ms
+-12 dB @ 250ms
+-18 dB @ 420ms
+...
+-60 dB @ 2100ms
+
+
+Delta encoding:
+[100, 150, 170, ...]
+
+Base62 encoding:
+"1W_4g_2s_..."
 
 ---
 
-## 4. Proposed Changes
+### 3.3 Base62 Digit Map
 
-### 4.1 Update `SampledSound` (InstrumentSynth.h)
+
+0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ
+
+
+---
+
+# 4. Proposed Changes
+
+---
+
+# 4.1 Update `SampledSound` (InstrumentSynth.h)
+
+Decay envelope stores **relative decay offsets from the peak** rather than absolute runtime loudness.
 
 ```cpp
 class SampledSound {
 public:
-    // ... existing fields ...
-    
-    // New decay envelope data (populated after sample load)
+
     struct DecayPoint {
-        float timeMs;      // elapsed ms from peak
-        float absoluteDb;  // absolute dB value at this time (peakDb already baked in)
+        float timeMs;      // milliseconds after peak transient
+        float dbOffset;    // -6, -12, -18 ...
     };
-    static constexpr size_t MAX_DECAY_POINTS = 10;  // -6 to -60 dB in 6 dB steps
+
+    static constexpr size_t MAX_DECAY_POINTS = 10;
+
     std::array<DecayPoint, MAX_DECAY_POINTS> decayEnvelope = {};
-    size_t decayPointCount = 0;  // actual number of valid points (0-10)
-    
-    // Metadata from parsed sample filename
-    float attackMs = 0.0f;
-    float decayMs = 0.0f;
-    float peakDb = 0.0f;
-    
-    // Helper: decode base62 deltas from decayCode and build decayEnvelope
-    // Calculates absolute dB values (peakDb + decay targets) and stores them
+    size_t decayPointCount = 0;
+
+
+    float decayMs  = 0.0f;  // estimated time to silence
+    float peakDb   = 0.0f;  // estimated acoustic rms peak
+
     void buildDecayEnvelope(const juce::String& decayCode);
-    
-    // Helper: get absolute dB level at given time (for seamless transitions)
-    float getDecayLevelAtTime(float timeMs) const;
+
+    float getDecayDbOffsetAtTime(float timeMs) const;
+
+    float getEstimatedAbsDbAtTime(float timeMs) const
+    {
+        return peakDb + getDecayDbOffsetAtTime(timeMs);
+    }
+
+    float findTimeForAbsDb(float targetAbsDb) const;
 };
-```
+4.2 Update SampleLoader
+Modified LoadJob::runJob()
+double effectiveLengthMs = loader.maxSampleLengthMs;
+bool hasMetadata = false;
 
-### 4.2 Update `SampleLoader` (SampleLoader.h/cpp)
+if (sampleFileInfo && sampleFileInfo->decayMs > 0)
+{
+    effectiveLengthMs = sampleFileInfo->decayMs + 150.0; // safety margin
+    hasMetadata = true;
 
-**Modify SampleLoader::LoadJob::runJob():**
-
-```cpp
-JobStatus runJob() override {
-    // ... load audio format reader ...
-    
-    // CHANGE 1: Use decayMs instead of maxSampleLengthMs if available
-    double effectiveLengthMs = loader.maxSampleLengthMs;  // fallback
-    bool hasMetadata = false;
-    if (sampleFileInfo && sampleFileInfo->decayMs > 0) {
-        effectiveLengthMs = sampleFileInfo->decayMs;
-        hasMetadata = true;
-        // Also populate SampledSound metadata
-        this->sound->attackMs = sampleFileInfo->attackMs;
-        this->sound->decayMs = sampleFileInfo->decayMs;
-        this->sound->peakDb = sampleFileInfo->peakDb;
-    }
-    
-    const int maxSamples = (int)(sampleRate * (effectiveLengthMs * 0.001));
-    const int samplesToRead = std::min((int64)reader->lengthInSamples, maxSamples);
-    
-    // ... read buffer ...
-    
-    // CHANGE 2: Skip generic fade-out if decayMs was used
-    if (!hasMetadata) {
-        // Apply generic fade-out for samples without metadata
-        const int fadeSamples = (int)(sampleRate * (loader.fadeOutMs * 0.001));
-        const int fadeStart = std::max(0, samplesToRead - fadeSamples);
-        for (int ch = 0; ch < channels; ++ch) {
-            buffer->applyGainRamp(ch, fadeStart, samplesToRead - fadeStart, 1.0f, 0.0f);
-        }
-    }
-    // else: decay is natural from audio; no artificial fade needed
-    
-    // CHANGE 3: Build decay envelope from decayCode if available
-    if (hasMetadata && sampleFileInfo) {
-        this->sound->buildDecayEnvelope(sampleFileInfo->decayCode);
-    }
-    
-    // ... cache and return ...
+    sound->attackMs = sampleFileInfo->attackMs;
+    sound->decayMs  = sampleFileInfo->decayMs;
+    sound->peakDb   = sampleFileInfo->peakDb;
 }
-```
+Trim Samples
+maxSamples = sampleRate * effectiveLengthMs
+Always Apply Safety Fade
 
-### 4.3 Decode Decay Code in `SampledSound`
+Even metadata-driven samples receive a short fade to avoid trim clicks.
 
-**Add to SampledSound class:**
+const int fadeSamples = (int)(sampleRate * 0.005); // 5ms fade
+const int fadeStart   = std::max(0, samplesToRead - fadeSamples);
 
-```cpp
-void SampledSound::buildDecayEnvelope(const juce::String& decayCode) {
-    if (decayCode.isEmpty()) {
-        this->decayPointCount = 0;
+for (int ch = 0; ch < channels; ++ch)
+{
+    buffer->applyGainRamp(
+        ch,
+        fadeStart,
+        samplesToRead - fadeStart,
+        1.0f,
+        0.0f);
+}
+Build Decay Envelope
+if (hasMetadata)
+{
+    sound->buildDecayEnvelope(sampleFileInfo->decayCode);
+}
+4.3 Decoding Decay Code
+void SampledSound::buildDecayEnvelope(const juce::String& decayCode)
+{
+    decayPointCount = 0;
+
+    if (decayCode.isEmpty())
         return;
-    }
-    
-    this->decayPointCount = 0;
-    
-    // Parse base62 deltas from decayCode
-    const char* BASE62_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    
-    auto base62ToInt = [BASE62_DIGITS](const juce::String& s) -> int {
-        int result = 0;
-        for (char c : s.toStdString()) {
-            const char* pos = strchr(BASE62_DIGITS, c);
-            if (pos) {
-                result = result * 62 + (pos - BASE62_DIGITS);
-            }
-        }
-        return result;
-    };
-    
-    auto tokens = juce::StringArray::fromTokens(decayCode, "_", "");
-    const float dBTargets[] = {-6, -12, -18, -24, -30, -36, -42, -48, -54, -60};
-    
-    float accumulatedTimeMs = 0.0f;
-    for (size_t i = 0; i < tokens.size() && i < this->MAX_DECAY_POINTS; ++i) {
+
+    const float dbTargets[10] =
+    {-6,-12,-18,-24,-30,-36,-42,-48,-54,-60};
+
+    auto tokens =
+        juce::StringArray::fromTokens(decayCode,"_","");
+
+    float accumulatedTimeMs = 0;
+
+    for (int i=0;i<tokens.size() && i<MAX_DECAY_POINTS;i++)
+    {
         int delta = base62ToInt(tokens[i]);
+
         accumulatedTimeMs += delta;
-        
-        this->decayEnvelope[i].timeMs = accumulatedTimeMs;
-        this->decayEnvelope[i].absoluteDb = this->peakDb + dBTargets[i];
-        this->decayPointCount++;
+
+        decayEnvelope[i].timeMs  = accumulatedTimeMs;
+        decayEnvelope[i].dbOffset = dbTargets[i];
+
+        decayPointCount++;
     }
 }
+4.4 Query Decay Offset
+float SampledSound::getDecayDbOffsetAtTime(float timeMs) const
+{
+    if (decayPointCount == 0)
+        return 0.0f;
 
-float SampledSound::getDecayLevelAtTime(float timeMs) const {
-    if (this->decayPointCount == 0) return this->peakDb;  // no decay info; return peak
-    
-    // Linear search is fine for max 10 points
-    for (size_t i = 0; i < this->decayPointCount; ++i) {
-        if (this->decayEnvelope[i].timeMs >= timeMs) {
-            if (i == 0) return this->decayEnvelope[0].absoluteDb;
-            
-            // Linear interpolation between adjacent absolute dB values
-            const auto& p0 = this->decayEnvelope[i - 1];
-            const auto& p1 = this->decayEnvelope[i];
-            
-            float alpha = (timeMs - p0.timeMs) / (p1.timeMs - p0.timeMs);
-            alpha = juce::jlimit(0.0f, 1.0f, alpha);
-            
-            return p0.absoluteDb + (p1.absoluteDb - p0.absoluteDb) * alpha;
+    for (size_t i=0;i<decayPointCount;i++)
+    {
+        if (decayEnvelope[i].timeMs >= timeMs)
+        {
+            if (i == 0)
+                return decayEnvelope[0].dbOffset;
+
+            const auto& p0 = decayEnvelope[i-1];
+            const auto& p1 = decayEnvelope[i];
+
+            float dt = p1.timeMs - p0.timeMs;
+
+            if (dt <= 0.001f)
+                return p1.dbOffset;
+
+            float alpha =
+                (timeMs - p0.timeMs) / dt;
+
+            alpha =
+                juce::jlimit(0.0f,1.0f,alpha);
+
+            return p0.dbOffset +
+                (p1.dbOffset - p0.dbOffset) * alpha;
         }
     }
-    
-    // Beyond last point, return last dB value
-    return this->decayEnvelope[this->decayPointCount - 1].absoluteDb;
+
+    return decayEnvelope[decayPointCount-1].dbOffset;
 }
-```
+4.5 Find Matching Decay Time for Target Loudness
 
-### 4.4 Query Current Level in `InstrumentSynthVoice` (for articulation transitions)
+This function enables articulation matching.
 
-**Add to InstrumentSynthVoice class:**
+float SampledSound::findTimeForAbsDb(float targetAbsDb) const
+{
+    for (size_t i = 0; i < decayPointCount; ++i)
+    {
+        float absDb = peakDb + decayEnvelope[i].dbOffset;
 
-```cpp
-class InstrumentSynthVoice {
-public:
-    // ... existing fields ...
-    
-    // Get current sounding level in dB (for seamless transitions)
-    float getCurrentSoundingLevelDb() const {
-        if (!this->currentlyPlayingSound || this->currentlyPlayingSound->decayPointCount == 0) {
-            return this->currentlyPlayingSound ? this->currentlyPlayingSound->peakDb : 0.0f;
+        if (absDb <= targetAbsDb)
+        {
+            if (i == 0)
+                return decayEnvelope[0].timeMs;
+
+            const auto& p0 = decayEnvelope[i - 1];
+            const auto& p1 = decayEnvelope[i];
+
+            float abs0 = peakDb + p0.dbOffset;
+            float abs1 = peakDb + p1.dbOffset;
+
+            float alpha =
+                (targetAbsDb - abs0) /
+                (abs1 - abs0);
+
+            return p0.timeMs +
+                alpha * (p1.timeMs - p0.timeMs);
         }
-        
-        // Calculate time offset from peak in milliseconds
-        double timeOffsetMs = this->sourceSamplePosition / (this->sampleRate / 1000.0);
-        
-        // getDecayLevelAtTime returns absolute dB (no arithmetic needed)
-        float decayDbLevel = this->currentlyPlayingSound->getDecayLevelAtTime(timeOffsetMs);
-        
-        // Apply velocity and envelope gains (convert to linear, apply ADSR)
-        float linearLevel = std::pow(10.0f, decayDbLevel / 20.0f);
-        linearLevel *= this->velocityGain * this->lastEnvelopeValue;
-        
-        return 20.0f * std::log10(linearLevel + 1e-6f);  // back to dB
     }
-};
-```
 
----
+    return decayEnvelope[decayPointCount - 1].timeMs;
+}
+4.6 Query Current Estimated Level in Voice
 
-## 5. Use Case: Seamless Articulation Mutations
+Decay time must be measured relative to the peak transient.
 
-### 5.1 Example: Hihat Open → Half → Close
+float InstrumentSynthVoice::getCurrentEstimatedAbsDb() const
+{
+    if (!currentlyPlayingSound)
+        return -120.0f;
 
-**Goal:** Transition from open hihat to closed with no clicks/artifacts
+    double timeMs =
+        (sourceSamplePosition / sampleRate) * 1000.0;
 
-```cpp
-class ArticulationMutationController {
-public:
-    void startMutation(InstrumentSynthVoice* sourceVoice, 
-                      InstrumentSynthVoice* targetVoice,
-                      float crossfadeDurationMs = 50.0f) {
-        if (!sourceVoice || !targetVoice) return;
-        
-        // Find current sounding level of source
-        float sourceLevelDb = sourceVoice->getCurrentSoundingLevelDb();
-        
-        // Find target articulation sample that has similar decay profile
-        // at a matching dB level (optional: could use decayCode similarity)
-        targetVoice->startNote(targetNote, targetVelocity, targetSound);
-        
-        // Crossfade: fade out source, fade in target
-        // Both follow their natural decay curves
-        float sourceFadeStartGain = linearFromDb(sourceLevelDb);
-        float targetFadeEndGain = linearFromDb(sourceLevelDb);  // start at same level
-        
-        sourceVoice->fadeOutSec(crossfadeDurationMs);
-        // targetVoice applies matching gain ramp during startup
-    }
-};
-```
+    timeMs -= currentlyPlayingSound->attackMs;
 
-### 5.2 Benefits
-- **No silence gaps:** Target starts at source's current dB level
-- **Natural decay:** Each articulation follows its own pre-analyzed decay profile
-- **CPU efficient:** Decay envelope is precomputed; query is O(log 10) lookup + interpolation
-- **Per-sample accuracy:** Respects actual recorded transient characteristics
+    if (timeMs < 0)
+        timeMs = 0;
 
----
+    return
+        currentlyPlayingSound
+        ->getEstimatedAbsDbAtTime((float)timeMs);
+}
+5. Seamless Articulation Mutations
 
-## 6. Implementation Steps
+Example: Hihat Open → Close
 
-1. **Phase 1: Foundation**
-   - Add decay fields to `SampledSound`
-   - Implement `buildDecayEnvelope()` and `getDecayOffsetAtTime()`
-   - Pass `SampleFileInfo` through to `SampleLoader::LoadJob`
+Transition algorithm:
 
-2. **Phase 2: SampleLoader Integration**
-   - Modify `LoadJob::runJob()` to use `decayMs` instead of `maxSampleLengthMs`
-   - Skip generic fade-out when `decayMs` is available
-   - Update cache key logic (already considers both parameters)
+Query source current decay level
 
-3. **Phase 3: Voice Query**
-   - Add `getCurrentSoundingLevelDb()` to `InstrumentSynthVoice`
-   - Integrate with `InstrumentSynthVoice::renderNextBlock()` if needed for monitoring
+Find equivalent level in target articulation
 
-4. **Phase 4: Articulation Transitions (Optional, Future)**
-   - Create `ArticulationMutationController` utility class
-   - Implement crossfade logic using current dB level queries
-   - Test with hihat and cymbal articulations
+Start target playback at matching decay offset
 
----
+Apply short crossfade if needed
 
-## 7. Edge Cases & Considerations
+sourceAbsDb = sourceVoice.getCurrentEstimatedAbsDb()
 
-### 7.1 Samples Without Metadata
-- Fallback to `maxSampleLengthMs` and generic `fadeOutMs`
-- `decayPointCount == 0`; queries return `peakDb` immediately (no array access needed)
+targetOffset =
+    targetSound.findTimeForAbsDb(sourceAbsDb)
 
-### 7.2 Incomplete Decay Codes
-- Some samples may not reach -60 dB within reasonable time
-- Array size is fixed (10 points for -6 to -60 dB)
-- Queries beyond last point return last dB offset
+targetVoice.startAtOffset(targetOffset)
+6. Cache Key Changes
 
-### 7.3 Very Short vs. Very Long Samples
-- Short attack samples (drums): decayMs may be < 100ms
-- Long tail samples (cymbals): decayMs may be > 10 seconds
-- No special handling needed; decayMs drives actual trimming
+Cache keys must include trimming parameters.
 
-### 7.4 Cache Key Invalidation
-- `makeCacheKey()` currently uses `maxSampleLengthMs` and `fadeOutMs`
-- If using `decayMs`, cache key should ideally include it (or decode it from filename)
-- Current implementation: each sample file cached independently, overrides based on presence
+cacheKey =
+filePath
++ decayMs
++ sampleRate
 
-### 7.5 Sample Rate Independence
-- Decay times stored in milliseconds (sample-rate agnostic)
-- `getDecayOffsetAtTime()` uses `timeMs`, not sample index
-- Works correctly across different project/playback sample rates
+Without this, cached buffers could be reused with incorrect trim lengths.
 
----
+7. Edge Cases
+Samples Without Metadata
 
-## 8. Data Structure Summary
+Fallback:
 
-```cpp
-// In SampledSound
-static constexpr size_t MAX_DECAY_POINTS = 10;  // -6 to -60 dB in 6 dB steps
+maxSampleLengthMs
+generic fadeOut
 
-struct DecayPoint {
-    float timeMs;      // 0..2500 typical range (milliseconds from peak)
-    float absoluteDb;  // absolute dB value (peakDb already baked in during buildDecayEnvelope)
-};
+Decay lookup returns 0 dB offset.
 
-std::array<DecayPoint, MAX_DECAY_POINTS> decayEnvelope = {};  // fixed-size array
-size_t decayPointCount = 0;  // actual number of populated points (0-10)
+Incomplete Decay Codes
 
-float attackMs = 0.0f;
-float decayMs = 0.0f;
-float peakDb = 0.0f;
-```
+Some samples may not reach -60 dB.
 
-**Memory footprint per sample:**
-- 3 floats = ~12 bytes (attackMs, decayMs, peakDb)
-- decayEnvelope array (10 × 8 bytes) = 80 bytes
-- decayPointCount (size_t) = 8 bytes
-- **Total: ~100 bytes per SampledSound object** (no pointers, no strings, no duplication)
+Queries beyond last point return final offset.
 
----
+Very Long Samples
 
-## 9. References
+Cymbal tails may exceed 10 seconds.
 
-- **Python analysis script:** `scripts/analyze_drum_samples.py` 
-  - `encode_time_intervals_as_base62()` - how decay_code is built
-  - `extract_decay_points()` - extracts -6, -12, ... -60 dB time points
-  - `construct_new_filename()` - embeds metadata in filename
+Metadata-driven trimming ensures buffers remain bounded.
 
-- **Current implementation files:**
-  - `source/Engine/KitLibModel.h` - `SampleFileInfo` definition
-  - `source/Engine/SampleLoader.h/cpp` - sample loading & trimming
-  - `source/Engine/InstrumentSynth.h/cpp` - voice rendering
+8. Memory Footprint
 
+Per sample:
+
+Decay envelope:
+10 × 8 bytes = 80 bytes
+
+Metadata:
+3 floats = 12 bytes
+
+Total ≈ ~100 bytes per SampledSound
+
+9. Future Option: Phase-Aligned Decay Mapping (Advanced)
+
+A more advanced articulation transition technique can be implemented later using phase-aligned decay mapping.
+
+Instead of crossfading between articulations, the system:
+
+Finds the current decay loudness of the source articulation
+
+Finds the matching decay position in the target articulation
+
+Starts playback of the target sample at that decay offset
+
+Because both samples represent the same physical instrument state along its decay curve, the transition often becomes perceptually seamless.
+
+Example flow:
+
+sourceAbsDb = sourceVoice.getCurrentEstimatedAbsDb()
+
+targetOffset =
+    targetSound.findTimeForAbsDb(sourceAbsDb)
+
+targetVoice.startAtOffset(targetOffset)
+
+Advantages:
+
+No crossfade required
+
+Very natural articulation morphing
+
+Preserves natural decay envelopes
+
+Extremely CPU efficient
+
+Typical use cases:
+
+open hihat → half open
+
+half open → closed
+
+cymbal → choke
+
+ride bow → bell articulation
+
+Crossfades can still be used as a fallback if phase mismatch is audible.
+
+10. References
+
+Python analysis script:
+
+scripts/analyze_drum_samples.py
+
+Relevant functions:
+
+extract_decay_points()
+
+encode_time_intervals_as_base62()
+
+construct_new_filename()
+
+Result
+
+With these changes the system:
+
+✔ Uses peak-aligned decay timing
+✔ Supports decay-curve articulation matching
+✔ Prevents trim clicks with safety fade
+✔ Maintains compact metadata footprint
+✔ Enables advanced articulation morphing strategies

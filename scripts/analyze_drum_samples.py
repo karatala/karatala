@@ -59,13 +59,13 @@ parser.add_argument(
 parser.add_argument(
     "--silence-db",
     type=float,
-    default=-60.0,
-    help="Silence threshold in dB (default: -60)"
+    default=-72.0,
+    help="Silence threshold in dB (default: -72)"
 )
 
 parser.add_argument(
     "-f", "--name-filter",
-    help="Only process file names that contain filter string"
+    help="Only process file names that contain filter regex string"
 )
 
 parser.add_argument(
@@ -79,8 +79,9 @@ args: argparse.Namespace = parser.parse_args()
 INPUT_FOLDER: str = os.path.abspath(args.input_folder)
 OUTPUT_CSV: str = args.output_csv
 SILENCE_THRESHOLD_DB: float = args.silence_db
-NAME_FILTER: Optional[str] = args.name_filter
 RENAME_FILES: bool = args.rename_files
+NAME_FILTER: Optional[str] = args.name_filter
+NAME_FILTER_REGEX = re.compile(NAME_FILTER, re.IGNORECASE) if NAME_FILTER else None
 
 
 # =========================
@@ -142,28 +143,6 @@ def schroeder_decay_curve(
     return time_axis_sec, decay_db
 
 
-def compute_amplitude_envelope_via_hilbert(
-    audio_waveform_float: npt.NDArray[np.float64]
-) -> npt.NDArray[np.float64]:
-    """
-    Computes instantaneous amplitude envelope of a mono audio waveform.
-
-    Input
-    -----
-    audio_waveform_float
-        Mono PCM waveform.
-        Range typically [-1.0, 1.0].
-
-    Output
-    ------
-    amplitude_envelope_linear
-        Instantaneous amplitude magnitude (linear scale).
-        Same length as input waveform.
-        Range: [0.0 .. ~1.0]
-    """
-    analytic_signal = hilbert(audio_waveform_float)
-    amplitude_envelope_linear = np.abs(analytic_signal)
-    return amplitude_envelope_linear
 
 
 def smooth_amplitude_envelope(
@@ -242,103 +221,87 @@ def extract_decay_points(envelope_db: npt.NDArray[np.float64], window_ms: float 
         if len(hits) > 0:
             idx = hits[0]
             decay_times.append((idx + peak_idx) * window_ms)
+        else:
+            decay_times.append(-1)
     peak_ms = peak_idx * window_ms
     return decay_times, peak_ms, peak_db
-
-
 
     
 def compute_decay_time_ms_from_envelope_frames(
     envelope_db: npt.NDArray[np.float64],
     frame_duration_ms: float,
-    decay_range_db: float = 60.0
+    silence_threshold_db: float
 ) -> float:
     """
-    Measures decay time relative to the signal's own peak.
+    Measures decay time until envelope falls below silence threshold.
 
-    Decay time = time until envelope falls (decay_range_db)
-    below its peak level.
-
-    Example:
-        If peak = -3 dB and decay_range_db = 60,
-        target level = -63 dB.
-
-    Parameters
-    ----------
     envelope_db
-        Envelope in dB.
+        Envelope in decibels.
 
     frame_duration_ms
         Duration of each frame in milliseconds.
 
-    decay_range_db
-        How far below peak to measure decay (default: 60 dB).
+    silence_threshold_db
+        Absolute silence threshold (e.g. -60 dB)
 
     Returns
     -------
     decay_time_ms
     """
-
-    peak_index = int(np.argmax(envelope_db))
-    peak_db = float(envelope_db[peak_index])
-
-    target_db = peak_db - decay_range_db
-
-    tail = envelope_db[peak_index:]
-
-    for i in range(len(tail)):
-        if tail[i] <= target_db:
-            return i * frame_duration_ms
-
-    return len(tail) * frame_duration_ms
+    for sample_index in range(0, len(envelope_db)):
+        if envelope_db[sample_index] <= silence_threshold_db:
+            decay_time_ms = sample_index * frame_duration_ms
+            return decay_time_ms
+    return len(envelope_db) * frame_duration_ms
 
 
 def encode_time_intervals_as_base62(times: List[float]) -> str:
-    """Encodes time intervals as Base-62 deltas for compact storage."""
-    if not times:
+    """Encodes time intervals as Base-62 deltas for compact storage, skipping -1 values."""
+    valid_times = [t for t in times if t != -1]
+    if not valid_times:
         return ""
-    deltas: List[float] = [times[0]]
-    for i in range(1, len(times)):
-        deltas.append(times[i] - times[i - 1])
+    deltas: List[float] = [valid_times[0]]
+    for i in range(1, len(valid_times)):
+        deltas.append(valid_times[i] - valid_times[i - 1])
     return "_".join(
         number_to_base62(int(t))
         for t in deltas
     )
 
+from pathlib import Path
+from typing import Tuple
 
 def extract_sample_metadata_from_path(path: str, input_root: str) -> Tuple[str, str, int, str, str]:
-    """Extracts instrument, articulation, velocity, and other metadata from file path structure."""
-    rel: str = os.path.relpath(path, input_root)
-    parts: Tuple[str, ...] = Path(rel).parts
-    instrument: str = ""
-    articulation: str = ""
-    velocity: int = 0
-    sample_variant: str = ""
-    mic_chain: str = ""
-    if len(parts) >= 3:
-        inst_folder: str = parts[-3]
-        inst_parts: List[str] = inst_folder.split("-")
-        if len(inst_parts) >= 2:
-            instrument: str = "-".join(inst_parts[:2])
-        else:
-            instrument: str = inst_folder
-    if len(parts) >= 2:
-        articulation: str = parts[-2].split("-")[0]
-    fname: str = Path(parts[-1]).stem
-    m: Optional[re.Match] = re.match(r"(\d+)([a-z]?)-([a-zA-Z0-9_]+)", fname)
-    if m:
-        velocity: int = int(m.group(1))
-        sample_variant: str = m.group(2)
-        mic_chain: str = m.group(3)
-    return instrument, articulation, velocity, sample_variant, mic_chain
+    """
+    Extract metadata from filename only (no directory dependency, no regex).
 
+    Format:
+    <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
+    """
+    fname: str = Path(path).stem
+    parts = fname.split("-")
+    if len(parts) < 4:
+        return fname, "", 0, "", ""
+    instrument = f"{parts[0]}-{parts[1]}"
+    articulation = parts[2]
+    vel_var = parts[3]
+    velocity_str = ""
+    sample_variant = ""
+    for ch in vel_var:
+        if ch.isdigit():
+            velocity_str += ch
+        else:
+            sample_variant += ch
+    velocity = int(velocity_str) if velocity_str else 0
+    mic_chain = parts[4]
+    return instrument, articulation, velocity, sample_variant, mic_chain
 
 def construct_new_filename(fileName: str, peak_ms: float, peak_db: float, decay_ms: float, decay_code: str) -> str:
     """Constructs new filename with encoded sample analysis metadata.
     
-    Format: <velocity><sampleVariant>-<micChain>-a{attack}-d{decay}-p{peak}-c{decay_code}.<ext>
+    Format: <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-p{peak_db*-10}_{peak_ms}-d{decay}-c{decay_code}.<ext>
     
-    Preserves base name (<velocity><sampleVariant>-<micChain>) in correct order.
+    Preserves base name (<instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>) in correct order.
     Updates existing metadata if file was already renamed.
     
     Example: 043a-ons-a38-d4960-p19-c34_5a_2U_76_6i_em_d4_kY_7K_0.flac
@@ -347,16 +310,16 @@ def construct_new_filename(fileName: str, peak_ms: float, peak_db: float, decay_
     name_without_ext = parts[0]
     ext = parts[1] if len(parts) > 1 else ""
     name_parts = name_without_ext.split("-")
-    # Base name is always first 2 parts: <velocity><sampleVariant>-<micChain>
-    if len(name_parts) >= 2:
-        base_name = "-".join(name_parts[:2])
+    # Base name is always first 5 parts: <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>
+    if len(name_parts) >= 5:
+        base_name = "-".join(name_parts[:5])
     else:
         base_name = name_without_ext
     # Build optional params with latest values
     decay_ms_int = int(round(decay_ms))
     peak_db_int = int(round(abs(peak_db*10)))
     peak_ms_int = int(round(peak_ms))
-    optional_params = f"d{decay_ms_int}-p{peak_db_int}_{peak_ms_int}-c{decay_code}"
+    optional_params = f"p{peak_db_int}_{peak_ms_int}-d{decay_ms_int}-c{decay_code}"
     new_name = f"{base_name}-{optional_params}"
     if ext:
         new_name += f".{ext}"
@@ -376,7 +339,7 @@ for root, _, filenames in os.walk(INPUT_FOLDER, followlinks=True):
         fname_lower: str = fname.lower()
         if not fname_lower.endswith(SUPPORTED_AUDIO_EXTENSIONS):
             continue
-        if NAME_FILTER and NAME_FILTER not in fname_lower:
+        if NAME_FILTER_REGEX and not NAME_FILTER_REGEX.search(fname):
             continue
         files.append(os.path.join(root, fname))
 
@@ -404,46 +367,35 @@ for n, path in enumerate(files, start=1):
         lufs = float("-inf")
 
 
-    amp_envelope_linear: npt.NDArray[np.float64]
-    amp_envelope_linear = compute_amplitude_envelope_via_hilbert(audio_waveform)
-    amp_envelope_linear = smooth_amplitude_envelope(amp_envelope_linear, sample_rate)
-    # amp_envelope = smooth_amplitude_envelope(amp_envelope, sample_rate)
-    # amp_envelope /= np.max(amp_envelope) + 1e-9
-    amp_envelope_db: npt.NDArray[np.float64] = convert_linear_amplitude_to_db(amp_envelope_linear)
+
+
+    amp_frame_ms = 1000.0 / sample_rate
+    amp_envelope_db: npt.NDArray[np.float64] = convert_linear_amplitude_to_db(audio_waveform)
 
     amp_peak_index = int(np.argmax(amp_envelope_db))
 
-    amp_frame_ms = 1000.0 / sample_rate
-
     amp_peak_db: float = float(np.max(amp_envelope_db))
     amp_peak_ms: float = amp_peak_index * amp_frame_ms
-    amp_decay_ms: float = compute_decay_time_ms_from_envelope_frames(amp_envelope_db, amp_frame_ms, -SILENCE_THRESHOLD_DB)
-    
-    amp_decay_points_db, _, _ = extract_decay_points(amp_envelope_db, amp_frame_ms)
 
 
-    rms_window_samples: int
-    
+
     rms_envelope_linear: npt.NDArray[np.float64]
+    rms_window_samples: int
     rms_envelope_linear, rms_window_samples = compute_rms_envelope_per_window(audio_waveform, sample_rate, RMS_ANALYSIS_WINDOW_MS)
+    
+    rms_window_ms: float = rms_window_samples / sample_rate * 1000
 
     rms_envelope_db: npt.NDArray[np.float64] = convert_linear_amplitude_to_db(rms_envelope_linear)
 
     rms_peak_index: int = int(np.argmax(rms_envelope_db))
-
-    rms_window_ms: float = rms_window_samples / sample_rate * 1000
-
     rms_peak_db: float = float(rms_envelope_db[rms_peak_index])
     rms_peak_ms: float = rms_peak_index * rms_window_ms
-    rms_decay_ms: float = compute_decay_time_ms_from_envelope_frames(rms_envelope_db, rms_window_ms, -SILENCE_THRESHOLD_DB)
+
+    rms_decay_ms: float = compute_decay_time_ms_from_envelope_frames(rms_envelope_db, rms_window_ms, SILENCE_THRESHOLD_DB)
 
     rms_decay_points_db, _, _ = extract_decay_points(rms_envelope_db, rms_window_ms)
-    # print(f"  2Peak: {amp_peak_db:.1f} dB @ {amp_peak_ms:.1f}ms   Decay: {amp_decay_ms:.1f}ms. RMS Peak: {rms_peak_db:.1f} dB @ {rms_peak_ms:.1f}ms   RMS Decay: {rms_decay_ms:.1f}ms")
 
-    # print(f"\n Decay points (dB): {[float(x) for x in amp_decay_points_db]}\n\n")
-    # print(f"\n Decay points (dB): {[float(x) for x in rms_decay_points_db]}\n\n")
-
-    decay_code: str = encode_time_intervals_as_base62([float(x) for x in amp_decay_points_db])
+    decay_code: str = encode_time_intervals_as_base62([float(x) for x in rms_decay_points_db])
     
     length_ms: float = len(audio_waveform) / sample_rate * 1000
 
@@ -456,17 +408,15 @@ for n, path in enumerate(files, start=1):
         velocity,
         sample_variant,
         mic_chain,
-        round(length_ms, 0),
-        round(rms_peak_ms, 0),
-        round(rms_decay_ms, 0),
+        int(length_ms),
+        int(rms_decay_ms),
+        int(amp_peak_ms),
+        int(rms_peak_ms),
+        round(amp_peak_db, 2),
         round(rms_peak_db, 2),
         round(lufs, 2),
-        decay_code,
-        *[float(x) for x in rms_decay_points_db],
-        round(amp_peak_ms, 0),
-        round(amp_decay_ms, 0),
-        round(amp_peak_db, 2),
-        *[round(float(x),0) for x in amp_decay_points_db],
+        "_" + decay_code,
+        *[int(x) for x in rms_decay_points_db],
     ]
     # print("  " + "\t".join(str(x) for x in row))
 
@@ -499,24 +449,13 @@ with open(OUTPUT_CSV, "w", newline="", encoding="utf-8") as f:
         "rr",
         "mic",
         "length_ms",
-        "rms_peak_ms",
         "rms_decay_ms",
+        "amp_peak_ms",
+        "rms_peak_ms",
+        "amp_peak_db",
         "rms_peak_db",
         "lufs",
         "decay_code",
-        "-6dB",
-        "-12dB",
-        "-18dB",
-        "-24dB",
-        "-30dB",
-        "-36dB",
-        "-42dB",
-        "-48dB",
-        "-54dB",
-        "-60dB",
-        "amp_peak_ms",
-        "amp_decay_ms",
-        "amp_peak_db",
         "-6dB",
         "-12dB",
         "-18dB",

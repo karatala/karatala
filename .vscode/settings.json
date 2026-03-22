@@ -14,5 +14,19 @@
         "statusBar.debuggingForeground": "#FFFAE5",
         "statusBar.noFolderBackground": "#5A4900",
         "statusBar.noFolderForeground": "#FFFAE5"
+    },
+    "chat.tools.terminal.autoApprove": {
+        "/^python \\.\\\\scripts\\\\analyze_drum_samples\\.py -i C:\\\\Users\\\\Public\\\\Documents\\\\Karatala\\\\sample_library -f 127a-rfs \\| head -20$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^python \\.\\\\scripts\\\\analyze_drum_samples\\.py -i C:\\\\Users\\\\Public\\\\Documents\\\\Karatala\\\\sample_library -f 127a-rfs 2>&1 \\| Select-Object -First 20$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^python \\.\\\\scripts\\\\analyze_drum_samples\\.py -i C:\\\\Users\\\\Public\\\\Documents\\\\Karatala\\\\sample_library -f 127a-rfs 2>&1 \\| Where-Object \\{\\$_ -match \"\\(Done\\|Error\\|Traceback\\|missing\\)\"\\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }

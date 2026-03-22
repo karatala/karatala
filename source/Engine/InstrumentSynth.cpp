@@ -108,6 +108,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     int skippedNoVoice = 0;
     int skippedTooLate = 0;
     int skippedNoDbMatch = 0;
+    int skippedSilentTarget = 0;
     int skippedOther = 0;
 
     // For each active voice, if its articulation differs from newArtIdx, crossfade
@@ -220,32 +221,14 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
         if (state.skip) continue;
 
-        // Find replacement voice BEFORE fading old one — if no voice available, keep old sound
-        auto* newVoice = this->findFreeVoice(midiChannel, voice->getCurrentlyPlayingNote(), voice->hitGroupId);
-        if (newVoice == voice) {
-            newVoice = nullptr;
-            for (auto* candidate : this->voices) {
-                if (candidate == nullptr || candidate == voice) continue;
-                if (!candidate->isVoiceActive()) {
-                    newVoice = candidate;
-                    break;
-                }
-            }
-
-            if (newVoice == nullptr) {
-                InstrumentSynthVoice* best = nullptr;
-                float bestDb = std::numeric_limits<float>::infinity();
-                for (auto* candidate : this->voices) {
-                    if (candidate == nullptr || candidate == voice || !candidate->isVoiceActive()) continue;
-                    if (candidate->hitGroupId != voice->hitGroupId) continue;
-
-                    const float db = candidate->getEstimatedCurrentDb();
-                    if (best == nullptr || db < bestDb) {
-                        best = candidate;
-                        bestDb = db;
-                    }
-                }
-                newVoice = best;
+        // For pedal transitions, never steal active voices. If no idle voice exists,
+        // keep the old voice ringing instead of risking an abrupt mute.
+        InstrumentSynthVoice* newVoice = nullptr;
+        for (auto* candidate : this->voices) {
+            if (candidate == nullptr || candidate == voice) continue;
+            if (!candidate->isVoiceActive()) {
+                newVoice = candidate;
+                break;
             }
         }
 
@@ -259,11 +242,46 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         const double offsetSamples = (state.offsetMs / 1000.0) * srcRate;
         const double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
 
+        // Guard against replacing with an effectively silent region.
+        // If target content around offset is too quiet, keep old voice to avoid perceived mute.
+        {
+            const int windowStart = juce::jlimit(0, juce::jmax(0, targetBuffer.getNumSamples() - 1), static_cast<int>(clampedOffset));
+            const int windowSize = juce::jmin(1024, targetBuffer.getNumSamples() - windowStart);
+            if (windowSize <= 0) {
+                ++skippedSilentTarget;
+                continue;
+            }
+
+            const int channelCount = targetBuffer.getNumChannels();
+            double sumSquares = 0.0;
+            int sampleCount = 0;
+            for (int channel = 0; channel < channelCount; ++channel) {
+                const float* readPtr = targetBuffer.getReadPointer(channel, windowStart);
+                for (int i = 0; i < windowSize; ++i) {
+                    const float sample = readPtr[i];
+                    sumSquares += static_cast<double>(sample) * static_cast<double>(sample);
+                }
+                sampleCount += windowSize;
+            }
+
+            const float rms = sampleCount > 0
+                ? std::sqrt(static_cast<float>(sumSquares / static_cast<double>(sampleCount)))
+                : 0.0f;
+            const float rmsDb = juce::Decibels::gainToDecibels(juce::jmax(0.000001f, rms), -100.0f);
+            if (rmsDb < -65.0f) {
+                ++skippedSilentTarget;
+                continue;
+            }
+        }
+
         // Only now fade old voice — replacement is confirmed
         voice->requestFadeOut(HIHAT_PEDAL_CROSSFADE_SEC);
 
         float vel = voice->getVelocityGain();
         this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
+        newVoice->hitGroupId = targetSe->sound->micBufferChannelStart;
+        newVoice->artNameId = newArt.nameId;
+        newVoice->artExprId = newArt.exprId;
         newVoice->sourceSamplePosition = clampedOffset;
         newVoice->setVelocityGain(vel);
         ++replacementsStarted;
@@ -312,6 +330,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             + ", noVoice=" + juce::String(skippedNoVoice)
             + ", tooLate=" + juce::String(skippedTooLate)
             + ", noDbMatch=" + juce::String(skippedNoDbMatch)
+            + ", silentTarget=" + juce::String(skippedSilentTarget)
             + ", other=" + juce::String(skippedOther) + "}");
     }
 }

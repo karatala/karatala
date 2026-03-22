@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-This plan outlines how to integrate the new sample metadata (`attackMs`, `decayMs`, `peakDb`, `decayCode`) extracted by `analyze_drum_samples.py` into the sample playback system to enable:
+This plan outlines how to integrate the new sample metadata (`peakDb`, `peadMs`, `decayMs`, `decayCode`) extracted by `analyze_drum_samples.py` into the sample playback system to enable:
 
 1. **Per-sample accurate decay timing**: Replace generic `maxSampleLengthMs` with sample-specific decay timing
 2. **Predefined decay envelope**: Build a fast lookup structure to query expected dB level at any time offset
@@ -14,7 +14,7 @@ This plan outlines how to integrate the new sample metadata (`attackMs`, `decayM
 
 ### 2.1 Sample File Parsing (KitLibModel.cpp)
 - `InstrumentSpec::parseSampleFile()` → extracts filename metadata into `SampleFileInfo`
-- Result includes: velocity, sampleVariant, micChain, **attackMs**, **decayMs**, **peakDb**, **decayCode**
+- Result includes: velocity, sampleVariant, micChain, **peakDb**, **peakMs**, **decayMs**, **decayCode**
 - Currently stored but **not yet used** in `SampleVariantSpec`
 
 ### 2.2 SampleLoader Processing
@@ -98,9 +98,9 @@ public:
     size_t decayPointCount = 0;  // actual number of valid points (0-10)
     
     // Metadata from parsed sample filename
-    float attackMs = 0.0f;
-    float decayMs = 0.0f;
     float peakDb = 0.0f;
+    float peakMs = 0.0f;
+    float decayMs = 0.0f;
     
     // Helper: decode base62 deltas from decayCode and build decayEnvelope
     // Calculates absolute dB values (peakDb + decay targets) and stores them
@@ -126,7 +126,6 @@ JobStatus runJob() override {
         effectiveLengthMs = sampleFileInfo->decayMs;
         hasMetadata = true;
         // Also populate SampledSound metadata
-        this->sound->attackMs = sampleFileInfo->attackMs;
         this->sound->decayMs = sampleFileInfo->decayMs;
         this->sound->peakDb = sampleFileInfo->peakDb;
     }
@@ -279,7 +278,7 @@ public:
         float sourceFadeStartGain = linearFromDb(sourceLevelDb);
         float targetFadeEndGain = linearFromDb(sourceLevelDb);  // start at same level
         
-        sourceVoice->fadeOutSec(crossfadeDurationMs);
+        sourceVoice->requestFadeOut(crossfadeDurationMs);
         // targetVoice applies matching gain ramp during startup
     }
 };
@@ -328,7 +327,7 @@ public:
 - Queries beyond last point return last dB offset
 
 ### 7.3 Very Short vs. Very Long Samples
-- Short attack samples (drums): decayMs may be < 100ms
+- Short attack samples (drums): decayMs may be < 800ms
 - Long tail samples (cymbals): decayMs may be > 10 seconds
 - No special handling needed; decayMs drives actual trimming
 
@@ -351,20 +350,20 @@ public:
 static constexpr size_t MAX_DECAY_POINTS = 10;  // -6 to -60 dB in 6 dB steps
 
 struct DecayPoint {
-    float timeMs;      // 0..2500 typical range (milliseconds from peak)
+    float timeMs;      // 0..2500 typical range (milliseconds from peak or prev point)
     float absoluteDb;  // absolute dB value (peakDb already baked in during buildDecayEnvelope)
 };
 
 std::array<DecayPoint, MAX_DECAY_POINTS> decayEnvelope = {};  // fixed-size array
 size_t decayPointCount = 0;  // actual number of populated points (0-10)
 
-float attackMs = 0.0f;
-float decayMs = 0.0f;
 float peakDb = 0.0f;
+float peakMs = 0.0f;
+float decayMs = 0.0f;
 ```
 
 **Memory footprint per sample:**
-- 3 floats = ~12 bytes (attackMs, decayMs, peakDb)
+- 3 floats = ~12 bytes (peakMs, peakDb, decayMs)
 - decayEnvelope array (10 × 8 bytes) = 80 bytes
 - decayPointCount (size_t) = 8 bytes
 - **Total: ~100 bytes per SampledSound object** (no pointers, no strings, no duplication)
