@@ -178,8 +178,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
         if (state.skip) continue;
 
-        const float fadeInSec = 0.005f;
-        voice->fadeOutSec(fadeInSec);
+        voice->requestFadeOut(0.005f);
 
         // Start replacement voice with small offset to avoid attack transient
         auto* newVoice = this->findFreeVoice(midiChannel, voice->getCurrentlyPlayingNote(), voice->hitGroupId);
@@ -312,12 +311,12 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
 
         if (voice->artNameId == art.nameId && voice->artExprId == art.exprId) {
             if (newVelocity >= voice->getVelocityGain() - 0.05f)
-                voice->fadeOutSec(POLYPHONY_CROSFADE_TIMEOUT_SEC);
+                voice->requestFadeOut(POLYPHONY_CROSFADE_TIMEOUT_SEC);
             continue;
         }
 
         if (this->type == KitLib::InstrumentSpec::Type::HiHat) {
-            voice->fadeOutSec(POLYPHONY_CROSFADE_TIMEOUT_SEC);
+            voice->requestFadeOut(POLYPHONY_CROSFADE_TIMEOUT_SEC);
         }
     }
 }
@@ -625,10 +624,6 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     else
         this->pitchRatio = 1.0;
 
-}
-
-void InstrumentSynthVoice::fadeOutSec(float sec) {
-    this->requestFadeOut(sec);
 }
 
 void InstrumentSynthVoice::requestFadeOut(float durationSec) {

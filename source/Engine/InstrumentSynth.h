@@ -81,7 +81,6 @@ public:
     
     float getVelocityGain() const { return this->velocityGain; }
     void setVelocityGain(float value) { this->velocityGain = value; }
-    void fadeOutSec(float ms);
     void requestFadeOut(float durationSec);
     void requestRelease();
     void killImmediately();
