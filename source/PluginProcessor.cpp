@@ -1,33 +1,62 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <algorithm>
+
+namespace {
+    static constexpr int TOTAL_HOST_CHANNELS = 32;
+
+    void logOutputBusTopology(juce::AudioProcessor& processor) {
+        juce::String summary = "Output buses:";
+        const int outputBusCount = processor.getBusCount(false);
+        for (int busIndex = 0; busIndex < outputBusCount; ++busIndex) {
+            const auto* bus = processor.getBus(false, busIndex);
+            if (bus == nullptr) continue;
+            summary += "\n  [" + juce::String(busIndex) + ": '" + bus->getName() + "' " + juce::String(bus->getCurrentLayout().size()) + "ch" + (bus->isEnabled() ? "" : ", disabled") + "]";
+        }
+        LOG(Info, summary);
+    }
+}
 
 //==============================================================================
 PluginProcessor::PluginProcessor()
-    : AudioProcessor(
-        BusesProperties()
-            // .withInput("Input", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 01", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 02", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 03", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 04", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 05", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 06", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 07", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 08", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 09", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 10", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 11", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 12", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 13", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 14", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 15", juce::AudioChannelSet::stereo(), true)
-            .withOutput("Out 16", juce::AudioChannelSet::stereo(), true)
+    : AudioProcessor([&]() {
+        const auto layout = DrumKitEngine::resolveMicLayoutFromConfig();
+        BusesProperties props;
+        int usedChannels = 0;
 
-    )
+        for (const auto& mic : layout.mics) {
+            int channelCount = std::max(1, mic.specs.channels);
+
+            if (usedChannels + channelCount > TOTAL_HOST_CHANNELS) {
+                LOG(Warning, "buildBusesFromMicLayout: MicLayout exceeds 32 host channels; truncating at '" + mic.name + "'.");
+                break;
+            }
+
+            const juce::String busName = mic.name.isNotEmpty()
+                ? mic.name
+                : ("Mic " + juce::String(usedChannels + 1));
+
+            const auto channelSet = (channelCount == 2)
+                ? juce::AudioChannelSet::stereo()
+                : juce::AudioChannelSet::mono();
+
+            props = props.withOutput(busName, channelSet, true);
+            usedChannels += channelCount;
+        }
+
+        int auxIndex = 1;
+        while (usedChannels < TOTAL_HOST_CHANNELS) {
+            props = props.withOutput("AUX " + juce::String(auxIndex++), juce::AudioChannelSet::mono(), true);
+            ++usedChannels;
+        }
+
+        return props;
+    }())
 
     , mAudioFormatManagerPtr(std::make_unique<juce::AudioFormatManager>())
     , mAudioProcessorValueTreeStatePtr(std::make_unique<juce::AudioProcessorValueTreeState>(*this, nullptr, juce::Identifier("plugin_params"), createParameterLayout())
 ) {
+    logOutputBusTopology(*this);
     this->drumKitEnginePtr = std::make_unique<DrumKitEngine>();
     this->drumKitEnginePtr->init(*mAudioProcessorValueTreeStatePtr);
 }

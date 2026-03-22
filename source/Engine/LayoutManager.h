@@ -6,6 +6,7 @@
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <map>
+#include <algorithm>
 
 struct KitLayout {
     using MidiNotes = std::vector<uint8_t>;
@@ -73,6 +74,13 @@ struct MicLayout {
         KitLib::MicSpec specs;
     };
     std::vector<Mic> mics;
+
+    int getTotalChannelCount() const {
+        int total = 0;
+        for (const auto& mic : this->mics)
+            total += std::max(1, mic.specs.channels);
+        return total;
+    }
 
     static MicLayout getDefault();
 

@@ -33,6 +33,8 @@ public:
     void useState(const juce::AudioProcessorValueTreeState& treeState);
     void saveSettings();
 
+    static MicLayout resolveMicLayoutFromConfig();
+
     void reloadAll();
 
     KitLayout* getKitLayout() { return this->activeKitLayoutPtr.get(); }

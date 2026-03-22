@@ -11,6 +11,49 @@
 static constexpr int NAME_IT_BETTER_MIN_VARIANTS = 3;
 static constexpr int NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS = 32;
 static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
+static constexpr int TOTAL_HOST_OUTPUT_CHANNELS = 32;
+
+MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
+    const char* dataPathEnv = "EDRUMS_DATA_PATH";
+    const auto defaultDataPath = DrumKitEngine().defaultDataPath;
+
+    juce::File resolvedDataPath;
+    auto envInfo = getEnvPath(dataPathEnv);
+    if (envInfo.ok()) {
+        resolvedDataPath = envInfo.value;
+    } else {
+        LOG(Notice, "" + envInfo.error());
+        resolvedDataPath = defaultDataPath;
+    }
+
+    juce::String configuredMicLayout;
+    const juce::File configFile = resolvedDataPath.getChildFile("config.yaml");
+    if (configFile.existsAsFile()) {
+        const auto root = YamlHelper::parse(configFile.loadFileAsString());
+        if (!root.isNull()) {
+            configuredMicLayout = root["micLayout"].asString().trim();
+        } else {
+            LOG(Warning, "Unable to parse config.yaml when resolving mic layout. Falling back to default.");
+        }
+    }
+
+    if (configuredMicLayout.isNotEmpty() && configuredMicLayout != "default") {
+        MicLayoutManager micLayoutManager;
+        micLayoutManager.initDefault();
+        auto scanResult = micLayoutManager.scanLayouts(resolvedDataPath.getChildFile("mic_layouts"));
+        if (!scanResult.ok()) {
+            LOG(Warning, "resolveMicLayoutFromConfig: " + scanResult.error());
+        }
+
+        if (const auto* resolved = micLayoutManager.getLayoutById(configuredMicLayout)) {
+            return *resolved;
+        }
+
+        LOG(Warning, "resolveMicLayoutFromConfig: MicLayout not found: " + configuredMicLayout + ". Using default.");
+    }
+
+    return MicLayout::getDefault();
+}
 
 void DrumKitEngine::init(const juce::AudioProcessorValueTreeState& treeState) {
     this->initGlobalSettings();
@@ -470,7 +513,7 @@ bool DrumKitEngine::applyMicLayout() {
     // }
 
     // Build per-instrument mapping using expected host channel count (defined by plugin outputs)
-    const int expectedHostChannels = 32; // PluginProcessor defines 16 stereo outputs -> 32 channels
+    const int expectedHostChannels = TOTAL_HOST_OUTPUT_CHANNELS;
 
     // Initialize empty mapping for each synth
     for (const auto& instPtr : this->instrumentSynthPtrs) {
@@ -600,8 +643,8 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
             }
             if (dest < 0 || dest >= outCh) {
                 // FIXME: remove logs from loops in audio thread
-                if (mappingUsed && !juce::JUCEApplicationBase::isStandaloneApp())
-                    LOG(Warning, "Instrument '" + instrumentSynthPtr->getId() + "' mapping for mic channel " + juce::String(c) + " -> host index " + juce::String(dest) + " is out of range (host channels=" + juce::String(outCh) + "). Falling back to wrap index.");
+                // if (mappingUsed && !juce::JUCEApplicationBase::isStandaloneApp()) //FIXME: after TODO03 - mic layout output busses this triggers all the time
+                //     LOG(Warning, "Instrument '" + instrumentSynthPtr->getId() + "' mapping for mic channel " + juce::String(c) + " -> host index " + juce::String(dest) + " is out of range (host channels=" + juce::String(outCh) + "). Falling back to wrap index.");
 
                 // Fallback: wrap to available outputs
                 dest = c % outCh;

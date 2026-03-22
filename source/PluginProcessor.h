@@ -16,7 +16,27 @@ public:
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override {
-        juce::ignoreUnused(layouts);
+        if (!layouts.inputBuses.isEmpty())
+            return false;
+
+        const auto current = this->getBusesLayout();
+
+        if (layouts.outputBuses.size() != current.outputBuses.size())
+            return false;
+
+        //FIXME: with this for block uncommented it do endless WARNING: Instrument '...' mapping for mic channel N -> host index M is out of range (host channels=N). Falling back to wrap index. but we use all 32 output channels according micLayout, but since this fails output falls back to first 2 channels
+        // but when its commented, it creates 32 channels for each output mic, like 32 Overheads, 32 Kick In, etc.
+        for (int i = 0; i < layouts.outputBuses.size(); ++i) {
+            const auto& requested = layouts.outputBuses.getReference(i);
+            const auto& fixed = current.outputBuses.getReference(i);
+
+            if (requested == juce::AudioChannelSet::disabled())
+                continue;
+
+            if (requested != fixed)
+                return false;
+        }
+
         return true;
     }
 
