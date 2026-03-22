@@ -5,6 +5,8 @@
 #include <unordered_set>
 
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.1f;
+static constexpr float HIHAT_PEDAL_CROSSFADE_SEC = 0.030f; // 30ms crossfade for pedal transitions
+static constexpr float HIHAT_PEDAL_MIN_REMAINING_SEC = 0.050f; // skip replacement if < 50ms of audio remaining
 // Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
 // value jitters around an articulation boundary.
 static constexpr int HIHAT_PEDAL_CC_HYSTERESIS = 2;
@@ -170,6 +172,15 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
                 : 0.0;
 
             const float clampedMs = juce::jlimit(newEnv.peakMs, static_cast<float>(sampleLengthMs), targetMs);
+
+            // If the offset leaves less than minimum useful audio, skip replacement
+            const float remainingMs = static_cast<float>(sampleLengthMs) - clampedMs;
+            if (remainingMs < HIHAT_PEDAL_MIN_REMAINING_SEC * 1000.0f) {
+                state.skip = true;
+                state.decided = true;
+                continue;
+            }
+
             state.offsetMs = static_cast<double>(clampedMs);
             state.decided = true;
             state.skip = false;
@@ -178,19 +189,21 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
         if (state.skip) continue;
 
-        voice->requestFadeOut(0.005f);
-
-        // Start replacement voice with small offset to avoid attack transient
+        // Find replacement voice BEFORE fading old one — if no voice available, keep old sound
         auto* newVoice = this->findFreeVoice(midiChannel, voice->getCurrentlyPlayingNote(), voice->hitGroupId);
         if (newVoice == nullptr) continue;
-        float vel = voice->getVelocityGain();
-        // Start voice; this will call startNote and set ADSR
-        this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
 
         const double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
         const auto& targetBuffer = *targetSe->sound->buffer;
         const double offsetSamples = (state.offsetMs / 1000.0) * srcRate;
-        newVoice->sourceSamplePosition = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
+        const double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
+
+        // Only now fade old voice — replacement is confirmed
+        voice->requestFadeOut(HIHAT_PEDAL_CROSSFADE_SEC);
+
+        float vel = voice->getVelocityGain();
+        this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
+        newVoice->sourceSamplePosition = clampedOffset;
         newVoice->setVelocityGain(vel);
 
     }
@@ -315,8 +328,13 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
             continue;
         }
 
+        // Cross-articulation choke for hi-hat: a new hit should choke old articulations,
+        // but only if the new hit is loud enough relative to the old voice.
+        // A quiet ghost note should not fully choke a loud ringing cymbal.
         if (this->type == KitLib::InstrumentSpec::Type::HiHat) {
-            voice->requestFadeOut(POLYPHONY_CROSFADE_TIMEOUT_SEC);
+            if (newVelocity >= voice->getVelocityGain() * 0.5f) {
+                voice->requestFadeOut(POLYPHONY_CROSFADE_TIMEOUT_SEC);
+            }
         }
     }
 }
