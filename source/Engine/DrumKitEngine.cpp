@@ -11,7 +11,6 @@
 static constexpr int NAME_IT_BETTER_MIN_VARIANTS = 3;
 static constexpr int NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS = 32;
 static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
-// TOTAL_HOST_OUTPUT_CHANNELS and HOST_OUTPUT_BUS_WIDTH are defined in DrumKitEngine.h
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
@@ -513,7 +512,7 @@ bool DrumKitEngine::applyMicLayout() {
     // }
 
     // Build per-instrument mapping using expected host channel count (defined by plugin outputs)
-    // All output buses are stereo, so each mic occupies HOST_OUTPUT_BUS_WIDTH channels
+    // All output buses are mono; stereo mics occupy 2 consecutive mono channels
     const int expectedHostChannels = TOTAL_HOST_OUTPUT_CHANNELS;
 
     // Initialize empty mapping for each synth
@@ -528,7 +527,7 @@ bool DrumKitEngine::applyMicLayout() {
         int channelCount = mic.specs.channels;
         if (channelCount <= 0) channelCount = 1;
 
-        if (outCursor + HOST_OUTPUT_BUS_WIDTH > expectedHostChannels) {
+        if (outCursor + channelCount > expectedHostChannels) {
             LOG(Warning, "Not enough host output channels to assign mic '" + mic.name + "' with " + juce::String(channelCount) + " channels. Skipping remaining mics.");
             break;
         }
@@ -559,14 +558,13 @@ bool DrumKitEngine::applyMicLayout() {
 
         if (targets.empty()) {
             LOG(Warning,  "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "' FAILED: no coresponding instrument slots found in your kit layout");
-            outCursor += HOST_OUTPUT_BUS_WIDTH; // still reserve host channels (one stereo bus)
+            outCursor += channelCount; // still reserve host channels
             continue;
         } else {
             LOG(Debug, "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "'");
         }
 
-        // Host channel indices for this mic (within the stereo bus)
-        // Mono mics use only the left channel; stereo mics use both
+        // Host channel indices for this mic — directly maps to mono bus indices
         std::vector<int> hostIdx;
         for (int i = 0; i < channelCount; ++i) hostIdx.push_back(outCursor + i);
 
@@ -578,7 +576,7 @@ bool DrumKitEngine::applyMicLayout() {
             t->setMicOutputMapping(merged);
         }
 
-        outCursor += HOST_OUTPUT_BUS_WIDTH; // always advance by stereo bus width
+        outCursor += channelCount; // advance by actual mic channel count
     }
 
     // Apply mapped mic channel counts to synths and size mic buffers if we know the block size

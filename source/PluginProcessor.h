@@ -16,25 +16,19 @@ public:
     void releaseResources() override;
 
     bool isBusesLayoutSupported(const BusesLayout& layouts) const override {
+        //TODO: probably we can remove all this checks and just return true
         // Reject any non-disabled input buses
-         for (int i = 0; i < layouts.inputBuses.size(); ++i) {
+        for (int i = 0; i < layouts.inputBuses.size(); ++i) {
             if (!layouts.inputBuses.getReference(i).isDisabled())
                 return false;
         }
-
         // Must have the same number of output buses we declared
-        if (layouts.outputBuses.size() != this->getBusCount(false))
-            return false;
-
-        // All output buses are stereo — accept stereo or disabled only
+        if (layouts.outputBuses.size() != this->getBusCount(false)) return false;
         for (int i = 0; i < layouts.outputBuses.size(); ++i) {
             const auto& requested = layouts.outputBuses.getReference(i);
+            if (requested.isDisabled()) continue;
 
-            if (requested.isDisabled())
-                continue;
-
-            if (requested != juce::AudioChannelSet::stereo())
-                return false;
+            if (requested != juce::AudioChannelSet::mono()) return false;
         }
 
         return true;
