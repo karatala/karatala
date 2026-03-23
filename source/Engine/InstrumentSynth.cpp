@@ -95,14 +95,6 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
     LOG(Debug, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
-    struct PedalReplacementState {
-        bool decided = false;
-        bool skip = false;
-        bool hasDirectMicAnchor = false;
-        double offsetMs = 0.0;
-    };
-    std::unordered_map<int, PedalReplacementState> replacementStates;
-
     int activeMismatchedVoices = 0;
     int replacementsStarted = 0;
     int skippedNoEnvelope = 0;
@@ -176,65 +168,48 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             continue;
         }
 
-        const int replacementKey =
-            ((voice->getCurrentlyPlayingNote() & 0xFF) << 16)
-            | ((currentArtIdx & 0xFF) << 8)
-            | (static_cast<int>(newArtIdx) & 0xFF);
-        auto& state = replacementStates[replacementKey];
-
-        const bool isDirectMic = ss->sampleVariantSpec && ss->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
-        const bool shouldRecomputeForDirect = !state.skip && state.decided && isDirectMic && !state.hasDirectMicAnchor;
-
-        if (!state.decided || shouldRecomputeForDirect) {
-            const auto& oldEnv = ss->decayEnvelope;
-            const auto& newEnv = targetSe->sound->decayEnvelope;
-            if (!oldEnv.isValid() || !newEnv.isValid()) {
-                state.skip = true;
-                state.decided = true;
-                ++skippedNoEnvelope;
-                continue;
-            }
-
-            const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
-            const double elapsedMs = (voice->sourceSamplePosition / oldSrcRate) * 1000.0;
-            const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
-            const float currentAudibleDb = oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs)) + oldVelDb;
-
-            const float replacementVelDb = oldVelDb;
-            const float targetRelativeDb = currentAudibleDb - replacementVelDb;
-            float targetMs = newEnv.getMsAtAbsoluteDb(targetRelativeDb);
-
-            if (targetMs < 0.0f) {
-                state.skip = true;
-                state.decided = true;
-                ++skippedNoDbMatch;
-                continue;
-            }
-
-            const auto& targetBuffer = *targetSe->sound->buffer;
-            const double targetSrcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-            const double sampleLengthMs = targetSrcRate > 0.0
-                ? (static_cast<double>(targetBuffer.getNumSamples()) / targetSrcRate) * 1000.0
-                : 0.0;
-
-            const float clampedMs = juce::jlimit(newEnv.peakMs, static_cast<float>(sampleLengthMs), targetMs);
-
-            // If the offset leaves less than minimum useful audio, skip replacement
-            const float remainingMs = static_cast<float>(sampleLengthMs) - clampedMs;
-            if (remainingMs < HIHAT_PEDAL_MIN_REMAINING_SEC * 1000.0f) {
-                state.skip = true;
-                state.decided = true;
-                ++skippedTooLate;
-                continue;
-            }
-
-            state.offsetMs = static_cast<double>(clampedMs);
-            state.decided = true;
-            state.skip = false;
-            state.hasDirectMicAnchor = isDirectMic;
+        // Compute offset for THIS voice independently from its own mic-specific
+        // decay envelopes. Each mic has different decay characteristics (direct
+        // mics peak early, room mics peak late), so sharing a single offset
+        // across all mics produces wrong results — room mic replacements end up
+        // in pre-peak / near-silent regions and die quickly.
+        const auto& oldEnv = ss->decayEnvelope;
+        const auto& newEnv = targetSe->sound->decayEnvelope;
+        if (!oldEnv.isValid() || !newEnv.isValid()) {
+            ++skippedNoEnvelope;
+            continue;
         }
 
-        if (state.skip) continue;
+        const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
+        const double elapsedMs = (voice->sourceSamplePosition / oldSrcRate) * 1000.0;
+        const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
+        const float currentAudibleDb = oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs)) + oldVelDb;
+
+        const float replacementVelDb = oldVelDb;
+        const float targetRelativeDb = currentAudibleDb - replacementVelDb;
+        float targetMs = newEnv.getMsAtAbsoluteDb(targetRelativeDb);
+
+        if (targetMs < 0.0f) {
+            ++skippedNoDbMatch;
+            continue;
+        }
+
+        const auto& targetBuffer = *targetSe->sound->buffer;
+        const double targetSrcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
+        const double sampleLengthMs = targetSrcRate > 0.0
+            ? (static_cast<double>(targetBuffer.getNumSamples()) / targetSrcRate) * 1000.0
+            : 0.0;
+
+        const float clampedMs = juce::jlimit(newEnv.peakMs, static_cast<float>(sampleLengthMs), targetMs);
+
+        // If the offset leaves less than minimum useful audio, skip replacement
+        const float remainingMs = static_cast<float>(sampleLengthMs) - clampedMs;
+        if (remainingMs < HIHAT_PEDAL_MIN_REMAINING_SEC * 1000.0f) {
+            ++skippedTooLate;
+            continue;
+        }
+
+        const double offsetMs = static_cast<double>(clampedMs);
 
         // For pedal transitions, never steal active voices. If no idle voice exists,
         // keep the old voice ringing instead of risking an abrupt mute.
@@ -253,12 +228,17 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         }
 
         const double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-        const auto& targetBuffer = *targetSe->sound->buffer;
-        const double offsetSamples = (state.offsetMs / 1000.0) * srcRate;
+        const double offsetSamples = (offsetMs / 1000.0) * srcRate;
         const double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
 
         // Guard against replacing with an effectively silent region.
-        // If target content around offset is too quiet, keep old voice to avoid perceived mute.
+        // Use a threshold RELATIVE to the expected level from the decay envelope,
+        // not an absolute floor. Quiet mics (overheads, rooms) have naturally low
+        // peak levels and at late offsets their content can be at -60 to -80dB —
+        // legitimate level-matched audio that must not be rejected.
+        // Only skip if measured content is >24dB below the envelope's prediction
+        // (indicating corrupt/empty sample), with an absolute floor at -90dB
+        // to catch true digital silence.
         {
             const int windowStart = juce::jlimit(0, juce::jmax(0, targetBuffer.getNumSamples() - 1), static_cast<int>(clampedOffset));
             const int windowSize = juce::jmin(1024, targetBuffer.getNumSamples() - windowStart);
@@ -267,11 +247,20 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
                 continue;
             }
 
-            const int channelCount = targetBuffer.getNumChannels();
+            // Only measure the channels this sample variant actually uses
+            int srcStart = 0;
+            int srcCount = targetBuffer.getNumChannels();
+            if (targetSe->sound->sampleVariantSpec != nullptr) {
+                srcStart = targetSe->sound->sampleVariantSpec->fileChannelStart;
+                if (targetSe->sound->sampleVariantSpec->fileChannelCount > 0)
+                    srcCount = targetSe->sound->sampleVariantSpec->fileChannelCount;
+            }
+
             double sumSquares = 0.0;
             int sampleCount = 0;
-            for (int channel = 0; channel < channelCount; ++channel) {
-                const float* readPtr = targetBuffer.getReadPointer(channel, windowStart);
+            for (int sc = 0; sc < srcCount; ++sc) {
+                const int ch = juce::jlimit(0, targetBuffer.getNumChannels() - 1, srcStart + sc);
+                const float* readPtr = targetBuffer.getReadPointer(ch, windowStart);
                 for (int i = 0; i < windowSize; ++i) {
                     const float sample = readPtr[i];
                     sumSquares += static_cast<double>(sample) * static_cast<double>(sample);
@@ -283,7 +272,12 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
                 ? std::sqrt(static_cast<float>(sumSquares / static_cast<double>(sampleCount)))
                 : 0.0f;
             const float rmsDb = juce::Decibels::gainToDecibels(juce::jmax(0.000001f, rms), -100.0f);
-            if (rmsDb < -65.0f) {
+
+            // Relative threshold: envelope predicts content at ~targetRelativeDb,
+            // allow 24dB margin for cymbal interference patterns & envelope imprecision.
+            // Absolute floor at -90dB catches true digital silence.
+            const float silenceThreshold = juce::jmax(targetRelativeDb - 24.0f, -90.0f);
+            if (rmsDb < silenceThreshold) {
                 ++skippedSilentTarget;
                 continue;
             }
@@ -323,7 +317,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             + " toArt=" + newArtCode
             + " micStart=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelStart : -1)
             + " micCount=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelCount : 0)
-            + " offsetMs=" + juce::String(state.offsetMs, 2)
+            + " offsetMs=" + juce::String(offsetMs, 2)
             + " offsetSamples=" + juce::String(clampedOffset, 2)
             + " sample=" + sampleName);
 
@@ -340,6 +334,22 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             + " value=" + juce::String(controllerValue)
             + " targetArt=" + juce::String((int)newArtIdx)
             + " activeMismatchedVoices=" + juce::String(activeMismatchedVoices)
+            + " reasons{noEnv=" + juce::String(skippedNoEnvelope)
+            + ", noTarget=" + juce::String(skippedNoTarget)
+            + ", noVoice=" + juce::String(skippedNoVoice)
+            + ", tooLate=" + juce::String(skippedTooLate)
+            + ", noDbMatch=" + juce::String(skippedNoDbMatch)
+            + ", silentTarget=" + juce::String(skippedSilentTarget)
+            + ", other=" + juce::String(skippedOther) + "}");
+    }
+
+    const int totalSkipped = skippedNoEnvelope + skippedNoTarget + skippedNoVoice + skippedTooLate + skippedNoDbMatch + skippedSilentTarget + skippedOther;
+    if (replacementsStarted > 0 && totalSkipped > 0) {
+        LOG(Debug, "HiHat pedal transition partial: cc=" + juce::String(controllerNumber)
+            + " value=" + juce::String(controllerValue)
+            + " targetArt=" + juce::String((int)newArtIdx)
+            + " started=" + juce::String(replacementsStarted)
+            + " skipped=" + juce::String(totalSkipped)
             + " reasons{noEnv=" + juce::String(skippedNoEnvelope)
             + ", noTarget=" + juce::String(skippedNoTarget)
             + ", noVoice=" + juce::String(skippedNoVoice)
@@ -434,7 +444,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
     const juce::ScopedLock sl(this->lock);
 
     //temporary disabled to debug cc hat transitions
-    // this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
+    this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
     // this->fadeOutExistingVoices(art, midiChannel, midiNoteNumber, velocity);
 
     bool anyStarted = false;
