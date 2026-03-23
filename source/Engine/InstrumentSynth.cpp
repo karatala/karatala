@@ -83,15 +83,17 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         return;
     }
 
-    if (lastValIt != this->lastCcValue.end()) {
-        const int lastVal = lastValIt->second;
-        if (std::abs(controllerValue - lastVal) < HIHAT_PEDAL_CC_HYSTERESIS) {
-            // Value changed only slightly within hysteresis window — skip processing
-            // but keep cached last value up-to-date.
-            this->lastCcValue[controllerNumber] = controllerValue;
-            return;
-        }
-    }
+    // if (lastValIt != this->lastCcValue.end()) {
+    //     const int lastVal = lastValIt->second;
+    //     if (std::abs(controllerValue - lastVal) < HIHAT_PEDAL_CC_HYSTERESIS) {
+    //         // Value changed only slightly within hysteresis window — skip processing
+    //         // but keep cached last value up-to-date.
+    //         this->lastCcValue[controllerNumber] = controllerValue;
+    //         return;
+    //     }
+    // }
+
+    LOG(Debug, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
     struct PedalReplacementState {
         bool decided = false;
@@ -145,10 +147,23 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         uint8_t curVariant = 0;
         if (ss->sampleVariantSpec) curVariant = KitLib::SampleVariantSpec::letterToIdx(ss->sampleVariantSpec->letter);
 
-        // find sample entry in target layer matching variant or fallback to first
+        // find sample entry in target layer matching variant AND mic channel,
+        // so each replacement voice writes to the same mic buffer channel as the
+        // voice it replaces (overhead stays overhead, room stays room, etc.).
+        const int voiceMicStart = ss->micBufferChannelStart;
         const InstrumentSynth::SampleEntry* targetSe = nullptr;
         for (const auto& se : layer.samples) {
-            if (se.variantIdx == curVariant) { targetSe = &se; break; }
+            if (se.variantIdx == curVariant && se.sound != nullptr
+                && se.sound->micBufferChannelStart == voiceMicStart) {
+                targetSe = &se;
+                break;
+            }
+        }
+        // fallback: match variant only (different mic layout between articulations)
+        if (targetSe == nullptr) {
+            for (const auto& se : layer.samples) {
+                if (se.variantIdx == curVariant) { targetSe = &se; break; }
+            }
         }
         if (targetSe == nullptr && !layer.samples.empty()) targetSe = &layer.samples.front();
         if (targetSe == nullptr || targetSe->sound == nullptr) {
@@ -338,7 +353,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
     int artIdx = this->resolveArticulation(midiNoteNumber);
     if (artIdx >= 0 && artIdx < static_cast<int>(this->runtimeArticulations.size())) {
-        // LOG(Debug, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
+        LOG(Debug, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
     } else {
         // LOG(Warning, "InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
@@ -418,6 +433,7 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
 bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
     const juce::ScopedLock sl(this->lock);
 
+    //temporary disabled to debug cc hat transitions
     // this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
     // this->fadeOutExistingVoices(art, midiChannel, midiNoteNumber, velocity);
 
