@@ -3,42 +3,75 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "InstrumentSynth.h"
 
-
+// Resolves the global host output channel assignment for each sample variant of an instrument.
+//
+// Built once per instrument load (constructor), then resolve() is called once per SampleVariantSpec
+// to obtain its {globalStart, channels} directly — no intermediate index lists or out-params needed.
+//
+// Channel ordering contract: applyMicLayout (DrumKitEngine) fills micOutputMapping by iterating
+// micLayout->mics in the same order this class uses (common mics first, then instrument-specific),
+// so globalMapping[localCursor] correctly corresponds to each mic entry here.
 class MicRoutingBuilder {
 public:
-    MicRoutingBuilder(InstrumentSynth* synth) : synth(synth) {}
-    
-    void build(KitLib::ArticulationSpec* artSpec, std::vector<int>& micBufStartChannels, std::vector<int>& micEntryChannelSizes, int& unmatchedStart) {
-        this->collectMicEntries();
-        this->assignVariants(artSpec);
-        this->computeMicGroups(micBufStartChannels, micEntryChannelSizes, unmatchedStart);
+    struct Assignment {
+        int globalStart = 0;
+        int channels    = 0;
+    };
+
+    explicit MicRoutingBuilder(InstrumentSynth* synth) : synth(synth) {
+        this->buildMicEntries();
     }
 
-    int getVariant(size_t& index) {
-        if (index >= this->allVariants.size()) return -1;
-        return this->allVariants[index].second; 
+    // Resolve the output channel assignment for a single sample variant spec.
+    // Matching priority: exact (type+position+format) > type-only > first entry > fully unmatched.
+    // For unmatched variants an offset beyond all real mic channels is allocated sequentially.
+    Assignment resolve(const KitLib::MicSpec& micSpec, int fileChannelCount) {
+        // 1. Exact match
+        for (size_t i = 0; i < micEntries.size(); ++i)
+            if (micKeyEq(micSpec, micEntries[i].mic->specs))
+                return micEntries[i].assignment;
+
+        // 2. Type-only match
+        for (size_t i = 0; i < micEntries.size(); ++i)
+            if (micEntries[i].mic->specs.type == micSpec.type)
+                return micEntries[i].assignment;
+
+        // 3. First entry fallback
+        if (!micEntries.empty())
+            return micEntries[0].assignment;
+
+        // 4. Fully unmatched — allocate past the real mic region
+        Assignment unmatched { unmatchedCursor, fileChannelCount };
+        unmatchedCursor += fileChannelCount;
+        return unmatched;
     }
+
 private:
-    InstrumentSynth* synth = nullptr;
-    std::vector<const MicLayout::Mic*> micEntriesForInst;
-    std::vector<std::pair<const KitLib::SampleVariantSpec*, int>> allVariants; // keep order for assignment
-    std::unordered_map<size_t, int> variantsPerMic; // index in micEntriesForInst -> count
-    int unmatchedVariantCount = 0;
+    struct MicEntryInfo {
+        const MicLayout::Mic* mic       = nullptr;
+        Assignment             assignment;
+    };
 
-    void collectMicEntries() {
-        this->micEntriesForInst.clear();
+    InstrumentSynth*           synth = nullptr;
+    std::vector<MicEntryInfo>  micEntries;
+    int                        unmatchedCursor = 0;
 
+    static bool micKeyEq(const KitLib::MicSpec& a, const KitLib::MicSpec& b) {
+        return a.type == b.type && a.position == b.position && a.format == b.format;
+    }
+
+    void buildMicEntries() {
         const MicLayout* micLayout = this->synth->getMicLayout();
-
         if (micLayout == nullptr) return;
 
-        std::vector<const MicLayout::Mic*> commonMics;
-        std::vector<const MicLayout::Mic*> sameCodeMics;
-        std::vector<const MicLayout::Mic*> sameTypeMics;
+        // Collect relevant mics in the same order applyMicLayout builds micOutputMapping:
+        // common mics (instrument="") for all instruments first, then instrument-specific.
+        std::vector<const MicLayout::Mic*> ordered;
+        std::vector<const MicLayout::Mic*> sameCodeMics, sameTypeMics;
 
         for (const auto& mic : micLayout->mics) {
             if (mic.instrument.isEmpty()) {
-                commonMics.push_back(&mic);
+                ordered.push_back(&mic);
                 continue;
             }
             if (mic.instrument == synth->getId()) {
@@ -46,132 +79,34 @@ private:
                 continue;
             }
             juce::String typeStr = mic.instrument;
-            while (typeStr.length() > 0 && juce::CharacterFunctions::isDigit(typeStr.getLastCharacter())) {
+            while (typeStr.length() > 0 && juce::CharacterFunctions::isDigit(typeStr.getLastCharacter()))
                 typeStr = typeStr.dropLastCharacters(1);
-            }
             auto instType = KitLib::InstrumentSpec::typeFromString(typeStr);
-            if (instType != KitLib::InstrumentSpec::Type::Unknown && instType == synth->getType()) {
+            if (instType != KitLib::InstrumentSpec::Type::Unknown && instType == synth->getType())
                 sameTypeMics.push_back(&mic);
-            }
         }
-        this->micEntriesForInst.insert(this->micEntriesForInst.end(), commonMics.begin(), commonMics.end());
+        const auto& specific = sameCodeMics.empty() ? sameTypeMics : sameCodeMics;
+        ordered.insert(ordered.end(), specific.begin(), specific.end());
 
-        if (!sameCodeMics.empty()) {
-            this->micEntriesForInst.insert(this->micEntriesForInst.end(), sameCodeMics.begin(), sameCodeMics.end());
-        } else {
-            this->micEntriesForInst.insert(this->micEntriesForInst.end(), sameTypeMics.begin(), sameTypeMics.end());
-        }
-        juce::String debug = "    MicLayout entries that apply to this instrument: ";
-        for (size_t i = 0; i < this->micEntriesForInst.size(); ++i) {
-            if (i > 0) debug += ", ";
-            const auto* mic = this->micEntriesForInst[i];
-            debug += "[" + juce::String(i) + "]: " + mic->name + " (" + juce::String(mic->specs.channels) + "ch)";
-        }
-        LOG(Debug, debug);
-    }
-
-    
-    void assignVariants(KitLib::ArticulationSpec* artSpec) {
-        this->variantsPerMic.clear();
-        this->allVariants.clear();
-
-        // Helper to compare mic specs (ignore variant suffix)
-        auto micKeyEq = [](const KitLib::MicSpec& a, const KitLib::MicSpec& b) {
-            return a.type == b.type && a.position == b.position && a.format == b.format;
-        };
-
-        // Count how many variants belong to each mic entry across all velocity layers
-        for (const auto& velSpec : artSpec->velocityLayerSpecs) {
-            for (const auto& varSpec : velSpec->sampleVariantSpecs) {
-                this->allVariants.emplace_back(varSpec.get(), -1); //FIXME: 0?
-            }
-        }
-
-        for (size_t vi = 0; vi < this->allVariants.size(); ++vi) {
-            const KitLib::SampleVariantSpec* var = this->allVariants[vi].first;
-            bool matched = false;
-
-            for (size_t mi = 0; mi < micEntriesForInst.size(); ++mi) {
-                const auto* mic = micEntriesForInst[mi];
-
-                if (micKeyEq(var->micSpec, mic->specs)) {
-                    this->variantsPerMic[mi] += 1;
-                    this->allVariants[vi].second = static_cast<int>(mi);
-                    matched = true;
-                    break;
-                }
-            }
-
-            if (!matched) {
-                // assign fallback: try to match by mic type, else use first mic entry
-                int fallback = -1;
-
-                for (size_t mi = 0; mi < micEntriesForInst.size(); ++mi) {
-                    if (micEntriesForInst[mi]->specs.type == var->micSpec.type) {
-                        fallback = static_cast<int>(mi);
-                        break;
-                    }
-                }
-
-                if (fallback == -1 && !micEntriesForInst.empty()) {
-                    fallback = 0;
-                }
-                if (fallback >= 0) {
-                    this->variantsPerMic[fallback] += 1;
-                    this->allVariants[vi].second = fallback;
-                } else {
-                    //FIXME: ? no mic entries at all: mark as unmatched
-                    this->unmatchedVariantCount += 1;
-                    this->allVariants[vi].second = -1;
-                }
-            }
-        }
-
-        juce::String debug = "    Variants per mic: ";
-        for (size_t i = 0; i < this->micEntriesForInst.size(); ++i) {
-            if (i > 0) debug += ", ";
-            int cnt = this->variantsPerMic.count(i) ? this->variantsPerMic[i] : 0;
-            debug += "[" + juce::String(i) + "]:" + juce::String(cnt);
-        }
-        debug += ". " + juce::String(this->unmatchedVariantCount) + " unmatched";
-        LOG(Debug, debug);
-    }
-
-    void computeMicGroups(std::vector<int>& micBufStartChannels, std::vector<int>& micEntryChannelSizes, int& unmatchedStart) {
-        micBufStartChannels.clear();
-        micEntryChannelSizes.clear();
-
-        // Use the instrument's global mic output mapping so that micBufferChannelStart on every
-        // SampledSound holds the *global* host channel index.  Voices can then render directly
-        // into the global output buffer without any local-to-global remapping step.
-        //
-        // applyMicLayout fills micOutputMapping in the same order that collectMicEntries builds
-        // micEntriesForInst (common mics first, then instrument-specific mics), so
-        // globalMapping[localCursor] is exactly the first host channel for mic entry i.
-        const auto& globalMapping = this->synth->getMicOutputMapping();
+        // Map each mic entry to its global host channel start via the instrument's micOutputMapping.
+        const auto& globalMapping = synth->getMicOutputMapping();
         int localCursor = 0;
 
-        for (size_t i = 0; i < micEntriesForInst.size(); ++i) {
-            const int ch = micEntriesForInst[i]->specs.channels;
+        juce::String debug = "    MicLayout entries for '" + synth->getId() + "': ";
+        for (size_t i = 0; i < ordered.size(); ++i) {
+            const auto* mic = ordered[i];
+            const int ch = mic->specs.channels;
             const int globalStart = (localCursor < static_cast<int>(globalMapping.size()))
                 ? globalMapping[localCursor]
-                : localCursor; // fallback when no mapping is available yet
-            micBufStartChannels.push_back(globalStart);
-            micEntryChannelSizes.push_back(ch);
+                : localCursor; // fallback when micOutputMapping not yet set
+            micEntries.push_back({ mic, { globalStart, ch } });
+            if (i > 0) debug += ", ";
+            debug += mic->name + " -> ch " + juce::String(globalStart) + " (" + juce::String(ch) + "ch)";
             localCursor += ch;
         }
-
-        juce::String debug = "    Mic Starts (global): ";
-        for (size_t i = 0; i < micBufStartChannels.size(); ++i) {
-            if (i > 0) debug += ", ";
-            debug += "" + juce::String(micBufStartChannels[i]) + " (" + juce::String(micEntryChannelSizes[i]) + "ch)";
-        }
-        debug += ". Total local: " + juce::String(localCursor);
         LOG(Debug, debug);
 
-        // Unmatched variants (if any) go after all globally mapped channels so they
-        // don't collide with any real mic channel.
-        const MicLayout* layout = this->synth->getMicLayout();
-        unmatchedStart = (layout != nullptr) ? layout->getTotalChannelCount() : localCursor;
+        // Unmatched variants land after all globally mapped channels
+        unmatchedCursor = (micLayout != nullptr) ? micLayout->getTotalChannelCount() : localCursor;
     }
 };

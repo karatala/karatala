@@ -9,7 +9,7 @@ namespace {
         for (int busIndex = 0; busIndex < outputBusCount; ++busIndex) {
             const auto* bus = processor.getBus(false, busIndex);
             if (bus == nullptr) continue;
-            summary += "\n  [" + juce::String(busIndex) + ": '" + bus->getName() + "' " + juce::String(bus->getCurrentLayout().size()) + "ch" + (bus->isEnabled() ? "" : ", disabled") + "]";
+            summary += "\n  [" + juce::String(busIndex) + ": '" + bus->getName() + "'" + (bus->isEnabled() ? "" : ", disabled") + "]";
         }
         LOG(Info, summary);
     }

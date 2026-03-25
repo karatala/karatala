@@ -463,9 +463,6 @@ private:
         , const KitLayout::MidiNotes& notes
         , KitLib::ArticulationSpec* artSpec
         , ArticulationRuntime& artRt
-        , const std::vector<int>& micStarts
-        , const std::vector<int>& micChannels
-        , int& unmatchedStart
         , MicRoutingBuilder& micRouting
     );
     void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions);

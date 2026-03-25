@@ -125,35 +125,22 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
   , ArtRtIdx artRtIdx
   , CcDimensionsMap& foundCcDimensions
 ) {
-    std::vector<int> micBufStartChannels; // start channel in micBuffer for each mic entry assigned to this instrument
-    std::vector<int> micEntryChannelSizes; // number of channels for each mic entry
-    std::vector<const MicLayout::Mic*> micEntriesForInst;
-    int unmatchedStart = 0;
-
     MicRoutingBuilder micRouting(this);
 
-    micRouting.build(artSpec, micBufStartChannels, micEntryChannelSizes, unmatchedStart);
-
-    this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, micBufStartChannels, micEntryChannelSizes, unmatchedStart, micRouting);
+    this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, micRouting);
     artRt.buildVelocityMapping();
 
-    for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artRtIdx; // mapNotesToArticulation
+    for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artRtIdx;
 
     this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
-    // this->runtimeArticulations.push_back(std::move(artRt));
 }
 
 void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
     , const KitLayout::MidiNotes& notes
     , KitLib::ArticulationSpec* artSpec
     , ArticulationRuntime& artRt
-    , const std::vector<int>& micBufStartChannels
-    , const std::vector<int>& micEntryChannelSizes
-    , int& unmatchedStart
     , MicRoutingBuilder& micRouting
 ) {
-    size_t variantIdx = 0;
-
     for (const auto& velSpec : artSpec->velocityLayerSpecs) {
         VelocityLayerRuntime layer;
         layer.velocity = velSpec->velocity;
@@ -165,25 +152,14 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             if (!sound->decayEnvelope.isValid()) {
                 LOG(Warning, "Missing or invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
             }
-            int fileChannelCount = varSpec->fileChannelCount > 0
+            const int fileChannelCount = varSpec->fileChannelCount > 0
                 ? varSpec->fileChannelCount
-                : varSpec->micSpec.channels
-            ;
-            int assignedMicIndex = micRouting.getVariant(variantIdx);
+                : varSpec->micSpec.channels;
 
-            // if (variantIdx < micBufStartChannels.size()) //TODO: verify/test this is not needed
-            //     assignedMicIndex = static_cast<int>(variantIdx);
+            const auto assignment = micRouting.resolve(varSpec->micSpec, fileChannelCount);
+            sound->micBufferChannelStart = assignment.globalStart;
+            sound->micBufferChannelCount = assignment.channels;
 
-            if (assignedMicIndex >= 0 && assignedMicIndex < static_cast<int>(micBufStartChannels.size())) {
-                // All variants for the same mic map to the same mic buffer group
-                sound->micBufferChannelStart = micBufStartChannels[assignedMicIndex];
-                sound->micBufferChannelCount = micEntryChannelSizes[assignedMicIndex];
-            } else {
-                // unmatched: append after mic blocks, allocate sequentially using fileChannelCount
-                sound->micBufferChannelStart = unmatchedStart;
-                sound->micBufferChannelCount = fileChannelCount;
-                unmatchedStart += fileChannelCount;
-            }
             this->addSound(sound);
             SampleEntry se;
             se.sound = sound;
@@ -205,16 +181,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                     }
                 );
             }
-            ++variantIdx;
         }
         artRt.layers.push_back(std::move(layer));
-    }
-    int computedMicChannels = unmatchedStart;
-    const auto& hostMapForInst = this->getMicOutputMapping();
-    int assignedHostChannels = static_cast<int>(hostMapForInst.size());
-    if (assignedHostChannels > 0 && computedMicChannels > assignedHostChannels) { //TODO: give more channels?
-        LOG(Warning, "Instrument '" + this->getId() + "' mic channels number (" + juce::String(computedMicChannels) + ") is greater than channel number we got from host mapping channels (" + juce::String(assignedHostChannels) + "). This may cause out-of-range writes.");
-        // jassertfalse;
     }
 }
 

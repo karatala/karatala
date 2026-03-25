@@ -592,7 +592,7 @@ bool DrumKitEngine::applyMicLayout() {
         const auto& map = instPtr->getMicOutputMapping();
         for (size_t i = 0; i < map.size(); ++i) {
             if (i) mapStr += ",";
-            mapStr += juce::String(map[i]);
+            mapStr += juce::String(map[i] + 1); // convert to 1-based for user-friendly display
         }
         if (mapStr.isEmpty()) mapStr = "(none)";
         LOG(Debug, "Mic mapping " + mapStr + " (" + juce::String(instPtr->getMicChannelCount()) + " ch) used for instrument '" + instPtr->getId() + "'");
