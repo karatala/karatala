@@ -43,6 +43,7 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
         LOG(Debug, "  nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " exprDims=" + dims + " artSpec=" + artSpec->codeRaw);
     }
     CcDimensionsMap foundCcDimensions;
+    std::set<juce::String> skippedMicCodes; // mic raw codes with no matching layout entry — logged once below
     for (const auto& layoutArt : this->instrumentSlot.articulations) {
         LOG(Info, "  Loading articulation: " + layoutArt.codeRaw + " (notes " + midiVectorToString(layoutArt.notes) + ")");
 
@@ -86,7 +87,7 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
             const auto artIdx = this->getOrAddRuntimeArticulationIdx(resolvedSpec->nameId, resolvedSpec->exprId);
             auto& artRt = this->runtimeArticulations[artIdx];
             resolvedSpec->sortVelocityLayers();
-            this->processArticulationSpec(instSpec, layoutArt, resolvedSpec, artRt, artIdx, foundCcDimensions);
+            this->processArticulationSpec(instSpec, layoutArt, resolvedSpec, artRt, artIdx, foundCcDimensions, skippedMicCodes);
         } else {
             LOG(Warning, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no suitable articulations for '" + this->instrumentSlot.id + "' '" + layoutArt.codeRaw + "'");
         }
@@ -108,8 +109,18 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
             }
             if (!hasMatchingController) continue;
             const auto artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
-            this->processArticulationSpec(instSpec, layoutArt, artSpec.get(), this->runtimeArticulations[artIdx], artIdx, foundCcDimensions);
+            this->processArticulationSpec(instSpec, layoutArt, artSpec.get(), this->runtimeArticulations[artIdx], artIdx, foundCcDimensions, skippedMicCodes);
         }
+    }
+
+    // Log skipped mic codes once per instrument load (suppresses per-sample spam)
+    if (!skippedMicCodes.empty()) {
+        juce::String codes;
+        for (const auto& c : skippedMicCodes) {
+            if (codes.isNotEmpty()) codes += ", ";
+            codes += "'" + c + "'";
+        }
+        LOG(Notice, "    Skipping samples for mic(s) " + codes + " - not present in active mic layout");
     }
 
     // Build final CC threshold maps
@@ -124,10 +135,12 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
   , ArticulationRuntime& artRt
   , ArtRtIdx artRtIdx
   , CcDimensionsMap& foundCcDimensions
+  , std::set<juce::String>& skippedMicCodes
 ) {
     MicRoutingBuilder micRouting(this);
 
     this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, micRouting);
+    micRouting.mergeSkippedInto(skippedMicCodes);
     artRt.buildVelocityMapping();
 
     for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artRtIdx;
@@ -147,16 +160,21 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
         layer.samples.reserve(velSpec->sampleVariantSpecs.size());
 
         for (const auto& varSpec : velSpec->sampleVariantSpecs) {
-            auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, notes);
-            sound->decayEnvelope = KitLib::DecayEnvelope::decode(varSpec->decayCode, varSpec->peakDb, varSpec->peakMs);
-            if (!sound->decayEnvelope.isValid()) {
-                LOG(Warning, "Missing or invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
-            }
             const int fileChannelCount = varSpec->fileChannelCount > 0
                 ? varSpec->fileChannelCount
                 : varSpec->micSpec.channels;
 
             const auto assignment = micRouting.resolve(varSpec->micSpec, fileChannelCount);
+            // Skip samples whose mic is not present in the active mic layout.
+            // The unmatched code is recorded in the builder for a single summary log later.
+            if (assignment.globalStart < 0)
+                continue;
+
+            auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, notes);
+            sound->decayEnvelope = KitLib::DecayEnvelope::decode(varSpec->decayCode, varSpec->peakDb, varSpec->peakMs);
+            if (!sound->decayEnvelope.isValid()) {
+                LOG(Warning, "Missing or invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
+            }
             sound->micBufferChannelStart = assignment.globalStart;
             sound->micBufferChannelCount = assignment.channels;
 

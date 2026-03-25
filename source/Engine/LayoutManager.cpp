@@ -47,7 +47,11 @@ mics:
     code: rcm
   - name: Room Far # 15-16
     code: rfs
-  # TODO utilize remaining 16 channels
+  - name: Overheads Mid-Side # 17-18
+    code: oni
+  - name: Overheads wide # 19-20
+    code: ows
+  # TODO utilize remaining 12 channels
 )yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
     if (!result.ok()) {

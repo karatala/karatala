@@ -4,6 +4,7 @@
 #include <atomic>
 #include <memory>
 #include <algorithm>
+#include <set>
 #include "AftertouchChokeProcessor.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
@@ -458,6 +459,7 @@ private:
         , ArticulationRuntime& artRt
         , ArtRtIdx artRtIdx
         , CcDimensionsMap& foundCcDimensions
+        , std::set<juce::String>& skippedMicCodes
     );
     void createVelocityLayers(KitLib::InstrumentSpec* instSpec
         , const KitLayout::MidiNotes& notes

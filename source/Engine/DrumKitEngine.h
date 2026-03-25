@@ -58,6 +58,12 @@ public:
     SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
     const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
 
+    // Returns true if `id` corresponds to a registered instrument slot.
+    // Used by MicRoutingBuilder to mirror applyMicLayout's slot-resolution logic:
+    // a mic whose instrument field names a known slot is exclusive to that slot and
+    // must not spill into other slots via type fallback.
+    bool hasLayoutSlotId(const juce::String& id) const { return this->instrumentSynthById.find(id) != this->instrumentSynthById.end(); }
+
     const int getLatestContinuousControllerValue(const int ccNum) const {
         const auto& it = this->latestCCValueMap.find(ccNum);
         if (it == this->latestCCValueMap.end()) return 0; //FIXME?
