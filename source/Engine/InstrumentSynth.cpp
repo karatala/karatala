@@ -447,6 +447,11 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
     this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
     // this->fadeOutExistingVoices(art, midiChannel, midiNoteNumber, velocity);
 
+    // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
+    // fades out ringing voices from more-open articulations.
+    if (this->type == KitLib::InstrumentSpec::Type::HiHat)
+        this->chokeHiHatVoicesByPoc(art.pocValue, HIHAT_PEDAL_CROSSFADE_SEC);
+
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
         if (!se.sound || se.variantIdx != chosenVariant) continue;
@@ -568,6 +573,40 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
         if (noteOnTimesToCull.find(voice->noteOnTime) != noteOnTimesToCull.end()) {
             voice->envelopeState = InstrumentSynthVoice::EnvelopeState::Dying;
             voice->killImmediately();
+        }
+    }
+}
+
+void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec) {
+    // newArtPocValue < 0 means the triggering articulation carries no poc rank
+    // (e.g. a non-hi-hat-openness hit) — nothing to do.
+    if (newArtPocValue < 0) return;
+
+    for (auto* voice : this->voices) {
+        if (!voice || !voice->isVoiceActive()) continue;
+        if (voice->envelopeState == InstrumentSynthVoice::EnvelopeState::FadingOut
+            || voice->envelopeState == InstrumentSynthVoice::EnvelopeState::Dying)
+            continue;
+
+        // Look up the poc rank stored in the matching ArticulationRuntime.
+        // artNameId / artExprId are stamped onto the voice when it starts.
+        int voicePocValue = -1;
+        for (const auto& art : this->runtimeArticulations) {
+            if (art.nameId == voice->artNameId && art.exprId == voice->artExprId) {
+                voicePocValue = art.pocValue;
+                break;
+            }
+        }
+
+        if (voicePocValue < 0) continue; // voice's articulation has no poc rank — skip
+
+        // A strictly more-closed new hit (higher poc) chokes softer-ringing voices.
+        // Equal-poc same-articulation retriggers are handled by existing cullMaskedVoices.
+        if (newArtPocValue > voicePocValue) {
+            LOG(Debug, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePocValue)
+                + " newPoc=" + juce::String(newArtPocValue)
+                + " note=" + juce::String(voice->getCurrentlyPlayingNote()));
+            voice->requestFadeOut(fadeTimeSec);
         }
     }
 }

@@ -183,6 +183,10 @@ public:
         juce::String codeRaw; //FIXME: remove after debugged or hide under something like ifdef DEBUG_SOMETHING
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
+        // pdl_opn_cls value extracted from ArticulationSpec expression dimensions.
+        // Higher value = more closed/tight = stronger (mutes articulations with lower pocValue).
+        // -1 = not a PedalOpenClose articulation.
+        int pocValue = -1;
         // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
         std::array<VelLayerIdx, 128> velocityToLayer; // -1 means no layer
         std::vector<VelocityLayerRuntime> layers;
@@ -472,6 +476,9 @@ private:
 
     uint8_t chooseVariantGroup(VelocityLayerRuntime& layer);
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
+    // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
+    // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
+    void chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec);
 
     KitLib::ArticulationSpec* resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt);
 };

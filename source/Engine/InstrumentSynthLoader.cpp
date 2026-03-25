@@ -143,6 +143,19 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
     micRouting.mergeSkippedInto(skippedMicCodes);
     artRt.buildVelocityMapping();
 
+    // Populate pocValue from the PedalOpenClose expression dimension (if present).
+    // Each hi-hat articulation folder encodes its closedness rank in pdl_opn_cls<value>;
+    // higher value = more closed/tight. Use max of the values list (usually exactly one).
+    if (artRt.pocValue < 0) { // only set once; avoid overwriting if already populated by sibling pass
+        for (const auto& dim : artSpec->expressionDimensions) {
+            if (dim->type == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose
+                && !dim->values.empty()) {
+                artRt.pocValue = static_cast<int>(*std::max_element(dim->values.begin(), dim->values.end()));
+                break;
+            }
+        }
+    }
+
     for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artRtIdx;
 
     this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
@@ -299,4 +312,3 @@ void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
         LOG(Debug, "processCcDimensions: CC " + juce::String((int)ccNum) + " thresholds: " + summary);
     }
 }
-
