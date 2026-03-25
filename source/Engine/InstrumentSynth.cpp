@@ -5,12 +5,17 @@
 #include <unordered_set>
 
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.3f;
-static constexpr float HIHAT_PEDAL_CROSSFADE_SEC = 0.30f;
+static constexpr float HIHAT_PEDAL_CROSSFADE_SEC = 0.20f;
 static constexpr float HIHAT_PEDAL_MIN_REMAINING_SEC = 0.050f; // skip replacement if < of audio remaining
 static constexpr float HIHAT_CROSS_ART_CHOKE_DB_MARGIN = 3.0f;
 // Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
 // value jitters around an articulation boundary.
-static constexpr int HIHAT_PEDAL_CC_HYSTERESIS = 2;
+// static constexpr int HIHAT_PEDAL_CC_HYSTERESIS = 2;
+// When true, CC-driven hi-hat transitions that would target a struck articulation
+// (e.g. edge[tight]) will be redirected to the "pedal" articulation at the same
+// poc rank if one exists.  Pedal samples carry no stick-attack transient and
+// sound more natural for pure foot-closure moves.
+static constexpr bool HIHAT_CC_PREFER_PEDAL_ART = true;
 
 void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     if (midiMessage.isNoteOn()) {
@@ -65,11 +70,36 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     const auto& mapArr = it->second;
     uint8_t newArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
     if (newArtIdx >= this->runtimeArticulations.size()) {
-        LOG(Warning, "handleController: CC " + juce::String(controllerNumber)
+        LOG(Warning, "handleController: CC " + juce::String(controllerNumber) 
             + " mapped to out-of-range articulation idx=" + juce::String((int)newArtIdx)
             + " (runtime size=" + juce::String((int)this->runtimeArticulations.size()) + ")");
         this->lastCcValue[controllerNumber] = controllerValue;
         return;
+    }
+
+    // redirect target to "pedal" articulation when CC would otherwise
+    // land on a struck type (e.g. edge[tight]) that shares the same poc rank.
+    // Done BEFORE the cache check so jitter within the tight/pedal zone benefits
+    // from the early-return: once transitioned to pedal, subsequent cc micro-moves
+    // see newArtIdx==pedal==cache and return immediately without touching voices.
+    if (HIHAT_CC_PREFER_PEDAL_ART) {
+        static const StringsDictSingleton::Id pedalNameId = StringsDictSingleton::getId("pedal");
+        const auto& targetArt = this->runtimeArticulations[newArtIdx];
+        const bool targetIsPedal = targetArt.nameId == pedalNameId;
+        if (!targetIsPedal && targetArt.pocValue >= 0) {
+            for (size_t idx = 0; idx < this->runtimeArticulations.size(); ++idx) {
+                const auto& candArt = this->runtimeArticulations[idx];
+                if (candArt.nameId == pedalNameId && candArt.pocValue == targetArt.pocValue) {
+                    const uint8_t redirectedIdx = static_cast<uint8_t>(idx);
+                    // Only log when this redirect produces a new transition (not already cached).
+                    const auto cachedArtIt = this->lastCcArticulation.find(controllerNumber);
+                    if (cachedArtIt == this->lastCcArticulation.end() || cachedArtIt->second != redirectedIdx)
+                        LOG(Debug, "HiHat CC: prefer-pedal redirect from " + targetArt.codeRaw + " to " + candArt.codeRaw);
+                    newArtIdx = redirectedIdx;
+                    break;
+                }
+            }
+        }
     }
 
     // Check cached last seen value/articulation for this CC to avoid spamming
