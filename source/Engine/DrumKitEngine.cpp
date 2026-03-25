@@ -11,6 +11,7 @@
 static constexpr int NAME_IT_BETTER_MIN_VARIANTS = 3;
 static constexpr int NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS = 32;
 static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
+// TOTAL_HOST_OUTPUT_CHANNELS is defined in DrumKitEngine.h
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
@@ -520,8 +521,6 @@ bool DrumKitEngine::applyMicLayout() {
         instPtr->setMicOutputMapping({});
     }
 
-    this->micMappingWarningLogged = false;
-
     int outCursor = 0;
     for (const auto& mic : this->activeMicLayoutPtr->mics) {
         int channelCount = mic.specs.channels;
@@ -579,18 +578,12 @@ bool DrumKitEngine::applyMicLayout() {
         outCursor += channelCount; // advance by actual mic channel count
     }
 
-    // Apply mapped mic channel counts to synths and size mic buffers if we know the block size
+    // Apply mapped mic channel counts to synths (used for informational purposes)
     for (const auto& instPtr : this->instrumentSynthPtrs) {
         const auto& map = instPtr->getMicOutputMapping();
         int totalAssigned = static_cast<int>(map.size());
-        if (totalAssigned <= 0) {
-            // Fallback default to stereo
-            totalAssigned = 2;
-        }
+        if (totalAssigned <= 0) totalAssigned = 2;
         instPtr->setMicChannelCount(totalAssigned);
-        if (this->lastSamplesPerBlock > 0) {
-            instPtr->getMicBuffer().setSize(totalAssigned, this->lastSamplesPerBlock);
-        }
     }
 
     // Detailed mapping log per instrument
@@ -624,37 +617,11 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     this->saveLatestContinuousControllerValues(midiMessages);
     this->saveLatestPolyphonicAftertouchValues(midiMessages);
 
+    // Each instrument's SampledSound now stores *global* host channel indices in
+    // micBufferChannelStart, so voices can render directly into outputBuffer.
+    // The per-instrument micBuffer intermediate and local-to-global copy are no longer needed.
     for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
-        auto& micBuffer = instrumentSynthPtr->getMicBuffer();
-        micBuffer.clear();
-
-        // Render into own mic buffer
-        instrumentSynthPtr->renderNextBlock(micBuffer, midiMessages, outputBufferStartSample, outputBufferNumSamples);
-
-        // Mix mic buffer channels into host output using per-instrument mapping (if present)
-        const int outCh = outputBuffer.getNumChannels();
-        const int micCh = micBuffer.getNumChannels();
-        const auto& mapping = instrumentSynthPtr->getMicOutputMapping();
-
-        for (int c = 0; c < micCh; ++c) {
-            int dest = -1;
-            bool mappingUsed = false;
-            if (c < static_cast<int>(mapping.size())) {
-                dest = mapping[c];
-                mappingUsed = true;
-            }
-            if (dest < 0 || dest >= outCh) {
-                // FIXME: remove logs from loops in audio thread!
-                if (mappingUsed && !this->micMappingWarningLogged) {
-                    LOG(Warning, "Instrument '" + instrumentSynthPtr->getId() + "' mapping for mic channel " + juce::String(c) + " -> host index " + juce::String(dest) + " is out of range (host channels=" + juce::String(outCh) + "). Falling back to wrap index.");
-                    this->micMappingWarningLogged = true;
-                }
-
-                // Fallback: wrap to available outputs (e.g. standalone mode with 2 channels)
-                dest = c % outCh;
-            }
-            outputBuffer.addFrom(dest, outputBufferStartSample, micBuffer, c, outputBufferStartSample, outputBufferNumSamples, 1.0f);
-        }
+        instrumentSynthPtr->renderNextBlock(outputBuffer, midiMessages, outputBufferStartSample, outputBufferNumSamples);
     }
 }
 

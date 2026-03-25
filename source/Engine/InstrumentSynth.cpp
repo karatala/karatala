@@ -4,9 +4,9 @@
 #include "DrumKitEngine.h"
 #include <unordered_set>
 
-static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.1f;
-static constexpr float HIHAT_PEDAL_CROSSFADE_SEC = 0.030f; // 30ms crossfade for pedal transitions
-static constexpr float HIHAT_PEDAL_MIN_REMAINING_SEC = 0.050f; // skip replacement if < 50ms of audio remaining
+static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.3f;
+static constexpr float HIHAT_PEDAL_CROSSFADE_SEC = 0.30f;
+static constexpr float HIHAT_PEDAL_MIN_REMAINING_SEC = 0.050f; // skip replacement if < of audio remaining
 static constexpr float HIHAT_CROSS_ART_CHOKE_DB_MARGIN = 3.0f;
 // Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
 // value jitters around an articulation boundary.
@@ -473,7 +473,7 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
 
         if (voice->artNameId == art.nameId && voice->artExprId == art.exprId) {
             if (newVelocity >= voice->getVelocityGain() - 0.05f)
-                voice->requestFadeOut(POLYPHONY_CROSFADE_TIMEOUT_SEC);
+                voice->requestFadeOut(POLYPHONY_CROSFADE_TIMEOUT_SEC);  
             continue;
         }
 
@@ -573,7 +573,7 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
 }
 
 void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity) {
-    if (false) {
+    if (true) {
         auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.codeRaw;
         auto& artCode = se.sound->sampleVariantSpec->parent->parent->codeRaw;
         auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
@@ -747,10 +747,9 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
-    // Ensure mic buffer has correct size
-    if (mMicChannelCount <= 0)
-        mMicChannelCount = 2;
-    micBuffer.setSize(mMicChannelCount, samplesPerBlock);
+    // micBuffer is no longer used for rendering — voices write directly to the global output
+    // buffer using globally-indexed micBufferChannelStart values.  Free any previous allocation.
+    micBuffer.setSize(0, 0);
 
     // Configure voices for this synth
     this->clearVoices();

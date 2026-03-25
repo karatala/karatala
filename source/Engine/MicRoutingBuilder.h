@@ -141,27 +141,37 @@ private:
         micBufStartChannels.clear();
         micEntryChannelSizes.clear();
 
-        // Build micBufStartChannels using the instrument's actual host mapping so that
-        // mic-buffer indices align with the host-output mapping assigned earlier
-
-        int mappingCursor = 0;
+        // Use the instrument's global mic output mapping so that micBufferChannelStart on every
+        // SampledSound holds the *global* host channel index.  Voices can then render directly
+        // into the global output buffer without any local-to-global remapping step.
+        //
+        // applyMicLayout fills micOutputMapping in the same order that collectMicEntries builds
+        // micEntriesForInst (common mics first, then instrument-specific mics), so
+        // globalMapping[localCursor] is exactly the first host channel for mic entry i.
+        const auto& globalMapping = this->synth->getMicOutputMapping();
+        int localCursor = 0;
 
         for (size_t i = 0; i < micEntriesForInst.size(); ++i) {
-            micBufStartChannels.push_back(mappingCursor);
-            int ch = micEntriesForInst[i]->specs.channels;
+            const int ch = micEntriesForInst[i]->specs.channels;
+            const int globalStart = (localCursor < static_cast<int>(globalMapping.size()))
+                ? globalMapping[localCursor]
+                : localCursor; // fallback when no mapping is available yet
+            micBufStartChannels.push_back(globalStart);
             micEntryChannelSizes.push_back(ch);
-            mappingCursor += ch;
+            localCursor += ch;
         }
 
-        juce::String debug = "    Mic Starts: ";
+        juce::String debug = "    Mic Starts (global): ";
         for (size_t i = 0; i < micBufStartChannels.size(); ++i) {
             if (i > 0) debug += ", ";
             debug += "" + juce::String(micBufStartChannels[i]) + " (" + juce::String(micEntryChannelSizes[i]) + "ch)";
         }
-        debug += ". Total: " + juce::String(mappingCursor);
+        debug += ". Total local: " + juce::String(localCursor);
         LOG(Debug, debug);
 
-        // unmatched variants (if any) go after mapped region
-        unmatchedStart = mappingCursor;
+        // Unmatched variants (if any) go after all globally mapped channels so they
+        // don't collide with any real mic channel.
+        const MicLayout* layout = this->synth->getMicLayout();
+        unmatchedStart = (layout != nullptr) ? layout->getTotalChannelCount() : localCursor;
     }
 };

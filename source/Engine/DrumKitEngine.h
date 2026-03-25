@@ -110,11 +110,8 @@ private:
 
     std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>> articulationFallbackIdMap;
 
-    // Last known audio block size (samples per block). Used to size mic buffers when applying layouts.
+    // Last known audio block size (samples per block).
     int lastSamplesPerBlock = 0;
-
-    // One-shot flag for out-of-range mapping warning (avoid audio-thread log spam)
-    bool micMappingWarningLogged = false;
 
     void initGlobalSettings();
     void initDefaultLayouts();
