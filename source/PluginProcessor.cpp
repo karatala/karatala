@@ -2,20 +2,6 @@
 #include "PluginEditor.h"
 #include <algorithm>
 
-namespace {
-    void logOutputBusTopology(juce::AudioProcessor& processor) {
-        juce::String summary = "Output buses:";
-        const int outputBusCount = processor.getBusCount(false);
-        for (int busIndex = 0; busIndex < outputBusCount; ++busIndex) {
-            const auto* bus = processor.getBus(false, busIndex);
-            if (bus == nullptr) continue;
-            summary += "\n  [" + juce::String(busIndex) + ": '" + bus->getName() + "'" + (bus->isEnabled() ? "" : ", disabled") + "]";
-        }
-        LOG(Info, summary);
-    }
-}
-
-//==============================================================================
 PluginProcessor::PluginProcessor()
     : AudioProcessor([&]() {
         const auto layout = DrumKitEngine::resolveMicLayoutFromConfig();
@@ -56,7 +42,16 @@ PluginProcessor::PluginProcessor()
     , mAudioFormatManagerPtr(std::make_unique<juce::AudioFormatManager>())
     , mAudioProcessorValueTreeStatePtr(std::make_unique<juce::AudioProcessorValueTreeState>(*this, nullptr, juce::Identifier("plugin_params"), createParameterLayout())
 ) {
-    logOutputBusTopology(*this);
+    if (LOG_ENABLED(Info)) {
+        juce::String summary = "Output buses:";
+        const int outputBusCount = this->getBusCount(false);
+        for (int busIndex = 0; busIndex < outputBusCount; ++busIndex) {
+            const auto* bus = this->getBus(false, busIndex);
+            if (bus == nullptr) continue;
+            summary += "\n  [" + juce::String(busIndex) + ": '" + bus->getName() + "'" + (bus->isEnabled() ? "" : ", disabled") + "]";
+        }
+        LOG(Info, summary);
+    }
     this->drumKitEnginePtr = std::make_unique<DrumKitEngine>();
     this->drumKitEnginePtr->init(*mAudioProcessorValueTreeStatePtr);
 }

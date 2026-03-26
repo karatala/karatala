@@ -37,10 +37,12 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
     for (const auto& artSpec : instSpec->articulationSpecs) {
         this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId); // discoverArticulations
 
-        juce::String dims;
-        for (const auto& dim : artSpec->expressionDimensions)
-            dims += "[" + dim->typeToString(dim->type) + ", " + midiVectorToString(dim->values) + "]";
-        LOG(Debug, "  nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " exprDims=" + dims + " artSpec=" + artSpec->codeRaw);
+        if (LOG_ENABLED(Debug)) {
+            juce::String dims;
+            for (const auto& dim : artSpec->expressionDimensions)
+                dims += "[" + dim->typeToString(dim->type) + ", " + midiVectorToString(dim->values) + "]";
+            LOG(Debug, "  nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " exprDims=" + dims + " artSpec=" + artSpec->codeRaw);
+        }
     }
     CcDimensionsMap foundCcDimensions;
     std::set<juce::String> skippedMicCodes; // mic raw codes with no matching layout entry — logged once below
@@ -69,9 +71,11 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
                         for (const auto& artSpec : instSpec->articulationSpecs) {
                             if (artSpec->nameId == fallbackId && artSpec->exprId == layoutArt.exprId) {
                                 resolvedSpec = artSpec.get();
-                                auto codeRaw = StringsDictSingleton::nameOf(artSpec->nameId);
-                                if (layoutArt.exprId != 0) codeRaw += "[" + StringsDictSingleton::nameOf(artSpec->exprId) + "]";
-                                LOG(Notice, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no articulation '" + layoutArt.codeRaw + "' for '" + this->instrumentSlot.id + "'. Using '" + codeRaw + "' instead");
+                                if (LOG_ENABLED(Notice)) {
+                                    auto codeRaw = StringsDictSingleton::nameOf(artSpec->nameId);
+                                    if (layoutArt.exprId != 0) codeRaw += "[" + StringsDictSingleton::nameOf(artSpec->exprId) + "]";
+                                    LOG(Notice, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no articulation '" + layoutArt.codeRaw + "' for '" + this->instrumentSlot.id + "'. Using '" + codeRaw + "' instead");
+                                }
                                 break;
                             }
                         }
@@ -114,7 +118,7 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
     }
 
     // Log skipped mic codes once per instrument load (suppresses per-sample spam)
-    if (!skippedMicCodes.empty()) {
+    if (!skippedMicCodes.empty() && LOG_ENABLED(Notice)) {
         juce::String codes;
         for (const auto& c : skippedMicCodes) {
             if (codes.isNotEmpty()) codes += ", ";
@@ -222,14 +226,16 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
 
     { // Debug: report articulation and its expression dimensions
         auto code = artSpec->codeRaw;
-        LOG(Debug, "buildCcMappings: processing artSpec=" + code + " nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " layoutArt=" + layoutArt.codeRaw);
-        if (artSpec->expressionDimensions.empty()) {
-            LOG(Debug, "buildCcMappings: artSpec has no expressionDimensions");
-        } else {
-            juce::String dims;
-            for (const auto& dim : artSpec->expressionDimensions)
-                dims += "[" + dim->typeToString(dim->type) + ", " + midiVectorToString(dim->values) + "]";
-            LOG(Debug, "buildCcMappings: expressionDimensions=" + dims);
+        if (LOG_ENABLED(Debug)) {
+            LOG(Debug, "buildCcMappings: processing artSpec=" + code + " nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " layoutArt=" + layoutArt.codeRaw);
+            if (artSpec->expressionDimensions.empty()) {
+                LOG(Debug, "buildCcMappings: artSpec has no expressionDimensions");
+            } else {
+                juce::String dims;
+                for (const auto& dim : artSpec->expressionDimensions)
+                    dims += "[" + dim->typeToString(dim->type) + ", " + midiVectorToString(dim->values) + "]";
+                LOG(Debug, "buildCcMappings: expressionDimensions=" + dims);
+            }
         }
     }
 
@@ -303,12 +309,15 @@ void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
             map[value] = chosen;
         }
         this->ccToArticulation[ccNum] = map;
-        // log condensed mapping: thresholds -> articulation index
-        juce::String summary;
-        for (size_t i = 0; i < valArtPairs.size(); ++i) {
-            if (i) summary += ",";
-            summary += "(" + juce::String((int)valArtPairs[i].first) + ":" + this->getArtName(valArtPairs[i].second) + " (artIdx=" + juce::String(valArtPairs[i].second) + "))";
+        
+        if (LOG_ENABLED(Debug)) { // log condensed mapping: thresholds -> articulation index
+            juce::String summary;
+            for (size_t i = 0; i < valArtPairs.size(); ++i) {
+                if (i) summary += ",";
+                summary += "(" + juce::String((int)valArtPairs[i].first) + ":" + this->getArtName(valArtPairs[i].second) + " (artIdx=" + juce::String(valArtPairs[i].second) + "))";
+            }
+            LOG(Debug, "processCcDimensions: CC " + juce::String((int)ccNum) + " thresholds: " + summary);
         }
-        LOG(Debug, "processCcDimensions: CC " + juce::String((int)ccNum) + " thresholds: " + summary);
     }
 }
+

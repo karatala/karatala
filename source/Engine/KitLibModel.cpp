@@ -479,20 +479,21 @@ int LibraryManager::scanAll() {
         LOG(Info, "Scanned kit: " + kitDir.getFileName() + ", " + juce::String(instrsInKit) + " instruments, " + juce::String(samplesInKit) + " samples");
     }
 
-    LOG(Info, "Dimension Code Usage:");
-    for (const auto& [key, count] : globalStats.dimensionCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " articulation folders");
+    if (LOG_ENABLED(Info)) {
+        LOG(Info, "Dimension Code Usage:");
+        for (const auto& [key, count] : globalStats.dimensionCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " articulation folders");
 
-    LOG(Info, "Mic Code Usage:");
-    for (const auto& [key, count] : globalStats.micCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
+        LOG(Info, "Mic Code Usage:");
+        for (const auto& [key, count] : globalStats.micCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
 
-    LOG(Info, "Sample Variant Usage:");
-    for (const auto& [key, count] : globalStats.sampleVariantCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
+        LOG(Info, "Sample Variant Usage:");
+        for (const auto& [key, count] : globalStats.sampleVariantCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
 
-    LOG(Info, "Velocity Usage:");
-    for (const auto& [key, count] : globalStats.velocityCounts) LOG(Info, "  " + juce::String(key) + ": " + juce::String(count) + " sample files");
+        LOG(Info, "Velocity Usage:");
+        for (const auto& [key, count] : globalStats.velocityCounts) LOG(Info, "  " + juce::String(key) + ": " + juce::String(count) + " sample files");
 
-    LOG(Info, "Total: " + juce::String(totalKits) + " kits, " + juce::String(totalInstruments) + " instruments, " + juce::String(totalSamples) + " sample files");
-
+        LOG(Info, "Total: " + juce::String(totalKits) + " kits, " + juce::String(totalInstruments) + " instruments, " + juce::String(totalSamples) + " sample files");
+    }
     return totalKits;
 }
 

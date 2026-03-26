@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <juce_core/juce_core.h>
 
 const int MIDI_MIN_VALUE = 0;
@@ -143,6 +144,10 @@ enum DebugLevel {
     Verbose = 5
 };
 
+// Fast global log-level variable: checked by the LOG macro before evaluating
+// any message expression (string building etc.) — single atomic load, no lock.
+inline std::atomic<int> gAppLogLevel { static_cast<int>(DebugLevel::Debug) };
+
 static inline const juce::String DebugLevelToString(DebugLevel level) {
     switch (level) {
         case DebugLevel::Error:   return "ERROR";
@@ -207,6 +212,7 @@ public:
     void setLogLevel(DebugLevel level) {
         const juce::ScopedLock lock(mutex);
         this->logLevel = level;
+        gAppLogLevel.store(static_cast<int>(level), std::memory_order_relaxed);
     }
 
     DebugLevel getLogLevel() const {
@@ -251,5 +257,14 @@ private:
 };
 
 #ifndef LOG
-#define LOG(level, msg) GlobalLogger::instance().log(level, msg)
+// The if-guard ensures msg (string building, formatted(), etc.) is never
+// evaluated when the current log level is below the requested level.
+// gAppLogLevel is a cheap atomic read — essentially one instruction.
+#define LOG(level, msg) \
+    do { if (gAppLogLevel.load(std::memory_order_relaxed) >= static_cast<int>(level)) \
+        GlobalLogger::instance().log((level), (msg)); } while (0)
+
+// Use LOG_ENABLED(level) to gate expensive prep work before a LOG call:
+//   if (LOG_ENABLED(Debug)) { auto s = buildExpensiveString(); LOG(Debug, s); }
+#define LOG_ENABLED(level) (gAppLogLevel.load(std::memory_order_relaxed) >= static_cast<int>(DebugLevel::level))
 #endif

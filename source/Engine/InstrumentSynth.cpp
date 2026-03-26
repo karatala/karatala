@@ -94,7 +94,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
                     // Only log when this redirect produces a new transition (not already cached).
                     const auto cachedArtIt = this->lastCcArticulation.find(controllerNumber);
                     if (cachedArtIt == this->lastCcArticulation.end() || cachedArtIt->second != redirectedIdx)
-                        LOG(Debug, "HiHat CC: prefer-pedal redirect from " + targetArt.codeRaw + " to " + candArt.codeRaw);
+                        LOG(Verbose, "HiHat CC: prefer-pedal redirect from " + targetArt.codeRaw + " to " + candArt.codeRaw);
                     newArtIdx = redirectedIdx;
                     break;
                 }
@@ -123,7 +123,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     //     }
     // }
 
-    LOG(Debug, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
+    LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
     int activeMismatchedVoices = 0;
     int replacementsStarted = 0;
@@ -339,7 +339,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr)
             sampleName = targetSe->sound->sampleVariantSpec->sampleFile.getFileName();
 
-        LOG(Debug, "PedalVoiceStart inst=" + this->getId()
+        LOG(Verbose, "PedalVoiceStart inst=" + this->getId()
             + " ch=" + juce::String(midiChannel)
             + " note=" + juce::String(voice->getCurrentlyPlayingNote())
             + " vel=" + juce::String(vel, 3)
@@ -349,7 +349,8 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             + " micCount=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelCount : 0)
             + " offsetMs=" + juce::String(offsetMs, 2)
             + " offsetSamples=" + juce::String(clampedOffset, 2)
-            + " sample=" + sampleName);
+            + " sample=" + sampleName
+        );
 
     }
 
@@ -360,7 +361,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     this->lastCcValue[controllerNumber] = controllerValue;
 
     if (activeMismatchedVoices > 0 && replacementsStarted == 0) {
-        LOG(Debug, "HiHat pedal transition skipped: cc=" + juce::String(controllerNumber)
+        LOG(Verbose, "HiHat pedal transition skipped: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
             + " targetArt=" + juce::String((int)newArtIdx)
             + " activeMismatchedVoices=" + juce::String(activeMismatchedVoices)
@@ -370,12 +371,13 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             + ", tooLate=" + juce::String(skippedTooLate)
             + ", noDbMatch=" + juce::String(skippedNoDbMatch)
             + ", silentTarget=" + juce::String(skippedSilentTarget)
-            + ", other=" + juce::String(skippedOther) + "}");
+            + ", other=" + juce::String(skippedOther) + "}"
+        );
     }
 
     const int totalSkipped = skippedNoEnvelope + skippedNoTarget + skippedNoVoice + skippedTooLate + skippedNoDbMatch + skippedSilentTarget + skippedOther;
     if (replacementsStarted > 0 && totalSkipped > 0) {
-        LOG(Debug, "HiHat pedal transition partial: cc=" + juce::String(controllerNumber)
+        LOG(Verbose, "HiHat pedal transition partial: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
             + " targetArt=" + juce::String((int)newArtIdx)
             + " started=" + juce::String(replacementsStarted)
@@ -386,14 +388,15 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             + ", tooLate=" + juce::String(skippedTooLate)
             + ", noDbMatch=" + juce::String(skippedNoDbMatch)
             + ", silentTarget=" + juce::String(skippedSilentTarget)
-            + ", other=" + juce::String(skippedOther) + "}");
+            + ", other=" + juce::String(skippedOther) + "}"
+        );
     }
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
     int artIdx = this->resolveArticulation(midiNoteNumber);
     if (artIdx >= 0 && artIdx < static_cast<int>(this->runtimeArticulations.size())) {
-        LOG(Debug, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
+        LOG(Verbose, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
     } else {
         // LOG(Warning, "InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
@@ -633,7 +636,7 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSe
         // A strictly more-closed new hit (higher poc) chokes softer-ringing voices.
         // Equal-poc same-articulation retriggers are handled by existing cullMaskedVoices.
         if (newArtPocValue > voicePocValue) {
-            LOG(Debug, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePocValue)
+            LOG(Verbose, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePocValue)
                 + " newPoc=" + juce::String(newArtPocValue)
                 + " note=" + juce::String(voice->getCurrentlyPlayingNote()));
             voice->requestFadeOut(fadeTimeSec);
@@ -642,11 +645,11 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSe
 }
 
 void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity) {
-    if (true) {
+    if (LOG_ENABLED(Verbose)) {
         auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.codeRaw;
         auto& artCode = se.sound->sampleVariantSpec->parent->parent->codeRaw;
         auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
-        LOG(Debug, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " inst " + instCode + " art " + artCode + " micBuf(" + juce::String(se.sound->micBufferChannelStart) + "," + juce::String(se.sound->micBufferChannelCount) + ") file=" + filePath);
+        LOG(Verbose, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " inst " + instCode + " art " + artCode + " micBuf(" + juce::String(se.sound->micBufferChannelStart) + "," + juce::String(se.sound->micBufferChannelCount) + ") file=" + filePath);
     }
     // use samples mic index as voice's hitGroupId so we can use it in stealing logic to prefer stealing voices with same mic
     voice.hitGroupId = se.sound->micBufferChannelStart;
