@@ -193,9 +193,19 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             continue;
         }
 
-        if (targetSe->sound->buffer == nullptr) {
-            ++skippedNoTarget;
-            continue;
+        if (!targetSe->sound->loaded.load(std::memory_order_acquire) || targetSe->sound->buffer == nullptr) {
+            for (const auto& se : layer.samples) {
+                if (se.sound == nullptr) continue;
+                if (se.sound->micBufferChannelStart != voiceMicStart) continue;
+                if (!se.sound->loaded.load(std::memory_order_acquire)) continue;
+                if (se.sound->buffer == nullptr) continue;
+                targetSe = &se;
+                break;
+            }
+            if (!targetSe->sound->loaded.load(std::memory_order_acquire) || targetSe->sound->buffer == nullptr) {
+                ++skippedNoTarget;
+                continue;
+            }
         }
 
         // Compute offset for THIS voice independently from its own mic-specific
@@ -448,13 +458,49 @@ int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
 
 int InstrumentSynth::resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity) {
     int layerIdx = art.velocityToLayer[(int)velocity];
-    if (layerIdx < 0 || layerIdx >= (int)art.layers.size()) return -1;
-    if (art.layers[layerIdx].samples.empty()) return -1;
-    return layerIdx;
+    if (layerIdx >= 0 && layerIdx < (int)art.layers.size()) {
+        if (this->hasAnyLoadedVariant(art.layers[layerIdx]))
+            return layerIdx;
+    }
+
+    int bestIdx = -1;
+    int bestDist = 128;
+    for (int idx = 0; idx < (int)art.layers.size(); ++idx) {
+        const auto& layer = art.layers[idx];
+        if (layer.samples.empty()) continue;
+        if (!this->hasAnyLoadedVariant(layer)) continue;
+        const int dist = std::abs((int)layer.velocity - (int)velocity);
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestIdx = idx;
+        }
+    }
+    return bestIdx;
+}
+
+bool InstrumentSynth::hasAnyLoadedVariant(const VelocityLayerRuntime& layer) const {
+    for (const auto& se : layer.samples) {
+        if (se.sound == nullptr) continue;
+        if (!se.sound->loaded.load(std::memory_order_acquire)) continue;
+        if (se.sound->buffer == nullptr) continue;
+        return true;
+    }
+    return false;
+}
+
+bool InstrumentSynth::isVariantReady(const VelocityLayerRuntime& layer, uint8_t variantIdx) const {
+    bool seen = false;
+    for (const auto& se : layer.samples) {
+        if (se.variantIdx != variantIdx) continue;
+        if (se.sound == nullptr) return false;
+        seen = true;
+        if (!se.sound->loaded.load(std::memory_order_acquire)) return false;
+        if (se.sound->buffer == nullptr) return false;
+    }
+    return seen;
 }
 
 uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
-    //TODO001: since some samples are loading in another thread, not all variants are available for playback before instrument loaded, so need to change architecture, increase loaded layers/variants count that was loaded in SampleLoader and use only then
     std::vector<uint8_t> uniqueVariants;
     uniqueVariants.reserve(layer.samples.size());
     for (const auto& se : layer.samples) {
@@ -463,10 +509,19 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
             uniqueVariants.push_back(key);
     }
     if (uniqueVariants.empty()) return 0;
-    if (uniqueVariants.size() == 1) return uniqueVariants[0];
+
+    std::vector<uint8_t> readyVariants;
+    readyVariants.reserve(uniqueVariants.size());
+    for (auto v : uniqueVariants) {
+        if (this->isVariantReady(layer, v))
+            readyVariants.push_back(v);
+    }
+
+    const auto& variants = readyVariants.empty() ? uniqueVariants : readyVariants;
+    if (variants.size() == 1) return variants[0];
     uint32_t rr = layer.roundRobinCounter->fetch_add(1u);
-    size_t idx = rr % uniqueVariants.size();
-    return uniqueVariants[idx];
+    size_t idx = rr % variants.size();
+    return variants[idx];
 }
 
 
@@ -488,9 +543,9 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
         if (!se.sound || se.variantIdx != chosenVariant) continue;
-        
-        if (se.sound->buffer == nullptr) {
-            LOG(Warning, "Sample buffer not loaded for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " file=" + se.sound->sampleVariantSpec->sampleFile.getFullPathName());
+
+        if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) {
+            LOG(Debug, "Sample buffer not loaded for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " file=" + se.sound->sampleVariantSpec->sampleFile.getFullPathName());
             continue;
         }
         auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
@@ -498,6 +553,18 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
         this->startSampleVoice(*voice, art, se, midiChannel, midiNoteNumber, velocity);
         anyStarted = true;
     }
+
+    if (!anyStarted) {
+        for (const auto& se : layer.samples) {
+            if (!se.sound) continue;
+            if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) continue;
+            auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
+            if (!voice) continue;
+            this->startSampleVoice(*voice, art, se, midiChannel, midiNoteNumber, velocity);
+            anyStarted = true;
+        }
+    }
+
     return anyStarted;
 }
 

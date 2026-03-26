@@ -213,6 +213,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                     [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
                         sound->buffer = buf;
                         sound->sampleRate = sr;
+                        sound->loaded.store(buf != nullptr, std::memory_order_release);
                     }
                 );
             }

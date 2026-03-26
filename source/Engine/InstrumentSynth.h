@@ -26,6 +26,7 @@ public:
     KitLib::SampleVariantSpec* sampleVariantSpec = nullptr;
     juce::File sampleFile;
     std::shared_ptr<juce::AudioBuffer<float>> buffer;
+    std::atomic<bool> loaded{false};
     std::vector<uint8_t> notes; 
 
     double sampleRate = 0.0;
@@ -475,6 +476,8 @@ private:
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
 
     uint8_t chooseVariantGroup(VelocityLayerRuntime& layer);
+    bool hasAnyLoadedVariant(const VelocityLayerRuntime& layer) const;
+    bool isVariantReady(const VelocityLayerRuntime& layer, uint8_t variantIdx) const;
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
     // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
