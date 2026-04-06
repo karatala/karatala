@@ -334,34 +334,6 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
     }
 }
 
-//TODO: Each non-empty, non-comment line should be: <slotId>:<KitName>/<InstrumentCode>:<params? like tuning, fx chain, etc>
-//FIXME: make parser return structured ParseResult<DataObjectToBeDefined> 
-std::vector<std::pair<juce::String, juce::String>> DrumKitEngine::parseInstrumentMapText(const juce::String& text) { 
-    std::vector<std::pair<juce::String, juce::String>> result;
-    const juce::StringArray lines = juce::StringArray::fromLines(text);
-    for (auto l : lines) {
-        auto line = l.trim();
-        if (line.isEmpty())
-            continue;
-        if (line.startsWithChar('#'))
-            continue;
-
-        auto colon = line.indexOfChar(':');
-        if (colon <= 0) {
-            LOG(Warning, "invalid mapping line (no colon): " + line);
-            continue;
-        }
-        auto left = line.substring(0, colon).trim();
-        auto right = line.substring(colon + 1).trim();
-        if (left.isEmpty() || right.isEmpty()) {
-            LOG(Warning, "invalid mapping line (empty slot or target): " + line);
-            continue;
-        }
-        result.emplace_back(left, right);
-    }
-    return result;
-}
-
 ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::String yamlStr) {
     ParseResult<DrumKitEngine::Config> result;
 
@@ -653,90 +625,118 @@ void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer&
     }
 }
 
-// bool DrumKitEngine::useInstrumentMap(juce::String text) { // not working draft
-//     if (text.trim().isEmpty()) {
-//         LOG(Warning, "empty instrument map text");
-//         return false;
-//     }
+bool DrumKitEngine::useInstrumentMap(juce::String text) { //FIXME: rewiew, probably rethink and rewrite this not working draft
+    if (text.trim().isEmpty()) {
+        LOG(Warning, "empty instrument map text");
+        return false;
+    }
 
-//     auto pairs = DrumKitEngine::parseInstrumentMapText(text); //TODO: plan implementation
-//     if (pairs.empty()) {
-//         LOG(Warning, "no valid mapping lines found");
-//         return false;
-//     }
+    auto pairs = DrumKitEngine::parseInstrumentMapText(text); //TODO: plan implementation
+    if (pairs.empty()) {
+        LOG(Warning, "no valid mapping lines found");
+        return false;
+    }
 
-//     if (this->libraryManagerPtr == nullptr) {
-//         LOG(Error, "LibraryManager is not initialized");
-//         return false;
-//     }
+    if (this->libraryManagerPtr == nullptr) {
+        LOG(Error, "LibraryManager is not initialized");
+        return false;
+    }
 
-//     int applied = 0;
-//     for (const auto& p : pairs) {
-//         const auto slotId = p.first.trim();
-//         const auto rhs = p.second.trim();
+    int applied = 0;
+    for (const auto& p : pairs) {
+        const auto slotId = p.first.trim();
+        const auto rhs = p.second.trim();
 
-//         // find slot
-//         auto sit = this->instrumentSynthById.find(slotId);
-//         if (sit == this->instrumentSynthById.end()) {
-//             LOG(Warning, "instrument slot not found: " + slotId);
-//             continue;
-//         }
-//         InstrumentSynth* slot = sit->second;
+        // find slot
+        auto sit = this->instrumentSynthById.find(slotId);
+        if (sit == this->instrumentSynthById.end()) {
+            LOG(Warning, "instrument slot not found: " + slotId);
+            continue;
+        }
+        InstrumentSynth* slot = sit->second;
 
-//         // parse kit and optional instrument code
-//         auto slashPos = rhs.indexOfChar('/');
-//         juce::String kitName = rhs;
-//         juce::String instCode;
-//         if (slashPos >= 0) {
-//             kitName = rhs.substring(0, slashPos).trim();
-//             instCode = rhs.substring(slashPos + 1).trim();
-//         }
+        // parse kit and optional instrument code
+        auto slashPos = rhs.indexOfChar('/');
+        juce::String kitName = rhs;
+        juce::String instCode;
+        if (slashPos >= 0) {
+            kitName = rhs.substring(0, slashPos).trim();
+            instCode = rhs.substring(slashPos + 1).trim();
+        }
 
-//         // find kit (by name or code)
-//         KitLib::DrumKitSpec* kitSpec = nullptr;
-//         for (auto& kptr : this->libraryManagerPtr->getKits()) {
-//             if (kptr->meta.name == kitName || kptr->meta.codeRaw == kitName) {
-//                 kitSpec = kptr.get();
-//                 break;
-//             }
-//         }
+        // find kit (by name or code)
+        KitLib::DrumKitSpec* kitSpec = nullptr;
+        for (auto& kptr : this->libraryManagerPtr->getKits()) {
+            if (kptr->meta.name == kitName || kptr->meta.codeRaw == kitName) {
+                kitSpec = kptr.get();
+                break;
+            }
+        }
 
-//         if (kitSpec == nullptr) {
-//             LOG(Warning, "kit not found: " + kitName);
-//             continue;
-//         }
+        if (kitSpec == nullptr) {
+            LOG(Warning, "kit not found: " + kitName);
+            continue;
+        }
 
-//         if (instCode.isEmpty()) {
-//             this->mapKit(*kitSpec);
-//             applied++;
-//             continue;
-//         }
+        if (instCode.isEmpty()) {
+            this->mapKit(*kitSpec);
+            applied++;
+            continue;
+        }
 
-//         KitLib::InstrumentSpec* instSpec = kitSpec->findInstrument(instCode);
-//         if (instSpec == nullptr) {
-//             LOG(Warning, "instrument not found in kit '" + kitSpec->meta.name + "': " + instCode);
-//             continue;
-//         }
+        KitLib::InstrumentSpec* instSpec = kitSpec->findInstrument(instCode);
+        if (instSpec == nullptr) {
+            LOG(Warning, "instrument not found in kit '" + kitSpec->meta.name + "': " + instCode);
+            continue;
+        }
 
-//         slot->loadInstrument(instSpec);
-//         applied++;
+        slot->loadInstrument(instSpec);
+        applied++;
 
-//         // map midi notes for this slot based on kit layout definition (if present)
-//         if (this->activeKitLayoutPtr != nullptr) {
-//             auto it = this->activeKitLayoutPtr->instrumentsById.find(slotId);
-//             if (it != this->activeKitLayoutPtr->instrumentsById.end()) {
-//                 const auto* layoutInst = it->second;
-//                 for (const auto& art : layoutInst->articulations) {
-//                     for (int note : art.notes) {
-//                         auto& vec = this->instrumentSynthsByNote[note];
-//                         // avoid duplicates
-//                         if (std::find(vec.begin(), vec.end(), slot) == vec.end())
-//                             vec.push_back(slot);
-//                     }
-//                 }
-//             }
-//         }
-//     }
+        // map midi notes for this slot based on kit layout definition (if present)
+        if (this->activeKitLayoutPtr != nullptr) {
+            auto it = this->activeKitLayoutPtr->instrumentsById.find(slotId);
+            if (it != this->activeKitLayoutPtr->instrumentsById.end()) {
+                const auto* layoutInst = it->second;
+                for (const auto& art : layoutInst->articulations) {
+                    for (int note : art.notes) {
+                        auto& vec = this->instrumentSynthsByNote[note];
+                        // avoid duplicates
+                        if (std::find(vec.begin(), vec.end(), slot) == vec.end())
+                            vec.push_back(slot);
+                    }
+                }
+            }
+        }
+    }
 
-//     return applied > 0;
-// }
+    return applied > 0;
+}
+
+//TODO: Each non-empty, non-comment line should be: <slotId>:<KitName>/<InstrumentCode>:<params? like tuning, attack, decay, maybe fx chain, etc>
+//FIXME: make parser return structured ParseResult<DataObjectToBeDefined> 
+std::vector<std::pair<juce::String, juce::String>> DrumKitEngine::parseInstrumentMapText(const juce::String& text) { 
+    std::vector<std::pair<juce::String, juce::String>> result;
+    const juce::StringArray lines = juce::StringArray::fromLines(text);
+    for (auto l : lines) {
+        auto line = l.trim();
+        if (line.isEmpty())
+            continue;
+        if (line.startsWithChar('#'))
+            continue;
+
+        auto colon = line.indexOfChar(':');
+        if (colon <= 0) {
+            LOG(Warning, "invalid mapping line (no colon): " + line);
+            continue;
+        }
+        auto left = line.substring(0, colon).trim();
+        auto right = line.substring(colon + 1).trim();
+        if (left.isEmpty() || right.isEmpty()) {
+            LOG(Warning, "invalid mapping line (empty slot or target): " + line);
+            continue;
+        }
+        result.emplace_back(left, right);
+    }
+    return result;
+}
