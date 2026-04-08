@@ -185,6 +185,7 @@ public:
         return it->second;
     }
     Name findName(Id id) const {
+        std::lock_guard<std::mutex> lock(this->mutex);
         if (id == StringsDictSingleton::EMPTY) return "";
         for (const auto& [name, nameId] : this->nameIdMap)
             if (nameId == id) return name;
@@ -194,7 +195,7 @@ public:
 private:
     std::unordered_map<Name, Id> nameIdMap;
     Id nextId { 1 };
-    std::mutex mutex;
+    mutable std::mutex mutex;
 
     StringsDictSingleton() { this->nameIdMap.reserve(1024); }
     StringsDictSingleton(const StringsDictSingleton&) = delete;

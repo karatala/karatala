@@ -835,6 +835,12 @@ void DrumKitEngine::prepareToPlay(double sampleRate, int samplesPerBlock) {
 }
 
 void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages) { //TODO: review
+    const juce::ScopedTryLock graphLock(this->engineGraphLock);
+    if (!graphLock.isLocked()) {
+        outputBuffer.clear();
+        return;
+    }
+
     const auto outputBufferStartSample = 0;
     const auto outputBufferNumSamples = outputBuffer.getNumSamples();
     
@@ -878,6 +884,7 @@ void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer&
 }
 
 bool DrumKitEngine::useInstrumentMap(juce::String text) {
+    const juce::ScopedLock graphLock(this->engineGraphLock);
     this->lastInstrumentMapStatus.clear();
 
     if (text.trim().isEmpty()) {

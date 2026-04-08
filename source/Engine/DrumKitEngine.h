@@ -122,6 +122,7 @@ private:
     //TODO: maybe no need in unordered_map and make it std::array<int, 128> or what will be faster/lighter/safer?
     std::unordered_map<int, int> latestCCValueMap;
     std::unordered_map<int, int> latestPAValueMap;
+    mutable juce::CriticalSection engineGraphLock;
 
     std::unique_ptr<KitLib::LibraryManager> libraryManagerPtr;
     std::unique_ptr<SampleLoader> sampleLoaderPtr;

@@ -54,6 +54,19 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     statusLabel.setText(processorRef.getEngine().getLastInstrumentMapStatus(), juce::dontSendNotification);
 
     applyButton.onClick = [this] {
+        struct ProcessingSuspendGuard {
+            PluginProcessor& processor;
+            explicit ProcessingSuspendGuard(PluginProcessor& proc)
+                : processor(proc) {
+                this->processor.suspendProcessing(true);
+            }
+            ~ProcessingSuspendGuard() {
+                this->processor.suspendProcessing(false);
+            }
+        } processingSuspendGuard(processorRef);
+
+        const juce::ScopedLock callbackLock(processorRef.getCallbackLock());
+
         auto text = instrumentMapEditor.getText();
         processorRef.getValueTreeState().state.setProperty("instrument_map", text, nullptr);
 
