@@ -1,21 +1,21 @@
-# TODO05: Instrument Map — Implementation Plan
+# TODO05: Instrument Map - Implementation Plan
 
 ## Summary
 
-Rewrite `parseInstrumentMapText()` and `useInstrumentMap()` in `DrumKitEngine` to support a structured, extensible instrument mapping format with per-slot parameters (tuning, attack, decay, etc.) and proper `ParseResult<>` error reporting.
+Rewrite `parseInstrumentMapText()` and `useInstrumentMap()` in `DrumKitEngine` to support a structured, extensible instrument mapping format with per-slot parameters (tuning, attack, decay, etc.) and proper `ParseResult<>` error reporting. (use DrumKitEngine::parseConfigYaml as an example of style)
 
 ## Current State
 
 ### What exists
-- `parseInstrumentMapText()` — splits lines on first `:` into `vector<pair<String, String>>`. No structured result, no parameter parsing, no `ParseResult<>` wrapping.
-- `useInstrumentMap()` — marked `FIXME: not working draft`. Manually re-parses `kitName/instCode` from the pair's RHS. Manually rebuilds MIDI note mappings (duplicating logic from `applyKitLayout`). No parameter application.
-- `useState()` — currently skips `useInstrumentMap()` with a `LOG(Warning, "Custom instrument map not supported yet")`.
+- `parseInstrumentMapText()` - splits lines on first `:` into `vector<pair<String, String>>`. No structured result, no parameter parsing, no `ParseResult<>` wrapping.
+- `useInstrumentMap()` - marked `FIXME: not working draft`. Manually re-parses `kitName/instCode` from the pair's RHS. Manually rebuilds MIDI note mappings (duplicating logic from `applyKitLayout`). No parameter application.
+- `useState()` - currently skips `useInstrumentMap()` with a `LOG(Warning, "Custom instrument map not supported yet")`.
 
 ### What's missing
-1. **Structured parse result type** — no `InstrumentMapEntry` struct.
-2. **Third field parsing** — the TODO says format should be `<slotId>:<KitName>/<InstrumentCode>:<params>` but only the first colon is parsed.
-3. **Per-instrument parameters** — `InstrumentSynth` has no instrument-level tuning/attack/decay setters. Voice-level `setAttackTimeSec` / `setReleaseTimeSec` / `pitchRatio` exist but are set per-voice, not per-instrument.
-4. **`LibraryManager::findKit()` exists** but `useInstrumentMap` manually loops over kits instead of using it. `findKit` only matches by `meta.name`, not by `meta.codeRaw` — should be extended or a wrapper used.
+1. **Structured parse result type** - no `InstrumentMapEntry` struct.
+2. **Third field parsing** - the TODO says format should be `<slotId>/<articulationCode>:<KitName>/<InstrumentCode>:<params>` but only the first colon is parsed.
+3. **Per-instrument and per articulation parameters** - `InstrumentSynth` has no instrument-level tuning/attack/decay setters. Voice-level `setAttackTimeSec` / `setReleaseTimeSec` / `pitchRatio` exist but are set per-voice, not per-instrument nor per-articulation.
+4. **`LibraryManager::findKit()` exists** but `useInstrumentMap` manually loops over kits instead of using it. `findKit` only matches by `meta.name`, not by `meta.codeRaw` - should be extended or a wrapper used.
 
 ---
 
@@ -36,25 +36,35 @@ snare1:MyDrumKit/snare-14
 kick1:MyDrumKit/kick-24:tuning=-2,attack=50,decay=300
 hihat1:MyDrumKit/hihat-14:tuning=15
 
-# Per-articulation source routing — ride bow from one instrument, ride edge from another:
-ride1:KitA/ride-20:art=bow
-ride1:KitB/ride-18:art=edge
+# Per-articulation source routing - ride bow from one instrument, ride edge from another:
+ride1/bow:KitA/ride-20/bow
+ride1/edge:KitB/ride-18/edge
 
-# Articulation layering — ride bow plays samples from several instruments simultaneously:
-ride1:KitA/ride-20:art=bow
-ride1:KitB/ride-18:art=bow
+# Articulation layering - ride bow plays samples from several instruments simultaneously:
+ride1/bow:KitA/ride-20/bow
+ride1/bow:KitB/ride-18/bow
 
-# Combined — ride bow is layered, ride edge from KitB only:
-ride1:KitA/ride-20:art=bow
-ride1:KitB/ride-18:art=bow,edge
+# Combined - ride bow is layered, ride edge from KitB only:
+ride1/bow:KitA/ride-20/bow
+ride1/bow:KitB/ride-18/bow
+ride1/edge:KitB/ride-18/edge
 
 # Supported parameters (all optional):
-#   tuning    — tuning cents offset (int, e.g. -2, +15)
-#   attack    — attack time in ms (int)
-#   decay     — release/decay time in ms (int)
-#   gain      — gain in dB (float, e.g. -3, +6)
-#   pan       — pan position (-1.0 left .. +1.0 right)
-#   art       — comma-separated articulation filter (e.g. art=bow,edge)
+#   tuning*   - tuning cents offset (int, e.g. -2, +15)
+#   attack    - attack time in ms (int)
+#   hold?     - hold time in ms (int) //TODO?
+#   decay     - release/decay time in ms (int)
+#   attack_curve - //TODO: maybe define several, but probably later.
+#   gain*     - gain in dB (float, e.g. -3, +6)
+#   pan*      - pan position (-1.0 left .. +1.0 right)
+#   flip*     - flip R/L for stereo mics * applicable only for stereo micCode like XXs (ons, rfs, etc) //TODO details, logic
+#   bleed*    - //FIXME: need to think about naming, probably bleed[micCode] like bleed[rfs] bleed[ons] ... then need to define some priority list for detecting which mic is primary (dXX - direct, then oXX - overhead then others?) or just use gain[micCode] instead?
+#   curve     - velocity curve //TODO do we even need this here, probably this is to be defined in kitLayout for all instruments? or per articulation curve can be good? maybe for now skip this and if some day will be needed then plan it, so later.
+#   solo,mute //TODO: also later, probably not related to this at all, since its temporary runtime thing that we dont need to save as instrument param
+
+
+all params need to be saved in vst settings chunk.
+* - param also can be automated
 ```
 
 ### Grammar
@@ -63,13 +73,13 @@ ride1:KitB/ride-18:art=bow,edge
 line        = comment | entry | empty
 comment     = '#' <any text>
 entry       = slotId ':' target (':' params)?
-slotId      = '*' | <identifier matching instrumentSynthById key>
-target      = kitRef ('/' instCode)?
-kitRef      = <kit name or code>
+slotId      = '*' | <identifier matching instrumentSynthById key> ('/' articulation[optionalExpressionShortName])? //TODO: need to think about <optionalExpressionShortName>, do we need it, if yes then what to do for same expr code with different <optionalExpressionCode><value> (according KitLibModel.h)?
+target      = kitRef ('/' instCode)? ('/' articulation[optionalExpressionShortName])? //TODO...
+kitRef      = <KitName>
 instCode    = <instrument code within kit>
-params      = param (',' param)*
+params      = param (';' param)*
 param       = key '=' value
-key         = 'tuning' | 'attack' | 'decay' | 'gain' | 'pan' | 'art'
+key         = 'tuning' | 'attack' | 'decay' | 'gain' | 'pan' | ...
 value       = <float literal> | <comma-separated identifiers (for art)>
 ```
 
@@ -77,7 +87,7 @@ value       = <float literal> | <comma-separated identifiers (for art)>
 
 ## Data Structures
 
-### New: `InstrumentMapEntry` (in DrumKitEngine.h or a new header)
+### New: `InstrumentMapEntry` (in DrumKitEngine.h or maybe better in KitLibModel.h, or separate header)
 
 ```cpp
 struct InstrumentMapEntry {
@@ -85,7 +95,7 @@ struct InstrumentMapEntry {
     juce::String kitRef;     // kit name or code
     juce::String instCode;   // instrument code within kit (empty = whole kit)
 
-    // Articulation filter — if non-empty, only load these articulations from the source.
+    // Articulation filter - if non-empty, only load these articulations from the source.
     // Names match ArticulationSpec::nameId (e.g. "bow", "edge", "bell", "center", "rim").
     // If empty, load all articulations from the source (default behavior).
     std::vector<juce::String> articulationFilter;
@@ -116,8 +126,8 @@ struct InstrumentMap {
 
 Users want to mix-and-match articulations from different kit instruments within a single slot. Two distinct use cases:
 
-1. **Per-articulation source routing** — "ride bow from KitA/ride-20, ride edge from KitB/ride-18". Each articulation plays exclusively from its assigned source.
-2. **Articulation layering** — "ride bow plays samples from BOTH KitA/ride-20 AND KitB/ride-18 simultaneously". Both sources trigger on the same MIDI note, creating a layered/blended sound.
+1. **Per-articulation source routing** - "ride bow from KitA/ride-20, ride edge from KitB/ride-18". Each articulation plays exclusively from its assigned source.
+2. **Articulation layering** - "ride bow plays samples from BOTH KitA/ride-20 AND KitB/ride-18 simultaneously". Both sources trigger on the same MIDI note, creating a layered/blended sound. //TODO: also here applies mixing of each layer, like it can be different gain, pan, flip, attack time, maybe even attack curve, //TODO also need to think about velocity layers, for example from velocity 0 to 52 use one articulation, from 52 to 90 - another, etc, together with other possibilities
 
 Additionally: articulations referenced in the map may not exist in the target instrument (e.g. requesting "bell" from an instrument that only has "bow" and "edge"). This must be handled gracefully.
 
@@ -125,7 +135,7 @@ Additionally: articulations referenced in the map may not exist in the target in
 
 - `InstrumentSynth` owns all `ArticulationRuntime` objects. `loadInstrument(instSpec)` clears everything and rebuilds from a **single** `InstrumentSpec`.
 - `processLayoutArticulations(instSpec)` iterates layout articulations and matches them to the instrument's `ArticulationSpec` list by `(nameId, exprId)`. Falls back via `articulationFallbackIdMap`.
-- `instrumentSynthsByNote` is `map<int, vector<InstrumentSynth*>>` — **multiple synths per MIDI note already work**. Each synth independently resolves articulation → velocity layer → sample and renders to its output channels.
+- `instrumentSynthsByNote` is `map<int, vector<InstrumentSynth*>>` - **multiple synths per MIDI note already work**. Each synth independently resolves articulation → velocity layer → sample and renders to its output channels.
 - `noteToArticulation[note]` in each InstrumentSynth maps a MIDI note to a single articulation index. This is a 1:1 mapping within one synth.
 
 ### Design
@@ -148,7 +158,7 @@ When processing each layout articulation, `processLayoutArticulations` checks if
 
 If the requested articulation doesn't exist in the source instrument:
 1. Try fallback via `articulationFallbackIdMap` (within the same source instrument).
-2. If still not found, log a warning and skip (the articulation is simply not available — no crash, no sound for that trigger).
+2. If still not found, log a warning and skip (the articulation is simply not available - no crash, no sound for that trigger).
 
 #### Articulation layering (multiple sources for same articulation)
 
@@ -157,17 +167,18 @@ Leverage the existing multi-synth-per-note infrastructure:
 When `useInstrumentMap` encounters **multiple entries for the same slot with overlapping `art=` filters**, it creates **shadow `InstrumentSynth` instances** for the additional layers:
 
 ```
-ride1:KitA/ride-20:art=bow         ← primary slot (ride1), loads bow from KitA
-ride1:KitB/ride-18:art=bow         ← second entry for ride1 with same art → creates shadow
+ride1/bow:KitA/ride-20/bow         ← primary slot (ride1), loads bow from KitA
+ride1/bow:KitB/ride-18/bow         ← second entry for ride1 with same art → mixes
 ```
 
 A shadow `InstrumentSynth` is:
 - A new `InstrumentSynth` instance that shares the same layout slot definition (same MIDI notes, same articulations).
 - Created and owned by `DrumKitEngine` (appended to `instrumentSynthPtrs`).
 - Registered in `instrumentSynthsByNote` for the relevant notes, so it triggers alongside the primary.
-- **NOT** registered in `instrumentSynthById` (only the primary slot keeps its name — shadows are internal).
+- **NOT** registered in `instrumentSynthById` (only the primary slot keeps its name - shadows are internal).
 - Has its own `loadInstrument` call with its own `InstrumentSpec` source.
 - Inherits mic output mapping from the primary slot.
+- TODO: make sure to load in cache only actually used for layering articulations/velLayers. also how do we tell difference if instrument is shadow? will it be more optimal to have "shadow" articulations instead of instruments? and that "shadow in kinda sounds not nice, maybe rename it some better way, like "stacked" or idk
 
 This way, when a MIDI note fires, both the primary and shadow synth render independently, producing a layered sound.
 
@@ -180,17 +191,18 @@ This way, when a MIDI note fires, both the primary and shadow synth render indep
 #### What happens when an articulation doesn't exist
 
 - `processLayoutArticulations` already handles this: if no match and no fallback, the layout articulation is simply skipped. `noteToArticulation[note]` stays at -1 for those notes, and `resolveArticulation` returns -1, causing `playNote` to do nothing.
-- The instrument map should log a clear warning: `"articulation 'bell' not found in KitA/ride-20 (and no fallback available) — skipping for slot 'ride1'"`.
+- The instrument map should log a clear warning: `"articulation 'bell' not found in KitA/ride-20 (and no fallback available) - skipping for slot 'ride1'"`.
 
 ### Example flow
 
 Map text:
 ```
-ride1:KitA/ride-20:art=bow
-ride1:KitB/ride-18:art=bow,edge
+ride1/bow:KitA/ride-20/bow
+ride1/bow:KitB/ride-18/bow
+ride1/edge:KitB/ride-18/edge
 ```
 
-Processing:
+Processing://FIXME everywhere according new format (instead of art=a,b now /art added to both sides etc)
 1. Group by `ride1`: two entries.
 2. Entry 1: `art=bow` from `KitA/ride-20`.
 3. Entry 2: `art=bow,edge` from `KitB/ride-18`.
@@ -224,7 +236,7 @@ Result: hitting the ride bow note triggers two synths (layered), hitting edge tr
 
 New logic:
 1. Split text into lines, skip empty and `#` comments.
-2. Split each line on `:` — expect 2 or 3 segments.
+2. Split each line on `:` - expect 2 or 3 segments.
    - Segment 1: `slotId`
    - Segment 2: `kitRef` optionally followed by `/instCode`
    - Segment 3 (optional): comma-separated `key=value` params
@@ -233,12 +245,12 @@ New logic:
 5. Special handling for `art` param: value is comma-separated list of articulation names → populate `articulationFilter`.
 6. Validate known param keys; warn on unknown.
 7. Populate `InstrumentMapEntry`, push to result.
-8. Return `ParseResult<InstrumentMap>` — use `addWarning()` for non-fatal issues, `returnWithError()` only if zero valid entries were parsed.
+8. Return `ParseResult<InstrumentMap>` - use `addWarning()` for non-fatal issues, `returnWithError()` only if zero valid entries were parsed.
 
 **Edge cases:**
 - Multiple colons: split into at most 3 parts by first two colons.
 - Kit names and instrument codes may not contain `:` or `/` (document this).
-- `art` param value may itself contain commas — but since it's inside the params segment (after the last `:`), and all other params are `key=value` pairs, we parse `art=bow,edge` by finding the `art=` key and consuming up to the next recognized `key=` or end.
+- `art` param value may itself contain commas - but since it's inside the params segment (after the last `:`), and all other params are `key=value` pairs, we parse `art=bow,edge` by finding the `art=` key and consuming up to the next recognized `key=` or end.
 
 ### Step 3: Add per-instrument parameter support to `InstrumentSynth`
 
@@ -280,7 +292,7 @@ void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument,
 
 New logic:
 1. Call `parseInstrumentMapText(text)`.
-2. If `!parseResult.ok()` — log errors, return false.
+2. If `!parseResult.ok()` - log errors, return false.
 3. Log any warnings from `parseResult`.
 4. **Group entries by slotId** (preserve order within each group).
 5. For each slot group:
@@ -312,7 +324,21 @@ New logic:
 
 - Also match `kit->meta.codeRaw` in addition to `kit->meta.name`.
 
-### Step 8: Tests
+### Step 8: UI — Instrument Map Textarea
+
+**File:** `source/PluginEditor.h` / `source/PluginEditor.cpp`
+
+Add a minimal UI so the user can view and edit the instrument map text without reloading the plugin:
+
+- `juce::TextEditor instrumentMapEditor` — multiline, full instrument map text
+- `juce::TextButton applyButton` — triggers re-apply: reads text from editor, calls `processor.getEngine().useInstrumentMap(text)`, refreshes status
+- `juce::Label statusLabel` — shows parse warnings/errors from the last apply (populated from `ParseResult::error()` / warnings list)
+- On editor construction: populate `instrumentMapEditor` from `treeState.state["instrument_map"]`
+- On apply: write new text back to `treeState.state["instrument_map"]` so it persists with plugin state
+
+This is intentionally minimal — full per-instrument/per-mic mixer UI is deferred with the APVTS work.
+
+### Step 9: Tests
 
 **File:** `tests/TestInstrumentMap.cpp` (new)
 
@@ -386,140 +412,179 @@ useState(treeState)
 | `source/Engine/InstrumentSynth.h` | Add tuning/attack/decay override members and setters; add `ArticulationSourceMap` typedef; declare `loadInstrumentWithSources` |
 | `source/Engine/InstrumentSynthLoader.cpp` | Implement `loadInstrumentWithSources`; modify `processLayoutArticulations` to accept articulation source overrides |
 | `source/Engine/KitLibModel.cpp` | Extend `findKit` to match `codeRaw` |
-| `tests/TestInstrumentMap.cpp` | New test file — parsing, per-articulation routing, layering |
+| `source/PluginEditor.h` / `.cpp` | Add instrument map textarea, apply button, status label |
+| `tests/TestInstrumentMap.cpp` | New test file - parsing, per-articulation routing, layering |
 | `cmake/Tests.cmake` | Add new test source |
 
 ---
 
 ## Key Design Decisions
 
-1. **MIDI note mapping stays in `applyKitLayout()`** — The instrument map changes *content* of slots, not *routing*. This avoids duplicating MIDI mapping logic and keeps concerns separated. Shadow synths created for layering are the only exception — they need note registration.
+1. **MIDI note mapping stays in `applyKitLayout()`** - The instrument map changes *content* of slots, not *routing*. This avoids duplicating MIDI mapping logic and keeps concerns separated. Shadow synths created for layering are the only exception - they need note registration.
 
-2. **Parameter overrides are instrument-level, not voice-level** — Tuning/attack/decay are set on `InstrumentSynth` and propagated to voices at note-on time. This is simpler and matches the mental model ("this snare is tuned down 200 cents").
+2. **Parameter overrides are instrument-level, not voice-level** - Tuning/attack/decay are set on `InstrumentSynth` and propagated to voices at note-on time. This is simpler and matches the mental model ("this snare is tuned down 200 cents").
 
-3. **`ParseResult<>` pattern** — Consistent with the rest of the codebase (`parseConfigYaml`, `parseInfo`, `parseYaml` for layouts).
+3. **`ParseResult<>` pattern** - Consistent with the rest of the codebase (`parseConfigYaml`, `parseInfo`, `parseYaml` for layouts).
 
-4. **Wildcard `*` for whole-kit** — Cleaner than overloading empty instCode to mean "apply whole kit". The `*` is explicit.
+4. **Wildcard `*` for whole-kit** - Cleaner than overloading empty instCode to mean "apply whole kit". The `*` is explicit.
 
-5. **`std::optional` for params** — Clear distinction between "not specified" (use default) and "specified as 0".
+5. **`std::optional` for params** - Clear distinction between "not specified" (use default) and "specified as 0".
 
-6. **Per-articulation routing via `ArticulationSourceMap`** — Modify `processLayoutArticulations` to look up each articulation's source from a map, falling back to the default instrument. This is minimally invasive — the existing loading pipeline is preserved, just with a configurable source per articulation.
+6. **Per-articulation routing via `ArticulationSourceMap`** - Modify `processLayoutArticulations` to look up each articulation's source from a map, falling back to the default instrument. This is minimally invasive - the existing loading pipeline is preserved, just with a configurable source per articulation.
 
-7. **Layering via shadow `InstrumentSynth` instances** — Reuses the existing multi-synth-per-note infrastructure (`instrumentSynthsByNote` is already a vector). No changes to the real-time playback path. Shadow synths are "invisible" to the user (not in `instrumentSynthById`), owned by the engine, and share MIDI routing with the primary slot.
+7. **Layering via shadow `InstrumentSynth` instances** - Reuses the existing multi-synth-per-note infrastructure (`instrumentSynthsByNote` is already a vector). No changes to the real-time playback path. Shadow synths are "invisible" to the user (not in `instrumentSynthById`), owned by the engine, and share MIDI routing with the primary slot.
 
 ---
 
-## VST Automatable Parameters (APVTS) Plan
+## VST Automatable Parameters (APVTS) — Deferred
 
-### Current State
+Full APVTS planning is deferred to a later TODO. Short summary of what was decided so far (for reference when that work starts):
 
-The APVTS is essentially empty — one placeholder `AudioParameterChoice` (`kitLayoutChoice`). The `InstrumentSynth` constructor and voice class have commented-out `gainParam`, `panParam`, `invertPhaseParam` references, showing intent but no implementation. `getStateInformation` / `setStateInformation` are no-ops.
+- **Per-instrument params** (tuning, attack, decay, mute, solo) — applied at note-on in `InstrumentSynth`. IDs `inst01_*`..`inst32_*`, fixed maximum of 32 slots for stable DAW automation lane IDs.
+- **Per-mic params** (volume, pan, phase, flipLR, mute) — applied as a post-render pass on host output channels in `processBlock`. IDs `mic01_*`..`mic32_*`. Per-mic not per-instrument because shared mics (Overheads, Room) capture all instruments simultaneously.
+- **Instrument map values are defaults**, APVTS params are live state — loading a map sets APVTS values, DAW automation can override at any time.
+- Implementation order when the time comes: instrument APVTS first → mic APVTS → UI mixer strips → state save/restore.
+
+---
+
+## Two distinct parameter scopes: Instrument vs Mic (reference)
+
+The architecture has two separate hierarchies that need different parameter scopes:
+
+<!-- SECTION_PLACEHOLDER -->
+
+The architecture has two separate hierarchies that need different parameter scopes:
+
+```
+Kit Layout  (variable, defines instruments)      Mic Layout  (static after load, defines output channels)
+─────────────────────────────────────────         ─────────────────────────────────────────────────────────
+  kick1                                             mic01: Overheads (ons, 2ch, shared by ALL instruments)
+  snare1                                            mic02: Hi-Hat (dtm, 1ch, hihat1 only)
+  tom1                                              mic03: Ride (dtm, 1ch, ride1 only)
+  tom2                                              mic04: Kick In (dim, 1ch, kick1 only)
+  hihat1                                            mic05: Kick Out (dom, 1ch, kick1 only)
+  ride1                                             mic06: Snare Top (dtm, 1ch, snare1 only)
+  crash1                                            mic07: Snare Bottom (dbm, 1ch, snare1 only)
+  ...  (25 slots in default layout, unbounded)      mic08..mic12: Toms (dtm, 1ch each)
+                                                    mic13: Room Close (rcm, 1ch, shared by ALL)
+                                                    mic14: Room Far (rfs, 2ch, shared by ALL)
+                                                    ... up to 32 mono host channels total
+```
+
+**Instruments** own tuning, attack, decay, mute, solo — properties of "what is being hit".
+**Mics** own volume, pan, phase, flipLR — properties of "how it's captured/mixed".
+
+An instrument can be captured by many mics (kick1 has Kick In + Kick Out + Overheads + Room). A shared mic (Overheads) captures ALL instruments. So vol/pan/flip are per-mic-slot, not per-instrument.
 
 ### What should NOT be an APVTS parameter
 
 | Thing | Why not |
 |-------|---------|
-| Instrument map text | Formatted string, no meaningful automation curve. Stored in ValueTree state (`treeState.state["instrument_map"]`). |
-| Kit layout selection | Discrete choice with side effects (rebuilds all slots). Keep as ValueTree state or `AudioParameterChoice`, not automatable. |
-| Mic layout selection | Same — structural change, not real-time. |
-| Articulation source routing (`art=`) | Part of instrument map config, not real-time. |
+| Instrument map text | Formatted string, no meaningful automation curve. Stored in ValueTree state. |
+| Kit layout selection | Structural change (rebuilds all slots). ValueTree state or non-automatable `AudioParameterChoice`. |
+| Mic layout selection | Structural change (rebuilds output routing). Same. |
+| Articulation source routing | Part of instrument map config, not real-time. |
 
-### What SHOULD be APVTS parameters (per-instrument)
+### Per-Instrument APVTS parameters
 
-These are real-time-tweak-friendly, automatable in a DAW, and directly map to knobs/faders a user would want on-screen:
+Applied at note-on time inside `InstrumentSynth` / voice `startNote()`. The kit layout defines instrument slots; the count is variable but we use a fixed maximum for stable parameter IDs.
 
 | Parameter | ID pattern | Type | Range | Default | Notes |
 |-----------|-----------|------|-------|---------|-------|
-| **Tuning** | `{slotId}_tuning` | `AudioParameterInt` | -2400..+2400 cents | 0 | Applied as pitch ratio: `pow(2, cents/1200)`. ±2400 = ±2 octaves. |
-| **Volume** | `{slotId}_volume` | `AudioParameterFloat` | -60..+12 dB | 0 | Applied as gain multiplier per voice. -60 dB ≈ silent. |
-| **Pan** | `{slotId}_pan` | `AudioParameterFloat` | -1.0..+1.0 | 0.0 | Left-right balance. Applied to stereo mic pairs. Mono mics: constant-power pan law. |
-| **Attack** | `{slotId}_attack` | `AudioParameterInt` | 0..500 ms | 1 (≈instant) | Overrides voice `attackTimeSec`. |
-| **Decay** | `{slotId}_decay` | `AudioParameterInt` | 10..5000 ms | 100 | Overrides voice `releaseTimeSec`. |
-| **Phase invert** | `{slotId}_phase` | `AudioParameterBool` | on/off | off | Multiplies output by -1. Useful for multi-mic phase alignment. |
-| **Flip L/R** | `{slotId}_flipLR` | `AudioParameterBool` | on/off | off | Swaps left/right channels of stereo mic pairs. Useful when drummer's perspective ≠ audience perspective. |
-| **Mute** | `{slotId}_mute` | `AudioParameterBool` | on/off | off | Silences the slot entirely. Useful for live performance or mixing. |
-| **Solo** | `{slotId}_solo` | `AudioParameterBool` | on/off | off | Only slots with solo=on are heard. If no solo is active, all non-muted slots play. |
+| **Tuning** | `inst{NN}_tuning` | `AudioParameterInt` | -2400..+2400 cents | 0 | `pitchRatio *= pow(2, cents/1200)`. ±2400 = ±2 octaves. |
+| **Attack** | `inst{NN}_attack` | `AudioParameterInt` | 0..500 ms | 1 | Overrides voice `attackTimeSec`. |
+| **Decay** | `inst{NN}_decay` | `AudioParameterInt` | 10..5000 ms | 100 | Overrides voice `releaseTimeSec`. |
+| **Mute** | `inst{NN}_mute` | `AudioParameterBool` | on/off | off | Silences the instrument. |
+| **Solo** | `inst{NN}_solo` | `AudioParameterBool` | on/off | off | If any solo is on, only soloed instruments play. |
 
-### Parameter count considerations
+**ID convention:** `inst01`..`inst32` (numeric, stable across layout changes). Display name maps to current slot name (e.g. `inst01` → "Kick").
 
-With 25 default slots × 9 params = **225 parameters**. This is within normal bounds for a drum VST (Superior Drummer, Addictive Drums, etc. expose similar counts). JUCE handles thousands of APVTS parameters without issue.
+**Maximum:** 32 instrument parameter groups. With 5 params each = **160 instrument parameters**.
 
-However: The slot count is **variable** (depends on kit layout YAML). Two approaches:
+### Per-Mic APVTS parameters
 
-#### Option A: Fixed maximum slot count (recommended)
+Applied as per-channel processing on the host output buffer. The mic layout is static after plugin load and maps directly to the 32 mono host output channels. Each mic-layout entry gets a parameter group.
 
-Define a compile-time maximum (e.g. 32 slots, matching `TOTAL_HOST_OUTPUT_CHANNELS`). Create all 32 × N parameters at plugin construction. Unused slots' parameters exist but are inert. APVTS parameter creation is a one-time cost.
+| Parameter | ID pattern | Type | Range | Default | Notes |
+|-----------|-----------|------|-------|---------|-------|
+| **Volume** | `mic{NN}_volume` | `AudioParameterFloat` | -60..+12 dB | 0 | Gain multiplier applied to the host output channel(s) for this mic. Shared mics (Overheads) affect all instruments equally. |
+| **Pan** | `mic{NN}_pan` | `AudioParameterFloat` | -1.0..+1.0 | 0.0 | For mono mics: constant-power pan to stereo. For stereo mics: L/R balance. |
+| **Phase** | `mic{NN}_phase` | `AudioParameterBool` | on/off | off | Multiplies channel output by -1. |
+| **Flip L/R** | `mic{NN}_flipLR` | `AudioParameterBool` | on/off | off | Swaps L and R of stereo mic pairs (e.g. `ons`, `rfs`). Only meaningful for stereo mics. |
+| **Mute** | `mic{NN}_mute` | `AudioParameterBool` | on/off | off | Silences this mic channel. |
 
-**Pros:** Simple, DAW state save/restore is stable (parameter IDs don't change), no dynamic parameter issues.
-**Cons:** DAW shows parameters for unused slots (minor — can be hidden via parameter groups).
+**ID convention:** `mic01`..`mic32` (indexed by mic-layout entry order = host channel assignment order). Display name maps to mic name (e.g. `mic01` → "Overheads").
 
-#### Option B: Dynamic parameter creation per layout
+**Maximum:** 32 mic parameter groups. With 5 params each = **160 mic parameters**.
 
-Create parameters only for slots defined in the active kit layout. Recreate on layout change.
+### Where mic params are applied in the rendering pipeline
 
-**Pros:** Clean — only real parameters visible.
-**Cons:** DAW automation lanes break when layout changes (parameter IDs appear/disappear). JUCE discourages dynamic APVTS parameter changes. Some DAWs crash.
+Mic params should be applied as a **post-render pass** on the host output buffer, not inside voice rendering. This is because:
+- Voices render via `addSample(destCh, ...)` directly into the output buffer
+- A shared mic (Overheads) receives `addSample` from ALL instruments — the gain must be applied once after all instruments have rendered, not per-voice
+- This keeps voice code simple and avoids duplicating mic-level logic across instruments
 
-**Recommendation: Option A.** Use a fixed maximum with `AudioProcessorParameterGroup` per slot for organization.
-
-### Parameter ID naming convention
-
-```
-slot01_tuning     // int, cents
-slot01_volume     // float, dB
-slot01_pan        // float
-slot01_attack     // int, ms
-slot01_decay      // int, ms
-slot01_phase      // bool
-slot01_flipLR     // bool
-slot01_mute       // bool
-slot01_solo       // bool
-```
-
-Use numeric slot indices (`slot01`..`slot32`) rather than slot names (`kick_tuning`) because:
-- Slot names are layout-dependent and could change
-- Numeric IDs are stable across layout changes
-- DAW automation lanes survive layout swaps
-- A display name function maps `slot01` → current slot's display name (e.g. "Kick") for the DAW UI
-
-### Relationship between instrument map params and APVTS params
-
-Two layers of the same concept — they must interact correctly:
-
-```
-                    Instrument Map (text config)        APVTS (real-time automation)
-                    ────────────────────────────        ────────────────────────────
-    tuning          kick1:Kit/kick-24:tuning=-200      slot01_tuning = -200
-    attack          kick1:Kit/kick-24:attack=50        slot01_attack = 50
-    decay           kick1:Kit/kick-24:decay=300        slot01_decay = 300
-    volume          (not in map yet)                   slot01_volume = -3.0
-    pan             (not in map yet)                   slot01_pan = 0.2
-    phase           (not in map yet)                   slot01_phase = true
-    flipLR          (not in map yet)                   slot01_flipLR = false
+```cpp
+// In DrumKitEngine::processBlock, AFTER all instrumentSynth->renderNextBlock:
+for (int micIdx = 0; micIdx < activeMicCount; ++micIdx) {
+    float gain = decibelsToGain(micVolumeParams[micIdx]->get());
+    bool phase = micPhaseParams[micIdx]->get();
+    if (phase) gain = -gain;
+    // apply to host channel(s) for this mic
+    for (int ch : micToHostChannels[micIdx]) {
+        outputBuffer.applyGain(ch, 0, numSamples, gain);
+    }
+    // flip L/R for stereo mics
+    if (micFlipParams[micIdx]->get() && micToHostChannels[micIdx].size() == 2) {
+        // swap channel data
+    }
+}
 ```
 
-**Resolution rule:** Instrument map values are initial/default values. APVTS parameters are the live state. When the instrument map is loaded:
-1. For each slot, if the map specifies a value (e.g. `tuning=-200`), set the APVTS parameter to that value.
-2. The APVTS parameter is the single source of truth at runtime — `InstrumentSynth` reads from the parameter, not from a stored override.
-3. DAW automation can override instrument map defaults at any point in the timeline.
+### Parameter count summary
 
-This means Step 3 from the implementation plan changes: instead of adding custom `setTuningOffsetCents()` / `setAttackOverrideMs()` members to `InstrumentSynth`, the synth holds `RangedAudioParameter*` pointers (as the commented code already suggests) and reads them at note-on time.
+| Scope | Groups | Params/group | Total |
+|-------|--------|-------------|-------|
+| Per-instrument | 32 max | 5 | 160 |
+| Per-mic | 32 max | 5 | 160 |
+| Global | 1 | 2 | 2 |
+| **Total** | | | **322** |
 
-### Implementation order (relative to instrument map work)
+Well within normal bounds for a drum VST.
 
-1. **First: Instrument map (Steps 1-8 of this plan)** — get the parsing, structured types, and `loadInstrumentWithSources` working. Use simple stored overrides (`setTuningOffsetCents`, etc.) for now.
-2. **Then: APVTS parameters** — create the parameter layout, wire `RangedAudioParameter*` pointers into `InstrumentSynth`, migrate from stored overrides to parameter reads.
-3. **Then: UI** — knobs/sliders per slot in the editor.
-4. **Then: State save/restore** — implement `getStateInformation` / `setStateInformation`.
-
-This way, the instrument map feature works standalone first, and APVTS integration is additive.
-
-### Global parameters (not per-instrument)
+### Global parameters
 
 | Parameter | ID | Type | Range | Default | Notes |
 |-----------|-------------|------|-------|---------|-------|
-| Master volume | `master_volume` | `AudioParameterFloat` | -60..+12 dB | 0 | Applied to final output buffer |
-| Master tuning | `master_tuning` | `AudioParameterInt` | -100..+100 cents | 0 | Global tuning offset added to all slots |
+| Master volume | `master_volume` | `AudioParameterFloat` | -60..+12 dB | 0 | Applied to final output buffer after mic processing |
+| Master tuning | `master_tuning` | `AudioParameterInt` | -100..+100 cents | 0 | Global tuning offset added to all instrument tuning values |
+
+### Relationship between instrument map params and APVTS params
+
+Instrument map values are **initial/default** values. APVTS parameters are the **live state**.
+
+```
+                    Instrument Map (text config)       APVTS (real-time automation)
+                    ────────────────────────────       ────────────────────────────
+Per-instrument:
+    tuning          kick1:Kit/kick-24:tuning=-200     inst01_tuning = -200
+    attack          kick1:Kit/kick-24:attack=50       inst01_attack = 50
+    decay           kick1:Kit/kick-24:decay=300       inst01_decay = 300
+
+Per-mic (from instrument map):
+    gain            kick1:Kit/kick-24:gain=-3         mic04_volume = -3    (Kick In mic)
+    flip            kick1:Kit/kick-24:flip=1          mic04_flipLR = true
+
+Per-mic (standalone, not from instrument map — configured in UI or via automation only):
+    pan                                               mic01_pan = 0.3      (Overheads)
+    phase                                             mic07_phase = true   (Snare Bottom)
+```
+
+When the instrument map specifies a mic-level param (e.g. `gain=-3` on `kick1`), it needs to resolve which mic(s) are affected. Options:
+- `gain=-3` on an instrument → applies to ALL mics assigned to that instrument (Kick In, Kick Out, Overheads, Room)
+- `gain[dim]=-3` → applies only to mic with code `dim` (Kick In) for that instrument — the `bleed[micCode]` syntax from the format comments
+
+This per-mic-per-instrument addressing (`gain[micCode]`) is a future extension. For now, instrument-level gain in the map can set a default for the instrument's primary/direct mic.
 
 ---
 
@@ -528,18 +593,8 @@ This way, the instrument map feature works standalone first, and APVTS integrati
 - **Parameter application timing**: If instrument map is re-applied after samples are already loaded, parameter overrides must be re-applied. Consider storing overrides persistently on the slot so they survive re-loads.
 - **FX chain parameter**: Mentioned in the TODO comment but deferred. Would need a named fx chain registry, which doesn't exist yet.
 - **Instrument re-mapping without full reload**: Currently `loadInstrument` does a full teardown+rebuild. If only params change, a lighter-weight path could be added later.
-- **Interaction with `mapKit`**: If the map contains `*:kit` followed by `snare1:otherKit/snare`, the wildcard maps everything and then the specific entry overrides one slot. Order matters — document this.
+- **Interaction with `mapKit`**: If the map contains `*:kit` followed by `snare1:otherKit/snare`, the wildcard maps everything and then the specific entry overrides one slot. Order matters - document this.
 - **Shadow synth lifetime**: Shadow synths must be cleaned up when the instrument map changes or `applyKitLayout` is called again. Need a `clearShadowSynths()` step at the start of `useInstrumentMap`.
 - **Shadow synth mic routing**: Shadow synths should inherit the mic output mapping from their primary slot. If the mic layout changes after layering is configured, shadows must be updated too.
-- **Articulation filter + expression dimensions**: The `art=bow` filter matches by `nameId` only. An instrument with `bow[open]`, `bow[half]`, `bow[closed]` would have all three loaded when `art=bow` is specified. This is the desired behavior — expression variants of the same articulation stay together.
+- **Articulation filter + expression dimensions**: The `art=bow` filter matches by `nameId` only. An instrument with `bow[open]`, `bow[half]`, `bow[closed]` would have all three loaded when `art=bow` is specified. This is the desired behavior - expression variants of the same articulation stay together.
 - **Voice stealing across layers**: When a shadow synth and primary synth both play on the same note, voice stealing is independent per synth. This is correct — each synth manages its own voice pool. However, the total voice count across layered synths is higher. Consider if `findVoiceToSteal` needs awareness of sibling layers (likely not — keep it simple for now).
-
-
-
-
-
->Fixed 32-slot maximum (matching TOTAL_HOST_OUTPUT_CHANNELS) — all parameters created at construction with stable numeric IDs (slot01_tuning..slot32_tuning). DAW automation lanes survive layout changes. 
-
-
-
-you probably mixed miclayout and kitlayout concepts, kit layout can have any amount of instruments and those params like tuning etc they apply to instrument and some like vol/pan/flip/ to child entity of instrument - mic, which instrument can have many, some can be reused (like overheads and room etc) mic layout is kinda static after plugin is loaded, we have 32 mono channels that are used by mics, and instrument can have some mics panned/mixed(volume) in some way, like flipRL for

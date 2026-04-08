@@ -3,9 +3,10 @@
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processorRef(p) {
-    juce::ignoreUnused(processorRef);
-
     addAndMakeVisible(inspectButton);
+    addAndMakeVisible(instrumentMapEditor);
+    addAndMakeVisible(applyButton);
+    addAndMakeVisible(statusLabel);
 
     // this chunk of code instantiates and opens the melatonin inspector
     inspectButton.onClick = [&] {
@@ -17,16 +18,37 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         inspector->setVisible(true);
     };
 
+    instrumentMapEditor.setMultiLine(true);
+    instrumentMapEditor.setReturnKeyStartsNewLine(true);
+    instrumentMapEditor.setScrollbarsShown(true);
+    instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", juce::Colours::grey);
+    instrumentMapEditor.setText(processorRef.getValueTreeState().state["instrument_map"].toString(), false);
+
+    statusLabel.setJustificationType(juce::Justification::topLeft);
+    statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+    statusLabel.setText(processorRef.getEngine().getLastInstrumentMapStatus(), juce::dontSendNotification);
+
+    applyButton.onClick = [this] {
+        auto text = instrumentMapEditor.getText();
+        processorRef.getValueTreeState().state.setProperty("instrument_map", text, nullptr);
+
+        const bool applied = processorRef.getEngine().useInstrumentMap(text);
+        if (!applied && text.trim().isEmpty()) {
+            processorRef.getEngine().mapDefaultKit();
+        }
+
+        statusLabel.setText(processorRef.getEngine().getLastInstrumentMapStatus(), juce::dontSendNotification);
+    };
+
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize(400, 300);
+    setSize(760, 520);
 }
 
 PluginEditor::~PluginEditor() {
 }
 
 void PluginEditor::paint(juce::Graphics& g) {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 
     auto area = getLocalBounds();
@@ -37,8 +59,16 @@ void PluginEditor::paint(juce::Graphics& g) {
 }
 
 void PluginEditor::resized() {
-    // layout the positions of your child components here
-    auto area = getLocalBounds();
-    area.removeFromBottom(50);
-    inspectButton.setBounds(getLocalBounds().withSizeKeepingCentre(100, 50));
+    auto area = getLocalBounds().reduced(12);
+    auto topBar = area.removeFromTop(36);
+    inspectButton.setBounds(topBar.removeFromRight(120));
+
+    area.removeFromTop(8);
+    auto statusArea = area.removeFromBottom(88);
+    auto buttonArea = statusArea.removeFromTop(32);
+    applyButton.setBounds(buttonArea.removeFromLeft(180));
+    statusArea.removeFromTop(8);
+    statusLabel.setBounds(statusArea);
+
+    instrumentMapEditor.setBounds(area);
 }

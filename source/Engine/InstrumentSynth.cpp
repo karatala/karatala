@@ -3,6 +3,7 @@
 #include "InstrumentSynth.h"
 #include "DrumKitEngine.h"
 #include <unordered_set>
+#include <cmath>
 
 static constexpr float POLYPHONY_CROSFADE_TIMEOUT_SEC = 0.3f;
 static constexpr float HIHAT_PEDAL_CROSSFADE_SEC = 0.20f;
@@ -726,6 +727,9 @@ void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, Articulation
     voice.artNameId = art.nameId;
     voice.artExprId = art.exprId;
     voice.setVelocityGain(velocity);
+    voice.setPitchRatioMultiplier(std::pow(2.0, static_cast<double>(this->tuningOffsetCents) / 1200.0));
+    voice.setAttackTimeSec(this->attackOverrideMs.has_value() ? static_cast<float>(*this->attackOverrideMs) / 1000.0f : 0.001f);
+    voice.setReleaseTimeSec(this->decayOverrideMs.has_value() ? static_cast<float>(*this->decayOverrideMs) / 1000.0f : 0.1f);
 }
 
 
@@ -945,6 +949,7 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     else
         this->pitchRatio = 1.0;
 
+    this->pitchRatio *= this->pitchRatioMultiplier;
 }
 
 void InstrumentSynthVoice::requestFadeOut(float durationSec) {

@@ -6,11 +6,27 @@
 #include "LayoutManager.h"
 #include "SampleLoader.h"
 #include <array>
+#include <optional>
 
 class DrumKitEngine {
 public:
     // All output buses are mono; stereo mics use two mono buses with L/R suffixes
     static constexpr int TOTAL_HOST_OUTPUT_CHANNELS = 32;
+
+    struct InstrumentMapEntry {
+        juce::String slotId;
+        std::vector<juce::String> slotArticulationFilter;
+        juce::String kitRef;
+        juce::String instCode;
+        std::vector<juce::String> articulationFilter;
+        std::optional<int> tuningCents;
+        std::optional<int> attackTimeMs;
+        std::optional<int> decayTimeMs;
+    };
+
+    struct InstrumentMap {
+        std::vector<InstrumentMapEntry> entries;
+    };
 
     explicit DrumKitEngine() {
         this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
@@ -47,7 +63,7 @@ public:
     bool useMicLayout(juce::String name);
     bool useInstrumentMap(juce::String text);
 
-    static std::vector<std::pair<juce::String, juce::String>> parseInstrumentMapText(const juce::String& text);
+    static ParseResult<InstrumentMap> parseInstrumentMapText(const juce::String& text);
 
     void mapDefaultKit();
     void mapKit(const KitLib::DrumKitSpec& kit);
@@ -57,6 +73,7 @@ public:
     const MicLayoutManager* getMicLayoutManager() const { return this->micLayoutManagerPtr.get(); }
     SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
     const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
+    const juce::String& getLastInstrumentMapStatus() const { return this->lastInstrumentMapStatus; }
 
     // Returns true if `id` corresponds to a registered instrument slot.
     // Used by MicRoutingBuilder to mirror applyMicLayout's slot-resolution logic:
@@ -97,7 +114,7 @@ private:
     Config globalConfig;
 
     std::vector<std::unique_ptr<InstrumentSynth>> instrumentSynthPtrs;
-    std::unordered_map<juce::String, InstrumentSynth*> instrumentSynthById;
+    std::unordered_map<juce::String, InstrumentSynth*> instrumentSynthById; //TODO: review if this map is actually needed, maybe we can do without it 
     std::unordered_map<int, std::vector<InstrumentSynth*>> instrumentSynthsByNote;
 
     //TODO: maybe no need in unordered_map and make it std::array<int, 128> or what will be faster/lighter/safer?
@@ -118,6 +135,9 @@ private:
 
     // Last known audio block size (samples per block).
     int lastSamplesPerBlock = 0;
+    double lastSampleRate = 0.0;
+    int primaryInstrumentSynthCount = 0;
+    juce::String lastInstrumentMapStatus;
 
     void initGlobalSettings();
     void initDefaultLayouts();
@@ -132,6 +152,8 @@ private:
     bool applyKitLayout();
     bool applyMicLayout();
     void buildNoteNameCache();
+    void clearShadowSynths();
+    void rebuildPrimaryInstrumentNoteRouting();
 
     void saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages);
     void saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer& midiMessages);

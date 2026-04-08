@@ -27,6 +27,23 @@ TODO05: need to decide what vst params to expose for avpts. instrument map - pro
 
 TODO cache baking, for example when we have instrument articulation layered and each of layers have some fx processing and pitch and adsr applied, maybe it will be cpu+ram win if sample buffer data will be recached with already applied fx-es/attack/decays and mixed waveforms, also metadata of applied processing will remain somewhere in instrument map and on some of those params change that can be recached with new params, since there will probably be no automations on those basic instrument params (or if it will ever be needed for some reason, then we can maybe make cache baking  toggle  in instrument map params)
 
+TODO: option: preview playback limit to 1 round robin
+show vel ranges in preview wide button with diff colors, kit settings saving in yaml in instr dir
+
+
+TODO: learn hit+articulations, dropdown with note name/midi number, learn for choke (polyaft or note), load/save  kitLayout, 
+
+
+invert cc, current cc position, cc curve?
+
+TODO: vel curve (global/per instr)
+
+TODO: preview velocity sliders on drum pad square (horizontal zones)
+
+optional:
+global decay?
+
+room reverb: amount, decay, predelay for short/long?
 
 
 TODO: peak offset for diffenetn mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) smart-parse from samples and save to filename

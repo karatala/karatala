@@ -5,6 +5,8 @@
 #include <memory>
 #include <algorithm>
 #include <set>
+#include <optional>
+#include <unordered_set>
 #include "AftertouchChokeProcessor.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
@@ -140,6 +142,7 @@ public:
     float getAttackTimeSec() const noexcept { return this->attackTimeSec; }
     void setReleaseTimeSec(float sec) { this->releaseTimeSec = sec; }
     float getReleaseTimeSec() const noexcept { return this->releaseTimeSec; }
+    void setPitchRatioMultiplier(double multiplier) { this->pitchRatioMultiplier = multiplier; }
     
     float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain; }
     
@@ -151,6 +154,7 @@ public:
 
     double sourceSamplePosition = 0.0;
     double pitchRatio = 1.0;
+    double pitchRatioMultiplier = 1.0;
     
     float velocityGain = 1.0f;
     float tailShortenFactor = 1.0f;   // 1.0 = normal, <1 = shortened
@@ -166,6 +170,7 @@ class InstrumentSynth {
 public:
     using ArtRtIdx = int8_t;
     using VelLayerIdx = int8_t;
+    using ArticulationSourceMap = std::unordered_map<uint32_t, KitLib::InstrumentSpec*>;
 
     // Runtime data structures built at loadInstrument() (non-realtime)
     struct SampleEntry {
@@ -235,7 +240,16 @@ public:
 
     void unloadInstrument();
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources);
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds);
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
+    void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
+    int getTuningOffsetCents() const { return this->tuningOffsetCents; }
+    void setAttackOverrideMs(int ms) { this->attackOverrideMs = ms; }
+    std::optional<int> getAttackOverrideMs() const { return this->attackOverrideMs; }
+    void setDecayOverrideMs(int ms) { this->decayOverrideMs = ms; }
+    std::optional<int> getDecayOverrideMs() const { return this->decayOverrideMs; }
+    void clearParameterOverrides();
     
     void clearSounds() {
         const juce::ScopedLock sl(this->lock);
@@ -348,6 +362,7 @@ public:
     KitLib::InstrumentSpec::Type getType() const { return this->type; }
 
     const juce::String& getId() const { return id; }
+    const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
 
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
         const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
@@ -456,8 +471,12 @@ private:
     // Velocity of the note currently being requested (0..1). Used by custom stealing logic.
     mutable std::atomic<float> lastRequestedVelocity{0.0f};
 
+    int tuningOffsetCents = 0;
+    std::optional<int> attackOverrideMs;
+    std::optional<int> decayOverrideMs;
 
-    void processLayoutArticulations(KitLib::InstrumentSpec* instSpec);
+
+    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds = {});
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec

@@ -53,6 +53,14 @@ PluginProcessor::PluginProcessor()
         LOG(Info, summary);
     }
     this->drumKitEnginePtr = std::make_unique<DrumKitEngine>();
+
+    if (!this->mAudioProcessorValueTreeStatePtr->state.hasProperty("kit_layout"))
+        this->mAudioProcessorValueTreeStatePtr->state.setProperty("kit_layout", juce::String(), nullptr);
+    if (!this->mAudioProcessorValueTreeStatePtr->state.hasProperty("mic_layout"))
+        this->mAudioProcessorValueTreeStatePtr->state.setProperty("mic_layout", juce::String(), nullptr);
+    if (!this->mAudioProcessorValueTreeStatePtr->state.hasProperty("instrument_map"))
+        this->mAudioProcessorValueTreeStatePtr->state.setProperty("instrument_map", juce::String(), nullptr);
+
     this->drumKitEnginePtr->init(*mAudioProcessorValueTreeStatePtr);
 }
 
@@ -143,16 +151,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout PluginProcessor::createParam
 
 //==============================================================================
 void PluginProcessor::getStateInformation(juce::MemoryBlock& destData) {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    juce::ignoreUnused(destData);
+    if (auto stateXml = this->mAudioProcessorValueTreeStatePtr->copyState().createXml())
+        copyXmlToBinary(*stateXml, destData);
 }
 
 void PluginProcessor::setStateInformation(const void* data, int sizeInBytes) {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    juce::ignoreUnused(data, sizeInBytes);
+    auto stateXml = getXmlFromBinary(data, sizeInBytes);
+    if (stateXml == nullptr)
+        return;
+
+    const auto restoredState = juce::ValueTree::fromXml(*stateXml);
+    if (!restoredState.isValid())
+        return;
+
+    this->mAudioProcessorValueTreeStatePtr->replaceState(restoredState);
+    if (this->drumKitEnginePtr != nullptr)
+        this->drumKitEnginePtr->useState(*this->mAudioProcessorValueTreeStatePtr);
 }
 
 //==============================================================================

@@ -504,8 +504,9 @@ DrumKitSpec* LibraryManager::getKit(int index) {
 }
 
 DrumKitSpec* LibraryManager::findKit(const juce::String& name) {
+    const auto needle = name.trim().toLowerCase();
     for (auto& kit : this->kitSpecs)
-        if (kit->meta.name == name)
+        if (kit->meta.name.trim().toLowerCase() == needle || kit->meta.codeRaw.trim().toLowerCase() == needle)
             return kit.get();
     return nullptr;
 }

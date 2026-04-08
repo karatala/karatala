@@ -62,6 +62,10 @@ public:
     }
 
     std::optional<juce::String> getNameForMidiNoteNumber (int note, int midiChannel) override;
+    DrumKitEngine& getEngine() { return *this->drumKitEnginePtr; }
+    const DrumKitEngine& getEngine() const { return *this->drumKitEnginePtr; }
+    juce::AudioProcessorValueTreeState& getValueTreeState() { return *this->mAudioProcessorValueTreeStatePtr; }
+    const juce::AudioProcessorValueTreeState& getValueTreeState() const { return *this->mAudioProcessorValueTreeStatePtr; }
 
 private:
     std::unique_ptr<juce::AudioFormatManager> mAudioFormatManagerPtr;

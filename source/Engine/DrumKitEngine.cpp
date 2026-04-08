@@ -6,12 +6,106 @@
 #include <juce_core/juce_core.h>
 #include <cmath>
 #include <algorithm>
+#include <unordered_set>
 
 // tuning constants
 static constexpr int NAME_IT_BETTER_MIN_VARIANTS = 3;
 static constexpr int NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS = 32;
 static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
 // TOTAL_HOST_OUTPUT_CHANNELS is defined in DrumKitEngine.h
+
+namespace {
+struct ParsedSlotRef {
+    juce::String slotId;
+    std::vector<juce::String> articulations;
+};
+
+static std::vector<juce::String> parseDelimitedNames(const juce::String& text) {
+    std::vector<juce::String> result;
+    juce::StringArray parts;
+    parts.addTokens(text, ",", "");
+    parts.removeEmptyStrings(true);
+    for (const auto& part : parts)
+        result.push_back(part.trim());
+    return result;
+}
+
+static ParsedSlotRef parseSlotRef(const juce::String& text) {
+    ParsedSlotRef result;
+    auto trimmed = text.trim();
+    const int slashIdx = trimmed.indexOfChar('/');
+    if (slashIdx < 0) {
+        result.slotId = trimmed;
+        return result;
+    }
+
+    result.slotId = trimmed.substring(0, slashIdx).trim();
+    result.articulations = parseDelimitedNames(trimmed.substring(slashIdx + 1));
+    return result;
+}
+
+struct ParsedTargetRef {
+    juce::String kitRef;
+    juce::String instCode;
+    std::vector<juce::String> articulations;
+};
+
+static ParsedTargetRef parseTargetRef(const juce::String& text) {
+    ParsedTargetRef result;
+    auto trimmed = text.trim();
+    const int firstSlashIdx = trimmed.indexOfChar('/');
+    if (firstSlashIdx < 0) {
+        result.kitRef = trimmed;
+        return result;
+    }
+
+    result.kitRef = trimmed.substring(0, firstSlashIdx).trim();
+    const auto remainder = trimmed.substring(firstSlashIdx + 1).trim();
+    const int secondSlashIdx = remainder.indexOfChar('/');
+    if (secondSlashIdx < 0) {
+        result.instCode = remainder;
+        return result;
+    }
+
+    result.instCode = remainder.substring(0, secondSlashIdx).trim();
+    result.articulations = parseDelimitedNames(remainder.substring(secondSlashIdx + 1));
+    return result;
+}
+
+static int findNextParamBoundary(const juce::String& text, int startIndex, const std::vector<juce::String>& knownKeys) {
+    for (int idx = startIndex; idx < text.length(); ++idx) {
+        const auto ch = text[idx];
+        if (ch != ',' && ch != ';')
+            continue;
+
+        int probe = idx + 1;
+        while (probe < text.length() && juce::CharacterFunctions::isWhitespace(text[probe]))
+            ++probe;
+
+        for (const auto& key : knownKeys) {
+            if (text.substring(probe).startsWith(key + "="))
+                return idx;
+        }
+    }
+
+    return -1;
+}
+
+static std::unordered_set<uint32_t> toArticulationIdSet(const std::vector<juce::String>& names) {
+    std::unordered_set<uint32_t> result;
+    for (const auto& name : names) {
+        if (name.isNotEmpty())
+            result.insert(StringsDictSingleton::getId(name));
+    }
+    return result;
+}
+
+static std::vector<juce::String> effectiveArticulationFilter(const DrumKitEngine::InstrumentMapEntry& entry) {
+    if (!entry.slotArticulationFilter.empty())
+        return entry.slotArticulationFilter;
+    return entry.articulationFilter;
+}
+}
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
@@ -165,7 +259,7 @@ void DrumKitEngine::initSampleLibrary() {
 bool DrumKitEngine::useKitLayout(juce::String name) {
     const KitLayout* ptr = this->getKitLayoutManager()->getLayoutById(name);
     if (ptr != nullptr)
-        this->setKitLayout(*ptr);
+        return this->setKitLayout(*ptr);
     if (name != "default") LOG(Warning, "KitLayout not found: " + name);
     return false;
 }
@@ -173,7 +267,7 @@ bool DrumKitEngine::useKitLayout(juce::String name) {
 bool DrumKitEngine::useMicLayout(juce::String name) {
     const MicLayout* ptr = this->getMicLayoutManager()->getLayoutById(name);
     if (ptr != nullptr)
-        this->setMicLayout(*ptr);
+        return this->setMicLayout(*ptr);
     if (name != "default") LOG(Warning, "MicLayout not found: " + name);
     return false;
 }
@@ -217,8 +311,8 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
     if (instrumentMap.isEmpty()) {
         this->mapDefaultKit();
     } else {
-        // this->useInstrumentMap(instrumentMap); //TODO: implement
-         LOG(Warning, "Custom instrument map not supported yet, ignoring");
+        if (!this->useInstrumentMap(instrumentMap))
+            this->mapDefaultKit();
     }
 }
 
@@ -410,10 +504,41 @@ bool DrumKitEngine::applyKitLayout() {
         }
     }
 
+    this->primaryInstrumentSynthCount = static_cast<int>(this->instrumentSynthPtrs.size());
+
     LOG(Info, "Applied kit layout: " + this->activeKitLayoutPtr->id);
 
     this->buildNoteNameCache();
     return true;
+}
+
+void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
+    this->instrumentSynthsByNote.clear();
+    this->latestPAValueMap.clear();
+
+    if (this->activeKitLayoutPtr == nullptr)
+        return;
+
+    for (const auto& instrumentSlot : this->activeKitLayoutPtr->instrumentSlots) {
+        auto it = this->instrumentSynthById.find(instrumentSlot.id);
+        if (it == this->instrumentSynthById.end())
+            continue;
+
+        auto* slot = it->second;
+        for (const auto& art : instrumentSlot.articulations) {
+            for (const int note : art.notes) {
+                this->latestPAValueMap[note] = 0;
+                this->instrumentSynthsByNote[note].push_back(slot);
+            }
+        }
+    }
+}
+
+void DrumKitEngine::clearShadowSynths() {
+    if (static_cast<int>(this->instrumentSynthPtrs.size()) > this->primaryInstrumentSynthCount)
+        this->instrumentSynthPtrs.erase(this->instrumentSynthPtrs.begin() + this->primaryInstrumentSynthCount, this->instrumentSynthPtrs.end());
+
+    this->rebuildPrimaryInstrumentNoteRouting();
 }
 
 void DrumKitEngine::buildNoteNameCache() {
@@ -558,6 +683,19 @@ bool DrumKitEngine::applyMicLayout() {
         instPtr->setMicChannelCount(totalAssigned);
     }
 
+    for (const auto& instPtr : this->instrumentSynthPtrs) {
+        auto primaryIt = this->instrumentSynthById.find(instPtr->getId());
+        if (primaryIt == this->instrumentSynthById.end())
+            continue;
+
+        auto* primary = primaryIt->second;
+        if (primary == instPtr.get())
+            continue;
+
+        instPtr->setMicOutputMapping(primary->getMicOutputMapping());
+        instPtr->setMicChannelCount(primary->getMicChannelCount());
+    }
+
     // Detailed mapping log per instrument
     for (const auto& instPtr : this->instrumentSynthPtrs) {
         juce::String mapStr = "";
@@ -575,6 +713,7 @@ bool DrumKitEngine::applyMicLayout() {
 }
 
 void DrumKitEngine::prepareToPlay(double sampleRate, int samplesPerBlock) {
+    this->lastSampleRate = sampleRate;
     this->lastSamplesPerBlock = samplesPerBlock;
     for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
         instrumentSynthPtr->setCurrentPlaybackSampleRate(sampleRate);
@@ -625,118 +764,307 @@ void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer&
     }
 }
 
-bool DrumKitEngine::useInstrumentMap(juce::String text) { //FIXME: rewiew, probably rethink and rewrite this not working draft
-    if (text.trim().isEmpty()) {
-        LOG(Warning, "empty instrument map text");
-        return false;
-    }
+bool DrumKitEngine::useInstrumentMap(juce::String text) {
+    this->lastInstrumentMapStatus.clear();
 
-    auto pairs = DrumKitEngine::parseInstrumentMapText(text); //TODO: plan implementation
-    if (pairs.empty()) {
-        LOG(Warning, "no valid mapping lines found");
+    if (text.trim().isEmpty()) {
+        this->lastInstrumentMapStatus = "Instrument map is empty";
+        LOG(Warning, this->lastInstrumentMapStatus);
         return false;
     }
 
     if (this->libraryManagerPtr == nullptr) {
-        LOG(Error, "LibraryManager is not initialized");
+        this->lastInstrumentMapStatus = "LibraryManager is not initialized";
+        LOG(Error, this->lastInstrumentMapStatus);
         return false;
     }
 
+    if (this->activeKitLayoutPtr == nullptr) {
+        this->lastInstrumentMapStatus = "Cannot apply instrument map without an active kit layout";
+        LOG(Error, this->lastInstrumentMapStatus);
+        return false;
+    }
+
+    auto parsed = DrumKitEngine::parseInstrumentMapText(text);
+    for (const auto& warning : parsed.errors)
+        LOG(parsed.ok() ? Warning : Error, warning);
+
+    if (!parsed.ok()) {
+        this->lastInstrumentMapStatus = parsed.error();
+        return false;
+    }
+
+    this->clearShadowSynths();
+
+    struct ShadowPlan {
+        const InstrumentMapEntry* entry = nullptr;
+        KitLib::InstrumentSpec* instSpec = nullptr;
+        std::vector<juce::String> articulations;
+    };
+
+    auto applyOverrides = [](InstrumentSynth& synth, const InstrumentMapEntry& entry) {
+        synth.setTuningOffsetCents(entry.tuningCents.value_or(0));
+        if (entry.attackTimeMs.has_value())
+            synth.setAttackOverrideMs(*entry.attackTimeMs);
+        if (entry.decayTimeMs.has_value())
+            synth.setDecayOverrideMs(*entry.decayTimeMs);
+    };
+
+    std::vector<juce::String> slotOrder;
+    std::unordered_map<juce::String, std::vector<const InstrumentMapEntry*>> entriesBySlotId;
+    for (const auto& entry : parsed.value.entries) {
+        if (entriesBySlotId.find(entry.slotId) == entriesBySlotId.end())
+            slotOrder.push_back(entry.slotId);
+        entriesBySlotId[entry.slotId].push_back(&entry);
+    }
+
+    juce::StringArray statusLines;
+    for (const auto& warning : parsed.errors)
+        statusLines.add(warning);
+
     int applied = 0;
-    for (const auto& p : pairs) {
-        const auto slotId = p.first.trim();
-        const auto rhs = p.second.trim();
 
-        // find slot
-        auto sit = this->instrumentSynthById.find(slotId);
-        if (sit == this->instrumentSynthById.end()) {
-            LOG(Warning, "instrument slot not found: " + slotId);
+    for (const auto& slotId : slotOrder) {
+        const auto& group = entriesBySlotId[slotId];
+        if (group.empty())
             continue;
-        }
-        InstrumentSynth* slot = sit->second;
 
-        // parse kit and optional instrument code
-        auto slashPos = rhs.indexOfChar('/');
-        juce::String kitName = rhs;
-        juce::String instCode;
-        if (slashPos >= 0) {
-            kitName = rhs.substring(0, slashPos).trim();
-            instCode = rhs.substring(slashPos + 1).trim();
-        }
-
-        // find kit (by name or code)
-        KitLib::DrumKitSpec* kitSpec = nullptr;
-        for (auto& kptr : this->libraryManagerPtr->getKits()) {
-            if (kptr->meta.name == kitName || kptr->meta.codeRaw == kitName) {
-                kitSpec = kptr.get();
-                break;
+        if (slotId == "*") {
+            const auto& wildcardEntry = *group.front();
+            auto* kitSpec = this->libraryManagerPtr->findKit(wildcardEntry.kitRef);
+            if (kitSpec == nullptr) {
+                statusLines.add("Kit not found for wildcard entry: " + wildcardEntry.kitRef);
+                continue;
             }
-        }
 
-        if (kitSpec == nullptr) {
-            LOG(Warning, "kit not found: " + kitName);
-            continue;
-        }
-
-        if (instCode.isEmpty()) {
+            this->clearShadowSynths();
             this->mapKit(*kitSpec);
-            applied++;
+            ++applied;
             continue;
         }
 
-        KitLib::InstrumentSpec* instSpec = kitSpec->findInstrument(instCode);
-        if (instSpec == nullptr) {
-            LOG(Warning, "instrument not found in kit '" + kitSpec->meta.name + "': " + instCode);
+        auto slotIt = this->instrumentSynthById.find(slotId);
+        if (slotIt == this->instrumentSynthById.end()) {
+            statusLines.add("Instrument slot not found: " + slotId);
             continue;
         }
 
-        slot->loadInstrument(instSpec);
-        applied++;
+        auto layoutIt = this->activeKitLayoutPtr->instrumentsById.find(slotId);
+        if (layoutIt == this->activeKitLayoutPtr->instrumentsById.end()) {
+            statusLines.add("Kit layout slot metadata missing: " + slotId);
+            continue;
+        }
 
-        // map midi notes for this slot based on kit layout definition (if present)
-        if (this->activeKitLayoutPtr != nullptr) {
-            auto it = this->activeKitLayoutPtr->instrumentsById.find(slotId);
-            if (it != this->activeKitLayoutPtr->instrumentsById.end()) {
-                const auto* layoutInst = it->second;
-                for (const auto& art : layoutInst->articulations) {
-                    for (int note : art.notes) {
-                        auto& vec = this->instrumentSynthsByNote[note];
-                        // avoid duplicates
-                        if (std::find(vec.begin(), vec.end(), slot) == vec.end())
-                            vec.push_back(slot);
-                    }
+        struct ResolvedEntry {
+            const InstrumentMapEntry* entry = nullptr;
+            KitLib::DrumKitSpec* kitSpec = nullptr;
+            KitLib::InstrumentSpec* instSpec = nullptr;
+            std::vector<juce::String> effectiveFilter;
+        };
+
+        std::vector<ResolvedEntry> resolvedEntries;
+        for (const auto* entry : group) {
+            auto* kitSpec = this->libraryManagerPtr->findKit(entry->kitRef);
+            if (kitSpec == nullptr) {
+                statusLines.add("Kit not found: " + entry->kitRef + " for slot '" + entry->slotId + "'");
+                continue;
+            }
+
+            if (entry->instCode.isEmpty()) {
+                statusLines.add("Instrument code is required for slot '" + entry->slotId + "'");
+                continue;
+            }
+
+            auto* instSpec = kitSpec->findInstrument(entry->instCode);
+            if (instSpec == nullptr) {
+                statusLines.add("Instrument not found: " + kitSpec->meta.name + "/" + entry->instCode + " for slot '" + entry->slotId + "'");
+                continue;
+            }
+
+            resolvedEntries.push_back({ entry, kitSpec, instSpec, effectiveArticulationFilter(*entry) });
+        }
+
+        if (resolvedEntries.empty())
+            continue;
+
+        auto* primarySlot = slotIt->second;
+        const auto& primary = resolvedEntries.front();
+        InstrumentSynth::ArticulationSourceMap artSources;
+        std::vector<ShadowPlan> shadowPlans;
+        std::unordered_set<uint32_t> claimedArticulations;
+
+        for (const auto& artName : primary.effectiveFilter) {
+            if (artName.isNotEmpty())
+                claimedArticulations.insert(StringsDictSingleton::getId(artName));
+        }
+
+        for (size_t idx = 1; idx < resolvedEntries.size(); ++idx) {
+            const auto& resolved = resolvedEntries[idx];
+            if (resolved.effectiveFilter.empty()) {
+                shadowPlans.push_back({ resolved.entry, resolved.instSpec, {} });
+                continue;
+            }
+
+            std::vector<juce::String> layeredArts;
+            for (const auto& artName : resolved.effectiveFilter) {
+                if (artName.isEmpty())
+                    continue;
+
+                const auto artId = StringsDictSingleton::getId(artName);
+                if (claimedArticulations.insert(artId).second) {
+                    artSources[artId] = resolved.instSpec;
+                } else {
+                    layeredArts.push_back(artName);
                 }
             }
+
+            if (!layeredArts.empty())
+                shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts });
+        }
+
+        primarySlot->loadInstrumentWithSources(primary.instSpec, artSources);
+        applyOverrides(*primarySlot, *primary.entry);
+        ++applied;
+
+        for (const auto& shadowPlan : shadowPlans) {
+            auto shadow = std::make_unique<InstrumentSynth>(this, *layoutIt->second);
+            auto* shadowPtr = shadow.get();
+            shadowPtr->setMicOutputMapping(primarySlot->getMicOutputMapping());
+            shadowPtr->setMicChannelCount(primarySlot->getMicChannelCount());
+            shadowPtr->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdSet(shadowPlan.articulations));
+            applyOverrides(*shadowPtr, *shadowPlan.entry);
+
+            if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
+                shadowPtr->setCurrentPlaybackSampleRate(this->lastSampleRate);
+                shadowPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
+            }
+
+            for (const auto& art : layoutIt->second->articulations) {
+                if (!shadowPlan.articulations.empty()) {
+                    const auto artName = StringsDictSingleton::nameOf(art.nameId);
+                    if (std::find(shadowPlan.articulations.begin(), shadowPlan.articulations.end(), artName) == shadowPlan.articulations.end())
+                        continue;
+                }
+
+                for (const int note : art.notes)
+                    this->instrumentSynthsByNote[note].push_back(shadowPtr);
+            }
+
+            this->instrumentSynthPtrs.push_back(std::move(shadow));
+            ++applied;
         }
     }
 
+    if (this->sampleLoaderPtr != nullptr)
+        this->sampleLoaderPtr->getQueue().startProcessing();
+
+    if (applied <= 0 && statusLines.isEmpty())
+        statusLines.add("No instrument map entries were applied");
+
+    if (statusLines.isEmpty())
+        statusLines.add("Instrument map applied successfully");
+
+    this->lastInstrumentMapStatus = statusLines.joinIntoString("\n");
     return applied > 0;
 }
 
-//TODO: Each non-empty, non-comment line should be: <slotId>:<KitName>/<InstrumentCode>:<params? like tuning, attack, decay, maybe fx chain, etc>
-//FIXME: make parser return structured ParseResult<DataObjectToBeDefined> 
-std::vector<std::pair<juce::String, juce::String>> DrumKitEngine::parseInstrumentMapText(const juce::String& text) { 
-    std::vector<std::pair<juce::String, juce::String>> result;
+ParseResult<DrumKitEngine::InstrumentMap> DrumKitEngine::parseInstrumentMapText(const juce::String& text) {
+    ParseResult<InstrumentMap> result;
     const juce::StringArray lines = juce::StringArray::fromLines(text);
-    for (auto l : lines) {
-        auto line = l.trim();
-        if (line.isEmpty())
-            continue;
-        if (line.startsWithChar('#'))
+    const std::vector<juce::String> knownKeys { "tuning", "attack", "decay", "art" };
+
+    auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<InstrumentMap>& parseResult, int lineNumber, std::optional<int>& target) {
+        auto trimmed = valueText.trim();
+        if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789")) {
+            parseResult.addWarning("Line " + juce::String(lineNumber) + ": invalid value for '" + key + "': " + valueText);
+            return;
+        }
+        target = trimmed.getIntValue();
+    };
+
+    for (int idx = 0; idx < lines.size(); ++idx) {
+        auto line = lines[idx].trim();
+        if (line.isEmpty() || line.startsWithChar('#'))
             continue;
 
-        auto colon = line.indexOfChar(':');
-        if (colon <= 0) {
-            LOG(Warning, "invalid mapping line (no colon): " + line);
+        const int firstColon = line.indexOfChar(':');
+        if (firstColon <= 0) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": expected '<slot>:<target>'");
             continue;
         }
-        auto left = line.substring(0, colon).trim();
-        auto right = line.substring(colon + 1).trim();
-        if (left.isEmpty() || right.isEmpty()) {
-            LOG(Warning, "invalid mapping line (empty slot or target): " + line);
+
+        const int secondColon = line.indexOf(firstColon + 1, ":");
+        const auto slotText = line.substring(0, firstColon).trim();
+        const auto targetText = secondColon >= 0 ? line.substring(firstColon + 1, secondColon).trim() : line.substring(firstColon + 1).trim();
+        const auto paramsText = secondColon >= 0 ? line.substring(secondColon + 1).trim() : juce::String();
+
+        if (slotText.isEmpty() || targetText.isEmpty()) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": empty slot or target");
             continue;
         }
-        result.emplace_back(left, right);
+
+        auto slotRef = parseSlotRef(slotText);
+        auto targetRef = parseTargetRef(targetText);
+
+        if (slotRef.slotId.isEmpty()) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": slot id is empty");
+            continue;
+        }
+        if (targetRef.kitRef.isEmpty()) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": kit reference is empty");
+            continue;
+        }
+
+        InstrumentMapEntry entry;
+        entry.slotId = slotRef.slotId;
+        entry.slotArticulationFilter = slotRef.articulations;
+        entry.kitRef = targetRef.kitRef;
+        entry.instCode = targetRef.instCode;
+        entry.articulationFilter = targetRef.articulations;
+
+        if (!paramsText.isEmpty()) {
+            int start = 0;
+            while (start < paramsText.length()) {
+                while (start < paramsText.length() && (paramsText[start] == ',' || paramsText[start] == ';' || juce::CharacterFunctions::isWhitespace(paramsText[start])))
+                    ++start;
+                if (start >= paramsText.length())
+                    break;
+
+                const int equalsIdx = paramsText.indexOf(start, "=");
+                if (equalsIdx < 0) {
+                    result.addWarning("Line " + juce::String(idx + 1) + ": malformed param '" + paramsText.substring(start).trim() + "'");
+                    break;
+                }
+
+                const auto key = paramsText.substring(start, equalsIdx).trim();
+                const int boundaryIdx = findNextParamBoundary(paramsText, equalsIdx + 1, knownKeys);
+                const auto value = (boundaryIdx < 0 ? paramsText.substring(equalsIdx + 1) : paramsText.substring(equalsIdx + 1, boundaryIdx)).trim();
+
+                if (key == "tuning")
+                    parseInt(value, key, result, idx + 1, entry.tuningCents);
+                else if (key == "attack")
+                    parseInt(value, key, result, idx + 1, entry.attackTimeMs);
+                else if (key == "decay")
+                    parseInt(value, key, result, idx + 1, entry.decayTimeMs);
+                else if (key == "art")
+                    entry.articulationFilter = parseDelimitedNames(value);
+                else
+                    result.addWarning("Line " + juce::String(idx + 1) + ": unknown param '" + key + "'");
+
+                if (boundaryIdx < 0)
+                    break;
+                start = boundaryIdx + 1;
+            }
+        }
+
+        if (entry.slotArticulationFilter.empty() && !entry.articulationFilter.empty())
+            entry.slotArticulationFilter = entry.articulationFilter;
+
+        result.value.entries.push_back(std::move(entry));
     }
+
+    if (result.value.entries.empty())
+        return result.returnWithError("No valid instrument map entries found");
+
     return result;
 }

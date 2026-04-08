@@ -19,6 +19,7 @@ void InstrumentSynth::unloadInstrument() {
     this->clearSounds();
     this->noteToArticulation.fill(-1);
     this->instrumentSpecstPtr = nullptr;
+    this->clearParameterOverrides();
 }
 
 void InstrumentSynth::loadInstrument(KitLib::InstrumentSpec* instSpec) {
@@ -28,13 +29,63 @@ void InstrumentSynth::loadInstrument(KitLib::InstrumentSpec* instSpec) {
     this->instrumentSpecstPtr = instSpec;
     this->type = instSpec->meta.type;
 
-    this->processLayoutArticulations(instSpec);
+    this->processLayoutArticulations(instSpec, {});
+}
+
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources) {
+    this->loadInstrumentWithSources(defaultInstrument, artSources, {});
+}
+
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds) {
+    if (defaultInstrument == nullptr) return;
+    this->unloadInstrument();
+
+    this->instrumentSpecstPtr = defaultInstrument;
+    this->type = defaultInstrument->meta.type;
+
+    this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds);
+}
+
+void InstrumentSynth::clearParameterOverrides() {
+    this->tuningOffsetCents = 0;
+    this->attackOverrideMs.reset();
+    this->decayOverrideMs.reset();
 }
 
 
-void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpec) {
-    LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + instSpec->meta.codeRaw + ":");
+KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt) {
+    if (instSpec == nullptr)
+        return nullptr;
+
     for (const auto& artSpec : instSpec->articulationSpecs) {
+        if (artSpec->nameId == layoutArt.nameId && artSpec->exprId == layoutArt.exprId)
+            return artSpec.get();
+    }
+
+    if (this->getEngine() == nullptr)
+        return nullptr;
+
+    const auto& fallbackIdMap = this->getEngine()->getArticulationFallbackIdMap();
+    auto it = fallbackIdMap.find(layoutArt.nameId);
+    if (it == fallbackIdMap.end())
+        return nullptr;
+
+    for (const auto& fallbackId : it->second) {
+        for (const auto& artSpec : instSpec->articulationSpecs) {
+            if (artSpec->nameId == fallbackId && artSpec->exprId == layoutArt.exprId)
+                return artSpec.get();
+        }
+    }
+
+    return nullptr;
+}
+
+void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds) {
+    if (defaultInstSpec == nullptr)
+        return;
+
+    LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + defaultInstSpec->meta.codeRaw + ":");
+    for (const auto& artSpec : defaultInstSpec->articulationSpecs) {
         this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId); // discoverArticulations
 
         if (LOG_ENABLED(Debug)) {
@@ -47,58 +98,30 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
     CcDimensionsMap foundCcDimensions;
     std::set<juce::String> skippedMicCodes; // mic raw codes with no matching layout entry — logged once below
     for (const auto& layoutArt : this->instrumentSlot.articulations) {
+        if (!allowedArticulationNameIds.empty() && allowedArticulationNameIds.find(layoutArt.nameId) == allowedArticulationNameIds.end())
+            continue;
+
         LOG(Info, "  Loading articulation: " + layoutArt.codeRaw + " (notes " + midiVectorToString(layoutArt.notes) + ")");
 
-        KitLib::ArticulationSpec* resolvedSpec = nullptr;
+        KitLib::InstrumentSpec* sourceInstrument = defaultInstSpec;
+        auto sourceIt = artSources.find(layoutArt.nameId);
+        if (sourceIt != artSources.end() && sourceIt->second != nullptr)
+            sourceInstrument = sourceIt->second;
 
-        // 1. Find exact articulation for sample playback
-        for (const auto& artSpec : instSpec->articulationSpecs) {
-            if (artSpec->nameId == layoutArt.nameId && artSpec->exprId == layoutArt.exprId) {
-                resolvedSpec = artSpec.get();
-                break;
-            }
-        }
+        KitLib::ArticulationSpec* resolvedSpec = this->resolveArticulationSpec(sourceInstrument, layoutArt);
 
-        // 2. Fallback if exact articulation not found
-        if (!resolvedSpec) {
-            if (this->getEngine() != nullptr) {
-                const auto& fallbackIdMap = this->getEngine()->getArticulationFallbackIdMap();
-
-                auto it = fallbackIdMap.find(layoutArt.nameId);
-                if (it != fallbackIdMap.end()) {
-
-                    for (auto& fallbackId : it->second) {
-                        for (const auto& artSpec : instSpec->articulationSpecs) {
-                            if (artSpec->nameId == fallbackId && artSpec->exprId == layoutArt.exprId) {
-                                resolvedSpec = artSpec.get();
-                                if (LOG_ENABLED(Notice)) {
-                                    auto codeRaw = StringsDictSingleton::nameOf(artSpec->nameId);
-                                    if (layoutArt.exprId != 0) codeRaw += "[" + StringsDictSingleton::nameOf(artSpec->exprId) + "]";
-                                    LOG(Notice, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no articulation '" + layoutArt.codeRaw + "' for '" + this->instrumentSlot.id + "'. Using '" + codeRaw + "' instead");
-                                }
-                                break;
-                            }
-                        }
-                        if (resolvedSpec) break;
-                    }
-                }
-            }
-        }
-
-
-        // 3. Process articulation normally
         if (resolvedSpec != nullptr) {
             const auto artIdx = this->getOrAddRuntimeArticulationIdx(resolvedSpec->nameId, resolvedSpec->exprId);
             auto& artRt = this->runtimeArticulations[artIdx];
             resolvedSpec->sortVelocityLayers();
-            this->processArticulationSpec(instSpec, layoutArt, resolvedSpec, artRt, artIdx, foundCcDimensions, skippedMicCodes);
+            this->processArticulationSpec(sourceInstrument, layoutArt, resolvedSpec, artRt, artIdx, foundCcDimensions, skippedMicCodes);
         } else {
-            LOG(Warning, instSpec->parent->meta.name + "/" + instSpec->meta.codeRaw + " has no suitable articulations for '" + this->instrumentSlot.id + "' '" + layoutArt.codeRaw + "'");
+            LOG(Warning, sourceInstrument->parent->meta.name + "/" + sourceInstrument->meta.codeRaw + " has no suitable articulations for '" + this->instrumentSlot.id + "' '" + layoutArt.codeRaw + "'");
         }
 
         // 4. ALSO collect CC thresholds from sibling exprIds
-        
-        for (const auto& artSpec : instSpec->articulationSpecs) {
+
+        for (const auto& artSpec : sourceInstrument->articulationSpecs) {
             if (artSpec->nameId != layoutArt.nameId) continue;
             if (artSpec->exprId == layoutArt.exprId) continue; // already processed
             bool hasMatchingController = false;
@@ -113,7 +136,7 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* instSpe
             }
             if (!hasMatchingController) continue;
             const auto artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
-            this->processArticulationSpec(instSpec, layoutArt, artSpec.get(), this->runtimeArticulations[artIdx], artIdx, foundCcDimensions, skippedMicCodes);
+            this->processArticulationSpec(sourceInstrument, layoutArt, artSpec.get(), this->runtimeArticulations[artIdx], artIdx, foundCcDimensions, skippedMicCodes);
         }
     }
 
