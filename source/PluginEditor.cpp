@@ -4,7 +4,10 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processorRef(p) {
     addAndMakeVisible(inspectButton);
+    addAndMakeVisible(referencePanel);
+    addAndMakeVisible(referencePanelLabel);
     addAndMakeVisible(instrumentMapEditor);
+    addAndMakeVisible(instrumentMapLabel);
     addAndMakeVisible(applyButton);
     addAndMakeVisible(statusLabel);
 
@@ -17,6 +20,22 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
         inspector->setVisible(true);
     };
+
+    referencePanelLabel.setText("Reference", juce::dontSendNotification);
+    referencePanelLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    referencePanelLabel.setJustificationType(juce::Justification::centredLeft);
+
+    referencePanel.setMultiLine(true);
+    referencePanel.setReadOnly(true);
+    referencePanel.setScrollbarsShown(true);
+    referencePanel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
+    referencePanel.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e1e1e));
+    referencePanel.setColour(juce::TextEditor::textColourId, juce::Colour(0xffaaaaaa));
+    referencePanel.setText(processorRef.getEngine().buildReferenceText(), false);
+
+    instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
+    instrumentMapLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
 
     instrumentMapEditor.setMultiLine(true);
     instrumentMapEditor.setReturnKeyStartsNewLine(true);
@@ -51,7 +70,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize(760, 520);
+    setSize(1000, 580);
 }
 
 PluginEditor::~PluginEditor() {
@@ -79,5 +98,19 @@ void PluginEditor::resized() {
     statusArea.removeFromTop(8);
     statusLabel.setBounds(statusArea);
 
-    instrumentMapEditor.setBounds(area);
+    // Split remaining area: 1/3 reference panel on left, 2/3 instrument map on right
+    const int gap = 8;
+    const int refWidth = (area.getWidth() - gap) / 3;
+    // const int mapWidth = area.getWidth() - gap - refWidth;
+
+    auto refArea = area.removeFromLeft(refWidth);
+    area.removeFromLeft(gap);
+    auto mapArea = area; // remaining 2/3
+
+    const int labelHeight = 18;
+    referencePanelLabel.setBounds(refArea.removeFromTop(labelHeight));
+    referencePanel.setBounds(refArea);
+
+    instrumentMapLabel.setBounds(mapArea.removeFromTop(labelHeight));
+    instrumentMapEditor.setBounds(mapArea);
 }

@@ -379,6 +379,55 @@ void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, m
     this->suggestedInstrumentMapText = lines.joinIntoString("\n");
 }
 
+juce::String DrumKitEngine::buildReferenceText() const {
+    juce::StringArray lines;
+
+    // Section 1: layout slots with their articulations
+    lines.add("# Layout slots  (slotId/articulation:)");
+    const KitLayout* layout = this->activeKitLayoutPtr.get();
+    if (layout != nullptr) {
+        for (const auto& slot : layout->instrumentSlots) {
+            if (slot.articulations.empty()) {
+                lines.add(slot.id + "/:");
+            } else {
+                for (const auto& art : slot.articulations) {
+                    const auto artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
+                    lines.add(slot.id + "/" + artName + ":");
+                }
+            }
+        }
+    }
+
+    // Section 2: all instruments from the library
+    lines.add("");
+    lines.add("# Library  (KitCode/instrument/articulation)");
+    const auto* mgr = this->getInstrumentManager();
+    if (mgr != nullptr) {
+        for (const auto& kitPtr : mgr->getKits()) {
+            // collect and sort instruments for stable display order
+            std::vector<const KitLib::InstrumentSpec*> instruments;
+            instruments.reserve(kitPtr->getInstrumentSpecsMap().size());
+            for (const auto& [code, instPtr] : kitPtr->getInstrumentSpecsMap())
+                instruments.push_back(instPtr.get());
+            std::sort(instruments.begin(), instruments.end(), [](const auto* a, const auto* b) {
+                return a->meta.codeRaw < b->meta.codeRaw;
+            });
+            for (const auto* inst : instruments) {
+                if (inst->articulationSpecs.empty()) {
+                    lines.add(kitPtr->meta.codeRaw + "/" + inst->meta.codeRaw);
+                } else {
+                    for (const auto& artPtr : inst->articulationSpecs) {
+                        const auto artName = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
+                        lines.add(kitPtr->meta.codeRaw + "/" + inst->meta.codeRaw + "/" + artName);
+                    }
+                }
+            }
+        }
+    }
+
+    return lines.joinIntoString("\n");
+}
+
 void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, probably rewrite, simplify
     if (this->activeKitLayoutPtr == nullptr) {
         LOG(Warning, "no active kit layout to map to");
