@@ -22,7 +22,13 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     instrumentMapEditor.setReturnKeyStartsNewLine(true);
     instrumentMapEditor.setScrollbarsShown(true);
     instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", juce::Colours::grey);
-    instrumentMapEditor.setText(processorRef.getValueTreeState().state["instrument_map"].toString(), false);
+    auto instrumentMapText = processorRef.getValueTreeState().state["instrument_map"].toString();
+    if (instrumentMapText.trim().isEmpty()) {
+        instrumentMapText = processorRef.getEngine().getSuggestedInstrumentMapText();
+        if (instrumentMapText.isNotEmpty())
+            processorRef.getValueTreeState().state.setProperty("instrument_map", instrumentMapText, nullptr);
+    }
+    instrumentMapEditor.setText(instrumentMapText, false);
 
     statusLabel.setJustificationType(juce::Justification::topLeft);
     statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
@@ -35,6 +41,9 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         const bool applied = processorRef.getEngine().useInstrumentMap(text);
         if (!applied && text.trim().isEmpty()) {
             processorRef.getEngine().mapDefaultKit();
+            const auto generatedMap = processorRef.getEngine().getSuggestedInstrumentMapText();
+            instrumentMapEditor.setText(generatedMap, false);
+            processorRef.getValueTreeState().state.setProperty("instrument_map", generatedMap, nullptr);
         }
 
         statusLabel.setText(processorRef.getEngine().getLastInstrumentMapStatus(), juce::dontSendNotification);
@@ -54,7 +63,7 @@ void PluginEditor::paint(juce::Graphics& g) {
     auto area = getLocalBounds();
     g.setColour(juce::Colours::white);
     g.setFont(16.0f);
-    auto helloWorld = juce::String("Hello from ") + PRODUCT_NAME_WITHOUT_VERSION + " v" VERSION + " running in " + CMAKE_BUILD_TYPE;
+    auto helloWorld = juce::String("Hello from ") + JucePlugin_Name;
     g.drawText(helloWorld, area.removeFromTop(150), juce::Justification::centred, false);
 }
 

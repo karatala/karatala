@@ -319,8 +319,35 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
 void DrumKitEngine::mapDefaultKit() {
     const auto& kits = this->getInstrumentManager()->getKits();
     const KitLib::DrumKitSpec* kit = kits.empty() ? nullptr : kits[0].get(); //MAYBE: later use global setting for default kit instead
-    if (kit != nullptr)
+    if (kit != nullptr) {
         this->mapKit(*kit);
+        this->regenerateSuggestedInstrumentMapText();
+        this->lastInstrumentMapStatus = "Mapped default kit and generated starter instrument map";
+    } else {
+        this->suggestedInstrumentMapText.clear();
+    }
+}
+
+void DrumKitEngine::regenerateSuggestedInstrumentMapText() {
+    this->suggestedInstrumentMapText.clear();
+
+    if (this->activeKitLayoutPtr == nullptr)
+        return;
+
+    juce::StringArray lines;
+    for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
+        auto slotIt = this->instrumentSynthById.find(slot.id);
+        if (slotIt == this->instrumentSynthById.end())
+            continue;
+
+        const auto* loadedInstrument = slotIt->second->getLoadedInstrumentSpec();
+        if (loadedInstrument == nullptr || loadedInstrument->parent == nullptr)
+            continue;
+
+        lines.add(slot.id + ":" + loadedInstrument->parent->meta.codeRaw + "/" + loadedInstrument->meta.codeRaw);
+    }
+
+    this->suggestedInstrumentMapText = lines.joinIntoString("\n");
 }
 
 void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, probably rewrite, simplify

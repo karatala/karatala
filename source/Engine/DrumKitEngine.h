@@ -35,7 +35,7 @@ public:
     ~DrumKitEngine() {};
 
     juce::File dataPath;
-    const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::commonDocumentsDirectory).getChildFile(PRODUCT_NAME_WITHOUT_VERSION) };
+    const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::commonDocumentsDirectory).getChildFile("Karatala") };
     const char* DATA_PATH_ENV = "EDRUMS_DATA_PATH";
 
     struct Config {
@@ -74,6 +74,7 @@ public:
     SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
     const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
     const juce::String& getLastInstrumentMapStatus() const { return this->lastInstrumentMapStatus; }
+    const juce::String& getSuggestedInstrumentMapText() const { return this->suggestedInstrumentMapText; }
 
     // Returns true if `id` corresponds to a registered instrument slot.
     // Used by MicRoutingBuilder to mirror applyMicLayout's slot-resolution logic:
@@ -138,6 +139,7 @@ private:
     double lastSampleRate = 0.0;
     int primaryInstrumentSynthCount = 0;
     juce::String lastInstrumentMapStatus;
+    juce::String suggestedInstrumentMapText;
 
     void initGlobalSettings();
     void initDefaultLayouts();
@@ -152,6 +154,7 @@ private:
     bool applyKitLayout();
     bool applyMicLayout();
     void buildNoteNameCache();
+    void regenerateSuggestedInstrumentMapText();
     void clearShadowSynths();
     void rebuildPrimaryInstrumentNoteRouting();
 

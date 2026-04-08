@@ -362,6 +362,7 @@ public:
     KitLib::InstrumentSpec::Type getType() const { return this->type; }
 
     const juce::String& getId() const { return id; }
+    const KitLib::InstrumentSpec* getLoadedInstrumentSpec() const { return this->instrumentSpecstPtr; }
     const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
 
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
