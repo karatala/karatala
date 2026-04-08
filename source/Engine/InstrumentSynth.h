@@ -279,8 +279,15 @@ public:
     SampledSound* addSound(SampledSound* newSound) {
         const juce::ScopedLock sl(this->lock);
         if (newSound == nullptr) return nullptr;
-        this->sampledSoundPtrs.emplace_back(std::unique_ptr<SampledSound>(newSound));
+        this->sampledSoundPtrs.emplace_back(std::shared_ptr<SampledSound>(newSound));
         return newSound;
+    }
+    SampledSound* addSound(std::shared_ptr<SampledSound> newSound) {
+        const juce::ScopedLock sl(this->lock);
+        if (!newSound) return nullptr;
+        auto* rawPtr = newSound.get();
+        this->sampledSoundPtrs.emplace_back(std::move(newSound));
+        return rawPtr;
     }
     InstrumentSynthVoice* addVoice(InstrumentSynthVoice* const newVoice) {
         InstrumentSynthVoice* voice;
@@ -439,7 +446,7 @@ private:
     double sampleRate = 0;
     juce::OwnedArray<InstrumentSynthVoice> voices;
     mutable juce::Array<InstrumentSynthVoice*> usableVoicesToStealArray;
-    std::vector<std::unique_ptr<SampledSound>> sampledSoundPtrs;
+    std::vector<std::shared_ptr<SampledSound>> sampledSoundPtrs;
     int minimumSubBlockSize = 32;
     bool subBlockSubdivisionIsStrict = false;
 
@@ -466,7 +473,7 @@ private:
     std::unordered_map<int, uint8_t> lastCcArticulation; // controller -> last applied articulation index
     
     // (owned) storage for all SampledSound instances created for this synth
-    // (use `sampledSoundPtrs` above which holds unique_ptrs)
+    // (use `sampledSoundPtrs` above which holds shared_ptrs)
     std::vector<int> micOutputMapping;
 
     // Velocity of the note currently being requested (0..1). Used by custom stealing logic.

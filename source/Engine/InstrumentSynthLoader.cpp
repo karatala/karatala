@@ -210,7 +210,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             if (assignment.globalStart < 0)
                 continue;
 
-            auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, notes);
+            auto sound = std::make_shared<SampledSound>(instSpec, varSpec.get(), varSpec->sampleFile, notes);
             sound->decayEnvelope = KitLib::DecayEnvelope::decode(varSpec->decayCode, varSpec->peakDb, varSpec->peakMs);
             if (!sound->decayEnvelope.isValid()) {
                 LOG(Warning, "Missing or invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
@@ -220,23 +220,27 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
 
             this->addSound(sound);
             SampleEntry se;
-            se.sound = sound;
+            se.sound = sound.get();
             // Store variant key (1..26) as returned by SampleVariantSpec::letterToIdx (0 if no letter)
             se.variantIdx = static_cast<uint8_t>(KitLib::SampleVariantSpec::letterToIdx(varSpec->letter));
             layer.samples.push_back(se);
 
             SampleLoader* loader = this->getSampleLoader();
             if (loader != nullptr) {
+                std::weak_ptr<SampledSound> weakSound = sound;
                 loader->getQueue().enqueueCandidate(
                     varSpec->sampleFile,
                     instSpec->meta.type,
                     artSpec->nameId,
                     velSpec->velocity,
                     KitLib::SampleVariantSpec::letterToIdx(varSpec->letter),
-                    [sound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
-                        sound->buffer = buf;
-                        sound->sampleRate = sr;
-                        sound->loaded.store(buf != nullptr, std::memory_order_release);
+                    [weakSound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
+                        auto soundLocked = weakSound.lock();
+                        if (!soundLocked)
+                            return;
+                        soundLocked->buffer = buf;
+                        soundLocked->sampleRate = sr;
+                        soundLocked->loaded.store(buf != nullptr, std::memory_order_release);
                     }
                 );
             }

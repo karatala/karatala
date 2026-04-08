@@ -449,6 +449,14 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
         slot->loadInstrument(matched); //TODO: wrap in performance measuring block
         usedInstSpecSet.insert(matched);
     }
+
+    if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
+        for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
+            instrumentSynthPtr->setCurrentPlaybackSampleRate(this->lastSampleRate);
+            instrumentSynthPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
+        }
+    }
+
     // Start staged sample loading only after all instruments/articulations were enqueued
     if (this->sampleLoaderPtr != nullptr) {
         this->sampleLoaderPtr->getQueue().startProcessing();
@@ -979,6 +987,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
             this->instrumentSynthPtrs.push_back(std::move(shadow));
             ++applied;
+        }
+    }
+
+    if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
+        for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
+            instrumentSynthPtr->setCurrentPlaybackSampleRate(this->lastSampleRate);
+            instrumentSynthPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
         }
     }
 
