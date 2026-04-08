@@ -1000,12 +1000,6 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             continue;
         }
 
-        auto layoutIt = this->activeKitLayoutPtr->instrumentsById.find(slotId);
-        if (layoutIt == this->activeKitLayoutPtr->instrumentsById.end()) {
-            statusLines.add("Kit layout slot metadata missing: " + slotId);
-            continue;
-        }
-
         struct ResolvedEntry {
             const InstrumentMapEntry* entry = nullptr;
             KitLib::DrumKitSpec* kitSpec = nullptr;
@@ -1039,6 +1033,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             continue;
 
         auto* primarySlot = slotIt->second;
+        const auto& slotLayout = primarySlot->getInstrumentSlot();
         const auto& primary = resolvedEntries.front();
         InstrumentSynth::ArticulationSourceMap artSources;
         std::vector<ShadowPlan> shadowPlans;
@@ -1046,7 +1041,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         std::vector<uint32_t> primaryAllowedArticulationIds;
 
         if (primary.effectiveFilter.empty()) {
-            for (const auto& layoutArt : layoutIt->second->articulations)
+            for (const auto& layoutArt : slotLayout.articulations)
                 addUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
         } else {
             for (const auto& artName : primary.effectiveFilter) {
@@ -1101,7 +1096,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
 
         if (rebuildAllShadows) for (const auto& shadowPlan : shadowPlans) {
-            auto shadow = std::make_unique<InstrumentSynth>(this, *layoutIt->second);
+            auto shadow = std::make_unique<InstrumentSynth>(this, slotLayout);
             auto* shadowPtr = shadow.get();
             shadowPtr->setMicOutputMapping(primarySlot->getMicOutputMapping());
             shadowPtr->setMicChannelCount(primarySlot->getMicChannelCount());
@@ -1113,7 +1108,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 shadowPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
             }
 
-            for (const auto& art : layoutIt->second->articulations) {
+            for (const auto& art : slotLayout.articulations) {
                 if (!shadowPlan.articulations.empty()) {
                     const auto artName = StringsDictSingleton::nameOf(art.nameId);
                     if (std::find(shadowPlan.articulations.begin(), shadowPlan.articulations.end(), artName) == shadowPlan.articulations.end())
