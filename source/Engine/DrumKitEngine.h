@@ -140,6 +140,7 @@ private:
     int primaryInstrumentSynthCount = 0;
     juce::String lastInstrumentMapStatus;
     juce::String suggestedInstrumentMapText;
+    std::unordered_map<juce::String, juce::String> lastAppliedSlotFingerprints;
 
     void initGlobalSettings();
     void initDefaultLayouts();

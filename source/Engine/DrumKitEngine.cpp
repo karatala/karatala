@@ -105,6 +105,37 @@ static std::vector<juce::String> effectiveArticulationFilter(const DrumKitEngine
         return entry.slotArticulationFilter;
     return entry.articulationFilter;
 }
+
+static juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMapEntry& entry) {
+    auto joinValues = [](const std::vector<juce::String>& values) {
+        juce::String out;
+        for (size_t idx = 0; idx < values.size(); ++idx) {
+            if (idx > 0) out += ",";
+            out += values[idx].trim().toLowerCase();
+        }
+        return out;
+    };
+
+    juce::String fp;
+    fp += entry.slotId.trim().toLowerCase() + "|";
+    fp += entry.kitRef.trim().toLowerCase() + "|";
+    fp += entry.instCode.trim().toLowerCase() + "|";
+    fp += joinValues(entry.slotArticulationFilter) + "|";
+    fp += joinValues(entry.articulationFilter) + "|";
+    fp += entry.tuningCents.has_value() ? juce::String(*entry.tuningCents) : "_";
+    fp += "|";
+    fp += entry.attackTimeMs.has_value() ? juce::String(*entry.attackTimeMs) : "_";
+    fp += "|";
+    fp += entry.decayTimeMs.has_value() ? juce::String(*entry.decayTimeMs) : "_";
+    return fp;
+}
+
+static std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap) {
+    std::unordered_map<juce::String, juce::String> result;
+    for (const auto& entry : instrumentMap.entries)
+        result[entry.slotId] += makeInstrumentMapEntryFingerprint(entry) + "\n";
+    return result;
+}
 }
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
@@ -322,31 +353,29 @@ void DrumKitEngine::mapDefaultKit() {
     if (kit != nullptr) {
         this->mapKit(*kit);
         this->regenerateSuggestedInstrumentMapText();
-        this->lastInstrumentMapStatus = "Mapped default kit and generated starter instrument map";
+        auto parsedSuggestedMap = DrumKitEngine::parseInstrumentMapText(this->suggestedInstrumentMapText);
+        if (parsedSuggestedMap.ok())
+            this->lastAppliedSlotFingerprints = buildSlotFingerprintMap(parsedSuggestedMap.value);
+        else
+            this->lastAppliedSlotFingerprints.clear();
+        this->lastInstrumentMapStatus = "Mapped default kit and generated starter instrument map";//FIXME: refactor, ui relates shit out
     } else {
         this->suggestedInstrumentMapText.clear();
+        this->lastAppliedSlotFingerprints.clear();
     }
 }
 
-void DrumKitEngine::regenerateSuggestedInstrumentMapText() {
+void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, move to ui related helper, or generate on demand in UI instead of storing in engine
     this->suggestedInstrumentMapText.clear();
-
-    if (this->activeKitLayoutPtr == nullptr)
-        return;
-
+    if (this->activeKitLayoutPtr == nullptr) return;
     juce::StringArray lines;
     for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
         auto slotIt = this->instrumentSynthById.find(slot.id);
-        if (slotIt == this->instrumentSynthById.end())
-            continue;
-
+        if (slotIt == this->instrumentSynthById.end()) continue;
         const auto* loadedInstrument = slotIt->second->getLoadedInstrumentSpec();
-        if (loadedInstrument == nullptr || loadedInstrument->parent == nullptr)
-            continue;
-
+        if (loadedInstrument == nullptr || loadedInstrument->parent == nullptr) continue;
         lines.add(slot.id + ":" + loadedInstrument->parent->meta.codeRaw + "/" + loadedInstrument->meta.codeRaw);
     }
-
     this->suggestedInstrumentMapText = lines.joinIntoString("\n");
 }
 
@@ -829,8 +858,6 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         return false;
     }
 
-    this->clearShadowSynths();
-
     struct ShadowPlan {
         const InstrumentMapEntry* entry = nullptr;
         KitLib::InstrumentSpec* instSpec = nullptr;
@@ -853,11 +880,25 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         entriesBySlotId[entry.slotId].push_back(&entry);
     }
 
+    std::unordered_map<juce::String, juce::String> nextSlotFingerprints = buildSlotFingerprintMap(parsed.value);
+    bool anyGroupHasMultipleEntries = false;
+    for (const auto& slotId : slotOrder) {
+        const auto& group = entriesBySlotId[slotId];
+        if (group.size() > 1)
+            anyGroupHasMultipleEntries = true;
+    }
+
+    const bool currentlyHasShadowSynths = static_cast<int>(this->instrumentSynthPtrs.size()) > this->primaryInstrumentSynthCount;
+    const bool rebuildAllShadows = currentlyHasShadowSynths || anyGroupHasMultipleEntries;
+    if (rebuildAllShadows)
+        this->clearShadowSynths();
+
     juce::StringArray statusLines;
     for (const auto& warning : parsed.errors)
         statusLines.add(warning);
 
     int applied = 0;
+    bool forceApplyAllSlots = false;
 
     for (const auto& slotId : slotOrder) {
         const auto& group = entriesBySlotId[slotId];
@@ -872,11 +913,16 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 continue;
             }
 
-            this->clearShadowSynths();
-            this->mapKit(*kitSpec);
-            ++applied;
+            const bool wildcardChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
+            if (wildcardChanged) {
+                this->mapKit(*kitSpec);
+                forceApplyAllSlots = true;
+                ++applied;
+            }
             continue;
         }
+
+        const bool slotChanged = forceApplyAllSlots || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
 
         auto slotIt = this->instrumentSynthById.find(slotId);
         if (slotIt == this->instrumentSynthById.end()) {
@@ -957,11 +1003,17 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts });
         }
 
-        primarySlot->loadInstrumentWithSources(primary.instSpec, artSources);
-        applyOverrides(*primarySlot, *primary.entry);
-        ++applied;
+        if (slotChanged) {
+            primarySlot->loadInstrumentWithSources(primary.instSpec, artSources);
+            applyOverrides(*primarySlot, *primary.entry);
+            if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
+                primarySlot->setCurrentPlaybackSampleRate(this->lastSampleRate);
+                primarySlot->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
+            }
+            ++applied;
+        }
 
-        for (const auto& shadowPlan : shadowPlans) {
+        if (rebuildAllShadows) for (const auto& shadowPlan : shadowPlans) {
             auto shadow = std::make_unique<InstrumentSynth>(this, *layoutIt->second);
             auto* shadowPtr = shadow.get();
             shadowPtr->setMicOutputMapping(primarySlot->getMicOutputMapping());
@@ -990,18 +1042,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
     }
 
-    if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
-        for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
-            instrumentSynthPtr->setCurrentPlaybackSampleRate(this->lastSampleRate);
-            instrumentSynthPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
-        }
-    }
+    this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
 
     if (this->sampleLoaderPtr != nullptr)
         this->sampleLoaderPtr->getQueue().startProcessing();
 
     if (applied <= 0 && statusLines.isEmpty())
-        statusLines.add("No instrument map entries were applied");
+        statusLines.add("Instrument map unchanged - no reload needed");
 
     if (statusLines.isEmpty())
         statusLines.add("Instrument map applied successfully");
