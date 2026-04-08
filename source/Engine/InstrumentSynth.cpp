@@ -722,14 +722,18 @@ void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, Articulation
     // use samples mic index as voice's hitGroupId so we can use it in stealing logic to prefer stealing voices with same mic
     voice.hitGroupId = se.sound->micBufferChannelStart;
 
+    // Apply overrides BEFORE startVoice so startNote() reads the correct values when
+    // baking pitchRatio and ADSR parameters. Setting these after startVoice means the
+    // first (and every) note-on uses stale defaults.
+    voice.setPitchRatioMultiplier(std::pow(2.0, static_cast<double>(this->tuningOffsetCents) / 1200.0));
+    voice.setAttackTimeSec(this->attackOverrideMs.has_value() ? static_cast<float>(*this->attackOverrideMs) / 1000.0f : 0.001f);
+    voice.setReleaseTimeSec(this->decayOverrideMs.has_value() ? static_cast<float>(*this->decayOverrideMs) / 1000.0f : 0.1f);
+
     this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocity);
 
     voice.artNameId = art.nameId;
     voice.artExprId = art.exprId;
     voice.setVelocityGain(velocity);
-    voice.setPitchRatioMultiplier(std::pow(2.0, static_cast<double>(this->tuningOffsetCents) / 1200.0));
-    voice.setAttackTimeSec(this->attackOverrideMs.has_value() ? static_cast<float>(*this->attackOverrideMs) / 1000.0f : 0.001f);
-    voice.setReleaseTimeSec(this->decayOverrideMs.has_value() ? static_cast<float>(*this->decayOverrideMs) / 1000.0f : 0.1f);
 }
 
 
