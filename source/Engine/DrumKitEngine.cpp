@@ -91,11 +91,25 @@ static int findNextParamBoundary(const juce::String& text, int startIndex, const
     return -1;
 }
 
-static std::unordered_set<uint32_t> toArticulationIdSet(const std::vector<juce::String>& names) {
-    std::unordered_set<uint32_t> result;
+static bool containsId(const std::vector<uint32_t>& values, uint32_t value) {
+    return std::find(values.begin(), values.end(), value) != values.end();
+}
+
+static void addUniqueId(std::vector<uint32_t>& values, uint32_t value) {
+    if (!containsId(values, value))
+        values.push_back(value);
+}
+
+static void eraseId(std::vector<uint32_t>& values, uint32_t value) {
+    values.erase(std::remove(values.begin(), values.end(), value), values.end());
+}
+
+static std::vector<uint32_t> toArticulationIdList(const std::vector<juce::String>& names) {
+    std::vector<uint32_t> result;
+    result.reserve(names.size());
     for (const auto& name : names) {
         if (name.isNotEmpty())
-            result.insert(StringsDictSingleton::getId(name));
+            addUniqueId(result, StringsDictSingleton::getId(name));
     }
     return result;
 }
@@ -1028,22 +1042,22 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         const auto& primary = resolvedEntries.front();
         InstrumentSynth::ArticulationSourceMap artSources;
         std::vector<ShadowPlan> shadowPlans;
-        std::unordered_set<uint32_t> claimedArticulations;
-        std::unordered_set<uint32_t> primaryAllowedArticulationIds;
+        std::vector<uint32_t> claimedArticulations;
+        std::vector<uint32_t> primaryAllowedArticulationIds;
 
         if (primary.effectiveFilter.empty()) {
             for (const auto& layoutArt : layoutIt->second->articulations)
-                primaryAllowedArticulationIds.insert(layoutArt.nameId);
+                addUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
         } else {
             for (const auto& artName : primary.effectiveFilter) {
                 if (artName.isNotEmpty())
-                    primaryAllowedArticulationIds.insert(StringsDictSingleton::getId(artName));
+                    addUniqueId(primaryAllowedArticulationIds, StringsDictSingleton::getId(artName));
             }
         }
 
         for (const auto& artName : primary.effectiveFilter) {
             if (artName.isNotEmpty())
-                claimedArticulations.insert(StringsDictSingleton::getId(artName));
+                addUniqueId(claimedArticulations, StringsDictSingleton::getId(artName));
         }
 
         for (size_t idx = 1; idx < resolvedEntries.size(); ++idx) {
@@ -1062,9 +1076,10 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 const auto artId = StringsDictSingleton::getId(artName);
                 if (hasParameterOverrides) {
                     layeredArts.push_back(artName);
-                    claimedArticulations.insert(artId);
-                    primaryAllowedArticulationIds.erase(artId);
-                } else if (claimedArticulations.insert(artId).second) {
+                    addUniqueId(claimedArticulations, artId);
+                    eraseId(primaryAllowedArticulationIds, artId);
+                } else if (!containsId(claimedArticulations, artId)) {
+                    addUniqueId(claimedArticulations, artId);
                     artSources[artId] = resolved.instSpec;
                 } else {
                     layeredArts.push_back(artName);
@@ -1090,7 +1105,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             auto* shadowPtr = shadow.get();
             shadowPtr->setMicOutputMapping(primarySlot->getMicOutputMapping());
             shadowPtr->setMicChannelCount(primarySlot->getMicChannelCount());
-            shadowPtr->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdSet(shadowPlan.articulations));
+            shadowPtr->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdList(shadowPlan.articulations));
             applyOverrides(*shadowPtr, *shadowPlan.entry);
 
             if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {

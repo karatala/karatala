@@ -36,7 +36,7 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->loadInstrumentWithSources(defaultInstrument, artSources, {});
 }
 
-void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds) {
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds) {
     if (defaultInstrument == nullptr) return;
     this->unloadInstrument();
 
@@ -80,7 +80,7 @@ KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::Instr
     return nullptr;
 }
 
-void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds) {
+void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds) {
     if (defaultInstSpec == nullptr)
         return;
 
@@ -98,7 +98,7 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* default
     CcDimensionsMap foundCcDimensions;
     std::set<juce::String> skippedMicCodes; // mic raw codes with no matching layout entry — logged once below
     for (const auto& layoutArt : this->instrumentSlot.articulations) {
-        if (!allowedArticulationNameIds.empty() && allowedArticulationNameIds.find(layoutArt.nameId) == allowedArticulationNameIds.end())
+        if (!allowedArticulationNameIds.empty() && std::find(allowedArticulationNameIds.begin(), allowedArticulationNameIds.end(), layoutArt.nameId) == allowedArticulationNameIds.end())
             continue;
 
         LOG(Info, "  Loading articulation: " + layoutArt.codeRaw + " (notes " + midiVectorToString(layoutArt.notes) + ")");

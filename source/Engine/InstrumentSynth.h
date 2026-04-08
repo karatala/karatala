@@ -6,7 +6,6 @@
 #include <algorithm>
 #include <set>
 #include <optional>
-#include <unordered_set>
 #include "AftertouchChokeProcessor.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
@@ -241,7 +240,7 @@ public:
     void unloadInstrument();
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources);
-    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds);
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds);
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
@@ -484,7 +483,7 @@ private:
     std::optional<int> decayOverrideMs;
 
 
-    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::unordered_set<uint32_t>& allowedArticulationNameIds = {});
+    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {});
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec
