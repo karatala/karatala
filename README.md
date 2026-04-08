@@ -3,6 +3,10 @@
 
 Karatala is a drum kit engine instrument for e-Drummers and everyone.
 
+TODO0A: get rid of juce completely, decide on what plugin format is needed, maybe only clap or keep also vst3, find better framework/tools to replace juce quirkiness
+TODO0X: avpts on plugin init to decide what micLayout to use?
+
+
 FIXME: replace std::vector and other std shit like std::move with something better
 FIXME: get rid of static_cast everywhere it is possible, change types
 FIXME: sort properties in classes and structs so 1st go the heaviest for memory optimization
@@ -15,6 +19,14 @@ FIXME: sort properties in classes and structs so 1st go the heaviest for memory 
             const StringsDictSingleton::Id ID_center = StringsDictSingleton::getId("center");
 
 [FAIL] Reduce voices to use one multichannel voice instead of many 1-2 ch, and then cache multichannel variant from n files - FAILED (performance become worse and idea is logically wrong, cause for example, room channers have different attack/length, cannot wait for them)
+
+
+
+TODO05: need to decide what vst params to expose for avpts. instrument map - probably no, since its formatted string, nothing to automate, but some params from it maybe, (like what? pitch? attack? vol/pan/phase/flipRL of each instrument?)
+
+
+TODO cache baking, for example when we have instrument articulation layered and each of layers have some fx processing and pitch and adsr applied, maybe it will be cpu+ram win if sample buffer data will be recached with already applied fx-es/attack/decays and mixed waveforms, also metadata of applied processing will remain somewhere in instrument map and on some of those params change that can be recached with new params, since there will probably be no automations on those basic instrument params (or if it will ever be needed for some reason, then we can maybe make cache baking  toggle  in instrument map params)
+
 
 
 TODO: peak offset for diffenetn mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) smart-parse from samples and save to filename

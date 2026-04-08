@@ -64,7 +64,7 @@ FixNamespaceComments: false
 NamespaceIndentation: All
 PointerAlignment: Left
 ReflowComments: false
-SortIncludes: true
+SortIncludes: false
 SpaceAfterCStyleCast: true
 SpaceAfterLogicalNot: false
 SpaceBeforeAssignmentOperators: true
