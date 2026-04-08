@@ -1022,6 +1022,17 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         InstrumentSynth::ArticulationSourceMap artSources;
         std::vector<ShadowPlan> shadowPlans;
         std::unordered_set<uint32_t> claimedArticulations;
+        std::unordered_set<uint32_t> primaryAllowedArticulationIds;
+
+        if (primary.effectiveFilter.empty()) {
+            for (const auto& layoutArt : layoutIt->second->articulations)
+                primaryAllowedArticulationIds.insert(layoutArt.nameId);
+        } else {
+            for (const auto& artName : primary.effectiveFilter) {
+                if (artName.isNotEmpty())
+                    primaryAllowedArticulationIds.insert(StringsDictSingleton::getId(artName));
+            }
+        }
 
         for (const auto& artName : primary.effectiveFilter) {
             if (artName.isNotEmpty())
@@ -1036,12 +1047,17 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             }
 
             std::vector<juce::String> layeredArts;
+            const bool hasParameterOverrides = resolved.entry->tuningCents.has_value() || resolved.entry->attackTimeMs.has_value() || resolved.entry->decayTimeMs.has_value();
             for (const auto& artName : resolved.effectiveFilter) {
                 if (artName.isEmpty())
                     continue;
 
                 const auto artId = StringsDictSingleton::getId(artName);
-                if (claimedArticulations.insert(artId).second) {
+                if (hasParameterOverrides) {
+                    layeredArts.push_back(artName);
+                    claimedArticulations.insert(artId);
+                    primaryAllowedArticulationIds.erase(artId);
+                } else if (claimedArticulations.insert(artId).second) {
                     artSources[artId] = resolved.instSpec;
                 } else {
                     layeredArts.push_back(artName);
@@ -1053,7 +1069,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
 
         if (slotChanged) {
-            primarySlot->loadInstrumentWithSources(primary.instSpec, artSources);
+            primarySlot->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds);
             applyOverrides(*primarySlot, *primary.entry);
             if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
                 primarySlot->setCurrentPlaybackSampleRate(this->lastSampleRate);
