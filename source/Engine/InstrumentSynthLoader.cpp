@@ -236,8 +236,13 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             SampleLoader* loader = this->getSampleLoader();
             if (loader != nullptr) {
                 std::weak_ptr<SampledSound> weakSound = sound;
+
+                SampleLoadSpec loadSpec;
+                loadSpec.file = varSpec->sampleFile;
+                loadSpec.volumeTrimDb = varSpec->volumeTrimDb;
+
                 loader->getQueue().enqueueCandidate(
-                    varSpec->sampleFile,
+                    loadSpec,
                     instSpec->meta.type,
                     artSpec->nameId,
                     velSpec->velocity,

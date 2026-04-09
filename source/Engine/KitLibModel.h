@@ -23,7 +23,7 @@
  *          └─ <instrumentType>-<size>[-<description>]/
  *              └─ <articulation>[optionalExpressionShortName]-<optionalExpressionCode><value>-<anotherExpressionCode><value>/
  *                  └─ <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
- * otherOptionalSampleParams: includes RMS values for p{peak_db*-10}_{peak_ms}-d{decay_ms}-c{decay_code}), 
+ * otherOptionalSampleParams: includes RMS values for v{n or p}{volume_trim_db, vn - negative, vp - positive}-p{peak_db*-10}_{peak_ms}-d{decay_ms}-c{decay_code}), 
  * where decay_code is a base62-encoded string representing the decay curve of relative interval in ms from peak to -60dB with 6dB steps (can have less then 10 steps for quiet samples!)
  * (refer to scripts\analyze_drum_samples.py line decay_code: str = encode_time_intervals_as_base62(decay_points))
  * 
@@ -133,6 +133,7 @@ public:
     // Number of channels occupied by this mic inside the source file (usually equals micSpec.channels)
     int fileChannelCount = 0;
 
+    float volumeTrimDb = 0.0f;
     float peakDb = 0.0f;
     float peakMs = 0.0f;
     float decayMs = 0.0f;
@@ -353,6 +354,7 @@ public:
         std::vector<MicSpec> micDescriptors;
         juce::File file;
         
+        float volumeTrimDb = 0.0f; // positive or negative volume adjustment in dB to apply to this sample for better level matching in the kit (ex. for cymbals with close mics that are too loud compared to other samples)
         float peakDb = 0.0f;
         float peakMs = 0.0f;
         float decayMs = 0.0f;

@@ -19,18 +19,20 @@ void SampleLoaderQueue::stopProcessing() {
     }
 }
 
-void SampleLoaderQueue::enqueueCandidate(const juce::File& file, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, LoadCallback cb) {
-    const juce::String path = file.getFullPathName();
+void SampleLoaderQueue::enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, SampleLoaderQueue::LoadCallback cb) {
+    const juce::String cacheKey = this->loader.makeCacheKey(loadSpec);
     std::lock_guard<std::mutex> g(lock);
-    auto pit = this->pendingCallbacks.find(path);
+    auto pit = this->pendingCallbacks.find(cacheKey);
     if (pit != this->pendingCallbacks.end()) {
         pit->second.push_back(cb);
         queuedCount.fetch_add(1);
-        // LOG(Debug, "SampleLoaderQueue: attached additional callback for pending file " + path);
+        // LOG(Debug, "SampleLoaderQueue: attached additional callback for pending key " + cacheKey);
         return;
     }
+
     Candidate cand;
-    cand.file = file;
+    cand.loadSpec = loadSpec;
+    cand.cacheKey = cacheKey;
     cand.instType = instType;
     cand.artId = artId;
     cand.velocity = velocity;
@@ -39,10 +41,10 @@ void SampleLoaderQueue::enqueueCandidate(const juce::File& file, KitLib::Instrum
     const int stage = determineStage(cand);
     int idx = std::clamp(stage - 1, 0, 3);
     stageQueues[idx].push_back(std::move(cand));
-    this->pendingCallbacks.emplace(path, std::vector<LoadCallback>{cb});
+    this->pendingCallbacks.emplace(cacheKey, std::vector<LoadCallback>{cb});
     queuedCount.fetch_add(1);
     juce::String artName = StringsDictSingleton::nameOf(artId);
-    // LOG(Info, "SampleLoaderQueue: enqueued varSpec file=" + path + " inst=" + KitLib::InstrumentSpec::typeToString(instType) + " art=" + artName + " vel=" + juce::String((int)vel) + " rr=" + juce::String((int)rrIndex));
+    // LOG(Info, "SampleLoaderQueue: enqueued varSpec file=" + loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(instType) + " art=" + artName + " vel=" + juce::String((int)vel) + " rr=" + juce::String((int)rrIndex));
 }
 
 int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type type) const {
@@ -146,10 +148,10 @@ void SampleLoaderQueue::workerLoop() {
         this->inFlightCount.fetch_add(1);
 
         juce::String artName = StringsDictSingleton::nameOf(task.artId);
-        // LOG(Info, "SampleLoaderQueue: dispatching file=" + task.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(task.instType) + " art=" + artName + " vel=" + juce::String((int)task.velocity) + " rr=" + juce::String((int)task.rrIndex));
+        // LOG(Info, "SampleLoaderQueue: dispatching file=" + task.loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(task.instType) + " art=" + artName + " vel=" + juce::String((int)task.velocity) + " rr=" + juce::String((int)task.rrIndex));
 
-        // Wrap callback to update stats and call all pending callbacks registered for this path
-        juce::String path = task.file.getFullPathName();
+        // Wrap callback to update stats and call all pending callbacks registered for this spec cache key
+        juce::String pendingKey = task.cacheKey;
         const auto dispatchTime = std::chrono::steady_clock::now();
         const int stageIdx = std::clamp(taskStage - 1, 0, 3);
 
@@ -162,12 +164,12 @@ void SampleLoaderQueue::workerLoop() {
                 this->stageFirstDispatchTime[stageIdx] = dispatchTime;
         }
 
-        loader.requestAsyncLoad(task.file, [this, path, artName, taskStage, dispatchTime, stageIdx](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr){
+        loader.requestAsyncLoad(task.loadSpec, [this, pendingKey, artName, taskStage, dispatchTime, stageIdx](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr){
             // collect callbacks under lock then erase entry so future enqueues will create a new pending vector
             std::vector<LoadCallback> cbs;
             {
                 std::lock_guard<std::mutex> g(lock);
-                auto it = this->pendingCallbacks.find(path);
+                auto it = this->pendingCallbacks.find(pendingKey);
                 if (it != this->pendingCallbacks.end()) {
                     cbs = std::move(it->second);
                     this->pendingCallbacks.erase(it);
@@ -209,33 +211,35 @@ void SampleLoaderQueue::workerLoop() {
 }
 
 
-void SampleLoader::requestAsyncLoad(const juce::File& file, LoadCallback callback) {
-    if (!file.existsAsFile()) {
+void SampleLoader::requestAsyncLoad(const SampleLoadSpec& loadSpec, LoadCallback callback) {
+    if (!loadSpec.file.existsAsFile()) {
         juce::MessageManager::callAsync([callback]() {
             callback(nullptr, 0.0);
         });
         return;
     }
-    const auto cacheKey = makeCacheKey(file);  
+
+    const auto cacheKey = this->makeCacheKey(loadSpec);
     { // Check cache
         std::lock_guard<std::mutex> lock(cacheMutex);
 
         auto it = cache.find(cacheKey);
         if (it != cache.end()) {
             auto buf = it->second;
-            juce::MessageManager::callAsync([buf, callback, file]() {
-                LOG(Debug, "SampleLoader: cache hit for " + file.getFullPathName());
+            juce::MessageManager::callAsync([buf, callback, loadSpec]() {
+                LOG(Debug, "SampleLoader: cache hit for " + loadSpec.file.getFullPathName());
                 callback(buf, 0.0); // SR not cached separately (safe assumption)
             });
             return;
         }
     }
-    threadPool.addJob(new LoadJob(*this, file, cacheKey, callback), true);
+
+    threadPool.addJob(new LoadJob(*this, loadSpec, cacheKey, callback), true);
 }
 
 
 juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
-    std::unique_ptr<juce::InputStream> in(file.createInputStream());
+    std::unique_ptr<juce::InputStream> in(this->loadSpec.file.createInputStream());
     if (!in) {
         juce::MessageManager::callAsync([cb = callback]() {
             cb(nullptr, 0.0);
@@ -254,8 +258,16 @@ juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
     const int channels = (int)reader->numChannels;
     const double sampleRate = reader->sampleRate;
 
+    const double resolvedMaxReadLengthMs = this->loadSpec.maxReadLengthMs > 0.0
+        ? this->loadSpec.maxReadLengthMs
+        : loader.maxSampleLengthMs;
+
+    const double resolvedFadeOutMs = this->loadSpec.fadeOutMs > 0.0
+        ? this->loadSpec.fadeOutMs
+        : loader.fadeOutMs;
+
     // Clamp length
-    const int maxSamples = (int)(sampleRate * (loader.maxSampleLengthMs * 0.001));
+    const int maxSamples = juce::jmax(1, (int)(sampleRate * (resolvedMaxReadLengthMs * 0.001)));
 
     const int samplesToRead = (int)std::min<int64_t>(reader->lengthInSamples, maxSamples);
 
@@ -268,8 +280,14 @@ juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
         return jobHasFinished;
     }
 
+    if (this->loadSpec.volumeTrimDb != 0.0f) {
+        const float gainLinear = juce::Decibels::decibelsToGain(this->loadSpec.volumeTrimDb);
+        for (int channelIdx = 0; channelIdx < channels; ++channelIdx)
+            buffer->applyGain(channelIdx, 0, samplesToRead, gainLinear);
+    }
+
     // Apply fade out
-    const int fadeSamples = (int)(sampleRate * (loader.fadeOutMs * 0.001));
+    const int fadeSamples = (int)(sampleRate * (resolvedFadeOutMs * 0.001));
     const int fadeStart = std::max(0, samplesToRead - fadeSamples);
     for (int ch = 0; ch < channels; ++ch) {
         buffer->applyGainRamp(ch, fadeStart, samplesToRead - fadeStart, 1.0f, 0.0f);

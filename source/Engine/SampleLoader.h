@@ -14,6 +14,18 @@
 
 class SampleLoader;
 
+struct SampleLoadSpec {
+    juce::File file;
+
+    // Pre-processing options that affect cached audio identity.
+    float volumeTrimDb = 0.0f;
+    double maxReadLengthMs = 0.0; // <=0: use loader default
+    double fadeOutMs = 0.0;       // <=0: use loader default
+
+    // Future-proof extension marker for additional transforms.
+    juce::String preprocessTag;
+};
+
 class SampleLoaderQueue {
 public:
     using LoadCallback = std::function<void(std::shared_ptr<juce::AudioBuffer<float>>, double)>;
@@ -31,7 +43,7 @@ public:
     // - `artId` is the articulation id (StringsDictSingleton::Id)
     // - `velocity` is the velocity layer value (1..127)
     // - `rrIndex` is the round-robin index (1..26)
-    void enqueueCandidate(const juce::File& file, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, LoadCallback cb);
+    void enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, LoadCallback cb);
 
     // Attempt to mark the worker as started. Returns true if the worker
     // was already started, false if we successfully marked it started.
@@ -41,7 +53,8 @@ public:
     }
 private:
     struct Candidate {
-        juce::File file;
+        SampleLoadSpec loadSpec;
+        juce::String cacheKey;
         KitLib::InstrumentSpec::Type instType;
         StringsDictSingleton::Id artId;
         uint8_t velocity;
@@ -52,7 +65,7 @@ private:
     SampleLoader& loader;
     std::mutex lock;
     std::deque<Candidate> stageQueues[4]; // index 0->stage1, 1->stage2, ...
-    // map file path -> pending callbacks (used to attach multiple callbacks for the same file)
+    // map cache key -> pending callbacks (used to attach callbacks for equivalent load specs)
     std::unordered_map<juce::String, std::vector<LoadCallback>> pendingCallbacks;
 
     std::thread workerThread;
@@ -101,7 +114,21 @@ public:
         threadPool.removeAllJobs(true, 5000);
     }
 
-    void requestAsyncLoad(const juce::File& file, LoadCallback callback);
+    void requestAsyncLoad(const SampleLoadSpec& loadSpec, LoadCallback callback);
+
+    juce::String makeCacheKey(const SampleLoadSpec& loadSpec) const {
+        // const double resolvedMaxReadLengthMs = loadSpec.maxReadLengthMs > 0.0 ? loadSpec.maxReadLengthMs : this->maxSampleLengthMs;
+        // const double resolvedFadeOutMs = loadSpec.fadeOutMs > 0.0 ? loadSpec.fadeOutMs : this->fadeOutMs;
+        // const int volumeMilliDb = juce::roundToInt(loadSpec.volumeTrimDb * 1000.0f);
+        // const int maxReadUs = juce::roundToInt(static_cast<float>(resolvedMaxReadLengthMs * 1000.0));
+        // const int fadeOutUs = juce::roundToInt(static_cast<float>(resolvedFadeOutMs * 1000.0));
+        return loadSpec.file.getFullPathName()
+            // + "|v=" + juce::String(volumeMilliDb)
+            // + "|len=" + juce::String(maxReadUs)
+            // + "|fade=" + juce::String(fadeOutUs)
+            // + "|tag=" + loadSpec.preprocessTag
+        ;
+    }
 
     SampleLoaderQueue& getQueue() { return *this->queuePtr; }
 
@@ -116,10 +143,10 @@ private:
     //========================================================
     class LoadJob : public juce::ThreadPoolJob {
     public:
-        LoadJob(SampleLoader& owner, juce::File file, juce::String cacheKey, LoadCallback callback)
+        LoadJob(SampleLoader& owner, SampleLoadSpec loadSpec, juce::String cacheKey, LoadCallback callback)
             : ThreadPoolJob("Sample Load Job")
             , loader(owner)
-            , file(std::move(file))
+            , loadSpec(std::move(loadSpec))
             , cacheKey(std::move(cacheKey))
             , callback(std::move(callback))
         {}
@@ -127,7 +154,7 @@ private:
 
     private:
         SampleLoader& loader;
-        juce::File file;
+        SampleLoadSpec loadSpec;
         juce::String cacheKey;
         LoadCallback callback;
     };
@@ -149,7 +176,4 @@ private:
     double maxSampleLengthMs = 5000.0;
     double fadeOutMs = 2000.0;
 
-    juce::String makeCacheKey(const juce::File& file) const {
-        return file.getFullPathName() + "_" + juce::String(this->maxSampleLengthMs) + "_" + juce::String(this->fadeOutMs);
-    }
 };
