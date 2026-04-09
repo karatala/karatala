@@ -84,24 +84,15 @@ public:
     bool hasLayoutSlotId(const juce::String& id) const { return this->instrumentSynthById.find(id) != this->instrumentSynthById.end(); }
 
     const int getLatestContinuousControllerValue(const int ccNum) const {
-        const auto& it = this->latestCCValueMap.find(ccNum);
-        if (it == this->latestCCValueMap.end()) return 0; //FIXME?
-        const int& value = it->second;
-        if (value < 0) return 0;
-        if (value > 127) return 127;
-        return value;
+        if (ccNum < 0 || ccNum > 127) return 0;
+        if (!this->trackedCCMask[ccNum]) return 0;
+        return juce::jlimit(0, 127, this->latestCCValues[ccNum]);
     }
     const int getLatestPolyphonicAftertouchValue(const int note) const {
-        const auto& it = this->latestPAValueMap.find(note);
-        if (it == this->latestPAValueMap.end()) return 0; //FIXME?
-        const int& value = it->second;
-        if (value < 0) return 0;
-        if (value > 127) return 127;
-        return value;
+        if (note < 0 || note > 127) return 0;
+        if (!this->trackedPAMask[note]) return 0;
+        return juce::jlimit(0, 127, this->latestPAValues[note]);
     }
-    // Realtime-safe accessor: get latest CC values by const-ref (no copy) //FIXME: check the codebase and make it use similar 'no copy' pattern whereever possible
-    const std::unordered_map<int, int>& getLatestContinuousControllerValuesRef() const { return this->latestCCValueMap; } //TODO: delete, probably will be unused
-    const std::unordered_map<int, int>& getLatestPolyphonicAftertouchValuesRef() const { return this->latestPAValueMap; } //TODO: delete, probably will be unused
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
@@ -119,9 +110,10 @@ private:
     std::unordered_map<juce::String, InstrumentSynth*> instrumentSynthById; //TODO: review if this map is actually needed, maybe we can do without it 
     std::unordered_map<int, std::vector<InstrumentSynth*>> instrumentSynthsByNote;
 
-    //TODO: maybe no need in unordered_map and make it std::array<int, 128> or what will be faster/lighter/safer?
-    std::unordered_map<int, int> latestCCValueMap;
-    std::unordered_map<int, int> latestPAValueMap;
+    std::array<int, 128> latestCCValues {};
+    std::array<bool, 128> trackedCCMask {};
+    std::array<int, 128> latestPAValues {};
+    std::array<bool, 128> trackedPAMask {};
     mutable juce::CriticalSection engineGraphLock;
 
     std::unique_ptr<KitLib::LibraryManager> libraryManagerPtr;

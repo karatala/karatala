@@ -153,6 +153,14 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* default
     // Build final CC threshold maps
     this->processCcDimensions(foundCcDimensions);
     // this->buildCcDimensionTables(instSpec, foundCcDimensions);
+
+    // Rebuild O(1) articulation-index lookup cache (nameId<<32|exprId -> index)
+    this->artIdByNameExprId.clear();
+    for (int artIdx = 0; artIdx < static_cast<int>(this->runtimeArticulations.size()); ++artIdx) {
+        const auto& art = this->runtimeArticulations[artIdx];
+        const uint64_t key = (static_cast<uint64_t>(art.nameId) << 32) | static_cast<uint64_t>(art.exprId);
+        this->artIdByNameExprId.emplace(key, artIdx);
+    }
 }
 
 

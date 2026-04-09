@@ -341,8 +341,10 @@ bool DrumKitEngine::applyKitLayout() {
     this->instrumentSynthPtrs.clear();
     this->instrumentSynthById.clear();
     this->instrumentSynthsByNote.clear();
-    this->latestCCValueMap.clear();
-    this->latestPAValueMap.clear();
+    this->latestCCValues.fill(0);
+    this->trackedCCMask.fill(false);
+    this->latestPAValues.fill(0);
+    this->trackedPAMask.fill(false);
 
     for (const auto& instrumentSlot : this->getKitLayout()->instrumentSlots) {
         auto slot = std::make_unique<InstrumentSynth>(this, instrumentSlot);
@@ -352,11 +354,13 @@ bool DrumKitEngine::applyKitLayout() {
         this->instrumentSynthPtrs.push_back(std::move(slot));
 
         for (const auto& cc : instrumentSlot.controllers) {
-            this->latestCCValueMap[cc.number] = 0;
+            if (cc.number >= 0 && cc.number < 128)
+                this->trackedCCMask[cc.number] = true;
         }
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
-                this->latestPAValueMap[note] = 0;
+                if (note >= 0 && note < 128)
+                    this->trackedPAMask[note] = true;
                 this->instrumentSynthsByNote[note].push_back(ptr); //TODO: check ptr safety
             }
         }
@@ -372,7 +376,8 @@ bool DrumKitEngine::applyKitLayout() {
 
 void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
     this->instrumentSynthsByNote.clear();
-    this->latestPAValueMap.clear();
+    this->latestPAValues.fill(0);
+    this->trackedPAMask.fill(false);
 
     if (this->activeKitLayoutPtr == nullptr)
         return;
@@ -385,7 +390,8 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
         auto* slot = it->second;
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
-                this->latestPAValueMap[note] = 0;
+                if (note >= 0 && note < 128)
+                    this->trackedPAMask[note] = true;
                 this->instrumentSynthsByNote[note].push_back(slot);
             }
         }
@@ -614,8 +620,8 @@ void DrumKitEngine::saveLatestContinuousControllerValues(const juce::MidiBuffer&
         const juce::MidiMessage msg = midiMess.getMessage();
         if (!msg.isController()) continue;
         const auto ccNum = msg.getControllerNumber();
-        if (this->latestCCValueMap.find(ccNum) == this->latestCCValueMap.end()) continue;
-        this->latestCCValueMap[ccNum] = msg.getControllerValue();
+        if (ccNum < 0 || ccNum > 127 || !this->trackedCCMask[ccNum]) continue;
+        this->latestCCValues[ccNum] = msg.getControllerValue();
     }
 }
 void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer& midiMessages) {
@@ -623,8 +629,8 @@ void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer&
         const juce::MidiMessage msg = midiMess.getMessage();
         if (!msg.isAftertouch()) continue;
         const auto note = msg.getNoteNumber();
-        if (this->latestPAValueMap.find(note) == this->latestPAValueMap.end()) continue;
-        this->latestPAValueMap[note] = msg.getAfterTouchValue();
+        if (note < 0 || note > 127 || !this->trackedPAMask[note]) continue;
+        this->latestPAValues[note] = msg.getAfterTouchValue();
     }
 }
 

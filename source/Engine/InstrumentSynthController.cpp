@@ -142,16 +142,12 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         auto* ss = voice->getCurrentlyPlayingSound();
         if (ss == nullptr || ss->sampleVariantSpec == nullptr) continue;
 
-        // Find articulation index for this voice by matching nameId/exprId
-        int currentArtIdx = -1;
-        for (size_t ai = 0; ai < this->runtimeArticulations.size(); ++ai) {
-            const auto& art = this->runtimeArticulations[ai];
-            if (art.nameId == ss->sampleVariantSpec->parent->parent->nameId && art.exprId == ss->sampleVariantSpec->parent->parent->exprId) {
-                currentArtIdx = static_cast<int>(ai);
-                break;
-            }
-        }
-        if (currentArtIdx == -1) continue;
+        // Find articulation index for this voice via O(1) precomputed cache
+        const auto* artSpec = ss->sampleVariantSpec->parent->parent;
+        const uint64_t artKey = (static_cast<uint64_t>(artSpec->nameId) << 32) | static_cast<uint64_t>(artSpec->exprId);
+        const auto artCacheIt = this->artIdByNameExprId.find(artKey);
+        if (artCacheIt == this->artIdByNameExprId.end()) continue;
+        const int currentArtIdx = artCacheIt->second;
 
         if (currentArtIdx == static_cast<int>(newArtIdx)) continue; // already correct
         ++activeMismatchedVoices;

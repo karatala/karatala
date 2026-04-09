@@ -58,15 +58,16 @@ void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSa
 }
 
 InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int /*midiNoteNumber*/, int groupId) const {
-    std::vector<InstrumentSynthVoice*> voiceCandidates;
+    const juce::ScopedLock sl(this->stealLock);
+    this->stealCandidateScratch.clear();
 
     for (auto* voice : this->voices) {
         if (!voice->isVoiceActive()) continue;
         if (voice->hitGroupId != groupId) continue;
-        voiceCandidates.push_back(voice);
+        this->stealCandidateScratch.push_back(voice);
     }
 
-    if (voiceCandidates.empty()) return nullptr;
+    if (this->stealCandidateScratch.empty()) return nullptr;
 
     auto pickOldest = [](const std::vector<InstrumentSynthVoice*>& arr) -> InstrumentSynthVoice* {
         if (arr.empty())
@@ -80,7 +81,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
 
     auto collectByState = [&](InstrumentSynthVoice::EnvelopeState state) {
         std::vector<InstrumentSynthVoice*> result;
-        for (auto* v : voiceCandidates)
+        for (auto* v : this->stealCandidateScratch)
             if (v->getEnvelopeState() == state)
                 result.push_back(v);
         return result;
@@ -119,7 +120,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
     }
 
     std::vector<InstrumentSynthVoice*> playing;
-    for (auto* v : voiceCandidates)
+    for (auto* v : this->stealCandidateScratch)
         if (v->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing)
             playing.push_back(v);
 
@@ -157,7 +158,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
             return protectedVoice;
     }
 
-    return pickOldest(voiceCandidates);
+    return pickOldest(this->stealCandidateScratch);
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {

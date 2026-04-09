@@ -297,7 +297,7 @@ public:
         }
         {
             const juce::ScopedLock sl(this->stealLock);
-            this->usableVoicesToStealArray.ensureStorageAllocated(voices.size() + 1);
+            this->stealCandidateScratch.reserve(voices.size() + 1);
         }
         return voice;
     }
@@ -444,7 +444,7 @@ private:
     mutable juce::CriticalSection stealLock;
     double sampleRate = 0;
     juce::OwnedArray<InstrumentSynthVoice> voices;
-    mutable juce::Array<InstrumentSynthVoice*> usableVoicesToStealArray;
+    mutable std::vector<InstrumentSynthVoice*> stealCandidateScratch;
     std::vector<std::shared_ptr<SampledSound>> sampledSoundPtrs;
     int minimumSubBlockSize = 32;
     bool subBlockSubdivisionIsStrict = false;
@@ -460,6 +460,8 @@ private:
     std::array<ArtRtIdx, 128> noteToArticulation;
     // Runtime articulations vector, index-stable after load
     std::vector<ArticulationRuntime> runtimeArticulations;
+    // Flat map for O(1) articulation-index lookup by (nameId<<32|exprId) key — rebuilt after every load
+    std::unordered_map<uint64_t, int> artIdByNameExprId;
     
     std::unordered_map<int8_t, std::vector<uint8_t>> noteToControllers;
     // If this articulation subscribes to controllers -> for each CC id store 128-entry mapping to expression index
