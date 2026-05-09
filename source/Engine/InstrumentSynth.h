@@ -236,7 +236,7 @@ public:
         , id(instrumentSlot.id)
         , type(instrumentSlot.type)
     {
-
+        this->lastCcArticulation.fill(-1);
     }
     ~InstrumentSynth() {}
 
@@ -273,7 +273,6 @@ public:
 
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
     void handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue) {
-        const juce::ScopedLock sl(this->lock);
         for (auto* voice : voices)
             if (voice->getCurrentlyPlayingNote() == midiNoteNumber && (midiChannel <= 0 || voice->isPlayingChannel(midiChannel)))
                 voice->aftertouchChanged(aftertouchValue);
@@ -451,14 +450,15 @@ private:
     std::unordered_map<uint64_t, int> artIdByNameExprId;
     
     std::unordered_map<int8_t, std::vector<uint8_t>> noteToControllers;
-    // If this articulation subscribes to controllers -> for each CC id store 128-entry mapping to expression index
-    // Stored as map CC -> array[valueIndex for 0..127]
-    std::unordered_map<int, std::array<uint8_t, 128>> ccToArticulation;
+    // Flat lookup table for CC -> articulation mapping (replaces unordered_map for cache locality)
+    // ccToArticulationMask[cc] = true if CC number has an articulation mapping
+    std::array<bool, 128> ccToArticulationMask {};
+    std::array<std::array<uint8_t, 128>, 128> ccToArticulationTable {};
     // Cache last seen controller value and resulting articulation index to avoid
     // spamming articulation change logic when controller jitters around a
     // threshold.
-    std::unordered_map<int, int> lastCcValue; // controller -> last 0..127 value
-    std::unordered_map<int, uint8_t> lastCcArticulation; // controller -> last applied articulation index
+    std::array<int, 128> lastCcValue {};
+    std::array<int8_t, 128> lastCcArticulation; // -1 = not cached
     
     // (owned) storage for all SampledSound instances created for this synth
     // (use `sampledSoundPtrs` above which holds shared_ptrs)

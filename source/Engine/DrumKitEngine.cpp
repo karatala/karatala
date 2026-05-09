@@ -10,12 +10,6 @@
 #include <algorithm>
 #include <unordered_set>
 
-// tuning constants
-static constexpr int NAME_IT_BETTER_MIN_VARIANTS = 3;
-static constexpr int NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS = 32;
-static constexpr int NAME_IT_BETTER_MAX_NEIGHBORS_TO_CONSIDER = 2;
-// TOTAL_HOST_OUTPUT_CHANNELS is defined in DrumKitEngine.h
-
 namespace {
 static bool containsId(const std::vector<uint32_t>& values, uint32_t value) {
     return std::find(values.begin(), values.end(), value) != values.end();
@@ -599,8 +593,7 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     const auto outputBufferStartSample = 0;
     const auto outputBufferNumSamples = outputBuffer.getNumSamples();
     
-    this->saveLatestContinuousControllerValues(midiMessages);
-    this->saveLatestPolyphonicAftertouchValues(midiMessages);
+    this->saveLatestControllerValues(midiMessages);
 
     // Each instrument's SampledSound now stores *global* host channel indices in
     // micBufferChannelStart, so voices can render directly into outputBuffer.
@@ -619,22 +612,18 @@ std::optional<juce::String> DrumKitEngine::getNameForMidiNoteNumber(int note, in
 }
 
 
-void DrumKitEngine::saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages) {
+void DrumKitEngine::saveLatestControllerValues(const juce::MidiBuffer& midiMessages) {
     for (const auto& midiMess : midiMessages) {
         const juce::MidiMessage msg = midiMess.getMessage();
-        if (!msg.isController()) continue;
-        const auto ccNum = msg.getControllerNumber();
-        if (ccNum < 0 || ccNum > 127 || !this->trackedCCMask[ccNum]) continue;
-        this->latestCCValues[ccNum] = msg.getControllerValue();
-    }
-}
-void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer& midiMessages) {
-    for (const auto& midiMess : midiMessages) {
-        const juce::MidiMessage msg = midiMess.getMessage();
-        if (!msg.isAftertouch()) continue;
-        const auto note = msg.getNoteNumber();
-        if (note < 0 || note > 127 || !this->trackedPAMask[note]) continue;
-        this->latestPAValues[note] = msg.getAfterTouchValue();
+        if (msg.isController()) {
+            const auto ccNum = msg.getControllerNumber();
+            if (ccNum >= 0 && ccNum <= 127 && this->trackedCCMask[ccNum])
+                this->latestCCValues[ccNum] = msg.getControllerValue();
+        } else if (msg.isAftertouch()) {
+            const auto note = msg.getNoteNumber();
+            if (note >= 0 && note <= 127 && this->trackedPAMask[note])
+                this->latestPAValues[note] = msg.getAfterTouchValue();
+        }
     }
 }
 

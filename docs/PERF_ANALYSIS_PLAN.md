@@ -129,10 +129,10 @@ PluginProcessor::processBlock
 | 3 | Heap allocs in `findVoiceToSteal` | Low | Removes RT allocations | P1 | **DONE** |
 | 5 | `applyAdaptiveTailShortening` O(N) every block | Low | Reduces per-block overhead | P1 | **DONE** |
 | 10 | Remove `codeRaw` from hot struct | Low | Better cache locality | P2 | **DONE** |
-| 8 | Replace `unordered_map` with flat array for CC | Low | Better cache locality | P2 | |
+| 8 | Replace `unordered_map` with flat array for CC | Low | Better cache locality | P2 | **DONE** |
 | 4 | String allocs in debug logging | Low | Removes conditional allocs | P1 | **DONE** |
-| 7 | Triple MIDI scan | Low | Minor CPU save | P2 | |
-| 9 | Aftertouch voice scan | Low | Scales better | P2 | |
+| 7 | Triple MIDI scan | Low | Minor CPU save | P2 | **DONE** |
+| 9 | Aftertouch voice scan | Low | Scales better | P2 | **DONE** |
 | 6 | `getEstimatedCurrentDb` math per block | Medium | Reduces FP overhead | P1 | **DONE** |
 
 ## P0 Fix Summary (applied)

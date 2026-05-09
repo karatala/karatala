@@ -153,6 +153,5 @@ private:
     void clearShadowSynths();
     void rebuildPrimaryInstrumentNoteRouting();
 
-    void saveLatestContinuousControllerValues(const juce::MidiBuffer& midiMessages);
-    void saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer& midiMessages);
+    void saveLatestControllerValues(const juce::MidiBuffer& midiMessages);
 };

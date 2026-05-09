@@ -11,9 +11,9 @@ SampleLoader* InstrumentSynth::getSampleLoader() { return this->parent ? this->p
 void InstrumentSynth::unloadInstrument() {
     this->runtimeArticulations.clear();
     this->noteToControllers.clear();
-    this->ccToArticulation.clear();
-    this->lastCcValue.clear();
-    this->lastCcArticulation.clear();
+    this->ccToArticulationMask.fill(false);
+    this->lastCcValue.fill(0);
+    this->lastCcArticulation.fill(-1);
     // stop and clear voices before releasing sounds
     this->clearVoices();
     this->clearSounds();
@@ -349,7 +349,8 @@ void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
             }
             map[value] = chosen;
         }
-        this->ccToArticulation[ccNum] = map;
+        this->ccToArticulationMask[ccNum] = true;
+        this->ccToArticulationTable[ccNum] = map;
         
         if (LOG_ENABLED(Debug)) { // log condensed mapping: thresholds -> articulation index
             juce::String summary;

@@ -24,7 +24,7 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     }
     else if (midiMessage.isController()) {
         auto ccNum = static_cast<uint8_t>(midiMessage.getControllerNumber());
-        if (this->ccToArticulation.find(ccNum) == this->ccToArticulation.end()) return;
+        if (!this->ccToArticulationMask[ccNum]) return;
         this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue());
     }
     else if (midiMessage.isAftertouch())
@@ -63,15 +63,15 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     // Only handle hi-hat pedal crossfades here for now
     if (this->getType() != KitLib::InstrumentSpec::Type::HiHat) return;
 
-    auto it = this->ccToArticulation.find(static_cast<int>(controllerNumber));
-    if (it == this->ccToArticulation.end()) return;
+    if (!this->ccToArticulationMask[controllerNumber]) return;
 
-    const auto& mapArr = it->second;
+    const auto& mapArr = this->ccToArticulationTable[controllerNumber];
     uint8_t newArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
     if (newArtIdx >= this->runtimeArticulations.size()) {
-        LOG(Warning, "handleController: CC " + juce::String(controllerNumber) 
-            + " mapped to out-of-range articulation idx=" + juce::String((int)newArtIdx)
-            + " (runtime size=" + juce::String((int)this->runtimeArticulations.size()) + ")");
+        if (LOG_ENABLED(Warning))
+            LOG(Warning, "handleController: CC " + juce::String(controllerNumber) 
+                + " mapped to out-of-range articulation idx=" + juce::String((int)newArtIdx)
+                + " (runtime size=" + juce::String((int)this->runtimeArticulations.size()) + ")");
         this->lastCcValue[controllerNumber] = controllerValue;
         return;
     }
@@ -91,8 +91,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
                 if (candArt.nameId == pedalNameId && candArt.pocValue == targetArt.pocValue) {
                     const uint8_t redirectedIdx = static_cast<uint8_t>(idx);
                     // Only log when this redirect produces a new transition (not already cached).
-                    const auto cachedArtIt = this->lastCcArticulation.find(controllerNumber);
-                    if (cachedArtIt == this->lastCcArticulation.end() || cachedArtIt->second != redirectedIdx)
+                    if (this->lastCcArticulation[controllerNumber] != static_cast<int8_t>(redirectedIdx))
                         LOG(Verbose, "HiHat CC: prefer-pedal redirect from " + targetArt.getCodeRaw() + " to " + candArt.getCodeRaw());
                     newArtIdx = redirectedIdx;
                     break;
@@ -103,10 +102,8 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
     // Check cached last seen value/articulation for this CC to avoid spamming
     // articulation change logic on tiny controller changes.
-    const auto lastValIt = this->lastCcValue.find(controllerNumber);
-    const auto lastArtIt = this->lastCcArticulation.find(controllerNumber);
 
-    if (lastArtIt != this->lastCcArticulation.end() && lastArtIt->second == newArtIdx) {
+    if (this->lastCcArticulation[controllerNumber] >= 0 && this->lastCcArticulation[controllerNumber] == static_cast<int8_t>(newArtIdx)) {
         // Articulation already applied for this controller; just remember latest value
         this->lastCcValue[controllerNumber] = controllerValue;
         return;
@@ -362,7 +359,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     // Only cache new articulation once at least one replacement starts, or when
     // there were no active mismatched voices to transition.
     if (replacementsStarted > 0 || activeMismatchedVoices == 0)
-        this->lastCcArticulation[controllerNumber] = newArtIdx;
+        this->lastCcArticulation[controllerNumber] = static_cast<int8_t>(newArtIdx);
     this->lastCcValue[controllerNumber] = controllerValue;
 
     if (activeMismatchedVoices > 0 && replacementsStarted == 0) {
@@ -434,14 +431,13 @@ int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
     }
     if (midiNoteNumber < 0 || midiNoteNumber >= 128) return -1;
     int artIdx = this->noteToArticulation[midiNoteNumber];
-    if (!this->ccToArticulation.empty() && parent != nullptr) {
+    if (parent != nullptr) {
         auto pair = this->noteToControllers.find((uint8_t)midiNoteNumber);
         if (pair != this->noteToControllers.end()) {
             for (auto ccNum : pair->second) {
-                auto artIt = this->ccToArticulation.find(ccNum);
-                if (artIt == this->ccToArticulation.end()) continue;
+                if (!this->ccToArticulationMask[ccNum]) continue;
                 const auto ccVal = this->parent->getLatestContinuousControllerValue(ccNum);
-                const auto& mapArr = artIt->second;
+                const auto& mapArr = this->ccToArticulationTable[ccNum];
                 artIdx = (int)mapArr[ccVal];
                 // LOG(Debug, "CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ") for note " + juce::String(midiNoteNumber) );
             }
