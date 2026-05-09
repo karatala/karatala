@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Volume Trim Renamer</title>
+  <style>
+    * { font-size: 10px; }
+    html, body { margin: 0; padding: 0; }
+    body { padding: 0 5px; }
+    .container { height: 100%; display: flex; flex-direction: row; }
+    .fill-height { height: 100vh; }
+    .horiz { flex: 1; display: flex; flex-direction: column; }
+    input,textarea { border: none; background: #eee; padding: 5px; margin: 2px; color: #7b7b7b }
+    textarea:read-only { background: #fafafa; color: #a7a7a7 }
+    textarea { height: 100%; resize: none; }
+    button { margin: 0 2px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="horiz fill-height">
+      <pre>1). paste file list here:</pre>
+      <textarea id="input"></textarea>
+    </div>
+    <div class="horiz fill-height">
+      <pre>2). run</pre>
+      <button onclick="generateCommands()">generate commands</button>
+      <button onclick="downloadResult()">download result</button>
+      <pre>copy result and use in terminal</pre>
+      <textarea id="result" readonly></textarea>
+    </div>
+  </div>
+
+<script>
+const rules = [
+  { regex: /kick-22-center-....-ons/, db: +6 },
+
+  // { regex: /tom-16-center-....-dtm/, db: -0 },
+  { regex: /tom-16-center-....-oni/, db: +7 },
+  { regex: /tom-16-center-....-ons/, db: +7 },
+  { regex: /tom-16-center-....-rcm/, db: +7 },
+  { regex: /tom-16-center-....-rfs/, db: +7 },
+
+
+  { regex: /crash-X1-bell-....-oni/, db: -15 },
+  { regex: /crash-X1-bell-....-ons/, db: -15 },
+  { regex: /crash-X1-bell-....-ows/, db: -12 }, //?
+  { regex: /crash-X1-bell-....-rcm/, db: -15 },
+  { regex: /crash-X1-bell-....-rfs/, db: -15 },
+
+  { regex: /crash-X1-edge-....-oni/, db: -3 },
+  { regex: /crash-X1-edge-....-ons/, db: -3 },
+  // { regex: /crash-X1-edge-....-ows/, db: -0 }, //?
+  { regex: /crash-X1-edge-....-rcm/, db: -3 },
+  { regex: /crash-X1-edge-....-rfs/, db: -3 },
+
+  { regex: /crash-X1-choke-....-oni/, db: -10 },
+  { regex: /crash-X1-choke-....-ons/, db: -15 },
+  { regex: /crash-X1-choke-....-ows/, db: -21 },
+  { regex: /crash-X1-choke-....-rcm/, db: -3 }, //FIXME ?
+  { regex: /crash-X1-choke-....-rfs/, db: -19 },
+
+
+  { regex: /crash-X2-bell-....-oni/, db: -15 },
+  { regex: /crash-X2-bell-....-ons/, db: -15 },
+  { regex: /crash-X2-bell-....-ows/, db: -12 }, //?
+  { regex: /crash-X2-bell-....-rcm/, db: -15 },
+  { regex: /crash-X2-bell-....-rfs/, db: -15 },
+
+  { regex: /crash-X2-edge-....-oni/, db: -3 },
+  { regex: /crash-X2-edge-....-ons/, db: -3 },
+  // { regex: /crash-X2-edge-....-ows/, db: -0 }, //?
+  { regex: /crash-X2-edge-....-rcm/, db: -3 },
+  { regex: /crash-X2-edge-....-rfs/, db: -3 },
+
+  { regex: /crash-X2-choke-....-oni/, db: -15 },
+  { regex: /crash-X2-choke-....-ons/, db: -15 },
+  { regex: /crash-X2-choke-....-ows/, db: -12 }, //?
+  { regex: /crash-X2-choke-....-rcm/, db: -15 },
+  { regex: /crash-X2-choke-....-rfs/, db: -15 },
+
+
+  { regex: /splash-X1-edge-....-oni/, db: -9 },
+  { regex: /splash-X1-edge-....-ons/, db: -3 },
+  // { regex: /splash-X1-edge-....-ows/, db: -0 }, //?
+  { regex: /splash-X1-edge-....-rcm/, db: -9 },
+  { regex: /splash-X1-edge-....-rfs/, db: -9 },
+
+  { regex: /splash-X2-edge-....-oni/, db: -3 },
+  { regex: /splash-X2-edge-....-ons/, db: -3 },
+  // { regex: /splash-X2-edge-....-ows/, db: -0 }, //?
+  { regex: /splash-X2-edge-....-rcm/, db: -3 },
+  { regex: /splash-X2-edge-....-rfs/, db: -3 },
+
+
+  { regex: /china-X1-edge-....-oni/, db: -3 },
+  { regex: /china-X1-edge-....-ons/, db: -3 },
+  // { regex: /china-X1-edge-....-ows/, db: -0 }, //?
+  { regex: /china-X1-edge-....-rcm/, db: -3 },
+  { regex: /china-X1-edge-....-rfs/, db: -3 },
+
+  { regex: /china-X2-edge-....-oni/, db: -3 },
+  { regex: /china-X2-edge-....-ons/, db: -3 },
+  // { regex: /china-X2-edge-....-ows/, db: -0 }, //?
+  { regex: /china-X2-edge-....-rcm/, db: -3 },
+  { regex: /china-X2-edge-....-rfs/, db: -3 },
+
+
+  { regex: /hihat-X1-edge\[tight\]-....-dtm/, db: -16 },
+  { regex: /hihat-X1-edge\[tight\]-....-oni/, db: -4 },
+  { regex: /hihat-X1-edge\[tight\]-....-ons/, db: -4 },
+  { regex: /hihat-X1-edge\[tight\]-....-ows/, db: -4 },
+  { regex: /hihat-X1-edge\[tight\]-....-rcm/, db: -4 },
+  { regex: /hihat-X1-edge\[tight\]-....-rfs/, db: -4 },
+
+  { regex: /hihat-X1-edge\[close\]-....-dtm/, db: -11 },
+  { regex: /hihat-X1-edge\[close\]-....-oni/, db: +1 },
+  { regex: /hihat-X1-edge\[close\]-....-ons/, db: +1 },
+  { regex: /hihat-X1-edge\[close\]-....-ows/, db: +1 },
+  { regex: /hihat-X1-edge\[close\]-....-rcm/, db: +1 },
+  { regex: /hihat-X1-edge\[close\]-....-rfs/, db: +1 },
+
+  { regex: /hihat-X1-edge\[half\]-....-dtm/, db: -5 },
+  { regex: /hihat-X1-edge\[half\]-....-oni/, db: +7 },
+  { regex: /hihat-X1-edge\[half\]-....-ons/, db: +7 },
+  { regex: /hihat-X1-edge\[half\]-....-ows/, db: +7 },
+  { regex: /hihat-X1-edge\[half\]-....-rcm/, db: +7 },
+  { regex: /hihat-X1-edge\[half\]-....-rfs/, db: +7 },
+
+  { regex: /hihat-X1-edge\[open\]-....-dtm/, db: +4 },
+  { regex: /hihat-X1-edge\[open\]-....-oni/, db: +8 },
+  { regex: /hihat-X1-edge\[open\]-....-ons/, db: +8 },
+  { regex: /hihat-X1-edge\[open\]-....-ows/, db: +8 },
+  { regex: /hihat-X1-edge\[open\]-....-rcm/, db: +8 },
+  { regex: /hihat-X1-edge\[open\]-....-rfs/, db: +8 },
+
+
+  { regex: /ride-X1-bell-....-dtm/, db: -7 },
+  { regex: /ride-X1-bell-....-oni/, db: -4 },
+  { regex: /ride-X1-bell-....-ons/, db: -1 },
+  // { regex: /ride-X1-bell-....-ows/, db: -0 }, //?
+  { regex: /ride-X1-bell-....-rcm/, db: -1 },
+  { regex: /ride-X1-bell-....-rfs/, db: -1 },
+
+  { regex: /ride-X1-bow-....-dtm/, db: -9 },
+  { regex: /ride-X1-bow-....-oni/, db: -6 },
+  { regex: /ride-X1-bow-....-ons/, db: -3 },
+  // { regex: /ride-X1-bow-....-ows/, db: -0 }, //?
+  { regex: /ride-X1-bow-....-rcm/, db: -3 },
+  { regex: /ride-X1-bow-....-rfs/, db: -3 },
+
+
+  { regex: /snare-X1-sidestick-....-dbm/, db: -12 },
+  { regex: /snare-X1-sidestick-....-dtm1/, db: -12 },
+  { regex: /snare-X1-sidestick-....-dtm2/, db: -12 },
+  { regex: /snare-X1-sidestick-....-oni/, db: -12 },
+  { regex: /snare-X1-sidestick-....-ons/, db: -12 },
+  { regex: /snare-X1-sidestick-....-rcm/, db: -12 },
+  { regex: /snare-X1-sidestick-....-rfs/, db: -12 },
+
+
+  // { regex: /snare-X2-center-....-dbm/, db: -0 },
+  // { regex: /snare-X2-center-....-dtm1/, db: -0 },
+  { regex: /snare-X2-center-....-dtm2/, db: -2 },
+  { regex: /snare-X2-center-....-oni/, db: -9 },
+  { regex: /snare-X2-center-....-ons/, db: -7 },
+  // { regex: /snare-X2-center-....-rcm/, db: -0 },
+  { regex: /snare-X2-center-....-rfs/, db: -2 },
+];
+
+function generateCommands() {
+  const inputText = document.getElementById("input").value;
+  const result = volumeTrimRenamer(inputText, rules);
+  document.getElementById("result").value = result;
+}
+
+function downloadResult() {
+  const resultString = document.getElementById("result").value;
+  if (!resultString.trim()) {
+    alert('result is empty, nothing to download');
+    return;
+  }
+  const blob = new Blob([resultString], { type: 'text/plain' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'commands.txt';
+  link.click();
+}
+
+let volumeTrimRenamer = (inputText, rules) => {
+  const dbToTag = (db) => {
+    const sign = db >= 0 ? 'p' : 'n';
+    return `-v${sign}${Math.abs(db)}`;
+  }
+  const applyRule = (line, rule) => {
+    const match = line.match(rule.regex);
+    if (!match) return null;
+    const tag = dbToTag(rule.db);
+    let cleaned = line.replace(/-v[pn]\d+/, '');
+    const idx = cleaned.indexOf(match[0]) + match[0].length;
+    return cleaned.slice(0, idx) + tag + cleaned.slice(idx);
+  }
+
+  const lines = inputText.split(/\r?\n/);
+
+  let commands = [];
+  const ruleCounts = {};
+  rules.forEach(rule => {
+    ruleCounts[rule.regex.source] = 0;
+  });
+
+  let totalLines = 0;
+  let matchedLines = 0;
+  let unmatchedLines = 0;
+  const unmatchedSamples = [];
+
+  lines.forEach(line => {
+    if (!line.trim()) return;
+    totalLines++;
+    let matched = false;
+    for (const rule of rules) {
+      const updated = applyRule(line, rule);
+      if (updated) {
+        const targetName = updated.replace(/^.*[\\\/]/, '');
+        commands.push(`ren "${line}" "${targetName}"`);
+        ruleCounts[rule.regex.source]++;
+        matched = true;
+        matchedLines++;
+        break; // Only apply first matching rule
+      }
+    }
+    if (!matched) {
+      unmatchedLines++;
+      if (unmatchedSamples.length < 5) {
+        unmatchedSamples.push(line);
+      }
+    }
+  });
+
+  console.log(`Total lines processed: ${totalLines}`);
+  console.log(`Lines that matched a rule: ${matchedLines}`);
+  console.log(`Lines that didn't match any rule: ${unmatchedLines}`);
+  if (unmatchedSamples.length > 0) {
+    console.log('Sample unmatched lines:');
+    unmatchedSamples.forEach(sample => console.log(sample));
+  }
+
+  console.log('Rules summary:');
+  let matchedRules = 0;
+  let unmatchedRules = 0;
+  Object.entries(ruleCounts).forEach(([regex, count]) => {
+    if (count > 0) {
+      console.log(`${regex}: ${count} matches`);
+      matchedRules++;
+    } else {
+      console.log(`${regex}: 0 matches`);
+      unmatchedRules++;
+    }
+  });
+  console.log(`Total rules: ${rules.length}, Matched: ${matchedRules}, Unmatched: ${unmatchedRules}`);
+
+  return commands.join('\n');
+}
+</script>
+
+</body>
+</html>
