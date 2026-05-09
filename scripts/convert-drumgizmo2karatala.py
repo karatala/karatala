@@ -61,6 +61,7 @@ def find_all_instruments(kit_dir: Path):
     """
     instruments = []
     seen_paths = set()  # Track already-found instrument XMLs to avoid duplicates
+    seen_names = set()  # Track instrument names to skip duplicates (e.g. _sub variants)
     
     def scan_dir(search_dir: Path, depth: int = 0):
         """Recursively scan for instrument XMLs, limiting depth to avoid excessive recursion."""
@@ -80,7 +81,9 @@ def find_all_instruments(kit_dir: Path):
                         if root.find('samples') is not None:
                             # Use XML's name attribute if available, otherwise use folder name
                             inst_name = root.attrib.get('name', item.name)
-                            instruments.append({'name': inst_name, 'path': inst_xml})
+                            if inst_name not in seen_names:
+                                instruments.append({'name': inst_name, 'path': inst_xml})
+                                seen_names.add(inst_name)
                             seen_paths.add(inst_xml)
                             continue
                     except Exception:
@@ -95,10 +98,11 @@ def find_all_instruments(kit_dir: Path):
                                 tree = ET.parse(xml_file)
                                 root = tree.getroot()
                                 if root.find('samples') is not None:
-                                    inst_name = root.attrib.get('name', item.name)
-                                    instruments.append({'name': inst_name, 'path': xml_file})
+                                    inst_name = root.attrib.get('name', xml_file.stem)
+                                    if inst_name not in seen_names:
+                                        instruments.append({'name': inst_name, 'path': xml_file})
+                                        seen_names.add(inst_name)
                                     seen_paths.add(xml_file)
-                                    break  # Use first XML with samples in this folder
                             except Exception:
                                 pass
                 except Exception:
@@ -113,37 +117,78 @@ def find_all_instruments(kit_dir: Path):
     return instruments
 
 
-def extract_channels_from_kit(kit_dir: Path, instruments: list):
-    """Extract channel list from any instrument's audiofiles.
+def extract_channels_from_kit(kit_dir: Path, instruments: list, kit_xml: Path = None):
+    """Extract channel list from kit XML or instrument audiofiles.
     
-    All instruments in a kit reference the same set of channels, so we extract
-    the channel order from the first instrument's audiofiles.
-    Returns list of channel names in order (by filechannel).
+    Prefers <channels> from kit XML if available.
+    Falls back to merging channels from all instruments.
     """
+    # Try kit XML <channels> definition first
+    if kit_xml and kit_xml.exists():
+        try:
+            tree = ET.parse(kit_xml)
+            root = tree.getroot()
+            channels_elem = root.find('channels')
+            if channels_elem is not None:
+                channels = []
+                for ch in channels_elem.findall('channel'):
+                    ch_name = ch.attrib.get('name')
+                    if ch_name:
+                        channels.append(ch_name)
+                if channels:
+                    return channels
+        except Exception:
+            pass
+
     if not instruments:
         return []
-    
-    # Parse the first instrument to get channel order
-    first_inst_path = instruments[0]['path']
-    tree = ET.parse(first_inst_path)
-    root = tree.getroot()
-    
-    channels_dict = {}  # filechannel -> channel_name
-    samples_parent = root.find('samples')
-    if samples_parent is not None:
-        for sample in samples_parent.findall('sample'):
-            for af in sample.findall('audiofile'):
-                ch_name = af.attrib.get('channel')
-                fc = int(af.attrib.get('filechannel') or 0)
-                if ch_name and fc not in channels_dict:
-                    channels_dict[fc] = ch_name
-    
-    # Sort by filechannel number to get correct order
+
+    # Fallback: merge channels from ALL instruments' audiofiles
+    channels_dict = {}
+    for inst in instruments:
+        try:
+            tree = ET.parse(inst['path'])
+            root = tree.getroot()
+            samples_parent = root.find('samples')
+            if samples_parent is not None:
+                for sample in samples_parent.findall('sample'):
+                    for af in sample.findall('audiofile'):
+                        ch_name = af.attrib.get('channel')
+                        fc = int(af.attrib.get('filechannel') or 0)
+                        if ch_name and fc not in channels_dict:
+                            channels_dict[fc] = ch_name
+                    break  # Only need first sample per instrument
+        except Exception:
+            pass
+
     if channels_dict:
-        channels = [channels_dict[i] for i in sorted(channels_dict.keys())]
+        channels = [channels_dict[idx] for idx in sorted(channels_dict.keys())]
         return channels
-    
+
     return []
+
+
+def _find_kit_xml(kit_dir: Path) -> Path:
+    """Find the main kit XML (the one with the most channels)."""
+    best = None
+    best_channel_count = 0
+    candidates = list(kit_dir.glob('*.xml'))
+    for subdir in sorted(kit_dir.iterdir()):
+        if subdir.is_dir():
+            candidates.extend(subdir.glob('*.xml'))
+    for candidate in candidates:
+        try:
+            tree = ET.parse(candidate)
+            root = tree.getroot()
+            channels_elem = root.find('channels')
+            if channels_elem is not None:
+                count = len(channels_elem.findall('channel'))
+                if count > best_channel_count:
+                    best = candidate
+                    best_channel_count = count
+        except Exception:
+            pass
+    return best
 
 
 def get_kit_info(kit_dir: Path):
@@ -152,10 +197,9 @@ def get_kit_info(kit_dir: Path):
     Returns dict with 'kit_name', 'channels', 'instruments'.
     This is independent of kit XML instrument list, discovering all real instruments.
     """
-    # Get kit name from folder or kit XML if available
     kit_name = kit_dir.name
-    kit_xml = kit_dir / f"{kit_dir.name}.xml"
-    if kit_xml.exists():
+    kit_xml = _find_kit_xml(kit_dir)
+    if kit_xml:
         try:
             tree = ET.parse(kit_xml)
             root = tree.getroot()
@@ -166,8 +210,8 @@ def get_kit_info(kit_dir: Path):
     # Scan for all instruments in the kit directory
     instruments = find_all_instruments(kit_dir)
     
-    # Extract channels from the instruments
-    channels = extract_channels_from_kit(kit_dir, instruments)
+    # Extract channels from kit XML or instruments
+    channels = extract_channels_from_kit(kit_dir, instruments, kit_xml)
     
     return {
         'kit_name': kit_name,
@@ -183,9 +227,23 @@ def parse_instrument_xml(inst_xml: Path):
     samples_parent = root.find('samples')
     if samples_parent is None:
         return samples
+    # Parse velocity ranges if available (used by some kits instead of power)
+    velocity_map = {}
+    velocities_parent = root.find('velocities')
+    if velocities_parent is not None:
+        for vel in velocities_parent.findall('velocity'):
+            lower = float(vel.attrib.get('lower', 0))
+            upper = float(vel.attrib.get('upper', 1))
+            for sref in vel.findall('sampleref'):
+                ref_name = sref.attrib.get('name')
+                if ref_name:
+                    velocity_map[ref_name] = (lower, upper)
     for s in samples_parent.findall('sample'):
         sname = s.attrib.get('name')
         power = float(s.attrib.get('power') or 0.0)
+        if power == 0.0 and sname in velocity_map:
+            lower, upper = velocity_map[sname]
+            power = (lower + upper) / 2.0
         audiofiles = []
         for af in s.findall('audiofile'):
             audiofiles.append({
@@ -322,7 +380,8 @@ def parse_instrument_name(name: str):
         'ride': 'ride',
         'crash': 'crash',
         'splash': 'splash',
-        'china': 'china'
+        'china': 'china',
+        'cymb': 'crash'
     }
 
     ARTIC = {
@@ -335,19 +394,25 @@ def parse_instrument_name(name: str):
         'rim': 'rim',
         'rest': 'rest',
         'bell': 'bell',
+        'foot': 'pedal',
+        'pdl': 'pedal',
+        'ped': 'pedal',
+        'edg': 'edge',
         'stop': 'choke',
         'stopped': 'choke',
         'choke': 'choke',
     }
 
     # Phrase-level articulation checks before token pass.
-    if 'rimshot' in lname:
+    # Strip separators to match compound names like "rim_shot" -> "rimshot"
+    clean_lname = lname.replace('_', '').replace('-', '')
+    if 'rimshot' in clean_lname:
         articulation = 'rimshot'
-    elif 'pedalhit' in lname:
+    elif 'pedalhit' in clean_lname:
         articulation = 'pedal[splash]'
-    elif 'closednopedal' in lname:
+    elif 'closednopedal' in clean_lname:
         articulation = 'edge[half]'
-    elif 'semiopen' in lname:
+    elif 'semiopen' in clean_lname:
         articulation = 'edge[half]'
     elif 'stopped' in lname or 'stop' in lname:
         articulation = 'choke'
@@ -409,8 +474,6 @@ def _strip_articulation_suffix(name: str) -> str:
         'pedal',
         'splash',
         'choke',
-        'extra',
-        'xtra',
         'open',
         'bell',
         'rest',
@@ -419,11 +482,28 @@ def _strip_articulation_suffix(name: str) -> str:
     changed = True
     while changed:
         changed = False
+        # Strip trailing separators only
+        stripped = re.sub(r'[_\-]+$', '', cleaned)
+        if stripped != cleaned:
+            cleaned = stripped
+            changed = True
+            continue
+        # Try stripping articulation suffixes
         for suffix in suffixes:
             if cleaned.endswith(suffix):
                 cleaned = cleaned[:-len(suffix)]
                 changed = True
                 break
+        if changed:
+            continue
+        # Strip trailing digits only if they expose an articulation suffix
+        digit_stripped = re.sub(r'\d+$', '', cleaned)
+        if digit_stripped != cleaned:
+            for suffix in suffixes:
+                if digit_stripped.rstrip('_-').endswith(suffix):
+                    cleaned = digit_stripped
+                    changed = True
+                    break
     return re.sub(r'[^a-z0-9]+', '', cleaned)
 
 
@@ -502,7 +582,7 @@ def enumerate_instrument_slots(instruments: list, parsed_by_path: dict) -> dict:
                     side = token.upper()
                 elif tl.isdigit():
                     value = int(tl)
-                    if value >= 6:
+                    if 6 <= value <= 26:
                         explicit_size = str(value)
             grouped[side].append((inst['name'], path_key, explicit_size))
 
@@ -543,10 +623,11 @@ def enumerate_instrument_slots(instruments: list, parsed_by_path: dict) -> dict:
 
         if base_size.isdigit():
             number = int(base_size)
-            if number >= 6:
+            if 6 <= number <= 26:
                 slot_by_path[path_key] = base_size
             else:
-                slot_by_path[path_key] = f"X{number}"
+                fallback_counters[inst_type] += 1
+                slot_by_path[path_key] = f"X{fallback_counters[inst_type]}"
             continue
 
         fallback_counters[inst_type] += 1
@@ -670,13 +751,17 @@ def process_kit(kit_dir: Path, output_dir: Path, os_name: str):
         return
     
     kit_name = kit['kit_name']
+    output_name = kit_dir.name
     channels = kit['channels']
     bat_lines = ["@echo off", "setlocal"]
 
     def emit(line: str):
         print(line)
-        if line.startswith('#'):
-            bat_lines.append("REM " + line)
+        stripped = line.lstrip()
+        if stripped.startswith('#'):
+            bat_lines.append("REM " + stripped)
+        elif stripped.startswith(('Missing', 'Instrument file', 'No samples', 'Summary', 'Skipping')):
+            bat_lines.append("REM " + stripped)
         else:
             bat_lines.append(line)
 
@@ -789,7 +874,7 @@ def process_kit(kit_dir: Path, output_dir: Path, os_name: str):
 
             fname = build_filename(itype, size, artic, velocity, variant, mic_chain, ext)
             inst_folder = itype + (f"-{size}" if size else '')
-            target_dir = output_dir / kit_name / inst_folder / artic
+            target_dir = output_dir / output_name / inst_folder / artic
             target_dir = target_dir.resolve()
             dst = target_dir / fname
             mkdir_cmd, file_cmd = platform_commands(os_name, str(target_dir), str(src), str(dst))
@@ -819,8 +904,8 @@ def process_kit(kit_dir: Path, output_dir: Path, os_name: str):
         f"missing_source={summary['missing_source']} errors={summary['errors']}"
     )
 
-    safe_kit = re.sub(r'[^A-Za-z0-9_.-]+', '_', kit_name).strip('_') or 'kit'
-    bat_dir = (output_dir / kit_name).resolve()
+    safe_kit = re.sub(r'[^A-Za-z0-9_.-]+', '_', output_name).strip('_') or 'kit'
+    bat_dir = (output_dir / output_name).resolve()
     bat_dir.mkdir(parents=True, exist_ok=True)
     bat_path = bat_dir / f"convert-{safe_kit}.bat"
     bat_text = "\n".join(bat_lines) + "\n"

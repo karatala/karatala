@@ -31,3 +31,4 @@ packaging/Output/*
 build/*
 JUCE/
 modules/
+__pycache__/
