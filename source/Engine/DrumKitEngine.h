@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
+#include "EngineSettings.h"
 #include "InstrumentSynth.h"
 #include "LayoutManager.h"
 #include "SampleLoader.h"
@@ -100,6 +101,9 @@ public:
     
     void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }
     DebugLevel maxDebugLevel = DebugLevel::Error;
+
+    EngineSettings engineSettings;
+    const EngineSettings& getEngineSettings() const { return this->engineSettings; }
 
     const std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>>& getArticulationFallbackIdMap() const { return this->articulationFallbackIdMap; }
 

@@ -7,16 +7,9 @@
 #include <set>
 #include <optional>
 #include "AftertouchChokeProcessor.h"
+#include "EngineSettings.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
-
-// Tail-shortening / adaptive release control tuning constants
-static constexpr float INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD = 0.5f; // start applying when load >= 70%
-static constexpr float INSTRUMENT_TAIL_SHORTEN_AGE_MULTIPLIER = 0.02f; // age multiplier (note-on count -> 0..1)
-static constexpr float INSTRUMENT_TAIL_SHORTEN_AMP_PROTECT = 0.6f; // voices louder than this are protected
-static constexpr float INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR = 0.3f; // minimum shorten factor at full load
-static constexpr float VOICE_TAIL_SHORTEN_MIN_CLAMP = 0.1f; // voice-level clamp for shortening factor
-static constexpr float VOICE_CULL_THRESHOLD_DB = 12.0f; // cull old voice if this much lower than new peak estimate
 
 class DrumKitEngine;
 class SampleLoader;
@@ -107,8 +100,8 @@ public:
         this->envelopeState = EnvelopeState::Idle;
     }
 
-    void setTailShorteningFactor(float factor) {
-        factor = juce::jlimit(VOICE_TAIL_SHORTEN_MIN_CLAMP, 1.0f, factor);
+    void setTailShorteningFactor(float factor, float minClamp) {
+        factor = juce::jlimit(minClamp, 1.0f, factor);
         if (factor >= this->tailShortenFactor)
             return; // never lengthen here, only shorten
         this->tailShortenFactor = factor;
@@ -388,33 +381,7 @@ public:
         return static_cast<ArtRtIdx>(this->runtimeArticulations.size() - 1);
     }
 
-    void applyAdaptiveTailShortening() {
-        const int maxVoices = this->voices.size();
-        if (this->activeVoiceCount < maxVoices * INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD) return; // no need
-        const int activeVoices = this->activeVoiceCount;
-        const float load = static_cast<float>(activeVoices) / static_cast<float>(maxVoices);
-        // load TAIL_SHORTEN_LOAD_THRESHOLD → 1.0 maps to factor 1.0 → INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR
-        const float minTailShortenFactor = juce::jmap(load, INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD, 1.0f, 1.0f, INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR);
-        const float protectDb = juce::Decibels::gainToDecibels(INSTRUMENT_TAIL_SHORTEN_AMP_PROTECT, -100.0f);
-        for (auto* voice : this->voices) {
-            if (!voice->isVoiceActive()) continue;
-            const auto state = voice->getEnvelopeState();
-            if (state == InstrumentSynthVoice::EnvelopeState::FadingOut
-                || state == InstrumentSynthVoice::EnvelopeState::Releasing
-                || state == InstrumentSynthVoice::EnvelopeState::Dying)
-                continue;
-
-            const float estimatedDb = voice->getEstimatedCurrentDb();
-            // Do NOT shorten loud fresh hits
-            if (estimatedDb > protectDb) continue;
-            // Older voices get more shortening
-            const float age = static_cast<float>(lastNoteOnCounter - voice->noteOnTime);
-            const float ageFactor = juce::jlimit(0.0f, 1.0f, age * INSTRUMENT_TAIL_SHORTEN_AGE_MULTIPLIER);
-            const float finalFactor = juce::jmap(ageFactor, 0.0f, 1.0f, 1.0f, minTailShortenFactor);
-            // LOG(Debug, "Applying tail shortening to voice " + juce::String(voice->currentlyPlayingNote) + " age=" + juce::String(age) + " ageFactor=" + juce::String(ageFactor) + " load=" + juce::String(load) + " minTailShortenFactor=" + juce::String(minTailShortenFactor) + " finalFactor=" + juce::String(finalFactor));
-            voice->setTailShorteningFactor(finalFactor);
-        }
-    }
+    void applyAdaptiveTailShortening();
 
 private:
     DrumKitEngine* parent = nullptr;

@@ -307,6 +307,43 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
     if (micLayout.isNotEmpty())
         config.micLayout = micLayout;
 
+    // Parse engine settings
+    const auto& engineNode = root["engine"];
+    if (engineNode.isMap()) {
+        auto parseFloat = [](const YamlHelper::YamlNode& node, const juce::String& key, float& target) {
+            const auto val = node[key].asString();
+            if (val.isNotEmpty()) target = val.getFloatValue();
+        };
+
+        const auto& chokeNode = engineNode["aftertouch_choke"];
+        if (chokeNode.isMap()) {
+            parseFloat(chokeNode, "maxDuckDepth", this->engineSettings.chokeMaxDuckDepth);
+            parseFloat(chokeNode, "duckTimeSec", this->engineSettings.chokeDuckTimeSec);
+            parseFloat(chokeNode, "releaseTimeSec", this->engineSettings.chokeReleaseTimeSec);
+            parseFloat(chokeNode, "muteTailSec", this->engineSettings.chokeMuteTailSec);
+            parseFloat(chokeNode, "releaseBoost", this->engineSettings.chokeReleaseBoost);
+            parseFloat(chokeNode, "muteThresholdRatio", this->engineSettings.chokeMuteThresholdRatio);
+        }
+
+        const auto& tailNode = engineNode["tail_shortening"];
+        if (tailNode.isMap()) {
+            parseFloat(tailNode, "loadThreshold", this->engineSettings.tailShortenLoadThreshold);
+            parseFloat(tailNode, "ageMultiplier", this->engineSettings.tailShortenAgeMultiplier);
+            parseFloat(tailNode, "ampProtect", this->engineSettings.tailShortenAmpProtect);
+            parseFloat(tailNode, "minFactor", this->engineSettings.tailShortenMinFactor);
+            parseFloat(tailNode, "voiceMinClamp", this->engineSettings.voiceTailShortenMinClamp);
+            parseFloat(tailNode, "cullThresholdDb", this->engineSettings.voiceCullThresholdDb);
+        }
+
+        const auto& hihatNode = engineNode["hihat"];
+        if (hihatNode.isMap()) {
+            parseFloat(hihatNode, "polyphonyCrossfadeTimeoutSec", this->engineSettings.polyphonyCrossfadeTimeoutSec);
+            parseFloat(hihatNode, "pedalCrossfadeSec", this->engineSettings.hihatPedalCrossfadeSec);
+            parseFloat(hihatNode, "pedalMinRemainingSec", this->engineSettings.hihatPedalMinRemainingSec);
+            parseFloat(hihatNode, "crossArtChokeDbMargin", this->engineSettings.hihatCrossArtChokeDbMargin);
+        }
+    }
+
     result.value = config;
     return result;
 }
@@ -319,13 +356,70 @@ juce::String DrumKitEngine::getDefaultYaml() {
     const juce::File libDir = this->dataPath.getChildFile("sample_library");
     if (libDir.exists())
         result += "libraryPath: " + libDir.getFullPathName() + "\n";
+    result += "\n";
+    result += "# engine:\n";
+    result += "#   aftertouch_choke:\n";
+    result += "#     maxDuckDepth: 0.7\n";
+    result += "#     duckTimeSec: 0.15\n";
+    result += "#     releaseTimeSec: 0.05\n";
+    result += "#     muteTailSec: 0.04\n";
+    result += "#     releaseBoost: 0.1\n";
+    result += "#     muteThresholdRatio: 0.5\n";
+    result += "#   tail_shortening:\n";
+    result += "#     loadThreshold: 0.5\n";
+    result += "#     ageMultiplier: 0.02\n";
+    result += "#     ampProtect: 0.6\n";
+    result += "#     minFactor: 0.3\n";
+    result += "#     voiceMinClamp: 0.1\n";
+    result += "#     cullThresholdDb: 12.0\n";
+    result += "#   hihat:\n";
+    result += "#     polyphonyCrossfadeTimeoutSec: 0.3\n";
+    result += "#     pedalCrossfadeSec: 0.2\n";
+    result += "#     pedalMinRemainingSec: 0.05\n";
+    result += "#     crossArtChokeDbMargin: 3.0\n";
     return result;
+}
+
+static juce::String floatToYaml(float value) {
+    // Use enough precision but avoid trailing zeros
+    return juce::String(value, 4).trimCharactersAtEnd("0").trimCharactersAtEnd(".");
 }
 
 void DrumKitEngine::saveSettings() {
     juce::File configFile = dataPath.getChildFile("config.yaml");
-    //TODO: write yaml
-    jassertfalse;
+
+    juce::String yaml;
+    yaml += "kitLayout: " + this->globalConfig.kitLayout + "\n";
+    yaml += "micLayout: " + this->globalConfig.micLayout + "\n";
+    yaml += "sampleLoaderCacheLimitMegabytes: " + juce::String(this->globalConfig.sampleLoaderCacheLimitMegabytes) + "\n";
+    if (this->globalConfig.libraryPath.exists())
+        yaml += "libraryPath: " + this->globalConfig.libraryPath.getFullPathName() + "\n";
+
+    const auto& settings = this->engineSettings;
+    yaml += "\nengine:\n";
+    yaml += "  aftertouch_choke:\n";
+    yaml += "    maxDuckDepth: " + floatToYaml(settings.chokeMaxDuckDepth) + "\n";
+    yaml += "    duckTimeSec: " + floatToYaml(settings.chokeDuckTimeSec) + "\n";
+    yaml += "    releaseTimeSec: " + floatToYaml(settings.chokeReleaseTimeSec) + "\n";
+    yaml += "    muteTailSec: " + floatToYaml(settings.chokeMuteTailSec) + "\n";
+    yaml += "    releaseBoost: " + floatToYaml(settings.chokeReleaseBoost) + "\n";
+    yaml += "    muteThresholdRatio: " + floatToYaml(settings.chokeMuteThresholdRatio) + "\n";
+    yaml += "  tail_shortening:\n";
+    yaml += "    loadThreshold: " + floatToYaml(settings.tailShortenLoadThreshold) + "\n";
+    yaml += "    ageMultiplier: " + floatToYaml(settings.tailShortenAgeMultiplier) + "\n";
+    yaml += "    ampProtect: " + floatToYaml(settings.tailShortenAmpProtect) + "\n";
+    yaml += "    minFactor: " + floatToYaml(settings.tailShortenMinFactor) + "\n";
+    yaml += "    voiceMinClamp: " + floatToYaml(settings.voiceTailShortenMinClamp) + "\n";
+    yaml += "    cullThresholdDb: " + floatToYaml(settings.voiceCullThresholdDb) + "\n";
+    yaml += "  hihat:\n";
+    yaml += "    polyphonyCrossfadeTimeoutSec: " + floatToYaml(settings.polyphonyCrossfadeTimeoutSec) + "\n";
+    yaml += "    pedalCrossfadeSec: " + floatToYaml(settings.hihatPedalCrossfadeSec) + "\n";
+    yaml += "    pedalMinRemainingSec: " + floatToYaml(settings.hihatPedalMinRemainingSec) + "\n";
+    yaml += "    crossArtChokeDbMargin: " + floatToYaml(settings.hihatCrossArtChokeDbMargin) + "\n";
+
+    if (!configFile.replaceWithText(yaml)) {
+        LOG(Warning, "Could not write config.yaml");
+    }
 }
 
 bool DrumKitEngine::applyKitLayout() {

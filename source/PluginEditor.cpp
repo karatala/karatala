@@ -10,6 +10,10 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     addAndMakeVisible(instrumentMapLabel);
     addAndMakeVisible(applyButton);
     addAndMakeVisible(statusLabel);
+    addAndMakeVisible(settingsTabButton);
+
+    settingsPanel = std::make_unique<EngineSettingsPanel>(processorRef.getEngine());
+    addChildComponent(*settingsPanel);
 
     // this chunk of code instantiates and opens the melatonin inspector
     inspectButton.onClick = [&] {
@@ -86,6 +90,19 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     setSize(1000, 580);
 }
 
+void PluginEditor::toggleSettingsView() {
+    this->showingSettings = !this->showingSettings;
+    this->settingsTabButton.setButtonText(this->showingSettings ? "Instrument Map" : "Engine Settings");
+    this->instrumentMapEditor.setVisible(!this->showingSettings);
+    this->instrumentMapLabel.setVisible(!this->showingSettings);
+    this->applyButton.setVisible(!this->showingSettings);
+    this->statusLabel.setVisible(!this->showingSettings);
+    this->settingsPanel->setVisible(this->showingSettings);
+    if (this->showingSettings)
+        this->settingsPanel->loadFromEngine();
+    this->resized();
+}
+
 PluginEditor::~PluginEditor() {
 }
 
@@ -102,6 +119,8 @@ void PluginEditor::paint(juce::Graphics& g) {
 void PluginEditor::resized() {
     auto area = getLocalBounds().reduced(12);
     auto topBar = area.removeFromTop(36);
+    settingsTabButton.setBounds(topBar.removeFromLeft(140));
+    topBar.removeFromLeft(8);
     inspectButton.setBounds(topBar.removeFromRight(120));
 
     area.removeFromTop(8);
@@ -124,6 +143,10 @@ void PluginEditor::resized() {
     referencePanelLabel.setBounds(refArea.removeFromTop(labelHeight));
     referencePanel.setBounds(refArea);
 
-    instrumentMapLabel.setBounds(mapArea.removeFromTop(labelHeight));
-    instrumentMapEditor.setBounds(mapArea);
+    if (this->showingSettings) {
+        this->settingsPanel->setBounds(mapArea);
+    } else {
+        instrumentMapLabel.setBounds(mapArea.removeFromTop(labelHeight));
+        instrumentMapEditor.setBounds(mapArea);
+    }
 }

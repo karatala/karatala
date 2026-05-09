@@ -1,18 +1,14 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "EngineSettings.h"
 
 /**
  *  realistic cymbal choke using Polyphonic Aftertouch: with mute timeout, if aftertouch value became less in that timeout, volume return back by some percent
  */
 class AftertouchChokeProcessor {
 public:
-    static constexpr float maxDuckDepth = 0.7f;       // 70%
-    static constexpr float duckTimeSec = 0.15f;       // 150 ms
-    static constexpr float releaseTimeSec = 0.05f;    // 50 ms
-    static constexpr float muteTailSec = 0.04f;       // 40 ms
-    static constexpr float releaseBoost = 0.1f;       // +10%
-    static constexpr float muteThresholdRatio = 0.5f; // 50% of maxPA
+    const EngineSettings* engineSettings = nullptr;
     
     enum class State { Idle, Ducking, Releasing, Muted };
 
@@ -43,7 +39,7 @@ public:
         if (pa > 0.0f) {
             this->maxPA = juce::jmax(this->maxPA, pa);
 
-            this->targetGain = 1.0f - pa * this->maxDuckDepth;
+            this->targetGain = 1.0f - pa * this->engineSettings->chokeMaxDuckDepth;
 
             if (this->state != State::Muted) {
                 this->state = State::Ducking;
@@ -54,7 +50,7 @@ public:
                 this->state = State::Releasing;
                 this->releaseElapsed = 0.0f;
 
-                float boosted = juce::jmin(1.0f, this->currentGain + releaseBoost);
+                float boosted = juce::jmin(1.0f, this->currentGain + this->engineSettings->chokeReleaseBoost);
                 this->targetGain = boosted;
             }
         }
@@ -66,10 +62,10 @@ public:
         switch (this->state) {
             case State::Ducking: {
                 this->duckElapsed += dt;
-                this->moveTowards(this->targetGain, duckTimeSec);
+                this->moveTowards(this->targetGain, this->engineSettings->chokeDuckTimeSec);
 
-                if (this->duckElapsed >= duckTimeSec) {
-                    if (this->currentPA >= this->maxPA * this->muteThresholdRatio) {
+                if (this->duckElapsed >= this->engineSettings->chokeDuckTimeSec) {
+                    if (this->currentPA >= this->maxPA * this->engineSettings->chokeMuteThresholdRatio) {
                         this->state = State::Muted;
                         this->muteElapsed = 0.0f;
                         // small tail instead of hard zero
@@ -84,9 +80,9 @@ public:
 
             case State::Releasing: {
                 this->releaseElapsed += dt;
-                this->moveTowards(this->targetGain, releaseTimeSec);
+                this->moveTowards(this->targetGain, this->engineSettings->chokeReleaseTimeSec);
 
-                if (this->releaseElapsed >= releaseTimeSec) {
+                if (this->releaseElapsed >= this->engineSettings->chokeReleaseTimeSec) {
                     this->state = State::Idle;
                     this->maxPA = 0.0f;
                 }
@@ -96,7 +92,7 @@ public:
             case State::Muted: {
                 this->muteElapsed += dt;
                 // smooth short tail
-                this->moveTowards(0.0f, muteTailSec);
+                this->moveTowards(0.0f, this->engineSettings->chokeMuteTailSec);
                 break;
             }
 

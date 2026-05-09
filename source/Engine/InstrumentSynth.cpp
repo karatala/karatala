@@ -1,6 +1,5 @@
-#pragma once
-
 #include "InstrumentSynth.h"
+#include "DrumKitEngine.h"
 #include <limits>
 
 
@@ -60,6 +59,31 @@ void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSa
     }
     this->activeVoiceCount = activeCount;
     this->applyAdaptiveTailShortening();
+}
+
+void InstrumentSynth::applyAdaptiveTailShortening() {
+    const auto& settings = this->parent->getEngineSettings();
+    const int maxVoices = this->voices.size();
+    if (this->activeVoiceCount < maxVoices * settings.tailShortenLoadThreshold) return;
+    const int activeVoices = this->activeVoiceCount;
+    const float load = static_cast<float>(activeVoices) / static_cast<float>(maxVoices);
+    const float minTailShortenFactor = juce::jmap(load, settings.tailShortenLoadThreshold, 1.0f, 1.0f, settings.tailShortenMinFactor);
+    const float protectDb = juce::Decibels::gainToDecibels(settings.tailShortenAmpProtect, -100.0f);
+    for (auto* voice : this->voices) {
+        if (!voice->isVoiceActive()) continue;
+        const auto state = voice->getEnvelopeState();
+        if (state == InstrumentSynthVoice::EnvelopeState::FadingOut
+            || state == InstrumentSynthVoice::EnvelopeState::Releasing
+            || state == InstrumentSynthVoice::EnvelopeState::Dying)
+            continue;
+
+        const float estimatedDb = voice->getEstimatedCurrentDb();
+        if (estimatedDb > protectDb) continue;
+        const float age = static_cast<float>(lastNoteOnCounter - voice->noteOnTime);
+        const float ageFactor = juce::jlimit(0.0f, 1.0f, age * settings.tailShortenAgeMultiplier);
+        const float finalFactor = juce::jmap(ageFactor, 0.0f, 1.0f, 1.0f, minTailShortenFactor);
+        voice->setTailShorteningFactor(finalFactor, settings.voiceTailShortenMinClamp);
+    }
 }
 
 InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int /*midiNoteNumber*/, int groupId) const {
@@ -185,8 +209,10 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     // set playback sample rate for voices
     this->setCurrentPlaybackSampleRate(newSampleRate);
 
-    for (auto* voice : this->voices) //TODO: maybe refactor to separate method
+    for (auto* voice : this->voices) { //TODO: maybe refactor to separate method
+        voice->chokeProcessor.engineSettings = &this->parent->getEngineSettings();
         voice->chokeProcessor.prepare(newSampleRate);
+    }
 }
 
 void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, SampledSound* sound) {
