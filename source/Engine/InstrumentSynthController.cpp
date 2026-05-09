@@ -93,7 +93,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
                     // Only log when this redirect produces a new transition (not already cached).
                     const auto cachedArtIt = this->lastCcArticulation.find(controllerNumber);
                     if (cachedArtIt == this->lastCcArticulation.end() || cachedArtIt->second != redirectedIdx)
-                        LOG(Verbose, "HiHat CC: prefer-pedal redirect from " + targetArt.codeRaw + " to " + candArt.codeRaw);
+                        LOG(Verbose, "HiHat CC: prefer-pedal redirect from " + targetArt.getCodeRaw() + " to " + candArt.getCodeRaw());
                     newArtIdx = redirectedIdx;
                     break;
                 }

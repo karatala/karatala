@@ -88,6 +88,7 @@ public:
     void requestRelease();
     void killImmediately();
     float getEstimatedCurrentDb() const;
+    void updateEstimatedDb();
     EnvelopeState getEnvelopeState() const noexcept { return this->envelopeState; }
 
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
@@ -158,6 +159,7 @@ public:
     float velocityGain = 1.0f;
     float tailShortenFactor = 1.0f;   // 1.0 = normal, <1 = shortened
     float lastEnvelopeValue = 0.0f;
+    float cachedEstimatedDb = -100.0f;
     int hitGroupId = -1;
 
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
@@ -185,7 +187,6 @@ public:
     };
 
     struct ArticulationRuntime {
-        juce::String codeRaw; //FIXME: remove after debugged or hide under something like ifdef DEBUG_SOMETHING
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
         // pdl_opn_cls value extracted from ArticulationSpec expression dimensions.
@@ -198,10 +199,12 @@ public:
 
         explicit ArticulationRuntime(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) : nameId(nameId), exprId(exprId) {
             velocityToLayer.fill(-1);
-            
-            //FIXME: remove after debugged or hide under something like ifdef DEBUG_SOMETHING
-            this->codeRaw = StringsDictSingleton::nameOf(nameId);
-            if (exprId != 0) this->codeRaw += "[" + StringsDictSingleton::nameOf(exprId) + "]";
+        }
+
+        juce::String getCodeRaw() const {
+            juce::String result = StringsDictSingleton::nameOf(nameId);
+            if (exprId != 0) result += "[" + StringsDictSingleton::nameOf(exprId) + "]";
+            return result;
         }
 
         // choose the first layer whose configured velocity is >= current velocity.
@@ -289,17 +292,9 @@ public:
         return rawPtr;
     }
     InstrumentSynthVoice* addVoice(InstrumentSynthVoice* const newVoice) {
-        InstrumentSynthVoice* voice;
-        {
-            const juce::ScopedLock sl(this->lock);
-            newVoice->setCurrentPlaybackSampleRate(this->sampleRate);
-            voice = this->voices.add(newVoice);
-        }
-        {
-            const juce::ScopedLock sl(this->stealLock);
-            this->stealCandidateScratch.reserve(voices.size() + 1);
-        }
-        return voice;
+        const juce::ScopedLock sl(this->lock);
+        newVoice->setCurrentPlaybackSampleRate(this->sampleRate);
+        return this->voices.add(newVoice);
     }
     InstrumentSynthVoice* findFreeVoice(int midiChannel, int midiNoteNumber, const int groupId) const {
         const juce::ScopedLock sl(this->lock);
@@ -395,16 +390,9 @@ public:
     }
 
     void applyAdaptiveTailShortening() {
-        const int activeVoices = [&]() {
-            int c = 0;
-            for (auto* v : this->voices)
-                if (v->isVoiceActive())
-                    ++c;
-            return c;
-        }();
-
         const int maxVoices = this->voices.size();
-        if (activeVoices < maxVoices * INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD) return; // no need
+        if (this->activeVoiceCount < maxVoices * INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD) return; // no need
+        const int activeVoices = this->activeVoiceCount;
         const float load = static_cast<float>(activeVoices) / static_cast<float>(maxVoices);
         // load TAIL_SHORTEN_LOAD_THRESHOLD → 1.0 maps to factor 1.0 → INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR
         const float minTailShortenFactor = juce::jmap(load, INSTRUMENT_TAIL_SHORTEN_LOAD_THRESHOLD, 1.0f, 1.0f, INSTRUMENT_TAIL_SHORTEN_MIN_FACTOR);
@@ -441,10 +429,9 @@ private:
 
     juce::uint32 lastNoteOnCounter = 0;
     juce::CriticalSection lock;
-    mutable juce::CriticalSection stealLock;
     double sampleRate = 0;
     juce::OwnedArray<InstrumentSynthVoice> voices;
-    mutable std::vector<InstrumentSynthVoice*> stealCandidateScratch;
+    int activeVoiceCount = 0;
     std::vector<std::shared_ptr<SampledSound>> sampledSoundPtrs;
     int minimumSubBlockSize = 32;
     bool subBlockSubdivisionIsStrict = false;

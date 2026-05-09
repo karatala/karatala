@@ -53,112 +53,100 @@ void InstrumentSynth::renderNextBlock(juce::AudioBuffer<float>& outputAudio, con
 }
 
 void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSample, int numSamples) {
+    int activeCount = 0;
+    for (auto* voice : this->voices) {
+        voice->renderNextBlock(buffer, startSample, numSamples);
+        if (voice->isVoiceActive()) ++activeCount;
+    }
+    this->activeVoiceCount = activeCount;
     this->applyAdaptiveTailShortening();
-    for (auto* voice : this->voices) voice->renderNextBlock(buffer, startSample, numSamples);
 }
 
 InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int /*midiNoteNumber*/, int groupId) const {
-    const juce::ScopedLock sl(this->stealLock);
-    this->stealCandidateScratch.clear();
+    // Single-pass scan: find best candidate per state category without heap allocations.
+    // Priority order: Dying (oldest) > FadingOut (quietest) > Releasing (quietest)
+    //               > Playing (quietest non-protected) > oldest in group.
+    InstrumentSynthVoice* oldestDying = nullptr;
+    InstrumentSynthVoice* quietestFading = nullptr;
+    float quietestFadingDb = std::numeric_limits<float>::infinity();
+    InstrumentSynthVoice* quietestReleasing = nullptr;
+    float quietestReleasingDb = std::numeric_limits<float>::infinity();
+
+    // Playing state: track both the loudest (protected) and quietest (steal target)
+    InstrumentSynthVoice* protectedPlaying = nullptr;
+    float protectedPlayingDb = -std::numeric_limits<float>::infinity();
+    uint32_t protectedPlayingTime = 0;
+    InstrumentSynthVoice* quietestPlaying = nullptr;
+    float quietestPlayingDb = std::numeric_limits<float>::infinity();
+    int playingCount = 0;
+
+    InstrumentSynthVoice* oldestInGroup = nullptr;
 
     for (auto* voice : this->voices) {
         if (!voice->isVoiceActive()) continue;
         if (voice->hitGroupId != groupId) continue;
-        this->stealCandidateScratch.push_back(voice);
+
+        // Track oldest overall as final fallback
+        if (oldestInGroup == nullptr || voice->wasStartedBefore(*oldestInGroup))
+            oldestInGroup = voice;
+
+        const auto state = voice->getEnvelopeState();
+        switch (state) {
+            case InstrumentSynthVoice::EnvelopeState::Dying:
+                if (oldestDying == nullptr || voice->wasStartedBefore(*oldestDying))
+                    oldestDying = voice;
+                break;
+            case InstrumentSynthVoice::EnvelopeState::FadingOut: {
+                const float db = voice->getEstimatedCurrentDb();
+                if (quietestFading == nullptr || db < quietestFadingDb) {
+                    quietestFading = voice;
+                    quietestFadingDb = db;
+                }
+                break;
+            }
+            case InstrumentSynthVoice::EnvelopeState::Releasing: {
+                const float db = voice->getEstimatedCurrentDb();
+                if (quietestReleasing == nullptr || db < quietestReleasingDb) {
+                    quietestReleasing = voice;
+                    quietestReleasingDb = db;
+                }
+                break;
+            }
+            case InstrumentSynthVoice::EnvelopeState::Playing: {
+                ++playingCount;
+                const float db = voice->getEstimatedCurrentDb();
+                // Track loudest/newest for protection
+                if (protectedPlaying == nullptr || db > protectedPlayingDb
+                    || (juce::approximatelyEqual(db, protectedPlayingDb) && voice->noteOnTime > protectedPlayingTime)) {
+                    protectedPlaying = voice;
+                    protectedPlayingDb = db;
+                    protectedPlayingTime = voice->noteOnTime;
+                }
+                // Track quietest for stealing
+                if (quietestPlaying == nullptr || db < quietestPlayingDb) {
+                    quietestPlaying = voice;
+                    quietestPlayingDb = db;
+                }
+                break;
+            }
+            default:
+                break;
+        }
     }
 
-    if (this->stealCandidateScratch.empty()) return nullptr;
+    if (oldestDying != nullptr) return oldestDying;
+    if (quietestFading != nullptr) return quietestFading;
+    if (quietestReleasing != nullptr) return quietestReleasing;
 
-    auto pickOldest = [](const std::vector<InstrumentSynthVoice*>& arr) -> InstrumentSynthVoice* {
-        if (arr.empty())
-            return nullptr;
-        auto* oldest = arr.front();
-        for (auto* v : arr)
-            if (v->wasStartedBefore(*oldest))
-                oldest = v;
-        return oldest;
-    };
-
-    auto collectByState = [&](InstrumentSynthVoice::EnvelopeState state) {
-        std::vector<InstrumentSynthVoice*> result;
-        for (auto* v : this->stealCandidateScratch)
-            if (v->getEnvelopeState() == state)
-                result.push_back(v);
-        return result;
-    };
-
-    auto dying = collectByState(InstrumentSynthVoice::EnvelopeState::Dying);
-    if (!dying.empty())
-        return pickOldest(dying);
-
-    auto fading = collectByState(InstrumentSynthVoice::EnvelopeState::FadingOut);
-    if (!fading.empty()) {
-        InstrumentSynthVoice* best = nullptr;
-        float bestDb = std::numeric_limits<float>::infinity();
-        for (auto* v : fading) {
-            const float db = v->getEstimatedCurrentDb();
-            if (!best || db < bestDb) {
-                best = v;
-                bestDb = db;
-            }
-        }
-        if (best) return best;
+    // For Playing voices: steal quietest, but protect loudest if multiple exist
+    if (playingCount > 0) {
+        if (playingCount > 1 && quietestPlaying != protectedPlaying && quietestPlaying != nullptr)
+            return quietestPlaying;
+        if (protectedPlaying != nullptr)
+            return protectedPlaying;
     }
 
-    auto releasing = collectByState(InstrumentSynthVoice::EnvelopeState::Releasing);
-    if (!releasing.empty()) {
-        InstrumentSynthVoice* best = nullptr;
-        float bestDb = std::numeric_limits<float>::infinity();
-        for (auto* v : releasing) {
-            const float db = v->getEstimatedCurrentDb();
-            if (!best || db < bestDb) {
-                best = v;
-                bestDb = db;
-            }
-        }
-        if (best) return best;
-    }
-
-    std::vector<InstrumentSynthVoice*> playing;
-    for (auto* v : this->stealCandidateScratch)
-        if (v->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing)
-            playing.push_back(v);
-
-    if (!playing.empty()) {
-        InstrumentSynthVoice* protectedVoice = nullptr;
-        float protectedDb = -std::numeric_limits<float>::infinity();
-        uint32_t protectedTime = 0;
-
-        for (auto* candidate : playing) {
-            const float db = candidate->getEstimatedCurrentDb();
-            if (!protectedVoice || db > protectedDb || (juce::approximatelyEqual(db, protectedDb) && candidate->noteOnTime > protectedTime)) {
-                protectedVoice = candidate;
-                protectedDb = db;
-                protectedTime = candidate->noteOnTime;
-            }
-        }
-
-        InstrumentSynthVoice* best = nullptr;
-        float bestDb = std::numeric_limits<float>::infinity();
-        for (auto* candidate : playing) {
-            if (playing.size() > 1 && candidate == protectedVoice)
-                continue;
-
-            const float db = candidate->getEstimatedCurrentDb();
-            if (!best || db < bestDb) {
-                best = candidate;
-                bestDb = db;
-            }
-        }
-
-        if (best != nullptr)
-            return best;
-
-        if (protectedVoice != nullptr)
-            return protectedVoice;
-    }
-
-    return pickOldest(this->stealCandidateScratch);
+    return oldestInGroup;
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
@@ -252,19 +240,26 @@ void InstrumentSynthVoice::killImmediately() {
 }
 
 float InstrumentSynthVoice::getEstimatedCurrentDb() const {
-    if (!this->isVoiceActive())
-        return -100.0f;
+    return this->cachedEstimatedDb;
+}
+
+void InstrumentSynthVoice::updateEstimatedDb() {
+    if (!this->isVoiceActive()) {
+        this->cachedEstimatedDb = -100.0f;
+        return;
+    }
 
     auto* s = this->currentlyPlayingSound;
     if (s == nullptr || !s->decayEnvelope.isValid()) {
         const float gain = juce::jmax(0.0001f, this->getCurrentAmplitude());
-        return juce::Decibels::gainToDecibels(gain, -100.0f);
+        this->cachedEstimatedDb = juce::Decibels::gainToDecibels(gain, -100.0f);
+        return;
     }
 
     const double srcRate = s->sampleRate > 0.0 ? s->sampleRate : 44100.0;
     const float elapsedMs = static_cast<float>((this->sourceSamplePosition / srcRate) * 1000.0);
     const float velDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, this->velocityGain), -100.0f);
-    return s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb;
+    this->cachedEstimatedDb = s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb;
 }
 
 void InstrumentSynthVoice::stopNote(bool allowTailOff) {
@@ -356,4 +351,5 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         this->stopNote(false);
         // LOG(Debug, "ADSR release finished for voice note " + juce::String(this->currentlyPlayingNote) + " sample=" + (s->sampleVariantSpec ? s->sampleVariantSpec->sampleFile.getFileName() : juce::String("unknown")) + " pos=" + juce::String(this->sourceSamplePosition) + " srcLen=" + juce::String(srcLen));
     }
+    this->updateEstimatedDb();
 }
