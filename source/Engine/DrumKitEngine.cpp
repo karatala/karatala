@@ -148,6 +148,7 @@ bool DrumKitEngine::setMicLayout(MicLayout layout) {
 }
 
 void DrumKitEngine::mapDefaultKit() {
+    const juce::ScopedLock graphLock(this->engineGraphLock);
     const auto& kits = this->getInstrumentManager()->getKits();
     const KitLib::DrumKitSpec* kit = kits.empty() ? nullptr : kits[0].get(); //MAYBE: later use global setting for default kit instead
     if (kit != nullptr) {
@@ -334,6 +335,7 @@ void DrumKitEngine::saveSettings() {
 }
 
 bool DrumKitEngine::applyKitLayout() {
+    const juce::ScopedLock graphLock(this->engineGraphLock);
     if (this->activeKitLayoutPtr == nullptr) {
         LOG(Warning, "kit layout was not set");
         return false;
@@ -434,6 +436,7 @@ void DrumKitEngine::buildNoteNameCache() {
 }
 
 bool DrumKitEngine::applyMicLayout() {
+    const juce::ScopedLock graphLock(this->engineGraphLock);
     if (this->activeMicLayoutPtr == nullptr) {
         LOG(Warning, "mic layout was not set");
         return false;
@@ -577,6 +580,7 @@ bool DrumKitEngine::applyMicLayout() {
 }
 
 void DrumKitEngine::prepareToPlay(double sampleRate, int samplesPerBlock) {
+    const juce::ScopedLock graphLock(this->engineGraphLock);
     this->lastSampleRate = sampleRate;
     this->lastSamplesPerBlock = samplesPerBlock;
     for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
@@ -635,7 +639,9 @@ void DrumKitEngine::saveLatestPolyphonicAftertouchValues(const juce::MidiBuffer&
 }
 
 bool DrumKitEngine::useInstrumentMap(juce::String text) {
-    const juce::ScopedLock graphLock(this->engineGraphLock);
+    // ======================== PHASE 1: VALIDATION (no lock) ========================
+    // Safe to read libraryManagerPtr/activeKitLayoutPtr without lock — only mutated on
+    // the message thread, which is our current thread.
     this->lastInstrumentMapStatus.clear();
 
     if (text.trim().isEmpty()) {
@@ -655,6 +661,10 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         LOG(Error, this->lastInstrumentMapStatus);
         return false;
     }
+
+    // ======================== PHASE 2: PARSE & RESOLVE (no lock) ========================
+    // All parsing, kit/instrument resolution, and synth creation happens here.
+    // The audio thread continues processing the OLD synth graph uninterrupted.
 
     auto parsed = DrumKitEngine::parseInstrumentMapText(text);
     for (const auto& warning : parsed.errors)
@@ -697,8 +707,11 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
     const bool currentlyHasShadowSynths = static_cast<int>(this->instrumentSynthPtrs.size()) > this->primaryInstrumentSynthCount;
     const bool rebuildAllShadows = currentlyHasShadowSynths || anyGroupHasMultipleEntries;
-    if (rebuildAllShadows)
-        this->clearShadowSynths();
+
+    // Build index map for fast primary slot lookup (safe to read on message thread)
+    std::unordered_map<juce::String, int> primarySlotIndex;
+    for (int idx = 0; idx < this->primaryInstrumentSynthCount; ++idx)
+        primarySlotIndex[this->instrumentSynthPtrs[idx]->getId()] = idx;
 
     juce::StringArray statusLines;
     for (const auto& warning : parsed.errors)
@@ -707,6 +720,23 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
     int applied = 0;
     bool forceApplyAllSlots = false;
 
+    // Wildcard handling: detect if a full kit reload is needed
+    KitLib::DrumKitSpec* wildcardKitSpec = nullptr;
+    bool wildcardChanged = false;
+
+    // Per-slot preparation: replacement synths and shadow synths built outside the lock
+    struct PreparedShadow {
+        std::unique_ptr<InstrumentSynth> synth;
+        std::vector<std::pair<int, InstrumentSynth*>> noteRoutes;
+    };
+    struct PreparedSlot {
+        juce::String slotId;
+        int primaryIndex = -1;
+        std::unique_ptr<InstrumentSynth> primaryReplacement;
+        std::vector<PreparedShadow> shadows;
+    };
+    std::vector<PreparedSlot> preparedSlots;
+
     for (const auto& slotId : slotOrder) {
         const auto& group = entriesBySlotId[slotId];
         if (group.empty())
@@ -714,15 +744,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
         if (slotId == "*") {
             const auto& wildcardEntry = *group.front();
-            auto* kitSpec = this->libraryManagerPtr->findKit(wildcardEntry.kitRef);
-            if (kitSpec == nullptr) {
+            wildcardKitSpec = this->libraryManagerPtr->findKit(wildcardEntry.kitRef);
+            if (wildcardKitSpec == nullptr) {
                 statusLines.add("Kit not found for wildcard entry: " + wildcardEntry.kitRef);
                 continue;
             }
-
-            const bool wildcardChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
+            wildcardChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
             if (wildcardChanged) {
-                this->mapKit(*kitSpec);
                 forceApplyAllSlots = true;
                 ++applied;
             }
@@ -822,46 +850,110 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts });
         }
 
-        if (slotChanged) {
-            primarySlot->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds);
-            applyOverrides(*primarySlot, *primary.entry);
+        PreparedSlot prep;
+        prep.slotId = slotId;
+        auto pIdxIt = primarySlotIndex.find(slotId);
+        prep.primaryIndex = (pIdxIt != primarySlotIndex.end()) ? pIdxIt->second : -1;
+
+        // Create a replacement synth for the primary slot (expensive work done outside lock)
+        if (slotChanged && prep.primaryIndex >= 0) {
+            auto replacement = std::make_unique<InstrumentSynth>(this, slotLayout);
+            replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
+            replacement->setMicChannelCount(primarySlot->getMicChannelCount());
+            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds);
+            applyOverrides(*replacement, *primary.entry);
             if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
-                primarySlot->setCurrentPlaybackSampleRate(this->lastSampleRate);
-                primarySlot->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
+                replacement->setCurrentPlaybackSampleRate(this->lastSampleRate);
+                replacement->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
             }
+            prep.primaryReplacement = std::move(replacement);
             ++applied;
         }
 
-        if (rebuildAllShadows) for (const auto& shadowPlan : shadowPlans) {
-            auto shadow = std::make_unique<InstrumentSynth>(this, slotLayout);
-            auto* shadowPtr = shadow.get();
-            shadowPtr->setMicOutputMapping(primarySlot->getMicOutputMapping());
-            shadowPtr->setMicChannelCount(primarySlot->getMicChannelCount());
-            shadowPtr->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdList(shadowPlan.articulations));
-            applyOverrides(*shadowPtr, *shadowPlan.entry);
+        // Create shadow synths (expensive work done outside lock)
+        if (rebuildAllShadows) {
+            for (const auto& shadowPlan : shadowPlans) {
+                auto shadow = std::make_unique<InstrumentSynth>(this, slotLayout);
+                auto* shadowRaw = shadow.get();
+                shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
+                shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
+                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdList(shadowPlan.articulations));
+                applyOverrides(*shadowRaw, *shadowPlan.entry);
 
-            if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
-                shadowPtr->setCurrentPlaybackSampleRate(this->lastSampleRate);
-                shadowPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
-            }
-
-            for (const auto& art : slotLayout.articulations) {
-                if (!shadowPlan.articulations.empty()) {
-                    const auto artName = StringsDictSingleton::nameOf(art.nameId);
-                    if (std::find(shadowPlan.articulations.begin(), shadowPlan.articulations.end(), artName) == shadowPlan.articulations.end())
-                        continue;
+                if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
+                    shadowRaw->setCurrentPlaybackSampleRate(this->lastSampleRate);
+                    shadowRaw->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
                 }
 
-                for (const int note : art.notes)
-                    this->instrumentSynthsByNote[note].push_back(shadowPtr);
+                PreparedShadow ps;
+                for (const auto& art : slotLayout.articulations) {
+                    if (!shadowPlan.articulations.empty()) {
+                        const auto artName = StringsDictSingleton::nameOf(art.nameId);
+                        if (std::find(shadowPlan.articulations.begin(), shadowPlan.articulations.end(), artName) == shadowPlan.articulations.end())
+                            continue;
+                    }
+                    for (const int note : art.notes)
+                        ps.noteRoutes.push_back({note, shadowRaw});
+                }
+                ps.synth = std::move(shadow);
+                prep.shadows.push_back(std::move(ps));
+                ++applied;
             }
-
-            this->instrumentSynthPtrs.push_back(std::move(shadow));
-            ++applied;
         }
+
+        preparedSlots.push_back(std::move(prep));
     }
 
-    this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
+    // ======================== PHASE 3: SWAP (brief lock) ========================
+    // The lock is held only for fast pointer swaps and routing table updates.
+    // Old synths are collected and destroyed AFTER the lock is released.
+    std::vector<std::unique_ptr<InstrumentSynth>> oldSynths;
+    {
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+
+        // Handle wildcard: full kit reload (rare, lock hold acceptable)
+        if (wildcardChanged && wildcardKitSpec != nullptr)
+            this->mapKit(*wildcardKitSpec);
+
+        // Remove old shadow synths
+        if (rebuildAllShadows) {
+            for (int idx = static_cast<int>(this->instrumentSynthPtrs.size()) - 1;
+                 idx >= this->primaryInstrumentSynthCount; --idx) {
+                oldSynths.push_back(std::move(this->instrumentSynthPtrs[idx]));
+            }
+            this->instrumentSynthPtrs.erase(
+                this->instrumentSynthPtrs.begin() + this->primaryInstrumentSynthCount,
+                this->instrumentSynthPtrs.end());
+        }
+
+        // Swap in prepared primary replacements (pointer swap only)
+        bool anyPrimarySwapped = false;
+        for (auto& prep : preparedSlots) {
+            if (prep.primaryReplacement && prep.primaryIndex >= 0
+                && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
+                oldSynths.push_back(std::move(this->instrumentSynthPtrs[prep.primaryIndex]));
+                this->instrumentSynthPtrs[prep.primaryIndex] = std::move(prep.primaryReplacement);
+                this->instrumentSynthById[prep.slotId] = this->instrumentSynthPtrs[prep.primaryIndex].get();
+                anyPrimarySwapped = true;
+            }
+        }
+
+        // Rebuild primary note routing if any primary was replaced or shadows were removed
+        if (rebuildAllShadows || anyPrimarySwapped)
+            this->rebuildPrimaryInstrumentNoteRouting();
+
+        // Add prepared shadow synths and their note routes
+        for (auto& prep : preparedSlots) {
+            for (auto& ps : prep.shadows) {
+                for (const auto& [note, synthPtr] : ps.noteRoutes)
+                    this->instrumentSynthsByNote[note].push_back(synthPtr);
+                this->instrumentSynthPtrs.push_back(std::move(ps.synth));
+            }
+        }
+
+        this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
+    }
+    // Old synths destroyed here outside the lock — audio thread cannot access them
 
     if (this->sampleLoaderPtr != nullptr)
         this->sampleLoaderPtr->getQueue().startProcessing();
