@@ -165,6 +165,7 @@ public:
     using ArtRtIdx = int8_t;
     using VelLayerIdx = int8_t;
     using ArticulationSourceMap = std::unordered_map<uint32_t, KitLib::InstrumentSpec*>;
+    using ArticulationNameRemap = std::unordered_map<uint32_t, uint32_t>; // slotArtNameId -> sourceArtNameId
 
     // Runtime data structures built at loadInstrument() (non-realtime)
     struct SampleEntry {
@@ -236,7 +237,7 @@ public:
     void unloadInstrument();
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources);
-    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds);
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap = {});
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
@@ -439,7 +440,7 @@ private:
     std::optional<int> decayOverrideMs;
 
 
-    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {});
+    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const ArticulationNameRemap& artNameRemap = {});
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec

@@ -36,14 +36,14 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->loadInstrumentWithSources(defaultInstrument, artSources, {});
 }
 
-void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds) {
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
     if (defaultInstrument == nullptr) return;
     this->unloadInstrument();
 
     this->instrumentSpecstPtr = defaultInstrument;
     this->type = defaultInstrument->meta.type;
 
-    this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds);
+    this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds, artNameRemap);
 }
 
 void InstrumentSynth::clearParameterOverrides() {
@@ -80,7 +80,7 @@ KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::Instr
     return nullptr;
 }
 
-void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds) {
+void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
     if (defaultInstSpec == nullptr)
         return;
 
@@ -108,7 +108,14 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* default
         if (sourceIt != artSources.end() && sourceIt->second != nullptr)
             sourceInstrument = sourceIt->second;
 
-        KitLib::ArticulationSpec* resolvedSpec = this->resolveArticulationSpec(sourceInstrument, layoutArt);
+        // Cross-art remap: resolve using the remapped nameId so we load source art samples
+        // but map them to the slot art's MIDI notes
+        LayoutArticulation resolveArt = layoutArt;
+        auto remapIt = artNameRemap.find(layoutArt.nameId);
+        if (remapIt != artNameRemap.end())
+            resolveArt.nameId = remapIt->second;
+
+        KitLib::ArticulationSpec* resolvedSpec = this->resolveArticulationSpec(sourceInstrument, resolveArt);
 
         if (resolvedSpec != nullptr) {
             const auto artIdx = this->getOrAddRuntimeArticulationIdx(resolvedSpec->nameId, resolvedSpec->exprId);

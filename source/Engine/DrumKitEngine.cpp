@@ -762,6 +762,23 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         const InstrumentMapEntry* entry = nullptr;
         KitLib::InstrumentSpec* instSpec = nullptr;
         std::vector<juce::String> articulations;
+        InstrumentSynth::ArticulationNameRemap artNameRemap;
+    };
+
+    // Build a name remap from an entry's slot/source art filters for cross-art mapping
+    auto buildArtNameRemap = [](const InstrumentMapEntry& entry) -> InstrumentSynth::ArticulationNameRemap {
+        InstrumentSynth::ArticulationNameRemap remap;
+        const auto& slotArts = entry.slotArticulationFilter;
+        const auto& srcArts = entry.articulationFilter;
+        if (slotArts.empty() || srcArts.empty())
+            return remap;
+        for (size_t idx = 0; idx < slotArts.size() && idx < srcArts.size(); ++idx) {
+            auto slotId = StringsDictSingleton::getId(slotArts[idx]);
+            auto srcId = StringsDictSingleton::getId(srcArts[idx]);
+            if (slotId != srcId)
+                remap[slotId] = srcId;
+        }
+        return remap;
     };
 
     auto applyOverrides = [](InstrumentSynth& synth, const InstrumentMapEntry& entry) {
@@ -884,6 +901,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         const auto& slotLayout = primarySlot->getInstrumentSlot();
         const auto& primary = resolvedEntries.front();
         InstrumentSynth::ArticulationSourceMap artSources;
+        InstrumentSynth::ArticulationNameRemap primaryRemap = buildArtNameRemap(*primary.entry);
         std::vector<ShadowPlan> shadowPlans;
         std::vector<uint32_t> claimedArticulations;
         std::vector<uint32_t> primaryAllowedArticulationIds;
@@ -906,7 +924,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         for (size_t idx = 1; idx < resolvedEntries.size(); ++idx) {
             const auto& resolved = resolvedEntries[idx];
             if (resolved.effectiveFilter.empty()) {
-                shadowPlans.push_back({ resolved.entry, resolved.instSpec, {} });
+                shadowPlans.push_back({ resolved.entry, resolved.instSpec, {}, buildArtNameRemap(*resolved.entry) });
                 continue;
             }
 
@@ -924,13 +942,18 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 } else if (!containsId(claimedArticulations, artId)) {
                     addUniqueId(claimedArticulations, artId);
                     artSources[artId] = resolved.instSpec;
+                    // Propagate cross-art remap for this articulation to the primary synth
+                    auto entryRemap = buildArtNameRemap(*resolved.entry);
+                    auto remapIt = entryRemap.find(artId);
+                    if (remapIt != entryRemap.end())
+                        primaryRemap[artId] = remapIt->second;
                 } else {
                     layeredArts.push_back(artName);
                 }
             }
 
             if (!layeredArts.empty())
-                shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts });
+                shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts, buildArtNameRemap(*resolved.entry) });
         }
 
         PreparedSlot prep;
@@ -943,7 +966,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             auto replacement = std::make_unique<InstrumentSynth>(this, slotLayout);
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
-            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds);
+            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap);
             applyOverrides(*replacement, *primary.entry);
             if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
                 replacement->setCurrentPlaybackSampleRate(this->lastSampleRate);
@@ -960,7 +983,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 auto* shadowRaw = shadow.get();
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
-                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdList(shadowPlan.articulations));
+                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdList(shadowPlan.articulations), shadowPlan.artNameRemap);
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
 
                 if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
