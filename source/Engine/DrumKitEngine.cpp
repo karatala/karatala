@@ -990,6 +990,14 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts, buildArtNameRemap(*resolved.entry) });
         }
 
+        // Any layout articulations not explicitly claimed by any entry fall through
+        // to the primary instrument. This ensures arts like "bow" on hihat are loaded
+        // even when the map only mentions "edge" and "pedal".
+        for (const auto& layoutArt : slotLayout.articulations) {
+            if (!containsId(claimedArticulations, layoutArt.nameId))
+                addUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
+        }
+
         if (LOG_ENABLED(Notice)) {
             juce::String allowedStr;
             for (const auto& artId : primaryAllowedArticulationIds)
