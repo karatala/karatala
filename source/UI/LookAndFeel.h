@@ -39,7 +39,7 @@ public:
     void drawScrollbarButton(juce::Graphics& g, juce::ScrollBar& bar,
                              int width, int height, int buttonDirection,
                              bool isScrollbarVertical, bool isMouseOverButton,
-                             bool isButtonDown) override {}
+                             bool isButtonDown) override { juce::ignoreUnused(g, bar, width, height, buttonDirection, isScrollbarVertical, isMouseOverButton, isButtonDown); }
 
     void drawCornerResizer(juce::Graphics& g, int w, int h, bool isMouseOver, bool isMouseDragging) override;
     void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown, int buttonX, int buttonY, int buttonW, int buttonH, juce::ComboBox& cb) override;

@@ -303,6 +303,8 @@ void InstrumentConfigPanel::populate() {
                         sourceFullPath += "/" + entry->instCode;
                     if (!entry->articulationFilter.empty())
                         sourceFullPath += "/" + entry->articulationFilter[0];
+                    else if (artName != "(default)")
+                        sourceFullPath += "/" + artName;
 
                     int tuning = entry->tuningCents.value_or(0);
                     int attack = entry->attackTimeMs.value_or(-1);
@@ -378,11 +380,13 @@ void InstrumentConfigPanel::addLayerRow(ArticulationCard* artCard, const juce::S
     layer->removeButton = std::make_unique<juce::TextButton>("x");
     artCard->addAndMakeVisible(*layer->removeButton);
     layer->removeButton->onClick = [this, artCard, layer] {
-        artCard->layers.removeObject(layer);
-        artCard->updateRemoveButtonVisibility();
-        this->layoutContent();
-        this->resized();
-        this->applyToEngine();
+        juce::MessageManager::callAsync([this, artCard, layer] {
+            artCard->layers.removeObject(layer);
+            artCard->updateRemoveButtonVisibility();
+            this->layoutContent();
+            this->resized();
+            this->applyToEngine();
+        });
     };
 }
 
@@ -422,21 +426,33 @@ void InstrumentConfigPanel::showPickerPopup(LayerRow* layer, SlotCard* slotCard)
             layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
         else
             layer->sourceButton->setButtonText("--");
-        this->dismissPopup();
-        this->applyToEngine();
+        juce::MessageManager::callAsync([this] {
+            this->dismissPopup();
+            this->applyToEngine();
+        });
     };
 
-    this->activePopup->onDismissed = [this] { this->dismissPopup(); };
+    // Transparent overlay behind popup to catch outside clicks
+    this->popupOverlay = std::make_unique<PopupOverlay>();
+    this->popupOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissPopup(); });
+    };
+    this->popupOverlay->setBounds(getLocalBounds());
+    addAndMakeVisible(*this->popupOverlay);
+    this->popupOverlay->toFront(false);
 
     addAndMakeVisible(*this->activePopup);
     this->activePopup->toFront(true);
 }
 
 void InstrumentConfigPanel::dismissPopup() {
+    if (this->popupOverlay) {
+        removeChildComponent(this->popupOverlay.get());
+        this->popupOverlay.reset();
+    }
     if (this->activePopup) {
         removeChildComponent(this->activePopup.get());
         this->activePopup.reset();
-        this->activePopupButton = nullptr;
     }
 }
 

@@ -132,8 +132,15 @@ private:
     juce::Viewport viewport;
 
     // Popup management
+    class PopupOverlay : public juce::Component {
+    public:
+        std::function<void()> onClick;
+        void mouseDown(const juce::MouseEvent&) override { if (this->onClick) this->onClick(); }
+    };
+    std::unique_ptr<PopupOverlay> popupOverlay;
     std::unique_ptr<SourcePickerPopup> activePopup;
-    juce::Component::SafePointer<juce::TextButton> activePopupButton;
+    juce::Button* activePopupButton = nullptr;
+
     void showPickerPopup(LayerRow* layer, SlotCard* slotCard);
     void dismissPopup();
 
