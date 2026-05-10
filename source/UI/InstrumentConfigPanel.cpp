@@ -253,11 +253,15 @@ void InstrumentConfigPanel::rebuildSourceItems() {
     }
 }
 
-int InstrumentConfigPanel::findSourceIndex(const juce::String& fullPath) const {
+int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const {
+    auto needle = searchPath.trim().toLowerCase();
+    // Try exact match against both full path (kitCodeRaw) and display path (kitDisplayName)
     for (int idx = 0; idx < static_cast<int>(this->sourceItems.size()); ++idx) {
-        if (this->sourceItems[static_cast<size_t>(idx)].fullPath() == fullPath)
+        const auto& item = this->sourceItems[static_cast<size_t>(idx)];
+        if (item.fullPath().toLowerCase() == needle || item.displayText().toLowerCase() == needle)
             return idx;
     }
+    DBG("InstrumentConfigPanel: no source match for '" + searchPath + "'");
     return -1;
 }
 
@@ -533,7 +537,8 @@ juce::String InstrumentConfigPanel::generateMapText() const {
                 if (artCard->artName != "(default)")
                     slotRef += "/" + artCard->artName;
 
-                juce::String targetRef = srcItem.kitCodeRaw;
+                // Use short kit name (kitDisplayName) for map text — engine resolves via findKit
+                juce::String targetRef = srcItem.kitDisplayName;
                 if (srcItem.instCode.isNotEmpty())
                     targetRef += "/" + srcItem.instCode;
 
@@ -550,7 +555,8 @@ juce::String InstrumentConfigPanel::generateMapText() const {
                 if (decayVal >= 0.0)
                     params.add("decay=" + juce::String(static_cast<int>(decayVal)));
 
-                if (srcItem.artCode.isNotEmpty())
+                // Only add art= filter when source articulation differs from slot articulation
+                if (srcItem.artCode.isNotEmpty() && srcItem.artCode != artCard->artName)
                     params.add("art=" + srcItem.artCode);
 
                 juce::String line = slotRef + ":" + targetRef;
@@ -570,6 +576,7 @@ void InstrumentConfigPanel::applyToEngine() {
     if (text.trim().isEmpty())
         return;
 
+    DBG("InstrumentConfigPanel::applyToEngine map text:\n" + text);
     this->engine.useInstrumentMap(text);
 
     if (this->onMapTextChanged)
