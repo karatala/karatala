@@ -3,6 +3,8 @@
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processorRef(p) {
+    this->setLookAndFeel(&this->lookAndFeel);
+
     addAndMakeVisible(inspectButton);
     addAndMakeVisible(referencePanel);
     addAndMakeVisible(referencePanelLabel);
@@ -57,6 +59,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
     statusLabel.setText(processorRef.getEngine().getLastInstrumentMapStatus(), juce::dontSendNotification);
 
+    settingsTabButton.onClick = [this] { this->toggleSettingsView(); };
+
     applyButton.onClick = [this] {
         struct ProcessingSuspendGuard {
             PluginProcessor& processor;
@@ -104,16 +108,11 @@ void PluginEditor::toggleSettingsView() {
 }
 
 PluginEditor::~PluginEditor() {
+    this->setLookAndFeel(nullptr);
 }
 
 void PluginEditor::paint(juce::Graphics& g) {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
-
-    auto area = getLocalBounds();
-    g.setColour(juce::Colours::white);
-    g.setFont(16.0f);
-    auto helloWorld = juce::String("Hello from ") + JucePlugin_Name;
-    g.drawText(helloWorld, area.removeFromTop(150), juce::Justification::centred, false);
 }
 
 void PluginEditor::resized() {

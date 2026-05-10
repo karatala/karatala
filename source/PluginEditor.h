@@ -3,6 +3,7 @@
 #include "BinaryData.h"
 #include "PluginProcessor.h"
 #include "EngineSettingsPanel.h"
+#include "UI/LookAndFeel.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
 //==============================================================================
@@ -19,6 +20,7 @@ private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     PluginProcessor& processorRef;
+    ::LookAndFeel lookAndFeel;
     std::unique_ptr<melatonin::Inspector> inspector;
     juce::TextButton inspectButton { "Inspect the UI" };
     juce::TextEditor referencePanel;
