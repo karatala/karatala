@@ -4,6 +4,7 @@ Sidebar::Sidebar() {
     this->modeButtons.add(new ModeButton(ViewMode::Zen, "Zen"));
     this->modeButtons.add(new ModeButton(ViewMode::Zoned, "Zone"));
     this->modeButtons.add(new ModeButton(ViewMode::Map, "Map"));
+    this->modeButtons.add(new ModeButton(ViewMode::Instrument, "Inst"));
     this->modeButtons.add(new ModeButton(ViewMode::Raw, "Raw"));
     this->modeButtons.add(new ModeButton(ViewMode::Settings, juce::String::charToString(0x2699))); // gear
 

@@ -2,6 +2,12 @@
 
 static const char* NOTE_NAMES[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
+static void setComboFont(juce::ComboBox& combo, float size) {
+    combo.setJustificationType(juce::Justification::centredLeft);
+    if (auto* label = dynamic_cast<juce::Label*>(combo.getChildComponent(0)))
+        label->setFont(juce::Font(juce::FontOptions(size)));
+}
+
 MidiMapTable::MidiMapTable() {
     this->viewport.setViewedComponent(&this->contentComponent, false);
     this->viewport.setScrollBarsShown(true, false);
@@ -66,6 +72,8 @@ void MidiMapTable::buildRows() {
             populateNoteComboBox(row->noteCombo2);
             this->contentComponent.addAndMakeVisible(row->noteCombo1);
             this->contentComponent.addAndMakeVisible(row->noteCombo2);
+            setComboFont(row->noteCombo1, 10.0f);
+            setComboFont(row->noteCombo2, 10.0f);
 
             int rowIdx = static_cast<int>(this->rows.size());
             row->noteCombo1.onChange = [this, rowIdx] {
@@ -114,6 +122,8 @@ void MidiMapTable::buildRows() {
             populateNoteComboBox(row->noteCombo2);
             this->contentComponent.addAndMakeVisible(row->noteCombo1);
             this->contentComponent.addAndMakeVisible(row->noteCombo2);
+            setComboFont(row->noteCombo1, 10.0f);
+            setComboFont(row->noteCombo2, 10.0f);
 
             int rowIdx = static_cast<int>(this->rows.size());
             row->noteCombo1.onChange = [this, rowIdx] {
@@ -228,42 +238,74 @@ void MidiMapTable::resized() {
 
     this->viewport.setBounds(area);
 
-    const int instColWidth = 100;
-    const int artColWidth = 110;
-    const int comboWidth = 120;
-    const int learnBtnWidth = 24;
-    const int gapSmall = 4;
-    const int rowTotalWidth = instColWidth + artColWidth + (comboWidth + learnBtnWidth + gapSmall) * 2 + gapSmall * 3;
-    int contentHeight = headerHeight + static_cast<int>(this->rows.size()) * rowHeight + 8;
-    int contentWidth = juce::jmax(rowTotalWidth, this->viewport.getWidth());
+    const int instColWidth = 90;
+    const int artColWidth = 100;
+    const int comboWidth = 84;
+    const int learnBtnWidth = 20;
+    const int gapSmall = 3;
+    // Single column width for one instrument group
+    const int singleColWidth = instColWidth + artColWidth + (comboWidth + learnBtnWidth + gapSmall) * 2 + gapSmall * 3 + 8;
+    const int columnGap = 12;
+
+    // Determine if we can fit 2 columns
+    int availWidth = this->viewport.getWidth() - (this->viewport.isVerticalScrollBarShown() ? 14 : 0);
+    bool twoColumns = availWidth >= singleColWidth * 2 + columnGap;
+
+    // Split rows into columns by instrument groups
+    // Find split point: half the rows, but on an instrument boundary
+    int totalRows = static_cast<int>(this->rows.size());
+    int halfRows = totalRows / 2;
+    int splitRow = halfRows;
+
+    if (twoColumns && totalRows > 2) {
+        // Find nearest instrument boundary at or after halfRows
+        for (int idx = halfRows; idx < totalRows; ++idx) {
+            if (this->rows[static_cast<size_t>(idx)]->showInstrumentLabel) {
+                splitRow = idx;
+                break;
+            }
+        }
+    }
+
+    int col1Count = twoColumns ? splitRow : totalRows;
+    int col2Count = twoColumns ? (totalRows - splitRow) : 0;
+    int maxColRows = juce::jmax(col1Count, col2Count);
+
+    int contentHeight = headerHeight + maxColRows * rowHeight + 8;
+    int contentWidth = twoColumns ? (singleColWidth * 2 + columnGap) : singleColWidth;
+    contentWidth = juce::jmax(contentWidth, availWidth);
 
     this->contentComponent.setBounds(0, 0, contentWidth, contentHeight);
 
-    int yPos = headerHeight;
-    juce::String lastInstrumentId;
+    auto layoutColumn = [&](int startIdx, int endIdx, int xOffset) {
+        int yPos = headerHeight;
+        for (int idx = startIdx; idx < endIdx; ++idx) {
+            auto& row = *this->rows[static_cast<size_t>(idx)];
+            int xPos = xOffset;
 
-    for (size_t idx = 0; idx < this->rows.size(); ++idx) {
-        auto& row = *this->rows[idx];
-        int xPos = 8;
+            row.instrumentLabel.setBounds(xPos, yPos, instColWidth - gapSmall, rowHeight);
+            xPos += instColWidth;
 
-        // Instrument label — only visible on first articulation of each instrument
-        row.instrumentLabel.setBounds(xPos, yPos, instColWidth - gapSmall, rowHeight);
-        xPos += instColWidth;
+            row.articulationLabel.setBounds(xPos, yPos, artColWidth - gapSmall, rowHeight);
+            xPos += artColWidth;
 
-        row.articulationLabel.setBounds(xPos, yPos, artColWidth - gapSmall, rowHeight);
-        xPos += artColWidth;
+            row.noteCombo1.setBounds(xPos, yPos + 2, comboWidth, rowHeight - 4);
+            xPos += comboWidth + gapSmall;
 
-        row.noteCombo1.setBounds(xPos, yPos + 2, comboWidth, rowHeight - 4);
-        xPos += comboWidth + gapSmall;
+            row.learnButton1.setBounds(xPos, yPos + 2, learnBtnWidth, rowHeight - 4);
+            xPos += learnBtnWidth + gapSmall;
 
-        row.learnButton1.setBounds(xPos, yPos + 2, learnBtnWidth, rowHeight - 4);
-        xPos += learnBtnWidth + gapSmall;
+            row.noteCombo2.setBounds(xPos, yPos + 2, comboWidth, rowHeight - 4);
+            xPos += comboWidth + gapSmall;
 
-        row.noteCombo2.setBounds(xPos, yPos + 2, comboWidth, rowHeight - 4);
-        xPos += comboWidth + gapSmall;
+            row.learnButton2.setBounds(xPos, yPos + 2, learnBtnWidth, rowHeight - 4);
 
-        row.learnButton2.setBounds(xPos, yPos + 2, learnBtnWidth, rowHeight - 4);
+            yPos += rowHeight;
+        }
+    };
 
-        yPos += rowHeight;
+    layoutColumn(0, col1Count, 4);
+    if (twoColumns && col2Count > 0) {
+        layoutColumn(splitRow, totalRows, singleColWidth + columnGap);
     }
 }

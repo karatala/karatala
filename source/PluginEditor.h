@@ -8,6 +8,7 @@
 #include "UI/StatusBar.h"
 #include "UI/DrumPadGrid.h"
 #include "UI/MidiMapTable.h"
+#include "UI/InstrumentConfigPanel.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
 //==============================================================================
@@ -44,6 +45,9 @@ private:
 
     // Mode: Settings
     std::unique_ptr<EngineSettingsPanel> settingsPanel;
+
+    // Mode: Instrument Config
+    std::unique_ptr<InstrumentConfigPanel> instrumentConfigPanel;
 
     ViewMode activeMode = ViewMode::Zen;
     void setViewMode(ViewMode mode);

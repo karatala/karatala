@@ -6,6 +6,7 @@ enum class ViewMode {
     Zen = 0,
     Zoned,
     Map,
+    Instrument,
     Raw,
     Settings
 };

@@ -209,7 +209,103 @@ Current instrument map + reference panels moved here verbatim.
 
 ---
 
-## Mode 5: Settings
+## Mode 5: Instrument Config (Inst)
+
+Visual editor for instrument slot → sample library mapping, per-slot articulation selection, tuning, attack/decay, and layer configuration. GUI version of manual text editing in Raw mode.
+
+### Layout
+
+```
+┌─ kick1 ───────────────────────────────────────────────────────────────────────┐
+│ ┌─ center ────────────────────────────────────────────────────────────────┐   │
+│ │ Inst: [ aasimonster2/kick-22/center  ▾]  Tuning: [═══○═══] 0 cents  [x] │   │
+│ │ Attack: [═══○═══] -- ms  Decay:  [═══○═══] -- ms OtherParam: ...        │   │
+│ │ [add layer]                                                             │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   |
+└───────────────────────────────────────────────────────────────────────────────┘
+┌─ snare1 ──────────────────────────────────────────────────────────────────────┐                                                                     │
+│ ┌─ center ────────────────────────────────────────────────────────────────┐   │
+│ │ Inst: [ nakeddrums/snare-X1/center  ▾]   Tuning: [═══○═══] 0 cents  [x] │   │
+│ │ Attack: [═══○═══] -- ms  Decay:  [═══○═══] 50 ms OtherParam: ...        │   │
+│ │                                                                         │   │
+│ │ Inst: [ aasimonster2/snare-14/center  ▾] Tuning: [════○══] 12 cents [x] │   │
+│ │ Attack: [═══○═══] 20 ms  Decay:  [═══○═══] -- ms OtherParam: ...        │   │
+│ │ [add layer]                                                             │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   |
+│ ┌─ crosstick ─────────────────────────────────────────────────────────────┐   │
+│ │ Inst: [ nakeddrums/snare-X1/xstick  ▾]   Tuning: [═══○═══] 0 cents  [x] │   │
+│ │ Attack: [═══○═══] -- ms  Decay:  [═══○═══] 0 ms  OtherParam: ...        │   │
+│ │ [add layer]                                                             │   │
+│ └─────────────────────────────────────────────────────────────────────────┘   |
+...other articulations
+└───────────────────────────────────────────────────────────────────────────────┘
+... other instrument slots
+│                                                                         │
+│ ... (scrollable)                                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Per-Slot Card Contents
+
+Each instrument slot from `KitLayout::instrumentSlots` gets a collapsible card:
+
+1. **Header** — slot id (bold), instrument type color indicator
+2. **Kit dropdown** — lists all kits/instruments/articulations from `LibraryManager::getKits()` by `DrumKitSpec::meta.codeRaw`, `InstrumentSpec::Type` etc. Dropdown items show `kitRef/instCode/artCode` (e.g. "aasimonster2/kick-22/center") ordered by instrument relevance, then articulation (matching type first, then others)
+4. **Tuning slider** — integer, range -2400..+2400 cents, default 0, interval 10. Maps to `InstrumentMapEntry::tuningCents`
+5. **Attack slider** — integer, range 0..500 ms, interval 10, default unset (--). Maps to `InstrumentMapEntry::attackTimeMs`
+6. **Decay slider** — integer, range 0..5000 ms, interval 10, default unset (--). Maps to `InstrumentMapEntry::decayTimeMs`
+7. **Add layer button** — adds another set of dropdown + params for layering multiple samples on the same slot/articulation with different settings (e.g. multiple kick samples layered together)
+
+### Behaviour
+
+- On any change → rebuild `InstrumentMap` entries from UI state → call `useInstrumentMap()` with generated text → update status bar
+- "Unset" values for tuning/attack/decay: slider at a sentinel position or a checkbox "override" toggle next to each
+- Cards are scrollable in a `juce::Viewport`
+- Each card has a subtle border matching `LookAndFeel::darkerGrey`
+
+### Data Flow
+
+```
+KitLayout::instrumentSlots  →  populate cards (one per slot)
+                                    ↓
+LibraryManager::getKits()   →  kit dropdown items
+Kit::instrumentSpecsMap     →  instrument dropdown items  
+InstrumentSpec::articulationSpecs → articulation checkboxes
+                                    ↓
+User edits card             →  generate InstrumentMapEntry
+                                    ↓
+All entries                 →  serialize to instrument map text
+                                    ↓
+                            →  DrumKitEngine::useInstrumentMap(text)
+                            →  statusBar.setStatusText(...)
+                            →  drumPadGrid.populate(...)
+```
+
+### Implementation
+
+- New component: `source/UI/InstrumentConfigPanel.h/.cpp`
+- `InstrumentConfigPanel` contains a `juce::Viewport` with a content component
+- Each slot card: `InstrumentSlotCard` (inner struct/class) owning the dropdowns, sliders, toggles
+- Card reads from current `InstrumentMapEntry` (parsed from existing instrument map text) for initial values
+- Card writes back by generating map text line: `slotId:kitRef/instCode:tuning=X,attack=Y,decay=Z,art=a,b,c`
+- Needs references to: `DrumKitEngine` (for `LibraryManager`, `KitLayout`, `useInstrumentMap`)
+
+### New Files
+
+```
+source/UI/
+    ├── InstrumentConfigPanel.h/.cpp  ← NEW: scrollable list of per-slot cards
+```
+
+### Sidebar Addition
+
+- Add new mode button between Map and Raw: "Inst" (instrument icon)
+- `ViewMode::Instrument` added to enum after `Map`
+- Total modes: Zen, Zoned, Map, **Inst**, Raw, Settings (6 buttons)
+
+---
+
+## Mode 6: Settings
 
 All engine settings in a clean two-column layout with grouped sections.
 

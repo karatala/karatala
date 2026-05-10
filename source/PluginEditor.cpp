@@ -141,6 +141,15 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
     };
 
+    // Instrument config mode
+    this->instrumentConfigPanel = std::make_unique<InstrumentConfigPanel>(this->processorRef.getEngine());
+    addChildComponent(*this->instrumentConfigPanel);
+    this->instrumentConfigPanel->onStatusMessage = [this](const juce::String& msg) {
+        this->statusBar.setStatusText(msg);
+        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+        this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+    };
+
     // Show default mode
     this->showComponentsForMode(this->activeMode);
 
@@ -166,6 +175,9 @@ void PluginEditor::setViewMode(ViewMode mode) {
     if (mode == ViewMode::Map)
         this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
 
+    if (mode == ViewMode::Instrument)
+        this->instrumentConfigPanel->populate();
+
     this->resized();
 }
 
@@ -184,6 +196,9 @@ void PluginEditor::showComponentsForMode(ViewMode mode) {
 
     // Map mode
     this->midiMapTable.setVisible(mode == ViewMode::Map);
+
+    // Instrument config mode
+    this->instrumentConfigPanel->setVisible(mode == ViewMode::Instrument);
 
     // Settings
     this->settingsPanel->setVisible(mode == ViewMode::Settings);
@@ -233,6 +248,10 @@ void PluginEditor::resized() {
 
         case ViewMode::Settings:
             this->settingsPanel->setBounds(mainArea);
+            break;
+
+        case ViewMode::Instrument:
+            this->instrumentConfigPanel->setBounds(mainArea);
             break;
 
         case ViewMode::Map:
