@@ -6,6 +6,22 @@ Karatala is a drum kit engine instrument for e-Drummers and everyone.
 TODO0A: get rid of juce completely, decide on what plugin format is needed, maybe only clap or keep also vst3, find better framework/tools to replace juce quirkiness
 TODO0X: avpts on plugin init to decide what micLayout to use?
 
+2. need to add Drums tab and dynamically fill it with pads grid that mapped to instruments, if instrument have >1 articulation, cell is splitted vertically to number of those articulations
+
+
+main idea is to have tabulated ui with main area, statusbar and left sidebar for "tab" buttons-icons to select gui mode (main area content) and some controls like velocity/hihat openness knobs, roundrobin lock knob (0-all, 1-first only, etc) and then main area with modes:
+1. default "zen" view mode - just a 6 columns x 4 rows (adjustable in settings tab) of drum pads withoud paddings
+2. "zoned" mode: same grid but pads now have zones (basically each pad splited horizontally to n parts depending on how much articulations each instrument has and articulation "importance"-, like if kick has 1 articulation only so it is not splited, snare has rim,crossstick,center,rimshot=4 articulations, ride have 3 articulations, bell,bow,edge; etc) 
+3. map mode, table with instruments+articulations, each articulation shows 2 dropdowns to select midi note like B0/35 etc and red circle button to learn note from midi.
+4. raw mode - current 'instrument map' with 'references' textarease are moved there
+5. settings mode - all engine settings sliders and toggles are here, maybe also some global settings like grid size for pads etc, show in 2 columns with labels and sliders/toggles on the right, maybe grouped in sections with group labels
+
+
+
+
+
+optional: is it possible to add round magic button for mouse click+hold so u can play on pads using pc keyboard and after pressing that and moving mouse up/down to control velocity or control hihat opennes by moving left/right and right click to choke?
+
 
 FIXME: replace std::vector and other std shit like std::move with something better
 FIXME: get rid of static_cast everywhere it is possible, change types

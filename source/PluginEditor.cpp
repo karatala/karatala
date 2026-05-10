@@ -5,63 +5,66 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     , processorRef(p) {
     this->setLookAndFeel(&this->lookAndFeel);
 
-    addAndMakeVisible(inspectButton);
-    addAndMakeVisible(referencePanel);
-    addAndMakeVisible(referencePanelLabel);
-    addAndMakeVisible(instrumentMapEditor);
-    addAndMakeVisible(instrumentMapLabel);
-    addAndMakeVisible(applyButton);
-    addAndMakeVisible(statusLabel);
-    addAndMakeVisible(settingsTabButton);
-
-    settingsPanel = std::make_unique<EngineSettingsPanel>(processorRef.getEngine());
-    addChildComponent(*settingsPanel);
-
-    // this chunk of code instantiates and opens the melatonin inspector
-    inspectButton.onClick = [&] {
-        if (!inspector) {
-            inspector = std::make_unique<melatonin::Inspector>(*this);
-            inspector->onClose = [this]() { inspector.reset(); };
+    // Sidebar
+    addAndMakeVisible(this->sidebar);
+    this->sidebar.onModeChanged = [this](ViewMode mode) {
+        this->setViewMode(mode);
+    };
+    this->sidebar.inspectButton.onClick = [this] {
+        if (!this->inspector) {
+            this->inspector = std::make_unique<melatonin::Inspector>(*this);
+            this->inspector->onClose = [this]() { this->inspector.reset(); };
         }
-
-        inspector->setVisible(true);
+        this->inspector->setVisible(true);
     };
 
-    referencePanelLabel.setText("Reference", juce::dontSendNotification);
-    referencePanelLabel.setFont(juce::Font(12.0f, juce::Font::bold));
-    referencePanelLabel.setJustificationType(juce::Justification::centredLeft);
+    // Status bar
+    addAndMakeVisible(this->statusBar);
+    this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
 
-    referencePanel.setMultiLine(true);
-    referencePanel.setReadOnly(true);
-    referencePanel.setScrollbarsShown(true);
-    referencePanel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
-    referencePanel.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e1e1e));
-    referencePanel.setColour(juce::TextEditor::textColourId, juce::Colour(0xffaaaaaa));
-    referencePanel.setText(processorRef.getEngine().buildReferenceText(), false);
+    // Drum pad grid (Zen / Zoned modes)
+    addAndMakeVisible(this->drumPadGrid);
+    this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+    this->sidebar.velocityKnob.onValueChange = [this] {
+        this->drumPadGrid.setClickVelocity(static_cast<float>(this->sidebar.velocityKnob.getValue()));
+    };
 
-    instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
-    instrumentMapLabel.setFont(juce::Font(12.0f, juce::Font::bold));
-    instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
+    // Raw mode components
+    addChildComponent(this->referencePanel);
+    addChildComponent(this->referencePanelLabel);
+    addChildComponent(this->instrumentMapEditor);
+    addChildComponent(this->instrumentMapLabel);
+    addChildComponent(this->applyButton);
 
-    instrumentMapEditor.setMultiLine(true);
-    instrumentMapEditor.setReturnKeyStartsNewLine(true);
-    instrumentMapEditor.setScrollbarsShown(true);
-    instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", juce::Colours::grey);
-    auto instrumentMapText = processorRef.getValueTreeState().state["instrument_map"].toString();
+    this->referencePanelLabel.setText("Reference", juce::dontSendNotification);
+    this->referencePanelLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    this->referencePanelLabel.setJustificationType(juce::Justification::centredLeft);
+
+    this->referencePanel.setMultiLine(true);
+    this->referencePanel.setReadOnly(true);
+    this->referencePanel.setScrollbarsShown(true);
+    this->referencePanel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
+    this->referencePanel.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e1e1e));
+    this->referencePanel.setColour(juce::TextEditor::textColourId, juce::Colour(0xffaaaaaa));
+    this->referencePanel.setText(this->processorRef.getEngine().buildReferenceText(), false);
+
+    this->instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
+    this->instrumentMapLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    this->instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
+
+    this->instrumentMapEditor.setMultiLine(true);
+    this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
+    this->instrumentMapEditor.setScrollbarsShown(true);
+    this->instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", juce::Colours::grey);
+    auto instrumentMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
     if (instrumentMapText.trim().isEmpty()) {
-        instrumentMapText = processorRef.getEngine().getSuggestedInstrumentMapText();
+        instrumentMapText = this->processorRef.getEngine().getSuggestedInstrumentMapText();
         if (instrumentMapText.isNotEmpty())
-            processorRef.getValueTreeState().state.setProperty("instrument_map", instrumentMapText, nullptr);
+            this->processorRef.getValueTreeState().state.setProperty("instrument_map", instrumentMapText, nullptr);
     }
-    instrumentMapEditor.setText(instrumentMapText, false);
+    this->instrumentMapEditor.setText(instrumentMapText, false);
 
-    statusLabel.setJustificationType(juce::Justification::topLeft);
-    statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
-    statusLabel.setText(processorRef.getEngine().getLastInstrumentMapStatus(), juce::dontSendNotification);
-
-    settingsTabButton.onClick = [this] { this->toggleSettingsView(); };
-
-    applyButton.onClick = [this] {
+    this->applyButton.onClick = [this] {
         struct ProcessingSuspendGuard {
             PluginProcessor& processor;
             explicit ProcessingSuspendGuard(PluginProcessor& proc)
@@ -71,44 +74,70 @@ PluginEditor::PluginEditor(PluginProcessor& p)
             ~ProcessingSuspendGuard() {
                 this->processor.suspendProcessing(false);
             }
-        } processingSuspendGuard(processorRef);
+        } processingSuspendGuard(this->processorRef);
 
-        const juce::ScopedLock callbackLock(processorRef.getCallbackLock());
+        const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
 
-        auto text = instrumentMapEditor.getText();
-        processorRef.getValueTreeState().state.setProperty("instrument_map", text, nullptr);
+        auto text = this->instrumentMapEditor.getText();
+        this->processorRef.getValueTreeState().state.setProperty("instrument_map", text, nullptr);
 
-        const bool applied = processorRef.getEngine().useInstrumentMap(text);
+        const bool applied = this->processorRef.getEngine().useInstrumentMap(text);
         if (!applied && text.trim().isEmpty()) {
-            processorRef.getEngine().mapDefaultKit();
-            const auto generatedMap = processorRef.getEngine().getSuggestedInstrumentMapText();
-            instrumentMapEditor.setText(generatedMap, false);
-            processorRef.getValueTreeState().state.setProperty("instrument_map", generatedMap, nullptr);
+            this->processorRef.getEngine().mapDefaultKit();
+            const auto generatedMap = this->processorRef.getEngine().getSuggestedInstrumentMapText();
+            this->instrumentMapEditor.setText(generatedMap, false);
+            this->processorRef.getValueTreeState().state.setProperty("instrument_map", generatedMap, nullptr);
         }
 
-        statusLabel.setText(processorRef.getEngine().getLastInstrumentMapStatus(), juce::dontSendNotification);
+        this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
+        // Re-populate pad grid after instrument map change
+        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
     };
 
-    // Make sure that before the constructor has finished, you've set the
-    // editor's size to whatever you need it to be.
-    setSize(1000, 580);
-}
+    // Settings mode
+    this->settingsPanel = std::make_unique<EngineSettingsPanel>(this->processorRef.getEngine());
+    addChildComponent(*this->settingsPanel);
 
-void PluginEditor::toggleSettingsView() {
-    this->showingSettings = !this->showingSettings;
-    this->settingsTabButton.setButtonText(this->showingSettings ? "Instrument Map" : "Engine Settings");
-    this->instrumentMapEditor.setVisible(!this->showingSettings);
-    this->instrumentMapLabel.setVisible(!this->showingSettings);
-    this->applyButton.setVisible(!this->showingSettings);
-    this->statusLabel.setVisible(!this->showingSettings);
-    this->settingsPanel->setVisible(this->showingSettings);
-    if (this->showingSettings)
-        this->settingsPanel->loadFromEngine();
-    this->resized();
+    // Show default mode
+    this->showComponentsForMode(this->activeMode);
+
+    setSize(1000, 580);
 }
 
 PluginEditor::~PluginEditor() {
     this->setLookAndFeel(nullptr);
+}
+
+void PluginEditor::setViewMode(ViewMode mode) {
+    this->activeMode = mode;
+    this->showComponentsForMode(mode);
+
+    if (mode == ViewMode::Settings)
+        this->settingsPanel->loadFromEngine();
+
+    if (mode == ViewMode::Zen || mode == ViewMode::Zoned) {
+        this->drumPadGrid.setPadMode(mode == ViewMode::Zoned ? PadMode::Zoned : PadMode::Zen);
+        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+    }
+
+    this->resized();
+}
+
+void PluginEditor::showComponentsForMode(ViewMode mode) {
+    // Drum pad grid — visible for Zen and Zoned
+    bool showPads = (mode == ViewMode::Zen || mode == ViewMode::Zoned);
+    this->drumPadGrid.setVisible(showPads);
+
+    // Raw mode components
+    bool showRaw = (mode == ViewMode::Raw);
+    this->referencePanel.setVisible(showRaw);
+    this->referencePanelLabel.setVisible(showRaw);
+    this->instrumentMapEditor.setVisible(showRaw);
+    this->instrumentMapLabel.setVisible(showRaw);
+    this->applyButton.setVisible(showRaw);
+
+    // Settings
+    this->settingsPanel->setVisible(mode == ViewMode::Settings);
 }
 
 void PluginEditor::paint(juce::Graphics& g) {
@@ -116,36 +145,49 @@ void PluginEditor::paint(juce::Graphics& g) {
 }
 
 void PluginEditor::resized() {
-    auto area = getLocalBounds().reduced(12);
-    auto topBar = area.removeFromTop(36);
-    settingsTabButton.setBounds(topBar.removeFromLeft(140));
-    topBar.removeFromLeft(8);
-    inspectButton.setBounds(topBar.removeFromRight(120));
+    auto area = getLocalBounds();
 
-    area.removeFromTop(8);
-    auto statusArea = area.removeFromBottom(88);
-    auto buttonArea = statusArea.removeFromTop(32);
-    applyButton.setBounds(buttonArea.removeFromLeft(180));
-    statusArea.removeFromTop(8);
-    statusLabel.setBounds(statusArea);
+    // Sidebar on left
+    constexpr int sidebarWidth = 56;
+    this->sidebar.setBounds(area.removeFromLeft(sidebarWidth));
 
-    // Split remaining area: 1/3 reference panel on left, 2/3 instrument map on right
-    const int gap = 8;
-    const int refWidth = (area.getWidth() - gap) / 3;
-    // const int mapWidth = area.getWidth() - gap - refWidth;
+    // Status bar at bottom
+    constexpr int statusBarHeight = 24;
+    this->statusBar.setBounds(area.removeFromBottom(statusBarHeight));
 
-    auto refArea = area.removeFromLeft(refWidth);
-    area.removeFromLeft(gap);
-    auto mapArea = area; // remaining 2/3
+    // Main area — remaining space
+    auto mainArea = area;
 
-    const int labelHeight = 18;
-    referencePanelLabel.setBounds(refArea.removeFromTop(labelHeight));
-    referencePanel.setBounds(refArea);
+    switch (this->activeMode) {
+        case ViewMode::Zen:
+        case ViewMode::Zoned:
+            this->drumPadGrid.setBounds(mainArea);
+            break;
 
-    if (this->showingSettings) {
-        this->settingsPanel->setBounds(mapArea);
-    } else {
-        instrumentMapLabel.setBounds(mapArea.removeFromTop(labelHeight));
-        instrumentMapEditor.setBounds(mapArea);
+        case ViewMode::Raw: {
+            auto rawArea = mainArea.reduced(8);
+            auto buttonArea = rawArea.removeFromBottom(32);
+            this->applyButton.setBounds(buttonArea.removeFromLeft(180));
+
+            const int gap = 8;
+            const int refWidth = (rawArea.getWidth() - gap) / 3;
+            auto refArea = rawArea.removeFromLeft(refWidth);
+            rawArea.removeFromLeft(gap);
+
+            const int labelHeight = 18;
+            this->referencePanelLabel.setBounds(refArea.removeFromTop(labelHeight));
+            this->referencePanel.setBounds(refArea);
+            this->instrumentMapLabel.setBounds(rawArea.removeFromTop(labelHeight));
+            this->instrumentMapEditor.setBounds(rawArea);
+            break;
+        }
+
+        case ViewMode::Settings:
+            this->settingsPanel->setBounds(mainArea);
+            break;
+
+        case ViewMode::Map:
+            // TODO: MidiMapTable
+            break;
     }
 }

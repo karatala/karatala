@@ -2,8 +2,11 @@
 
 #include "BinaryData.h"
 #include "PluginProcessor.h"
-#include "EngineSettingsPanel.h"
+#include "UI/EngineSettingsPanel.h"
 #include "UI/LookAndFeel.h"
+#include "UI/Sidebar.h"
+#include "UI/StatusBar.h"
+#include "UI/DrumPadGrid.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
 //==============================================================================
@@ -17,21 +20,30 @@ public:
     void resized() override;
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
     PluginProcessor& processorRef;
     ::LookAndFeel lookAndFeel;
     std::unique_ptr<melatonin::Inspector> inspector;
-    juce::TextButton inspectButton { "Inspect the UI" };
+
+    // Layout components
+    Sidebar sidebar;
+    StatusBar statusBar;
+
+    // Mode: Zen / Zoned — drum pad grid
+    DrumPadGrid drumPadGrid;
+
+    // Mode: Raw — existing instrument map editor
     juce::TextEditor referencePanel;
     juce::Label referencePanelLabel;
     juce::TextEditor instrumentMapEditor;
     juce::Label instrumentMapLabel;
     juce::TextButton applyButton { "Apply instrument map" };
-    juce::Label statusLabel;
-    juce::TextButton settingsTabButton { "Engine Settings" };
+
+    // Mode: Settings
     std::unique_ptr<EngineSettingsPanel> settingsPanel;
-    bool showingSettings = false;
-    void toggleSettingsView();
+
+    ViewMode activeMode = ViewMode::Zen;
+    void setViewMode(ViewMode mode);
+    void showComponentsForMode(ViewMode mode);
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

@@ -1,5 +1,5 @@
 #include "EngineSettingsPanel.h"
-#include "Engine/DrumKitEngine.h"
+#include "../Engine/DrumKitEngine.h"
 
 EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     : engine(engine) {
