@@ -76,6 +76,7 @@ public:
     const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
     const juce::String& getLastInstrumentMapStatus() const { return this->lastInstrumentMapStatus; }
     const juce::String& getSuggestedInstrumentMapText() const { return this->suggestedInstrumentMapText; }
+    void seedInstrumentMapFingerprints(const juce::String& mapText);
     juce::String buildReferenceText() const;
 
     // Returns true if `id` corresponds to a registered instrument slot.

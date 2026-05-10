@@ -356,6 +356,10 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     }
 
     this->layoutContent();
+
+    // Seed engine fingerprints from the initial generated map text so that
+    // subsequent tiny changes only reload the affected slot, not everything.
+    this->engine.seedInstrumentMapFingerprints(this->generateMapText());
 }
 
 static juce::Label* makeCompactLabel(juce::Component* parent, const juce::String& text) {

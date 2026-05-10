@@ -164,6 +164,12 @@ void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, m
     this->suggestedInstrumentMapText = DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentSynthById);
 }
 
+void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
+    auto parsed = DrumKitEngine::parseInstrumentMapText(mapText);
+    if (parsed.ok())
+        this->lastAppliedSlotFingerprints = buildSlotFingerprintMap(parsed.value);
+}
+
 juce::String DrumKitEngine::buildReferenceText() const {
     return DrumKitEngineTextView::buildReferenceText(this->activeKitLayoutPtr.get(), this->getInstrumentManager());
 }
@@ -940,13 +946,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             juce::String allowedStr;
             for (const auto& artId : primaryAllowedArticulationIds)
                 allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(artId);
-            LOG(Notice, "  slot=" + slotId + " primaryAllowed=[" + allowedStr + "] slotChanged=" + juce::String(slotChanged ? "yes" : "no"));
-            if (!primaryRemap.empty()) {
-                juce::String remapStr;
-                for (const auto& [fromId, toId] : primaryRemap)
-                    remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
-                LOG(Notice, "  primaryRemap: [" + remapStr + "]");
-            }
+            LOG(Notice, "  slot=" + slotId + " primaryAllowed(initial)=[" + allowedStr + "] slotChanged=" + juce::String(slotChanged ? "yes" : "no"));
         }
 
         for (const auto& artName : primary.effectiveFilter) {
@@ -975,6 +975,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 } else if (!containsId(claimedArticulations, artId)) {
                     addUniqueId(claimedArticulations, artId);
                     artSources[artId] = resolved.instSpec;
+                    addUniqueId(primaryAllowedArticulationIds, artId);
                     // Propagate cross-art remap for this articulation to the primary synth
                     auto entryRemap = buildArtNameRemap(*resolved.entry);
                     auto remapIt = entryRemap.find(artId);
@@ -987,6 +988,25 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
             if (!layeredArts.empty())
                 shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts, buildArtNameRemap(*resolved.entry) });
+        }
+
+        if (LOG_ENABLED(Notice)) {
+            juce::String allowedStr;
+            for (const auto& artId : primaryAllowedArticulationIds)
+                allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(artId);
+            LOG(Notice, "  slot=" + slotId + " primaryAllowed(final)=[" + allowedStr + "]");
+            if (!primaryRemap.empty()) {
+                juce::String remapStr;
+                for (const auto& [fromId, toId] : primaryRemap)
+                    remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
+                LOG(Notice, "  primaryRemap: [" + remapStr + "]");
+            }
+            if (!artSources.empty()) {
+                juce::String srcStr;
+                for (const auto& [artId, instPtr] : artSources)
+                    srcStr += (srcStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(artId) + "->" + instPtr->meta.codeRaw;
+                LOG(Notice, "  artSources: [" + srcStr + "]");
+            }
         }
 
         PreparedSlot prep;
