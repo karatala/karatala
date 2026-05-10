@@ -149,6 +149,10 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
         this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
     };
+    this->instrumentConfigPanel->onMapTextChanged = [this](const juce::String& mapText) {
+        this->processorRef.getValueTreeState().state.setProperty("instrument_map", mapText, nullptr);
+        this->instrumentMapEditor.setText(mapText, false);
+    };
 
     // Show default mode
     this->showComponentsForMode(this->activeMode);
@@ -175,8 +179,10 @@ void PluginEditor::setViewMode(ViewMode mode) {
     if (mode == ViewMode::Map)
         this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
 
-    if (mode == ViewMode::Instrument)
-        this->instrumentConfigPanel->populate();
+    if (mode == ViewMode::Instrument) {
+        auto savedMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
+        this->instrumentConfigPanel->populate(savedMap);
+    }
 
     this->resized();
 }

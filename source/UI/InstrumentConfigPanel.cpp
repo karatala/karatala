@@ -13,7 +13,7 @@ InstrumentConfigPanel::SourcePickerPopup::SourcePickerPopup(const std::vector<So
     addAndMakeVisible(this->relatedOnlyToggle);
 
     this->listBox.setModel(&this->listModel);
-    this->listBox.setRowHeight(20);
+    this->listBox.setRowHeight(18);
     this->listBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff2a2a2a));
     addAndMakeVisible(this->listBox);
 
@@ -27,8 +27,8 @@ void InstrumentConfigPanel::SourcePickerPopup::setFilterType(KitLib::InstrumentS
 
 void InstrumentConfigPanel::SourcePickerPopup::resized() {
     auto area = getLocalBounds().reduced(4);
-    auto topRow = area.removeFromTop(24);
-    this->filterField.setBounds(topRow.removeFromLeft(topRow.getWidth() - 80));
+    auto topRow = area.removeFromTop(22);
+    this->filterField.setBounds(topRow.removeFromLeft(topRow.getWidth() - 70));
     topRow.removeFromLeft(4);
     this->relatedOnlyToggle.setBounds(topRow);
     area.removeFromTop(2);
@@ -83,7 +83,7 @@ void InstrumentConfigPanel::SourcePickerPopup::ListModel::paintListBoxItem(int r
         g.fillAll(rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e));
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions(11.0f)));
+    g.setFont(juce::Font(juce::FontOptions(10.0f)));
     g.drawText(item.displayText(), 4, 0, width - 8, height, juce::Justification::centredLeft);
 }
 
@@ -100,11 +100,16 @@ void InstrumentConfigPanel::SourcePickerPopup::ListModel::listBoxItemClicked(int
 
 InstrumentConfigPanel::ArticulationCard::ArticulationCard(const juce::String& artName)
     : artName(artName) {
+    this->artLabel.setText(artName, juce::dontSendNotification);
+    this->artLabel.setFont(juce::Font(juce::FontOptions(10.0f).withStyle("Bold")));
+    this->artLabel.setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
+    addAndMakeVisible(this->artLabel);
     addAndMakeVisible(this->addLayerButton);
+    this->addLayerButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
 }
 
 int InstrumentConfigPanel::ArticulationCard::getRequiredHeight() const {
-    return static_cast<int>(this->layers.size()) * layerHeight + addButtonHeight + 4;
+    return headerHeight + static_cast<int>(this->layers.size()) * layerHeight + addButtonHeight + 2;
 }
 
 void InstrumentConfigPanel::ArticulationCard::updateRemoveButtonVisibility() {
@@ -113,33 +118,47 @@ void InstrumentConfigPanel::ArticulationCard::updateRemoveButtonVisibility() {
         layer->removeButton->setVisible(showRemove);
 }
 
+void InstrumentConfigPanel::ArticulationCard::paint(juce::Graphics& g) {
+    g.setColour(juce::Colour(0xff333333));
+    g.drawRect(getLocalBounds().reduced(1, 0), 1);
+}
+
 void InstrumentConfigPanel::ArticulationCard::resized() {
-    auto area = getLocalBounds().reduced(2, 0);
+    auto area = getLocalBounds().reduced(4, 0);
+
+    // Articulation name header
+    this->artLabel.setBounds(area.removeFromTop(headerHeight));
 
     for (auto* layer : this->layers) {
         auto row = area.removeFromTop(layerHeight);
 
         if (layer->removeButton->isVisible()) {
-            layer->removeButton->setBounds(row.removeFromRight(22).reduced(1));
-            row.removeFromRight(2);
+            layer->removeButton->setBounds(row.removeFromRight(20).reduced(1));
+            row.removeFromRight(1);
         }
 
-        // Source button takes about 40% of remaining width
-        const int buttonWidth = juce::jmax(120, row.getWidth() * 2 / 5);
-        layer->sourceButton->setBounds(row.removeFromLeft(buttonWidth).reduced(0, 2));
-        row.removeFromLeft(4);
+        // Source button
+        const int buttonWidth = juce::jmax(100, row.getWidth() * 2 / 5);
+        layer->sourceButton->setBounds(row.removeFromLeft(buttonWidth).reduced(0, 1));
+        row.removeFromLeft(2);
 
-        // 3 sliders share remaining space equally
-        const int sliderWidth = (row.getWidth() - 8) / 3;
-        layer->tuningSlider->setBounds(row.removeFromLeft(sliderWidth).reduced(0, 2));
-        row.removeFromLeft(4);
-        layer->attackSlider->setBounds(row.removeFromLeft(sliderWidth).reduced(0, 2));
-        row.removeFromLeft(4);
-        layer->decaySlider->setBounds(row.reduced(0, 2));
+        // T: [slider]  A: [slider]  D: [slider]
+        const int remaining = row.getWidth();
+        const int labelWidth = 12;
+        const int sliderWidth = (remaining - labelWidth * 3 - 6) / 3;
+
+        layer->tuningLabel->setBounds(row.removeFromLeft(labelWidth));
+        layer->tuningSlider->setBounds(row.removeFromLeft(sliderWidth).reduced(0, 1));
+        row.removeFromLeft(3);
+        layer->attackLabel->setBounds(row.removeFromLeft(labelWidth));
+        layer->attackSlider->setBounds(row.removeFromLeft(sliderWidth).reduced(0, 1));
+        row.removeFromLeft(3);
+        layer->decayLabel->setBounds(row.removeFromLeft(labelWidth));
+        layer->decaySlider->setBounds(row.reduced(0, 1));
     }
 
     auto btnRow = area.removeFromTop(addButtonHeight);
-    this->addLayerButton.setBounds(btnRow.removeFromLeft(70).reduced(0, 1));
+    this->addLayerButton.setBounds(btnRow.removeFromLeft(24).reduced(0, 1));
 }
 
 // ─── SlotCard ─────────────────────────────────────────────────────────────────
@@ -148,7 +167,7 @@ InstrumentConfigPanel::SlotCard::SlotCard(const juce::String& slotId, KitLib::In
     : slotId(slotId)
     , slotType(type) {
     this->headerLabel.setText(slotId, juce::dontSendNotification);
-    this->headerLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
+    this->headerLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
     this->headerLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     addAndMakeVisible(this->headerLabel);
 }
@@ -156,18 +175,25 @@ InstrumentConfigPanel::SlotCard::SlotCard(const juce::String& slotId, KitLib::In
 int InstrumentConfigPanel::SlotCard::getRequiredHeight() const {
     int total = headerHeight;
     for (const auto* artCard : this->artCards)
-        total += artCard->getRequiredHeight() + 2;
-    return total + 4;
+        total += artCard->getRequiredHeight() + 1;
+    return total + 2;
+}
+
+void InstrumentConfigPanel::SlotCard::paint(juce::Graphics& g) {
+    g.setColour(juce::Colour(0xff2a2a2a));
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), 3.0f);
+    g.setColour(juce::Colour(0xff444444));
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 3.0f, 1.0f);
 }
 
 void InstrumentConfigPanel::SlotCard::resized() {
-    auto area = getLocalBounds().reduced(4, 0);
+    auto area = getLocalBounds().reduced(4, 2);
     this->headerLabel.setBounds(area.removeFromTop(headerHeight));
 
     for (auto* artCard : this->artCards) {
         int cardHeight = artCard->getRequiredHeight();
         artCard->setBounds(area.removeFromTop(cardHeight));
-        area.removeFromTop(2);
+        area.removeFromTop(1);
     }
 }
 
@@ -193,7 +219,6 @@ void InstrumentConfigPanel::rebuildSourceItems() {
         return;
 
     for (const auto& kitPtr : libraryManager->getKits()) {
-        // Build short display name: use meta.name (strips author/license) 
         juce::String kitShort = kitPtr->meta.name;
         if (kitShort.isEmpty())
             kitShort = kitPtr->meta.codeRaw;
@@ -236,18 +261,22 @@ int InstrumentConfigPanel::findSourceIndex(const juce::String& fullPath) const {
     return -1;
 }
 
-void InstrumentConfigPanel::populate() {
+void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->dismissPopup();
     this->rebuildSourceItems();
     this->slotCards.clear();
     this->contentComponent.removeAllChildren();
+    this->populated = true;
 
     auto* layout = this->engine.getKitLayout();
     if (layout == nullptr)
         return;
 
-    // Parse current instrument map for existing entries
-    auto mapText = this->engine.getSuggestedInstrumentMapText();
+    // Parse the provided instrument map text (from ValueTreeState, not default)
+    juce::String mapText = instrumentMapText;
+    if (mapText.trim().isEmpty())
+        mapText = this->engine.getSuggestedInstrumentMapText();
+
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto& existingEntries = parseResult.value.entries;
 
@@ -255,7 +284,6 @@ void InstrumentConfigPanel::populate() {
         auto* slotCard = this->slotCards.add(new SlotCard(slot.id, slot.type));
         this->contentComponent.addAndMakeVisible(slotCard);
 
-        // Collect unique articulation names for this slot
         std::vector<juce::String> artNames;
         if (slot.articulations.empty()) {
             artNames.push_back("(default)");
@@ -271,7 +299,6 @@ void InstrumentConfigPanel::populate() {
             auto* artCard = slotCard->artCards.add(new ArticulationCard(artName));
             slotCard->addAndMakeVisible(artCard);
 
-            // Find matching entries from existing map
             std::vector<const DrumKitEngine::InstrumentMapEntry*> matchingEntries;
             for (const auto& entry : existingEntries) {
                 if (entry.slotId != slot.id)
@@ -327,57 +354,69 @@ void InstrumentConfigPanel::populate() {
     this->layoutContent();
 }
 
+static juce::Label* makeCompactLabel(juce::Component* parent, const juce::String& text) {
+    auto* label = new juce::Label();
+    label->setText(text, juce::dontSendNotification);
+    label->setFont(juce::Font(juce::FontOptions(9.0f)));
+    label->setColour(juce::Label::textColourId, juce::Colour(0xff888888));
+    label->setJustificationType(juce::Justification::centred);
+    parent->addAndMakeVisible(label);
+    return label;
+}
+
 void InstrumentConfigPanel::addLayerRow(ArticulationCard* artCard, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs) {
     auto* layer = artCard->layers.add(new LayerRow());
 
-    // Source button (replaces ComboBox)
+    // Source button
     layer->sourceButton = std::make_unique<juce::TextButton>();
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
     if (layer->selectedSourceIndex >= 0)
         layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].displayText());
     else
         layer->sourceButton->setButtonText("--");
-
+    layer->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
     artCard->addAndMakeVisible(*layer->sourceButton);
-    // onClick is wired per-slot in populate's caller context; we need slotCard ref.
-    // We'll wire it after adding to the artCard - see below.
 
-    // Tuning slider
+    // T: tuning label + slider
+    layer->tuningLabel.reset(makeCompactLabel(artCard, "T"));
     layer->tuningSlider = std::make_unique<juce::Slider>();
     layer->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 50, 20);
+    layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 18);
     layer->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
     layer->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
     layer->tuningSlider->setTextValueSuffix(" ct");
     artCard->addAndMakeVisible(*layer->tuningSlider);
     layer->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
 
-    // Attack slider
+    // A: attack label + slider
+    layer->attackLabel.reset(makeCompactLabel(artCard, "A"));
     layer->attackSlider = std::make_unique<juce::Slider>();
     layer->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 44, 20);
+    layer->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 38, 18);
     layer->attackSlider->setRange(-10.0, 500.0, 10.0);
     layer->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -10.0, juce::dontSendNotification);
     layer->attackSlider->textFromValueFunction = [](double value) -> juce::String {
-        return value < 0.0 ? "--" : juce::String(static_cast<int>(value)) + " ms";
+        return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
     artCard->addAndMakeVisible(*layer->attackSlider);
     layer->attackSlider->onValueChange = [this] { this->applyToEngine(); };
 
-    // Decay slider
+    // D: decay label + slider
+    layer->decayLabel.reset(makeCompactLabel(artCard, "D"));
     layer->decaySlider = std::make_unique<juce::Slider>();
     layer->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 44, 20);
+    layer->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 38, 18);
     layer->decaySlider->setRange(-10.0, 5000.0, 10.0);
     layer->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -10.0, juce::dontSendNotification);
     layer->decaySlider->textFromValueFunction = [](double value) -> juce::String {
-        return value < 0.0 ? "--" : juce::String(static_cast<int>(value)) + " ms";
+        return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
     artCard->addAndMakeVisible(*layer->decaySlider);
     layer->decaySlider->onValueChange = [this] { this->applyToEngine(); };
 
-    // Remove button (visibility managed by updateRemoveButtonVisibility)
+    // Remove button
     layer->removeButton = std::make_unique<juce::TextButton>("x");
+    layer->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
     artCard->addAndMakeVisible(*layer->removeButton);
     layer->removeButton->onClick = [this, artCard, layer] {
         juce::MessageManager::callAsync([this, artCard, layer] {
@@ -395,11 +434,8 @@ void InstrumentConfigPanel::showPickerPopup(LayerRow* layer, SlotCard* slotCard)
 
     this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
     this->activePopup->setFilterType(slotCard->slotType);
-    this->activePopupButton = layer->sourceButton.get();
 
-    // Position popup below the source button
     auto buttonBounds = layer->sourceButton->getBoundsInParent();
-    // Convert from artCard coords to contentComponent coords to viewport coords to our coords
     auto* artCard = dynamic_cast<juce::Component*>(layer->sourceButton->getParentComponent());
     if (artCard != nullptr) {
         auto posInContent = artCard->getPosition() + slotCard->getPosition() + buttonBounds.getPosition();
@@ -407,11 +443,10 @@ void InstrumentConfigPanel::showPickerPopup(LayerRow* layer, SlotCard* slotCard)
         auto posInPanel = posInViewport + this->viewport.getPosition();
 
         int popupWidth = juce::jmax(300, buttonBounds.getWidth());
-        int popupHeight = 300;
+        int popupHeight = 280;
         int popupX = posInPanel.getX();
         int popupY = posInPanel.getY() + buttonBounds.getHeight();
 
-        // Clamp to panel bounds
         if (popupY + popupHeight > getHeight())
             popupY = posInPanel.getY() - popupHeight;
         if (popupX + popupWidth > getWidth())
@@ -459,7 +494,7 @@ void InstrumentConfigPanel::dismissPopup() {
 void InstrumentConfigPanel::layoutContent() {
     int totalHeight = 0;
     for (const auto* slotCard : this->slotCards)
-        totalHeight += slotCard->getRequiredHeight() + 6;
+        totalHeight += slotCard->getRequiredHeight() + 4;
 
     const int contentWidth = this->viewport.getWidth() - this->viewport.getScrollBarThickness();
     this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 400), totalHeight);
@@ -467,8 +502,8 @@ void InstrumentConfigPanel::layoutContent() {
     int yPos = 0;
     for (auto* slotCard : this->slotCards) {
         int cardHeight = slotCard->getRequiredHeight();
-        slotCard->setBounds(0, yPos, this->contentComponent.getWidth(), cardHeight);
-        yPos += cardHeight + 6;
+        slotCard->setBounds(2, yPos, this->contentComponent.getWidth() - 4, cardHeight);
+        yPos += cardHeight + 4;
     }
 
     // Wire source button onClick for each layer (needs slotCard ref)
@@ -494,17 +529,14 @@ juce::String InstrumentConfigPanel::generateMapText() const {
 
                 const auto& srcItem = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
 
-                // Build slot ref
                 juce::String slotRef = slotCard->slotId;
                 if (artCard->artName != "(default)")
                     slotRef += "/" + artCard->artName;
 
-                // Build target ref (using kitCodeRaw for map text)
                 juce::String targetRef = srcItem.kitCodeRaw;
                 if (srcItem.instCode.isNotEmpty())
                     targetRef += "/" + srcItem.instCode;
 
-                // Build params
                 juce::StringArray params;
                 int tuning = static_cast<int>(layer->tuningSlider->getValue());
                 if (tuning != 0)
@@ -535,7 +567,13 @@ juce::String InstrumentConfigPanel::generateMapText() const {
 
 void InstrumentConfigPanel::applyToEngine() {
     auto text = this->generateMapText();
+    if (text.trim().isEmpty())
+        return;
+
     this->engine.useInstrumentMap(text);
+
+    if (this->onMapTextChanged)
+        this->onMapTextChanged(text);
 
     if (this->onStatusMessage)
         this->onStatusMessage(this->engine.getLastInstrumentMapStatus());
