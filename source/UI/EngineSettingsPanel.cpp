@@ -7,15 +7,15 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
 
     // Group labels
     chokeGroupLabel.setText("Aftertouch Choke", juce::dontSendNotification);
-    chokeGroupLabel.setFont(juce::Font(13.0f, juce::Font::bold));
+    chokeGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
     addAndMakeVisible(chokeGroupLabel);
 
     tailGroupLabel.setText("Tail Shortening", juce::dontSendNotification);
-    tailGroupLabel.setFont(juce::Font(13.0f, juce::Font::bold));
+    tailGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
     addAndMakeVisible(tailGroupLabel);
 
     hihatGroupLabel.setText("Hi-Hat / Polyphony", juce::dontSendNotification);
-    hihatGroupLabel.setFont(juce::Font(13.0f, juce::Font::bold));
+    hihatGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
     addAndMakeVisible(hihatGroupLabel);
 
     // Aftertouch Choke sliders
@@ -40,6 +40,14 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->addSlider("Pedal Min Remaining (sec)", &settings.hihatPedalMinRemainingSec, 0.01f, 0.5f, 0.01f);
     this->addSlider("Cross-Art Choke Margin (dB)", &settings.hihatCrossArtChokeDbMargin, 0.0f, 20.0f, 0.5f);
 
+    // UI / Grid
+    uiGridGroupLabel.setText("UI / Grid", juce::dontSendNotification);
+    uiGridGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
+    addAndMakeVisible(uiGridGroupLabel);
+
+    this->addIntSlider("Pad Grid Columns", &settings.padGridColumns, 1, 12);
+    this->addIntSlider("Pad Grid Rows", &settings.padGridRows, 1, 8);
+
     this->loadFromEngine();
 }
 
@@ -48,7 +56,7 @@ void EngineSettingsPanel::addSlider(const juce::String& name, float* target, flo
     entry->target = target;
 
     entry->label.setText(name, juce::dontSendNotification);
-    entry->label.setFont(juce::Font(11.0f));
+    entry->label.setFont(juce::Font(juce::FontOptions(11.0f)));
     entry->label.setJustificationType(juce::Justification::centredRight);
     addAndMakeVisible(entry->label);
 
@@ -61,19 +69,48 @@ void EngineSettingsPanel::addSlider(const juce::String& name, float* target, flo
     this->sliders.push_back(std::move(entry));
 }
 
+void EngineSettingsPanel::addIntSlider(const juce::String& name, int* target, int minVal, int maxVal) {
+    auto entry = std::make_unique<SliderEntry>();
+    entry->intTarget = target;
+
+    entry->label.setText(name, juce::dontSendNotification);
+    entry->label.setFont(juce::Font(juce::FontOptions(11.0f)));
+    entry->label.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(entry->label);
+
+    entry->slider.setRange(static_cast<double>(minVal), static_cast<double>(maxVal), 1.0);
+    entry->slider.setSliderStyle(juce::Slider::LinearHorizontal);
+    entry->slider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
+    entry->slider.onValueChange = [this] { this->onSettingChanged(); };
+    addAndMakeVisible(entry->slider);
+
+    this->sliders.push_back(std::move(entry));
+}
+
 void EngineSettingsPanel::loadFromEngine() {
     for (auto& entry : this->sliders) {
         if (entry->target != nullptr)
             entry->slider.setValue(static_cast<double>(*entry->target), juce::dontSendNotification);
+        else if (entry->intTarget != nullptr)
+            entry->slider.setValue(static_cast<double>(*entry->intTarget), juce::dontSendNotification);
     }
 }
 
 void EngineSettingsPanel::onSettingChanged() {
+    bool gridChanged = false;
     for (auto& entry : this->sliders) {
         if (entry->target != nullptr)
             *entry->target = static_cast<float>(entry->slider.getValue());
+        else if (entry->intTarget != nullptr) {
+            int oldVal = *entry->intTarget;
+            *entry->intTarget = static_cast<int>(entry->slider.getValue());
+            if (oldVal != *entry->intTarget)
+                gridChanged = true;
+        }
     }
     this->engine.saveSettings();
+    if (gridChanged && this->onGridSizeChanged)
+        this->onGridSizeChanged();
 }
 
 void EngineSettingsPanel::resized() {
@@ -107,4 +144,7 @@ void EngineSettingsPanel::resized() {
 
     placeGroupLabel(hihatGroupLabel);
     placeSliderRows(12, 4);
+
+    placeGroupLabel(uiGridGroupLabel);
+    placeSliderRows(16, 2);
 }

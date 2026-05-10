@@ -24,9 +24,34 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     // Drum pad grid (Zen / Zoned modes)
     addAndMakeVisible(this->drumPadGrid);
+    {
+        auto& settings = this->processorRef.getEngine().engineSettings;
+        this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
+    }
     this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+    this->drumPadGrid.onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, float velocity) {
+        if (!slot || artIdx < 0 || artIdx >= static_cast<int>(slot->articulations.size()))
+            return;
+        auto& art = slot->articulations[static_cast<size_t>(artIdx)];
+        if (art.notes.empty())
+            return;
+        int midiNote = static_cast<int>(art.notes[0]);
+        float vel = velocity / 127.0f;
+        this->processorRef.injectMidiFromUI(juce::MidiMessage::noteOn(1, midiNote, vel));
+    };
     this->sidebar.velocityKnob.onValueChange = [this] {
         this->drumPadGrid.setClickVelocity(static_cast<float>(this->sidebar.velocityKnob.getValue()));
+    };
+
+    // HiHat openness knob — sends CC4
+    this->sidebar.hihatKnob.onValueChange = [this] {
+        int ccValue = static_cast<int>(this->sidebar.hihatKnob.getValue());
+        this->processorRef.injectMidiFromUI(juce::MidiMessage::controllerEvent(1, 4, ccValue));
+    };
+
+    // Round-robin lock knob — sets engine setting directly
+    this->sidebar.rrLockKnob.onValueChange = [this] {
+        this->processorRef.getEngine().engineSettings.roundRobinLock = static_cast<int>(this->sidebar.rrLockKnob.getValue());
     };
 
     // Raw mode components
@@ -37,19 +62,19 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     addChildComponent(this->applyButton);
 
     this->referencePanelLabel.setText("Reference", juce::dontSendNotification);
-    this->referencePanelLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    this->referencePanelLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
     this->referencePanelLabel.setJustificationType(juce::Justification::centredLeft);
 
     this->referencePanel.setMultiLine(true);
     this->referencePanel.setReadOnly(true);
     this->referencePanel.setScrollbarsShown(true);
-    this->referencePanel.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
+    this->referencePanel.setFont(juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName())));
     this->referencePanel.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e1e1e));
     this->referencePanel.setColour(juce::TextEditor::textColourId, juce::Colour(0xffaaaaaa));
     this->referencePanel.setText(this->processorRef.getEngine().buildReferenceText(), false);
 
     this->instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
-    this->instrumentMapLabel.setFont(juce::Font(12.0f, juce::Font::bold));
+    this->instrumentMapLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
     this->instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
 
     this->instrumentMapEditor.setMultiLine(true);
@@ -92,11 +117,29 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
         // Re-populate pad grid after instrument map change
         this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+        this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+    };
+
+    // Map mode — MIDI note assignment table
+    addChildComponent(this->midiMapTable);
+    this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+    this->midiMapTable.onMappingChanged = [this] {
+        // Rebuild engine note routing after mapping changes
+        auto* layout = this->processorRef.getEngine().getKitLayout();
+        if (layout) {
+            layout->rebuildIndices();
+        }
+        this->statusBar.setStatusText("MIDI mapping updated");
     };
 
     // Settings mode
     this->settingsPanel = std::make_unique<EngineSettingsPanel>(this->processorRef.getEngine());
     addChildComponent(*this->settingsPanel);
+    this->settingsPanel->onGridSizeChanged = [this] {
+        auto& settings = this->processorRef.getEngine().engineSettings;
+        this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
+        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+    };
 
     // Show default mode
     this->showComponentsForMode(this->activeMode);
@@ -120,6 +163,9 @@ void PluginEditor::setViewMode(ViewMode mode) {
         this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
     }
 
+    if (mode == ViewMode::Map)
+        this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+
     this->resized();
 }
 
@@ -135,6 +181,9 @@ void PluginEditor::showComponentsForMode(ViewMode mode) {
     this->instrumentMapEditor.setVisible(showRaw);
     this->instrumentMapLabel.setVisible(showRaw);
     this->applyButton.setVisible(showRaw);
+
+    // Map mode
+    this->midiMapTable.setVisible(mode == ViewMode::Map);
 
     // Settings
     this->settingsPanel->setVisible(mode == ViewMode::Settings);
@@ -187,7 +236,7 @@ void PluginEditor::resized() {
             break;
 
         case ViewMode::Map:
-            // TODO: MidiMapTable
+            this->midiMapTable.setBounds(mainArea);
             break;
     }
 }

@@ -65,7 +65,7 @@ void DrumPad::paintZen(juce::Graphics& g) {
     if (this->slotPtr) {
         auto displayName = this->slotPtr->display.isNotEmpty() ? this->slotPtr->display : this->slotPtr->id;
         g.setColour(juce::Colours::white.withAlpha(0.9f));
-        g.setFont(juce::Font(12.0f, juce::Font::bold));
+        g.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
         g.drawText(displayName, bounds.reduced(4), juce::Justification::centred);
     }
 }
@@ -103,13 +103,13 @@ void DrumPad::paintZoned(juce::Graphics& g) {
 
         // Articulation label
         g.setColour(juce::Colours::white.withAlpha(0.85f));
-        g.setFont(juce::Font(10.0f));
+        g.setFont(juce::Font(juce::FontOptions(10.0f)));
         auto labelText = this->slotPtr->articulations[static_cast<size_t>(idx)].codeRaw;
         if (idx == 0 && artCount == 1) {
             // Single articulation — show instrument name + articulation
             auto displayName = this->slotPtr->display.isNotEmpty() ? this->slotPtr->display : this->slotPtr->id;
             labelText = displayName + " [" + labelText + "]";
-            g.setFont(juce::Font(11.0f, juce::Font::bold));
+            g.setFont(juce::Font(juce::FontOptions(11.0f).withStyle("Bold")));
         }
         g.drawText(labelText, zoneRect.reduced(4, 1), juce::Justification::centredLeft);
     }

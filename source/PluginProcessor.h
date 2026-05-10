@@ -67,6 +67,9 @@ public:
     juce::AudioProcessorValueTreeState& getValueTreeState() { return *this->mAudioProcessorValueTreeStatePtr; }
     const juce::AudioProcessorValueTreeState& getValueTreeState() const { return *this->mAudioProcessorValueTreeStatePtr; }
 
+    /** Queue a MIDI message from the UI thread to be processed in the next audio block. */
+    void injectMidiFromUI(const juce::MidiMessage& msg);
+
 private:
     std::unique_ptr<juce::AudioFormatManager> mAudioFormatManagerPtr;
     std::unique_ptr<juce::AudioProcessorValueTreeState> mAudioProcessorValueTreeStatePtr;
@@ -74,6 +77,10 @@ private:
     // std::unique_ptr<PluginParameters> mPluginParameters;
 
     std::unique_ptr<DrumKitEngine> drumKitEnginePtr;
+
+    // MIDI messages injected from UI (pad clicks), consumed in processBlock
+    juce::MidiBuffer pendingUiMidiMessages;
+    juce::CriticalSection uiMidiLock;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

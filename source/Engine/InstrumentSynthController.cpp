@@ -496,6 +496,15 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
     }
     if (uniqueVariants.empty()) return 0;
 
+    // RR lock: force a specific variant index (1-based setting)
+    const auto& settings = this->parent->getEngineSettings();
+    if (settings.roundRobinLock > 0) {
+        size_t lockIdx = static_cast<size_t>(settings.roundRobinLock - 1);
+        if (lockIdx < uniqueVariants.size())
+            return uniqueVariants[lockIdx];
+        return uniqueVariants[0]; // fallback if lock index out of range
+    }
+
     std::vector<uint8_t> readyVariants;
     readyVariants.reserve(uniqueVariants.size());
     for (auto v : uniqueVariants) {

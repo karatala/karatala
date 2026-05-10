@@ -138,8 +138,21 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     }
 
     if (this->drumKitEnginePtr) {
+        // Merge any UI-injected MIDI (pad clicks) into this block
+        {
+            const juce::ScopedLock lock(this->uiMidiLock);
+            if (!this->pendingUiMidiMessages.isEmpty()) {
+                midiMessages.addEvents(this->pendingUiMidiMessages, 0, buffer.getNumSamples(), 0);
+                this->pendingUiMidiMessages.clear();
+            }
+        }
         this->drumKitEnginePtr->processBlock(buffer, midiMessages);
     }
+}
+
+void PluginProcessor::injectMidiFromUI(const juce::MidiMessage& msg) {
+    const juce::ScopedLock lock(this->uiMidiLock);
+    this->pendingUiMidiMessages.addEvent(msg, 0);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout PluginProcessor::createParameterLayout() {

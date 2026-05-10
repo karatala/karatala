@@ -22,4 +22,11 @@ struct EngineSettings {
     float hihatPedalCrossfadeSec = 0.20f;        // CC-driven hi-hat crossfade
     float hihatPedalMinRemainingSec = 0.050f;    // min remaining audio for replacement
     float hihatCrossArtChokeDbMargin = 3.0f;     // cross-articulation choke dB margin
+
+    // -- Round-Robin --
+    int roundRobinLock = 0;  // 0 = normal cycling, 1+ = force variant index (1-based)
+
+    // -- UI / Grid --
+    int padGridColumns = 6;
+    int padGridRows = 4;
 };

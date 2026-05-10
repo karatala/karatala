@@ -7,6 +7,7 @@
 #include "UI/Sidebar.h"
 #include "UI/StatusBar.h"
 #include "UI/DrumPadGrid.h"
+#include "UI/MidiMapTable.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
 //==============================================================================
@@ -30,6 +31,9 @@ private:
 
     // Mode: Zen / Zoned — drum pad grid
     DrumPadGrid drumPadGrid;
+
+    // Mode: Map — MIDI note assignment table
+    MidiMapTable midiMapTable;
 
     // Mode: Raw — existing instrument map editor
     juce::TextEditor referencePanel;

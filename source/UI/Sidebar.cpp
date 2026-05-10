@@ -18,7 +18,7 @@ Sidebar::Sidebar() {
 
     // Velocity knob
     this->velocityLabel.setText("Vel", juce::dontSendNotification);
-    this->velocityLabel.setFont(juce::Font(10.0f));
+    this->velocityLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
     this->velocityLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(this->velocityLabel);
 
@@ -30,7 +30,7 @@ Sidebar::Sidebar() {
 
     // HiHat openness knob
     this->hihatLabel.setText("HH", juce::dontSendNotification);
-    this->hihatLabel.setFont(juce::Font(10.0f));
+    this->hihatLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
     this->hihatLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(this->hihatLabel);
 
@@ -42,7 +42,7 @@ Sidebar::Sidebar() {
 
     // Round-robin lock knob
     this->rrLockLabel.setText("RR", juce::dontSendNotification);
-    this->rrLockLabel.setFont(juce::Font(10.0f));
+    this->rrLockLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
     this->rrLockLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(this->rrLockLabel);
 

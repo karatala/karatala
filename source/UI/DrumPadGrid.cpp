@@ -49,9 +49,8 @@ void DrumPadGrid::setClickVelocity(float velocity) {
 }
 
 void DrumPadGrid::flashPad(const juce::String& slotId, float velocity) {
-    for (auto& pad : this->pads) {
-        // TODO: match by slotId once DrumPad exposes it
-    }
+    juce::ignoreUnused(slotId, velocity);
+    // TODO: match pad by slotId and call pad->flash(velocity)
 }
 
 void DrumPadGrid::resized() {
