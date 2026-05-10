@@ -758,6 +758,21 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         return false;
     }
 
+    LOG(Notice, "=== useInstrumentMap: " + juce::String(parsed.value.entries.size()) + " entries ===");
+    for (size_t idx = 0; idx < parsed.value.entries.size(); ++idx) {
+        const auto& entry = parsed.value.entries[idx];
+        juce::String slotArtStr, srcArtStr;
+        for (const auto& sa : entry.slotArticulationFilter) slotArtStr += (slotArtStr.isEmpty() ? "" : ",") + sa;
+        for (const auto& sa : entry.articulationFilter) srcArtStr += (srcArtStr.isEmpty() ? "" : ",") + sa;
+        LOG(Notice, "  entry[" + juce::String(idx) + "]: slot=" + entry.slotId
+            + (slotArtStr.isNotEmpty() ? "/" + slotArtStr : "")
+            + " -> kit=" + entry.kitRef + " inst=" + entry.instCode
+            + (srcArtStr.isNotEmpty() ? " art=" + srcArtStr : "")
+            + (entry.tuningCents.has_value() ? " tuning=" + juce::String(*entry.tuningCents) : "")
+            + (entry.attackTimeMs.has_value() ? " attack=" + juce::String(*entry.attackTimeMs) : "")
+            + (entry.decayTimeMs.has_value() ? " decay=" + juce::String(*entry.decayTimeMs) : ""));
+    }
+
     struct ShadowPlan {
         const InstrumentMapEntry* entry = nullptr;
         KitLib::InstrumentSpec* instSpec = nullptr;
@@ -891,7 +906,12 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 continue;
             }
 
-            resolvedEntries.push_back({ entry, kitSpec, instSpec, effectiveArticulationFilter(*entry) });
+            auto filter = effectiveArticulationFilter(*entry);
+            juce::String filterStr;
+            for (const auto& fa : filter) filterStr += (filterStr.isEmpty() ? "" : ",") + fa;
+            LOG(Notice, "  resolved: slot=" + entry->slotId + " -> " + kitSpec->meta.name + "/" + entry->instCode
+                + (filterStr.isNotEmpty() ? " effectiveFilter=[" + filterStr + "]" : " effectiveFilter=[ALL]"));
+            resolvedEntries.push_back({ entry, kitSpec, instSpec, std::move(filter) });
         }
 
         if (resolvedEntries.empty())
@@ -913,6 +933,19 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             for (const auto& artName : primary.effectiveFilter) {
                 if (artName.isNotEmpty())
                     addUniqueId(primaryAllowedArticulationIds, StringsDictSingleton::getId(artName));
+            }
+        }
+
+        if (LOG_ENABLED(Notice)) {
+            juce::String allowedStr;
+            for (const auto& artId : primaryAllowedArticulationIds)
+                allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(artId);
+            LOG(Notice, "  slot=" + slotId + " primaryAllowed=[" + allowedStr + "] slotChanged=" + juce::String(slotChanged ? "yes" : "no"));
+            if (!primaryRemap.empty()) {
+                juce::String remapStr;
+                for (const auto& [fromId, toId] : primaryRemap)
+                    remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
+                LOG(Notice, "  primaryRemap: [" + remapStr + "]");
             }
         }
 
@@ -968,6 +1001,10 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
             replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap);
             applyOverrides(*replacement, *primary.entry);
+            LOG(Notice, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
+                + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
+                + (primary.entry->attackTimeMs.has_value() ? " attack=" + juce::String(*primary.entry->attackTimeMs) : "")
+                + (primary.entry->decayTimeMs.has_value() ? " decay=" + juce::String(*primary.entry->decayTimeMs) : ""));
             if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
                 replacement->setCurrentPlaybackSampleRate(this->lastSampleRate);
                 replacement->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
@@ -985,6 +1022,16 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
                 shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdList(shadowPlan.articulations), shadowPlan.artNameRemap);
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
+                if (LOG_ENABLED(Notice)) {
+                    juce::String shadowArtsStr;
+                    for (const auto& sa : shadowPlan.articulations) shadowArtsStr += (shadowArtsStr.isEmpty() ? "" : ",") + sa;
+                    juce::String remapStr;
+                    for (const auto& [fromId, toId] : shadowPlan.artNameRemap) remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
+                    LOG(Notice, "  SHADOW loaded: slot=" + slotId + " inst=" + shadowPlan.instSpec->meta.codeRaw
+                        + " arts=[" + shadowArtsStr + "]"
+                        + (remapStr.isNotEmpty() ? " remap=[" + remapStr + "]" : "")
+                        + " tuning=" + juce::String(shadowPlan.entry->tuningCents.value_or(0)));
+                }
 
                 if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
                     shadowRaw->setCurrentPlaybackSampleRate(this->lastSampleRate);
@@ -1071,6 +1118,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         statusLines.add("Instrument map applied successfully");
 
     this->lastInstrumentMapStatus = statusLines.joinIntoString("\n");
+    LOG(Notice, "=== useInstrumentMap done: applied=" + juce::String(applied) + " oldSynths=" + juce::String(oldSynths.size())
+        + " totalSynths=" + juce::String(this->instrumentSynthPtrs.size()) + " ===");
     return applied > 0;
 }
 

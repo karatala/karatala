@@ -112,12 +112,18 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* default
         // but map them to the slot art's MIDI notes
         LayoutArticulation resolveArt = layoutArt;
         auto remapIt = artNameRemap.find(layoutArt.nameId);
-        if (remapIt != artNameRemap.end())
+        if (remapIt != artNameRemap.end()) {
             resolveArt.nameId = remapIt->second;
+            LOG(Info, "    remap: layout art '" + layoutArt.codeRaw + "' (nameId=" + juce::String((int)layoutArt.nameId)
+                + ") -> resolve as nameId=" + juce::String((int)resolveArt.nameId)
+                + " ('" + StringsDictSingleton::nameOf(resolveArt.nameId) + "')");
+        }
 
         KitLib::ArticulationSpec* resolvedSpec = this->resolveArticulationSpec(sourceInstrument, resolveArt);
 
         if (resolvedSpec != nullptr) {
+            LOG(Info, "    resolved: layout='" + layoutArt.codeRaw + "' -> artSpec='" + resolvedSpec->codeRaw
+                + "' (nameId=" + juce::String((int)resolvedSpec->nameId) + " exprId=" + juce::String((int)resolvedSpec->exprId) + ")");
             const auto artIdx = this->getOrAddRuntimeArticulationIdx(resolvedSpec->nameId, resolvedSpec->exprId);
             auto& artRt = this->runtimeArticulations[artIdx];
             resolvedSpec->sortVelocityLayers();
