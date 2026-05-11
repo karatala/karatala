@@ -226,6 +226,7 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     this->adsr.noteOn();
 
     this->tailShortenFactor = 1.0f;
+    this->dbUpdateCounter = 3; // force immediate dB update on first render
 
     this->chokeProcessor.noteStarted();
     // LOG(Debug, "InstrumentSynthVoice: startNote velocity=" + juce::String(velocity) + " pitchRatio=" + juce::String(this->pitchRatio));
@@ -274,6 +275,12 @@ void InstrumentSynthVoice::updateEstimatedDb() {
         this->cachedEstimatedDb = -100.0f;
         return;
     }
+
+    // Throttle: only recompute every 4th render call to reduce log10 overhead.
+    // The cached value is still fresh enough for voice stealing and tail shortening.
+    if (++this->dbUpdateCounter < 4)
+        return;
+    this->dbUpdateCounter = 0;
 
     auto* s = this->currentlyPlayingSound;
     if (s == nullptr || !s->decayEnvelope.isValid()) {
@@ -326,9 +333,37 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         this->stopNote(false);
         return;
     }
+
+    // P1-B: Pre-validate destination channels — skip voice if all out of range.
+    const int destChBase = s->micBufferChannelStart;
+    if (destChBase < 0 || destChBase >= destChCount) {
+        // Advance ADSR to keep envelope state consistent
+        for (int i = 0; i < numSamples; ++i)
+            (void) this->adsr.getNextSample();
+        this->sourceSamplePosition += this->pitchRatio * numSamples;
+        if (!this->adsr.isActive() || this->sourceSamplePosition >= srcLen)
+            this->stopNote(false);
+        this->updateEstimatedDb();
+        return;
+    }
+    // Clamp srcCount to fit within output buffer
+    const int effectiveSrcCount = juce::jmin(srcCount, destChCount - destChBase);
+
+    // P1-C: Cache raw read/write pointers outside the sample loop to avoid
+    // repeated getReadPointer/getSample function call overhead.
+    static constexpr int MAX_RENDER_CHANNELS = 32;
+    const float* srcPtrs[MAX_RENDER_CHANNELS];
+    float* destPtrs[MAX_RENDER_CHANNELS];
+    for (int sc = 0; sc < effectiveSrcCount && sc < MAX_RENDER_CHANNELS; ++sc) {
+        srcPtrs[sc] = buf.getReadPointer(juce::jlimit(0, srcChannels - 1, srcStart + sc));
+        destPtrs[sc] = outputBuffer.getWritePointer(destChBase + sc);
+    }
+
     for (int i = 0; i < numSamples; ++i) {
         //TODO: use peak offset for mics (found minimal (for example di) and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) first makke script to smart-parse from samples and save to filename
-        // Process per-voice ducking for this block and get block gain
+        // Per-sample choke gain — MUST stay per-sample, not per-block.
+        // getNextBlockGain() advances elapsed time by 1/sampleRate each call;
+        // calling once per block freezes ducking/muting and breaks aftertouch choke.
         const float chokeGain = this->chokeProcessor.getNextBlockGain();
 
         const double pos = this->sourceSamplePosition;
@@ -340,24 +375,13 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         if (idx >= 0 && idx < srcLen) {
             const auto env = this->adsr.getNextSample();
             this->lastEnvelopeValue = env;
+            const float gain = env * this->velocityGain * chokeGain;
 
-            for (int sc = 0; sc < srcCount; ++sc) {
-                int actualSrcCh = juce::jlimit(0, srcChannels - 1, srcStart + sc);
-                float v0 = buf.getSample(actualSrcCh, idx);
-                float v1 = (idx + 1 < srcLen) ? buf.getSample(actualSrcCh, idx + 1) : 0.0f;
-                auto sample = static_cast<float>(v0 + (v1 - v0) * frac) * env * this->velocityGain * chokeGain;
-
-                int destCh = s->micBufferChannelStart + sc;
-                if (destCh >= 0 && destCh < destChCount) {
-                    outputBuffer.addSample(destCh, startSample + i, sample);
-                } else {
-                    // Attempt to write outside of provided mic buffer — warn once per occurrence
-                    // if (s->sampleVariantSpec) {
-                    //     LOG(Warning, "Render: attempted write to micBuffer destCh=" + juce::String(destCh) + " but mic buffer has " + juce::String(destChCount) + " channels. Sample=" + s->sampleVariantSpec->sampleFileName);
-                    // } else {
-                    //     LOG(Warning, "Render: attempted write to micBuffer destCh=" + juce::String(destCh) + " but mic buffer has " + juce::String(destChCount) + " channels.");
-                    // }
-                }
+            for (int sc = 0; sc < effectiveSrcCount; ++sc) {
+                float v0 = srcPtrs[sc][idx];
+                float v1 = (idx + 1 < srcLen) ? srcPtrs[sc][idx + 1] : 0.0f;
+                float sample = static_cast<float>(v0 + (v1 - v0) * frac) * gain;
+                destPtrs[sc][startSample + i] += sample;
             }
         } else {
             // still advance envelope even if out of source range

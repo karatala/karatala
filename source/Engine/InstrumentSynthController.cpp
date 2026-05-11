@@ -1,6 +1,5 @@
 #include "InstrumentSynth.h"
 #include "DrumKitEngine.h"
-#include <unordered_set>
 #include <cmath>
 
 // Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
@@ -486,37 +485,64 @@ bool InstrumentSynth::isVariantReady(const VelocityLayerRuntime& layer, uint8_t 
     return seen;
 }
 
-uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
-    std::vector<uint8_t> uniqueVariants;
-    uniqueVariants.reserve(layer.samples.size());
-    for (const auto& se : layer.samples) {
-        uint8_t key = se.variantIdx;
-        if (std::find(uniqueVariants.begin(), uniqueVariants.end(), key) == uniqueVariants.end())
-            uniqueVariants.push_back(key);
+// Portable bit helpers for bitmask-based variant selection (no heap allocation).
+namespace {
+    inline uint8_t lowestSetBit(uint32_t mask) {
+        for (uint8_t idx = 0; idx < 32; ++idx)
+            if (mask & (1u << idx)) return idx;
+        return 0;
     }
-    if (uniqueVariants.empty()) return 0;
+    inline int popCount(uint32_t mask) {
+        int count = 0;
+        while (mask) { mask &= (mask - 1); ++count; }
+        return count;
+    }
+    inline uint32_t clearLowestSetBit(uint32_t mask) {
+        return mask & (mask - 1);
+    }
+}
+
+uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
+    // Collect unique variant indices using a bitmask — no heap allocation.
+    // Supports up to 32 variant indices (0..31), far more than any round-robin group.
+    uint32_t allMask = 0;
+    for (const auto& se : layer.samples) {
+        if (se.variantIdx < 32)
+            allMask |= (1u << se.variantIdx);
+    }
+    if (allMask == 0) return 0;
 
     // RR lock: force a specific variant index (1-based setting)
     const auto& settings = this->parent->getEngineSettings();
     if (settings.roundRobinLock > 0) {
-        size_t lockIdx = static_cast<size_t>(settings.roundRobinLock - 1);
-        if (lockIdx < uniqueVariants.size())
-            return uniqueVariants[lockIdx];
-        return uniqueVariants[0]; // fallback if lock index out of range
+        int lockIdx = settings.roundRobinLock - 1;
+        int count = 0;
+        for (uint32_t mask = allMask; mask != 0; mask = clearLowestSetBit(mask)) {
+            if (count == lockIdx)
+                return lowestSetBit(mask);
+            ++count;
+        }
+        return lowestSetBit(allMask);
     }
 
-    std::vector<uint8_t> readyVariants;
-    readyVariants.reserve(uniqueVariants.size());
-    for (auto v : uniqueVariants) {
-        if (this->isVariantReady(layer, v))
-            readyVariants.push_back(v);
+    uint32_t readyMask = 0;
+    for (uint32_t remaining = allMask; remaining != 0; ) {
+        uint8_t variantIdx = lowestSetBit(remaining);
+        remaining &= ~(1u << variantIdx);
+        if (this->isVariantReady(layer, variantIdx))
+            readyMask |= (1u << variantIdx);
     }
 
-    const auto& variants = readyVariants.empty() ? uniqueVariants : readyVariants;
-    if (variants.size() == 1) return variants[0];
+    const uint32_t choiceMask = readyMask != 0 ? readyMask : allMask;
+    const int choiceCount = popCount(choiceMask);
+    if (choiceCount == 1) return lowestSetBit(choiceMask);
+
     uint32_t rr = layer.roundRobinCounter->fetch_add(1u);
-    size_t idx = rr % variants.size();
-    return variants[idx];
+    int target = static_cast<int>(rr % static_cast<uint32_t>(choiceCount));
+    uint32_t remaining = choiceMask;
+    for (int idx = 0; idx < target; ++idx)
+        remaining = clearLowestSetBit(remaining);
+    return lowestSetBit(remaining);
 }
 
 bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
@@ -621,7 +647,14 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     if (!hasPeak)
         return;
 
-    std::unordered_map<juce::uint32, float> oldGroupPeakDbByNoteOn;
+    // Stack-allocated flat arrays instead of std::unordered_map/set — avoids
+    // heap allocation on every note-on. 128 entries covers the maximum voice
+    // count per instrument (typically 10-100).
+    static constexpr int MAX_GROUPS = 128;
+    struct NoteOnGroup { juce::uint32 noteOnTime; float peakDb; };
+    NoteOnGroup groups[MAX_GROUPS];
+    int groupCount = 0;
+
     for (auto* voice : this->voices) {
         if (!voice || !voice->isVoiceActive())
             continue;
@@ -643,30 +676,39 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
         const float oldVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->velocityGain), -100.0f);
         const float oldAbsDb = oldEnv.getAbsoluteDbAtMs(elapsedMs) + oldVelocityDb;
 
-        auto it = oldGroupPeakDbByNoteOn.find(voice->noteOnTime);
-        if (it == oldGroupPeakDbByNoteOn.end()) {
-            oldGroupPeakDbByNoteOn[voice->noteOnTime] = oldAbsDb;
-        } else {
-            it->second = juce::jmax(it->second, oldAbsDb);
+        // Linear scan to find or insert group by noteOnTime
+        int found = -1;
+        for (int idx = 0; idx < groupCount; ++idx) {
+            if (groups[idx].noteOnTime == voice->noteOnTime) { found = idx; break; }
+        }
+        if (found >= 0) {
+            groups[found].peakDb = juce::jmax(groups[found].peakDb, oldAbsDb);
+        } else if (groupCount < MAX_GROUPS) {
+            groups[groupCount++] = { voice->noteOnTime, oldAbsDb };
         }
     }
 
-    std::unordered_set<juce::uint32> noteOnTimesToCull;
-    for (const auto& [noteOnTime, oldGroupPeakDb] : oldGroupPeakDbByNoteOn) {
-        if (oldGroupPeakDb < (newPeakDb - settings.voiceCullThresholdDb))
-            noteOnTimesToCull.insert(noteOnTime);
+    // Mark groups whose peak is below threshold for culling (reuse the array in-place)
+    juce::uint32 cullTimes[MAX_GROUPS];
+    int cullCount = 0;
+    for (int idx = 0; idx < groupCount; ++idx) {
+        if (groups[idx].peakDb < (newPeakDb - settings.voiceCullThresholdDb))
+            cullTimes[cullCount++] = groups[idx].noteOnTime;
     }
 
-    if (noteOnTimesToCull.empty())
+    if (cullCount == 0)
         return;
 
     for (auto* voice : this->voices) {
         if (!voice || !voice->isVoiceActive())
             continue;
 
-        if (noteOnTimesToCull.find(voice->noteOnTime) != noteOnTimesToCull.end()) {
-            voice->envelopeState = InstrumentSynthVoice::EnvelopeState::Dying;
-            voice->killImmediately();
+        for (int idx = 0; idx < cullCount; ++idx) {
+            if (voice->noteOnTime == cullTimes[idx]) {
+                voice->envelopeState = InstrumentSynthVoice::EnvelopeState::Dying;
+                voice->killImmediately();
+                break;
+            }
         }
     }
 }

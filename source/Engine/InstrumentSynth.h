@@ -153,6 +153,7 @@ public:
     float tailShortenFactor = 1.0f;   // 1.0 = normal, <1 = shortened
     float lastEnvelopeValue = 0.0f;
     float cachedEstimatedDb = -100.0f;
+    uint8_t dbUpdateCounter = 0; // throttle updateEstimatedDb to every N-th render call
     int hitGroupId = -1;
 
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
