@@ -126,7 +126,7 @@ public:
             // + "|v=" + juce::String(volumeMilliDb)
             // + "|len=" + juce::String(maxReadUs)
             // + "|fade=" + juce::String(fadeOutUs)
-            // + "|tag=" + loadSpec.preprocessTag
+            + "|tag=" + loadSpec.preprocessTag
         ;
     }
 
@@ -168,7 +168,11 @@ private:
     std::unique_ptr<SampleLoaderQueue> queuePtr;
 
     std::mutex cacheMutex;
-    std::unordered_map<juce::String, BufferPtr> cache;
+    struct CacheEntry {
+        BufferPtr buffer;
+        double sampleRate = 0.0;
+    };
+    std::unordered_map<juce::String, CacheEntry> cache;
 
     size_t currentCacheBytes = 0;
     size_t cacheLimitBytes;

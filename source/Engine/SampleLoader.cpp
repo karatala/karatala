@@ -225,10 +225,11 @@ void SampleLoader::requestAsyncLoad(const SampleLoadSpec& loadSpec, LoadCallback
 
         auto it = cache.find(cacheKey);
         if (it != cache.end()) {
-            auto buf = it->second;
-            juce::MessageManager::callAsync([buf, callback, loadSpec]() {
+            auto buf = it->second.buffer;
+            auto cachedSr = it->second.sampleRate;
+            juce::MessageManager::callAsync([buf, cachedSr, callback, loadSpec]() {
                 LOG(Debug, "SampleLoader: cache hit for " + loadSpec.file.getFullPathName());
-                callback(buf, 0.0); // SR not cached separately (safe assumption)
+                callback(buf, cachedSr);
             });
             return;
         }
@@ -299,7 +300,7 @@ juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
         const size_t bytes = (size_t)channels * (size_t)samplesToRead * sizeof(float);
 
         if (loader.currentCacheBytes + bytes <= loader.cacheLimitBytes) {
-            loader.cache[cacheKey] = buffer;
+            loader.cache[cacheKey] = { buffer, sampleRate };
             loader.currentCacheBytes += bytes;
             // LOG(Debug, "SampleLoader::LoadJob: cached " + file.getFullPathName() + " (" + juce::String(bytes) + " bytes)");
         }
