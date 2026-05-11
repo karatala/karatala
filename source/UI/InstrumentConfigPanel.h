@@ -9,12 +9,9 @@ public:
     ~InstrumentConfigPanel() override = default;
 
     void resized() override;
-
-    // Populate from given instrument map text (reads current state)
     void populate(const juce::String& instrumentMapText);
 
     std::function<void(const juce::String&)> onStatusMessage;
-    // Called with new map text when user changes anything — editor should persist this
     std::function<void(const juce::String&)> onMapTextChanged;
 
 private:
@@ -23,8 +20,8 @@ private:
 
     // ─── Structured source item for picker ───
     struct SourceItem {
-        juce::String kitCodeRaw;     // full kit code for map text
-        juce::String kitDisplayName; // short name (no author/license)
+        juce::String kitCodeRaw;
+        juce::String kitDisplayName;
         juce::String instCode;
         juce::String artCode;
         KitLib::InstrumentSpec::Type instType = KitLib::InstrumentSpec::Type::Unknown;
@@ -35,7 +32,6 @@ private:
             if (this->artCode.isNotEmpty()) result += "/" + this->artCode;
             return result;
         }
-
         juce::String displayText() const {
             juce::String result = this->kitDisplayName;
             if (this->instCode.isNotEmpty()) result += "/" + this->instCode;
@@ -55,18 +51,15 @@ private:
         void paint(juce::Graphics& g) override;
         void setFilterType(KitLib::InstrumentSpec::Type type);
         std::function<void(int)> onItemSelected;
-
     private:
         const std::vector<SourceItem>& allItems;
         KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;
         juce::TextEditor filterField;
         juce::ToggleButton relatedOnlyToggle { "related" };
         juce::ListBox listBox;
-
         struct FilteredEntry { int originalIndex; };
         std::vector<FilteredEntry> filteredEntries;
         void rebuildFiltered();
-
         class ListModel : public juce::ListBoxModel {
         public:
             explicit ListModel(SourcePickerPopup& owner) : owner(owner) {}
@@ -80,53 +73,26 @@ private:
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourcePickerPopup)
     };
 
-    // ─── Per-layer UI row ───
-    struct LayerRow {
+    // ─── Flat table row (one per articulation/layer) ───
+    struct TableRow {
+        juce::String slotId;
+        juce::String artName;
+        KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
         int selectedSourceIndex = -1;
+
+        std::unique_ptr<juce::Label> slotLabel;
+        std::unique_ptr<juce::Label> artLabel;
         std::unique_ptr<juce::TextButton> sourceButton;
-        std::unique_ptr<juce::Label> tuningLabel;
         std::unique_ptr<juce::Slider> tuningSlider;
-        std::unique_ptr<juce::Label> attackLabel;
         std::unique_ptr<juce::Slider> attackSlider;
-        std::unique_ptr<juce::Label> decayLabel;
         std::unique_ptr<juce::Slider> decaySlider;
+        std::unique_ptr<juce::TextButton> addButton;
         std::unique_ptr<juce::TextButton> removeButton;
     };
 
-    // ─── Per-articulation card ───
-    struct ArticulationCard : public juce::Component {
-        juce::String artName;
-        juce::Label artLabel;
-        juce::OwnedArray<LayerRow> layers;
-        juce::TextButton addLayerButton { "+" };
+    juce::OwnedArray<TableRow> tableRows;
 
-        explicit ArticulationCard(const juce::String& artName);
-        void resized() override;
-        void paint(juce::Graphics& g) override;
-        void updateRemoveButtonVisibility();
-
-        static constexpr int layerHeight = 24;
-        static constexpr int headerHeight = 18;
-        static constexpr int addButtonHeight = 20;
-        int getRequiredHeight() const;
-    };
-
-    // ─── Per-slot card ───
-    struct SlotCard : public juce::Component {
-        juce::String slotId;
-        KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
-        juce::Label headerLabel;
-        juce::OwnedArray<ArticulationCard> artCards;
-
-        explicit SlotCard(const juce::String& slotId, KitLib::InstrumentSpec::Type type);
-        void resized() override;
-        void paint(juce::Graphics& g) override;
-
-        static constexpr int headerHeight = 20;
-        int getRequiredHeight() const;
-    };
-
-    juce::OwnedArray<SlotCard> slotCards;
+    juce::Label headerSlot, headerInstrument, headerTuning, headerAttack, headerDecay;
 
     juce::Component contentComponent;
     juce::Viewport viewport;
@@ -139,16 +105,18 @@ private:
     };
     std::unique_ptr<PopupOverlay> popupOverlay;
     std::unique_ptr<SourcePickerPopup> activePopup;
-    juce::Button* activePopupButton = nullptr;
 
-    void showPickerPopup(LayerRow* layer, SlotCard* slotCard);
+    void showPickerPopup(TableRow* row);
     void dismissPopup();
-
     void layoutContent();
     void applyToEngine();
     juce::String generateMapText() const;
-    void addLayerRow(ArticulationCard* artCard, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);
+    void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,
+                const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);
     int findSourceIndex(const juce::String& fullPath) const;
+    void updateRemoveButtonVisibility();
+
+    static constexpr int rowHeight = 22;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentConfigPanel)
 };

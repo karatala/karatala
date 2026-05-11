@@ -49,16 +49,12 @@ void InstrumentConfigPanel::SourcePickerPopup::rebuildFiltered() {
 
     for (int idx = 0; idx < static_cast<int>(this->allItems.size()); ++idx) {
         const auto& item = this->allItems[static_cast<size_t>(idx)];
-
         if (relatedOnly && item.instType != this->filterType)
             continue;
-
         if (filterText.isNotEmpty()) {
-            auto displayLower = item.displayText().toLowerCase();
-            if (!displayLower.contains(filterText))
+            if (!item.displayText().toLowerCase().contains(filterText))
                 continue;
         }
-
         this->filteredEntries.push_back({ idx });
     }
 
@@ -73,15 +69,12 @@ int InstrumentConfigPanel::SourcePickerPopup::ListModel::getNumRows() {
 void InstrumentConfigPanel::SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.filteredEntries.size()))
         return;
-
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(rowNumber)].originalIndex;
     const auto& item = this->owner.allItems[static_cast<size_t>(originalIdx)];
-
     if (rowIsSelected)
         g.fillAll(juce::Colour(0xff3a5a8a));
     else
         g.fillAll(rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e));
-
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(juce::FontOptions(10.0f)));
     g.drawText(item.displayText(), 4, 0, width - 8, height, juce::Justification::centredLeft);
@@ -90,111 +83,9 @@ void InstrumentConfigPanel::SourcePickerPopup::ListModel::paintListBoxItem(int r
 void InstrumentConfigPanel::SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent&) {
     if (row < 0 || row >= static_cast<int>(this->owner.filteredEntries.size()))
         return;
-
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
     if (this->owner.onItemSelected)
         this->owner.onItemSelected(originalIdx);
-}
-
-// ─── ArticulationCard ─────────────────────────────────────────────────────────
-
-InstrumentConfigPanel::ArticulationCard::ArticulationCard(const juce::String& artName)
-    : artName(artName) {
-    this->artLabel.setText(artName, juce::dontSendNotification);
-    this->artLabel.setFont(juce::Font(juce::FontOptions(10.0f).withStyle("Bold")));
-    this->artLabel.setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
-    addAndMakeVisible(this->artLabel);
-    addAndMakeVisible(this->addLayerButton);
-    this->addLayerButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
-}
-
-int InstrumentConfigPanel::ArticulationCard::getRequiredHeight() const {
-    return headerHeight + static_cast<int>(this->layers.size()) * layerHeight + addButtonHeight + 2;
-}
-
-void InstrumentConfigPanel::ArticulationCard::updateRemoveButtonVisibility() {
-    bool showRemove = this->layers.size() > 1;
-    for (auto* layer : this->layers)
-        layer->removeButton->setVisible(showRemove);
-}
-
-void InstrumentConfigPanel::ArticulationCard::paint(juce::Graphics& g) {
-    g.setColour(juce::Colour(0xff333333));
-    g.drawRect(getLocalBounds().reduced(1, 0), 1);
-}
-
-void InstrumentConfigPanel::ArticulationCard::resized() {
-    auto area = getLocalBounds().reduced(4, 0);
-
-    // Articulation name header
-    this->artLabel.setBounds(area.removeFromTop(headerHeight));
-
-    for (auto* layer : this->layers) {
-        auto row = area.removeFromTop(layerHeight);
-
-        if (layer->removeButton->isVisible()) {
-            layer->removeButton->setBounds(row.removeFromRight(20).reduced(1));
-            row.removeFromRight(1);
-        }
-
-        // Source button
-        const int buttonWidth = juce::jmax(100, row.getWidth() * 2 / 5);
-        layer->sourceButton->setBounds(row.removeFromLeft(buttonWidth).reduced(0, 1));
-        row.removeFromLeft(2);
-
-        // T: [slider]  A: [slider]  D: [slider]
-        const int remaining = row.getWidth();
-        const int labelWidth = 12;
-        const int sliderWidth = (remaining - labelWidth * 3 - 6) / 3;
-
-        layer->tuningLabel->setBounds(row.removeFromLeft(labelWidth));
-        layer->tuningSlider->setBounds(row.removeFromLeft(sliderWidth).reduced(0, 1));
-        row.removeFromLeft(3);
-        layer->attackLabel->setBounds(row.removeFromLeft(labelWidth));
-        layer->attackSlider->setBounds(row.removeFromLeft(sliderWidth).reduced(0, 1));
-        row.removeFromLeft(3);
-        layer->decayLabel->setBounds(row.removeFromLeft(labelWidth));
-        layer->decaySlider->setBounds(row.reduced(0, 1));
-    }
-
-    auto btnRow = area.removeFromTop(addButtonHeight);
-    this->addLayerButton.setBounds(btnRow.removeFromLeft(24).reduced(0, 1));
-}
-
-// ─── SlotCard ─────────────────────────────────────────────────────────────────
-
-InstrumentConfigPanel::SlotCard::SlotCard(const juce::String& slotId, KitLib::InstrumentSpec::Type type)
-    : slotId(slotId)
-    , slotType(type) {
-    this->headerLabel.setText(slotId, juce::dontSendNotification);
-    this->headerLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
-    this->headerLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    addAndMakeVisible(this->headerLabel);
-}
-
-int InstrumentConfigPanel::SlotCard::getRequiredHeight() const {
-    int total = headerHeight;
-    for (const auto* artCard : this->artCards)
-        total += artCard->getRequiredHeight() + 1;
-    return total + 2;
-}
-
-void InstrumentConfigPanel::SlotCard::paint(juce::Graphics& g) {
-    g.setColour(juce::Colour(0xff2a2a2a));
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 3.0f);
-    g.setColour(juce::Colour(0xff444444));
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 3.0f, 1.0f);
-}
-
-void InstrumentConfigPanel::SlotCard::resized() {
-    auto area = getLocalBounds().reduced(4, 2);
-    this->headerLabel.setBounds(area.removeFromTop(headerHeight));
-
-    for (auto* artCard : this->artCards) {
-        int cardHeight = artCard->getRequiredHeight();
-        artCard->setBounds(area.removeFromTop(cardHeight));
-        area.removeFromTop(1);
-    }
 }
 
 // ─── InstrumentConfigPanel ────────────────────────────────────────────────────
@@ -204,6 +95,19 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& engine)
     this->viewport.setViewedComponent(&this->contentComponent, false);
     this->viewport.setScrollBarsShown(true, false);
     addAndMakeVisible(this->viewport);
+
+    auto setupHeader = [this](juce::Label& label, const juce::String& text) {
+        label.setText(text, juce::dontSendNotification);
+        label.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
+        label.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
+        label.setJustificationType(juce::Justification::centredLeft);
+        this->contentComponent.addAndMakeVisible(label);
+    };
+    setupHeader(this->headerSlot, "Slot");
+    setupHeader(this->headerInstrument, "Instrument");
+    setupHeader(this->headerTuning, "Tuning");
+    setupHeader(this->headerAttack, "Attack");
+    setupHeader(this->headerDecay, "Decay");
 }
 
 void InstrumentConfigPanel::resized() {
@@ -255,7 +159,6 @@ void InstrumentConfigPanel::rebuildSourceItems() {
 
 int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const {
     auto needle = searchPath.trim().toLowerCase();
-    // Try exact match against both full path (kitCodeRaw) and display path (kitDisplayName)
     for (int idx = 0; idx < static_cast<int>(this->sourceItems.size()); ++idx) {
         const auto& item = this->sourceItems[static_cast<size_t>(idx)];
         if (item.fullPath().toLowerCase() == needle || item.displayText().toLowerCase() == needle)
@@ -268,15 +171,19 @@ int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const
 void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->dismissPopup();
     this->rebuildSourceItems();
-    this->slotCards.clear();
+    this->tableRows.clear();
     this->contentComponent.removeAllChildren();
+    this->contentComponent.addAndMakeVisible(this->headerSlot);
+    this->contentComponent.addAndMakeVisible(this->headerInstrument);
+    this->contentComponent.addAndMakeVisible(this->headerTuning);
+    this->contentComponent.addAndMakeVisible(this->headerAttack);
+    this->contentComponent.addAndMakeVisible(this->headerDecay);
     this->populated = true;
 
     auto* layout = this->engine.getKitLayout();
     if (layout == nullptr)
         return;
 
-    // Parse the provided instrument map text (from ValueTreeState, not default)
     juce::String mapText = instrumentMapText;
     if (mapText.trim().isEmpty())
         mapText = this->engine.getSuggestedInstrumentMapText();
@@ -285,9 +192,6 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     const auto& existingEntries = parseResult.value.entries;
 
     for (const auto& slot : layout->instrumentSlots) {
-        auto* slotCard = this->slotCards.add(new SlotCard(slot.id, slot.type));
-        this->contentComponent.addAndMakeVisible(slotCard);
-
         std::vector<juce::String> artNames;
         if (slot.articulations.empty()) {
             artNames.push_back("(default)");
@@ -300,9 +204,6 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
         }
 
         for (const auto& artName : artNames) {
-            auto* artCard = slotCard->artCards.add(new ArticulationCard(artName));
-            slotCard->addAndMakeVisible(artCard);
-
             std::vector<const DrumKitEngine::InstrumentMapEntry*> matchingEntries;
             for (const auto& entry : existingEntries) {
                 if (entry.slotId != slot.id)
@@ -310,10 +211,8 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                 if (!entry.slotArticulationFilter.empty()) {
                     bool found = false;
                     for (const auto& filter : entry.slotArticulationFilter)
-                        if (filter == artName)
-                            found = true;
-                    if (!found)
-                        continue;
+                        if (filter == artName) found = true;
+                    if (!found) continue;
                 }
                 matchingEntries.push_back(&entry);
             }
@@ -326,7 +225,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
             }
 
             if (matchingEntries.empty()) {
-                this->addLayerRow(artCard, "", 0, -1, -1);
+                this->addRow(slot.id, artName, slot.type, "", 0, -1, -1);
             } else {
                 for (const auto* entry : matchingEntries) {
                     juce::String sourceFullPath = entry->kitRef;
@@ -340,142 +239,218 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                     int tuning = entry->tuningCents.value_or(0);
                     int attack = entry->attackTimeMs.value_or(-1);
                     int decay = entry->decayTimeMs.value_or(-1);
-                    this->addLayerRow(artCard, sourceFullPath, tuning, attack, decay);
+                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay);
                 }
             }
-
-            artCard->updateRemoveButtonVisibility();
-
-            artCard->addLayerButton.onClick = [this, artCard] {
-                this->addLayerRow(artCard, "", 0, -1, -1);
-                artCard->updateRemoveButtonVisibility();
-                this->layoutContent();
-                this->resized();
-            };
         }
     }
 
+    this->updateRemoveButtonVisibility();
     this->layoutContent();
-
-    // Seed engine fingerprints from the initial generated map text so that
-    // subsequent tiny changes only reload the affected slot, not everything.
     this->engine.seedInstrumentMapFingerprints(this->generateMapText());
 }
 
-static juce::Label* makeCompactLabel(juce::Component* parent, const juce::String& text) {
-    auto* label = new juce::Label();
-    label->setText(text, juce::dontSendNotification);
-    label->setFont(juce::Font(juce::FontOptions(9.0f)));
-    label->setColour(juce::Label::textColourId, juce::Colour(0xff888888));
-    label->setJustificationType(juce::Justification::centred);
-    parent->addAndMakeVisible(label);
-    return label;
-}
+void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::String& artName,
+                                    KitLib::InstrumentSpec::Type slotType,
+                                    const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs) {
+    auto* row = this->tableRows.add(new TableRow());
+    row->slotId = slotId;
+    row->artName = artName;
+    row->slotType = slotType;
 
-void InstrumentConfigPanel::addLayerRow(ArticulationCard* artCard, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs) {
-    auto* layer = artCard->layers.add(new LayerRow());
+    // Slot label
+    row->slotLabel = std::make_unique<juce::Label>();
+    row->slotLabel->setText(slotId, juce::dontSendNotification);
+    row->slotLabel->setFont(juce::Font(juce::FontOptions(10.0f).withStyle("Bold")));
+    row->slotLabel->setColour(juce::Label::textColourId, juce::Colours::white);
+    this->contentComponent.addAndMakeVisible(*row->slotLabel);
+
+    // Art label
+    row->artLabel = std::make_unique<juce::Label>();
+    row->artLabel->setText(artName, juce::dontSendNotification);
+    row->artLabel->setFont(juce::Font(juce::FontOptions(9.0f)));
+    row->artLabel->setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
+    this->contentComponent.addAndMakeVisible(*row->artLabel);
 
     // Source button
-    layer->sourceButton = std::make_unique<juce::TextButton>();
-    layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
-    if (layer->selectedSourceIndex >= 0)
-        layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].displayText());
+    row->sourceButton = std::make_unique<juce::TextButton>();
+    row->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
+    if (row->selectedSourceIndex >= 0)
+        row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].displayText());
     else
-        layer->sourceButton->setButtonText("--");
-    layer->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
-    artCard->addAndMakeVisible(*layer->sourceButton);
+        row->sourceButton->setButtonText("--");
+    row->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    this->contentComponent.addAndMakeVisible(*row->sourceButton);
+    row->sourceButton->onClick = [this, row] { this->showPickerPopup(row); };
 
-    // T: tuning label + slider
-    layer->tuningLabel.reset(makeCompactLabel(artCard, "T"));
-    layer->tuningSlider = std::make_unique<juce::Slider>();
-    layer->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 18);
-    layer->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
-    layer->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
-    layer->tuningSlider->setTextValueSuffix(" ct");
-    artCard->addAndMakeVisible(*layer->tuningSlider);
-    layer->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
+    // Tuning slider
+    row->tuningSlider = std::make_unique<juce::Slider>();
+    row->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
+    row->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 36, 18);
+    row->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
+    row->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
+    row->tuningSlider->setTextValueSuffix(" c");
+    this->contentComponent.addAndMakeVisible(*row->tuningSlider);
+    row->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
 
-    // A: attack label + slider
-    layer->attackLabel.reset(makeCompactLabel(artCard, "A"));
-    layer->attackSlider = std::make_unique<juce::Slider>();
-    layer->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 38, 18);
-    layer->attackSlider->setRange(-10.0, 500.0, 10.0);
-    layer->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -10.0, juce::dontSendNotification);
-    layer->attackSlider->textFromValueFunction = [](double value) -> juce::String {
+    // Attack slider
+    row->attackSlider = std::make_unique<juce::Slider>();
+    row->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
+    row->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 32, 18);
+    row->attackSlider->setRange(-10.0, 500.0, 10.0);
+    row->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -10.0, juce::dontSendNotification);
+    row->attackSlider->textFromValueFunction = [](double value) -> juce::String {
         return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
-    artCard->addAndMakeVisible(*layer->attackSlider);
-    layer->attackSlider->onValueChange = [this] { this->applyToEngine(); };
+    this->contentComponent.addAndMakeVisible(*row->attackSlider);
+    row->attackSlider->onValueChange = [this] { this->applyToEngine(); };
 
-    // D: decay label + slider
-    layer->decayLabel.reset(makeCompactLabel(artCard, "D"));
-    layer->decaySlider = std::make_unique<juce::Slider>();
-    layer->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 38, 18);
-    layer->decaySlider->setRange(-10.0, 5000.0, 10.0);
-    layer->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -10.0, juce::dontSendNotification);
-    layer->decaySlider->textFromValueFunction = [](double value) -> juce::String {
+    // Decay slider
+    row->decaySlider = std::make_unique<juce::Slider>();
+    row->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
+    row->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 32, 18);
+    row->decaySlider->setRange(-10.0, 5000.0, 10.0);
+    row->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -10.0, juce::dontSendNotification);
+    row->decaySlider->textFromValueFunction = [](double value) -> juce::String {
         return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
-    artCard->addAndMakeVisible(*layer->decaySlider);
-    layer->decaySlider->onValueChange = [this] { this->applyToEngine(); };
+    this->contentComponent.addAndMakeVisible(*row->decaySlider);
+    row->decaySlider->onValueChange = [this] { this->applyToEngine(); };
+
+    // Add layer button
+    row->addButton = std::make_unique<juce::TextButton>("+");
+    row->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    this->contentComponent.addAndMakeVisible(*row->addButton);
+    row->addButton->onClick = [this, row] {
+        // Find insertion point: after the last row with same slotId/artName
+        int insertAfter = -1;
+        for (int idx = 0; idx < this->tableRows.size(); ++idx) {
+            if (this->tableRows[idx]->slotId == row->slotId && this->tableRows[idx]->artName == row->artName)
+                insertAfter = idx;
+        }
+        if (insertAfter >= 0) {
+            auto* newRow = new TableRow();
+            newRow->slotId = row->slotId;
+            newRow->artName = row->artName;
+            newRow->slotType = row->slotType;
+            // Temporarily add to end, then move
+            this->tableRows.insert(insertAfter + 1, newRow);
+            // Re-populate by calling addRow-like setup inline
+            newRow->slotLabel = std::make_unique<juce::Label>();
+            newRow->slotLabel->setText("", juce::dontSendNotification);
+            this->contentComponent.addAndMakeVisible(*newRow->slotLabel);
+            newRow->artLabel = std::make_unique<juce::Label>();
+            newRow->artLabel->setText("", juce::dontSendNotification);
+            this->contentComponent.addAndMakeVisible(*newRow->artLabel);
+            newRow->sourceButton = std::make_unique<juce::TextButton>("--");
+            newRow->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+            this->contentComponent.addAndMakeVisible(*newRow->sourceButton);
+            newRow->sourceButton->onClick = [this, newRow] { this->showPickerPopup(newRow); };
+            newRow->tuningSlider = std::make_unique<juce::Slider>();
+            newRow->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
+            newRow->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 36, 18);
+            newRow->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
+            newRow->tuningSlider->setTextValueSuffix(" c");
+            this->contentComponent.addAndMakeVisible(*newRow->tuningSlider);
+            newRow->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
+            newRow->attackSlider = std::make_unique<juce::Slider>();
+            newRow->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
+            newRow->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 32, 18);
+            newRow->attackSlider->setRange(-10.0, 500.0, 10.0);
+            newRow->attackSlider->setValue(-10.0, juce::dontSendNotification);
+            newRow->attackSlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
+            this->contentComponent.addAndMakeVisible(*newRow->attackSlider);
+            newRow->attackSlider->onValueChange = [this] { this->applyToEngine(); };
+            newRow->decaySlider = std::make_unique<juce::Slider>();
+            newRow->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
+            newRow->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 32, 18);
+            newRow->decaySlider->setRange(-10.0, 5000.0, 10.0);
+            newRow->decaySlider->setValue(-10.0, juce::dontSendNotification);
+            newRow->decaySlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
+            this->contentComponent.addAndMakeVisible(*newRow->decaySlider);
+            newRow->decaySlider->onValueChange = [this] { this->applyToEngine(); };
+            newRow->addButton = std::make_unique<juce::TextButton>("+");
+            newRow->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+            this->contentComponent.addAndMakeVisible(*newRow->addButton);
+            newRow->addButton->onClick = [this, newRow] { /* handled via same pattern but simplified — just re-populate */ };
+            newRow->removeButton = std::make_unique<juce::TextButton>("x");
+            newRow->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+            this->contentComponent.addAndMakeVisible(*newRow->removeButton);
+            newRow->removeButton->onClick = [this, newRow] {
+                juce::MessageManager::callAsync([this, newRow] {
+                    this->tableRows.removeObject(newRow);
+                    this->updateRemoveButtonVisibility();
+                    this->layoutContent();
+                    this->applyToEngine();
+                });
+            };
+            this->updateRemoveButtonVisibility();
+            this->layoutContent();
+        }
+    };
 
     // Remove button
-    layer->removeButton = std::make_unique<juce::TextButton>("x");
-    layer->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
-    artCard->addAndMakeVisible(*layer->removeButton);
-    layer->removeButton->onClick = [this, artCard, layer] {
-        juce::MessageManager::callAsync([this, artCard, layer] {
-            artCard->layers.removeObject(layer);
-            artCard->updateRemoveButtonVisibility();
+    row->removeButton = std::make_unique<juce::TextButton>("x");
+    row->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    this->contentComponent.addAndMakeVisible(*row->removeButton);
+    row->removeButton->onClick = [this, row] {
+        juce::MessageManager::callAsync([this, row] {
+            this->tableRows.removeObject(row);
+            this->updateRemoveButtonVisibility();
             this->layoutContent();
-            this->resized();
             this->applyToEngine();
         });
     };
 }
 
-void InstrumentConfigPanel::showPickerPopup(LayerRow* layer, SlotCard* slotCard) {
+void InstrumentConfigPanel::updateRemoveButtonVisibility() {
+    // Count rows per slot/art group; show [x] only if group has >1 row
+    for (int idx = 0; idx < this->tableRows.size(); ++idx) {
+        auto* row = this->tableRows[idx];
+        int groupCount = 0;
+        for (int jdx = 0; jdx < this->tableRows.size(); ++jdx) {
+            if (this->tableRows[jdx]->slotId == row->slotId && this->tableRows[jdx]->artName == row->artName)
+                ++groupCount;
+        }
+        row->removeButton->setVisible(groupCount > 1);
+    }
+}
+
+void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     this->dismissPopup();
 
     this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
-    this->activePopup->setFilterType(slotCard->slotType);
+    this->activePopup->setFilterType(row->slotType);
 
-    auto buttonBounds = layer->sourceButton->getBoundsInParent();
-    auto* artCard = dynamic_cast<juce::Component*>(layer->sourceButton->getParentComponent());
-    if (artCard != nullptr) {
-        auto posInContent = artCard->getPosition() + slotCard->getPosition() + buttonBounds.getPosition();
-        auto posInViewport = posInContent - juce::Point<int>(0, this->viewport.getViewPositionY());
-        auto posInPanel = posInViewport + this->viewport.getPosition();
+    auto buttonBounds = row->sourceButton->getBoundsInParent();
+    auto posInContent = buttonBounds.getPosition();
+    auto posInViewport = posInContent - juce::Point<int>(0, this->viewport.getViewPositionY());
+    auto posInPanel = posInViewport + this->viewport.getPosition();
 
-        int popupWidth = juce::jmax(300, buttonBounds.getWidth());
-        int popupHeight = 280;
-        int popupX = posInPanel.getX();
-        int popupY = posInPanel.getY() + buttonBounds.getHeight();
+    int popupWidth = juce::jmax(300, buttonBounds.getWidth());
+    int popupHeight = 280;
+    int popupX = posInPanel.getX();
+    int popupY = posInPanel.getY() + buttonBounds.getHeight();
 
-        if (popupY + popupHeight > getHeight())
-            popupY = posInPanel.getY() - popupHeight;
-        if (popupX + popupWidth > getWidth())
-            popupX = getWidth() - popupWidth;
+    if (popupY + popupHeight > getHeight())
+        popupY = posInPanel.getY() - popupHeight;
+    if (popupX + popupWidth > getWidth())
+        popupX = getWidth() - popupWidth;
 
-        this->activePopup->setBounds(popupX, popupY, popupWidth, popupHeight);
-    }
+    this->activePopup->setBounds(popupX, popupY, popupWidth, popupHeight);
 
-    this->activePopup->onItemSelected = [this, layer](int sourceIndex) {
-        layer->selectedSourceIndex = sourceIndex;
+    this->activePopup->onItemSelected = [this, row](int sourceIndex) {
+        row->selectedSourceIndex = sourceIndex;
         if (sourceIndex >= 0)
-            layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
+            row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
         else
-            layer->sourceButton->setButtonText("--");
+            row->sourceButton->setButtonText("--");
         juce::MessageManager::callAsync([this] {
             this->dismissPopup();
             this->applyToEngine();
         });
     };
 
-    // Transparent overlay behind popup to catch outside clicks
     this->popupOverlay = std::make_unique<PopupOverlay>();
     this->popupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] { this->dismissPopup(); });
@@ -500,76 +475,119 @@ void InstrumentConfigPanel::dismissPopup() {
 }
 
 void InstrumentConfigPanel::layoutContent() {
-    int totalHeight = 0;
-    for (const auto* slotCard : this->slotCards)
-        totalHeight += slotCard->getRequiredHeight() + 4;
-
     const int contentWidth = this->viewport.getWidth() - this->viewport.getScrollBarThickness();
-    this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 400), totalHeight);
+    const int totalRows = this->tableRows.size();
+    const int headerH = 18;
+    const int totalHeight = headerH + totalRows * rowHeight + 4;
 
-    int yPos = 0;
-    for (auto* slotCard : this->slotCards) {
-        int cardHeight = slotCard->getRequiredHeight();
-        slotCard->setBounds(2, yPos, this->contentComponent.getWidth() - 4, cardHeight);
-        yPos += cardHeight + 4;
-    }
+    this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 600), totalHeight);
 
-    // Wire source button onClick for each layer (needs slotCard ref)
-    for (auto* slotCard : this->slotCards) {
-        for (auto* artCard : slotCard->artCards) {
-            for (auto* layer : artCard->layers) {
-                layer->sourceButton->onClick = [this, layer, slotCard] {
-                    this->showPickerPopup(layer, slotCard);
-                };
-            }
-        }
+    // Column layout: | slotCol | artCol | sourceCol | tuningCol | attackCol | decayCol | btnsCol |
+    const int width = this->contentComponent.getWidth();
+    const int slotCol = 70;
+    const int artCol = 58;
+    const int btnsCol = 44;
+    const int sliderCols = width - slotCol - artCol - btnsCol;
+    const int sourceCol = juce::jmax(140, sliderCols * 40 / 100);
+    const int remaining = sliderCols - sourceCol;
+    const int tuningCol = remaining * 40 / 100;
+    const int attackCol = remaining * 30 / 100;
+    const int decayCol = remaining - tuningCol - attackCol;
+
+    // Header row
+    int xPos = 0;
+    this->headerSlot.setBounds(xPos, 0, slotCol, headerH); xPos += slotCol;
+    xPos += artCol; // no header for art column
+    this->headerInstrument.setBounds(xPos, 0, sourceCol, headerH); xPos += sourceCol;
+    this->headerTuning.setBounds(xPos, 0, tuningCol, headerH); xPos += tuningCol;
+    this->headerAttack.setBounds(xPos, 0, attackCol, headerH); xPos += attackCol;
+    this->headerDecay.setBounds(xPos, 0, decayCol, headerH);
+
+    // Track which slot/art was last shown to suppress duplicate labels
+    juce::String lastSlotId, lastArtName;
+    int yPos = headerH;
+
+    for (int idx = 0; idx < this->tableRows.size(); ++idx) {
+        auto* row = this->tableRows[idx];
+        xPos = 0;
+
+        // Slot label: show only on first row of each slot group
+        bool showSlot = (row->slotId != lastSlotId);
+        row->slotLabel->setText(showSlot ? row->slotId : "", juce::dontSendNotification);
+        row->slotLabel->setFont(juce::Font(juce::FontOptions(10.0f).withStyle("Bold")));
+        row->slotLabel->setColour(juce::Label::textColourId, juce::Colours::white);
+        row->slotLabel->setBounds(xPos, yPos, slotCol, rowHeight);
+        xPos += slotCol;
+
+        // Art label: show only on first row of each slot/art group
+        bool showArt = showSlot || (row->artName != lastArtName);
+        row->artLabel->setText(showArt ? row->artName : "", juce::dontSendNotification);
+        row->artLabel->setFont(juce::Font(juce::FontOptions(9.0f)));
+        row->artLabel->setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
+        row->artLabel->setBounds(xPos, yPos, artCol, rowHeight);
+        xPos += artCol;
+
+        row->sourceButton->setBounds(xPos, yPos + 1, sourceCol - 2, rowHeight - 2);
+        xPos += sourceCol;
+
+        row->tuningSlider->setBounds(xPos, yPos + 1, tuningCol - 2, rowHeight - 2);
+        xPos += tuningCol;
+
+        row->attackSlider->setBounds(xPos, yPos + 1, attackCol - 2, rowHeight - 2);
+        xPos += attackCol;
+
+        row->decaySlider->setBounds(xPos, yPos + 1, decayCol - 2, rowHeight - 2);
+        xPos += decayCol;
+
+        // Buttons: [+] always, [x] conditional
+        row->addButton->setBounds(xPos, yPos + 1, 20, rowHeight - 2);
+        if (row->removeButton->isVisible())
+            row->removeButton->setBounds(xPos + 21, yPos + 1, 20, rowHeight - 2);
+
+        lastSlotId = row->slotId;
+        lastArtName = row->artName;
+        yPos += rowHeight;
     }
 }
 
 juce::String InstrumentConfigPanel::generateMapText() const {
     juce::StringArray lines;
 
-    for (const auto* slotCard : this->slotCards) {
-        for (const auto* artCard : slotCard->artCards) {
-            for (const auto* layer : artCard->layers) {
-                if (layer->selectedSourceIndex < 0)
-                    continue;
+    for (const auto* row : this->tableRows) {
+        if (row->selectedSourceIndex < 0)
+            continue;
 
-                const auto& srcItem = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
+        const auto& srcItem = this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)];
 
-                juce::String slotRef = slotCard->slotId;
-                if (artCard->artName != "(default)")
-                    slotRef += "/" + artCard->artName;
+        juce::String slotRef = row->slotId;
+        if (row->artName != "(default)")
+            slotRef += "/" + row->artName;
 
-                // Use short kit name (kitDisplayName) for map text — engine resolves via findKit
-                juce::String targetRef = srcItem.kitDisplayName;
-                if (srcItem.instCode.isNotEmpty())
-                    targetRef += "/" + srcItem.instCode;
+        juce::String targetRef = srcItem.kitDisplayName;
+        if (srcItem.instCode.isNotEmpty())
+            targetRef += "/" + srcItem.instCode;
 
-                juce::StringArray params;
-                int tuning = static_cast<int>(layer->tuningSlider->getValue());
-                if (tuning != 0)
-                    params.add("tuning=" + juce::String(tuning));
+        juce::StringArray params;
+        int tuning = static_cast<int>(row->tuningSlider->getValue());
+        if (tuning != 0)
+            params.add("tuning=" + juce::String(tuning));
 
-                double attackVal = layer->attackSlider->getValue();
-                if (attackVal >= 0.0)
-                    params.add("attack=" + juce::String(static_cast<int>(attackVal)));
+        double attackVal = row->attackSlider->getValue();
+        if (attackVal >= 0.0)
+            params.add("attack=" + juce::String(static_cast<int>(attackVal)));
 
-                double decayVal = layer->decaySlider->getValue();
-                if (decayVal >= 0.0)
-                    params.add("decay=" + juce::String(static_cast<int>(decayVal)));
+        double decayVal = row->decaySlider->getValue();
+        if (decayVal >= 0.0)
+            params.add("decay=" + juce::String(static_cast<int>(decayVal)));
 
-                // Only add art= filter when source articulation differs from slot articulation
-                if (srcItem.artCode.isNotEmpty() && srcItem.artCode != artCard->artName)
-                    params.add("art=" + srcItem.artCode);
+        if (srcItem.artCode.isNotEmpty() && srcItem.artCode != row->artName)
+            params.add("art=" + srcItem.artCode);
 
-                juce::String line = slotRef + ":" + targetRef;
-                if (!params.isEmpty())
-                    line += ":" + params.joinIntoString(",");
+        juce::String line = slotRef + ":" + targetRef;
+        if (!params.isEmpty())
+            line += ":" + params.joinIntoString(",");
 
-                lines.add(line);
-            }
-        }
+        lines.add(line);
     }
 
     return lines.joinIntoString("\n");
