@@ -98,6 +98,7 @@ public:
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
+    void playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
     
     void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }

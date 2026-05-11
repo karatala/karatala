@@ -16,6 +16,7 @@ public:
     void setClickVelocity(float velocity);
 
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, float velocity)> onPadClicked;
+    std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, juce::Point<int> screenPos)> onPadRightClicked;
 
     void flashPad(const juce::String& slotId, float velocity);
 

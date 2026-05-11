@@ -711,6 +711,36 @@ std::optional<juce::String> DrumKitEngine::getNameForMidiNoteNumber(int note, in
     return {};
 }
 
+void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity) {
+    auto synthIt = this->instrumentSynthById.find(slotId);
+    if (synthIt == this->instrumentSynthById.end())
+        return;
+
+    auto* layout = this->activeKitLayoutPtr.get();
+    if (layout == nullptr)
+        return;
+
+    // Find the MIDI note for this slot/articulation
+    for (const auto& slot : layout->instrumentSlots) {
+        if (slot.id != slotId)
+            continue;
+        for (const auto& art : slot.articulations) {
+            auto artCode = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
+            if (artCode == artName || artName == "(default)") {
+                if (!art.notes.empty()) {
+                    synthIt->second->playNote(1, static_cast<int>(art.notes[0]), velocity);
+                    return;
+                }
+            }
+        }
+        // Fallback: use first articulation's first note
+        if (!slot.articulations.empty() && !slot.articulations[0].notes.empty()) {
+            synthIt->second->playNote(1, static_cast<int>(slot.articulations[0].notes[0]), velocity);
+        }
+        return;
+    }
+}
+
 
 void DrumKitEngine::saveLatestControllerValues(const juce::MidiBuffer& midiMessages) {
     for (const auto& midiMess : midiMessages) {

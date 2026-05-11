@@ -39,19 +39,25 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         float vel = velocity / 127.0f;
         this->processorRef.injectMidiFromUI(juce::MidiMessage::noteOn(1, midiNote, vel));
     };
+    this->drumPadGrid.onPadRightClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos) {
+        this->showPadContextPopup(slot, artIdx, screenPos);
+    };
     this->sidebar.velocityKnob.onValueChange = [this] {
         this->drumPadGrid.setClickVelocity(static_cast<float>(this->sidebar.velocityKnob.getValue()));
+        this->sidebar.updateKnobLabels();
     };
 
     // HiHat openness knob — sends CC4
     this->sidebar.hihatKnob.onValueChange = [this] {
         int ccValue = static_cast<int>(this->sidebar.hihatKnob.getValue());
         this->processorRef.injectMidiFromUI(juce::MidiMessage::controllerEvent(1, 4, ccValue));
+        this->sidebar.updateKnobLabels();
     };
 
     // Round-robin lock knob — sets engine setting directly
     this->sidebar.rrLockKnob.onValueChange = [this] {
         this->processorRef.getEngine().engineSettings.roundRobinLock = static_cast<int>(this->sidebar.rrLockKnob.getValue());
+        this->sidebar.updateKnobLabels();
     };
 
     // Raw mode components
@@ -264,4 +270,46 @@ void PluginEditor::resized() {
             this->midiMapTable.setBounds(mainArea);
             break;
     }
+}
+
+void PluginEditor::dismissPadContextPopup() {
+    if (this->padPopupOverlay) {
+        removeChildComponent(this->padPopupOverlay.get());
+        this->padPopupOverlay.reset();
+    }
+    if (this->padContextPopup) {
+        removeChildComponent(this->padContextPopup.get());
+        this->padContextPopup.reset();
+    }
+}
+
+void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos) {
+    this->dismissPadContextPopup();
+    if (!slot)
+        return;
+
+    this->padContextPopup = std::make_unique<PadContextPopup>(this->processorRef.getEngine(), *slot, artIdx);
+    this->padContextPopup->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissPadContextPopup(); });
+    };
+
+    // Convert screen position to local coordinates
+    auto localPos = getLocalPoint(nullptr, screenPos);
+    int popupWidth = this->padContextPopup->getWidth();
+    int popupHeight = this->padContextPopup->getHeight();
+    int popupX = juce::jlimit(0, getWidth() - popupWidth, localPos.getX());
+    int popupY = juce::jlimit(0, getHeight() - popupHeight, localPos.getY());
+
+    this->padContextPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
+
+    this->padPopupOverlay = std::make_unique<PadPopupOverlay>();
+    this->padPopupOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissPadContextPopup(); });
+    };
+    this->padPopupOverlay->setBounds(getLocalBounds());
+    addAndMakeVisible(*this->padPopupOverlay);
+    this->padPopupOverlay->toFront(false);
+
+    addAndMakeVisible(*this->padContextPopup);
+    this->padContextPopup->toFront(true);
 }

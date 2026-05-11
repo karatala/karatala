@@ -19,14 +19,19 @@ private:
     struct SliderEntry {
         juce::Label label;
         juce::Slider slider;
+        juce::TextButton resetButton { "x" };
         float* target = nullptr;
         int* intTarget = nullptr;
+        double defaultValue = 0.0;
     };
 
     juce::Label chokeGroupLabel;
     juce::Label tailGroupLabel;
     juce::Label hihatGroupLabel;
     juce::Label uiGridGroupLabel;
+
+    juce::Viewport viewport;
+    juce::Component contentComponent;
 
     std::vector<std::unique_ptr<SliderEntry>> sliders;
 

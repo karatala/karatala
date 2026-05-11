@@ -9,6 +9,7 @@
 #include "UI/DrumPadGrid.h"
 #include "UI/MidiMapTable.h"
 #include "UI/InstrumentConfigPanel.h"
+#include "UI/PadContextPopup.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
 //==============================================================================
@@ -48,6 +49,16 @@ private:
 
     // Mode: Instrument Config
     std::unique_ptr<InstrumentConfigPanel> instrumentConfigPanel;
+
+    // Pad context popup (Zone mode right-click)
+    std::unique_ptr<PadContextPopup> padContextPopup;
+    struct PadPopupOverlay : public juce::Component {
+        std::function<void()> onClick;
+        void mouseDown(const juce::MouseEvent&) override { if (this->onClick) this->onClick(); }
+    };
+    std::unique_ptr<PadPopupOverlay> padPopupOverlay;
+    void dismissPadContextPopup();
+    void showPadContextPopup(const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos);
 
     ViewMode activeMode = ViewMode::Zen;
     void setViewMode(ViewMode mode);

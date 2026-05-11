@@ -142,6 +142,12 @@ void DrumPad::mouseDown(const juce::MouseEvent& event) {
     if (this->padMode == PadMode::Zoned)
         artIdx = this->getZoneIndexAt(event.getPosition().getY());
 
+    if (event.mods.isPopupMenu()) {
+        if (this->onPadRightClicked)
+            this->onPadRightClicked(this->slotPtr, artIdx, event.getScreenPosition());
+        return;
+    }
+
     if (this->onPadClicked)
         this->onPadClicked(this->slotPtr, artIdx, this->clickVelocity);
 }

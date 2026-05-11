@@ -19,6 +19,7 @@ public:
     void flash(float velocity);
 
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, float velocity)> onPadClicked;
+    std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, juce::Point<int> screenPos)> onPadRightClicked;
 
     float getClickVelocity() const { return this->clickVelocity; }
     void setClickVelocity(float vel) { this->clickVelocity = vel; }

@@ -51,6 +51,7 @@ private:
         void paint(juce::Graphics& g) override;
         void setFilterType(KitLib::InstrumentSpec::Type type);
         std::function<void(int)> onItemSelected;
+        std::function<void(int, juce::uint8)> onPreview;
     private:
         const std::vector<SourceItem>& allItems;
         KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;

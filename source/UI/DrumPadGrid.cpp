@@ -24,6 +24,11 @@ void DrumPadGrid::populate(const KitLayout* layout) {
                 this->onPadClicked(slot, artIdx, vel);
         };
 
+        pad->onPadRightClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos) {
+            if (this->onPadRightClicked)
+                this->onPadRightClicked(slot, artIdx, screenPos);
+        };
+
         addAndMakeVisible(*pad);
         this->pads.push_back(std::move(pad));
     }
