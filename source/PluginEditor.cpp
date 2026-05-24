@@ -27,6 +27,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     {
         auto& settings = this->processorRef.getEngine().engineSettings;
         this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
+        this->drumPadGrid.setPadGap(settings.padGap);
     }
     this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
     this->drumPadGrid.onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, float velocity) {
@@ -144,6 +145,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->settingsPanel->onGridSizeChanged = [this] {
         auto& settings = this->processorRef.getEngine().engineSettings;
         this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
+        this->drumPadGrid.setPadGap(settings.padGap);
         this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
     };
 

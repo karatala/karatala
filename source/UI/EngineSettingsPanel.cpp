@@ -51,6 +51,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
 
     this->addIntSlider("Pad Grid Columns", &settings.padGridColumns, 1, 12);
     this->addIntSlider("Pad Grid Rows", &settings.padGridRows, 1, 8);
+    this->addIntSlider("Pad Gap", &settings.padGap, 0, 8);
 
     this->loadFromEngine();
 }
@@ -150,7 +151,7 @@ void EngineSettingsPanel::resized() {
     countGroupHeight(6);  // choke
     countGroupHeight(6);  // tail
     countGroupHeight(4);  // hihat
-    countGroupHeight(2);  // grid
+    countGroupHeight(3);  // grid
     totalHeight += 8; // bottom padding
 
     this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 400), totalHeight);

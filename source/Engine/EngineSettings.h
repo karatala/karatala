@@ -29,4 +29,5 @@ struct EngineSettings {
     // -- UI / Grid --
     int padGridColumns = 6;
     int padGridRows = 4;
+    int padGap = 0;
 };

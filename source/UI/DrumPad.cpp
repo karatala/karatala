@@ -111,7 +111,7 @@ void DrumPad::paintZoned(juce::Graphics& g) {
             labelText = displayName + " [" + labelText + "]";
             g.setFont(juce::Font(juce::FontOptions(11.0f).withStyle("Bold")));
         }
-        g.drawText(labelText, zoneRect.reduced(4, 1), juce::Justification::centredLeft);
+        g.drawText(labelText, zoneRect.reduced(4, 1), juce::Justification::centred);
     }
 
     // Flash overlay

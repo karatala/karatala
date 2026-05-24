@@ -13,6 +13,7 @@ public:
     void populate(const KitLayout* layout);
     void setPadMode(PadMode mode);
     void setGridSize(int columns, int rows);
+    void setPadGap(int gap);
     void setClickVelocity(float velocity);
 
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, float velocity)> onPadClicked;
@@ -25,6 +26,7 @@ private:
     PadMode padMode = PadMode::Zen;
     int gridColumns = 6;
     int gridRows = 4;
+    int padGap = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPadGrid)
 };

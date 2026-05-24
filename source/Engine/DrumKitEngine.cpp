@@ -320,6 +320,10 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
             const auto val = node[key].asString();
             if (val.isNotEmpty()) target = val.getFloatValue();
         };
+        auto parseInt = [](const YamlHelper::YamlNode& node, const juce::String& key, int& target) {
+            const auto val = node[key].asString();
+            if (val.isNotEmpty()) target = val.getIntValue();
+        };
 
         const auto& chokeNode = engineNode["aftertouch_choke"];
         if (chokeNode.isMap()) {
@@ -347,6 +351,13 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
             parseFloat(hihatNode, "pedalCrossfadeSec", this->engineSettings.hihatPedalCrossfadeSec);
             parseFloat(hihatNode, "pedalMinRemainingSec", this->engineSettings.hihatPedalMinRemainingSec);
             parseFloat(hihatNode, "crossArtChokeDbMargin", this->engineSettings.hihatCrossArtChokeDbMargin);
+        }
+
+        const auto& uiGridNode = engineNode["ui_grid"];
+        if (uiGridNode.isMap()) {
+            parseInt(uiGridNode, "padGridColumns", this->engineSettings.padGridColumns);
+            parseInt(uiGridNode, "padGridRows", this->engineSettings.padGridRows);
+            parseInt(uiGridNode, "padGap", this->engineSettings.padGap);
         }
     }
 
@@ -383,6 +394,10 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "#     pedalCrossfadeSec: 0.2\n";
     result += "#     pedalMinRemainingSec: 0.05\n";
     result += "#     crossArtChokeDbMargin: 3.0\n";
+    result += "#   ui_grid:\n";
+    result += "#     padGridColumns: 6\n";
+    result += "#     padGridRows: 4\n";
+    result += "#     padGap: 0\n";
     return result;
 }
 
@@ -422,6 +437,10 @@ void DrumKitEngine::saveSettings() {
     yaml += "    pedalCrossfadeSec: " + floatToYaml(settings.hihatPedalCrossfadeSec) + "\n";
     yaml += "    pedalMinRemainingSec: " + floatToYaml(settings.hihatPedalMinRemainingSec) + "\n";
     yaml += "    crossArtChokeDbMargin: " + floatToYaml(settings.hihatCrossArtChokeDbMargin) + "\n";
+    yaml += "  ui_grid:\n";
+    yaml += "    padGridColumns: " + juce::String(settings.padGridColumns) + "\n";
+    yaml += "    padGridRows: " + juce::String(settings.padGridRows) + "\n";
+    yaml += "    padGap: " + juce::String(settings.padGap) + "\n";
 
     if (!configFile.replaceWithText(yaml)) {
         LOG(Warning, "Could not write config.yaml");

@@ -242,8 +242,8 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
 
     // Set initial size so the editor can position the popup
     int layerCount = juce::jmax(1, this->layerRows.size());
-    int initHeight = 6 + 16 + 2 + 14 + 22 + 4 + 14 + layerCount * 21 + 6;
-    this->setSize(360, initHeight);
+    int initHeight = 6 + 16 + 2 + 14 + 22 + 4 + 14 + layerCount * 25 + 6;
+    this->setSize(480, initHeight);
 }
 
 void PadContextPopup::populateLayers() {
@@ -309,7 +309,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     layer->tuningSlider = std::make_unique<juce::Slider>();
     layer->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 32, 16);
+    layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
     layer->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
     layer->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
     // layer->tuningSlider->setTextValueSuffix(" c");
@@ -318,18 +318,18 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     layer->attackSlider = std::make_unique<juce::Slider>();
     layer->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 28, 16);
-    layer->attackSlider->setRange(-10.0, 500.0, 10.0);
-    layer->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -10.0, juce::dontSendNotification);
+    layer->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
+    layer->attackSlider->setRange(-1.0, 500.0, 10.0);
+    layer->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, juce::dontSendNotification);
     layer->attackSlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
     addAndMakeVisible(*layer->attackSlider);
     layer->attackSlider->onValueChange = [this] { this->applyToEngine(); };
 
     layer->decaySlider = std::make_unique<juce::Slider>();
     layer->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 28, 16);
-    layer->decaySlider->setRange(-10.0, 5000.0, 10.0);
-    layer->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -10.0, juce::dontSendNotification);
+    layer->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
+    layer->decaySlider->setRange(-1.0, 5000.0, 10.0);
+    layer->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, juce::dontSendNotification);
     layer->decaySlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
     addAndMakeVisible(*layer->decaySlider);
     layer->decaySlider->onValueChange = [this] { this->applyToEngine(); };
@@ -527,11 +527,11 @@ void PadContextPopup::resized() {
     // Layer section
     this->layerHeaderLabel.setBounds(area.removeFromTop(14));
 
-    const int layerRowH = 20;
+    const int layerRowH = 24;
     const int sliderAreaWidth = area.getWidth();
     const int btnAreaW = 42;
-    const int sourceW = juce::jmax(100, (sliderAreaWidth - btnAreaW) * 40 / 100);
-    const int sliderW = (sliderAreaWidth - sourceW - btnAreaW) / 3;
+    const int sourceW = juce::jmax(180, (sliderAreaWidth - btnAreaW) / 2);
+    const int sliderW = juce::jmax(0, (sliderAreaWidth - sourceW - btnAreaW) / 3);
 
     for (auto* layer : this->layerRows) {
         auto row = area.removeFromTop(layerRowH);
@@ -547,7 +547,7 @@ void PadContextPopup::resized() {
 
     // Resize popup to fit content
     int requiredHeight = 6 + 16 + 2 + 14 + 22 + 4 + 14 + static_cast<int>(this->layerRows.size()) * (layerRowH + 1) + 6;
-    int requiredWidth = juce::jmax(360, getWidth());
+    int requiredWidth = juce::jmax(480, getWidth());
     if (requiredHeight != getHeight() || requiredWidth != getWidth())
         this->setSize(requiredWidth, requiredHeight);
 }
