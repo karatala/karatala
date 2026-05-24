@@ -168,10 +168,11 @@ int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
 
 // ─── Constructor ──────────────────────────────────────────────────────────────
 
-PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx)
+PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedInstrumentMapText)
     : engine(engine)
     , slotId(slot.id)
-    , slotType(slot.type) {
+    , slotType(slot.type)
+    , savedInstrumentMapText(savedInstrumentMapText) {
     // Resolve articulation
     if (artIdx >= 0 && artIdx < static_cast<int>(slot.articulations.size())) {
         auto& art = const_cast<KitLayout::InstrumentSlot::ArticulationTrigger&>(slot.articulations[static_cast<size_t>(artIdx)]);
@@ -247,8 +248,9 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
 }
 
 void PadContextPopup::populateLayers() {
-    // Parse the current instrument map from the engine to find layers for this slot/art
-    auto mapText = this->engine.getSuggestedInstrumentMapText();
+    // Parse the saved instrument map to find layers for this slot/art
+    // Use saved map if provided, otherwise fall back to suggested map
+    auto mapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto& existingEntries = parseResult.value.entries;
 
@@ -368,7 +370,7 @@ void PadContextPopup::updateRemoveButtonVisibility() {
 
 juce::String PadContextPopup::generateFullMapText() const {
     // Start with current map, remove lines for this slot/art, then append our layers
-    auto currentMapText = this->engine.getSuggestedInstrumentMapText();
+    auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
     juce::StringArray existingLines;
     existingLines.addTokens(currentMapText, "\n", "");
 

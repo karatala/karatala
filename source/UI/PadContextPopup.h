@@ -5,7 +5,7 @@
 
 class PadContextPopup : public juce::Component {
 public:
-    explicit PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx);
+    explicit PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedInstrumentMapText = "");
     ~PadContextPopup() override = default;
 
     void paint(juce::Graphics& g) override;
@@ -21,6 +21,7 @@ private:
     DrumKitEngine& engine;
     juce::String slotId;
     juce::String artName;
+    juce::String savedInstrumentMapText;
     KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
 
     // ─── Header ───
