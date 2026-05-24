@@ -1,21 +1,18 @@
 #include "MidiNotePicker.h"
 
 static const char* const NOTE_NAMES_PICKER[] = {
-    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
+    "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"
 };
 static const bool IS_BLACK_KEY_PICKER[12] = {
     false, true, false, true, false, false, true, false, true, false, true, false
 };
 
-// 6 hues cycling across octaves (red → orange → green → cyan → blue → purple)
-static const float OCTAVE_HUES_PICKER[6] = {
-    0.00f, 0.12f, 0.35f, 0.55f, 0.67f, 0.80f
-};
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 MidiNotePicker::MidiNotePicker() {
-    setSize(TOTAL_COLS * CELL_W, ROWS * CELL_H);
+    setSize(COL_PAIRS * PAIR_W, ROWS * CELL_H);
 }
 
 void MidiNotePicker::setCurrentNote(int note) {
@@ -34,95 +31,90 @@ juce::String MidiNotePicker::noteToButtonText(int note) {
 
 // ─── Static helpers ──────────────────────────────────────────────────────────
 
-int MidiNotePicker::noteAt(int col, int row) {
-    if (row < SPACERS) return -1;  // spacer rows
-
-    // Name columns: col 0..5 → same note range as number columns 6..11
-    const int noteCol = (col < NAME_COLS) ? col : (col - NAME_COLS);
-    const int noteRow = row - SPACERS;
-    const int note    = 127 - noteCol * NOTES_PER_COL - noteRow;
-
+int MidiNotePicker::noteAt(int pairIdx, int row) {
+    // Virtual top note of pair 0 is B9 = 131 (above MIDI range).
+    // Each pair covers 24 descending semitones (2 octaves, B→C).
+    const int note = 131 - pairIdx * 24 - row;
     return (note >= 0 && note <= 127) ? note : -1;
 }
 
 juce::Colour MidiNotePicker::cellBg(int note, bool isBlackKey, bool isHighlighted) {
     if (note < 0)
-        return juce::Colour(0xff111111);  // spacer / out-of-range
+        return juce::Colour(0xffDDDDDD);
 
-    const float hue = OCTAVE_HUES_PICKER[(note / 12) % 6];
-    const float sat = isBlackKey ? 0.60f : 0.32f;
-    const float bri = isBlackKey ? 0.14f : 0.24f;
-
-    auto base = juce::Colour::fromHSV(hue, sat, bri, 1.0f);
-    return isHighlighted ? base.brighter(1.5f) : base;
+    auto base = isBlackKey ? juce::Colour(0xff222222) : juce::Colour(0xffE8E8E8);
+    return isHighlighted ? (isBlackKey ? base.brighter(0.6f) : base.darker(0.25f)) : base;
 }
 
 // ─── Paint ───────────────────────────────────────────────────────────────────
 
 void MidiNotePicker::paint(juce::Graphics& g) {
-    // Use a monospaced font for clean column alignment
     auto mono = juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 10.5f, juce::Font::plain));
     g.setFont(mono);
 
-    for (int col = 0; col < TOTAL_COLS; ++col) {
-        const bool isNumCol = (col >= NAME_COLS);
+    for (int pairIdx = 0; pairIdx < COL_PAIRS; ++pairIdx) {
+        const int pairX = pairIdx * PAIR_W;
 
-        // Thin vertical separator between name block and number block
-        if (col == NAME_COLS) {
-            g.setColour(juce::Colour(0xff444444));
-            g.fillRect(col * CELL_W, 0, 1, getHeight());
+        // Vertical separator between pairs
+        if (pairIdx > 0) {
+            g.setColour(juce::Colour(0xffAAAAAA));
+            g.fillRect(pairX, 0, 1, getHeight());
         }
 
         for (int row = 0; row < ROWS; ++row) {
-            const int note = noteAt(col, row);
-            const juce::Rectangle<int> cell(col * CELL_W, row * CELL_H, CELL_W, CELL_H);
+            const int note = noteAt(pairIdx, row);
 
-            const bool bk          = (note >= 0) && IS_BLACK_KEY_PICKER[note % 12];
+            const juce::Rectangle<int> nameCell(pairX, row * CELL_H, NAME_W, CELL_H);
+            const juce::Rectangle<int> numCell(pairX + NAME_W, row * CELL_H, NUM_W, CELL_H);
+
+            const bool isBlack     = (note >= 0) && IS_BLACK_KEY_PICKER[note % 12];
             const bool highlighted = (note >= 0) && (note == this->currentNote);
 
-            // Background
-            g.setColour(cellBg(note, bk, highlighted));
-            g.fillRect(cell);
+            // Background — name half uses key colour, number half always white
+            auto bg = cellBg(note, isBlack, highlighted);
+            g.setColour(bg);
+            g.fillRect(nameCell);
+            g.setColour(note >= 0 ? juce::Colour(0xffF4F4F4) : juce::Colour(0xffDDDDDD));
+            g.fillRect(numCell);
 
-            // Thin horizontal line between cells
-            g.setColour(juce::Colour(0xff333333));
-            g.fillRect(cell.getX(), cell.getBottom() - 1, cell.getWidth(), 1);
+            // Horizontal separator
+            g.setColour(juce::Colour(0xffAAAAAA));
+            g.fillRect(pairX, nameCell.getBottom() - 1, PAIR_W, 1);
 
-            if (note < 0) continue;  // spacer — no text
+            if (note < 0) continue;
 
-            // Text colour: slightly dim for black keys
-            g.setColour(juce::Colour(0xffffffff).withAlpha(bk ? 0.72f : 0.92f));
+            // Note name (append octave on C notes)
+            const int semitone = note % 12;
+            juce::String name(NOTE_NAMES_PICKER[semitone]);
+            if (semitone == 0)
+                name += juce::String((note / 12) - 2);
 
-            if (isNumCol) {
-                // Right-aligned note number
-                g.drawText(juce::String(note),
-                           cell.withTrimmedRight(3),
-                           juce::Justification::centredRight);
-            } else {
-                // Left-aligned note name
-                g.drawText(juce::String(NOTE_NAMES_PICKER[note % 12]),
-                           cell.withTrimmedLeft(4),
-                           juce::Justification::centredLeft);
-            }
+            // Name text: white on black keys, dark on white keys
+            g.setColour(isBlack ? juce::Colour(0xffEEEEEE) : juce::Colour(0xff222222));
+            g.drawText(name, nameCell.withTrimmedLeft(4), juce::Justification::centredLeft);
+
+            // Number text: always dark on white bg
+            g.setColour(juce::Colour(0xff222222));
+            g.drawText(juce::String(note), numCell.withTrimmedRight(3), juce::Justification::centredRight);
         }
     }
 
     // Outer border
-    g.setColour(juce::Colour(0xff555555));
+    g.setColour(juce::Colour(0xff999999));
     g.drawRect(getLocalBounds(), 1);
 }
 
 // ─── Mouse ───────────────────────────────────────────────────────────────────
 
 void MidiNotePicker::mouseUp(const juce::MouseEvent& e) {
-    const int col = e.x / CELL_W;
-    const int row = e.y / CELL_H;
+    const int pairIdx = e.x / PAIR_W;
+    const int row     = e.y / CELL_H;
 
-    if (col < 0 || col >= TOTAL_COLS || row < 0 || row >= ROWS)
+    if (pairIdx < 0 || pairIdx >= COL_PAIRS || row < 0 || row >= ROWS)
         return;
 
-    const int note = noteAt(col, row);
-    if (note < 0) return;  // spacer or out-of-range — ignore
+    const int note = noteAt(pairIdx, row);
+    if (note < 0) return;
 
     setCurrentNote(note);
 

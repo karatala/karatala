@@ -5,18 +5,13 @@
 /**
  * Custom MIDI note grid picker.
  *
- * Layout: 12 columns (6 note-name columns + 6 note-number columns).
- * Each column has SPACERS placeholder rows followed by NOTES_PER_COL
- * note rows.  The two column groups are displayed side by side so the
- * grid looks like a piano keyboard legend:
+ * Layout: 6 column pairs (note-name + MIDI-number), 24 rows.
+ * Each pair covers two octaves descending B→C.  Notes use mixed
+ * sharp/flat naming: C C# D Eb E F F# G Ab A Bb B.
+ * C notes show the octave label (e.g. "C4", "C-2").
  *
- *   ┌──────────────────┬──────────────────┐
- *   │  name columns    │  number columns  │
- *   │  G  F# F  E  …   │  127 126 125 … │
- *   └──────────────────┴──────────────────┘
- *
- * Clicking any name or number cell fires onNoteSelected(noteNumber).
- * Pass -1 to deselect.  Clicking a spacer row does nothing.
+ * Clicking any cell fires onNoteSelected(noteNumber).
+ * Pass -1 to deselect.
  */
 class MidiNotePicker : public juce::Component {
 public:
@@ -35,19 +30,17 @@ public:
     void mouseUp(const juce::MouseEvent&) override;
 
 private:
-    static constexpr int NOTES_PER_COL = 24;
-    static constexpr int SPACERS       = 4;
-    static constexpr int ROWS          = SPACERS + NOTES_PER_COL; // 28
-    static constexpr int NAME_COLS     = 6;
-    static constexpr int NUM_COLS      = 6;
-    static constexpr int TOTAL_COLS    = NAME_COLS + NUM_COLS;    // 12
-    static constexpr int CELL_W        = 32;
-    static constexpr int CELL_H        = 13;
+    static constexpr int ROWS      = 24;
+    static constexpr int COL_PAIRS = 6;
+    static constexpr int NAME_W    = 28;
+    static constexpr int NUM_W     = 30;
+    static constexpr int PAIR_W    = NAME_W + NUM_W;  // 58
+    static constexpr int CELL_H    = 13;
 
     int currentNote = -1;
 
-    /** Returns the MIDI note for a given column/row, or -1 for spacers and out-of-range. */
-    static int noteAt(int col, int row);
+    /** Returns the MIDI note for a given column-pair / row, or -1 for out-of-range. */
+    static int noteAt(int pairIdx, int row);
 
     /** Background colour for a cell. */
     static juce::Colour cellBg(int note, bool isBlackKey, bool isHighlighted);
