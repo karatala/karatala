@@ -7,10 +7,9 @@ static const char* NOTE_NAMES[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "
 juce::String PadContextPopup::midiNoteToString(int note) {
     if (note < 0 || note > 127)
         return "--";
-    int octave = (note / 12) - 2;
-    int noteIdx = note % 12;
-    const auto noteNumber = juce::String(note).paddedLeft(' ', 3);
-    return noteNumber + " / " + juce::String(NOTE_NAMES[noteIdx]) + juce::String(octave);
+    const auto name = juce::String(NOTE_NAMES[note % 12]).paddedRight(' ', 2);
+    const auto num  = juce::String(note).paddedLeft(' ', 3);
+    return name + "  " + num;
 }
 
 void PadContextPopup::populateNoteComboBox(juce::ComboBox& combo) {
