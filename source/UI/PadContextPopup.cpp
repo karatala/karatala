@@ -312,7 +312,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 32, 16);
     layer->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
     layer->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
-    layer->tuningSlider->setTextValueSuffix(" c");
+    // layer->tuningSlider->setTextValueSuffix(" c");
     addAndMakeVisible(*layer->tuningSlider);
     layer->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
 

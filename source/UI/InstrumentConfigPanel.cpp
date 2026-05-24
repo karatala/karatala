@@ -293,7 +293,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 36, 18);
     row->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
     row->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
-    row->tuningSlider->setTextValueSuffix(" c");
+    // row->tuningSlider->setTextValueSuffix(" c");
     this->contentComponent.addAndMakeVisible(*row->tuningSlider);
     row->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
 
@@ -354,7 +354,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
             newRow->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
             newRow->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 36, 18);
             newRow->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
-            newRow->tuningSlider->setTextValueSuffix(" c");
+            // newRow->tuningSlider->setTextValueSuffix(" c");
             this->contentComponent.addAndMakeVisible(*newRow->tuningSlider);
             newRow->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
             newRow->attackSlider = std::make_unique<juce::Slider>();
