@@ -776,6 +776,58 @@ void DrumKitEngine::saveLatestControllerValues(const juce::MidiBuffer& midiMessa
     }
 }
 
+void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
+                                         const juce::String& artName,
+                                         int layerIndex,
+                                         std::optional<int> tuningCents,
+                                         std::optional<int> attackMs,
+                                         std::optional<int> decayMs) {
+    juce::ignoreUnused(artName);
+    if (layerIndex < 0)
+        return;
+
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+
+    int currentLayerIndex = 0;
+    for (auto& synthPtr : this->instrumentSynthPtrs) {
+        if (synthPtr == nullptr)
+            continue;
+        if (synthPtr->getId() != slotId)
+            continue;
+
+        if (currentLayerIndex == layerIndex) {
+            if (tuningCents.has_value())
+                synthPtr->setTuningOffsetCents(*tuningCents);
+
+            auto nextAttack = synthPtr->getAttackOverrideMs();
+            auto nextDecay = synthPtr->getDecayOverrideMs();
+
+            if (attackMs.has_value()) {
+                if (*attackMs < 0)
+                    nextAttack.reset();
+                else
+                    nextAttack = *attackMs;
+            }
+
+            if (decayMs.has_value()) {
+                if (*decayMs < 0)
+                    nextDecay.reset();
+                else
+                    nextDecay = *decayMs;
+            }
+
+            synthPtr->clearParameterOverrides();
+            if (nextAttack.has_value())
+                synthPtr->setAttackOverrideMs(*nextAttack);
+            if (nextDecay.has_value())
+                synthPtr->setDecayOverrideMs(*nextDecay);
+            return;
+        }
+
+        ++currentLayerIndex;
+    }
+}
+
 bool DrumKitEngine::useInstrumentMap(juce::String text) {
     // ======================== PHASE 1: VALIDATION (no lock) ========================
     // Safe to read libraryManagerPtr/activeKitLayoutPtr without lock — only mutated on

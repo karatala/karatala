@@ -275,6 +275,9 @@ void PluginEditor::resized() {
 }
 
 void PluginEditor::dismissPadContextPopup() {
+    if (this->padContextPopup)
+        this->padContextPopup->flushMapText();
+
     if (this->padPopupOverlay) {
         removeChildComponent(this->padPopupOverlay.get());
         this->padPopupOverlay.reset();
@@ -317,7 +320,16 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
 
     this->padPopupOverlay = std::make_unique<PadPopupOverlay>();
     this->padPopupOverlay->onClick = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissPadContextPopup(); });
+        juce::MessageManager::callAsync([this] {
+            if (this->padContextPopup) {
+                this->padContextPopup->flushMapText();
+                if (this->padContextPopup->onDismiss) {
+                    this->padContextPopup->onDismiss();
+                    return;
+                }
+            }
+            this->dismissPadContextPopup();
+        });
     };
     this->padPopupOverlay->setBounds(getLocalBounds());
     addAndMakeVisible(*this->padPopupOverlay);

@@ -198,17 +198,17 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     // Tuning slider
     layer->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents), 40, 20);
     addAndMakeVisible(*layer->tuningSlider);
-    layer->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
+    layer->tuningSlider->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
 
     // Attack slider
     layer->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, 40, 20, sentinelTextFn);
     addAndMakeVisible(*layer->attackSlider);
-    layer->attackSlider->onValueChange = [this] { this->applyToEngine(); };
+    layer->attackSlider->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
 
     // Decay slider
     layer->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, 40, 20, sentinelTextFn);
     addAndMakeVisible(*layer->decaySlider);
-    layer->decaySlider->onValueChange = [this] { this->applyToEngine(); };
+    layer->decaySlider->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
 
     layer->addButton = std::make_unique<juce::TextButton>("+");
     layer->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
@@ -236,6 +236,35 @@ void PadContextPopup::updateRemoveButtonVisibility() {
     bool showRemove = this->layerRows.size() > 1;
     for (auto* layer : this->layerRows)
         layer->removeButton->setVisible(showRemove);
+}
+
+int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
+    for (int idx = 0; idx < this->layerRows.size(); ++idx) {
+        if (this->layerRows[idx] == layer)
+            return idx;
+    }
+    return -1;
+}
+
+void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
+    if (layer == nullptr)
+        return;
+
+    const int layerIndex = this->getLayerIndex(layer);
+    if (layerIndex < 0)
+        return;
+
+    const int tuning = static_cast<int>(layer->tuningSlider->getValue());
+    const int attack = static_cast<int>(layer->attackSlider->getValue());
+    const int decay = static_cast<int>(layer->decaySlider->getValue());
+
+    this->engine.updateSlotParameters(this->slotId,
+                                      this->artName,
+                                      layerIndex,
+                                      tuning,
+                                      attack,
+                                      decay);
+    this->mapTextDirty = true;
 }
 
 // ─── Generate map text: rebuilds the FULL instrument map, replacing only this slot/art's entries ──
@@ -312,6 +341,23 @@ void PadContextPopup::applyToEngine() {
     if (text.trim().isEmpty()) return;
 
     this->engine.useInstrumentMap(text);
+    this->savedInstrumentMapText = text;
+    this->mapTextDirty = false;
+
+    if (this->onMapTextChanged)
+        this->onMapTextChanged(text);
+}
+
+void PadContextPopup::flushMapText() {
+    if (!this->mapTextDirty)
+        return;
+
+    auto text = this->generateFullMapText();
+    if (text.trim().isEmpty())
+        return;
+
+    this->savedInstrumentMapText = text;
+    this->mapTextDirty = false;
 
     if (this->onMapTextChanged)
         this->onMapTextChanged(text);

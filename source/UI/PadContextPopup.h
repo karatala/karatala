@@ -12,6 +12,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void flushMapText();
 
     std::function<void()> onDismiss;
     /** Fires whenever this popup changes the instrument map text. */
@@ -62,10 +63,13 @@ private:
     juce::Label layerHeaderLabel;
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);
+    int getLayerIndex(const LayerRow* layer) const;
+    void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();
     void applyToEngine();
     juce::String generateFullMapText() const;
     void populateLayers();
+    bool mapTextDirty = false;
 
     std::unique_ptr<SourcePickerPopup> activePickerPopup;
     class PickerOverlay : public juce::Component {
