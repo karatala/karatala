@@ -7,13 +7,17 @@ static const char* NOTE_NAMES[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "
 juce::String PadContextPopup::midiNoteToString(int note) {
     if (note < 0 || note > 127)
         return "--";
-    const auto name = juce::String(NOTE_NAMES[note % 12]).paddedRight(' ', 2);
+    const int octave = (note / 12) - 2;
     const auto num  = juce::String(note).paddedLeft(' ', 3);
-    return name + "  " + num;
+    const auto name = juce::String(NOTE_NAMES[note % 12]);
+    return num + " / " + name + " " + juce::String(octave);
 }
 
 void PadContextPopup::populateNoteComboBox(juce::ComboBox& combo) {
     combo.clear(juce::dontSendNotification);
+    // 4 separator rows so col 1 is offset by 4, aligning subsequent columns to octave B boundaries
+    for (int i = 0; i < 4; ++i)
+        combo.addSeparator();
     combo.addItem("--", 1);
     for (int note = 127; note >= 0; --note)
         combo.addItem(midiNoteToString(note), note + 2);

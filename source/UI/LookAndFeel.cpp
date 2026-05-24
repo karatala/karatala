@@ -168,31 +168,33 @@ void LookAndFeel::drawPopupMenuBackground(juce::Graphics& g, int /*width*/, int 
     g.fillAll(juce::Colours::darkgrey);
 }
 
-// Returns the MIDI note number (0-127) if text matches our compact note format "Bb  106", else -1.
+// Returns MIDI note 0-127 if text matches format "127 / G 8", else -1.
 static int parseMidiNoteFromItemText(const juce::String& text) {
-    const auto trimmed = text.trimStart();
+    const auto trimmed = text.trim();
     if (trimmed.isEmpty() || trimmed == "--") return -1;
-    const auto numStr = trimmed.fromLastOccurrenceOf(" ", false, false).trim();
+    // Number is the leading token before " /"
+    const auto numStr = trimmed.upToFirstOccurrenceOf(" /", false, false).trim();
     if (numStr.isEmpty() || !numStr.containsOnly("0123456789")) return -1;
     const int note = numStr.getIntValue();
-    if (note < 0 || note > 127) return -1;
-    // Quick sanity: the non-numeric prefix must look like a note name
-    const auto prefix = trimmed.upToLastOccurrenceOf(" ", false, false).trim();
-    if (prefix.isEmpty() || prefix.length() > 2) return -1;
-    return note;
+    return (note >= 0 && note <= 127) ? note : -1;
+}
+
+// True for MIDI semitones that are black keys: C# D# F# G# A#
+static bool isMidiBlackKey(int note) {
+    static const bool BK[12] = { false,true,false,true,false,false,true,false,true,false,true,false };
+    return BK[note % 12];
 }
 
 void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String& text, const juce::String& /*shortcutKeyText*/, const juce::Drawable* /*icon*/, const juce::Colour* /*textColour*/) {
-    // Per-octave tint for MIDI note items
-    static const juce::Colour octaveBg[11] = {
-        juce::Colour(0xff0d1a0d), juce::Colour(0xff0d0d1a), juce::Colour(0xff1a0d0d),
-        juce::Colour(0xff1a1a0d), juce::Colour(0xff0d1a1a), juce::Colour(0xff1a0d1a),
-        juce::Colour(0xff121a0d), juce::Colour(0xff0d121a), juce::Colour(0xff1a0d12),
-        juce::Colour(0xff141414), juce::Colour(0xff0d1414),
-    };
+    // Piano-key colouring: each octave gets a distinct hue; black keys are darker.
+    // 6 hues cycle across the 11 MIDI octaves (0..10).
+    static const float OCTAVE_HUES[6] = { 0.00f, 0.12f, 0.35f, 0.55f, 0.67f, 0.80f };
+
     int midiNote = parseMidiNoteFromItemText(text);
     if (midiNote >= 0) {
-        g.setColour(octaveBg[(midiNote / 12) % 11]);
+        const float hue = OCTAVE_HUES[(midiNote / 12) % 6];
+        const bool  bk  = isMidiBlackKey(midiNote);
+        g.setColour(juce::Colour::fromHSV(hue, bk ? 0.55f : 0.30f, bk ? 0.13f : 0.22f, 1.0f));
         g.fillRect(area);
     } else {
         g.setColour(darkestGrey);
@@ -205,12 +207,15 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
         g.fillRect(separatorRect);
     } else {
         if (isHighlighted) {
-            g.setColour(darkerGrey);
-            g.fillRect(area.reduced(2, 2));
+            g.setColour(midiNote >= 0 ? juce::Colour::fromHSV(OCTAVE_HUES[(midiNote / 12) % 6], 0.4f, 0.40f, 1.0f)
+                                      : darkerGrey);
+            g.fillRect(area.reduced(1, 1));
         }
 
-        g.setColour(juce::Colour(0xFFFFFF).withAlpha(isActive ? 0.8f : 0.2f));
-        g.drawText(text, area.reduced(25, 0), juce::Justification::left);
+        g.setColour(juce::Colour(0xFFFFFF).withAlpha(isActive ? 0.85f : 0.25f));
+        // Note items: tight left margin (no tick); other items: standard 25 px margin for tick dot
+        const int leftPad = (midiNote >= 0) ? 4 : 25;
+        g.drawText(text, area.withTrimmedLeft(leftPad).withTrimmedRight(4), juce::Justification::left);
 
         if (hasSubMenu) {
             constexpr int subTriWidth = 6;
