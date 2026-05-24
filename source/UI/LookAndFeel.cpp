@@ -207,6 +207,21 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
     }
 }
 
+juce::PopupMenu::Options LookAndFeel::getOptionsForComboBoxPopupMenu(juce::ComboBox& cb, juce::Label& label) {
+    auto options = juce::LookAndFeel_V4::getOptionsForComboBoxPopupMenu(cb, label);
+
+    const bool isMidiGrid = cb.getProperties().getWithDefault("midiNoteGrid", false);
+    if (!isMidiGrid)
+        return options;
+
+    const int configuredColumns = static_cast<int>(cb.getProperties().getWithDefault("midiNoteGridColumns", 6));
+    const int columns = juce::jmax(1, configuredColumns);
+
+    return options.withStandardItemHeight(16)
+                  .withMinimumNumColumns(columns)
+                  .withMaximumNumColumns(columns);
+}
+
 void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown) {
     const juce::Rectangle<int> activeArea(button.getActiveArea());
 

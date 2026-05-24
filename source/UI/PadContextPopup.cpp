@@ -9,13 +9,14 @@ juce::String PadContextPopup::midiNoteToString(int note) {
         return "--";
     int octave = (note / 12) - 2;
     int noteIdx = note % 12;
-    return juce::String(NOTE_NAMES[noteIdx]) + juce::String(octave) + "/" + juce::String(note);
+    const auto noteNumber = juce::String(note).paddedLeft(' ', 3);
+    return noteNumber + " / " + juce::String(NOTE_NAMES[noteIdx]) + juce::String(octave);
 }
 
 void PadContextPopup::populateNoteComboBox(juce::ComboBox& combo) {
     combo.clear(juce::dontSendNotification);
     combo.addItem("--", 1);
-    for (int note = 0; note <= 127; ++note)
+    for (int note = 127; note >= 0; --note)
         combo.addItem(midiNoteToString(note), note + 2);
 }
 
@@ -94,6 +95,10 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
 
     populateNoteComboBox(this->noteCombo1);
     populateNoteComboBox(this->noteCombo2);
+    this->noteCombo1.getProperties().set("midiNoteGrid", true);
+    this->noteCombo2.getProperties().set("midiNoteGrid", true);
+    this->noteCombo1.getProperties().set("midiNoteGridColumns", 6);
+    this->noteCombo2.getProperties().set("midiNoteGridColumns", 6);
     addAndMakeVisible(this->noteCombo1);
     addAndMakeVisible(this->noteCombo2);
     this->noteCombo1.onChange = [this] { this->applyComboToNotes(); };
