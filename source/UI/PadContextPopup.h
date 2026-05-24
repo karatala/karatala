@@ -2,6 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/DrumKitEngine.h"
+#include "UITypes.h"
+#include "SourcePickerPopup.h"
 
 class PadContextPopup : public juce::Component {
 public:
@@ -42,27 +44,6 @@ private:
     void syncComboFromNotes();
     void applyComboToNotes();
 
-    // ─── SourceItem (same as InstrumentConfigPanel) ───
-    struct SourceItem {
-        juce::String kitCodeRaw;
-        juce::String kitDisplayName;
-        juce::String instCode;
-        juce::String artCode;
-        KitLib::InstrumentSpec::Type instType = KitLib::InstrumentSpec::Type::Unknown;
-
-        juce::String fullPath() const {
-            juce::String result = this->kitCodeRaw;
-            if (this->instCode.isNotEmpty()) result += "/" + this->instCode;
-            if (this->artCode.isNotEmpty()) result += "/" + this->artCode;
-            return result;
-        }
-        juce::String displayText() const {
-            juce::String result = this->kitDisplayName;
-            if (this->instCode.isNotEmpty()) result += "/" + this->instCode;
-            if (this->artCode.isNotEmpty()) result += "/" + this->artCode;
-            return result;
-        }
-    };
     std::vector<SourceItem> sourceItems;
     void rebuildSourceItems();
     int findSourceIndex(const juce::String& searchPath) const;
@@ -85,36 +66,6 @@ private:
     void applyToEngine();
     juce::String generateFullMapText() const;
     void populateLayers();
-
-    // ─── Source picker popup (inline, reuses same pattern) ───
-    class SourcePickerPopup : public juce::Component {
-    public:
-        explicit SourcePickerPopup(const std::vector<SourceItem>& items);
-        void resized() override;
-        void paint(juce::Graphics& g) override;
-        void setFilterType(KitLib::InstrumentSpec::Type type);
-        std::function<void(int)> onItemSelected;
-    private:
-        const std::vector<SourceItem>& allItems;
-        KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;
-        juce::TextEditor filterField;
-        juce::ToggleButton relatedOnlyToggle { "related" };
-        juce::ListBox listBox;
-        struct FilteredEntry { int originalIndex; };
-        std::vector<FilteredEntry> filteredEntries;
-        void rebuildFiltered();
-        class ListModel : public juce::ListBoxModel {
-        public:
-            explicit ListModel(SourcePickerPopup& owner) : owner(owner) {}
-            int getNumRows() override;
-            void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
-            void listBoxItemClicked(int row, const juce::MouseEvent& event) override;
-        private:
-            SourcePickerPopup& owner;
-        };
-        ListModel listModel { *this };
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourcePickerPopup)
-    };
 
     std::unique_ptr<SourcePickerPopup> activePickerPopup;
     class PickerOverlay : public juce::Component {

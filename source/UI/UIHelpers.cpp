@@ -1,0 +1,80 @@
+#include "UITypes.h"
+
+namespace UIHelpers {
+
+std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager) {
+    std::vector<SourceItem> sourceItems;
+    if (libraryManager == nullptr) return sourceItems;
+
+    for (const auto& kitPtr : libraryManager->getKits()) {
+        juce::String kitShort = kitPtr->meta.name;
+        if (kitShort.isEmpty()) kitShort = kitPtr->meta.codeRaw;
+
+        std::vector<const KitLib::InstrumentSpec*> instruments;
+        for (const auto& [code, instPtr] : kitPtr->getInstrumentSpecsMap())
+            instruments.push_back(instPtr.get());
+        std::sort(instruments.begin(), instruments.end(), [](const auto* a, const auto* b) {
+            return a->meta.codeRaw < b->meta.codeRaw;
+        });
+
+        for (const auto* inst : instruments) {
+            if (inst->articulationSpecs.empty()) {
+                SourceItem item;
+                item.kitCodeRaw = kitPtr->meta.codeRaw;
+                item.kitDisplayName = kitShort;
+                item.instCode = inst->meta.codeRaw;
+                item.instType = inst->meta.type;
+                sourceItems.push_back(std::move(item));
+            } else {
+                for (const auto& artPtr : inst->articulationSpecs) {
+                    SourceItem item;
+                    item.kitCodeRaw = kitPtr->meta.codeRaw;
+                    item.kitDisplayName = kitShort;
+                    item.instCode = inst->meta.codeRaw;
+                    item.artCode = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
+                    item.instType = inst->meta.type;
+                    sourceItems.push_back(std::move(item));
+                }
+            }
+        }
+    }
+    return sourceItems;
+}
+
+int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::String& searchPath) {
+    auto needle = searchPath.trim().toLowerCase();
+    for (int idx = 0; idx < static_cast<int>(sourceItems.size()); ++idx) {
+        auto haystack = sourceItems[static_cast<size_t>(idx)].fullPath().toLowerCase();
+        if (needle.isEmpty() || haystack == needle)
+            return idx;
+        if (haystack.contains(needle))
+            return idx;
+    }
+    return -1;
+}
+
+std::unique_ptr<juce::Slider> createParamSlider(
+    double minVal, 
+    double maxVal, 
+    double interval,
+    double initialValue,
+    int textBoxWidth, 
+    int textBoxHeight,
+    std::function<juce::String(double)> textFromValueFn) {
+
+    auto slider = std::make_unique<juce::Slider>();
+    slider->setSliderStyle(juce::Slider::LinearHorizontal);
+    slider->setTextBoxStyle(juce::Slider::TextBoxRight, false, textBoxWidth, textBoxHeight);
+    slider->setRange(minVal, maxVal, interval);
+    
+    if (textFromValueFn) {
+        slider->textFromValueFunction = textFromValueFn;
+    }
+    
+    slider->setValue(initialValue, juce::dontSendNotification);
+    slider->updateText();
+    
+    return slider;
+}
+
+}  // namespace UIHelpers

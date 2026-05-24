@@ -1,0 +1,55 @@
+#pragma once
+
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "UITypes.h"
+
+/**
+ * @file SourcePickerPopup.h
+ * Standalone source (kit/instrument/articulation) picker popup.
+ * Used by both PadContextPopup and InstrumentConfigPanel.
+ */
+class SourcePickerPopup : public juce::Component {
+public:
+    explicit SourcePickerPopup(const std::vector<SourceItem>& items);
+    ~SourcePickerPopup() override = default;
+
+    void resized() override;
+    void paint(juce::Graphics& g) override;
+
+    void setFilterType(KitLib::InstrumentSpec::Type type);
+
+    /** Fires when an item is selected in the list. */
+    std::function<void(int)> onItemSelected;
+    
+    /** Fires on preview (hover/click) with velocity. Used by InstrumentConfigPanel. */
+    std::function<void(int, juce::uint8)> onPreview;
+
+private:
+    const std::vector<SourceItem>& allItems;
+    KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;
+    
+    juce::TextEditor filterField;
+    juce::ToggleButton relatedOnlyToggle { "related" };
+    juce::ListBox listBox;
+
+    struct FilteredEntry { 
+        int originalIndex; 
+    };
+    std::vector<FilteredEntry> filteredEntries;
+
+    void rebuildFiltered();
+
+    class ListModel : public juce::ListBoxModel {
+    public:
+        explicit ListModel(SourcePickerPopup& owner) : owner(owner) {}
+        int getNumRows() override;
+        void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
+        void listBoxItemClicked(int row, const juce::MouseEvent& event) override;
+    private:
+        SourcePickerPopup& owner;
+    };
+    
+    ListModel listModel { *this };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourcePickerPopup)
+};

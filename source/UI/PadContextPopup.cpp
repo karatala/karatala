@@ -1,83 +1,5 @@
 #include "PadContextPopup.h"
 
-// ─── SourcePickerPopup (compact copy from InstrumentConfigPanel) ──────────────
-
-PadContextPopup::SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items)
-    : allItems(items) {
-    this->filterField.setTextToShowWhenEmpty("filter...", juce::Colours::grey);
-    this->filterField.onTextChange = [this] { this->rebuildFiltered(); };
-    addAndMakeVisible(this->filterField);
-    this->relatedOnlyToggle.setToggleState(true, juce::dontSendNotification);
-    this->relatedOnlyToggle.onClick = [this] { this->rebuildFiltered(); };
-    addAndMakeVisible(this->relatedOnlyToggle);
-    this->listBox.setModel(&this->listModel);
-    this->listBox.setRowHeight(18);
-    this->listBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff2a2a2a));
-    addAndMakeVisible(this->listBox);
-    this->rebuildFiltered();
-}
-
-void PadContextPopup::SourcePickerPopup::setFilterType(KitLib::InstrumentSpec::Type type) {
-    this->filterType = type;
-    this->rebuildFiltered();
-}
-
-void PadContextPopup::SourcePickerPopup::resized() {
-    auto area = getLocalBounds().reduced(4);
-    auto topRow = area.removeFromTop(22);
-    this->filterField.setBounds(topRow.removeFromLeft(topRow.getWidth() - 70));
-    topRow.removeFromLeft(4);
-    this->relatedOnlyToggle.setBounds(topRow);
-    area.removeFromTop(2);
-    this->listBox.setBounds(area);
-}
-
-void PadContextPopup::SourcePickerPopup::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(0xff222222));
-    g.setColour(juce::Colour(0xff555555));
-    g.drawRect(getLocalBounds(), 1);
-}
-
-void PadContextPopup::SourcePickerPopup::rebuildFiltered() {
-    this->filteredEntries.clear();
-    auto filterText = this->filterField.getText().toLowerCase();
-    bool relatedOnly = this->relatedOnlyToggle.getToggleState()
-                       && this->filterType != KitLib::InstrumentSpec::Type::Unknown;
-    for (int idx = 0; idx < static_cast<int>(this->allItems.size()); ++idx) {
-        const auto& item = this->allItems[static_cast<size_t>(idx)];
-        if (relatedOnly && item.instType != this->filterType)
-            continue;
-        if (filterText.isNotEmpty() && !item.displayText().toLowerCase().contains(filterText))
-            continue;
-        this->filteredEntries.push_back({ idx });
-    }
-    this->listBox.updateContent();
-    this->listBox.repaint();
-}
-
-int PadContextPopup::SourcePickerPopup::ListModel::getNumRows() {
-    return static_cast<int>(this->owner.filteredEntries.size());
-}
-
-void PadContextPopup::SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
-    if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.filteredEntries.size()))
-        return;
-    auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(rowNumber)].originalIndex;
-    const auto& item = this->owner.allItems[static_cast<size_t>(originalIdx)];
-    g.fillAll(rowIsSelected ? juce::Colour(0xff3a5a8a) : (rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e)));
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions(10.0f)));
-    g.drawText(item.displayText(), 4, 0, width - 8, height, juce::Justification::centredLeft);
-}
-
-void PadContextPopup::SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent&) {
-    if (row < 0 || row >= static_cast<int>(this->owner.filteredEntries.size()))
-        return;
-    auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
-    if (this->owner.onItemSelected)
-        this->owner.onItemSelected(originalIdx);
-}
-
 // ─── MIDI utility ─────────────────────────────────────────────────────────────
 
 static const char* NOTE_NAMES[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
@@ -118,52 +40,11 @@ void PadContextPopup::applyComboToNotes() {
 // ─── Source items ─────────────────────────────────────────────────────────────
 
 void PadContextPopup::rebuildSourceItems() {
-    this->sourceItems.clear();
-    const auto* libraryManager = this->engine.getInstrumentManager();
-    if (libraryManager == nullptr) return;
-
-    for (const auto& kitPtr : libraryManager->getKits()) {
-        juce::String kitShort = kitPtr->meta.name;
-        if (kitShort.isEmpty()) kitShort = kitPtr->meta.codeRaw;
-
-        std::vector<const KitLib::InstrumentSpec*> instruments;
-        for (const auto& [code, instPtr] : kitPtr->getInstrumentSpecsMap())
-            instruments.push_back(instPtr.get());
-        std::sort(instruments.begin(), instruments.end(), [](const auto* a, const auto* b) {
-            return a->meta.codeRaw < b->meta.codeRaw;
-        });
-
-        for (const auto* inst : instruments) {
-            if (inst->articulationSpecs.empty()) {
-                SourceItem item;
-                item.kitCodeRaw = kitPtr->meta.codeRaw;
-                item.kitDisplayName = kitShort;
-                item.instCode = inst->meta.codeRaw;
-                item.instType = inst->meta.type;
-                this->sourceItems.push_back(std::move(item));
-            } else {
-                for (const auto& artPtr : inst->articulationSpecs) {
-                    SourceItem item;
-                    item.kitCodeRaw = kitPtr->meta.codeRaw;
-                    item.kitDisplayName = kitShort;
-                    item.instCode = inst->meta.codeRaw;
-                    item.artCode = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
-                    item.instType = inst->meta.type;
-                    this->sourceItems.push_back(std::move(item));
-                }
-            }
-        }
-    }
+    this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
 }
 
 int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
-    auto needle = searchPath.trim().toLowerCase();
-    for (int idx = 0; idx < static_cast<int>(this->sourceItems.size()); ++idx) {
-        const auto& item = this->sourceItems[static_cast<size_t>(idx)];
-        if (item.fullPath().toLowerCase() == needle || item.displayText().toLowerCase() == needle)
-            return idx;
-    }
-    return -1;
+    return UIHelpers::findSourceIndex(this->sourceItems, searchPath);
 }
 
 // ─── Constructor ──────────────────────────────────────────────────────────────
@@ -309,32 +190,23 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     addAndMakeVisible(*layer->sourceButton);
     layer->sourceButton->onClick = [this, layer] { this->showSourcePicker(layer); };
 
-    layer->tuningSlider = std::make_unique<juce::Slider>();
-    layer->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
-    layer->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
-    layer->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
-    // layer->tuningSlider->setTextValueSuffix(" c");
+    // Sentinel text function for attack/decay sliders
+    auto sentinelTextFn = [](double value) -> juce::String {
+        return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
+    };
+
+    // Tuning slider
+    layer->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents), 40, 20);
     addAndMakeVisible(*layer->tuningSlider);
     layer->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
 
-    layer->attackSlider = std::make_unique<juce::Slider>();
-    layer->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
-    layer->attackSlider->setRange(-1.0, 500.0, 10.0);
-    layer->attackSlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
-    layer->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, juce::dontSendNotification);
-    layer->attackSlider->updateText();
+    // Attack slider
+    layer->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, 40, 20, sentinelTextFn);
     addAndMakeVisible(*layer->attackSlider);
     layer->attackSlider->onValueChange = [this] { this->applyToEngine(); };
 
-    layer->decaySlider = std::make_unique<juce::Slider>();
-    layer->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
-    layer->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
-    layer->decaySlider->setRange(-1.0, 5000.0, 10.0);
-    layer->decaySlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
-    layer->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, juce::dontSendNotification);
-    layer->decaySlider->updateText();
+    // Decay slider
+    layer->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, 40, 20, sentinelTextFn);
     addAndMakeVisible(*layer->decaySlider);
     layer->decaySlider->onValueChange = [this] { this->applyToEngine(); };
 
