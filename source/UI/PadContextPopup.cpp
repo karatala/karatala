@@ -2,45 +2,50 @@
 
 // ─── MIDI utility ─────────────────────────────────────────────────────────────
 
-static const char* NOTE_NAMES[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+// ─── MIDI note button helpers ─────────────────────────────────────────────────
 
-juce::String PadContextPopup::midiNoteToString(int note) {
-    if (note < 0 || note > 127)
-        return "--";
-    const int octave = (note / 12) - 2;
-    const auto num  = juce::String(note).paddedLeft(' ', 3);
-    const auto name = juce::String(NOTE_NAMES[note % 12]);
-    return num + " / " + name + " " + juce::String(octave);
-}
-
-void PadContextPopup::populateNoteComboBox(juce::ComboBox& combo) {
-    combo.clear(juce::dontSendNotification);
-    // 4 separator rows so col 1 is offset by 4, aligning subsequent columns to octave B boundaries
-    for (int i = 0; i < 4; ++i)
-        combo.addSeparator();
-    combo.addItem("--", 1);
-    for (int note = 127; note >= 0; --note)
-        combo.addItem(midiNoteToString(note), note + 2);
-}
-
-void PadContextPopup::syncComboFromNotes() {
+void PadContextPopup::syncNoteButtons() {
     if (!this->midiNotesPtr) return;
     auto& notes = *this->midiNotesPtr;
-    this->noteCombo1.setSelectedId(!notes.empty() ? static_cast<int>(notes[0]) + 2 : 1, juce::dontSendNotification);
-    this->noteCombo2.setSelectedId(notes.size() >= 2 ? static_cast<int>(notes[1]) + 2 : 1, juce::dontSendNotification);
+    const int n1 = !notes.empty()          ? static_cast<int>(notes[0]) : -1;
+    const int n2 = notes.size() >= 2 ? static_cast<int>(notes[1]) : -1;
+    this->noteButton1.setButtonText(MidiNotePicker::noteToButtonText(n1));
+    this->noteButton2.setButtonText(MidiNotePicker::noteToButtonText(n2));
 }
 
-void PadContextPopup::applyComboToNotes() {
+void PadContextPopup::applyNoteToSlot(int slotIdx, int note) {
     if (!this->midiNotesPtr) return;
-    this->midiNotesPtr->clear();
-    int id1 = this->noteCombo1.getSelectedId();
-    int id2 = this->noteCombo2.getSelectedId();
-    if (id1 > 1) this->midiNotesPtr->push_back(static_cast<uint8_t>(id1 - 2));
-    if (id2 > 1) this->midiNotesPtr->push_back(static_cast<uint8_t>(id2 - 2));
+    auto& notes = *this->midiNotesPtr;
+    // Ensure the vector has at least (slotIdx+1) entries
+    while (static_cast<int>(notes.size()) <= slotIdx)
+        notes.push_back(0);
+    if (note >= 0 && note <= 127)
+        notes[static_cast<size_t>(slotIdx)] = static_cast<uint8_t>(note);
+    else
+        notes.erase(notes.begin() + slotIdx);
+    this->syncNoteButtons();
     if (this->onMidiMappingChanged)
         this->onMidiMappingChanged();
 }
 
+void PadContextPopup::showMidiNotePicker(int slotIdx) {
+    auto picker = std::make_unique<MidiNotePicker>();
+
+    // Pre-select current note
+    if (this->midiNotesPtr && static_cast<int>(this->midiNotesPtr->size()) > slotIdx)
+        picker->setCurrentNote(static_cast<int>((*this->midiNotesPtr)[static_cast<size_t>(slotIdx)]));
+
+    picker->onNoteSelected = [this, slotIdx](int note) {
+        this->applyNoteToSlot(slotIdx, note);
+        // Dismiss the CallOutBox
+        if (auto* modal = juce::Component::getCurrentlyModalComponent())
+            modal->exitModalState(0);
+    };
+
+    auto& btn = (slotIdx == 0) ? this->noteButton1 : this->noteButton2;
+    this->activeMidiPicker = picker.get();
+    juce::CallOutBox::launchAsynchronously(std::move(picker), btn.getScreenBounds(), nullptr);
+}
 // ─── Source items ─────────────────────────────────────────────────────────────
 
 void PadContextPopup::rebuildSourceItems() {
@@ -96,20 +101,15 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->midiHeaderLabel.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
     addAndMakeVisible(this->midiHeaderLabel);
 
-    populateNoteComboBox(this->noteCombo1);
-    populateNoteComboBox(this->noteCombo2);
-    this->noteCombo1.getProperties().set("midiNoteGrid", true);
-    this->noteCombo2.getProperties().set("midiNoteGrid", true);
-    this->noteCombo1.getProperties().set("midiNoteGridColumns", 6);
-    this->noteCombo2.getProperties().set("midiNoteGridColumns", 6);
-    addAndMakeVisible(this->noteCombo1);
-    addAndMakeVisible(this->noteCombo2);
-    this->noteCombo1.onChange = [this] { this->applyComboToNotes(); };
-    this->noteCombo2.onChange = [this] { this->applyComboToNotes(); };
-    if (auto* label1 = dynamic_cast<juce::Label*>(this->noteCombo1.getChildComponent(0)))
-        label1->setFont(juce::Font(juce::FontOptions(9.0f)));
-    if (auto* label2 = dynamic_cast<juce::Label*>(this->noteCombo2.getChildComponent(0)))
-        label2->setFont(juce::Font(juce::FontOptions(9.0f)));
+    // Note buttons (open the custom MidiNotePicker grid when clicked)
+    this->noteButton1.setButtonText("--");
+    this->noteButton2.setButtonText("--");
+    for (auto* btn : { &this->noteButton1, &this->noteButton2 })
+        btn->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    addAndMakeVisible(this->noteButton1);
+    addAndMakeVisible(this->noteButton2);
+    this->noteButton1.onClick = [this] { this->showMidiNotePicker(0); };
+    this->noteButton2.onClick = [this] { this->showMidiNotePicker(1); };
 
     this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
     this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
@@ -126,7 +126,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
         this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
     };
 
-    this->syncComboFromNotes();
+    this->syncNoteButtons();
 
     // Layer header
     this->layerHeaderLabel.setText("Layers", juce::dontSendNotification);
@@ -464,11 +464,11 @@ void PadContextPopup::resized() {
     this->midiHeaderLabel.setBounds(area.removeFromTop(14));
     auto midiRow = area.removeFromTop(22);
     const int learnBtnW = 18;
-    const int comboW = (midiRow.getWidth() - learnBtnW * 2 - 8) / 2;
-    this->noteCombo1.setBounds(midiRow.removeFromLeft(comboW).reduced(0, 1));
+    const int noteW = (midiRow.getWidth() - learnBtnW * 2 - 8) / 2;
+    this->noteButton1.setBounds(midiRow.removeFromLeft(noteW).reduced(0, 1));
     this->learnButton1.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
     midiRow.removeFromLeft(4);
-    this->noteCombo2.setBounds(midiRow.removeFromLeft(comboW).reduced(0, 1));
+    this->noteButton2.setBounds(midiRow.removeFromLeft(noteW).reduced(0, 1));
     this->learnButton2.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
     area.removeFromTop(4);
 

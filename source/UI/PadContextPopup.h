@@ -4,6 +4,7 @@
 #include "../Engine/DrumKitEngine.h"
 #include "UITypes.h"
 #include "SourcePickerPopup.h"
+#include "MidiNotePicker.h"
 
 class PadContextPopup : public juce::Component {
 public:
@@ -34,18 +35,19 @@ private:
     juce::Label artLabel;
 
     // ─── MIDI map ───
-    juce::Label midiHeaderLabel;
-    juce::ComboBox noteCombo1;
-    juce::ComboBox noteCombo2;
+    juce::Label     midiHeaderLabel;
+    juce::TextButton noteButton1;
+    juce::TextButton noteButton2;
     juce::TextButton learnButton1 { juce::String::charToString(0x25CF) };
     juce::TextButton learnButton2 { juce::String::charToString(0x25CF) };
     KitLayout::MidiNotes* midiNotesPtr = nullptr;
     int activeLearningSlot = -1;
+    // Active CallOutBox content tracked weakly so we can dismiss on MIDI learn
+    juce::Component::SafePointer<MidiNotePicker> activeMidiPicker;
 
-    static void populateNoteComboBox(juce::ComboBox& combo);
-    static juce::String midiNoteToString(int note);
-    void syncComboFromNotes();
-    void applyComboToNotes();
+    void syncNoteButtons();
+    void applyNoteToSlot(int slotIdx, int note);
+    void showMidiNotePicker(int slotIdx);
 
     std::vector<SourceItem> sourceItems;
     void rebuildSourceItems();
