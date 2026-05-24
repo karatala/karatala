@@ -302,10 +302,10 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
     row->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
     row->attackSlider->setRange(-1.0, 500.0, 10.0);
-    row->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, juce::dontSendNotification);
     row->attackSlider->textFromValueFunction = [](double value) -> juce::String {
         return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
+    row->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, juce::dontSendNotification);
     this->contentComponent.addAndMakeVisible(*row->attackSlider);
     row->attackSlider->onValueChange = [this] { this->applyToEngine(); };
 
@@ -314,10 +314,10 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
     row->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
     row->decaySlider->setRange(-1.0, 5000.0, 10.0);
-    row->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, juce::dontSendNotification);
     row->decaySlider->textFromValueFunction = [](double value) -> juce::String {
         return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
+    row->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, juce::dontSendNotification);
     this->contentComponent.addAndMakeVisible(*row->decaySlider);
     row->decaySlider->onValueChange = [this] { this->applyToEngine(); };
 
@@ -361,16 +361,16 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
             newRow->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
             newRow->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
             newRow->attackSlider->setRange(-1.0, 500.0, 10.0);
-            newRow->attackSlider->setValue(-1.0, juce::dontSendNotification);
             newRow->attackSlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
+            newRow->attackSlider->setValue(-1.0, juce::dontSendNotification);
             this->contentComponent.addAndMakeVisible(*newRow->attackSlider);
             newRow->attackSlider->onValueChange = [this] { this->applyToEngine(); };
             newRow->decaySlider = std::make_unique<juce::Slider>();
             newRow->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
             newRow->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 40, 20);
             newRow->decaySlider->setRange(-1.0, 5000.0, 10.0);
-            newRow->decaySlider->setValue(-1.0, juce::dontSendNotification);
             newRow->decaySlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
+            newRow->decaySlider->setValue(-1.0, juce::dontSendNotification);
             this->contentComponent.addAndMakeVisible(*newRow->decaySlider);
             newRow->decaySlider->onValueChange = [this] { this->applyToEngine(); };
             newRow->addButton = std::make_unique<juce::TextButton>("+");
