@@ -13,6 +13,7 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     void flushMapText();
+    void setPreviewVelocityProvider(std::function<int()> provider) { this->previewVelocityProvider = std::move(provider); }
 
     std::function<void()> onDismiss;
     /** Fires whenever this popup changes the instrument map text. */
@@ -25,6 +26,7 @@ private:
     juce::String slotId;
     juce::String artName;
     juce::String savedInstrumentMapText;
+    std::function<int()> previewVelocityProvider;
     KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
 
     // ─── Header ───
@@ -63,6 +65,7 @@ private:
     juce::Label layerHeaderLabel;
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);
+    juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
     void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();

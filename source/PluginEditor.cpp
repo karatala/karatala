@@ -296,6 +296,9 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
     // Pass the saved instrument map from ValueTreeState so layers are correctly restored
     auto savedMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
     this->padContextPopup = std::make_unique<PadContextPopup>(this->processorRef.getEngine(), *slot, artIdx, savedMapText);
+    this->padContextPopup->setPreviewVelocityProvider([this]() {
+        return static_cast<int>(this->sidebar.velocityKnob.getValue());
+    });
     this->padContextPopup->onDismiss = [this] {
         juce::MessageManager::callAsync([this] { this->dismissPadContextPopup(); });
     };

@@ -47,6 +47,14 @@ int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
     return UIHelpers::findSourceIndex(this->sourceItems, searchPath);
 }
 
+juce::uint8 PadContextPopup::getPreviewVelocity() const {
+    if (!this->previewVelocityProvider)
+        return static_cast<juce::uint8>(100);
+
+    const int velocity = juce::jlimit(1, 127, this->previewVelocityProvider());
+    return static_cast<juce::uint8>(velocity);
+}
+
 // ─── Constructor ──────────────────────────────────────────────────────────────
 
 PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedInstrumentMapText)
@@ -199,16 +207,25 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents), 40, 20);
     addAndMakeVisible(*layer->tuningSlider);
     layer->tuningSlider->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->tuningSlider->onDragEnd = [this] {
+        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    };
 
     // Attack slider
     layer->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, 40, 20, sentinelTextFn);
     addAndMakeVisible(*layer->attackSlider);
     layer->attackSlider->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->attackSlider->onDragEnd = [this] {
+        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    };
 
     // Decay slider
     layer->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, 40, 20, sentinelTextFn);
     addAndMakeVisible(*layer->decaySlider);
     layer->decaySlider->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->decaySlider->onDragEnd = [this] {
+        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    };
 
     layer->addButton = std::make_unique<juce::TextButton>("+");
     layer->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
@@ -390,6 +407,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
         juce::MessageManager::callAsync([this] {
             this->dismissSourcePicker();
             this->applyToEngine();
+            this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
         });
     };
 
