@@ -75,20 +75,9 @@ void InstrumentConfigPanel::SourcePickerPopup::ListModel::paintListBoxItem(int r
         g.fillAll(juce::Colour(0xff3a5a8a));
     else
         g.fillAll(rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e));
-
-    // Confirm button area on right
-    const int confirmWidth = 20;
-    auto confirmArea = juce::Rectangle<int>(width - confirmWidth, 0, confirmWidth, height);
-    g.setColour(juce::Colour(0xff3a6a3a));
-    g.fillRect(confirmArea.reduced(2, 2));
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(juce::FontOptions(10.0f)));
-    g.drawText(juce::String::charToString(0x2713), confirmArea, juce::Justification::centred);
-
-    // Item text
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions(10.0f)));
-    g.drawText(item.displayText(), 4, 0, width - confirmWidth - 8, height, juce::Justification::centredLeft);
+    g.drawText(item.displayText(), 4, 0, width - 8, height, juce::Justification::centredLeft);
 }
 
 void InstrumentConfigPanel::SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
@@ -96,20 +85,11 @@ void InstrumentConfigPanel::SourcePickerPopup::ListModel::listBoxItemClicked(int
         return;
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
 
-    // Check if click is in the confirm button area (right 20px)
-    auto listBounds = this->owner.listBox.getRowPosition(row, true);
-    int confirmX = listBounds.getWidth() - 20;
-    if (event.getPosition().getX() >= confirmX) {
-        // Confirm: apply selection
-        if (this->owner.onItemSelected)
-            this->owner.onItemSelected(originalIdx);
-    } else {
-        // Preview: velocity from X position
-        float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(event.getPosition().getX()) / static_cast<float>(juce::jmax(1, confirmX)));
-        juce::uint8 velocity = static_cast<juce::uint8>(juce::jlimit(1, 127, static_cast<int>(xRatio * 127.0f)));
-        if (this->owner.onPreview)
-            this->owner.onPreview(originalIdx, velocity);
-    }
+    // X-axis velocity: left=soft, right=hard
+    float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(event.getPosition().getX()) / static_cast<float>(juce::jmax(1, this->owner.listBox.getRowPosition(row, true).getWidth())));
+    juce::uint8 velocity = static_cast<juce::uint8>(juce::jlimit(1, 127, static_cast<int>(xRatio * 127.0f)));
+    if (this->owner.onPreview)
+        this->owner.onPreview(originalIdx, velocity);
 }
 
 // ─── InstrumentConfigPanel ────────────────────────────────────────────────────
@@ -463,19 +443,14 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
 
     this->activePopup->setBounds(popupX, popupY, popupWidth, popupHeight);
 
-    this->activePopup->onItemSelected = [this, row](int sourceIndex) {
+    this->activePopup->onPreview = [this, row](int sourceIndex, juce::uint8 velocity) {
+        // Apply the clicked source immediately and play preview
         row->selectedSourceIndex = sourceIndex;
         if (sourceIndex >= 0)
             row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
         else
             row->sourceButton->setButtonText("--");
-        juce::MessageManager::callAsync([this] {
-            this->dismissPopup();
-            this->applyToEngine();
-        });
-    };
-
-    this->activePopup->onPreview = [this, row](int /*sourceIndex*/, juce::uint8 velocity) {
+        this->applyToEngine();
         this->engine.playPreviewNote(row->slotId, row->artName, velocity);
     };
 

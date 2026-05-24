@@ -292,6 +292,16 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
     this->padContextPopup->onDismiss = [this] {
         juce::MessageManager::callAsync([this] { this->dismissPadContextPopup(); });
     };
+    this->padContextPopup->onMapTextChanged = [this](const juce::String& mapText) {
+        this->processorRef.getValueTreeState().state.setProperty("instrument_map", mapText, nullptr);
+        this->instrumentMapEditor.setText(mapText, false);
+        this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
+    };
+    this->padContextPopup->onMidiMappingChanged = [this] {
+        auto* layout = this->processorRef.getEngine().getKitLayout();
+        if (layout) layout->rebuildIndices();
+        this->statusBar.setStatusText("MIDI mapping updated");
+    };
 
     // Convert screen position to local coordinates
     auto localPos = getLocalPoint(nullptr, screenPos);

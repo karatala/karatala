@@ -1,56 +1,500 @@
 #include "PadContextPopup.h"
 
+// ─── SourcePickerPopup (compact copy from InstrumentConfigPanel) ──────────────
+
+PadContextPopup::SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items)
+    : allItems(items) {
+    this->filterField.setTextToShowWhenEmpty("filter...", juce::Colours::grey);
+    this->filterField.onTextChange = [this] { this->rebuildFiltered(); };
+    addAndMakeVisible(this->filterField);
+    this->relatedOnlyToggle.setToggleState(true, juce::dontSendNotification);
+    this->relatedOnlyToggle.onClick = [this] { this->rebuildFiltered(); };
+    addAndMakeVisible(this->relatedOnlyToggle);
+    this->listBox.setModel(&this->listModel);
+    this->listBox.setRowHeight(18);
+    this->listBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff2a2a2a));
+    addAndMakeVisible(this->listBox);
+    this->rebuildFiltered();
+}
+
+void PadContextPopup::SourcePickerPopup::setFilterType(KitLib::InstrumentSpec::Type type) {
+    this->filterType = type;
+    this->rebuildFiltered();
+}
+
+void PadContextPopup::SourcePickerPopup::resized() {
+    auto area = getLocalBounds().reduced(4);
+    auto topRow = area.removeFromTop(22);
+    this->filterField.setBounds(topRow.removeFromLeft(topRow.getWidth() - 70));
+    topRow.removeFromLeft(4);
+    this->relatedOnlyToggle.setBounds(topRow);
+    area.removeFromTop(2);
+    this->listBox.setBounds(area);
+}
+
+void PadContextPopup::SourcePickerPopup::paint(juce::Graphics& g) {
+    g.fillAll(juce::Colour(0xff222222));
+    g.setColour(juce::Colour(0xff555555));
+    g.drawRect(getLocalBounds(), 1);
+}
+
+void PadContextPopup::SourcePickerPopup::rebuildFiltered() {
+    this->filteredEntries.clear();
+    auto filterText = this->filterField.getText().toLowerCase();
+    bool relatedOnly = this->relatedOnlyToggle.getToggleState()
+                       && this->filterType != KitLib::InstrumentSpec::Type::Unknown;
+    for (int idx = 0; idx < static_cast<int>(this->allItems.size()); ++idx) {
+        const auto& item = this->allItems[static_cast<size_t>(idx)];
+        if (relatedOnly && item.instType != this->filterType)
+            continue;
+        if (filterText.isNotEmpty() && !item.displayText().toLowerCase().contains(filterText))
+            continue;
+        this->filteredEntries.push_back({ idx });
+    }
+    this->listBox.updateContent();
+    this->listBox.repaint();
+}
+
+int PadContextPopup::SourcePickerPopup::ListModel::getNumRows() {
+    return static_cast<int>(this->owner.filteredEntries.size());
+}
+
+void PadContextPopup::SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
+    if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.filteredEntries.size()))
+        return;
+    auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(rowNumber)].originalIndex;
+    const auto& item = this->owner.allItems[static_cast<size_t>(originalIdx)];
+    g.fillAll(rowIsSelected ? juce::Colour(0xff3a5a8a) : (rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e)));
+    g.setColour(juce::Colours::white);
+    g.setFont(juce::Font(juce::FontOptions(10.0f)));
+    g.drawText(item.displayText(), 4, 0, width - 8, height, juce::Justification::centredLeft);
+}
+
+void PadContextPopup::SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent&) {
+    if (row < 0 || row >= static_cast<int>(this->owner.filteredEntries.size()))
+        return;
+    auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
+    if (this->owner.onItemSelected)
+        this->owner.onItemSelected(originalIdx);
+}
+
+// ─── MIDI utility ─────────────────────────────────────────────────────────────
+
+static const char* NOTE_NAMES[] = { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+juce::String PadContextPopup::midiNoteToString(int note) {
+    if (note < 0 || note > 127)
+        return "--";
+    int octave = (note / 12) - 2;
+    int noteIdx = note % 12;
+    return juce::String(NOTE_NAMES[noteIdx]) + juce::String(octave) + "/" + juce::String(note);
+}
+
+void PadContextPopup::populateNoteComboBox(juce::ComboBox& combo) {
+    combo.clear(juce::dontSendNotification);
+    combo.addItem("--", 1);
+    for (int note = 0; note <= 127; ++note)
+        combo.addItem(midiNoteToString(note), note + 2);
+}
+
+void PadContextPopup::syncComboFromNotes() {
+    if (!this->midiNotesPtr) return;
+    auto& notes = *this->midiNotesPtr;
+    this->noteCombo1.setSelectedId(!notes.empty() ? static_cast<int>(notes[0]) + 2 : 1, juce::dontSendNotification);
+    this->noteCombo2.setSelectedId(notes.size() >= 2 ? static_cast<int>(notes[1]) + 2 : 1, juce::dontSendNotification);
+}
+
+void PadContextPopup::applyComboToNotes() {
+    if (!this->midiNotesPtr) return;
+    this->midiNotesPtr->clear();
+    int id1 = this->noteCombo1.getSelectedId();
+    int id2 = this->noteCombo2.getSelectedId();
+    if (id1 > 1) this->midiNotesPtr->push_back(static_cast<uint8_t>(id1 - 2));
+    if (id2 > 1) this->midiNotesPtr->push_back(static_cast<uint8_t>(id2 - 2));
+    if (this->onMidiMappingChanged)
+        this->onMidiMappingChanged();
+}
+
+// ─── Source items ─────────────────────────────────────────────────────────────
+
+void PadContextPopup::rebuildSourceItems() {
+    this->sourceItems.clear();
+    const auto* libraryManager = this->engine.getInstrumentManager();
+    if (libraryManager == nullptr) return;
+
+    for (const auto& kitPtr : libraryManager->getKits()) {
+        juce::String kitShort = kitPtr->meta.name;
+        if (kitShort.isEmpty()) kitShort = kitPtr->meta.codeRaw;
+
+        std::vector<const KitLib::InstrumentSpec*> instruments;
+        for (const auto& [code, instPtr] : kitPtr->getInstrumentSpecsMap())
+            instruments.push_back(instPtr.get());
+        std::sort(instruments.begin(), instruments.end(), [](const auto* a, const auto* b) {
+            return a->meta.codeRaw < b->meta.codeRaw;
+        });
+
+        for (const auto* inst : instruments) {
+            if (inst->articulationSpecs.empty()) {
+                SourceItem item;
+                item.kitCodeRaw = kitPtr->meta.codeRaw;
+                item.kitDisplayName = kitShort;
+                item.instCode = inst->meta.codeRaw;
+                item.instType = inst->meta.type;
+                this->sourceItems.push_back(std::move(item));
+            } else {
+                for (const auto& artPtr : inst->articulationSpecs) {
+                    SourceItem item;
+                    item.kitCodeRaw = kitPtr->meta.codeRaw;
+                    item.kitDisplayName = kitShort;
+                    item.instCode = inst->meta.codeRaw;
+                    item.artCode = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
+                    item.instType = inst->meta.type;
+                    this->sourceItems.push_back(std::move(item));
+                }
+            }
+        }
+    }
+}
+
+int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
+    auto needle = searchPath.trim().toLowerCase();
+    for (int idx = 0; idx < static_cast<int>(this->sourceItems.size()); ++idx) {
+        const auto& item = this->sourceItems[static_cast<size_t>(idx)];
+        if (item.fullPath().toLowerCase() == needle || item.displayText().toLowerCase() == needle)
+            return idx;
+    }
+    return -1;
+}
+
+// ─── Constructor ──────────────────────────────────────────────────────────────
+
 PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx)
     : engine(engine)
-    , slotId(slot.id) {
-    // Resolve articulation info
+    , slotId(slot.id)
+    , slotType(slot.type) {
+    // Resolve articulation
     if (artIdx >= 0 && artIdx < static_cast<int>(slot.articulations.size())) {
-        const auto& art = slot.articulations[static_cast<size_t>(artIdx)];
+        auto& art = const_cast<KitLayout::InstrumentSlot::ArticulationTrigger&>(slot.articulations[static_cast<size_t>(artIdx)]);
         this->artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
-
-        juce::StringArray noteStrings;
-        for (auto note : art.notes)
-            noteStrings.add(juce::String(static_cast<int>(note)));
-        this->midiNotesText = noteStrings.joinIntoString(", ");
+        this->midiNotesPtr = &art.notes;
+    } else if (!slot.articulations.empty()) {
+        auto& art = const_cast<KitLayout::InstrumentSlot::ArticulationTrigger&>(slot.articulations[0]);
+        this->artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
+        this->midiNotesPtr = &art.notes;
     } else {
         this->artName = "(default)";
     }
 
-    // Slot label
+    // Header
     this->slotLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
-    this->slotLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
+    this->slotLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
     this->slotLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     addAndMakeVisible(this->slotLabel);
 
-    // Art label
-    this->artLabel.setText("Art: " + this->artName, juce::dontSendNotification);
-    this->artLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
+    this->artLabel.setText(this->artName, juce::dontSendNotification);
+    this->artLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
     this->artLabel.setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
     addAndMakeVisible(this->artLabel);
 
-    // MIDI notes label
-    this->midiLabel.setText("MIDI: " + this->midiNotesText, juce::dontSendNotification);
-    this->midiLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
-    this->midiLabel.setColour(juce::Label::textColourId, juce::Colour(0xffaaaaaa));
-    addAndMakeVisible(this->midiLabel);
+    // MIDI map section
+    this->midiHeaderLabel.setText("MIDI", juce::dontSendNotification);
+    this->midiHeaderLabel.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
+    this->midiHeaderLabel.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
+    addAndMakeVisible(this->midiHeaderLabel);
 
-    // Preview button
-    this->previewButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff3a5a3a));
-    this->previewButton.onClick = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, 100);
+    populateNoteComboBox(this->noteCombo1);
+    populateNoteComboBox(this->noteCombo2);
+    addAndMakeVisible(this->noteCombo1);
+    addAndMakeVisible(this->noteCombo2);
+    this->noteCombo1.onChange = [this] { this->applyComboToNotes(); };
+    this->noteCombo2.onChange = [this] { this->applyComboToNotes(); };
+    if (auto* label1 = dynamic_cast<juce::Label*>(this->noteCombo1.getChildComponent(0)))
+        label1->setFont(juce::Font(juce::FontOptions(9.0f)));
+    if (auto* label2 = dynamic_cast<juce::Label*>(this->noteCombo2.getChildComponent(0)))
+        label2->setFont(juce::Font(juce::FontOptions(9.0f)));
+
+    this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+    this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+    addAndMakeVisible(this->learnButton1);
+    addAndMakeVisible(this->learnButton2);
+    this->learnButton1.onClick = [this] {
+        this->activeLearningSlot = (this->activeLearningSlot == 0) ? -1 : 0;
+        this->learnButton1.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 0 ? juce::Colours::yellow : juce::Colours::red);
+        this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
     };
-    addAndMakeVisible(this->previewButton);
-
-    // Close button
-    this->closeButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff444444));
-    this->closeButton.onClick = [this] {
-        if (this->onDismiss)
-            this->onDismiss();
+    this->learnButton2.onClick = [this] {
+        this->activeLearningSlot = (this->activeLearningSlot == 1) ? -1 : 1;
+        this->learnButton2.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 1 ? juce::Colours::yellow : juce::Colours::red);
+        this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
     };
-    addAndMakeVisible(this->closeButton);
 
-    this->setSize(220, 130);
+    this->syncComboFromNotes();
+
+    // Layer header
+    this->layerHeaderLabel.setText("Layers", juce::dontSendNotification);
+    this->layerHeaderLabel.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
+    this->layerHeaderLabel.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
+    addAndMakeVisible(this->layerHeaderLabel);
+
+    // Build source items and populate layers from existing instrument map
+    this->rebuildSourceItems();
+    this->populateLayers();
+
+    // Set initial size so the editor can position the popup
+    int layerCount = juce::jmax(1, this->layerRows.size());
+    int initHeight = 6 + 16 + 2 + 14 + 22 + 4 + 14 + layerCount * 21 + 6;
+    this->setSize(360, initHeight);
 }
+
+void PadContextPopup::populateLayers() {
+    // Parse the current instrument map from the engine to find layers for this slot/art
+    auto mapText = this->engine.getSuggestedInstrumentMapText();
+    auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
+    const auto& existingEntries = parseResult.value.entries;
+
+    std::vector<const DrumKitEngine::InstrumentMapEntry*> matchingEntries;
+    for (const auto& entry : existingEntries) {
+        if (entry.slotId != this->slotId) continue;
+        if (!entry.slotArticulationFilter.empty()) {
+            bool found = false;
+            for (const auto& filter : entry.slotArticulationFilter)
+                if (filter == this->artName) found = true;
+            if (!found) continue;
+        }
+        matchingEntries.push_back(&entry);
+    }
+
+    // Fallback: entries with no art filter for this slot
+    if (matchingEntries.empty()) {
+        for (const auto& entry : existingEntries) {
+            if (entry.slotId == this->slotId && entry.slotArticulationFilter.empty())
+                matchingEntries.push_back(&entry);
+        }
+    }
+
+    if (matchingEntries.empty()) {
+        this->addLayerRow("", 0, -1, -1);
+    } else {
+        for (const auto* entry : matchingEntries) {
+            juce::String sourceFullPath = entry->kitRef;
+            if (entry->instCode.isNotEmpty())
+                sourceFullPath += "/" + entry->instCode;
+            if (!entry->articulationFilter.empty())
+                sourceFullPath += "/" + entry->articulationFilter[0];
+            else if (this->artName != "(default)")
+                sourceFullPath += "/" + this->artName;
+
+            int tuning = entry->tuningCents.value_or(0);
+            int attack = entry->attackTimeMs.value_or(-1);
+            int decay = entry->decayTimeMs.value_or(-1);
+            this->addLayerRow(sourceFullPath, tuning, attack, decay);
+        }
+    }
+
+    this->updateRemoveButtonVisibility();
+}
+
+void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs) {
+    auto* layer = this->layerRows.add(new LayerRow());
+    layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
+
+    layer->sourceButton = std::make_unique<juce::TextButton>();
+    if (layer->selectedSourceIndex >= 0)
+        layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].displayText());
+    else
+        layer->sourceButton->setButtonText("--");
+    layer->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    addAndMakeVisible(*layer->sourceButton);
+    layer->sourceButton->onClick = [this, layer] { this->showSourcePicker(layer); };
+
+    layer->tuningSlider = std::make_unique<juce::Slider>();
+    layer->tuningSlider->setSliderStyle(juce::Slider::LinearHorizontal);
+    layer->tuningSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 32, 16);
+    layer->tuningSlider->setRange(-2400.0, 2400.0, 10.0);
+    layer->tuningSlider->setValue(static_cast<double>(tuningCents), juce::dontSendNotification);
+    layer->tuningSlider->setTextValueSuffix(" c");
+    addAndMakeVisible(*layer->tuningSlider);
+    layer->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
+
+    layer->attackSlider = std::make_unique<juce::Slider>();
+    layer->attackSlider->setSliderStyle(juce::Slider::LinearHorizontal);
+    layer->attackSlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 28, 16);
+    layer->attackSlider->setRange(-10.0, 500.0, 10.0);
+    layer->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -10.0, juce::dontSendNotification);
+    layer->attackSlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
+    addAndMakeVisible(*layer->attackSlider);
+    layer->attackSlider->onValueChange = [this] { this->applyToEngine(); };
+
+    layer->decaySlider = std::make_unique<juce::Slider>();
+    layer->decaySlider->setSliderStyle(juce::Slider::LinearHorizontal);
+    layer->decaySlider->setTextBoxStyle(juce::Slider::TextBoxRight, false, 28, 16);
+    layer->decaySlider->setRange(-10.0, 5000.0, 10.0);
+    layer->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -10.0, juce::dontSendNotification);
+    layer->decaySlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
+    addAndMakeVisible(*layer->decaySlider);
+    layer->decaySlider->onValueChange = [this] { this->applyToEngine(); };
+
+    layer->addButton = std::make_unique<juce::TextButton>("+");
+    layer->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    addAndMakeVisible(*layer->addButton);
+    layer->addButton->onClick = [this] {
+        this->addLayerRow("", 0, -1, -1);
+        this->updateRemoveButtonVisibility();
+        this->resized();
+    };
+
+    layer->removeButton = std::make_unique<juce::TextButton>("x");
+    layer->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    addAndMakeVisible(*layer->removeButton);
+    layer->removeButton->onClick = [this, layer] {
+        juce::MessageManager::callAsync([this, layer] {
+            this->layerRows.removeObject(layer);
+            this->updateRemoveButtonVisibility();
+            this->resized();
+            this->applyToEngine();
+        });
+    };
+}
+
+void PadContextPopup::updateRemoveButtonVisibility() {
+    bool showRemove = this->layerRows.size() > 1;
+    for (auto* layer : this->layerRows)
+        layer->removeButton->setVisible(showRemove);
+}
+
+// ─── Generate map text: rebuilds the FULL instrument map, replacing only this slot/art's entries ──
+
+juce::String PadContextPopup::generateFullMapText() const {
+    // Start with current map, remove lines for this slot/art, then append our layers
+    auto currentMapText = this->engine.getSuggestedInstrumentMapText();
+    juce::StringArray existingLines;
+    existingLines.addTokens(currentMapText, "\n", "");
+
+    juce::StringArray result;
+    juce::String slotArtPrefix1 = this->slotId + "/" + this->artName + ":";
+    juce::String slotArtPrefix2 = this->slotId + ":";
+
+    for (const auto& line : existingLines) {
+        auto trimmed = line.trim();
+        if (trimmed.isEmpty()) continue;
+
+        // Remove lines matching this slot/art
+        if (trimmed.startsWith(slotArtPrefix1)) continue;
+        // For (default) articulation or unfiltered entries: remove if matches slot
+        if (this->artName == "(default)" && trimmed.startsWith(slotArtPrefix2) && !trimmed.substring(slotArtPrefix2.length()).contains("/"))
+            continue;
+        // Also remove lines that match this slot with exact art filter
+        // Parse the slot part to check
+        auto colonPos = trimmed.indexOf(":");
+        if (colonPos > 0) {
+            auto slotPart = trimmed.substring(0, colonPos);
+            auto slashPos = slotPart.indexOf("/");
+            if (slashPos > 0) {
+                auto lineSlotId = slotPart.substring(0, slashPos);
+                auto lineArt = slotPart.substring(slashPos + 1);
+                if (lineSlotId == this->slotId && lineArt == this->artName)
+                    continue;
+            }
+        }
+        result.add(trimmed);
+    }
+
+    // Now add our layers
+    for (const auto* layer : this->layerRows) {
+        if (layer->selectedSourceIndex < 0) continue;
+
+        const auto& srcItem = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
+        juce::String slotRef = this->slotId;
+        if (this->artName != "(default)")
+            slotRef += "/" + this->artName;
+
+        juce::String targetRef = srcItem.kitDisplayName;
+        if (srcItem.instCode.isNotEmpty())
+            targetRef += "/" + srcItem.instCode;
+
+        juce::StringArray params;
+        int tuning = static_cast<int>(layer->tuningSlider->getValue());
+        if (tuning != 0) params.add("tuning=" + juce::String(tuning));
+        double attackVal = layer->attackSlider->getValue();
+        if (attackVal >= 0.0) params.add("attack=" + juce::String(static_cast<int>(attackVal)));
+        double decayVal = layer->decaySlider->getValue();
+        if (decayVal >= 0.0) params.add("decay=" + juce::String(static_cast<int>(decayVal)));
+        if (srcItem.artCode.isNotEmpty() && srcItem.artCode != this->artName)
+            params.add("art=" + srcItem.artCode);
+
+        juce::String line = slotRef + ":" + targetRef;
+        if (!params.isEmpty())
+            line += ":" + params.joinIntoString(",");
+        result.add(line);
+    }
+
+    return result.joinIntoString("\n");
+}
+
+void PadContextPopup::applyToEngine() {
+    auto text = this->generateFullMapText();
+    if (text.trim().isEmpty()) return;
+
+    this->engine.useInstrumentMap(text);
+
+    if (this->onMapTextChanged)
+        this->onMapTextChanged(text);
+}
+
+// ─── Source picker ────────────────────────────────────────────────────────────
+
+void PadContextPopup::showSourcePicker(LayerRow* layer) {
+    this->dismissSourcePicker();
+
+    this->activePickerPopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
+    this->activePickerPopup->setFilterType(this->slotType);
+
+    // Position relative to this popup
+    int popupWidth = juce::jmax(280, getWidth() - 8);
+    int popupHeight = 240;
+    int popupX = 4;
+    int popupY = layer->sourceButton->getBounds().getBottom() + 2;
+    if (popupY + popupHeight > getHeight())
+        popupY = layer->sourceButton->getBounds().getY() - popupHeight;
+
+    this->activePickerPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
+
+    this->activePickerPopup->onItemSelected = [this, layer](int sourceIndex) {
+        layer->selectedSourceIndex = sourceIndex;
+        if (sourceIndex >= 0)
+            layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
+        else
+            layer->sourceButton->setButtonText("--");
+        juce::MessageManager::callAsync([this] {
+            this->dismissSourcePicker();
+            this->applyToEngine();
+        });
+    };
+
+    this->pickerOverlay = std::make_unique<PickerOverlay>();
+    this->pickerOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    };
+    this->pickerOverlay->setBounds(getLocalBounds());
+    addAndMakeVisible(*this->pickerOverlay);
+    this->pickerOverlay->toFront(false);
+
+    addAndMakeVisible(*this->activePickerPopup);
+    this->activePickerPopup->toFront(true);
+}
+
+void PadContextPopup::dismissSourcePicker() {
+    if (this->pickerOverlay) {
+        removeChildComponent(this->pickerOverlay.get());
+        this->pickerOverlay.reset();
+    }
+    if (this->activePickerPopup) {
+        removeChildComponent(this->activePickerPopup.get());
+        this->activePickerPopup.reset();
+    }
+}
+
+// ─── Paint / Layout ───────────────────────────────────────────────────────────
 
 void PadContextPopup::paint(juce::Graphics& g) {
     g.setColour(juce::Colour(0xff222222));
@@ -60,13 +504,50 @@ void PadContextPopup::paint(juce::Graphics& g) {
 }
 
 void PadContextPopup::resized() {
-    auto area = getLocalBounds().reduced(8);
-    this->slotLabel.setBounds(area.removeFromTop(20));
-    this->artLabel.setBounds(area.removeFromTop(18));
-    this->midiLabel.setBounds(area.removeFromTop(18));
+    auto area = getLocalBounds().reduced(6);
+
+    // Header
+    auto headerRow = area.removeFromTop(16);
+    this->slotLabel.setBounds(headerRow.removeFromLeft(headerRow.getWidth() / 2));
+    this->artLabel.setBounds(headerRow);
+    area.removeFromTop(2);
+
+    // MIDI section
+    this->midiHeaderLabel.setBounds(area.removeFromTop(14));
+    auto midiRow = area.removeFromTop(22);
+    const int learnBtnW = 18;
+    const int comboW = (midiRow.getWidth() - learnBtnW * 2 - 8) / 2;
+    this->noteCombo1.setBounds(midiRow.removeFromLeft(comboW).reduced(0, 1));
+    this->learnButton1.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
+    midiRow.removeFromLeft(4);
+    this->noteCombo2.setBounds(midiRow.removeFromLeft(comboW).reduced(0, 1));
+    this->learnButton2.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
     area.removeFromTop(4);
-    auto btnRow = area.removeFromTop(24);
-    this->previewButton.setBounds(btnRow.removeFromLeft(100).reduced(0, 2));
-    btnRow.removeFromLeft(4);
-    this->closeButton.setBounds(btnRow.removeFromLeft(60).reduced(0, 2));
+
+    // Layer section
+    this->layerHeaderLabel.setBounds(area.removeFromTop(14));
+
+    const int layerRowH = 20;
+    const int sliderAreaWidth = area.getWidth();
+    const int btnAreaW = 42;
+    const int sourceW = juce::jmax(100, (sliderAreaWidth - btnAreaW) * 40 / 100);
+    const int sliderW = (sliderAreaWidth - sourceW - btnAreaW) / 3;
+
+    for (auto* layer : this->layerRows) {
+        auto row = area.removeFromTop(layerRowH);
+        layer->sourceButton->setBounds(row.removeFromLeft(sourceW).reduced(0, 1));
+        layer->tuningSlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
+        layer->attackSlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
+        layer->decaySlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
+        layer->addButton->setBounds(row.removeFromLeft(20).reduced(1));
+        if (layer->removeButton->isVisible())
+            layer->removeButton->setBounds(row.removeFromLeft(20).reduced(1));
+        area.removeFromTop(1);
+    }
+
+    // Resize popup to fit content
+    int requiredHeight = 6 + 16 + 2 + 14 + 22 + 4 + 14 + static_cast<int>(this->layerRows.size()) * (layerRowH + 1) + 6;
+    int requiredWidth = juce::jmax(360, getWidth());
+    if (requiredHeight != getHeight() || requiredWidth != getWidth())
+        this->setSize(requiredWidth, requiredHeight);
 }
