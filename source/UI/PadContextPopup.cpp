@@ -241,9 +241,9 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->populateLayers();
 
     // Set initial size so the editor can position the popup
-    int layerCount = juce::jmax(1, this->layerRows.size());
-    int initHeight = 6 + 16 + 2 + 14 + 22 + 4 + 14 + layerCount * 25 + 6;
-    this->setSize(480, initHeight);
+    // Don't set initial size here — let the editor control popup size to be 80% of viewport
+    // For now, set a reasonable minimum to avoid zero-size issues
+    this->setSize(600, 400);
 }
 
 void PadContextPopup::populateLayers() {
@@ -451,13 +451,13 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->activePickerPopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
     this->activePickerPopup->setFilterType(this->slotType);
 
-    // Position relative to this popup
+    // Position relative to this popup — allow to overflow beyond popup bounds
     int popupWidth = juce::jmax(280, getWidth() - 8);
     int popupHeight = 240;
     int popupX = 4;
+    // Always try to open downward first
     int popupY = layer->sourceButton->getBounds().getBottom() + 2;
-    if (popupY + popupHeight > getHeight())
-        popupY = layer->sourceButton->getBounds().getY() - popupHeight;
+    // If there's not enough room below, let it overflow (don't clamp to popup height)
 
     this->activePickerPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
 
@@ -547,9 +547,5 @@ void PadContextPopup::resized() {
         area.removeFromTop(1);
     }
 
-    // Resize popup to fit content
-    int requiredHeight = 6 + 16 + 2 + 14 + 22 + 4 + 14 + static_cast<int>(this->layerRows.size()) * (layerRowH + 1) + 6;
-    int requiredWidth = juce::jmax(480, getWidth());
-    if (requiredHeight != getHeight() || requiredWidth != getWidth())
-        this->setSize(requiredWidth, requiredHeight);
+    // Don't resize the popup itself; let it flow content within the bounds set by the editor
 }

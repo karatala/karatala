@@ -305,12 +305,11 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
         this->statusBar.setStatusText("MIDI mapping updated");
     };
 
-    // Convert screen position to local coordinates
-    auto localPos = getLocalPoint(nullptr, screenPos);
-    int popupWidth = this->padContextPopup->getWidth();
-    int popupHeight = this->padContextPopup->getHeight();
-    int popupX = juce::jlimit(0, getWidth() - popupWidth, localPos.getX());
-    int popupY = juce::jlimit(0, getHeight() - popupHeight, localPos.getY());
+    // Set popup to 80% of editor viewport, centered
+    int popupWidth = static_cast<int>(getWidth() * 0.8f);
+    int popupHeight = static_cast<int>(getHeight() * 0.8f);
+    int popupX = (getWidth() - popupWidth) / 2;
+    int popupY = (getHeight() - popupHeight) / 2;
 
     this->padContextPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
 
