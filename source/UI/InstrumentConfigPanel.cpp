@@ -306,6 +306,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
         return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
     row->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, juce::dontSendNotification);
+    row->attackSlider->updateText();
     this->contentComponent.addAndMakeVisible(*row->attackSlider);
     row->attackSlider->onValueChange = [this] { this->applyToEngine(); };
 
@@ -318,6 +319,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
         return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
     row->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, juce::dontSendNotification);
+    row->decaySlider->updateText();
     this->contentComponent.addAndMakeVisible(*row->decaySlider);
     row->decaySlider->onValueChange = [this] { this->applyToEngine(); };
 
@@ -363,6 +365,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
             newRow->attackSlider->setRange(-1.0, 500.0, 10.0);
             newRow->attackSlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
             newRow->attackSlider->setValue(-1.0, juce::dontSendNotification);
+            newRow->attackSlider->updateText();
             this->contentComponent.addAndMakeVisible(*newRow->attackSlider);
             newRow->attackSlider->onValueChange = [this] { this->applyToEngine(); };
             newRow->decaySlider = std::make_unique<juce::Slider>();
@@ -371,6 +374,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
             newRow->decaySlider->setRange(-1.0, 5000.0, 10.0);
             newRow->decaySlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
             newRow->decaySlider->setValue(-1.0, juce::dontSendNotification);
+            newRow->decaySlider->updateText();
             this->contentComponent.addAndMakeVisible(*newRow->decaySlider);
             newRow->decaySlider->onValueChange = [this] { this->applyToEngine(); };
             newRow->addButton = std::make_unique<juce::TextButton>("+");

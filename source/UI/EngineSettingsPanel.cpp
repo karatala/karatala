@@ -187,5 +187,5 @@ void EngineSettingsPanel::resized() {
     placeSliderRows(12, 4);
 
     placeGroupLabel(uiGridGroupLabel);
-    placeSliderRows(16, 2);
+    placeSliderRows(16, 3);
 }

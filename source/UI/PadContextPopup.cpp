@@ -322,6 +322,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->attackSlider->setRange(-1.0, 500.0, 10.0);
     layer->attackSlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
     layer->attackSlider->setValue(attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, juce::dontSendNotification);
+    layer->attackSlider->updateText();
     addAndMakeVisible(*layer->attackSlider);
     layer->attackSlider->onValueChange = [this] { this->applyToEngine(); };
 
@@ -331,6 +332,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->decaySlider->setRange(-1.0, 5000.0, 10.0);
     layer->decaySlider->textFromValueFunction = [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); };
     layer->decaySlider->setValue(decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, juce::dontSendNotification);
+    layer->decaySlider->updateText();
     addAndMakeVisible(*layer->decaySlider);
     layer->decaySlider->onValueChange = [this] { this->applyToEngine(); };
 
