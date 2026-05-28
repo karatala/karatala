@@ -35,9 +35,14 @@ private:
     static constexpr int NAME_W    = 28;
     static constexpr int NUM_W     = 30;
     static constexpr int PAIR_W    = NAME_W + NUM_W;  // 58
+    static constexpr int GAP       = 4;               // dark grey gap between pairs
+    static constexpr int MARGIN    = 4;               // dark grey margin on edges
     static constexpr int CELL_H    = 13;
 
     int currentNote = -1;
+
+    /** X offset for a given column-pair index. */
+    static int pairX(int pairIdx);
 
     /** Returns the MIDI note for a given column-pair / row, or -1 for out-of-range. */
     static int noteAt(int pairIdx, int row);
