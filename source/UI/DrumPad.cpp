@@ -94,9 +94,12 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         g.setColour(baseColour.withMultipliedBrightness(brightVariation));
         g.fillRect(zoneRect);
 
-        // Zone divider (thin line between zones)
+        // Zone divider (thin line between zones) — use a colour midway between
+        // the two adjacent zones so the divider is visible but not a harsh black gap
         if (idx > 0) {
-            g.setColour(baseColour.withMultipliedBrightness(0.15f));
+            float prevBright = 0.25f + 0.1f * static_cast<float>((idx - 1) % 3);
+            float avgBright = (prevBright + brightVariation) * 0.5f * 0.5f;
+            g.setColour(baseColour.withMultipliedBrightness(avgBright));
             g.drawHorizontalLine(zoneRect.getY(), static_cast<float>(zoneRect.getX()), static_cast<float>(zoneRect.getRight()));
         }
 

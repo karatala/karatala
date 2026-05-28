@@ -83,7 +83,7 @@ void MidiNotePicker::paint(juce::Graphics& g) {
             g.fillRect(numCell);
 
             // Horizontal separator
-            g.setColour(juce::Colour(0xffAAAAAA));
+            g.setColour(juce::Colour(0xff444444));
             g.fillRect(px, nameCell.getBottom() - 1, PAIR_W, 1);
 
             if (note < 0) continue;

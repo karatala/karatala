@@ -494,9 +494,9 @@ void PadContextPopup::resized() {
     this->layerHeaderLabel.setBounds(area.removeFromTop(14));
 
     const int layerRowH = 24;
-    const int btnW = 22; // minimum square for + and x buttons
+    const int btnSide = layerRowH - 2; // square buttons matching row height
     const int sliderAreaWidth = area.getWidth();
-    const int btnAreaW = btnW * 2 + 2;
+    const int btnAreaW = btnSide * 2 + 2;
     const int sourceW = juce::jmax(180, (sliderAreaWidth - btnAreaW) / 2);
     const int sliderW = juce::jmax(0, (sliderAreaWidth - sourceW - btnAreaW) / 3);
 
@@ -506,9 +506,9 @@ void PadContextPopup::resized() {
         layer->tuningSlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
         layer->attackSlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
         layer->decaySlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
-        layer->addButton->setBounds(row.removeFromLeft(btnW).reduced(1));
+        layer->addButton->setBounds(row.removeFromLeft(btnSide).reduced(0, 1));
         if (layer->removeButton->isVisible())
-            layer->removeButton->setBounds(row.removeFromLeft(btnW).reduced(1));
+            layer->removeButton->setBounds(row.removeFromLeft(btnSide).reduced(0, 1));
         area.removeFromTop(1);
     }
 
