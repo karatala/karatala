@@ -12,6 +12,7 @@ void DrumPadGrid::populate(const KitLayout* layout) {
     for (int idx = 0; idx < totalCells; ++idx) {
         auto pad = std::make_unique<DrumPad>();
         pad->setPadMode(this->padMode);
+        pad->setPadGap(this->padGap);
 
         if (idx < slotCount) {
             pad->setSlot(&layout->instrumentSlots[static_cast<size_t>(idx)]);
@@ -50,6 +51,8 @@ void DrumPadGrid::setGridSize(int columns, int rows) {
 
 void DrumPadGrid::setPadGap(int gap) {
     this->padGap = juce::jmax(0, gap);
+    for (auto& pad : this->pads)
+        pad->setPadGap(this->padGap);
     this->resized();
 }
 

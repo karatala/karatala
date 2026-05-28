@@ -70,6 +70,10 @@ public:
     /** Queue a MIDI message from the UI thread to be processed in the next audio block. */
     void injectMidiFromUI(const juce::MidiMessage& msg);
 
+    /** Set a callback to receive MIDI note-on events for MIDI learn.
+     *  The callback will be posted to the message thread. Pass nullptr to disable. */
+    void setMidiLearnCallback(std::function<void(int)> callback);
+
 private:
     std::unique_ptr<juce::AudioFormatManager> mAudioFormatManagerPtr;
     std::unique_ptr<juce::AudioProcessorValueTreeState> mAudioProcessorValueTreeStatePtr;
@@ -81,6 +85,9 @@ private:
     // MIDI messages injected from UI (pad clicks), consumed in processBlock
     juce::MidiBuffer pendingUiMidiMessages;
     juce::CriticalSection uiMidiLock;
+
+    std::function<void(int)> midiLearnCallback;
+    juce::CriticalSection midiLearnLock;
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

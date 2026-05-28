@@ -22,6 +22,12 @@ public:
     /** Fires when MIDI mapping changes (note combos edited). */
     std::function<void()> onMidiMappingChanged;
 
+    /** Called when the user receives a MIDI note while learn is active. */
+    void midiLearnNoteReceived(int midiNote);
+
+    /** Callback fired when MIDI learn starts (true) or stops (false). */
+    std::function<void(bool)> onMidiLearnStateChanged;
+
 private:
     DrumKitEngine& engine;
     juce::String slotId;

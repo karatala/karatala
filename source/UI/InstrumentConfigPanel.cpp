@@ -381,9 +381,10 @@ void InstrumentConfigPanel::layoutContent() {
         xPos += decayCol;
 
         // Buttons: [+] always, [x] conditional
-        row->addButton->setBounds(xPos, yPos + 1, 20, rowHeight - 2);
+        const int btnSize = juce::jmax(20, rowHeight - 2); // minimum square
+        row->addButton->setBounds(xPos, yPos + 1, btnSize, rowHeight - 2);
         if (row->removeButton->isVisible())
-            row->removeButton->setBounds(xPos + 21, yPos + 1, 20, rowHeight - 2);
+            row->removeButton->setBounds(xPos + btnSize + 1, yPos + 1, btnSize, rowHeight - 2);
 
         lastSlotId = row->slotId;
         lastArtName = row->artName;

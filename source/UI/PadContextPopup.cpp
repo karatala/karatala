@@ -46,6 +46,16 @@ void PadContextPopup::showMidiNotePicker(int slotIdx) {
     this->activeMidiPicker = picker.get();
     juce::CallOutBox::launchAsynchronously(std::move(picker), btn.getScreenBounds(), nullptr);
 }
+
+void PadContextPopup::midiLearnNoteReceived(int midiNote) {
+    if (this->activeLearningSlot < 0) return;
+    this->applyNoteToSlot(this->activeLearningSlot, midiNote);
+    this->activeLearningSlot = -1;
+    this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+    this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+    if (this->onMidiLearnStateChanged)
+        this->onMidiLearnStateChanged(false);
+}
 // ─── Source items ─────────────────────────────────────────────────────────────
 
 void PadContextPopup::rebuildSourceItems() {
@@ -116,14 +126,22 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     addAndMakeVisible(this->learnButton1);
     addAndMakeVisible(this->learnButton2);
     this->learnButton1.onClick = [this] {
+        bool wasLearning = (this->activeLearningSlot >= 0);
         this->activeLearningSlot = (this->activeLearningSlot == 0) ? -1 : 0;
         this->learnButton1.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 0 ? juce::Colours::yellow : juce::Colours::red);
         this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+        bool nowLearning = (this->activeLearningSlot >= 0);
+        if (nowLearning != wasLearning && this->onMidiLearnStateChanged)
+            this->onMidiLearnStateChanged(nowLearning);
     };
     this->learnButton2.onClick = [this] {
+        bool wasLearning = (this->activeLearningSlot >= 0);
         this->activeLearningSlot = (this->activeLearningSlot == 1) ? -1 : 1;
         this->learnButton2.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 1 ? juce::Colours::yellow : juce::Colours::red);
         this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+        bool nowLearning = (this->activeLearningSlot >= 0);
+        if (nowLearning != wasLearning && this->onMidiLearnStateChanged)
+            this->onMidiLearnStateChanged(nowLearning);
     };
 
     this->syncNoteButtons();
@@ -463,7 +481,7 @@ void PadContextPopup::resized() {
     // MIDI section
     this->midiHeaderLabel.setBounds(area.removeFromTop(14));
     auto midiRow = area.removeFromTop(22);
-    const int learnBtnW = 18;
+    const int learnBtnW = 22; // minimum square
     const int noteW = (midiRow.getWidth() - learnBtnW * 2 - 8) / 2;
     this->noteButton1.setBounds(midiRow.removeFromLeft(noteW).reduced(0, 1));
     this->learnButton1.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
@@ -476,8 +494,9 @@ void PadContextPopup::resized() {
     this->layerHeaderLabel.setBounds(area.removeFromTop(14));
 
     const int layerRowH = 24;
+    const int btnW = 22; // minimum square for + and x buttons
     const int sliderAreaWidth = area.getWidth();
-    const int btnAreaW = 42;
+    const int btnAreaW = btnW * 2 + 2;
     const int sourceW = juce::jmax(180, (sliderAreaWidth - btnAreaW) / 2);
     const int sliderW = juce::jmax(0, (sliderAreaWidth - sourceW - btnAreaW) / 3);
 
@@ -487,9 +506,9 @@ void PadContextPopup::resized() {
         layer->tuningSlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
         layer->attackSlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
         layer->decaySlider->setBounds(row.removeFromLeft(sliderW).reduced(1, 1));
-        layer->addButton->setBounds(row.removeFromLeft(20).reduced(1));
+        layer->addButton->setBounds(row.removeFromLeft(btnW).reduced(1));
         if (layer->removeButton->isVisible())
-            layer->removeButton->setBounds(row.removeFromLeft(20).reduced(1));
+            layer->removeButton->setBounds(row.removeFromLeft(btnW).reduced(1));
         area.removeFromTop(1);
     }
 

@@ -57,9 +57,11 @@ void DrumPad::paintZen(juce::Graphics& g) {
         g.fillRect(bounds);
     }
 
-    // Border
-    g.setColour(juce::Colour(0xff111111));
-    g.drawRect(bounds, 1);
+    // Border — only when there's a visible gap between pads
+    if (this->padGap > 0) {
+        g.setColour(juce::Colour(0xff111111));
+        g.drawRect(bounds, 1);
+    }
 
     // Instrument name
     if (this->slotPtr) {
@@ -80,15 +82,12 @@ void DrumPad::paintZoned(juce::Graphics& g) {
     }
 
     auto artCount = static_cast<int>(this->slotPtr->articulations.size());
-    float zoneHeight = static_cast<float>(bounds.getHeight()) / static_cast<float>(artCount);
 
+    // Use integer arithmetic to avoid sub-pixel gaps between zones
     for (int idx = 0; idx < artCount; ++idx) {
-        auto zoneRect = juce::Rectangle<float>(
-            static_cast<float>(bounds.getX()),
-            static_cast<float>(bounds.getY()) + zoneHeight * static_cast<float>(idx),
-            static_cast<float>(bounds.getWidth()),
-            zoneHeight
-        ).toNearestInt();
+        int zoneTop = bounds.getY() + bounds.getHeight() * idx / artCount;
+        int zoneBottom = bounds.getY() + bounds.getHeight() * (idx + 1) / artCount;
+        auto zoneRect = juce::Rectangle<int>(bounds.getX(), zoneTop, bounds.getWidth(), zoneBottom - zoneTop);
 
         // Fill zone
         float brightVariation = 0.25f + 0.1f * static_cast<float>(idx % 3);
@@ -97,7 +96,7 @@ void DrumPad::paintZoned(juce::Graphics& g) {
 
         // Zone divider (thin line between zones)
         if (idx > 0) {
-            g.setColour(juce::Colour(0xff111111));
+            g.setColour(baseColour.withMultipliedBrightness(0.15f));
             g.drawHorizontalLine(zoneRect.getY(), static_cast<float>(zoneRect.getX()), static_cast<float>(zoneRect.getRight()));
         }
 
@@ -120,18 +119,24 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         g.fillRect(bounds);
     }
 
-    // Outer border
-    g.setColour(juce::Colour(0xff111111));
-    g.drawRect(bounds, 1);
+    // Outer border — only when there's a visible gap between pads
+    if (this->padGap > 0) {
+        g.setColour(juce::Colour(0xff111111));
+        g.drawRect(bounds, 1);
+    }
 }
 
 int DrumPad::getZoneIndexAt(int yPos) const {
     if (!this->slotPtr || this->slotPtr->articulations.empty())
         return 0;
     auto artCount = static_cast<int>(this->slotPtr->articulations.size());
-    float zoneHeight = static_cast<float>(getHeight()) / static_cast<float>(artCount);
-    int zoneIdx = static_cast<int>(static_cast<float>(yPos) / zoneHeight);
-    return juce::jlimit(0, artCount - 1, zoneIdx);
+    // Use same integer arithmetic as paintZoned
+    for (int idx = 0; idx < artCount; ++idx) {
+        int zoneBottom = getHeight() * (idx + 1) / artCount;
+        if (yPos < zoneBottom)
+            return idx;
+    }
+    return artCount - 1;
 }
 
 void DrumPad::mouseDown(const juce::MouseEvent& event) {

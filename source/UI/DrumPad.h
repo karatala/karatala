@@ -23,12 +23,14 @@ public:
 
     float getClickVelocity() const { return this->clickVelocity; }
     void setClickVelocity(float vel) { this->clickVelocity = vel; }
+    void setPadGap(int gap) { this->padGap = gap; repaint(); }
 
 private:
     const KitLayout::InstrumentSlot* slotPtr = nullptr;
     PadMode padMode = PadMode::Zen;
     float clickVelocity = 100.0f;
     float flashAlpha = 0.0f;
+    int padGap = 0;
 
     static juce::Colour getColourForType(KitLib::InstrumentSpec::Type type);
     void paintZen(juce::Graphics& g);

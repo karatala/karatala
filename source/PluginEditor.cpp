@@ -138,6 +138,15 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         }
         this->statusBar.setStatusText("MIDI mapping updated");
     };
+    this->midiMapTable.onMidiLearnStateChanged = [this](bool learning) {
+        if (learning) {
+            this->processorRef.setMidiLearnCallback([this](int noteNumber) {
+                this->midiMapTable.midiLearnNoteReceived(noteNumber);
+            });
+        } else {
+            this->processorRef.setMidiLearnCallback(nullptr);
+        }
+    };
 
     // Settings mode
     this->settingsPanel = std::make_unique<EngineSettingsPanel>(this->processorRef.getEngine());
@@ -275,8 +284,11 @@ void PluginEditor::resized() {
 }
 
 void PluginEditor::dismissPadContextPopup() {
-    if (this->padContextPopup)
+    if (this->padContextPopup) {
         this->padContextPopup->flushMapText();
+        // Stop MIDI learn when closing popup
+        this->processorRef.setMidiLearnCallback(nullptr);
+    }
 
     if (this->padPopupOverlay) {
         removeChildComponent(this->padPopupOverlay.get());
@@ -311,6 +323,16 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
         auto* layout = this->processorRef.getEngine().getKitLayout();
         if (layout) layout->rebuildIndices();
         this->statusBar.setStatusText("MIDI mapping updated");
+    };
+    this->padContextPopup->onMidiLearnStateChanged = [this](bool learning) {
+        if (learning) {
+            this->processorRef.setMidiLearnCallback([this](int noteNumber) {
+                if (this->padContextPopup)
+                    this->padContextPopup->midiLearnNoteReceived(noteNumber);
+            });
+        } else {
+            this->processorRef.setMidiLearnCallback(nullptr);
+        }
     };
 
     // Set popup to 80% of editor viewport, centered

@@ -147,12 +147,35 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             }
         }
         this->drumKitEnginePtr->processBlock(buffer, midiMessages);
+
+        // Forward note-on events to MIDI learn callback (if active)
+        {
+            const juce::ScopedLock lock(this->midiLearnLock);
+            if (this->midiLearnCallback) {
+                for (const auto metadata : midiMessages) {
+                    const auto msg = metadata.getMessage();
+                    if (msg.isNoteOn()) {
+                        auto callback = this->midiLearnCallback;
+                        int noteNumber = msg.getNoteNumber();
+                        juce::MessageManager::callAsync([callback, noteNumber] {
+                            callback(noteNumber);
+                        });
+                        break; // Only capture the first note-on per block
+                    }
+                }
+            }
+        }
     }
 }
 
 void PluginProcessor::injectMidiFromUI(const juce::MidiMessage& msg) {
     const juce::ScopedLock lock(this->uiMidiLock);
     this->pendingUiMidiMessages.addEvent(msg, 0);
+}
+
+void PluginProcessor::setMidiLearnCallback(std::function<void(int)> callback) {
+    const juce::ScopedLock lock(this->midiLearnLock);
+    this->midiLearnCallback = std::move(callback);
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout PluginProcessor::createParameterLayout() {

@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/LayoutManager.h"
+#include "MidiNotePicker.h"
 
 class MidiMapTable : public juce::Component {
 public:
@@ -19,12 +20,13 @@ public:
     /** Call from engine/processor when MIDI learn is active and a note is received. */
     void midiLearnNoteReceived(int midiNote);
 
+    /** Callback fired when MIDI learn starts (true) or stops (false).
+     *  Owner should forward incoming MIDI notes to midiLearnNoteReceived(). */
+    std::function<void(bool)> onMidiLearnStateChanged;
+
 private:
     static constexpr int rowHeight = 26;
     static constexpr int headerHeight = 28;
-
-    static juce::String midiNoteToString(int note);
-    static void populateNoteComboBox(juce::ComboBox& combo);
 
     KitLayout* layoutPtr = nullptr;
 
@@ -39,8 +41,8 @@ private:
 
         juce::Label instrumentLabel;
         juce::Label articulationLabel;
-        juce::ComboBox noteCombo1;
-        juce::ComboBox noteCombo2;
+        juce::TextButton noteButton1 { "--" };
+        juce::TextButton noteButton2 { "--" };
         juce::TextButton learnButton1 { juce::String::charToString(0x25CF) }; // ●
         juce::TextButton learnButton2 { juce::String::charToString(0x25CF) };
         bool showInstrumentLabel = false;
@@ -52,11 +54,15 @@ private:
 
     // MIDI learn state
     int activeLearningRow = -1;
-    int activeLearningSlot = -1; // 0 = first combo, 1 = second combo
+    int activeLearningSlot = -1; // 0 = first button, 1 = second button
+
+    // Active CallOutBox content tracked weakly so we can dismiss on MIDI learn
+    juce::Component::SafePointer<MidiNotePicker> activeMidiPicker;
 
     void buildRows();
-    void syncComboFromNotes(MapRow& row);
-    void applyComboToNotes(MapRow& row);
+    void syncNoteButtons(MapRow& row);
+    void applyNoteToSlot(MapRow& row, int slotIdx, int note);
+    void showMidiNotePicker(int rowIdx, int slotIdx);
     void startMidiLearn(int rowIdx, int slotIdx);
     void stopMidiLearn();
 
