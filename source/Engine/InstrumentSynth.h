@@ -129,12 +129,14 @@ private:
 
     float attackTimeSec = 0.001f;
     float releaseTimeSec = 0.1f;
+    bool useOneShotDecayEnvelope = false;
 
 public:
     void setAttackTimeSec(float sec) { this->attackTimeSec = sec; }
     float getAttackTimeSec() const noexcept { return this->attackTimeSec; }
     void setReleaseTimeSec(float sec) { this->releaseTimeSec = sec; }
     float getReleaseTimeSec() const noexcept { return this->releaseTimeSec; }
+    void setUseOneShotDecayEnvelope(bool shouldUse) { this->useOneShotDecayEnvelope = shouldUse; }
     void setPitchRatioMultiplier(double multiplier) { this->pitchRatioMultiplier = multiplier; }
     
     float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain; }

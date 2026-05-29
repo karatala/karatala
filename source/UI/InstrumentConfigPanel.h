@@ -60,6 +60,8 @@ private:
     void dismissPopup();
     void layoutContent();
     void applyToEngine();
+    void applyRowParametersFast(TableRow* row);
+    int getMappedLayerIndexForRow(const TableRow* row) const;
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,
                 const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);

@@ -157,17 +157,17 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     // Tuning slider
     row->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents), 40, 20);
     this->contentComponent.addAndMakeVisible(*row->tuningSlider);
-    row->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
+    row->tuningSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
 
     // Attack slider
     row->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, 40, 20, sentinelTextFn);
     this->contentComponent.addAndMakeVisible(*row->attackSlider);
-    row->attackSlider->onValueChange = [this] { this->applyToEngine(); };
+    row->attackSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
 
     // Decay slider
     row->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, 40, 20, sentinelTextFn);
     this->contentComponent.addAndMakeVisible(*row->decaySlider);
-    row->decaySlider->onValueChange = [this] { this->applyToEngine(); };
+    row->decaySlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
 
     // Add layer button
     row->addButton = std::make_unique<juce::TextButton>("+");
@@ -200,15 +200,15 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
             newRow->sourceButton->onClick = [this, newRow] { this->showPickerPopup(newRow); };
             newRow->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, 0.0, 40, 20);
             this->contentComponent.addAndMakeVisible(*newRow->tuningSlider);
-            newRow->tuningSlider->onValueChange = [this] { this->applyToEngine(); };
+            newRow->tuningSlider->onValueChange = [this, newRow] { this->applyRowParametersFast(newRow); };
             newRow->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, -1.0, 40, 20, 
                 [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); });
             this->contentComponent.addAndMakeVisible(*newRow->attackSlider);
-            newRow->attackSlider->onValueChange = [this] { this->applyToEngine(); };
+            newRow->attackSlider->onValueChange = [this, newRow] { this->applyRowParametersFast(newRow); };
             newRow->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, -1.0, 40, 20,
                 [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); });
             this->contentComponent.addAndMakeVisible(*newRow->decaySlider);
-            newRow->decaySlider->onValueChange = [this] { this->applyToEngine(); };
+            newRow->decaySlider->onValueChange = [this, newRow] { this->applyRowParametersFast(newRow); };
             newRow->addButton = std::make_unique<juce::TextButton>("+");
             newRow->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
             this->contentComponent.addAndMakeVisible(*newRow->addButton);
@@ -438,6 +438,47 @@ juce::String InstrumentConfigPanel::generateMapText() const {
     }
 
     return lines.joinIntoString("\n");
+}
+
+int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const {
+    if (row == nullptr)
+        return -1;
+    if (row->selectedSourceIndex < 0)
+        return -1;
+
+    int mappedLayerIndex = 0;
+    for (int idx = 0; idx < this->tableRows.size(); ++idx) {
+        const auto* currentRow = this->tableRows[idx];
+        if (currentRow->slotId != row->slotId)
+            continue;
+        if (currentRow->selectedSourceIndex < 0)
+            continue;
+
+        if (currentRow == row)
+            return mappedLayerIndex;
+
+        ++mappedLayerIndex;
+    }
+
+    return -1;
+}
+
+void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
+    if (row == nullptr)
+        return;
+
+    const int layerIndex = this->getMappedLayerIndexForRow(row);
+    if (layerIndex < 0)
+        return;
+
+    const int tuning = static_cast<int>(row->tuningSlider->getValue());
+    const int attack = static_cast<int>(row->attackSlider->getValue());
+    const int decay = static_cast<int>(row->decaySlider->getValue());
+
+    this->engine.updateSlotParameters(row->slotId, row->artName, layerIndex, tuning, attack, decay);
+
+    if (this->onMapTextChanged)
+        this->onMapTextChanged(this->generateMapText());
 }
 
 void InstrumentConfigPanel::applyToEngine() {

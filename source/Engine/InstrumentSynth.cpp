@@ -220,8 +220,16 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     this->velocityGain = velocity;
     this->sourceSamplePosition = 0.0;
     this->envelopeState = EnvelopeState::Playing;
-    // Apply ADSR using configured attack/release
-    this->adsr.setParameters({ this->attackTimeSec, 0.0f, 1.0f, this->releaseTimeSec });
+
+    if (this->useOneShotDecayEnvelope) {
+        // Decay override should shape one-shot loudness over time, even without note-off.
+        const float decaySec = juce::jmax(0.001f, this->releaseTimeSec);
+        this->adsr.setParameters({ this->attackTimeSec, decaySec, 0.0f, decaySec });
+    } else {
+        // Default behavior: natural sample tail, release only used on note-off/choke.
+        this->adsr.setParameters({ this->attackTimeSec, 0.0f, 1.0f, this->releaseTimeSec });
+    }
+
     this->adsr.setSampleRate(this->getSampleRate());
     this->adsr.noteOn();
 

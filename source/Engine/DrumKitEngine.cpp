@@ -40,6 +40,96 @@ static std::vector<juce::String> effectiveArticulationFilter(const DrumKitEngine
     return entry.articulationFilter;
 }
 
+static juce::String normalizeArticulationName(const juce::String& rawName) {
+    return rawName.upToFirstOccurrenceOf("[", false, false).trim().toLowerCase();
+}
+
+static bool stringArrayContainsIgnoreCase(const juce::StringArray& values, const juce::String& needle) {
+    for (const auto& value : values) {
+        if (value.compareIgnoreCase(needle) == 0)
+            return true;
+    }
+    return false;
+}
+
+static int levenshteinDistance(const juce::String& left, const juce::String& right) {
+    const int leftLength = left.length();
+    const int rightLength = right.length();
+
+    if (leftLength == 0)
+        return rightLength;
+    if (rightLength == 0)
+        return leftLength;
+
+    std::vector<int> previousRow(static_cast<size_t>(rightLength) + 1);
+    std::vector<int> currentRow(static_cast<size_t>(rightLength) + 1);
+
+    for (int column = 0; column <= rightLength; ++column)
+        previousRow[static_cast<size_t>(column)] = column;
+
+    for (int leftIdx = 1; leftIdx <= leftLength; ++leftIdx) {
+        currentRow[0] = leftIdx;
+        const auto leftChar = left[leftIdx - 1];
+
+        for (int rightIdx = 1; rightIdx <= rightLength; ++rightIdx) {
+            const int substitutionCost = (leftChar == right[rightIdx - 1]) ? 0 : 1;
+            const int deletionCost = previousRow[static_cast<size_t>(rightIdx)] + 1;
+            const int insertionCost = currentRow[static_cast<size_t>(rightIdx - 1)] + 1;
+            const int substitutionTotal = previousRow[static_cast<size_t>(rightIdx - 1)] + substitutionCost;
+
+            currentRow[static_cast<size_t>(rightIdx)] = std::min(std::min(deletionCost, insertionCost), substitutionTotal);
+        }
+
+        std::swap(previousRow, currentRow);
+    }
+
+    return previousRow[static_cast<size_t>(rightLength)];
+}
+
+static juce::StringArray collectInstrumentArticulationNames(const KitLib::InstrumentSpec& instrumentSpec) {
+    juce::StringArray availableNames;
+    for (const auto& articulationSpec : instrumentSpec.articulationSpecs) {
+        if (articulationSpec == nullptr)
+            continue;
+
+        auto articulationName = articulationSpec->codeRaw.upToFirstOccurrenceOf("[", false, false).trim();
+        if (articulationName.isEmpty())
+            continue;
+
+        if (!stringArrayContainsIgnoreCase(availableNames, articulationName))
+            availableNames.add(articulationName);
+    }
+
+    availableNames.sort(true);
+    return availableNames;
+}
+
+static juce::String findClosestArticulationName(const juce::String& unknownName, const juce::StringArray& availableNames) {
+    const auto normalizedUnknownName = normalizeArticulationName(unknownName);
+    if (normalizedUnknownName.isEmpty() || availableNames.isEmpty())
+        return {};
+
+    juce::String bestMatch;
+    int bestDistance = 1000000;
+
+    for (const auto& availableName : availableNames) {
+        const auto normalizedAvailableName = normalizeArticulationName(availableName);
+        if (normalizedAvailableName.isEmpty())
+            continue;
+
+        const int distance = levenshteinDistance(normalizedUnknownName, normalizedAvailableName);
+        if (distance < bestDistance) {
+            bestDistance = distance;
+            bestMatch = availableName;
+        }
+    }
+
+    if (bestDistance <= 2)
+        return bestMatch;
+
+    return {};
+}
+
 static juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMapEntry& entry) {
     auto joinValues = [](const std::vector<juce::String>& values) {
         juce::String out;
@@ -881,8 +971,9 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
             continue;
 
         if (currentLayerIndex == layerIndex) {
+            int nextTuning = synthPtr->getTuningOffsetCents();
             if (tuningCents.has_value())
-                synthPtr->setTuningOffsetCents(*tuningCents);
+                nextTuning = *tuningCents;
 
             auto nextAttack = synthPtr->getAttackOverrideMs();
             auto nextDecay = synthPtr->getDecayOverrideMs();
@@ -902,6 +993,7 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
             }
 
             synthPtr->clearParameterOverrides();
+            synthPtr->setTuningOffsetCents(nextTuning);
             if (nextAttack.has_value())
                 synthPtr->setAttackOverrideMs(*nextAttack);
             if (nextDecay.has_value())
@@ -1096,6 +1188,43 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             if (instSpec == nullptr) {
                 statusLines.add("Instrument not found: " + kitSpec->meta.name + "/" + entry->instCode + " for slot '" + entry->slotId + "'");
                 continue;
+            }
+
+            if (!entry->articulationFilter.empty()) {
+                const auto availableSourceArts = collectInstrumentArticulationNames(*instSpec);
+                juce::StringArray unknownSourceArts;
+                juce::StringArray unknownSourceArtKeys;
+
+                for (const auto& sourceArtName : entry->articulationFilter) {
+                    const auto normalizedSourceArtName = normalizeArticulationName(sourceArtName);
+                    if (normalizedSourceArtName.isEmpty())
+                        continue;
+
+                    if (stringArrayContainsIgnoreCase(availableSourceArts, normalizedSourceArtName))
+                        continue;
+
+                    if (stringArrayContainsIgnoreCase(unknownSourceArtKeys, normalizedSourceArtName))
+                        continue;
+
+                    auto sourceArtToken = normalizedSourceArtName;
+                    const auto suggestedSourceArt = findClosestArticulationName(normalizedSourceArtName, availableSourceArts);
+                    if (suggestedSourceArt.isNotEmpty())
+                        sourceArtToken += " (did you mean '" + suggestedSourceArt + "'?)";
+                    unknownSourceArtKeys.add(normalizedSourceArtName);
+                    unknownSourceArts.add(sourceArtToken);
+                }
+
+                if (!unknownSourceArts.isEmpty()) {
+                    const auto unknownSourceArtsText = unknownSourceArts.joinIntoString(", ");
+                    const auto availableSourceArtsText = availableSourceArts.isEmpty()
+                        ? juce::String("none")
+                        : availableSourceArts.joinIntoString(", ");
+
+                    statusLines.add("Unknown source articulation(s) [" + unknownSourceArtsText
+                        + "] for target '" + kitSpec->meta.codeRaw + "/" + instSpec->meta.codeRaw
+                        + "' in slot '" + entry->slotId + "'. Available source articulations: "
+                        + availableSourceArtsText);
+                }
             }
 
             auto filter = effectiveArticulationFilter(*entry);
