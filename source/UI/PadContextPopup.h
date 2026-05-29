@@ -71,6 +71,9 @@ private:
     };
     juce::OwnedArray<LayerRow> layerRows;
     juce::Label layerHeaderLabel;
+    juce::Label layerTuningLabel;
+    juce::Label layerAttackLabel;
+    juce::Label layerDecayLabel;
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);
     juce::uint8 getPreviewVelocity() const;

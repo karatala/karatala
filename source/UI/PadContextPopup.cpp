@@ -147,10 +147,21 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->syncNoteButtons();
 
     // Layer header
-    this->layerHeaderLabel.setText("Layers", juce::dontSendNotification);
+    this->layerHeaderLabel.setText("Instrument", juce::dontSendNotification);
     this->layerHeaderLabel.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
     this->layerHeaderLabel.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
     addAndMakeVisible(this->layerHeaderLabel);
+
+    auto setupLayerColHeader = [this](juce::Label& label, const juce::String& text) {
+        label.setText(text, juce::dontSendNotification);
+        label.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
+        label.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
+        label.setJustificationType(juce::Justification::centredLeft);
+        addAndMakeVisible(label);
+    };
+    setupLayerColHeader(this->layerTuningLabel, "Tuning");
+    setupLayerColHeader(this->layerAttackLabel, "Attack");
+    setupLayerColHeader(this->layerDecayLabel, "Decay");
 
     // Build source items and populate layers from existing instrument map
     this->rebuildSourceItems();
@@ -486,7 +497,7 @@ void PadContextPopup::resized() {
     this->midiHeaderLabel.setBounds(area.removeFromTop(14));
     auto midiRow = area.removeFromTop(22);
     const int learnBtnW = 22; // minimum square
-    const int noteW = (midiRow.getWidth() - learnBtnW * 2 - 8) / 2;
+    const int noteW = juce::jmin(80, (midiRow.getWidth() - learnBtnW * 2 - 8) / 2);
     this->noteButton1.setBounds(midiRow.removeFromLeft(noteW).reduced(0, 1));
     this->learnButton1.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
     midiRow.removeFromLeft(4);
@@ -494,14 +505,31 @@ void PadContextPopup::resized() {
     this->learnButton2.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
     area.removeFromTop(4);
 
-    // Layer section
-    this->layerHeaderLabel.setBounds(area.removeFromTop(14));
+    // Layer column headers
+    auto layerHeaderRow = area.removeFromTop(14);
+    {
+        const int layerRowH = 24;
+        const int btnSide = layerRowH - 2;
+        const int totalW = layerHeaderRow.getWidth();
+        const int btnAreaW = btnSide * 2 + 2;
+        const int sourceW = juce::jmax(140, (totalW - btnAreaW) * 40 / 100);
+        const int sliderW = juce::jmax(0, (totalW - sourceW - btnAreaW) / 3);
+
+        auto headerArea = layerHeaderRow;
+        headerArea.removeFromLeft(sourceW); // skip instrument column (label is implied)
+        this->layerHeaderLabel.setText("Instrument", juce::dontSendNotification);
+        this->layerHeaderLabel.setBounds(layerHeaderRow.getX(), layerHeaderRow.getY(), sourceW, 14);
+
+        this->layerTuningLabel.setBounds(headerArea.removeFromLeft(sliderW));
+        this->layerAttackLabel.setBounds(headerArea.removeFromLeft(sliderW));
+        this->layerDecayLabel.setBounds(headerArea.removeFromLeft(sliderW));
+    }
 
     const int layerRowH = 24;
     const int btnSide = layerRowH - 2; // square buttons matching row height
     const int sliderAreaWidth = area.getWidth();
     const int btnAreaW = btnSide * 2 + 2;
-    const int sourceW = juce::jmax(180, (sliderAreaWidth - btnAreaW) / 2);
+    const int sourceW = juce::jmax(140, (sliderAreaWidth - btnAreaW) * 40 / 100);
     const int sliderW = juce::jmax(0, (sliderAreaWidth - sourceW - btnAreaW) / 3);
 
     for (auto* layer : this->layerRows) {

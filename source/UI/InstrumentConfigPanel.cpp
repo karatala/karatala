@@ -158,20 +158,30 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents), 40, 20);
     this->contentComponent.addAndMakeVisible(*row->tuningSlider);
     row->tuningSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
+    row->tuningSlider->onDragEnd = [this, row] {
+        this->engine.playPreviewNote(row->slotId, row->artName, 100);
+    };
 
     // Attack slider
     row->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, 40, 20, sentinelTextFn);
     this->contentComponent.addAndMakeVisible(*row->attackSlider);
     row->attackSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
+    row->attackSlider->onDragEnd = [this, row] {
+        this->engine.playPreviewNote(row->slotId, row->artName, 100);
+    };
 
     // Decay slider
     row->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, 40, 20, sentinelTextFn);
     this->contentComponent.addAndMakeVisible(*row->decaySlider);
     row->decaySlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
+    row->decaySlider->onDragEnd = [this, row] {
+        this->engine.playPreviewNote(row->slotId, row->artName, 100);
+    };
 
     // Add layer button
     row->addButton = std::make_unique<juce::TextButton>("+");
     row->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    row->addButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     this->contentComponent.addAndMakeVisible(*row->addButton);
     row->addButton->onClick = [this, row] {
         // Find insertion point: after the last row with same slotId/artName
@@ -201,20 +211,31 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
             newRow->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, 0.0, 40, 20);
             this->contentComponent.addAndMakeVisible(*newRow->tuningSlider);
             newRow->tuningSlider->onValueChange = [this, newRow] { this->applyRowParametersFast(newRow); };
+            newRow->tuningSlider->onDragEnd = [this, newRow] {
+                this->engine.playPreviewNote(newRow->slotId, newRow->artName, 100);
+            };
             newRow->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, -1.0, 40, 20, 
                 [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); });
             this->contentComponent.addAndMakeVisible(*newRow->attackSlider);
             newRow->attackSlider->onValueChange = [this, newRow] { this->applyRowParametersFast(newRow); };
+            newRow->attackSlider->onDragEnd = [this, newRow] {
+                this->engine.playPreviewNote(newRow->slotId, newRow->artName, 100);
+            };
             newRow->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, -1.0, 40, 20,
                 [](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); });
             this->contentComponent.addAndMakeVisible(*newRow->decaySlider);
             newRow->decaySlider->onValueChange = [this, newRow] { this->applyRowParametersFast(newRow); };
+            newRow->decaySlider->onDragEnd = [this, newRow] {
+                this->engine.playPreviewNote(newRow->slotId, newRow->artName, 100);
+            };
             newRow->addButton = std::make_unique<juce::TextButton>("+");
             newRow->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+            newRow->addButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
             this->contentComponent.addAndMakeVisible(*newRow->addButton);
             newRow->addButton->onClick = [this, newRow] { /* handled via same pattern but simplified — just re-populate */ };
             newRow->removeButton = std::make_unique<juce::TextButton>("x");
             newRow->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+            newRow->removeButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
             this->contentComponent.addAndMakeVisible(*newRow->removeButton);
             newRow->removeButton->onClick = [this, newRow] {
                 juce::MessageManager::callAsync([this, newRow] {
@@ -232,6 +253,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     // Remove button
     row->removeButton = std::make_unique<juce::TextButton>("x");
     row->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    row->removeButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     this->contentComponent.addAndMakeVisible(*row->removeButton);
     row->removeButton->onClick = [this, row] {
         juce::MessageManager::callAsync([this, row] {

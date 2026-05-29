@@ -67,42 +67,74 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
         return;
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(rowNumber)].originalIndex;
     const auto& item = this->owner.allItems[static_cast<size_t>(originalIdx)];
-    int textWidth = width - SourcePickerPopup::selectButtonWidth;
+    const int btnW = SourcePickerPopup::selectButtonWidth;
+    const int prevW = SourcePickerPopup::previewButtonWidth;
+    int textWidth = width - btnW - prevW;
     g.fillAll(rowIsSelected ? juce::Colour(0xff3a5a8a) : (rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e)));
 
-    // Item text area (left portion — clickable for preview)
+    // Item text area (left portion — click for max-velocity zone preview)
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(juce::FontOptions(10.0f)));
     g.drawText(item.displayText(), 4, 0, textWidth - 8, height, juce::Justification::centredLeft);
 
-    // Select button area (right portion)
-    auto btnArea = juce::Rectangle<int>(textWidth, 0, SourcePickerPopup::selectButtonWidth, height).reduced(1);
+    // Preview button area (middle — velocity-aware preview with triangle indicator)
+    auto prevArea = juce::Rectangle<int>(textWidth, 0, prevW, height).reduced(1);
+    g.setColour(juce::Colour(0xff3a3a3a));
+    g.fillRoundedRectangle(prevArea.toFloat(), 2.0f);
+    // Draw volume-level triangle (left-to-right descending like a volume indicator)
+    {
+        auto triArea = prevArea.reduced(2, 3);
+        int triW = juce::jmin(14, triArea.getWidth() / 3);
+        auto triRect = triArea.removeFromLeft(triW);
+        juce::Path triangle;
+        triangle.addTriangle(
+            static_cast<float>(triRect.getX()), static_cast<float>(triRect.getBottom()),
+            static_cast<float>(triRect.getRight()), static_cast<float>(triRect.getBottom()),
+            static_cast<float>(triRect.getRight()), static_cast<float>(triRect.getY())
+        );
+        g.setColour(juce::Colour(0xff88aacc));
+        g.fillPath(triangle);
+        // "preview" text
+        triArea.removeFromLeft(2);
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        g.setFont(juce::Font(juce::FontOptions(8.0f)));
+        g.drawText("preview", triArea, juce::Justification::centredLeft);
+    }
+
+    // Select/Use button area (right portion)
+    auto btnArea = juce::Rectangle<int>(textWidth + prevW, 0, btnW, height).reduced(1);
     g.setColour(juce::Colour(0xff444444));
     g.fillRoundedRectangle(btnArea.toFloat(), 2.0f);
-    // Draw a checkmark icon
     g.setColour(juce::Colours::white.withAlpha(0.8f));
-    g.setFont(juce::Font(juce::FontOptions(11.0f)));
-    g.drawText(juce::CharPointer_UTF8("\xe2\x9c\x93"), btnArea, juce::Justification::centred);
+    g.setFont(juce::Font(juce::FontOptions(9.0f)));
+    g.drawText("use", btnArea, juce::Justification::centred);
 }
 
 void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
     if (row < 0 || row >= static_cast<int>(this->owner.filteredEntries.size()))
         return;
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
-    
-    int textWidth = this->owner.listBox.getWidth() - SourcePickerPopup::selectButtonWidth;
-    bool clickedSelectButton = event.getPosition().getX() >= textWidth;
-    
-    if (clickedSelectButton) {
-        // Confirm selection
+
+    const int btnW = SourcePickerPopup::selectButtonWidth;
+    const int prevW = SourcePickerPopup::previewButtonWidth;
+    int totalWidth = this->owner.listBox.getWidth();
+    int textWidth = totalWidth - btnW - prevW;
+    int clickX = event.getPosition().getX();
+
+    if (clickX >= textWidth + prevW) {
+        // Clicked "use" button — confirm selection
         if (this->owner.onItemSelected)
             this->owner.onItemSelected(originalIdx);
-    } else {
-        // Preview: velocity from x-position ratio within the text area
+    } else if (clickX >= textWidth) {
+        // Clicked preview button — velocity from x-position within preview area
         if (this->owner.onPreview) {
-            float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(event.getPosition().getX()) / static_cast<float>(juce::jmax(1, textWidth)));
+            float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(clickX - textWidth) / static_cast<float>(juce::jmax(1, prevW)));
             juce::uint8 velocity = static_cast<juce::uint8>(juce::jlimit(1, 127, static_cast<int>(xRatio * 127.0f)));
             this->owner.onPreview(originalIdx, velocity);
         }
+    } else {
+        // Clicked item text — zone preview at max velocity
+        if (this->owner.onPreview)
+            this->owner.onPreview(originalIdx, static_cast<juce::uint8>(127));
     }
 }

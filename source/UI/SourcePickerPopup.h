@@ -25,7 +25,8 @@ public:
     std::function<void(int, juce::uint8)> onPreview;
 
 private:
-    static constexpr int selectButtonWidth = 18;
+    static constexpr int selectButtonWidth = 26;
+    static constexpr int previewButtonWidth = 60;
 
     const std::vector<SourceItem>& allItems;
     KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;
