@@ -720,6 +720,28 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
         instrumentSynthPtr->renderNextBlock(outputBuffer, midiMessages, outputBufferStartSample, outputBufferNumSamples);
     }
+
+    // Mix one-shot preview playback into the first two output channels
+    int readPos = this->previewReadPos.load();
+    if (readPos >= 0) {
+        const juce::SpinLock::ScopedLockType previewScopedLock(this->previewLock);
+        auto buf = this->previewBuffer;
+        if (buf != nullptr && readPos < buf->getNumSamples()) {
+            int samplesToMix = juce::jmin(outputBufferNumSamples, buf->getNumSamples() - readPos);
+            int srcChannels = buf->getNumChannels();
+            int dstChannels = outputBuffer.getNumChannels();
+            for (int ch = 0; ch < juce::jmin(srcChannels, dstChannels, 2); ++ch) {
+                outputBuffer.addFrom(ch, 0, *buf, ch, readPos, samplesToMix, this->previewGain);
+            }
+            readPos += samplesToMix;
+            if (readPos >= buf->getNumSamples())
+                this->previewReadPos.store(-1);
+            else
+                this->previewReadPos.store(readPos);
+        } else {
+            this->previewReadPos.store(-1);
+        }
+    }
 }
 
 std::optional<juce::String> DrumKitEngine::getNameForMidiNoteNumber(int note, int /* midiChannel */) {
@@ -758,6 +780,69 @@ void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::Stri
         }
         return;
     }
+}
+
+
+void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
+                                       const juce::String& artCode, juce::uint8 velocity) {
+    auto* libMgr = this->libraryManagerPtr.get();
+    if (libMgr == nullptr) return;
+
+    auto* kit = libMgr->findKit(kitCodeRaw);
+    if (kit == nullptr) return;
+
+    auto* inst = kit->findInstrument(instCode);
+    if (inst == nullptr) return;
+
+    // Ensure samples are scanned
+    if (inst->articulationSpecs.empty())
+        inst->scanInstrumentSamples();
+
+    // Find the articulation (first if artCode is empty)
+    KitLib::ArticulationSpec* artSpec = nullptr;
+    if (artCode.isNotEmpty()) {
+        artSpec = inst->findArticulation(artCode);
+    }
+    if (artSpec == nullptr && !inst->articulationSpecs.empty()) {
+        artSpec = inst->articulationSpecs[0].get();
+    }
+    if (artSpec == nullptr || artSpec->velocityLayerSpecs.empty()) return;
+
+    // Find closest velocity layer
+    KitLib::VelocityLayerSpec* bestLayer = nullptr;
+    int bestDist = 999;
+    for (auto& layer : artSpec->velocityLayerSpecs) {
+        int dist = std::abs(static_cast<int>(layer->velocity) - static_cast<int>(velocity));
+        if (dist < bestDist) {
+            bestDist = dist;
+            bestLayer = layer.get();
+        }
+    }
+    if (bestLayer == nullptr || bestLayer->sampleVariantSpecs.empty()) return;
+
+    // Pick the first sample variant
+    auto& sampleVariant = bestLayer->sampleVariantSpecs[0];
+    if (!sampleVariant->isValid()) return;
+
+    juce::File sampleFile = sampleVariant->sampleFile;
+    float volumeTrimDb = sampleVariant->volumeTrimDb;
+    float gain = juce::Decibels::decibelsToGain(volumeTrimDb)
+               * (static_cast<float>(velocity) / 127.0f);
+
+    // Load asynchronously via SampleLoader
+    SampleLoadSpec loadSpec;
+    loadSpec.file = sampleFile;
+    loadSpec.volumeTrimDb = 0.0f; // apply gain ourselves for velocity scaling
+    loadSpec.preprocessTag = "preview";
+
+    this->sampleLoaderPtr->requestAsyncLoad(loadSpec, [this, gain](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+        if (buffer == nullptr) return;
+        const juce::SpinLock::ScopedLockType scopedLock(this->previewLock);
+        this->previewBuffer = buffer;
+        this->previewSampleRate = sampleRate;
+        this->previewGain = gain;
+        this->previewReadPos.store(0);
+    });
 }
 
 

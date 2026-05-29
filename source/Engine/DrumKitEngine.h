@@ -99,6 +99,17 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
     void playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity);
+
+    /** Play a one-shot preview of a sample file from the library.
+     *  Finds the closest velocity sample for the given kit/instrument/articulation
+     *  and plays it directly without affecting the current instrument mapping.
+     *  @param kitCodeRaw     kit folder name (e.g. "NakedDrums")
+     *  @param instCode       instrument code (e.g. "kick-22")
+     *  @param artCode        articulation code (e.g. "center"), empty = first articulation
+     *  @param velocity       desired velocity 1-127
+     */
+    void previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
+                           const juce::String& artCode, juce::uint8 velocity);
     void updateSlotParameters(const juce::String& slotId,
                               const juce::String& artName,
                               int layerIndex,
@@ -166,4 +177,11 @@ private:
     void rebuildPrimaryInstrumentNoteRouting();
 
     void saveLatestControllerValues(const juce::MidiBuffer& midiMessages);
+
+    // One-shot preview playback (mixed into processBlock output)
+    std::shared_ptr<juce::AudioBuffer<float>> previewBuffer;
+    double previewSampleRate = 0.0;
+    std::atomic<int> previewReadPos { -1 };
+    float previewGain = 1.0f;
+    juce::SpinLock previewLock;
 };

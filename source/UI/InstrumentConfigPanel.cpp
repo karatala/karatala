@@ -281,15 +281,23 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
 
     this->activePopup->setBounds(popupX, popupY, popupWidth, popupHeight);
 
-    this->activePopup->onPreview = [this, row](int sourceIndex, juce::uint8 velocity) {
-        // Apply the clicked source immediately and play preview
+    this->activePopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
+        if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
+        const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
+        this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
+    };
+
+    this->activePopup->onItemSelected = [this, row](int sourceIndex) {
         row->selectedSourceIndex = sourceIndex;
         if (sourceIndex >= 0)
             row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
         else
             row->sourceButton->setButtonText("--");
-        this->applyToEngine();
-        this->engine.playPreviewNote(row->slotId, row->artName, velocity);
+        juce::MessageManager::callAsync([this, row] {
+            this->dismissPopup();
+            this->applyToEngine();
+            this->engine.playPreviewNote(row->slotId, row->artName, 100);
+        });
     };
 
     this->popupOverlay = std::make_unique<PopupOverlay>();

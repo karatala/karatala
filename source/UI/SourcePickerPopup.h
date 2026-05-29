@@ -18,13 +18,15 @@ public:
 
     void setFilterType(KitLib::InstrumentSpec::Type type);
 
-    /** Fires when an item is selected in the list. */
+    /** Fires when an item is confirmed via the select button. */
     std::function<void(int)> onItemSelected;
     
-    /** Fires on preview (hover/click) with velocity. Used by InstrumentConfigPanel. */
+    /** Fires on preview click with velocity. */
     std::function<void(int, juce::uint8)> onPreview;
 
 private:
+    static constexpr int selectButtonWidth = 18;
+
     const std::vector<SourceItem>& allItems;
     KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;
     

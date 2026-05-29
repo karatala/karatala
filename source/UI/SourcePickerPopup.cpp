@@ -67,10 +67,22 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
         return;
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(rowNumber)].originalIndex;
     const auto& item = this->owner.allItems[static_cast<size_t>(originalIdx)];
+    int textWidth = width - SourcePickerPopup::selectButtonWidth;
     g.fillAll(rowIsSelected ? juce::Colour(0xff3a5a8a) : (rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e)));
+
+    // Item text area (left portion — clickable for preview)
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(juce::FontOptions(10.0f)));
-    g.drawText(item.displayText(), 4, 0, width - 8, height, juce::Justification::centredLeft);
+    g.drawText(item.displayText(), 4, 0, textWidth - 8, height, juce::Justification::centredLeft);
+
+    // Select button area (right portion)
+    auto btnArea = juce::Rectangle<int>(textWidth, 0, SourcePickerPopup::selectButtonWidth, height).reduced(1);
+    g.setColour(juce::Colour(0xff444444));
+    g.fillRoundedRectangle(btnArea.toFloat(), 2.0f);
+    // Draw a checkmark icon
+    g.setColour(juce::Colours::white.withAlpha(0.8f));
+    g.setFont(juce::Font(juce::FontOptions(11.0f)));
+    g.drawText(juce::CharPointer_UTF8("\xe2\x9c\x93"), btnArea, juce::Justification::centred);
 }
 
 void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
@@ -78,14 +90,19 @@ void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::Mouse
         return;
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
     
-    // Handle preview callback (used by InstrumentConfigPanel)
-    if (this->owner.onPreview) {
-        float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(event.getPosition().getX()) / static_cast<float>(juce::jmax(1, this->owner.listBox.getRowPosition(row, true).getWidth())));
-        juce::uint8 velocity = static_cast<juce::uint8>(juce::jlimit(1, 127, static_cast<int>(xRatio * 127.0f)));
-        this->owner.onPreview(originalIdx, velocity);
-    }
+    int textWidth = this->owner.listBox.getWidth() - SourcePickerPopup::selectButtonWidth;
+    bool clickedSelectButton = event.getPosition().getX() >= textWidth;
     
-    // Handle selection callback (used by both panels)
-    if (this->owner.onItemSelected)
-        this->owner.onItemSelected(originalIdx);
+    if (clickedSelectButton) {
+        // Confirm selection
+        if (this->owner.onItemSelected)
+            this->owner.onItemSelected(originalIdx);
+    } else {
+        // Preview: velocity from x-position ratio within the text area
+        if (this->owner.onPreview) {
+            float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(event.getPosition().getX()) / static_cast<float>(juce::jmax(1, textWidth)));
+            juce::uint8 velocity = static_cast<juce::uint8>(juce::jlimit(1, 127, static_cast<int>(xRatio * 127.0f)));
+            this->owner.onPreview(originalIdx, velocity);
+        }
+    }
 }

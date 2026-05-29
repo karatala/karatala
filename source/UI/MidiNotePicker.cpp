@@ -1,7 +1,7 @@
 #include "MidiNotePicker.h"
 
 static const char* const NOTE_NAMES_PICKER[] = {
-    "C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"
+    "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 };
 static const bool IS_BLACK_KEY_PICKER[12] = {
     false, true, false, true, false, false, true, false, true, false, true, false
@@ -50,7 +50,7 @@ juce::Colour MidiNotePicker::cellBg(int note, bool isBlackKey, bool isHighlighte
     if (isHighlighted)
         return juce::Colour(0xff3399FF);
 
-    return isBlackKey ? juce::Colour(0xff222222) : juce::Colour(0xffE8E8E8);
+    return isBlackKey ? juce::Colour(0xff222222) : juce::Colour(0xffF4F4F4);
 }
 
 // ─── Paint ───────────────────────────────────────────────────────────────────

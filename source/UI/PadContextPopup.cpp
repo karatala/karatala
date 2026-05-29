@@ -415,7 +415,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->activePickerPopup->setFilterType(this->slotType);
 
     // Position relative to this popup — allow to overflow beyond popup bounds
-    int popupWidth = juce::jmax(280, getWidth() - 8);
+    int popupWidth = juce::jmax(200, getWidth() - 8);
     int popupHeight = 240;
     int popupX = 4;
     // Always try to open downward first
@@ -423,6 +423,12 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     // If there's not enough room below, let it overflow (don't clamp to popup height)
 
     this->activePickerPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
+
+    this->activePickerPopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
+        if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
+        const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
+        this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
+    };
 
     this->activePickerPopup->onItemSelected = [this, layer](int sourceIndex) {
         layer->selectedSourceIndex = sourceIndex;
