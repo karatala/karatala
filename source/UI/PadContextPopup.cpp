@@ -335,14 +335,15 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
         bleedCtrl->bleedPot = std::make_unique<juce::Slider>();
         bleedCtrl->bleedPot->setSliderStyle(juce::Slider::LinearBar);
         bleedCtrl->bleedPot->setRange(0.0, 1.0, 0.01);
-        bleedCtrl->bleedPot->setValue(static_cast<double>(level), juce::dontSendNotification);
-        bleedCtrl->bleedPot->textFromValueFunction = [](double value) {
-            return juce::String(static_cast<int>(value * 100.0));
-        };
         bleedCtrl->bleedPot->setColour(juce::Slider::trackColourId, juce::Colour(0xff444444));
         bleedCtrl->bleedPot->setColour(juce::Slider::thumbColourId, juce::Colour(0xff666666));
         bleedCtrl->bleedPot->setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
         bleedCtrl->bleedPot->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+        bleedCtrl->bleedPot->textFromValueFunction = [](double value) {
+            return juce::String(static_cast<int>(value * 100.0));
+        };
+        bleedCtrl->bleedPot->setValue(static_cast<double>(level), juce::dontSendNotification);
+        bleedCtrl->bleedPot->updateText();
         bleedCtrl->bleedPot->setTooltip(micName);
         addAndMakeVisible(*bleedCtrl->bleedPot);
         bleedCtrl->bleedPot->onValueChange = [this] {
@@ -622,63 +623,63 @@ void PadContextPopup::resized() {
     this->layerHeaderLabel.setBounds(area.removeFromTop(14));
 
     const int potW = 44;
-    const int flipBtnW = 22;
-    const int btnSide = 20;
-    const int labelH = 12;
-    const int potH = 40;
-    const int layerRowH = labelH + potH; // label row + pot row
-    const int bleedRowH = 20;
-    const int potsAreaW = potW * 4 + flipBtnW * 2; // tuning+attack+decay + L/R+Ø + vol
+    const int potH = 36;
+    const int labelH = 11;
+    const int flipBtnW = 20;
+    const int btnSide = 18;
+    const int layerRowH = labelH + potH;
+    const int bleedRowH = 18;
+    const int rightW = potW * 4 + flipBtnW * 2; // tuning+attack+decay+vol + L/R+Ø
     const int totalW = area.getWidth();
-    const int sourceW = juce::jmax(80, totalW - potsAreaW);
 
     for (auto* layer : this->layerRows) {
         auto layerArea = area.removeFromTop(layerRowH);
 
-        // Left side: source button + add/remove
-        auto leftArea = layerArea.removeFromLeft(sourceW);
-        auto sourceRow = leftArea;
-        auto btnRow = sourceRow;
-        if (layer->removeButton->isVisible())
-            layer->removeButton->setBounds(btnRow.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
-        layer->addButton->setBounds(btnRow.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
-        layer->sourceButton->setBounds(btnRow.reduced(0, (layerRowH - 22) / 2));
-
-        // Right side: labels row + pots row
-        auto rightArea = layerArea; // remaining width = potsAreaW
+        // Right side (fixed width): labels + pots
+        auto rightArea = layerArea.removeFromRight(rightW);
         auto labelRow = rightArea.removeFromTop(labelH);
-        auto potRow = rightArea.removeFromTop(potH);
+        auto potRow = rightArea;
 
-        // Labels: Tuning, Attack, Decay, (skip flips), Vol
+        // Labels above pots
         auto lr = labelRow;
         layer->tuningLabel->setBounds(lr.removeFromLeft(potW));
         layer->attackLabel->setBounds(lr.removeFromLeft(potW));
         layer->decayLabel->setBounds(lr.removeFromLeft(potW));
-        lr.removeFromLeft(flipBtnW * 2); // skip flip button columns
+        lr.removeFromLeft(flipBtnW * 2);
         layer->volumeLabel->setBounds(lr.removeFromLeft(potW));
 
-        // Pots: Tuning, Attack, Decay, L/R, Ø, Vol
+        // Pots row
         auto pr = potRow;
-        layer->tuningPot->setBounds(pr.removeFromLeft(potW).reduced(1, 0));
-        layer->attackPot->setBounds(pr.removeFromLeft(potW).reduced(1, 0));
-        layer->decayPot->setBounds(pr.removeFromLeft(potW).reduced(1, 0));
-        layer->flipLRButton->setBounds(pr.removeFromLeft(flipBtnW).reduced(1, (potH - 18) / 2));
-        layer->flipPhaseButton->setBounds(pr.removeFromLeft(flipBtnW).reduced(1, (potH - 18) / 2));
-        layer->volumePot->setBounds(pr.removeFromLeft(potW).reduced(1, 0));
+        layer->tuningPot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
+        layer->attackPot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
+        layer->decayPot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
+        layer->flipLRButton->setBounds(pr.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
+        layer->flipPhaseButton->setBounds(pr.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
+        layer->volumePot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
 
-        // Bleed row: [label value] [label value] ... (only if there are mics)
+        // Left side (remaining): source + buttons inline
+        auto leftArea = layerArea;
+        leftArea.removeFromRight(4); // gap between source and pots
+        auto btnArea = leftArea;
+        if (layer->removeButton->isVisible())
+            layer->removeButton->setBounds(btnArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
+        layer->addButton->setBounds(btnArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
+        layer->sourceButton->setBounds(btnArea.reduced(0, (layerRowH - 22) / 2));
+
+        // Bleed row: full width [micName value] cells
         if (!layer->micBleeds.empty()) {
             auto bleedRow = area.removeFromTop(bleedRowH);
             const int numBleeds = static_cast<int>(layer->micBleeds.size());
-            const int cellW = juce::jmax(80, bleedRow.getWidth() / juce::jmax(1, numBleeds));
+            const int cellW = bleedRow.getWidth() / juce::jmax(1, numBleeds);
             for (auto& bleedCtrl : layer->micBleeds) {
                 auto cell = bleedRow.removeFromLeft(cellW);
-                const int barW = 36;
-                bleedCtrl->bleedLabel->setBounds(cell.removeFromLeft(cell.getWidth() - barW - 2).reduced(2, 1));
-                bleedCtrl->bleedPot->setBounds(cell.removeFromLeft(barW).reduced(0, 1));
+                const int barW = 38;
+                auto labelArea = cell.removeFromLeft(cell.getWidth() - barW);
+                bleedCtrl->bleedLabel->setBounds(labelArea.reduced(1, 0));
+                bleedCtrl->bleedPot->setBounds(cell.reduced(0, 1));
             }
         }
-        area.removeFromTop(2);
+        area.removeFromTop(3);
     }
 
     // Don't resize the popup itself; let it flow content within the bounds set by the editor
