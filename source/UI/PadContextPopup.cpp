@@ -242,8 +242,34 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
         return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
     };
 
+    // Tuning pot
+    layer->tuningPot = std::make_unique<LabeledPot>("Tuning", -2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
+    addAndMakeVisible(*layer->tuningPot);
+    layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->tuningPot->onDragEnd = [this] {
+        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    };
+
+    // Attack pot
+    layer->attackPot = std::make_unique<LabeledPot>("Attack", -1.0, 500.0, 10.0,
+        attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, sentinelTextFn);
+    addAndMakeVisible(*layer->attackPot);
+    layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->attackPot->onDragEnd = [this] {
+        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    };
+
+    // Decay pot
+    layer->decayPot = std::make_unique<LabeledPot>("Decay", -1.0, 5000.0, 10.0,
+        decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, sentinelTextFn);
+    addAndMakeVisible(*layer->decayPot);
+    layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->decayPot->onDragEnd = [this] {
+        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    };
+
     // Volume pot (-60 to +12 dB)
-    layer->volumePot = UIHelpers::createCompactPot(-60.0, 12.0, 0.5, static_cast<double>(volumeDb),
+    layer->volumePot = std::make_unique<LabeledPot>("Vol", -60.0, 12.0, 0.5, static_cast<double>(volumeDb),
         [](double value) -> juce::String {
             if (value <= -60.0) return "-inf";
             return juce::String(value, 1);
@@ -253,44 +279,6 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->volumePot->onDragEnd = [this] {
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
     };
-
-    // Tuning pot
-    layer->tuningPot = UIHelpers::createCompactPot(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
-    addAndMakeVisible(*layer->tuningPot);
-    layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->tuningPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
-    };
-
-    // Attack pot
-    layer->attackPot = UIHelpers::createCompactPot(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, sentinelTextFn);
-    addAndMakeVisible(*layer->attackPot);
-    layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->attackPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
-    };
-
-    // Decay pot
-    layer->decayPot = UIHelpers::createCompactPot(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, sentinelTextFn);
-    addAndMakeVisible(*layer->decayPot);
-    layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->decayPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
-    };
-
-    // Per-layer pot labels
-    auto makePotLabel = [this](const juce::String& text) {
-        auto label = std::make_unique<juce::Label>("", text);
-        label->setFont(juce::Font(juce::FontOptions(9.0f)));
-        label->setColour(juce::Label::textColourId, juce::Colour(0xff777777));
-        label->setJustificationType(juce::Justification::centred);
-        addAndMakeVisible(*label);
-        return label;
-    };
-    layer->tuningLabel = makePotLabel("Tuning");
-    layer->attackLabel = makePotLabel("Attack");
-    layer->decayLabel = makePotLabel("Decay");
-    layer->volumeLabel = makePotLabel("Vol");
 
     // Flip L/R button (toggle)
     layer->flipLRButton = std::make_unique<juce::TextButton>("L/R");
@@ -623,48 +611,33 @@ void PadContextPopup::resized() {
     this->layerHeaderLabel.setBounds(area.removeFromTop(14));
 
     const int potW = 44;
-    const int potH = 36;
-    const int labelH = 11;
+    const int potH = 48; // label(11) + knob + value text
     const int flipBtnW = 20;
     const int btnSide = 18;
-    const int layerRowH = labelH + potH;
+    const int layerRowH = potH;
     const int bleedRowH = 18;
-    const int rightW = potW * 4 + flipBtnW * 2; // tuning+attack+decay+vol + L/R+Ø
+    const int rightW = potW * 4 + flipBtnW * 2;
     const int totalW = area.getWidth();
 
     for (auto* layer : this->layerRows) {
         auto layerArea = area.removeFromTop(layerRowH);
 
-        // Right side (fixed width): labels + pots
+        // Right side (fixed width): LabeledPots + flip buttons
         auto rightArea = layerArea.removeFromRight(rightW);
-        auto labelRow = rightArea.removeFromTop(labelH);
-        auto potRow = rightArea;
-
-        // Labels above pots
-        auto lr = labelRow;
-        layer->tuningLabel->setBounds(lr.removeFromLeft(potW));
-        layer->attackLabel->setBounds(lr.removeFromLeft(potW));
-        layer->decayLabel->setBounds(lr.removeFromLeft(potW));
-        lr.removeFromLeft(flipBtnW * 2);
-        layer->volumeLabel->setBounds(lr.removeFromLeft(potW));
-
-        // Pots row
-        auto pr = potRow;
-        layer->tuningPot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
-        layer->attackPot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
-        layer->decayPot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
-        layer->flipLRButton->setBounds(pr.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
-        layer->flipPhaseButton->setBounds(pr.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
-        layer->volumePot->setBounds(pr.removeFromLeft(potW).reduced(2, 0));
+        layer->tuningPot->setBounds(rightArea.removeFromLeft(potW));
+        layer->attackPot->setBounds(rightArea.removeFromLeft(potW));
+        layer->decayPot->setBounds(rightArea.removeFromLeft(potW));
+        layer->flipLRButton->setBounds(rightArea.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
+        layer->flipPhaseButton->setBounds(rightArea.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
+        layer->volumePot->setBounds(rightArea.removeFromLeft(potW));
 
         // Left side (remaining): source + buttons inline
         auto leftArea = layerArea;
-        leftArea.removeFromRight(4); // gap between source and pots
-        auto btnArea = leftArea;
+        leftArea.removeFromRight(4);
         if (layer->removeButton->isVisible())
-            layer->removeButton->setBounds(btnArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
-        layer->addButton->setBounds(btnArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
-        layer->sourceButton->setBounds(btnArea.reduced(0, (layerRowH - 22) / 2));
+            layer->removeButton->setBounds(leftArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
+        layer->addButton->setBounds(leftArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
+        layer->sourceButton->setBounds(leftArea.reduced(0, (layerRowH - 22) / 2));
 
         // Bleed row: full width [micName value] cells
         if (!layer->micBleeds.empty()) {

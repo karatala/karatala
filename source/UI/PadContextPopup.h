@@ -5,6 +5,7 @@
 #include "UITypes.h"
 #include "SourcePickerPopup.h"
 #include "MidiNotePicker.h"
+#include "LabeledPot.h"
 
 class PadContextPopup : public juce::Component {
 public:
@@ -63,14 +64,10 @@ private:
     struct LayerRow {
         int selectedSourceIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
-        std::unique_ptr<juce::Slider> tuningPot;
-        std::unique_ptr<juce::Slider> attackPot;
-        std::unique_ptr<juce::Slider> decayPot;
-        std::unique_ptr<juce::Slider> volumePot;
-        std::unique_ptr<juce::Label> tuningLabel;
-        std::unique_ptr<juce::Label> attackLabel;
-        std::unique_ptr<juce::Label> decayLabel;
-        std::unique_ptr<juce::Label> volumeLabel;
+        std::unique_ptr<LabeledPot> tuningPot;
+        std::unique_ptr<LabeledPot> attackPot;
+        std::unique_ptr<LabeledPot> decayPot;
+        std::unique_ptr<LabeledPot> volumePot;
         std::unique_ptr<juce::TextButton> flipLRButton;
         std::unique_ptr<juce::TextButton> flipPhaseButton;
         // Per-mic bleed pots: one per relevant mic
