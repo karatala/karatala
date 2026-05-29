@@ -57,15 +57,15 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     {
         juce::Graphics::ScopedSaveState saved(g);
         if (slider.isEnabled()) {
-            juce::ColourGradient fillGradient(outline.brighter(), centre.getX() + lineW * 2.0f, centre.getY() - lineW * 4.0f, outline, centre.getX() + knobRadius, centre.getY() + knobRadius, true);
+            juce::ColourGradient fillGradient(juce::Colour(0xff3a3a3a), centre.getX() + lineW * 2.0f, centre.getY() - lineW * 4.0f, juce::Colour(0xff1a1a1a), centre.getX() + knobRadius, centre.getY() + knobRadius, true);
             g.setGradientFill(fillGradient);
         }
         g.fillEllipse(centre.getX() - knobRadius, centre.getY() - knobRadius, knobRadius * 2.0f, knobRadius * 2.0f);
     }
 
     knobRadius = std::max(knobRadius - 4.0f, 10.0f);
-    g.setColour(outline.brighter());
-    g.drawEllipse(centre.getX() - knobRadius, centre.getY() - knobRadius, knobRadius * 2.0f, knobRadius * 2.0f, 2.0f);
+    g.setColour(juce::Colour(0xff555555));
+    g.drawEllipse(centre.getX() - knobRadius, centre.getY() - knobRadius, knobRadius * 2.0f, knobRadius * 2.0f, 1.5f);
 
     if (slider.isEnabled() && arcRadius > 10.0f) {
         juce::Path valueArc;
@@ -75,10 +75,11 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
         g.strokePath(valueArc, juce::PathStrokeType(lineW, juce::PathStrokeType::curved, juce::PathStrokeType::butt));
     }
 
-    juce::Path indicatorPath;
-    indicatorPath.startNewSubPath(centre.getPointOnCircumference(knobRadius - lineW, toAngle));
-    indicatorPath.lineTo(centre.getPointOnCircumference((knobRadius - lineW) * 0.6f, toAngle));
-    g.strokePath(indicatorPath, juce::PathStrokeType(lineW, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    // Indicator dot at the knob edge — uses fill (red) color
+    auto dotPos = centre.getPointOnCircumference(knobRadius - lineW * 0.5f, toAngle);
+    float dotRadius = juce::jmin(lineW * 1.2f, 4.0f);
+    g.setColour(fill);
+    g.fillEllipse(dotPos.getX() - dotRadius, dotPos.getY() - dotRadius, dotRadius * 2.0f, dotRadius * 2.0f);
 }
 
 void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool isMouseOverButton, bool isButtonDown) {

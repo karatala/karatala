@@ -25,6 +25,7 @@ public:
 private:
     PluginProcessor& processorRef;
     ::LookAndFeel lookAndFeel;
+    juce::TooltipWindow tooltipWindow { this, 500 };
     std::unique_ptr<melatonin::Inspector> inspector;
 
     // Layout components

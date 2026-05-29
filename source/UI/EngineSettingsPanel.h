@@ -16,9 +16,9 @@ public:
 private:
     DrumKitEngine& engine;
 
-    struct SliderEntry {
+    struct PotEntry {
         juce::Label label;
-        juce::Slider slider;
+        juce::Slider pot;
         juce::TextButton resetButton { "x" };
         float* target = nullptr;
         int* intTarget = nullptr;
@@ -33,13 +33,12 @@ private:
     juce::Viewport viewport;
     juce::Component contentComponent;
 
-    std::vector<std::unique_ptr<SliderEntry>> sliders;
+    std::vector<std::unique_ptr<PotEntry>> pots;
 
-    void addSlider(const juce::String& name, float* target, float minVal, float maxVal, float interval);
-    void addIntSlider(const juce::String& name, int* target, int minVal, int maxVal);
+    void addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval);
+    void addIntPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal);
     void onSettingChanged();
 
-    /** Called when grid size changes — owner can listen to this. */
 public:
     std::function<void()> onGridSizeChanged;
 
