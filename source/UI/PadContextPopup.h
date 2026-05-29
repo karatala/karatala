@@ -63,19 +63,33 @@ private:
     struct LayerRow {
         int selectedSourceIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
-        std::unique_ptr<juce::Slider> tuningSlider;
-        std::unique_ptr<juce::Slider> attackSlider;
-        std::unique_ptr<juce::Slider> decaySlider;
+        std::unique_ptr<juce::Slider> tuningPot;
+        std::unique_ptr<juce::Slider> attackPot;
+        std::unique_ptr<juce::Slider> decayPot;
+        std::unique_ptr<juce::Slider> volumePot;
+        std::unique_ptr<juce::Label> tuningLabel;
+        std::unique_ptr<juce::Label> attackLabel;
+        std::unique_ptr<juce::Label> decayLabel;
+        std::unique_ptr<juce::Label> volumeLabel;
+        std::unique_ptr<juce::TextButton> flipLRButton;
+        std::unique_ptr<juce::TextButton> flipPhaseButton;
+        // Per-mic bleed pots: one per relevant mic
+        struct MicBleedControl {
+            juce::String micCode;
+            juce::String micName;
+            std::unique_ptr<juce::Slider> bleedPot;
+            std::unique_ptr<juce::Label> bleedLabel;
+        };
+        std::vector<std::unique_ptr<MicBleedControl>> micBleeds;
         std::unique_ptr<juce::TextButton> addButton;
         std::unique_ptr<juce::TextButton> removeButton;
     };
     juce::OwnedArray<LayerRow> layerRows;
     juce::Label layerHeaderLabel;
-    juce::Label layerTuningLabel;
-    juce::Label layerAttackLabel;
-    juce::Label layerDecayLabel;
 
-    void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);
+    void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+                     float volumeDb, bool flipLR, bool flipPhase,
+                     const std::unordered_map<juce::String, float>& micBleedLevels);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
     void applyLayerParametersFast(LayerRow* layer);
@@ -83,6 +97,7 @@ private:
     void applyToEngine();
     juce::String generateFullMapText() const;
     void populateLayers();
+    std::vector<std::pair<juce::String, juce::String>> getRelevantMics() const;
     bool mapTextDirty = false;
 
     std::unique_ptr<SourcePickerPopup> activePickerPopup;

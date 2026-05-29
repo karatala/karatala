@@ -92,8 +92,6 @@ void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& t
     entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
     entry->pot.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
     entry->pot.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    if (tooltip.isNotEmpty())
-        entry->pot.setTooltip(tooltip);
     entry->pot.onValueChange = [this] { this->onSettingChanged(); };
     this->contentComponent.addAndMakeVisible(entry->pot);
 
@@ -127,8 +125,6 @@ void EngineSettingsPanel::addIntPot(const juce::String& name, const juce::String
     entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
     entry->pot.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
     entry->pot.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-    if (tooltip.isNotEmpty())
-        entry->pot.setTooltip(tooltip);
     entry->pot.onValueChange = [this] { this->onSettingChanged(); };
     this->contentComponent.addAndMakeVisible(entry->pot);
 

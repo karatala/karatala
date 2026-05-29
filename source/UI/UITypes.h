@@ -56,4 +56,14 @@ std::unique_ptr<juce::Slider> createParamSlider(
     int textBoxHeight = 20,
     std::function<juce::String(double)> textFromValueFn = nullptr);
 
+/**
+ * Create a compact rotary pot with text below.
+ */
+std::unique_ptr<juce::Slider> createCompactPot(
+    double minVal, 
+    double maxVal, 
+    double interval,
+    double initialValue,
+    std::function<juce::String(double)> textFromValueFn = nullptr);
+
 }  // namespace UIHelpers

@@ -83,7 +83,7 @@ namespace DrumKitEngineMappingModel {
 ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::String& text) {
     ParseResult<DrumKitEngine::InstrumentMap> result;
     const juce::StringArray lines = juce::StringArray::fromLines(text);
-    const std::vector<juce::String> knownKeys { "tuning", "attack", "decay", "art" };
+    const std::vector<juce::String> knownKeys { "tuning", "attack", "decay", "art", "vol", "flipLR", "flipPhase", "bleed" };
 
     auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<DrumKitEngine::InstrumentMap>& parseResult, int lineNumber, std::optional<int>& target) {
         auto trimmed = valueText.trim();
@@ -164,6 +164,29 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                     if (!sawDeprecatedArtParam) {
                         result.addWarning("Line " + juce::String(idx + 1) + ": 'art=' is deprecated; use target path articulation '<kit>/<inst>/<sourceArt>'");
                         sawDeprecatedArtParam = true;
+                    }
+                } else if (key == "vol") {
+                    auto trimmed = value.trim();
+                    if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789."))
+                        result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'vol': " + value);
+                    else
+                        entry.volumeDb = trimmed.getFloatValue();
+                } else if (key == "flipLR") {
+                    entry.flipLR = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
+                } else if (key == "flipPhase") {
+                    entry.flipPhase = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
+                } else if (key == "bleed") {
+                    // Format: bleed=micCode:level,micCode:level,...
+                    juce::StringArray pairs;
+                    pairs.addTokens(value, ",", "");
+                    for (const auto& pair : pairs) {
+                        auto colonPos = pair.indexOf(":");
+                        if (colonPos > 0) {
+                            auto micCode = pair.substring(0, colonPos).trim();
+                            auto levelStr = pair.substring(colonPos + 1).trim();
+                            if (micCode.isNotEmpty() && levelStr.containsOnly("0123456789."))
+                                entry.micBleedLevels[micCode] = levelStr.getFloatValue();
+                        }
                     }
                 } else
                     result.addWarning("Line " + juce::String(idx + 1) + ": unknown param '" + key + "'");

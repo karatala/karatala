@@ -89,4 +89,29 @@ std::unique_ptr<juce::Slider> createParamSlider(
     return slider;
 }
 
+std::unique_ptr<juce::Slider> createCompactPot(
+    double minVal, 
+    double maxVal, 
+    double interval,
+    double initialValue,
+    std::function<juce::String(double)> textFromValueFn) {
+
+    auto pot = std::make_unique<juce::Slider>();
+    pot->setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    pot->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 38, 12);
+    pot->setRange(minVal, maxVal, interval);
+    pot->setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::red);
+    pot->setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
+    pot->setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
+    pot->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+
+    if (textFromValueFn)
+        pot->textFromValueFunction = textFromValueFn;
+
+    pot->setValue(initialValue, juce::dontSendNotification);
+    pot->updateText();
+
+    return pot;
+}
+
 }  // namespace UIHelpers
