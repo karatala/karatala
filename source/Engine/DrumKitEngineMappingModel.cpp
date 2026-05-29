@@ -171,6 +171,8 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
 
         if (entry.slotArticulationFilter.empty() && !entry.articulationFilter.empty())
             entry.slotArticulationFilter = entry.articulationFilter;
+        else if (!entry.slotArticulationFilter.empty() && entry.articulationFilter.empty())
+            entry.articulationFilter = entry.slotArticulationFilter;
 
         result.value.entries.push_back(std::move(entry));
     }

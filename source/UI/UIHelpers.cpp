@@ -43,11 +43,11 @@ std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryMa
 
 int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::String& searchPath) {
     auto needle = searchPath.trim().toLowerCase();
+    if (needle.isEmpty())
+        return -1;
     for (int idx = 0; idx < static_cast<int>(sourceItems.size()); ++idx) {
         auto haystack = sourceItems[static_cast<size_t>(idx)].fullPath().toLowerCase();
-        if (needle.isEmpty() || haystack == needle)
-            return idx;
-        if (haystack.contains(needle))
+        if (haystack == needle)
             return idx;
     }
     return -1;

@@ -101,8 +101,6 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                         sourceFullPath += "/" + entry->instCode;
                     if (!entry->articulationFilter.empty())
                         sourceFullPath += "/" + entry->articulationFilter[0];
-                    else if (artName != "(default)")
-                        sourceFullPath += "/" + artName;
 
                     int tuning = entry->tuningCents.value_or(0);
                     int attack = entry->attackTimeMs.value_or(-1);
@@ -413,9 +411,11 @@ juce::String InstrumentConfigPanel::generateMapText() const {
         if (row->artName != "(default)")
             slotRef += "/" + row->artName;
 
-        juce::String targetRef = srcItem.kitDisplayName;
+        juce::String targetRef = srcItem.kitCodeRaw;
         if (srcItem.instCode.isNotEmpty())
             targetRef += "/" + srcItem.instCode;
+        if (srcItem.artCode.isNotEmpty())
+            targetRef += "/" + srcItem.artCode;
 
         juce::StringArray params;
         int tuning = static_cast<int>(row->tuningSlider->getValue());
@@ -429,9 +429,6 @@ juce::String InstrumentConfigPanel::generateMapText() const {
         double decayVal = row->decaySlider->getValue();
         if (decayVal >= 0.0)
             params.add("decay=" + juce::String(static_cast<int>(decayVal)));
-
-        if (srcItem.artCode.isNotEmpty() && srcItem.artCode != row->artName)
-            params.add("art=" + srcItem.artCode);
 
         juce::String line = slotRef + ":" + targetRef;
         if (!params.isEmpty())
