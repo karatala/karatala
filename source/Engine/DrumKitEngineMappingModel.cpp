@@ -133,6 +133,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
         entry.kitRef = targetRef.kitRef;
         entry.instCode = targetRef.instCode;
         entry.articulationFilter = targetRef.articulations;
+        bool sawDeprecatedArtParam = false;
 
         if (!paramsText.isEmpty()) {
             int start = 0;
@@ -158,9 +159,13 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                     parseInt(value, key, result, idx + 1, entry.attackTimeMs);
                 else if (key == "decay")
                     parseInt(value, key, result, idx + 1, entry.decayTimeMs);
-                else if (key == "art")
+                else if (key == "art") {
                     entry.articulationFilter = parseDelimitedNames(value);
-                else
+                    if (!sawDeprecatedArtParam) {
+                        result.addWarning("Line " + juce::String(idx + 1) + ": 'art=' is deprecated; use target path articulation '<kit>/<inst>/<sourceArt>'");
+                        sawDeprecatedArtParam = true;
+                    }
+                } else
                     result.addWarning("Line " + juce::String(idx + 1) + ": unknown param '" + key + "'");
 
                 if (boundaryIdx < 0)

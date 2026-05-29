@@ -198,8 +198,6 @@ void PadContextPopup::populateLayers() {
                 sourceFullPath += "/" + entry->instCode;
             if (!entry->articulationFilter.empty())
                 sourceFullPath += "/" + entry->articulationFilter[0];
-            else if (this->artName != "(default)")
-                sourceFullPath += "/" + this->artName;
 
             int tuning = entry->tuningCents.value_or(0);
             int attack = entry->attackTimeMs.value_or(-1);
@@ -356,9 +354,11 @@ juce::String PadContextPopup::generateFullMapText() const {
         if (this->artName != "(default)")
             slotRef += "/" + this->artName;
 
-        juce::String targetRef = srcItem.kitDisplayName;
+        juce::String targetRef = srcItem.kitCodeRaw;
         if (srcItem.instCode.isNotEmpty())
             targetRef += "/" + srcItem.instCode;
+        if (srcItem.artCode.isNotEmpty())
+            targetRef += "/" + srcItem.artCode;
 
         juce::StringArray params;
         int tuning = static_cast<int>(layer->tuningSlider->getValue());
@@ -367,8 +367,6 @@ juce::String PadContextPopup::generateFullMapText() const {
         if (attackVal >= 0.0) params.add("attack=" + juce::String(static_cast<int>(attackVal)));
         double decayVal = layer->decaySlider->getValue();
         if (decayVal >= 0.0) params.add("decay=" + juce::String(static_cast<int>(decayVal)));
-        if (srcItem.artCode.isNotEmpty() && srcItem.artCode != this->artName)
-            params.add("art=" + srcItem.artCode);
 
         juce::String line = slotRef + ":" + targetRef;
         if (!params.isEmpty())

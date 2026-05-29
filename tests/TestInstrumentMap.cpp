@@ -63,6 +63,25 @@ TEST_CASE("InstrumentMap parser supports wildcard and art param", "[InstrumentMa
     REQUIRE(entry.slotArticulationFilter.size() == 2);
     CHECK(entry.slotArticulationFilter[0] == "bow");
     CHECK(entry.slotArticulationFilter[1] == "edge");
+    CHECK_FALSE(parsed.errors.empty());
+    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("'art=' is deprecated"));
+}
+
+TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[InstrumentMap]") {
+    const juce::String text = "ride1/edge:KitB/crash-18/bell:tuning=120";
+    const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 1);
+
+    const auto& entry = parsed.value.entries.front();
+    REQUIRE(entry.slotArticulationFilter.size() == 1);
+    CHECK(entry.slotArticulationFilter[0] == "edge");
+    REQUIRE(entry.articulationFilter.size() == 1);
+    CHECK(entry.articulationFilter[0] == "bell");
+
+    const auto parserMessages = parsed.error().toStdString();
+    CHECK(parserMessages.find("'art=' is deprecated") == std::string::npos);
 }
 
 TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[InstrumentMap]") {

@@ -1,10 +1,22 @@
 #include "UITypes.h"
 
+#include <unordered_set>
+
 namespace UIHelpers {
 
 std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager) {
     std::vector<SourceItem> sourceItems;
     if (libraryManager == nullptr) return sourceItems;
+
+    std::unordered_set<std::string> seenFullPathKeys;
+    auto addUniqueSourceItem = [&sourceItems, &seenFullPathKeys](SourceItem sourceItem) {
+        const auto fullPathKey = sourceItem.fullPath().trim().toLowerCase().toStdString();
+        if (fullPathKey.empty())
+            return;
+
+        if (seenFullPathKeys.insert(fullPathKey).second)
+            sourceItems.push_back(std::move(sourceItem));
+    };
 
     for (const auto& kitPtr : libraryManager->getKits()) {
         juce::String kitShort = kitPtr->meta.name;
@@ -24,7 +36,7 @@ std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryMa
                 item.kitDisplayName = kitShort;
                 item.instCode = inst->meta.codeRaw;
                 item.instType = inst->meta.type;
-                sourceItems.push_back(std::move(item));
+                addUniqueSourceItem(std::move(item));
             } else {
                 for (const auto& artPtr : inst->articulationSpecs) {
                     SourceItem item;
@@ -33,7 +45,7 @@ std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryMa
                     item.instCode = inst->meta.codeRaw;
                     item.artCode = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
                     item.instType = inst->meta.type;
-                    sourceItems.push_back(std::move(item));
+                    addUniqueSourceItem(std::move(item));
                 }
             }
         }
