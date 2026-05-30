@@ -166,7 +166,7 @@ void LookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar& /*scrollbar*
 }
 
 void LookAndFeel::drawPopupMenuBackground(juce::Graphics& g, int /*width*/, int /*height*/) {
-    g.fillAll(juce::Colours::darkgrey);
+    g.fillAll(UITheme::Colours::bgPanelRaised);
 }
 
 // Returns MIDI note 0-127 if text matches format "127 / G 8", else -1.
@@ -198,12 +198,12 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
         g.setColour(juce::Colour::fromHSV(hue, bk ? 0.55f : 0.30f, bk ? 0.13f : 0.22f, 1.0f));
         g.fillRect(area);
     } else {
-        g.setColour(darkestGrey);
+        g.setColour(UITheme::Colours::bgPanelRaised);
         g.fillRect(area);
     }
 
     if (isSeparator) {
-        g.setColour(juce::Colour(0xFFFFFF).withAlpha(0.2f));
+        g.setColour(UITheme::Colours::textPrimary.withAlpha(0.2f));
         const auto separatorRect = juce::Rectangle<int>(10, area.getHeight() / 2, area.getWidth() - 20, 1);
         g.fillRect(separatorRect);
     } else {
@@ -213,7 +213,7 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
             g.fillRect(area.reduced(1, 1));
         }
 
-        g.setColour(juce::Colour(0xFFFFFF).withAlpha(isActive ? 0.85f : 0.25f));
+        g.setColour(UITheme::Colours::textPrimary.withAlpha(isActive ? 0.85f : 0.25f));
         // Note items: tight left margin (no tick); other items: standard 25 px margin for tick dot
         const int leftPad = (midiNote >= 0) ? 4 : 25;
         g.drawText(text, area.withTrimmedLeft(leftPad).withTrimmedRight(4), juce::Justification::left);
@@ -234,7 +234,7 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
         }
 
         if (isTicked) {
-            g.setColour(juce::Colours::red);
+            g.setColour(UITheme::Colours::accent);
             g.fillEllipse(10.0f, (area.getHeight() - 5.0f) / 2.0f, 5.0f, 5.0f);
         }
     }

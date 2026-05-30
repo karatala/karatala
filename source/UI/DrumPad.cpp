@@ -1,4 +1,5 @@
 #include "DrumPad.h"
+#include "UITheme.h"
 
 DrumPad::DrumPad() {
 }
@@ -32,20 +33,7 @@ void DrumPad::timerCallback() {
 }
 
 juce::Colour DrumPad::getColourForType(KitLib::InstrumentSpec::Type type) {
-    switch (type) {
-        case KitLib::InstrumentSpec::Type::Kick:    return juce::Colour(0xffcc3333);
-        case KitLib::InstrumentSpec::Type::Snare:   return juce::Colour(0xffcc8833);
-        case KitLib::InstrumentSpec::Type::HiHat:   return juce::Colour(0xffcccc33);
-        case KitLib::InstrumentSpec::Type::Tom:     return juce::Colour(0xff3366cc);
-        case KitLib::InstrumentSpec::Type::Ride:    return juce::Colour(0xff33cccc);
-        case KitLib::InstrumentSpec::Type::Crash:   return juce::Colour(0xff9933cc);
-        case KitLib::InstrumentSpec::Type::Splash:  return juce::Colour(0xff33cc99);
-        case KitLib::InstrumentSpec::Type::China:   return juce::Colour(0xffcc3399);
-        case KitLib::InstrumentSpec::Type::Cymbal:  return juce::Colour(0xff6699cc);
-        case KitLib::InstrumentSpec::Type::Drum:    return juce::Colour(0xff6666cc);
-        case KitLib::InstrumentSpec::Type::Percussion: return juce::Colour(0xff999966);
-        default:                                    return juce::Colour(0xff555555);
-    }
+    return UITheme::Colours::instrumentType(type);
 }
 
 void DrumPad::paint(juce::Graphics& g) {
@@ -57,7 +45,7 @@ void DrumPad::paint(juce::Graphics& g) {
 
 void DrumPad::paintZen(juce::Graphics& g) {
     auto bounds = getLocalBounds();
-    auto baseColour = this->slotPtr ? getColourForType(this->slotPtr->type) : juce::Colour(0xff333333);
+    auto baseColour = this->slotPtr ? getColourForType(this->slotPtr->type) : UITheme::Colours::padEmpty;
 
     // Fill with base colour, darkened
     g.setColour(baseColour.withMultipliedBrightness(0.3f));
@@ -71,22 +59,22 @@ void DrumPad::paintZen(juce::Graphics& g) {
 
     // Border — only when there's a visible gap between pads
     if (this->padGap > 0) {
-        g.setColour(juce::Colour(0xff111111));
+        g.setColour(UITheme::Colours::separator);
         g.drawRect(bounds, 1);
     }
 
     // Instrument name
     if (this->slotPtr) {
         auto displayName = this->slotPtr->display.isNotEmpty() ? this->slotPtr->display : this->slotPtr->id;
-        g.setColour(juce::Colours::white.withAlpha(0.9f));
-        g.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
+        g.setColour(UITheme::Colours::textPrimary.withAlpha(0.9f));
+        g.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
         g.drawText(displayName, bounds.reduced(4), juce::Justification::centred);
     }
 }
 
 void DrumPad::paintZoned(juce::Graphics& g) {
     auto bounds = getLocalBounds();
-    auto baseColour = this->slotPtr ? getColourForType(this->slotPtr->type) : juce::Colour(0xff333333);
+    auto baseColour = this->slotPtr ? getColourForType(this->slotPtr->type) : UITheme::Colours::padEmpty;
 
     if (!this->slotPtr || this->slotPtr->articulations.empty()) {
         this->paintZen(g);
@@ -107,14 +95,14 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         g.fillRect(zoneRect);
 
         // Articulation label
-        g.setColour(juce::Colours::white.withAlpha(0.85f));
-        g.setFont(juce::Font(juce::FontOptions(10.0f)));
+        g.setColour(UITheme::Colours::textPrimary.withAlpha(0.85f));
+        g.setFont(UITheme::Fonts::label());
         auto labelText = this->slotPtr->articulations[static_cast<size_t>(idx)].codeRaw;
         if (idx == 0 && artCount == 1) {
             // Single articulation — show instrument name + articulation
             auto displayName = this->slotPtr->display.isNotEmpty() ? this->slotPtr->display : this->slotPtr->id;
             labelText = displayName + " [" + labelText + "]";
-            g.setFont(juce::Font(juce::FontOptions(11.0f).withStyle("Bold")));
+            g.setFont(UITheme::Fonts::labelBold().withHeight(11.0f));
         }
         g.drawText(labelText, zoneRect.reduced(4, 1), juce::Justification::centred);
     }
@@ -127,7 +115,7 @@ void DrumPad::paintZoned(juce::Graphics& g) {
 
     // Outer border — only when there's a visible gap between pads
     if (this->padGap > 0) {
-        g.setColour(juce::Colour(0xff111111));
+        g.setColour(UITheme::Colours::separator);
         g.drawRect(bounds, 1);
     }
 }

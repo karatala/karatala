@@ -1,8 +1,9 @@
 #include "SourcePickerPopup.h"
+#include "UITheme.h"
 
 SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items)
     : allItems(items) {
-    this->filterField.setTextToShowWhenEmpty("filter...", juce::Colours::grey);
+    this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
     this->filterField.onTextChange = [this] { this->rebuildFiltered(); };
     addAndMakeVisible(this->filterField);
 
@@ -12,7 +13,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items)
 
     this->listBox.setModel(&this->listModel);
     this->listBox.setRowHeight(18);
-    this->listBox.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff2a2a2a));
+    this->listBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
     addAndMakeVisible(this->listBox);
 
     this->rebuildFiltered();
@@ -34,8 +35,8 @@ void SourcePickerPopup::resized() {
 }
 
 void SourcePickerPopup::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(0xff222222));
-    g.setColour(juce::Colour(0xff555555));
+    g.fillAll(UITheme::Colours::bgPanelRaised);
+    g.setColour(UITheme::Colours::borderStrong);
     g.drawRect(getLocalBounds(), 1);
 }
 
@@ -70,16 +71,17 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
     const int btnW = SourcePickerPopup::selectButtonWidth;
     const int prevW = SourcePickerPopup::previewButtonWidth;
     int textWidth = width - btnW - prevW;
-    g.fillAll(rowIsSelected ? juce::Colour(0xff3a5a8a) : (rowNumber % 2 == 0 ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff2e2e2e)));
+    g.fillAll(rowIsSelected ? UITheme::Colours::listSelection
+                            : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd));
 
     // Item text area (left portion — click for max-velocity zone preview)
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(juce::FontOptions(10.0f)));
+    g.setColour(UITheme::Colours::textPrimary);
+    g.setFont(UITheme::Fonts::table());
     g.drawText(item.displayText(), 4, 0, textWidth - 8, height, juce::Justification::centredLeft);
 
     // Preview button area (middle — velocity-aware preview with triangle indicator)
     auto prevArea = juce::Rectangle<int>(textWidth, 0, prevW, height).reduced(1);
-    g.setColour(juce::Colour(0xff3a3a3a));
+    g.setColour(UITheme::Colours::bgControlRaised);
     g.fillRoundedRectangle(prevArea.toFloat(), 2.0f);
     // Draw volume-level triangle (left-to-right descending like a volume indicator)
     {
@@ -92,21 +94,21 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
             static_cast<float>(triRect.getRight()), static_cast<float>(triRect.getBottom()),
             static_cast<float>(triRect.getRight()), static_cast<float>(triRect.getY())
         );
-        g.setColour(juce::Colour(0xff88aacc));
+        g.setColour(UITheme::Colours::accentSoft);
         g.fillPath(triangle);
         // "preview" text
         triArea.removeFromLeft(2);
-        g.setColour(juce::Colours::white.withAlpha(0.7f));
-        g.setFont(juce::Font(juce::FontOptions(8.0f)));
+        g.setColour(UITheme::Colours::textPrimary.withAlpha(0.7f));
+        g.setFont(UITheme::Fonts::small().withHeight(8.0f));
         g.drawText("preview", triArea, juce::Justification::centredLeft);
     }
 
     // Select/Use button area (right portion)
     auto btnArea = juce::Rectangle<int>(textWidth + prevW, 0, btnW, height).reduced(1);
-    g.setColour(juce::Colour(0xff444444));
+    g.setColour(UITheme::Colours::borderMid);
     g.fillRoundedRectangle(btnArea.toFloat(), 2.0f);
-    g.setColour(juce::Colours::white.withAlpha(0.8f));
-    g.setFont(juce::Font(juce::FontOptions(9.0f)));
+    g.setColour(UITheme::Colours::textPrimary.withAlpha(0.8f));
+    g.setFont(UITheme::Fonts::small());
     g.drawText("use", btnArea, juce::Justification::centred);
 }
 

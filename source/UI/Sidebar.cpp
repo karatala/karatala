@@ -17,11 +17,12 @@ Sidebar::Sidebar() {
         addAndMakeVisible(btn);
     }
 
-    const auto accentColour = juce::Colour(0xffcc4444);
+    const auto accentColour = UITheme::Colours::accent;
 
     // HiHat openness knob
-    this->hihatLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
+    this->hihatLabel.setFont(UITheme::Fonts::label());
     this->hihatLabel.setJustificationType(juce::Justification::centred);
+    this->hihatLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     addAndMakeVisible(this->hihatLabel);
 
     this->hihatKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
@@ -33,8 +34,9 @@ Sidebar::Sidebar() {
     addAndMakeVisible(this->hihatKnob);
 
     // Velocity knob
-    this->velocityLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
+    this->velocityLabel.setFont(UITheme::Fonts::label());
     this->velocityLabel.setJustificationType(juce::Justification::centred);
+    this->velocityLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     addAndMakeVisible(this->velocityLabel);
 
     this->velocityKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
@@ -46,8 +48,9 @@ Sidebar::Sidebar() {
     addAndMakeVisible(this->velocityKnob);
 
     // Round-robin lock knob
-    this->rrLockLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
+    this->rrLockLabel.setFont(UITheme::Fonts::label());
     this->rrLockLabel.setJustificationType(juce::Justification::centred);
+    this->rrLockLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     addAndMakeVisible(this->rrLockLabel);
 
     this->rrLockKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
@@ -79,9 +82,9 @@ void Sidebar::updateButtonStates() {
 }
 
 void Sidebar::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(0xff1a1a1a));
+    g.fillAll(UITheme::Colours::bgPanel);
     // Right edge separator
-    g.setColour(juce::Colour(0xff333333));
+    g.setColour(UITheme::Colours::borderSubtle);
     g.drawVerticalLine(getWidth() - 1, 0.0f, static_cast<float>(getHeight()));
 }
 

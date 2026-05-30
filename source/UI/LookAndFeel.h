@@ -2,28 +2,29 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "UITheme.h"
 
 class LookAndFeel : public juce::LookAndFeel_V4 {
 public:
-    static inline juce::Colour darkestGrey = juce::Colour(34, 34, 34);
-    static inline juce::Colour darkerGrey = juce::Colour(68, 68, 68);
+    static inline juce::Colour darkestGrey = UITheme::Colours::bgPanelRaised;
+    static inline juce::Colour darkerGrey = UITheme::Colours::borderMid;
 
     LookAndFeel() {
         this->setColourScheme({
-            juce::Colours::black, // windowBackground
+            UITheme::Colours::bgApp, // windowBackground
             darkestGrey,          // widgetBackground
             darkestGrey,          // menuBackground
-            juce::Colours::white, // outline
-            juce::Colours::white, // defaultText
-            juce::Colours::red,   // defaultFill
-            juce::Colours::white, // highlightedText
-            juce::Colours::red,   // highlightedFill
-            juce::Colours::white  // menuText
+            UITheme::Colours::textPrimary, // outline
+            UITheme::Colours::textPrimary, // defaultText
+            UITheme::Colours::accent,      // defaultFill
+            UITheme::Colours::textPrimary, // highlightedText
+            UITheme::Colours::accent,      // highlightedFill
+            UITheme::Colours::textPrimary  // menuText
         });
 
         this->setColour(juce::TabbedComponent::outlineColourId, darkestGrey);
         this->setColour(juce::GroupComponent::outlineColourId, darkerGrey);
-        this->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::black);
+        this->setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::bgApp);
     }
 
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,

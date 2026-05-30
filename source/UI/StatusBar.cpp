@@ -1,14 +1,15 @@
 #include "StatusBar.h"
+#include "UITheme.h"
 
 StatusBar::StatusBar() {
     this->statusLabel.setJustificationType(juce::Justification::centredLeft);
-    this->statusLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
-    this->statusLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+    this->statusLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+    this->statusLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSuccess);
     addAndMakeVisible(this->statusLabel);
 
     this->infoLabel.setJustificationType(juce::Justification::centredRight);
-    this->infoLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
-    this->infoLabel.setColour(juce::Label::textColourId, juce::Colour(0xffaaaaaa));
+    this->infoLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+    this->infoLabel.setColour(juce::Label::textColourId, UITheme::Colours::textInfo);
     addAndMakeVisible(this->infoLabel);
 }
 
@@ -21,9 +22,9 @@ void StatusBar::setInfoText(const juce::String& text) {
 }
 
 void StatusBar::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(0xff1a1a1a));
+    g.fillAll(UITheme::Colours::bgPanel);
     // Top border line
-    g.setColour(juce::Colour(0xff333333));
+    g.setColour(UITheme::Colours::borderSubtle);
     g.drawHorizontalLine(0, 0.0f, static_cast<float>(getWidth()));
 }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "UITheme.h"
 
 enum class ViewMode {
     Zen = 0,
@@ -30,8 +31,8 @@ public:
     juce::TextButton inspectButton { "?" };
 
 private:
-    static constexpr int buttonSize = 44;
-    static constexpr int knobSize = 40;
+    static constexpr int buttonSize = UITheme::Sizes::modeButton;
+    static constexpr int knobSize = UITheme::Sizes::sidebarKnob;
 
     ViewMode activeMode = ViewMode::Zen;
 
