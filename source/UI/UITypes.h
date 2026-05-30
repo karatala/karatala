@@ -2,6 +2,7 @@
 
 #include <juce_core/juce_core.h>
 #include "../Engine/DrumKitEngine.h"
+#include "UITheme.h"
 
 /**
  * @file UITypes.h
@@ -52,8 +53,8 @@ std::unique_ptr<juce::Slider> createParamSlider(
     double maxVal, 
     double interval,
     double initialValue,
-    int textBoxWidth = 40, 
-    int textBoxHeight = 20,
+    int textBoxWidth = UITheme::Sizes::sliderTextBoxW,
+    int textBoxHeight = UITheme::Sizes::sliderTextBoxH,
     std::function<juce::String(double)> textFromValueFn = nullptr);
 
 /**

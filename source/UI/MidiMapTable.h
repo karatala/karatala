@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/LayoutManager.h"
 #include "MidiNotePicker.h"
+#include "UITheme.h"
 
 class MidiMapTable : public juce::Component {
 public:
@@ -25,8 +26,8 @@ public:
     std::function<void(bool)> onMidiLearnStateChanged;
 
 private:
-    static constexpr int rowHeight = 26;
-    static constexpr int headerHeight = 28;
+    static constexpr int rowHeight = UITheme::Spacing::rowLarge;
+    static constexpr int headerHeight = UITheme::Spacing::rowLarge + 2;
 
     KitLayout* layoutPtr = nullptr;
 

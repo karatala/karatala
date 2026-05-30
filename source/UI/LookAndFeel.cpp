@@ -57,14 +57,20 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
     {
         juce::Graphics::ScopedSaveState saved(g);
         if (slider.isEnabled()) {
-            juce::ColourGradient fillGradient(juce::Colour(0xff3a3a3a), centre.getX() + lineW * 2.0f, centre.getY() - lineW * 4.0f, juce::Colour(0xff1a1a1a), centre.getX() + knobRadius, centre.getY() + knobRadius, true);
+            juce::ColourGradient fillGradient(UITheme::Colours::bgControlRaised,
+                                              centre.getX() + lineW * 2.0f,
+                                              centre.getY() - lineW * 4.0f,
+                                              UITheme::Colours::bgPanel,
+                                              centre.getX() + knobRadius,
+                                              centre.getY() + knobRadius,
+                                              true);
             g.setGradientFill(fillGradient);
         }
         g.fillEllipse(centre.getX() - knobRadius, centre.getY() - knobRadius, knobRadius * 2.0f, knobRadius * 2.0f);
     }
 
     knobRadius = std::max(knobRadius - 4.0f, 10.0f);
-    g.setColour(juce::Colour(0xff555555));
+    g.setColour(UITheme::Colours::borderStrong);
     g.drawEllipse(centre.getX() - knobRadius, centre.getY() - knobRadius, knobRadius * 2.0f, knobRadius * 2.0f, 1.5f);
 
     if (slider.isEnabled() && arcRadius > 10.0f) {
@@ -278,5 +284,5 @@ void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, b
 juce::Font LookAndFeel::getTextButtonFont(juce::TextButton& button, int buttonHeight) {
     // For small buttons (like +, x, ●), use a font that actually fits
     // without JUCE's drawFittedText truncating to "..."
-    return juce::Font(juce::FontOptions(juce::jmin(14.0f, static_cast<float>(buttonHeight) * 0.7f)));
+    return UITheme::Fonts::label().withHeight(juce::jmin(14.0f, static_cast<float>(buttonHeight) * 0.7f));
 }

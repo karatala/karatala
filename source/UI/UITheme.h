@@ -6,6 +6,7 @@
 namespace UITheme {
 namespace Colours {
     inline const juce::Colour bgApp = juce::Colours::black;
+    inline const juce::Colour bgEditor = juce::Colour(0xff1e1e1e);
     inline const juce::Colour bgPanel = juce::Colour(0xff1a1a1a);
     inline const juce::Colour bgPanelRaised = juce::Colour(0xff222222);
     inline const juce::Colour bgControl = juce::Colour(0xff333333);
@@ -18,6 +19,9 @@ namespace Colours {
     inline const juce::Colour textSecondary = juce::Colour(0xffcccccc);
     inline const juce::Colour textInfo = juce::Colour(0xffaaaaaa);
     inline const juce::Colour textMuted = juce::Colour(0xff888888);
+    inline const juce::Colour textSubtle = juce::Colour(0xff777777);
+    inline const juce::Colour textAccent = juce::Colour(0xff99bbdd);
+    inline const juce::Colour textAccentSoft = juce::Colour(0xff88aacc);
     inline const juce::Colour textSuccess = juce::Colours::lightgreen;
     inline const juce::Colour accent = juce::Colour(0xffcc4444);
     inline const juce::Colour accentSoft = juce::Colour(0xff88aacc);
@@ -28,6 +32,12 @@ namespace Colours {
     inline const juce::Colour padEmpty = juce::Colour(0xff333333);
     inline const juce::Colour listRowOdd = juce::Colour(0xff2e2e2e);
     inline const juce::Colour listSelection = juce::Colour(0xff3a5a8a);
+    inline const juce::Colour selectionStrong = juce::Colour(0xff3399FF);
+    inline const juce::Colour keyWhite = juce::Colour(0xffF4F4F4);
+    inline const juce::Colour keyWhiteText = juce::Colour(0xff222222);
+    inline const juce::Colour keyBlack = juce::Colour(0xff222222);
+    inline const juce::Colour keyBlackText = juce::Colour(0xffEEEEEE);
+    inline const juce::Colour transparent = juce::Colours::transparentBlack;
 
     inline juce::Colour instrumentType(KitLib::InstrumentSpec::Type type) {
         switch (type) {
@@ -67,6 +77,10 @@ namespace Fonts {
     inline juce::Font mono() {
         return juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName()));
     }
+
+    inline juce::Font sectionTitle() {
+        return juce::Font(juce::FontOptions(13.0f).withStyle("Bold"));
+    }
 }
 
 namespace Spacing {
@@ -86,5 +100,10 @@ namespace Sizes {
     constexpr int midiLearnButton = 22;
     constexpr int sliderTextBoxW = 40;
     constexpr int sliderTextBoxH = 20;
+    constexpr int compactPotTextBoxW = 38;
+    constexpr int compactPotTextBoxH = 12;
+    constexpr int settingsTextBoxW = 50;
+    constexpr int settingsIntTextBoxW = 40;
+    constexpr int settingsTextBoxH = 14;
 }
 }

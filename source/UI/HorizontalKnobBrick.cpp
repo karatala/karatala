@@ -1,17 +1,18 @@
 #include "HorizontalKnobBrick.h"
+#include "UITheme.h"
 
 HorizontalKnobBrick::HorizontalKnobBrick(const juce::String& name, double minVal, double maxVal, double interval, double initialValue, std::function<juce::String(double)> textFromValueFn) {
     this->titleLabel.setText(name, juce::dontSendNotification);
-    this->titleLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    this->titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff777777));
+    this->titleLabel.setFont(UITheme::Fonts::small());
+    this->titleLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSubtle);
     this->titleLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(this->titleLabel);
 
     this->pot.setSliderStyle(juce::Slider::RotaryVerticalDrag);
     this->pot.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
     this->pot.setRange(minVal, maxVal, interval);
-    this->pot.setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::red);
-    this->pot.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
+    this->pot.setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
+    this->pot.setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
 
     if (textFromValueFn)
         this->pot.textFromValueFunction = std::move(textFromValueFn);
@@ -19,8 +20,8 @@ HorizontalKnobBrick::HorizontalKnobBrick(const juce::String& name, double minVal
     this->pot.setValue(initialValue, juce::dontSendNotification);
     addAndMakeVisible(this->pot);
 
-    this->valueLabel.setFont(juce::Font(juce::FontOptions(13.0f)));
-    this->valueLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
+    this->valueLabel.setFont(UITheme::Fonts::label().withHeight(13.0f));
+    this->valueLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     this->valueLabel.setJustificationType(juce::Justification::centredLeft);
     this->valueLabel.setEditable(true);
     addAndMakeVisible(this->valueLabel);

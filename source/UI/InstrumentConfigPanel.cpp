@@ -10,8 +10,8 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& engine)
 
     auto setupHeader = [this](juce::Label& label, const juce::String& text) {
         label.setText(text, juce::dontSendNotification);
-        label.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
-        label.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
+        label.setFont(UITheme::Fonts::small().boldened());
+        label.setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
         label.setJustificationType(juce::Justification::centredLeft);
         this->contentComponent.addAndMakeVisible(label);
     };
@@ -133,15 +133,15 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     // Slot label
     row->slotLabel = std::make_unique<juce::Label>();
     row->slotLabel->setText(slotId, juce::dontSendNotification);
-    row->slotLabel->setFont(juce::Font(juce::FontOptions(10.0f).withStyle("Bold")));
-    row->slotLabel->setColour(juce::Label::textColourId, juce::Colours::white);
+    row->slotLabel->setFont(UITheme::Fonts::labelBold());
+    row->slotLabel->setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->contentComponent.addAndMakeVisible(*row->slotLabel);
 
     // Art label
     row->artLabel = std::make_unique<juce::Label>();
     row->artLabel->setText(artName, juce::dontSendNotification);
-    row->artLabel->setFont(juce::Font(juce::FontOptions(9.0f)));
-    row->artLabel->setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
+    row->artLabel->setFont(UITheme::Fonts::small());
+    row->artLabel->setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
     this->contentComponent.addAndMakeVisible(*row->artLabel);
 
     // Source button
@@ -151,7 +151,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
         row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].displayText());
     else
         row->sourceButton->setButtonText("--");
-    row->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    row->sourceButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     this->contentComponent.addAndMakeVisible(*row->sourceButton);
     row->sourceButton->onClick = [this, row] { this->showPickerPopup(row); };
 
@@ -161,7 +161,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     };
 
     // Tuning slider
-    row->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents), 40, 20);
+    row->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
     this->contentComponent.addAndMakeVisible(*row->tuningSlider);
     row->tuningSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->tuningSlider->onDragEnd = [this, row] {
@@ -169,7 +169,8 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     };
 
     // Attack slider
-    row->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, 40, 20, sentinelTextFn);
+    row->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0,
+                                                     UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, sentinelTextFn);
     this->contentComponent.addAndMakeVisible(*row->attackSlider);
     row->attackSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->attackSlider->onDragEnd = [this, row] {
@@ -177,7 +178,8 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     };
 
     // Decay slider
-    row->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, 40, 20, sentinelTextFn);
+    row->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0,
+                                                    UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, sentinelTextFn);
     this->contentComponent.addAndMakeVisible(*row->decaySlider);
     row->decaySlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->decaySlider->onDragEnd = [this, row] {
@@ -186,7 +188,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
 
     // Add layer button
     row->addButton = std::make_unique<juce::TextButton>("+");
-    row->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    row->addButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     row->addButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     this->contentComponent.addAndMakeVisible(*row->addButton);
     row->addButton->onClick = [this, row] {
@@ -205,7 +207,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
 
     // Remove button
     row->removeButton = std::make_unique<juce::TextButton>("x");
-    row->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    row->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     row->removeButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     this->contentComponent.addAndMakeVisible(*row->removeButton);
     row->removeButton->onClick = [this, row] {
@@ -299,7 +301,7 @@ void InstrumentConfigPanel::dismissPopup() {
 void InstrumentConfigPanel::layoutContent() {
     const int contentWidth = this->viewport.getWidth() - this->viewport.getScrollBarThickness();
     const int totalRows = this->tableRows.size();
-    const int headerH = 18;
+    const int headerH = UITheme::Spacing::rowCompact;
     const int totalHeight = headerH + totalRows * rowHeight + 4;
 
     this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 600), totalHeight);
@@ -336,16 +338,16 @@ void InstrumentConfigPanel::layoutContent() {
         // Slot label: show only on first row of each slot group
         bool showSlot = (row->slotId != lastSlotId);
         row->slotLabel->setText(showSlot ? row->slotId : "", juce::dontSendNotification);
-        row->slotLabel->setFont(juce::Font(juce::FontOptions(10.0f).withStyle("Bold")));
-        row->slotLabel->setColour(juce::Label::textColourId, juce::Colours::white);
+        row->slotLabel->setFont(UITheme::Fonts::labelBold());
+        row->slotLabel->setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
         row->slotLabel->setBounds(xPos, yPos, slotCol, rowHeight);
         xPos += slotCol;
 
         // Art label: show only on first row of each slot/art group
         bool showArt = showSlot || (row->artName != lastArtName);
         row->artLabel->setText(showArt ? row->artName : "", juce::dontSendNotification);
-        row->artLabel->setFont(juce::Font(juce::FontOptions(9.0f)));
-        row->artLabel->setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
+        row->artLabel->setFont(UITheme::Fonts::small());
+        row->artLabel->setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
         row->artLabel->setBounds(xPos, yPos, artCol, rowHeight);
         xPos += artCol;
 

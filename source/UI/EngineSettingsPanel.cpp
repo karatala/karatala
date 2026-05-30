@@ -11,19 +11,23 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
 
     // Group labels
     this->chokeGroupLabel.setText("Aftertouch Choke", juce::dontSendNotification);
-    this->chokeGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
+    this->chokeGroupLabel.setFont(UITheme::Fonts::sectionTitle());
+    this->chokeGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->contentComponent.addAndMakeVisible(this->chokeGroupLabel);
 
     this->tailGroupLabel.setText("Tail Shortening", juce::dontSendNotification);
-    this->tailGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
+    this->tailGroupLabel.setFont(UITheme::Fonts::sectionTitle());
+    this->tailGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->contentComponent.addAndMakeVisible(this->tailGroupLabel);
 
     this->hihatGroupLabel.setText("Hi-Hat / Polyphony", juce::dontSendNotification);
-    this->hihatGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
+    this->hihatGroupLabel.setFont(UITheme::Fonts::sectionTitle());
+    this->hihatGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->contentComponent.addAndMakeVisible(this->hihatGroupLabel);
 
     this->uiGridGroupLabel.setText("UI / Grid", juce::dontSendNotification);
-    this->uiGridGroupLabel.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("Bold")));
+    this->uiGridGroupLabel.setFont(UITheme::Fonts::sectionTitle());
+    this->uiGridGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->contentComponent.addAndMakeVisible(this->uiGridGroupLabel);
 
     // ── Aftertouch Choke ──
@@ -78,24 +82,24 @@ void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& t
     entry->defaultValue = static_cast<double>(*target);
 
     entry->label.setText(name, juce::dontSendNotification);
-    entry->label.setFont(juce::Font(juce::FontOptions(9.0f)));
+    entry->label.setFont(UITheme::Fonts::small());
     entry->label.setJustificationType(juce::Justification::centred);
-    entry->label.setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
+    entry->label.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     if (tooltip.isNotEmpty())
         entry->label.setTooltip(tooltip);
     this->contentComponent.addAndMakeVisible(entry->label);
 
     entry->pot.setRange(minVal, maxVal, interval);
     entry->pot.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    entry->pot.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 14);
-    entry->pot.setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::red);
-    entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
-    entry->pot.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
-    entry->pot.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    entry->pot.setTextBoxStyle(juce::Slider::TextBoxBelow, false, UITheme::Sizes::settingsTextBoxW, UITheme::Sizes::settingsTextBoxH);
+    entry->pot.setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
+    entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
+    entry->pot.setColour(juce::Slider::textBoxTextColourId, UITheme::Colours::textSecondary);
+    entry->pot.setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::transparent);
     entry->pot.onValueChange = [this] { this->onSettingChanged(); };
     this->contentComponent.addAndMakeVisible(entry->pot);
 
-    entry->resetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    entry->resetButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     entry->resetButton.setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     entry->resetButton.onClick = [entry = entry.get()] {
         entry->pot.setValue(entry->defaultValue, juce::sendNotificationSync);
@@ -111,24 +115,24 @@ void EngineSettingsPanel::addIntPot(const juce::String& name, const juce::String
     entry->defaultValue = static_cast<double>(*target);
 
     entry->label.setText(name, juce::dontSendNotification);
-    entry->label.setFont(juce::Font(juce::FontOptions(9.0f)));
+    entry->label.setFont(UITheme::Fonts::small());
     entry->label.setJustificationType(juce::Justification::centred);
-    entry->label.setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
+    entry->label.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     if (tooltip.isNotEmpty())
         entry->label.setTooltip(tooltip);
     this->contentComponent.addAndMakeVisible(entry->label);
 
     entry->pot.setRange(static_cast<double>(minVal), static_cast<double>(maxVal), 1.0);
     entry->pot.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    entry->pot.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 40, 14);
-    entry->pot.setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::red);
-    entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
-    entry->pot.setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
-    entry->pot.setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    entry->pot.setTextBoxStyle(juce::Slider::TextBoxBelow, false, UITheme::Sizes::settingsIntTextBoxW, UITheme::Sizes::settingsTextBoxH);
+    entry->pot.setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
+    entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
+    entry->pot.setColour(juce::Slider::textBoxTextColourId, UITheme::Colours::textSecondary);
+    entry->pot.setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::transparent);
     entry->pot.onValueChange = [this] { this->onSettingChanged(); };
     this->contentComponent.addAndMakeVisible(entry->pot);
 
-    entry->resetButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    entry->resetButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     entry->resetButton.setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     entry->resetButton.onClick = [entry = entry.get()] {
         entry->pot.setValue(entry->defaultValue, juce::sendNotificationSync);

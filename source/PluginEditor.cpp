@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "UI/UITheme.h"
 
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
@@ -70,25 +71,30 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     addChildComponent(this->applyButton);
 
     this->referencePanelLabel.setText("Reference", juce::dontSendNotification);
-    this->referencePanelLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
+    this->referencePanelLabel.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
+    this->referencePanelLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->referencePanelLabel.setJustificationType(juce::Justification::centredLeft);
 
     this->referencePanel.setMultiLine(true);
     this->referencePanel.setReadOnly(true);
     this->referencePanel.setScrollbarsShown(true);
-    this->referencePanel.setFont(juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName())));
-    this->referencePanel.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1e1e1e));
-    this->referencePanel.setColour(juce::TextEditor::textColourId, juce::Colour(0xffaaaaaa));
+    this->referencePanel.setFont(UITheme::Fonts::mono());
+    this->referencePanel.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgEditor);
+    this->referencePanel.setColour(juce::TextEditor::textColourId, UITheme::Colours::textInfo);
     this->referencePanel.setText(this->processorRef.getEngine().buildReferenceText(), false);
 
     this->instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
-    this->instrumentMapLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
+    this->instrumentMapLabel.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
+    this->instrumentMapLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
 
     this->instrumentMapEditor.setMultiLine(true);
     this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
     this->instrumentMapEditor.setScrollbarsShown(true);
-    this->instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", juce::Colours::grey);
+    this->instrumentMapEditor.setFont(UITheme::Fonts::mono());
+    this->instrumentMapEditor.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgEditor);
+    this->instrumentMapEditor.setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
+    this->instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", UITheme::Colours::textMuted);
     auto instrumentMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
     if (instrumentMapText.trim().isEmpty()) {
         instrumentMapText = this->processorRef.getEngine().getSuggestedInstrumentMapText();
@@ -237,12 +243,10 @@ void PluginEditor::resized() {
     auto area = getLocalBounds();
 
     // Sidebar on left
-    constexpr int sidebarWidth = 56;
-    this->sidebar.setBounds(area.removeFromLeft(sidebarWidth));
+    this->sidebar.setBounds(area.removeFromLeft(UITheme::Sizes::sidebarWidth));
 
     // Status bar at bottom
-    constexpr int statusBarHeight = 24;
-    this->statusBar.setBounds(area.removeFromBottom(statusBarHeight));
+    this->statusBar.setBounds(area.removeFromBottom(UITheme::Sizes::statusBarHeight));
 
     // Main area — remaining space
     auto mainArea = area;
@@ -254,16 +258,16 @@ void PluginEditor::resized() {
             break;
 
         case ViewMode::Raw: {
-            auto rawArea = mainArea.reduced(8);
+            auto rawArea = mainArea.reduced(UITheme::Spacing::md);
             auto buttonArea = rawArea.removeFromBottom(32);
             this->applyButton.setBounds(buttonArea.removeFromLeft(180));
 
-            const int gap = 8;
+            const int gap = UITheme::Spacing::md;
             const int refWidth = (rawArea.getWidth() - gap) / 3;
             auto refArea = rawArea.removeFromLeft(refWidth);
             rawArea.removeFromLeft(gap);
 
-            const int labelHeight = 18;
+            const int labelHeight = UITheme::Spacing::rowCompact;
             this->referencePanelLabel.setBounds(refArea.removeFromTop(labelHeight));
             this->referencePanel.setBounds(refArea);
             this->instrumentMapLabel.setBounds(rawArea.removeFromTop(labelHeight));

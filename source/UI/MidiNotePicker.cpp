@@ -1,4 +1,5 @@
 #include "MidiNotePicker.h"
+#include "UITheme.h"
 
 static const char* const NOTE_NAMES_PICKER[] = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
@@ -45,21 +46,21 @@ int MidiNotePicker::noteAt(int pairIdx, int row) {
 
 juce::Colour MidiNotePicker::cellBg(int note, bool isBlackKey, bool isHighlighted) {
     if (note < 0)
-        return juce::Colour(0xff444444);
+        return UITheme::Colours::borderMid;
 
     if (isHighlighted)
-        return juce::Colour(0xff3399FF);
+        return UITheme::Colours::selectionStrong;
 
-    return isBlackKey ? juce::Colour(0xff222222) : juce::Colour(0xffF4F4F4);
+    return isBlackKey ? UITheme::Colours::keyBlack : UITheme::Colours::keyWhite;
 }
 
 // ─── Paint ───────────────────────────────────────────────────────────────────
 
 void MidiNotePicker::paint(juce::Graphics& g) {
     // Dark grey background (visible as margins and gaps)
-    g.fillAll(juce::Colour(0xff444444));
+    g.fillAll(UITheme::Colours::borderMid);
 
-    auto mono = juce::Font(juce::FontOptions(juce::Font::getDefaultMonospacedFontName(), 10.5f, juce::Font::plain));
+    auto mono = UITheme::Fonts::mono().withHeight(10.5f);
     g.setFont(mono);
 
     for (int idx = 0; idx < COL_PAIRS; ++idx) {
@@ -78,12 +79,12 @@ void MidiNotePicker::paint(juce::Graphics& g) {
             auto bg = cellBg(note, isBlack, highlighted);
             g.setColour(bg);
             g.fillRect(nameCell);
-            g.setColour(note >= 0 ? (highlighted ? juce::Colour(0xff3399FF) : juce::Colour(0xffF4F4F4))
-                                  : juce::Colour(0xff444444));
+            g.setColour(note >= 0 ? (highlighted ? UITheme::Colours::selectionStrong : UITheme::Colours::keyWhite)
+                                  : UITheme::Colours::borderMid);
             g.fillRect(numCell);
 
             // Horizontal separator
-            g.setColour(juce::Colour(0xff444444));
+            g.setColour(UITheme::Colours::borderMid);
             g.fillRect(px, nameCell.getBottom() - 1, PAIR_W, 1);
 
             if (note < 0) continue;
@@ -95,11 +96,11 @@ void MidiNotePicker::paint(juce::Graphics& g) {
                 name += juce::String((note / 12) - 2);
 
             // Name text: white on black/highlighted keys, dark on white keys
-            g.setColour((isBlack || highlighted) ? juce::Colour(0xffEEEEEE) : juce::Colour(0xff222222));
+            g.setColour((isBlack || highlighted) ? UITheme::Colours::keyBlackText : UITheme::Colours::keyWhiteText);
             g.drawText(name, nameCell.withTrimmedLeft(4), juce::Justification::centredLeft);
 
             // Number text: always dark
-            g.setColour(juce::Colour(0xff222222));
+            g.setColour(UITheme::Colours::keyWhiteText);
             g.drawText(juce::String(note), numCell.withTrimmedRight(3), juce::Justification::centredRight);
         }
     }

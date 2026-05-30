@@ -98,12 +98,12 @@ std::unique_ptr<juce::Slider> createCompactPot(
 
     auto pot = std::make_unique<juce::Slider>();
     pot->setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    pot->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 38, 12);
+    pot->setTextBoxStyle(juce::Slider::TextBoxBelow, false, UITheme::Sizes::compactPotTextBoxW, UITheme::Sizes::compactPotTextBoxH);
     pot->setRange(minVal, maxVal, interval);
-    pot->setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::red);
-    pot->setColour(juce::Slider::rotarySliderOutlineColourId, juce::Colour(0xff444444));
-    pot->setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
-    pot->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
+    pot->setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
+    pot->setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
+    pot->setColour(juce::Slider::textBoxTextColourId, UITheme::Colours::textSecondary);
+    pot->setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::transparent);
 
     if (textFromValueFn)
         pot->textFromValueFunction = textFromValueFn;

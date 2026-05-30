@@ -4,6 +4,7 @@
 #include "../Engine/DrumKitEngine.h"
 #include "UITypes.h"
 #include "SourcePickerPopup.h"
+#include "UITheme.h"
 
 class InstrumentConfigPanel : public juce::Component {
 public:
@@ -69,7 +70,7 @@ private:
     int findSourceIndex(const juce::String& fullPath) const;
     void updateRemoveButtonVisibility();
 
-    static constexpr int rowHeight = 22;
+    static constexpr int rowHeight = UITheme::Spacing::rowNormal;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentConfigPanel)
 };

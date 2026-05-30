@@ -1,4 +1,5 @@
 #include "MidiMapTable.h"
+#include "UITheme.h"
 
 MidiMapTable::MidiMapTable() {
     this->viewport.setViewedComponent(&this->contentComponent, false);
@@ -26,16 +27,16 @@ void MidiMapTable::buildRows() {
 
         this->contentComponent.addAndMakeVisible(row->articulationLabel);
 
-        row->noteButton1.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
-        row->noteButton2.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+        row->noteButton1.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+        row->noteButton2.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
         this->contentComponent.addAndMakeVisible(row->noteButton1);
         this->contentComponent.addAndMakeVisible(row->noteButton2);
 
         row->noteButton1.onClick = [this, rowIdx] { this->showMidiNotePicker(rowIdx, 0); };
         row->noteButton2.onClick = [this, rowIdx] { this->showMidiNotePicker(rowIdx, 1); };
 
-        row->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
-        row->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+        row->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
+        row->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
         this->contentComponent.addAndMakeVisible(row->learnButton1);
         this->contentComponent.addAndMakeVisible(row->learnButton2);
 
@@ -59,11 +60,13 @@ void MidiMapTable::buildRows() {
             firstRow = false;
 
             row->instrumentLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
-            row->instrumentLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
+            row->instrumentLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+            row->instrumentLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
             row->instrumentLabel.setJustificationType(juce::Justification::centredLeft);
 
             row->articulationLabel.setText(art.codeRaw, juce::dontSendNotification);
-            row->articulationLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
+            row->articulationLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+            row->articulationLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
             row->articulationLabel.setJustificationType(juce::Justification::centredLeft);
 
             int rowIdx = static_cast<int>(this->rows.size());
@@ -83,12 +86,13 @@ void MidiMapTable::buildRows() {
             firstRow = false;
 
             row->instrumentLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
-            row->instrumentLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
+            row->instrumentLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+            row->instrumentLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
             row->instrumentLabel.setJustificationType(juce::Justification::centredLeft);
 
             row->articulationLabel.setText(row->articulationCode, juce::dontSendNotification);
-            row->articulationLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
-            row->articulationLabel.setColour(juce::Label::textColourId, juce::Colour(0xff88aacc));
+            row->articulationLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+            row->articulationLabel.setColour(juce::Label::textColourId, UITheme::Colours::textAccentSoft);
             row->articulationLabel.setJustificationType(juce::Justification::centredLeft);
 
             int rowIdx = static_cast<int>(this->rows.size());
@@ -162,7 +166,7 @@ void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
     // Highlight active learn button
     auto& row = *this->rows[static_cast<size_t>(rowIdx)];
     auto& btn = (slotIdx == 0) ? row.learnButton1 : row.learnButton2;
-    btn.setColour(juce::TextButton::textColourOffId, juce::Colours::yellow);
+    btn.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnActive);
     btn.repaint();
 
     if (this->onMidiLearnStateChanged)
@@ -172,8 +176,8 @@ void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
 void MidiMapTable::stopMidiLearn() {
     if (this->activeLearningRow >= 0 && this->activeLearningRow < static_cast<int>(this->rows.size())) {
         auto& row = *this->rows[static_cast<size_t>(this->activeLearningRow)];
-        row.learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
-        row.learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+        row.learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
+        row.learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
         row.learnButton1.repaint();
         row.learnButton2.repaint();
     }
@@ -196,7 +200,7 @@ void MidiMapTable::midiLearnNoteReceived(int midiNote) {
 }
 
 void MidiMapTable::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(0xff1e1e1e));
+    g.fillAll(UITheme::Colours::bgEditor);
 }
 
 void MidiMapTable::resized() {

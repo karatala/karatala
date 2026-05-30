@@ -1,4 +1,5 @@
 #include "PadContextPopup.h"
+#include "UITheme.h"
 
 // ─── MIDI utility ─────────────────────────────────────────────────────────────
 
@@ -51,8 +52,8 @@ void PadContextPopup::midiLearnNoteReceived(int midiNote) {
     if (this->activeLearningSlot < 0) return;
     this->applyNoteToSlot(this->activeLearningSlot, midiNote);
     this->activeLearningSlot = -1;
-    this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
-    this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+    this->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
+    this->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
     if (this->onMidiLearnStateChanged)
         this->onMidiLearnStateChanged(false);
 }
@@ -97,35 +98,35 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     // Header: "Kick / center"
     juce::String headerText = (slot.display.isNotEmpty() ? slot.display : slot.id) + " / " + this->artName;
     this->slotLabel.setText(headerText, juce::dontSendNotification);
-    this->slotLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
-    this->slotLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    this->slotLabel.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
+    this->slotLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     addAndMakeVisible(this->slotLabel);
 
     // MIDI inline
     this->midiHeaderLabel.setText("MIDI:", juce::dontSendNotification);
-    this->midiHeaderLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
-    this->midiHeaderLabel.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
+    this->midiHeaderLabel.setFont(UITheme::Fonts::small());
+    this->midiHeaderLabel.setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
     addAndMakeVisible(this->midiHeaderLabel);
 
     // Note buttons (open the custom MidiNotePicker grid when clicked)
     this->noteButton1.setButtonText("--");
     this->noteButton2.setButtonText("--");
     for (auto* btn : { &this->noteButton1, &this->noteButton2 })
-        btn->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+        btn->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     addAndMakeVisible(this->noteButton1);
     addAndMakeVisible(this->noteButton2);
     this->noteButton1.onClick = [this] { this->showMidiNotePicker(0); };
     this->noteButton2.onClick = [this] { this->showMidiNotePicker(1); };
 
-    this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
-    this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+    this->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
+    this->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
     addAndMakeVisible(this->learnButton1);
     addAndMakeVisible(this->learnButton2);
     this->learnButton1.onClick = [this] {
         bool wasLearning = (this->activeLearningSlot >= 0);
         this->activeLearningSlot = (this->activeLearningSlot == 0) ? -1 : 0;
-        this->learnButton1.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 0 ? juce::Colours::yellow : juce::Colours::red);
-        this->learnButton2.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+        this->learnButton1.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 0 ? UITheme::Colours::midiLearnActive : UITheme::Colours::midiLearnIdle);
+        this->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
         bool nowLearning = (this->activeLearningSlot >= 0);
         if (nowLearning != wasLearning && this->onMidiLearnStateChanged)
             this->onMidiLearnStateChanged(nowLearning);
@@ -133,8 +134,8 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->learnButton2.onClick = [this] {
         bool wasLearning = (this->activeLearningSlot >= 0);
         this->activeLearningSlot = (this->activeLearningSlot == 1) ? -1 : 1;
-        this->learnButton2.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 1 ? juce::Colours::yellow : juce::Colours::red);
-        this->learnButton1.setColour(juce::TextButton::textColourOffId, juce::Colours::red);
+        this->learnButton2.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 1 ? UITheme::Colours::midiLearnActive : UITheme::Colours::midiLearnIdle);
+        this->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
         bool nowLearning = (this->activeLearningSlot >= 0);
         if (nowLearning != wasLearning && this->onMidiLearnStateChanged)
             this->onMidiLearnStateChanged(nowLearning);
@@ -143,7 +144,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->syncNoteButtons();
 
     // "+ Layer" button in header
-    this->addLayerButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    this->addLayerButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     this->addLayerButton.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(this->addLayerButton);
     this->addLayerButton.onClick = [this] {
@@ -230,15 +231,15 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Source button (opens picker)
     layer->sourceButton = std::make_unique<juce::TextButton>();
-    layer->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2a2a2a));
+    layer->sourceButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControlAlt);
     layer->sourceButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(*layer->sourceButton);
     layer->sourceButton->onClick = [this, layer] { this->showSourcePicker(layer); };
 
     // Source detail label (multi-line: kit / inst / art)
     layer->sourceDetailLabel = std::make_unique<juce::Label>();
-    layer->sourceDetailLabel->setFont(juce::Font(juce::FontOptions(11.0f)));
-    layer->sourceDetailLabel->setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
+    layer->sourceDetailLabel->setFont(UITheme::Fonts::table().withHeight(11.0f));
+    layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
     layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
     addAndMakeVisible(*layer->sourceDetailLabel);
@@ -291,10 +292,10 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->flipLRButton = std::make_unique<juce::TextButton>("L/R");
     layer->flipLRButton->setClickingTogglesState(true);
     layer->flipLRButton->setToggleState(flipLR, juce::dontSendNotification);
-    layer->flipLRButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
-    layer->flipLRButton->setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff883333));
-    layer->flipLRButton->setColour(juce::TextButton::textColourOffId, juce::Colour(0xff888888));
-    layer->flipLRButton->setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    layer->flipLRButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    layer->flipLRButton->setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::accentWarning);
+    layer->flipLRButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
+    layer->flipLRButton->setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     layer->flipLRButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(*layer->flipLRButton);
     layer->flipLRButton->onClick = [this] {
@@ -306,10 +307,10 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->flipPhaseButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x98")); // Ø
     layer->flipPhaseButton->setClickingTogglesState(true);
     layer->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
-    layer->flipPhaseButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
-    layer->flipPhaseButton->setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff883333));
-    layer->flipPhaseButton->setColour(juce::TextButton::textColourOffId, juce::Colour(0xff888888));
-    layer->flipPhaseButton->setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+    layer->flipPhaseButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    layer->flipPhaseButton->setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::accentWarning);
+    layer->flipPhaseButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
+    layer->flipPhaseButton->setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     layer->flipPhaseButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(*layer->flipPhaseButton);
     layer->flipPhaseButton->onClick = [this] {
@@ -338,8 +339,8 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Remove button (×)
     layer->removeButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x97")); // ×
-    layer->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
-    layer->removeButton->setColour(juce::TextButton::textColourOffId, juce::Colour(0xff888888));
+    layer->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
+    layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
     layer->removeButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(*layer->removeButton);
     layer->removeButton->onClick = [this, layer] {
@@ -565,13 +566,13 @@ void PadContextPopup::dismissSourcePicker() {
 // ─── Paint / Layout ───────────────────────────────────────────────────────────
 
 void PadContextPopup::paint(juce::Graphics& g) {
-    g.setColour(juce::Colour(0xff222222));
+    g.setColour(UITheme::Colours::bgPanelRaised);
     g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
-    g.setColour(juce::Colour(0xff555555));
+    g.setColour(UITheme::Colours::borderStrong);
     g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
 
     // Draw group backgrounds for each layer
-    g.setColour(juce::Colour(0xff1a1a1a));
+    g.setColour(UITheme::Colours::bgPanel);
     for (const auto* layer : this->layerRows) {
         if (!layer->mainGroupBounds.isEmpty())
             g.fillRoundedRectangle(layer->mainGroupBounds.toFloat(), 4.0f);
