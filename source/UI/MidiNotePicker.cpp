@@ -78,7 +78,7 @@ void MidiNotePicker::paint(juce::Graphics& g) {
             auto bg = cellBg(note, isBlack, highlighted);
             g.setColour(bg);
             g.fillRect(nameCell);
-            g.setColour(note >= 0 ? (highlighted ? juce::Colour(0xffAAD4FF) : juce::Colour(0xffF4F4F4))
+            g.setColour(note >= 0 ? (highlighted ? juce::Colour(0xff3399FF) : juce::Colour(0xffF4F4F4))
                                   : juce::Colour(0xff444444));
             g.fillRect(numCell);
 

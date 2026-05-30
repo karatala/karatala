@@ -610,8 +610,8 @@ void PadContextPopup::resized() {
     // Layer header
     this->layerHeaderLabel.setBounds(area.removeFromTop(14));
 
-    const int potW = 44;
-    const int potH = 48; // label(11) + knob + value text
+    const int potW = 80;
+    const int potH = 36;
     const int flipBtnW = 20;
     const int btnSide = 18;
     const int layerRowH = potH;

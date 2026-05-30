@@ -1,9 +1,6 @@
 #include "LabeledPot.h"
 
-LabeledPot::LabeledPot(const juce::String& name,
-                       double minVal, double maxVal, double interval, double initialValue,
-                       std::function<juce::String(double)> textFromValueFn)
-{
+LabeledPot::LabeledPot(const juce::String& name, double minVal, double maxVal, double interval, double initialValue, std::function<juce::String(double)> textFromValueFn) {
     this->titleLabel.setText(name, juce::dontSendNotification);
     this->titleLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
     this->titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff777777));
@@ -22,7 +19,7 @@ LabeledPot::LabeledPot(const juce::String& name,
     this->pot.setValue(initialValue, juce::dontSendNotification);
     addAndMakeVisible(this->pot);
 
-    this->valueLabel.setFont(juce::Font(juce::FontOptions(11.0f)));
+    this->valueLabel.setFont(juce::Font(juce::FontOptions(13.0f)));
     this->valueLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
     this->valueLabel.setJustificationType(juce::Justification::centredLeft);
     this->valueLabel.setEditable(true);
@@ -36,12 +33,10 @@ LabeledPot::LabeledPot(const juce::String& name,
 
     this->pot.onValueChange = [this] {
         this->updateValueText();
-        if (this->onValueChange)
-            this->onValueChange();
+        if (this->onValueChange) this->onValueChange();
     };
     this->pot.onDragEnd = [this] {
-        if (this->onDragEnd)
-            this->onDragEnd();
+        if (this->onDragEnd) this->onDragEnd();
     };
 }
 
@@ -51,12 +46,10 @@ void LabeledPot::updateValueText() {
 
 void LabeledPot::resized() {
     auto area = getLocalBounds();
-    // Right half: pot knob (square, filling height)
-    const int potSize = area.getHeight();
+    const int potSize = juce::jmin(area.getHeight(), area.getWidth() * 4 / 5);
     auto potArea = area.removeFromRight(potSize);
     this->pot.setBounds(potArea);
-    // Left half: label on top, value on bottom
     auto leftArea = area;
-    this->titleLabel.setBounds(leftArea.removeFromTop(leftArea.getHeight() / 2));
+    this->titleLabel.setBounds(leftArea.removeFromTop(leftArea.getHeight() / 3));
     this->valueLabel.setBounds(leftArea);
 }
