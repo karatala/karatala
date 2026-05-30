@@ -237,9 +237,9 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Source detail label (multi-line: kit / inst / art)
     layer->sourceDetailLabel = std::make_unique<juce::Label>();
-    layer->sourceDetailLabel->setFont(juce::Font(juce::FontOptions(10.0f)));
+    layer->sourceDetailLabel->setFont(juce::Font(juce::FontOptions(11.0f)));
     layer->sourceDetailLabel->setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
-    layer->sourceDetailLabel->setJustificationType(juce::Justification::centredLeft);
+    layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
     layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
     addAndMakeVisible(*layer->sourceDetailLabel);
     this->updateSourceDisplay(layer);
@@ -361,15 +361,15 @@ void PadContextPopup::updateRemoveButtonVisibility() {
 void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
     if (layer->selectedSourceIndex >= 0) {
         const auto& src = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
-        juce::String detail = src.kitDisplayName + "\n" + src.instCode;
+        juce::String line1 = src.kitDisplayName + "  " + juce::String::charToString(0x25BC);
+        juce::String detail = line1 + "\n" + src.instCode;
         if (src.artCode.isNotEmpty())
             detail += "\n" + src.artCode;
         layer->sourceDetailLabel->setText(detail, juce::dontSendNotification);
-        layer->sourceButton->setButtonText(src.kitDisplayName);
     } else {
-        layer->sourceDetailLabel->setText("--", juce::dontSendNotification);
-        layer->sourceButton->setButtonText("--");
+        layer->sourceDetailLabel->setText("--  " + juce::String::charToString(0x25BC), juce::dontSendNotification);
     }
+    layer->sourceButton->setButtonText("");
 }
 
 int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
@@ -575,6 +575,15 @@ void PadContextPopup::paint(juce::Graphics& g) {
     g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
     g.setColour(juce::Colour(0xff555555));
     g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
+
+    // Draw group backgrounds for each layer
+    g.setColour(juce::Colour(0xff1a1a1a));
+    for (const auto* layer : this->layerRows) {
+        if (!layer->mainGroupBounds.isEmpty())
+            g.fillRoundedRectangle(layer->mainGroupBounds.toFloat(), 4.0f);
+        if (!layer->bleedGroupBounds.isEmpty())
+            g.fillRoundedRectangle(layer->bleedGroupBounds.toFloat(), 4.0f);
+    }
 }
 
 void PadContextPopup::resized() {
@@ -601,48 +610,61 @@ void PadContextPopup::resized() {
     this->slotLabel.setBounds(headerRow);
     area.removeFromTop(6);
 
-    // Layer rows
-    const int potW = 80;
-    const int potH = 36;
-    const int flipColW = 28;
-    const int removeW = 18;
-    const int sourceW = 180;
-    const int layerRowH = potH * 2 + 4; // source card height = 2 pot rows
-    const int bleedPotW = 80;
+    // Layer rows — single row per layer (vertical pot layout):
+    // [×] [Source Card] | [Tuning|Attack|Decay|Gain|L/R+Ø] | [Bleed1|Bleed2|...]
+    const int potW = 50;
+    const int potH = 56; // 12(title) + 28(knob) + 14(value) + 2(gap)
+    const int flipColW = 26;
+    const int removeW = 16;
+    const int sourceW = 170;
+    const int layerRowH = potH + 8; // pot height + padding
+    const int bleedPotW = 50;
+    const int groupGap = 6;
+    const int groupPad = 4;
 
     for (auto* layer : this->layerRows) {
         auto layerArea = area.removeFromTop(layerRowH);
+        auto layerContent = layerArea.reduced(0, 4);
 
-        // Remove button (×) on far left
+        // Remove button (×) on far left, vertically centered
         if (layer->removeButton->isVisible())
-            layer->removeButton->setBounds(layerArea.removeFromLeft(removeW).reduced(0, (layerRowH - 18) / 2));
+            layer->removeButton->setBounds(layerContent.removeFromLeft(removeW).withSizeKeepingCentre(14, 14));
 
-        // Source card (left)
-        auto srcArea = layerArea.removeFromLeft(sourceW);
+        // Source card
+        auto srcArea = layerContent.removeFromLeft(sourceW);
         layer->sourceButton->setBounds(srcArea);
-        layer->sourceDetailLabel->setBounds(srcArea.reduced(4, 2));
+        layer->sourceDetailLabel->setBounds(srcArea.reduced(6, 4));
 
-        layerArea.removeFromLeft(4); // gap
+        layerContent.removeFromLeft(groupGap);
 
-        // Main pots row (top half): Tuning, Attack, Decay, Gain + flip buttons
-        auto topRow = layerArea.removeFromTop(potH);
-        layer->tuningPot->setBounds(topRow.removeFromLeft(potW));
-        layer->attackPot->setBounds(topRow.removeFromLeft(potW));
-        layer->decayPot->setBounds(topRow.removeFromLeft(potW));
-        layer->gainPot->setBounds(topRow.removeFromLeft(potW));
-        // Flip buttons stacked vertically in remaining space
-        auto flipArea = topRow.removeFromLeft(flipColW);
-        layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 1));
-        layer->flipPhaseButton->setBounds(flipArea.reduced(2, 1));
+        // Main params group: Tuning, Attack, Decay, Gain + L/R, Ø
+        const int mainGroupW = potW * 4 + flipColW + groupPad * 2;
+        auto mainGroupArea = layerContent.removeFromLeft(mainGroupW);
+        layer->mainGroupBounds = mainGroupArea;
+        auto mainInner = mainGroupArea.reduced(groupPad, 0);
+        layer->tuningPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+        layer->attackPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+        layer->decayPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+        layer->gainPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+        auto flipArea = mainInner.removeFromLeft(flipColW).withHeight(potH);
+        layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 4));
+        layer->flipPhaseButton->setBounds(flipArea.reduced(2, 4));
 
-        // Bleed pots row (bottom half)
-        auto bottomRow = layerArea.removeFromTop(potH);
+        layerContent.removeFromLeft(groupGap);
+
+        // Bleed group
         const int numBleeds = static_cast<int>(layer->micBleeds.size());
-        const int actualBleedW = numBleeds > 0 ? juce::jmin(bleedPotW, bottomRow.getWidth() / numBleeds) : bleedPotW;
-        for (auto& bleedCtrl : layer->micBleeds) {
-            bleedCtrl->bleedPot->setBounds(bottomRow.removeFromLeft(actualBleedW));
+        if (numBleeds > 0) {
+            const int bleedGroupW = juce::jmin(layerContent.getWidth(), numBleeds * bleedPotW + groupPad * 2);
+            auto bleedGroupArea = layerContent.removeFromLeft(bleedGroupW);
+            layer->bleedGroupBounds = bleedGroupArea;
+            auto bleedInner = bleedGroupArea.reduced(groupPad, 0);
+            const int actualBleedW = bleedInner.getWidth() / numBleeds;
+            for (auto& bleedCtrl : layer->micBleeds) {
+                bleedCtrl->bleedPot->setBounds(bleedInner.removeFromLeft(actualBleedW).withHeight(potH));
+            }
         }
 
-        area.removeFromTop(4); // gap between layers
+        area.removeFromTop(2); // gap between layers
     }
 }

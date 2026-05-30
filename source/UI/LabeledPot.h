@@ -3,12 +3,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 /**
- * Horizontal composite: left half = title label (top) + editable value (bottom),
- * right half = rotary pot knob.
+ * Vertical composite: title on top, rotary knob in center, value on bottom.
  *
  * Layout:
- *   [Label ] [ pot ]
- *   [value ] [ pot ]
+ *   [ title ]
+ *   [  pot  ]
+ *   [ value ]
  */
 class LabeledPot : public juce::Component {
 public:

@@ -79,6 +79,9 @@ private:
         };
         std::vector<std::unique_ptr<MicBleedControl>> micBleeds;
         std::unique_ptr<juce::TextButton> removeButton;
+        // Cached bounds for painting group backgrounds
+        juce::Rectangle<int> mainGroupBounds;
+        juce::Rectangle<int> bleedGroupBounds;
     };
     juce::OwnedArray<LayerRow> layerRows;
 

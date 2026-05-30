@@ -4,7 +4,7 @@ LabeledPot::LabeledPot(const juce::String& name, double minVal, double maxVal, d
     this->titleLabel.setText(name, juce::dontSendNotification);
     this->titleLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
     this->titleLabel.setColour(juce::Label::textColourId, juce::Colour(0xff777777));
-    this->titleLabel.setJustificationType(juce::Justification::centredLeft);
+    this->titleLabel.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(this->titleLabel);
 
     this->pot.setSliderStyle(juce::Slider::RotaryVerticalDrag);
@@ -19,9 +19,9 @@ LabeledPot::LabeledPot(const juce::String& name, double minVal, double maxVal, d
     this->pot.setValue(initialValue, juce::dontSendNotification);
     addAndMakeVisible(this->pot);
 
-    this->valueLabel.setFont(juce::Font(juce::FontOptions(13.0f)));
+    this->valueLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
     this->valueLabel.setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
-    this->valueLabel.setJustificationType(juce::Justification::centredLeft);
+    this->valueLabel.setJustificationType(juce::Justification::centred);
     this->valueLabel.setEditable(true);
     addAndMakeVisible(this->valueLabel);
     this->updateValueText();
@@ -46,10 +46,11 @@ void LabeledPot::updateValueText() {
 
 void LabeledPot::resized() {
     auto area = getLocalBounds();
-    const int potSize = juce::jmin(area.getHeight(), area.getWidth() * 4 / 5);
-    auto potArea = area.removeFromRight(potSize);
-    this->pot.setBounds(potArea);
-    auto leftArea = area;
-    this->titleLabel.setBounds(leftArea.removeFromTop(leftArea.getHeight() / 3));
-    this->valueLabel.setBounds(leftArea);
+    const int titleH = 12;
+    const int valueH = 14;
+    this->titleLabel.setBounds(area.removeFromTop(titleH));
+    this->valueLabel.setBounds(area.removeFromBottom(valueH));
+    // Remaining center area for the knob (square, centered)
+    const int knobSize = juce::jmin(area.getWidth(), area.getHeight());
+    this->pot.setBounds(area.withSizeKeepingCentre(knobSize, knobSize));
 }
