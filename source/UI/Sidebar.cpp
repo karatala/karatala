@@ -1,5 +1,7 @@
 #include "Sidebar.h"
 
+#include "UIHelpers.h"
+
 Sidebar::Sidebar() {
     this->modeButtons.add(new ModeButton(ViewMode::Zen, "Zen"));
     this->modeButtons.add(new ModeButton(ViewMode::Zoned, "Zone"));
@@ -17,47 +19,33 @@ Sidebar::Sidebar() {
         addAndMakeVisible(btn);
     }
 
-    const auto accentColour = UITheme::Colours::accent;
-
     // HiHat openness knob
-    this->hihatLabel.setFont(UITheme::Fonts::label());
-    this->hihatLabel.setJustificationType(juce::Justification::centred);
-    this->hihatLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+    UIHelpers::configureValueLabel(this->hihatLabel);
     addAndMakeVisible(this->hihatLabel);
 
-    this->hihatKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    this->hihatKnob.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
+    UIHelpers::configureRotarySlider(this->hihatKnob, juce::Slider::NoTextBox, 0, 0);
     this->hihatKnob.setRange(0.0, 127.0, 1.0);
     this->hihatKnob.setValue(0.0, juce::dontSendNotification);
-    this->hihatKnob.setColour(juce::Slider::rotarySliderFillColourId, accentColour);
     this->hihatKnob.onValueChange = [this] { this->updateKnobLabels(); };
     addAndMakeVisible(this->hihatKnob);
 
     // Velocity knob
-    this->velocityLabel.setFont(UITheme::Fonts::label());
-    this->velocityLabel.setJustificationType(juce::Justification::centred);
-    this->velocityLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+    UIHelpers::configureValueLabel(this->velocityLabel);
     addAndMakeVisible(this->velocityLabel);
 
-    this->velocityKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    this->velocityKnob.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
+    UIHelpers::configureRotarySlider(this->velocityKnob, juce::Slider::NoTextBox, 0, 0);
     this->velocityKnob.setRange(1.0, 127.0, 1.0);
     this->velocityKnob.setValue(100.0, juce::dontSendNotification);
-    this->velocityKnob.setColour(juce::Slider::rotarySliderFillColourId, accentColour);
     this->velocityKnob.onValueChange = [this] { this->updateKnobLabels(); };
     addAndMakeVisible(this->velocityKnob);
 
     // Round-robin lock knob
-    this->rrLockLabel.setFont(UITheme::Fonts::label());
-    this->rrLockLabel.setJustificationType(juce::Justification::centred);
-    this->rrLockLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+    UIHelpers::configureValueLabel(this->rrLockLabel);
     addAndMakeVisible(this->rrLockLabel);
 
-    this->rrLockKnob.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    this->rrLockKnob.setTextBoxStyle(juce::Slider::NoTextBox, true, 0, 0);
+    UIHelpers::configureRotarySlider(this->rrLockKnob, juce::Slider::NoTextBox, 0, 0);
     this->rrLockKnob.setRange(0.0, 8.0, 1.0);
     this->rrLockKnob.setValue(0.0, juce::dontSendNotification);
-    this->rrLockKnob.setColour(juce::Slider::rotarySliderFillColourId, accentColour);
     this->rrLockKnob.onValueChange = [this] { this->updateKnobLabels(); };
     addAndMakeVisible(this->rrLockKnob);
 

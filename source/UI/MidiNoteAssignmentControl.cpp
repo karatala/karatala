@@ -1,8 +1,10 @@
 #include "MidiNoteAssignmentControl.h"
 
+#include "UIHelpers.h"
+
 MidiNoteAssignmentControl::MidiNoteAssignmentControl() {
-    this->noteButton1.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    this->noteButton2.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    UIHelpers::configureControlButton(this->noteButton1);
+    UIHelpers::configureControlButton(this->noteButton2);
     addAndMakeVisible(this->noteButton1);
     addAndMakeVisible(this->noteButton2);
 

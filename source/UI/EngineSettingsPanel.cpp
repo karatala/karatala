@@ -1,5 +1,18 @@
 #include "EngineSettingsPanel.h"
 #include "../Engine/DrumKitEngine.h"
+#include "UIHelpers.h"
+
+namespace {
+
+ParameterPot::LayoutOptions makeSettingsPotLayout(bool isInteger) {
+    ParameterPot::LayoutOptions options;
+    options.valueDisplay = ParameterPot::ValueDisplay::TextBoxBelow;
+    options.textBoxWidth = isInteger ? UITheme::Sizes::settingsIntTextBoxW : UITheme::Sizes::settingsTextBoxW;
+    options.textBoxHeight = UITheme::Sizes::settingsTextBoxH;
+    return options;
+}
+
+} // namespace
 
 EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     : engine(engine) {
@@ -11,23 +24,19 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
 
     // Group labels
     this->chokeGroupLabel.setText("Aftertouch Choke", juce::dontSendNotification);
-    this->chokeGroupLabel.setFont(UITheme::Fonts::sectionTitle());
-    this->chokeGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
+    UIHelpers::configureSectionLabel(this->chokeGroupLabel);
     this->contentComponent.addAndMakeVisible(this->chokeGroupLabel);
 
     this->tailGroupLabel.setText("Tail Shortening", juce::dontSendNotification);
-    this->tailGroupLabel.setFont(UITheme::Fonts::sectionTitle());
-    this->tailGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
+    UIHelpers::configureSectionLabel(this->tailGroupLabel);
     this->contentComponent.addAndMakeVisible(this->tailGroupLabel);
 
     this->hihatGroupLabel.setText("Hi-Hat / Polyphony", juce::dontSendNotification);
-    this->hihatGroupLabel.setFont(UITheme::Fonts::sectionTitle());
-    this->hihatGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
+    UIHelpers::configureSectionLabel(this->hihatGroupLabel);
     this->contentComponent.addAndMakeVisible(this->hihatGroupLabel);
 
     this->uiGridGroupLabel.setText("UI / Grid", juce::dontSendNotification);
-    this->uiGridGroupLabel.setFont(UITheme::Fonts::sectionTitle());
-    this->uiGridGroupLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
+    UIHelpers::configureSectionLabel(this->uiGridGroupLabel);
     this->contentComponent.addAndMakeVisible(this->uiGridGroupLabel);
 
     // ── Aftertouch Choke ──
@@ -81,28 +90,21 @@ void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& t
     entry->target = target;
     entry->defaultValue = static_cast<double>(*target);
 
-    entry->label.setText(name, juce::dontSendNotification);
-    entry->label.setFont(UITheme::Fonts::small());
-    entry->label.setJustificationType(juce::Justification::centred);
-    entry->label.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
-    if (tooltip.isNotEmpty())
-        entry->label.setTooltip(tooltip);
-    this->contentComponent.addAndMakeVisible(entry->label);
+    entry->parameterPot = std::make_unique<ParameterPot>(name,
+                                                         static_cast<double>(minVal),
+                                                         static_cast<double>(maxVal),
+                                                         static_cast<double>(interval),
+                                                         entry->defaultValue,
+                                                         nullptr,
+                                                         makeSettingsPotLayout(false));
+    entry->parameterPot->setTooltipText(tooltip);
+    entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
+    this->contentComponent.addAndMakeVisible(*entry->parameterPot);
 
-    entry->pot.setRange(minVal, maxVal, interval);
-    entry->pot.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    entry->pot.setTextBoxStyle(juce::Slider::TextBoxBelow, false, UITheme::Sizes::settingsTextBoxW, UITheme::Sizes::settingsTextBoxH);
-    entry->pot.setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
-    entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
-    entry->pot.setColour(juce::Slider::textBoxTextColourId, UITheme::Colours::textSecondary);
-    entry->pot.setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::transparent);
-    entry->pot.onValueChange = [this] { this->onSettingChanged(); };
-    this->contentComponent.addAndMakeVisible(entry->pot);
-
-    entry->resetButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    entry->resetButton.setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
+    UIHelpers::configureControlButton(entry->resetButton,
+                                      juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     entry->resetButton.onClick = [entry = entry.get()] {
-        entry->pot.setValue(entry->defaultValue, juce::sendNotificationSync);
+        entry->parameterPot->setValue(entry->defaultValue, juce::sendNotificationSync);
     };
     this->contentComponent.addAndMakeVisible(entry->resetButton);
 
@@ -114,28 +116,21 @@ void EngineSettingsPanel::addIntPot(const juce::String& name, const juce::String
     entry->intTarget = target;
     entry->defaultValue = static_cast<double>(*target);
 
-    entry->label.setText(name, juce::dontSendNotification);
-    entry->label.setFont(UITheme::Fonts::small());
-    entry->label.setJustificationType(juce::Justification::centred);
-    entry->label.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
-    if (tooltip.isNotEmpty())
-        entry->label.setTooltip(tooltip);
-    this->contentComponent.addAndMakeVisible(entry->label);
+    entry->parameterPot = std::make_unique<ParameterPot>(name,
+                                                         static_cast<double>(minVal),
+                                                         static_cast<double>(maxVal),
+                                                         1.0,
+                                                         entry->defaultValue,
+                                                         nullptr,
+                                                         makeSettingsPotLayout(true));
+    entry->parameterPot->setTooltipText(tooltip);
+    entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
+    this->contentComponent.addAndMakeVisible(*entry->parameterPot);
 
-    entry->pot.setRange(static_cast<double>(minVal), static_cast<double>(maxVal), 1.0);
-    entry->pot.setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    entry->pot.setTextBoxStyle(juce::Slider::TextBoxBelow, false, UITheme::Sizes::settingsIntTextBoxW, UITheme::Sizes::settingsTextBoxH);
-    entry->pot.setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
-    entry->pot.setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
-    entry->pot.setColour(juce::Slider::textBoxTextColourId, UITheme::Colours::textSecondary);
-    entry->pot.setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::transparent);
-    entry->pot.onValueChange = [this] { this->onSettingChanged(); };
-    this->contentComponent.addAndMakeVisible(entry->pot);
-
-    entry->resetButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    entry->resetButton.setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
+    UIHelpers::configureControlButton(entry->resetButton,
+                                      juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     entry->resetButton.onClick = [entry = entry.get()] {
-        entry->pot.setValue(entry->defaultValue, juce::sendNotificationSync);
+        entry->parameterPot->setValue(entry->defaultValue, juce::sendNotificationSync);
     };
     this->contentComponent.addAndMakeVisible(entry->resetButton);
 
@@ -145,9 +140,9 @@ void EngineSettingsPanel::addIntPot(const juce::String& name, const juce::String
 void EngineSettingsPanel::loadFromEngine() {
     for (auto& entry : this->pots) {
         if (entry->target != nullptr)
-            entry->pot.setValue(static_cast<double>(*entry->target), juce::dontSendNotification);
+            entry->parameterPot->setValue(static_cast<double>(*entry->target), juce::dontSendNotification);
         else if (entry->intTarget != nullptr)
-            entry->pot.setValue(static_cast<double>(*entry->intTarget), juce::dontSendNotification);
+            entry->parameterPot->setValue(static_cast<double>(*entry->intTarget), juce::dontSendNotification);
     }
 }
 
@@ -155,10 +150,10 @@ void EngineSettingsPanel::onSettingChanged() {
     bool gridChanged = false;
     for (auto& entry : this->pots) {
         if (entry->target != nullptr)
-            *entry->target = static_cast<float>(entry->pot.getValue());
+            *entry->target = static_cast<float>(entry->parameterPot->getValue());
         else if (entry->intTarget != nullptr) {
             int oldVal = *entry->intTarget;
-            *entry->intTarget = static_cast<int>(entry->pot.getValue());
+            *entry->intTarget = static_cast<int>(entry->parameterPot->getValue());
             if (oldVal != *entry->intTarget)
                 gridChanged = true;
         }
@@ -210,10 +205,7 @@ void EngineSettingsPanel::resized() {
 
             auto& entry = this->pots[static_cast<size_t>(idx)];
 
-            // Label on top
-            entry->label.setBounds(cellX, cellY, potCellW, 14);
-            // Pot in center
-            entry->pot.setBounds(cellX + 4, cellY + 14, potCellW - 8, potCellH - 28);
+            entry->parameterPot->setBounds(cellX, cellY, potCellW, potCellH - 2);
             // Reset button at bottom-right corner
             entry->resetButton.setBounds(cellX + potCellW - 18, cellY + potCellH - 16, 16, 14);
 

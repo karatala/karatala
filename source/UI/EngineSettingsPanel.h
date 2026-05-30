@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/EngineSettings.h"
+#include "ParameterPot.h"
 #include "UITheme.h"
 
 class DrumKitEngine;
@@ -18,8 +19,7 @@ private:
     DrumKitEngine& engine;
 
     struct PotEntry {
-        juce::Label label;
-        juce::Slider pot;
+        std::unique_ptr<ParameterPot> parameterPot;
         juce::TextButton resetButton { "x" };
         float* target = nullptr;
         int* intTarget = nullptr;

@@ -4,6 +4,48 @@
 
 namespace UIHelpers {
 
+void configureCaptionLabel(juce::Label& label,
+                           juce::Justification justification,
+                           juce::Colour colour) {
+    label.setFont(UITheme::Fonts::small());
+    label.setJustificationType(justification);
+    label.setColour(juce::Label::textColourId, colour);
+}
+
+void configureValueLabel(juce::Label& label,
+                         juce::Justification justification,
+                         float fontHeight) {
+    auto font = UITheme::Fonts::label();
+    if (fontHeight > 0.0f)
+        font = font.withHeight(fontHeight);
+
+    label.setFont(font);
+    label.setJustificationType(justification);
+    label.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+}
+
+void configureSectionLabel(juce::Label& label) {
+    label.setFont(UITheme::Fonts::sectionTitle());
+    label.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
+}
+
+void configureRotarySlider(juce::Slider& slider,
+                           juce::Slider::TextEntryBoxPosition textBoxPosition,
+                           int textBoxWidth,
+                           int textBoxHeight) {
+    slider.setSliderStyle(juce::Slider::RotaryVerticalDrag);
+    slider.setTextBoxStyle(textBoxPosition, false, textBoxWidth, textBoxHeight);
+    slider.setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
+    slider.setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
+    slider.setColour(juce::Slider::textBoxTextColourId, UITheme::Colours::textSecondary);
+    slider.setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::transparent);
+}
+
+void configureControlButton(juce::TextButton& button, int connectedEdges) {
+    button.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    button.setConnectedEdges(connectedEdges);
+}
+
 std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager) {
     std::vector<SourceItem> sourceItems;
     if (libraryManager == nullptr) return sourceItems;
@@ -97,13 +139,11 @@ std::unique_ptr<juce::Slider> createCompactPot(
     std::function<juce::String(double)> textFromValueFn) {
 
     auto pot = std::make_unique<juce::Slider>();
-    pot->setSliderStyle(juce::Slider::RotaryVerticalDrag);
-    pot->setTextBoxStyle(juce::Slider::TextBoxBelow, false, UITheme::Sizes::compactPotTextBoxW, UITheme::Sizes::compactPotTextBoxH);
+    configureRotarySlider(*pot,
+                          juce::Slider::TextBoxBelow,
+                          UITheme::Sizes::compactPotTextBoxW,
+                          UITheme::Sizes::compactPotTextBoxH);
     pot->setRange(minVal, maxVal, interval);
-    pot->setColour(juce::Slider::rotarySliderFillColourId, UITheme::Colours::accent);
-    pot->setColour(juce::Slider::rotarySliderOutlineColourId, UITheme::Colours::borderMid);
-    pot->setColour(juce::Slider::textBoxTextColourId, UITheme::Colours::textSecondary);
-    pot->setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::transparent);
 
     if (textFromValueFn)
         pot->textFromValueFunction = textFromValueFn;

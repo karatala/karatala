@@ -6,6 +6,23 @@
 
 namespace UIHelpers {
 
+void configureCaptionLabel(juce::Label& label,
+                           juce::Justification justification = juce::Justification::centred,
+                           juce::Colour colour = UITheme::Colours::textSecondary);
+
+void configureValueLabel(juce::Label& label,
+                         juce::Justification justification = juce::Justification::centred,
+                         float fontHeight = 0.0f);
+
+void configureSectionLabel(juce::Label& label);
+
+void configureRotarySlider(juce::Slider& slider,
+                           juce::Slider::TextEntryBoxPosition textBoxPosition,
+                           int textBoxWidth,
+                           int textBoxHeight);
+
+void configureControlButton(juce::TextButton& button, int connectedEdges = 0);
+
 std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager);
 
 int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::String& searchPath);

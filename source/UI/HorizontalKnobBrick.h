@@ -1,6 +1,6 @@
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "ParameterPot.h"
 
 /**
  * Horizontal composite: left half = title label (top) + editable value (bottom),
@@ -10,31 +10,11 @@
  *   [Label ] [ pot ]
  *   [value ] [ pot ]
  */
-class HorizontalKnobBrick : public juce::Component {
+class HorizontalKnobBrick : public ParameterPot {
 public:
     HorizontalKnobBrick(const juce::String& name,
                double minVal, double maxVal, double interval, double initialValue,
                std::function<juce::String(double)> textFromValueFn = nullptr);
-
-    void resized() override;
-
-    juce::Slider& getPot() { return this->pot; }
-    const juce::Slider& getPot() const { return this->pot; }
-
-    double getValue() const { return this->pot.getValue(); }
-    void setValue(double val, juce::NotificationType notification = juce::dontSendNotification) {
-        this->pot.setValue(val, notification);
-    }
-
-    std::function<void()> onValueChange;
-    std::function<void()> onDragEnd;
-
-private:
-    juce::Label titleLabel;
-    juce::Label valueLabel;
-    juce::Slider pot;
-
-    void updateValueText();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(HorizontalKnobBrick)
 };
