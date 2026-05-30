@@ -1,4 +1,5 @@
 #include "PadContextPopup.h"
+#include "UIHelpers.h"
 #include "UITheme.h"
 
 // ─── MIDI utility ─────────────────────────────────────────────────────────────
@@ -6,12 +7,11 @@
 // ─── MIDI note button helpers ─────────────────────────────────────────────────
 
 void PadContextPopup::syncNoteButtons() {
-    if (!this->midiNotesPtr) return;
+    if (!this->midiNotesPtr || !this->midiAssignmentControl) return;
     auto& notes = *this->midiNotesPtr;
     const int n1 = !notes.empty()          ? static_cast<int>(notes[0]) : -1;
     const int n2 = notes.size() >= 2 ? static_cast<int>(notes[1]) : -1;
-    this->noteButton1.setButtonText(MidiNotePicker::noteToButtonText(n1));
-    this->noteButton2.setButtonText(MidiNotePicker::noteToButtonText(n2));
+    this->midiAssignmentControl->setNotes(n1, n2);
 }
 
 void PadContextPopup::applyNoteToSlot(int slotIdx, int note) {
@@ -29,31 +29,12 @@ void PadContextPopup::applyNoteToSlot(int slotIdx, int note) {
         this->onMidiMappingChanged();
 }
 
-void PadContextPopup::showMidiNotePicker(int slotIdx) {
-    auto picker = std::make_unique<MidiNotePicker>();
-
-    // Pre-select current note
-    if (this->midiNotesPtr && static_cast<int>(this->midiNotesPtr->size()) > slotIdx)
-        picker->setCurrentNote(static_cast<int>((*this->midiNotesPtr)[static_cast<size_t>(slotIdx)]));
-
-    picker->onNoteSelected = [this, slotIdx](int note) {
-        this->applyNoteToSlot(slotIdx, note);
-        // Dismiss the CallOutBox
-        if (auto* modal = juce::Component::getCurrentlyModalComponent())
-            modal->exitModalState(0);
-    };
-
-    auto& btn = (slotIdx == 0) ? this->noteButton1 : this->noteButton2;
-    this->activeMidiPicker = picker.get();
-    juce::CallOutBox::launchAsynchronously(std::move(picker), btn.getScreenBounds(), nullptr);
-}
-
 void PadContextPopup::midiLearnNoteReceived(int midiNote) {
     if (this->activeLearningSlot < 0) return;
     this->applyNoteToSlot(this->activeLearningSlot, midiNote);
     this->activeLearningSlot = -1;
-    this->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-    this->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
+    if (this->midiAssignmentControl)
+        this->midiAssignmentControl->setLearningSlot(-1);
     if (this->onMidiLearnStateChanged)
         this->onMidiLearnStateChanged(false);
 }
@@ -108,38 +89,20 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->midiHeaderLabel.setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
     addAndMakeVisible(this->midiHeaderLabel);
 
-    // Note buttons (open the custom MidiNotePicker grid when clicked)
-    this->noteButton1.setButtonText("--");
-    this->noteButton2.setButtonText("--");
-    for (auto* btn : { &this->noteButton1, &this->noteButton2 })
-        btn->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    addAndMakeVisible(this->noteButton1);
-    addAndMakeVisible(this->noteButton2);
-    this->noteButton1.onClick = [this] { this->showMidiNotePicker(0); };
-    this->noteButton2.onClick = [this] { this->showMidiNotePicker(1); };
-
-    this->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-    this->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-    addAndMakeVisible(this->learnButton1);
-    addAndMakeVisible(this->learnButton2);
-    this->learnButton1.onClick = [this] {
+    this->midiAssignmentControl = std::make_unique<MidiNoteAssignmentControl>();
+    this->midiAssignmentControl->setLayoutMetrics({ 60, 18, 0, 6, 2 });
+    this->midiAssignmentControl->onNoteSelected = [this](int slotIdx, int note) {
+        this->applyNoteToSlot(slotIdx, note);
+    };
+    this->midiAssignmentControl->onLearnButtonClicked = [this](int slotIdx) {
         bool wasLearning = (this->activeLearningSlot >= 0);
-        this->activeLearningSlot = (this->activeLearningSlot == 0) ? -1 : 0;
-        this->learnButton1.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 0 ? UITheme::Colours::midiLearnActive : UITheme::Colours::midiLearnIdle);
-        this->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
+        this->activeLearningSlot = (this->activeLearningSlot == slotIdx) ? -1 : slotIdx;
+        this->midiAssignmentControl->setLearningSlot(this->activeLearningSlot);
         bool nowLearning = (this->activeLearningSlot >= 0);
         if (nowLearning != wasLearning && this->onMidiLearnStateChanged)
             this->onMidiLearnStateChanged(nowLearning);
     };
-    this->learnButton2.onClick = [this] {
-        bool wasLearning = (this->activeLearningSlot >= 0);
-        this->activeLearningSlot = (this->activeLearningSlot == 1) ? -1 : 1;
-        this->learnButton2.setColour(juce::TextButton::textColourOffId, this->activeLearningSlot == 1 ? UITheme::Colours::midiLearnActive : UITheme::Colours::midiLearnIdle);
-        this->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-        bool nowLearning = (this->activeLearningSlot >= 0);
-        if (nowLearning != wasLearning && this->onMidiLearnStateChanged)
-            this->onMidiLearnStateChanged(nowLearning);
-    };
+    addAndMakeVisible(*this->midiAssignmentControl);
 
     this->syncNoteButtons();
 
@@ -591,13 +554,9 @@ void PadContextPopup::resized() {
     headerRow.removeFromRight(8);
 
     // MIDI: right-aligned in header
-    const int learnBtnW = 18;
-    const int noteW = 60;
-    this->learnButton2.setBounds(headerRow.removeFromRight(learnBtnW).reduced(1, 3));
-    this->noteButton2.setBounds(headerRow.removeFromRight(noteW).reduced(0, 2));
-    headerRow.removeFromRight(6);
-    this->learnButton1.setBounds(headerRow.removeFromRight(learnBtnW).reduced(1, 3));
-    this->noteButton1.setBounds(headerRow.removeFromRight(noteW).reduced(0, 2));
+    const int midiControlW = this->midiAssignmentControl ? this->midiAssignmentControl->getPreferredWidth() : 0;
+    if (this->midiAssignmentControl)
+        this->midiAssignmentControl->setBounds(headerRow.removeFromRight(midiControlW).reduced(0, 2));
     headerRow.removeFromRight(4);
     this->midiHeaderLabel.setBounds(headerRow.removeFromRight(32).reduced(0, 2));
 

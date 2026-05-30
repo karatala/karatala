@@ -7,6 +7,7 @@
 #include "UI/Sidebar.h"
 #include "UI/StatusBar.h"
 #include "UI/DrumPadGrid.h"
+#include "UI/DismissOverlay.h"
 #include "UI/MidiMapTable.h"
 #include "UI/InstrumentConfigPanel.h"
 #include "UI/PadContextPopup.h"
@@ -53,11 +54,7 @@ private:
 
     // Pad context popup (Zone mode right-click)
     std::unique_ptr<PadContextPopup> padContextPopup;
-    struct PadPopupOverlay : public juce::Component {
-        std::function<void()> onClick;
-        void mouseDown(const juce::MouseEvent&) override { if (this->onClick) this->onClick(); }
-    };
-    std::unique_ptr<PadPopupOverlay> padPopupOverlay;
+    std::unique_ptr<DismissOverlay> padPopupOverlay;
     void dismissPadContextPopup();
     void showPadContextPopup(const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos);
     void flashPadForSlot(const juce::String& slotId, float velocity);

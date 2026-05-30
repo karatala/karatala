@@ -1,0 +1,48 @@
+#pragma once
+
+#include <array>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include "MidiNotePicker.h"
+#include "UITheme.h"
+
+class MidiNoteAssignmentControl : public juce::Component {
+public:
+    struct LayoutMetrics {
+        int noteButtonWidth = 60;
+        int learnButtonSize = 18;
+        int noteLearnGap = 0;
+        int pairGap = 6;
+        int verticalInset = 2;
+    };
+
+    MidiNoteAssignmentControl();
+    ~MidiNoteAssignmentControl() override = default;
+
+    void resized() override;
+
+    void setNotes(int firstNote, int secondNote);
+    void setLearningSlot(int slotIdx);
+    int getLearningSlot() const { return this->learningSlot; }
+    void setLayoutMetrics(LayoutMetrics metrics);
+    int getPreferredWidth() const;
+
+    std::function<void(int slotIdx, int note)> onNoteSelected;
+    std::function<void(int slotIdx)> onLearnButtonClicked;
+
+private:
+    void updateNoteButtons();
+    void updateLearnButtons();
+    void showMidiNotePicker(int slotIdx);
+
+    LayoutMetrics layoutMetrics;
+    std::array<int, 2> noteValues { { -1, -1 } };
+    int learningSlot = -1;
+
+    juce::TextButton noteButton1 { "--" };
+    juce::TextButton noteButton2 { "--" };
+    juce::TextButton learnButton1 { juce::String::charToString(0x25CF) };
+    juce::TextButton learnButton2 { juce::String::charToString(0x25CF) };
+    juce::Component::SafePointer<MidiNotePicker> activeMidiPicker;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiNoteAssignmentControl)
+};

@@ -350,7 +350,7 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
 
     this->padContextPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
 
-    this->padPopupOverlay = std::make_unique<PadPopupOverlay>();
+    this->padPopupOverlay = std::make_unique<DismissOverlay>();
     this->padPopupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] {
             if (this->padContextPopup) {

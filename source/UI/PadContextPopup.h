@@ -2,9 +2,9 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/DrumKitEngine.h"
-#include "UITypes.h"
+#include "SourceItem.h"
 #include "SourcePickerPopup.h"
-#include "MidiNotePicker.h"
+#include "MidiNoteAssignmentControl.h"
 #include "LabeledPot.h"
 
 class PadContextPopup : public juce::Component {
@@ -42,19 +42,13 @@ private:
 
     // ─── MIDI map (inline in header) ───
     juce::Label     midiHeaderLabel;
-    juce::TextButton noteButton1;
-    juce::TextButton noteButton2;
-    juce::TextButton learnButton1 { juce::String::charToString(0x25CF) };
-    juce::TextButton learnButton2 { juce::String::charToString(0x25CF) };
+    std::unique_ptr<MidiNoteAssignmentControl> midiAssignmentControl;
     juce::TextButton addLayerButton { "+ Layer" };
     KitLayout::MidiNotes* midiNotesPtr = nullptr;
     int activeLearningSlot = -1;
-    // Active CallOutBox content tracked weakly so we can dismiss on MIDI learn
-    juce::Component::SafePointer<MidiNotePicker> activeMidiPicker;
 
     void syncNoteButtons();
     void applyNoteToSlot(int slotIdx, int note);
-    void showMidiNotePicker(int slotIdx);
 
     std::vector<SourceItem> sourceItems;
     void rebuildSourceItems();

@@ -27,21 +27,16 @@ void MidiMapTable::buildRows() {
 
         this->contentComponent.addAndMakeVisible(row->articulationLabel);
 
-        row->noteButton1.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-        row->noteButton2.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-        this->contentComponent.addAndMakeVisible(row->noteButton1);
-        this->contentComponent.addAndMakeVisible(row->noteButton2);
-
-        row->noteButton1.onClick = [this, rowIdx] { this->showMidiNotePicker(rowIdx, 0); };
-        row->noteButton2.onClick = [this, rowIdx] { this->showMidiNotePicker(rowIdx, 1); };
-
-        row->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-        row->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-        this->contentComponent.addAndMakeVisible(row->learnButton1);
-        this->contentComponent.addAndMakeVisible(row->learnButton2);
-
-        row->learnButton1.onClick = [this, rowIdx] { this->startMidiLearn(rowIdx, 0); };
-        row->learnButton2.onClick = [this, rowIdx] { this->startMidiLearn(rowIdx, 1); };
+        row->midiAssignmentControl = std::make_unique<MidiNoteAssignmentControl>();
+        row->midiAssignmentControl->setLayoutMetrics({ noteButtonWidth, learnButtonSize, midiControlGap, midiControlGap, 2 });
+        row->midiAssignmentControl->onNoteSelected = [this, rowIdx](int slotIdx, int note) {
+            if (rowIdx < static_cast<int>(this->rows.size()))
+                this->applyNoteToSlot(*this->rows[static_cast<size_t>(rowIdx)], slotIdx, note);
+        };
+        row->midiAssignmentControl->onLearnButtonClicked = [this, rowIdx](int slotIdx) {
+            this->startMidiLearn(rowIdx, slotIdx);
+        };
+        this->contentComponent.addAndMakeVisible(*row->midiAssignmentControl);
 
         this->syncNoteButtons(*row);
     };
@@ -103,12 +98,11 @@ void MidiMapTable::buildRows() {
 }
 
 void MidiMapTable::syncNoteButtons(MapRow& row) {
-    if (!row.notesPtr) return;
+    if (!row.notesPtr || !row.midiAssignmentControl) return;
     auto& notes = *row.notesPtr;
     const int note1 = !notes.empty()     ? static_cast<int>(notes[0]) : -1;
     const int note2 = notes.size() >= 2  ? static_cast<int>(notes[1]) : -1;
-    row.noteButton1.setButtonText(MidiNotePicker::noteToButtonText(note1));
-    row.noteButton2.setButtonText(MidiNotePicker::noteToButtonText(note2));
+    row.midiAssignmentControl->setNotes(note1, note2);
 }
 
 void MidiMapTable::applyNoteToSlot(MapRow& row, int slotIdx, int note) {
@@ -126,30 +120,6 @@ void MidiMapTable::applyNoteToSlot(MapRow& row, int slotIdx, int note) {
         this->onMappingChanged();
 }
 
-void MidiMapTable::showMidiNotePicker(int rowIdx, int slotIdx) {
-    if (rowIdx < 0 || rowIdx >= static_cast<int>(this->rows.size()))
-        return;
-
-    auto& row = *this->rows[static_cast<size_t>(rowIdx)];
-    auto picker = std::make_unique<MidiNotePicker>();
-
-    // Pre-select current note
-    if (row.notesPtr && static_cast<int>(row.notesPtr->size()) > slotIdx)
-        picker->setCurrentNote(static_cast<int>((*row.notesPtr)[static_cast<size_t>(slotIdx)]));
-
-    picker->onNoteSelected = [this, rowIdx, slotIdx](int note) {
-        if (rowIdx < static_cast<int>(this->rows.size()))
-            this->applyNoteToSlot(*this->rows[static_cast<size_t>(rowIdx)], slotIdx, note);
-        // Dismiss the CallOutBox
-        if (auto* modal = juce::Component::getCurrentlyModalComponent())
-            modal->exitModalState(0);
-    };
-
-    auto& btn = (slotIdx == 0) ? row.noteButton1 : row.noteButton2;
-    this->activeMidiPicker = picker.get();
-    juce::CallOutBox::launchAsynchronously(std::move(picker), btn.getScreenBounds(), nullptr);
-}
-
 void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
     // Toggle off if already learning this slot
     if (this->activeLearningRow == rowIdx && this->activeLearningSlot == slotIdx) {
@@ -165,9 +135,8 @@ void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
 
     // Highlight active learn button
     auto& row = *this->rows[static_cast<size_t>(rowIdx)];
-    auto& btn = (slotIdx == 0) ? row.learnButton1 : row.learnButton2;
-    btn.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnActive);
-    btn.repaint();
+    if (row.midiAssignmentControl)
+        row.midiAssignmentControl->setLearningSlot(slotIdx);
 
     if (this->onMidiLearnStateChanged)
         this->onMidiLearnStateChanged(true);
@@ -176,10 +145,8 @@ void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
 void MidiMapTable::stopMidiLearn() {
     if (this->activeLearningRow >= 0 && this->activeLearningRow < static_cast<int>(this->rows.size())) {
         auto& row = *this->rows[static_cast<size_t>(this->activeLearningRow)];
-        row.learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-        row.learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-        row.learnButton1.repaint();
-        row.learnButton2.repaint();
+        if (row.midiAssignmentControl)
+            row.midiAssignmentControl->setLearningSlot(-1);
     }
 
     bool wasLearning = (this->activeLearningRow >= 0);
@@ -208,14 +175,9 @@ void MidiMapTable::resized() {
 
     this->viewport.setBounds(area);
 
-    const int instColWidth = 90;
-    const int artColWidth = 100;
-    const int noteButtonWidth = 84;
-    const int learnBtnSize = juce::jmax(rowHeight - 4, 20); // minimum square
-    const int gapSmall = 3;
+    const int midiControlWidth = noteButtonWidth * 2 + learnButtonSize * 2 + midiControlGap * 3;
     // Single column width for one instrument group
-    const int singleColWidth = instColWidth + artColWidth + (noteButtonWidth + learnBtnSize + gapSmall) * 2 + gapSmall * 3 + 8;
-    const int columnGap = 12;
+    const int singleColWidth = instColWidth + artColWidth + midiControlWidth + 8;
 
     // Determine if we can fit 2 columns
     int availWidth = this->viewport.getWidth() - (this->viewport.isVerticalScrollBarShown() ? 14 : 0);
@@ -251,22 +213,14 @@ void MidiMapTable::resized() {
             auto& row = *this->rows[static_cast<size_t>(idx)];
             int xPos = xOffset;
 
-            row.instrumentLabel.setBounds(xPos, yPos, instColWidth - gapSmall, rowHeight);
+            row.instrumentLabel.setBounds(xPos, yPos, instColWidth - midiControlGap, rowHeight);
             xPos += instColWidth;
 
-            row.articulationLabel.setBounds(xPos, yPos, artColWidth - gapSmall, rowHeight);
+            row.articulationLabel.setBounds(xPos, yPos, artColWidth - midiControlGap, rowHeight);
             xPos += artColWidth;
 
-            row.noteButton1.setBounds(xPos, yPos + 2, noteButtonWidth, rowHeight - 4);
-            xPos += noteButtonWidth + gapSmall;
-
-            row.learnButton1.setBounds(xPos, yPos + 2, learnBtnSize, learnBtnSize);
-            xPos += learnBtnSize + gapSmall;
-
-            row.noteButton2.setBounds(xPos, yPos + 2, noteButtonWidth, rowHeight - 4);
-            xPos += noteButtonWidth + gapSmall;
-
-            row.learnButton2.setBounds(xPos, yPos + 2, learnBtnSize, learnBtnSize);
+            if (row.midiAssignmentControl)
+                row.midiAssignmentControl->setBounds(xPos, yPos, midiControlWidth, rowHeight);
 
             yPos += rowHeight;
         }

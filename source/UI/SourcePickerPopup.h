@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "UITypes.h"
+#include "SourceItem.h"
 
 /**
  * @file SourcePickerPopup.h

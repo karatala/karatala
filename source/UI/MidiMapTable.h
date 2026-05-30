@@ -2,7 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/LayoutManager.h"
-#include "MidiNotePicker.h"
+#include "MidiNoteAssignmentControl.h"
 #include "UITheme.h"
 
 class MidiMapTable : public juce::Component {
@@ -28,6 +28,12 @@ public:
 private:
     static constexpr int rowHeight = UITheme::Spacing::rowLarge;
     static constexpr int headerHeight = UITheme::Spacing::rowLarge + 2;
+    static constexpr int instColWidth = 90;
+    static constexpr int artColWidth = 100;
+    static constexpr int noteButtonWidth = 84;
+    static constexpr int learnButtonSize = 22;
+    static constexpr int midiControlGap = 3;
+    static constexpr int columnGap = 12;
 
     KitLayout* layoutPtr = nullptr;
 
@@ -42,10 +48,7 @@ private:
 
         juce::Label instrumentLabel;
         juce::Label articulationLabel;
-        juce::TextButton noteButton1 { "--" };
-        juce::TextButton noteButton2 { "--" };
-        juce::TextButton learnButton1 { juce::String::charToString(0x25CF) }; // ●
-        juce::TextButton learnButton2 { juce::String::charToString(0x25CF) };
+        std::unique_ptr<MidiNoteAssignmentControl> midiAssignmentControl;
         bool showInstrumentLabel = false;
     };
 
@@ -57,13 +60,9 @@ private:
     int activeLearningRow = -1;
     int activeLearningSlot = -1; // 0 = first button, 1 = second button
 
-    // Active CallOutBox content tracked weakly so we can dismiss on MIDI learn
-    juce::Component::SafePointer<MidiNotePicker> activeMidiPicker;
-
     void buildRows();
     void syncNoteButtons(MapRow& row);
     void applyNoteToSlot(MapRow& row, int slotIdx, int note);
-    void showMidiNotePicker(int rowIdx, int slotIdx);
     void startMidiLearn(int rowIdx, int slotIdx);
     void stopMidiLearn();
 

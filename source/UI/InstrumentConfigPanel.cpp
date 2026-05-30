@@ -1,4 +1,5 @@
 #include "InstrumentConfigPanel.h"
+#include "UIHelpers.h"
 
 // ─── InstrumentConfigPanel ────────────────────────────────────────────────────
 
@@ -275,7 +276,7 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
         });
     };
 
-    this->popupOverlay = std::make_unique<PopupOverlay>();
+    this->popupOverlay = std::make_unique<DismissOverlay>();
     this->popupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] { this->dismissPopup(); });
     };

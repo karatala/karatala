@@ -2,7 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/DrumKitEngine.h"
-#include "UITypes.h"
+#include "DismissOverlay.h"
+#include "SourceItem.h"
 #include "SourcePickerPopup.h"
 #include "UITheme.h"
 
@@ -49,12 +50,7 @@ private:
     juce::Viewport viewport;
 
     // Popup management
-    class PopupOverlay : public juce::Component {
-    public:
-        std::function<void()> onClick;
-        void mouseDown(const juce::MouseEvent&) override { if (this->onClick) this->onClick(); }
-    };
-    std::unique_ptr<PopupOverlay> popupOverlay;
+    std::unique_ptr<DismissOverlay> popupOverlay;
     std::unique_ptr<SourcePickerPopup> activePopup;
 
     void showPickerPopup(TableRow* row);
