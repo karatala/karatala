@@ -39,14 +39,14 @@ private:
 
     // ─── Header ───
     juce::Label slotLabel;
-    juce::Label artLabel;
 
-    // ─── MIDI map ───
+    // ─── MIDI map (inline in header) ───
     juce::Label     midiHeaderLabel;
     juce::TextButton noteButton1;
     juce::TextButton noteButton2;
     juce::TextButton learnButton1 { juce::String::charToString(0x25CF) };
     juce::TextButton learnButton2 { juce::String::charToString(0x25CF) };
+    juce::TextButton addLayerButton { "+ Layer" };
     KitLayout::MidiNotes* midiNotesPtr = nullptr;
     int activeLearningSlot = -1;
     // Active CallOutBox content tracked weakly so we can dismiss on MIDI learn
@@ -64,25 +64,23 @@ private:
     struct LayerRow {
         int selectedSourceIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
+        std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst/art multiline
         std::unique_ptr<LabeledPot> tuningPot;
         std::unique_ptr<LabeledPot> attackPot;
         std::unique_ptr<LabeledPot> decayPot;
-        std::unique_ptr<LabeledPot> volumePot;
+        std::unique_ptr<LabeledPot> gainPot;
         std::unique_ptr<juce::TextButton> flipLRButton;
         std::unique_ptr<juce::TextButton> flipPhaseButton;
-        // Per-mic bleed pots: one per relevant mic
+        // Per-mic bleed pots
         struct MicBleedControl {
             juce::String micCode;
             juce::String micName;
-            std::unique_ptr<juce::Slider> bleedPot;
-            std::unique_ptr<juce::Label> bleedLabel;
+            std::unique_ptr<LabeledPot> bleedPot;
         };
         std::vector<std::unique_ptr<MicBleedControl>> micBleeds;
-        std::unique_ptr<juce::TextButton> addButton;
         std::unique_ptr<juce::TextButton> removeButton;
     };
     juce::OwnedArray<LayerRow> layerRows;
-    juce::Label layerHeaderLabel;
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
                      float volumeDb, bool flipLR, bool flipPhase,
@@ -91,6 +89,7 @@ private:
     int getLayerIndex(const LayerRow* layer) const;
     void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();
+    void updateSourceDisplay(LayerRow* layer);
     void applyToEngine();
     juce::String generateFullMapText() const;
     void populateLayers();

@@ -94,20 +94,16 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
         this->artName = "(default)";
     }
 
-    // Header
-    this->slotLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
+    // Header: "Kick / center"
+    juce::String headerText = (slot.display.isNotEmpty() ? slot.display : slot.id) + " / " + this->artName;
+    this->slotLabel.setText(headerText, juce::dontSendNotification);
     this->slotLabel.setFont(juce::Font(juce::FontOptions(12.0f).withStyle("Bold")));
     this->slotLabel.setColour(juce::Label::textColourId, juce::Colours::white);
     addAndMakeVisible(this->slotLabel);
 
-    this->artLabel.setText(this->artName, juce::dontSendNotification);
-    this->artLabel.setFont(juce::Font(juce::FontOptions(10.0f)));
-    this->artLabel.setColour(juce::Label::textColourId, juce::Colour(0xff99bbdd));
-    addAndMakeVisible(this->artLabel);
-
-    // MIDI map section
-    this->midiHeaderLabel.setText("MIDI", juce::dontSendNotification);
-    this->midiHeaderLabel.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
+    // MIDI inline
+    this->midiHeaderLabel.setText("MIDI:", juce::dontSendNotification);
+    this->midiHeaderLabel.setFont(juce::Font(juce::FontOptions(9.0f)));
     this->midiHeaderLabel.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
     addAndMakeVisible(this->midiHeaderLabel);
 
@@ -146,11 +142,15 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
 
     this->syncNoteButtons();
 
-    // Layer header
-    this->layerHeaderLabel.setText("Instrument", juce::dontSendNotification);
-    this->layerHeaderLabel.setFont(juce::Font(juce::FontOptions(9.0f).withStyle("Bold")));
-    this->layerHeaderLabel.setColour(juce::Label::textColourId, juce::Colour(0xff888888));
-    addAndMakeVisible(this->layerHeaderLabel);
+    // "+ Layer" button in header
+    this->addLayerButton.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    this->addLayerButton.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    addAndMakeVisible(this->addLayerButton);
+    this->addLayerButton.onClick = [this] {
+        this->addLayerRow("", 0, -1, -1, 0.0f, false, false, {});
+        this->updateRemoveButtonVisibility();
+        this->resized();
+    };
 
     // Build source items and populate layers from existing instrument map
     this->rebuildSourceItems();
@@ -228,14 +228,21 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     auto* layer = this->layerRows.add(new LayerRow());
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
 
+    // Source button (opens picker)
     layer->sourceButton = std::make_unique<juce::TextButton>();
-    if (layer->selectedSourceIndex >= 0)
-        layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].displayText());
-    else
-        layer->sourceButton->setButtonText("--");
-    layer->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    layer->sourceButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2a2a2a));
+    layer->sourceButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(*layer->sourceButton);
     layer->sourceButton->onClick = [this, layer] { this->showSourcePicker(layer); };
+
+    // Source detail label (multi-line: kit / inst / art)
+    layer->sourceDetailLabel = std::make_unique<juce::Label>();
+    layer->sourceDetailLabel->setFont(juce::Font(juce::FontOptions(10.0f)));
+    layer->sourceDetailLabel->setColour(juce::Label::textColourId, juce::Colour(0xffcccccc));
+    layer->sourceDetailLabel->setJustificationType(juce::Justification::centredLeft);
+    layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
+    addAndMakeVisible(*layer->sourceDetailLabel);
+    this->updateSourceDisplay(layer);
 
     // Sentinel text function for attack/decay
     auto sentinelTextFn = [](double value) -> juce::String {
@@ -268,15 +275,15 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
     };
 
-    // Volume pot (-60 to +12 dB)
-    layer->volumePot = std::make_unique<LabeledPot>("Vol", -60.0, 12.0, 0.5, static_cast<double>(volumeDb),
+    // Gain pot (-60 to +12 dB)
+    layer->gainPot = std::make_unique<LabeledPot>("Gain", -60.0, 12.0, 0.5, static_cast<double>(volumeDb),
         [](double value) -> juce::String {
             if (value <= -60.0) return "-inf";
             return juce::String(value, 1);
         });
-    addAndMakeVisible(*layer->volumePot);
-    layer->volumePot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->volumePot->onDragEnd = [this] {
+    addAndMakeVisible(*layer->gainPot);
+    layer->gainPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->gainPot->onDragEnd = [this] {
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
     };
 
@@ -310,7 +317,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
         this->applyToEngine();
     };
 
-    // Per-mic bleed pots
+    // Per-mic bleed as LabeledPots
     auto relevantMics = this->getRelevantMics();
     for (const auto& [micCode, micName] : relevantMics) {
         auto bleedCtrl = std::make_unique<LayerRow::MicBleedControl>();
@@ -320,46 +327,19 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
         auto it = micBleedLevels.find(micCode);
         if (it != micBleedLevels.end())
             level = it->second;
-        bleedCtrl->bleedPot = std::make_unique<juce::Slider>();
-        bleedCtrl->bleedPot->setSliderStyle(juce::Slider::LinearBar);
-        bleedCtrl->bleedPot->setRange(0.0, 1.0, 0.01);
-        bleedCtrl->bleedPot->setColour(juce::Slider::trackColourId, juce::Colour(0xff444444));
-        bleedCtrl->bleedPot->setColour(juce::Slider::thumbColourId, juce::Colour(0xff666666));
-        bleedCtrl->bleedPot->setColour(juce::Slider::textBoxTextColourId, juce::Colour(0xffcccccc));
-        bleedCtrl->bleedPot->setColour(juce::Slider::textBoxOutlineColourId, juce::Colours::transparentBlack);
-        bleedCtrl->bleedPot->textFromValueFunction = [](double value) {
-            return juce::String(static_cast<int>(value * 100.0));
-        };
-        bleedCtrl->bleedPot->setValue(static_cast<double>(level), juce::dontSendNotification);
-        bleedCtrl->bleedPot->updateText();
-        bleedCtrl->bleedPot->setTooltip(micName);
+        bleedCtrl->bleedPot = std::make_unique<LabeledPot>(micName, 0.0, 100.0, 1.0,
+            static_cast<double>(level * 100.0f));
         addAndMakeVisible(*bleedCtrl->bleedPot);
         bleedCtrl->bleedPot->onValueChange = [this] {
             this->mapTextDirty = true;
         };
-
-        // Mic name label (left of bar)
-        bleedCtrl->bleedLabel = std::make_unique<juce::Label>("", micName);
-        bleedCtrl->bleedLabel->setFont(juce::Font(juce::FontOptions(9.0f)));
-        bleedCtrl->bleedLabel->setColour(juce::Label::textColourId, juce::Colour(0xff777777));
-        bleedCtrl->bleedLabel->setJustificationType(juce::Justification::centredRight);
-        addAndMakeVisible(*bleedCtrl->bleedLabel);
-
         layer->micBleeds.push_back(std::move(bleedCtrl));
     }
 
-    layer->addButton = std::make_unique<juce::TextButton>("+");
-    layer->addButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
-    layer->addButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    addAndMakeVisible(*layer->addButton);
-    layer->addButton->onClick = [this] {
-        this->addLayerRow("", 0, -1, -1, 0.0f, false, false, {});
-        this->updateRemoveButtonVisibility();
-        this->resized();
-    };
-
-    layer->removeButton = std::make_unique<juce::TextButton>("x");
-    layer->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff333333));
+    // Remove button (×)
+    layer->removeButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x97")); // ×
+    layer->removeButton->setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    layer->removeButton->setColour(juce::TextButton::textColourOffId, juce::Colour(0xff888888));
     layer->removeButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(*layer->removeButton);
     layer->removeButton->onClick = [this, layer] {
@@ -376,6 +356,20 @@ void PadContextPopup::updateRemoveButtonVisibility() {
     bool showRemove = this->layerRows.size() > 1;
     for (auto* layer : this->layerRows)
         layer->removeButton->setVisible(showRemove);
+}
+
+void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
+    if (layer->selectedSourceIndex >= 0) {
+        const auto& src = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
+        juce::String detail = src.kitDisplayName + "\n" + src.instCode;
+        if (src.artCode.isNotEmpty())
+            detail += "\n" + src.artCode;
+        layer->sourceDetailLabel->setText(detail, juce::dontSendNotification);
+        layer->sourceButton->setButtonText(src.kitDisplayName);
+    } else {
+        layer->sourceDetailLabel->setText("--", juce::dontSendNotification);
+        layer->sourceButton->setButtonText("--");
+    }
 }
 
 int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
@@ -466,15 +460,15 @@ juce::String PadContextPopup::generateFullMapText() const {
         if (attackVal >= 0.0) params.add("attack=" + juce::String(static_cast<int>(attackVal)));
         double decayVal = layer->decayPot->getValue();
         if (decayVal >= 0.0) params.add("decay=" + juce::String(static_cast<int>(decayVal)));
-        double volVal = layer->volumePot->getValue();
+        double volVal = layer->gainPot->getValue();
         if (std::abs(volVal) > 0.01) params.add("vol=" + juce::String(volVal, 1));
         if (layer->flipLRButton->getToggleState()) params.add("flipLR=1");
         if (layer->flipPhaseButton->getToggleState()) params.add("flipPhase=1");
 
-        // Bleed levels: only emit non-default values (< 1.0)
+        // Bleed levels: only emit non-default values (< 100)
         juce::StringArray bleedParts;
         for (const auto& bleedCtrl : layer->micBleeds) {
-            double bleedVal = bleedCtrl->bleedPot->getValue();
+            double bleedVal = bleedCtrl->bleedPot->getValue() / 100.0;
             if (bleedVal < 0.99)
                 bleedParts.add(bleedCtrl->micCode + ":" + juce::String(bleedVal, 2));
         }
@@ -543,10 +537,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
 
     this->activePickerPopup->onItemSelected = [this, layer](int sourceIndex) {
         layer->selectedSourceIndex = sourceIndex;
-        if (sourceIndex >= 0)
-            layer->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
-        else
-            layer->sourceButton->setButtonText("--");
+        this->updateSourceDisplay(layer);
         juce::MessageManager::callAsync([this] {
             this->dismissSourcePicker();
             this->applyToEngine();
@@ -587,73 +578,71 @@ void PadContextPopup::paint(juce::Graphics& g) {
 }
 
 void PadContextPopup::resized() {
-    auto area = getLocalBounds().reduced(6);
+    auto area = getLocalBounds().reduced(8);
 
-    // Header
-    auto headerRow = area.removeFromTop(16);
-    this->slotLabel.setBounds(headerRow.removeFromLeft(headerRow.getWidth() / 2));
-    this->artLabel.setBounds(headerRow);
-    area.removeFromTop(2);
+    // Header row: "Kick / center" | MIDI: [btn][●] [btn][●] | [+ Layer]
+    auto headerRow = area.removeFromTop(24);
+    const int addLayerBtnW = 60;
+    this->addLayerButton.setBounds(headerRow.removeFromRight(addLayerBtnW).reduced(0, 2));
+    headerRow.removeFromRight(8);
 
-    // MIDI section
-    this->midiHeaderLabel.setBounds(area.removeFromTop(14));
-    auto midiRow = area.removeFromTop(22);
-    const int learnBtnW = 22; // minimum square
-    const int noteW = juce::jmin(80, (midiRow.getWidth() - learnBtnW * 2 - 8) / 2);
-    this->noteButton1.setBounds(midiRow.removeFromLeft(noteW).reduced(0, 1));
-    this->learnButton1.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
-    midiRow.removeFromLeft(4);
-    this->noteButton2.setBounds(midiRow.removeFromLeft(noteW).reduced(0, 1));
-    this->learnButton2.setBounds(midiRow.removeFromLeft(learnBtnW).reduced(1));
-    area.removeFromTop(4);
+    // MIDI: right-aligned in header
+    const int learnBtnW = 18;
+    const int noteW = 60;
+    this->learnButton2.setBounds(headerRow.removeFromRight(learnBtnW).reduced(1, 3));
+    this->noteButton2.setBounds(headerRow.removeFromRight(noteW).reduced(0, 2));
+    headerRow.removeFromRight(6);
+    this->learnButton1.setBounds(headerRow.removeFromRight(learnBtnW).reduced(1, 3));
+    this->noteButton1.setBounds(headerRow.removeFromRight(noteW).reduced(0, 2));
+    headerRow.removeFromRight(4);
+    this->midiHeaderLabel.setBounds(headerRow.removeFromRight(32).reduced(0, 2));
 
-    // Layer header
-    this->layerHeaderLabel.setBounds(area.removeFromTop(14));
+    // Slot label fills remaining left
+    this->slotLabel.setBounds(headerRow);
+    area.removeFromTop(6);
 
+    // Layer rows
     const int potW = 80;
     const int potH = 36;
-    const int flipBtnW = 20;
-    const int btnSide = 18;
-    const int layerRowH = potH;
-    const int bleedRowH = 18;
-    const int rightW = potW * 4 + flipBtnW * 2;
-    const int totalW = area.getWidth();
+    const int flipColW = 28;
+    const int removeW = 18;
+    const int sourceW = 180;
+    const int layerRowH = potH * 2 + 4; // source card height = 2 pot rows
+    const int bleedPotW = 80;
 
     for (auto* layer : this->layerRows) {
         auto layerArea = area.removeFromTop(layerRowH);
 
-        // Right side (fixed width): LabeledPots + flip buttons
-        auto rightArea = layerArea.removeFromRight(rightW);
-        layer->tuningPot->setBounds(rightArea.removeFromLeft(potW));
-        layer->attackPot->setBounds(rightArea.removeFromLeft(potW));
-        layer->decayPot->setBounds(rightArea.removeFromLeft(potW));
-        layer->flipLRButton->setBounds(rightArea.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
-        layer->flipPhaseButton->setBounds(rightArea.removeFromLeft(flipBtnW).reduced(1, (potH - 16) / 2));
-        layer->volumePot->setBounds(rightArea.removeFromLeft(potW));
-
-        // Left side (remaining): source + buttons inline
-        auto leftArea = layerArea;
-        leftArea.removeFromRight(4);
+        // Remove button (×) on far left
         if (layer->removeButton->isVisible())
-            layer->removeButton->setBounds(leftArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
-        layer->addButton->setBounds(leftArea.removeFromRight(btnSide).reduced(0, (layerRowH - btnSide) / 2));
-        layer->sourceButton->setBounds(leftArea.reduced(0, (layerRowH - 22) / 2));
+            layer->removeButton->setBounds(layerArea.removeFromLeft(removeW).reduced(0, (layerRowH - 18) / 2));
 
-        // Bleed row: full width [micName value] cells
-        if (!layer->micBleeds.empty()) {
-            auto bleedRow = area.removeFromTop(bleedRowH);
-            const int numBleeds = static_cast<int>(layer->micBleeds.size());
-            const int cellW = bleedRow.getWidth() / juce::jmax(1, numBleeds);
-            for (auto& bleedCtrl : layer->micBleeds) {
-                auto cell = bleedRow.removeFromLeft(cellW);
-                const int barW = 38;
-                auto labelArea = cell.removeFromLeft(cell.getWidth() - barW);
-                bleedCtrl->bleedLabel->setBounds(labelArea.reduced(1, 0));
-                bleedCtrl->bleedPot->setBounds(cell.reduced(0, 1));
-            }
+        // Source card (left)
+        auto srcArea = layerArea.removeFromLeft(sourceW);
+        layer->sourceButton->setBounds(srcArea);
+        layer->sourceDetailLabel->setBounds(srcArea.reduced(4, 2));
+
+        layerArea.removeFromLeft(4); // gap
+
+        // Main pots row (top half): Tuning, Attack, Decay, Gain + flip buttons
+        auto topRow = layerArea.removeFromTop(potH);
+        layer->tuningPot->setBounds(topRow.removeFromLeft(potW));
+        layer->attackPot->setBounds(topRow.removeFromLeft(potW));
+        layer->decayPot->setBounds(topRow.removeFromLeft(potW));
+        layer->gainPot->setBounds(topRow.removeFromLeft(potW));
+        // Flip buttons stacked vertically in remaining space
+        auto flipArea = topRow.removeFromLeft(flipColW);
+        layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 1));
+        layer->flipPhaseButton->setBounds(flipArea.reduced(2, 1));
+
+        // Bleed pots row (bottom half)
+        auto bottomRow = layerArea.removeFromTop(potH);
+        const int numBleeds = static_cast<int>(layer->micBleeds.size());
+        const int actualBleedW = numBleeds > 0 ? juce::jmin(bleedPotW, bottomRow.getWidth() / numBleeds) : bleedPotW;
+        for (auto& bleedCtrl : layer->micBleeds) {
+            bleedCtrl->bleedPot->setBounds(bottomRow.removeFromLeft(actualBleedW));
         }
-        area.removeFromTop(3);
-    }
 
-    // Don't resize the popup itself; let it flow content within the bounds set by the editor
+        area.removeFromTop(4); // gap between layers
+    }
 }
