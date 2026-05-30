@@ -5,7 +5,7 @@
 
 enum class PadMode { Zen, Zoned };
 
-class DrumPad : public juce::Component {
+class DrumPad : public juce::Component, private juce::Timer {
 public:
     explicit DrumPad();
     ~DrumPad() override = default;
@@ -36,6 +36,10 @@ private:
     void paintZen(juce::Graphics& g);
     void paintZoned(juce::Graphics& g);
     int getZoneIndexAt(int yPos) const;
+    void timerCallback() override;
+
+    static constexpr int flashFadeDurationMs = 240;
+    static constexpr int flashTimerHz = 30;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPad)
 };

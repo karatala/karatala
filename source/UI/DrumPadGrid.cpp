@@ -5,6 +5,7 @@ DrumPadGrid::DrumPadGrid() {
 
 void DrumPadGrid::populate(const KitLayout* layout) {
     this->pads.clear();
+    this->padSlotIds.clear();
 
     int totalCells = this->gridColumns * this->gridRows;
     int slotCount = layout ? static_cast<int>(layout->instrumentSlots.size()) : 0;
@@ -16,8 +17,10 @@ void DrumPadGrid::populate(const KitLayout* layout) {
 
         if (idx < slotCount) {
             pad->setSlot(&layout->instrumentSlots[static_cast<size_t>(idx)]);
+            this->padSlotIds.push_back(layout->instrumentSlots[static_cast<size_t>(idx)].id);
         } else {
             pad->setSlot(nullptr);
+            this->padSlotIds.emplace_back();
         }
 
         pad->onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, float vel) {
@@ -62,8 +65,12 @@ void DrumPadGrid::setClickVelocity(float velocity) {
 }
 
 void DrumPadGrid::flashPad(const juce::String& slotId, float velocity) {
-    juce::ignoreUnused(slotId, velocity);
-    // TODO: match pad by slotId and call pad->flash(velocity)
+    for (int idx = 0; idx < static_cast<int>(this->pads.size()) && idx < static_cast<int>(this->padSlotIds.size()); ++idx) {
+        if (this->padSlotIds[static_cast<size_t>(idx)] == slotId) {
+            this->pads[static_cast<size_t>(idx)]->flash(velocity);
+            return;
+        }
+    }
 }
 
 void DrumPadGrid::resized() {

@@ -14,9 +14,21 @@ void DrumPad::setPadMode(PadMode mode) {
 }
 
 void DrumPad::flash(float velocity) {
-    this->flashAlpha = velocity / 127.0f;
+    this->flashAlpha = juce::jlimit(0.0f, 1.0f, velocity / 127.0f);
+    this->startTimerHz(flashTimerHz);
     repaint();
-    // TODO: animate fade-out with Timer
+}
+
+void DrumPad::timerCallback() {
+    const float flashStep = 1.0f / static_cast<float>((flashFadeDurationMs * flashTimerHz) / 1000);
+    this->flashAlpha = juce::jmax(0.0f, this->flashAlpha - flashStep);
+
+    if (this->flashAlpha <= 0.0f) {
+        this->flashAlpha = 0.0f;
+        this->stopTimer();
+    }
+
+    repaint();
 }
 
 juce::Colour DrumPad::getColourForType(KitLib::InstrumentSpec::Type type) {

@@ -64,7 +64,8 @@ private:
     int getMappedLayerIndexForRow(const TableRow* row) const;
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,
-                const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs);
+                const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+                int insertionIndex = -1);
     int findSourceIndex(const juce::String& fullPath) const;
     void updateRemoveButtonVisibility();
 

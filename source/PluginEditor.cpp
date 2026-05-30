@@ -36,6 +36,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         auto& art = slot->articulations[static_cast<size_t>(artIdx)];
         if (art.notes.empty())
             return;
+        this->flashPadForSlot(slot->id, velocity);
         int midiNote = static_cast<int>(art.notes[0]);
         float vel = velocity / 127.0f;
         this->processorRef.injectMidiFromUI(juce::MidiMessage::noteOn(1, midiNote, vel));
@@ -141,6 +142,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->midiMapTable.onMidiLearnStateChanged = [this](bool learning) {
         if (learning) {
             this->processorRef.setMidiLearnCallback([this](int noteNumber) {
+                this->flashPadForMidiNote(noteNumber, 127.0f);
                 this->midiMapTable.midiLearnNoteReceived(noteNumber);
             });
         } else {
@@ -327,6 +329,7 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
     this->padContextPopup->onMidiLearnStateChanged = [this](bool learning) {
         if (learning) {
             this->processorRef.setMidiLearnCallback([this](int noteNumber) {
+                this->flashPadForMidiNote(noteNumber, 127.0f);
                 if (this->padContextPopup)
                     this->padContextPopup->midiLearnNoteReceived(noteNumber);
             });
@@ -362,4 +365,26 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
 
     addAndMakeVisible(*this->padContextPopup);
     this->padContextPopup->toFront(true);
+}
+
+void PluginEditor::flashPadForSlot(const juce::String& slotId, float velocity) {
+    if (slotId.isEmpty())
+        return;
+
+    this->drumPadGrid.flashPad(slotId, velocity);
+}
+
+void PluginEditor::flashPadForMidiNote(int midiNote, float velocity) {
+    auto* layout = this->processorRef.getEngine().getKitLayout();
+    if (layout == nullptr)
+        return;
+
+    for (const auto& slot : layout->instrumentSlots) {
+        for (const auto& articulation : slot.articulations) {
+            if (std::find(articulation.notes.begin(), articulation.notes.end(), static_cast<uint8_t>(midiNote)) != articulation.notes.end()) {
+                this->flashPadForSlot(slot.id, velocity);
+                return;
+            }
+        }
+    }
 }

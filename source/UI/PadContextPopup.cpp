@@ -373,10 +373,23 @@ void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
 }
 
 int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
+    if (layer == nullptr)
+        return -1;
+    if (layer->selectedSourceIndex < 0)
+        return -1;
+
+    int mappedLayerIndex = 0;
     for (int idx = 0; idx < this->layerRows.size(); ++idx) {
-        if (this->layerRows[idx] == layer)
-            return idx;
+        const auto* currentLayer = this->layerRows[idx];
+        if (currentLayer->selectedSourceIndex < 0)
+            continue;
+
+        if (currentLayer == layer)
+            return mappedLayerIndex;
+
+        ++mappedLayerIndex;
     }
+
     return -1;
 }
 
@@ -516,26 +529,17 @@ void PadContextPopup::flushMapText() {
 void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->dismissSourcePicker();
 
-    this->activePickerPopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
-    this->activePickerPopup->setFilterType(this->slotType);
+    auto pickerPopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
+    pickerPopup->setFilterType(this->slotType);
+    pickerPopup->setSize(juce::jlimit(240, 420, getWidth() - 16), 240);
 
-    // Position relative to this popup — allow to overflow beyond popup bounds
-    int popupWidth = juce::jmax(200, getWidth() - 8);
-    int popupHeight = 240;
-    int popupX = 4;
-    // Always try to open downward first
-    int popupY = layer->sourceButton->getBounds().getBottom() + 2;
-    // If there's not enough room below, let it overflow (don't clamp to popup height)
-
-    this->activePickerPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
-
-    this->activePickerPopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
+    pickerPopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
         const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
         this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
     };
 
-    this->activePickerPopup->onItemSelected = [this, layer](int sourceIndex) {
+    pickerPopup->onItemSelected = [this, layer](int sourceIndex) {
         layer->selectedSourceIndex = sourceIndex;
         this->updateSourceDisplay(layer);
         juce::MessageManager::callAsync([this] {
@@ -545,26 +549,16 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
         });
     };
 
-    this->pickerOverlay = std::make_unique<PickerOverlay>();
-    this->pickerOverlay->onClick = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
-    };
-    this->pickerOverlay->setBounds(getLocalBounds());
-    addAndMakeVisible(*this->pickerOverlay);
-    this->pickerOverlay->toFront(false);
-
-    addAndMakeVisible(*this->activePickerPopup);
-    this->activePickerPopup->toFront(true);
+    auto& pickerCallout = juce::CallOutBox::launchAsynchronously(std::move(pickerPopup),
+                                                                 layer->sourceButton->getScreenBounds(),
+                                                                 nullptr);
+    this->activePickerCallout = &pickerCallout;
 }
 
 void PadContextPopup::dismissSourcePicker() {
-    if (this->pickerOverlay) {
-        removeChildComponent(this->pickerOverlay.get());
-        this->pickerOverlay.reset();
-    }
-    if (this->activePickerPopup) {
-        removeChildComponent(this->activePickerPopup.get());
-        this->activePickerPopup.reset();
+    if (this->activePickerCallout != nullptr) {
+        this->activePickerCallout->exitModalState(0);
+        this->activePickerCallout = nullptr;
     }
 }
 

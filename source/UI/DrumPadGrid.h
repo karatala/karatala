@@ -23,6 +23,7 @@ public:
 
 private:
     std::vector<std::unique_ptr<DrumPad>> pads;
+    std::vector<juce::String> padSlotIds;
     PadMode padMode = PadMode::Zen;
     int gridColumns = 6;
     int gridRows = 4;

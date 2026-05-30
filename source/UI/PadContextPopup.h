@@ -10,7 +10,7 @@
 class PadContextPopup : public juce::Component {
 public:
     explicit PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedInstrumentMapText = "");
-    ~PadContextPopup() override = default;
+    ~PadContextPopup() override { this->dismissSourcePicker(); }
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -99,13 +99,7 @@ private:
     std::vector<std::pair<juce::String, juce::String>> getRelevantMics() const;
     bool mapTextDirty = false;
 
-    std::unique_ptr<SourcePickerPopup> activePickerPopup;
-    class PickerOverlay : public juce::Component {
-    public:
-        std::function<void()> onClick;
-        void mouseDown(const juce::MouseEvent&) override { if (this->onClick) this->onClick(); }
-    };
-    std::unique_ptr<PickerOverlay> pickerOverlay;
+    juce::Component::SafePointer<juce::CallOutBox> activePickerCallout;
 
     void showSourcePicker(LayerRow* layer);
     void dismissSourcePicker();

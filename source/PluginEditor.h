@@ -60,6 +60,8 @@ private:
     std::unique_ptr<PadPopupOverlay> padPopupOverlay;
     void dismissPadContextPopup();
     void showPadContextPopup(const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos);
+    void flashPadForSlot(const juce::String& slotId, float velocity);
+    void flashPadForMidiNote(int midiNote, float velocity);
 
     ViewMode activeMode = ViewMode::Zen;
     void setViewMode(ViewMode mode);

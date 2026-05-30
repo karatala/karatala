@@ -377,6 +377,19 @@ public:
         if (art.exprId != 0) artLabel += "[" + StringsDictSingleton::nameOf(art.exprId) + "]";
         return artLabel;
     }
+    bool supportsArticulation(const juce::String& artName) const {
+        const auto normalizedTarget = artName.upToFirstOccurrenceOf("[", false, false).trim();
+        if (normalizedTarget.isEmpty() || normalizedTarget == "(default)")
+            return true;
+
+        for (const auto& art : this->runtimeArticulations) {
+            const auto runtimeArtName = StringsDictSingleton::nameOf(art.nameId).upToFirstOccurrenceOf("[", false, false).trim();
+            if (runtimeArtName.compareIgnoreCase(normalizedTarget) == 0)
+                return true;
+        }
+
+        return false;
+    }
     ArtRtIdx getOrAddRuntimeArticulationIdx(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) {
         for (size_t i = 0; i < this->runtimeArticulations.size(); ++i)
             if (this->runtimeArticulations[i].nameId == nameId && this->runtimeArticulations[i].exprId == exprId)
