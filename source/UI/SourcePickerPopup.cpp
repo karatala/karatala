@@ -72,10 +72,39 @@ void SourcePickerPopup::queueRebuildFiltered() {
 }
 
 int SourcePickerPopup::ListModel::getNumRows() {
-    return static_cast<int>(this->owner.filteredEntries.size());
+    return this->owner.filteredEntries.empty() ? 1 : static_cast<int>(this->owner.filteredEntries.size());
 }
 
 void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
+    if (this->owner.filteredEntries.empty()) {
+        g.fillAll(UITheme::Colours::bgControlAlt);
+        g.setColour(UITheme::Colours::textMuted);
+        g.setFont(UITheme::Fonts::small());
+
+        const auto emptyMessage = this->owner.allItems.empty()
+            ? juce::String("No sources available")
+            : juce::String("No matching sources");
+        const auto emptyHint = this->owner.allItems.empty()
+            ? juce::String("Check your sample library path")
+            : juce::String("Try a different filter or disable related");
+
+        g.drawText(emptyMessage,
+                   8,
+                   1,
+                   width - 16,
+                   height / 2,
+                   juce::Justification::centredLeft);
+        g.setColour(UITheme::Colours::textMuted.withAlpha(0.75f));
+        g.setFont(UITheme::Fonts::small().withHeight(10.0f));
+        g.drawText(emptyHint,
+                   8,
+                   height / 2 - 1,
+                   width - 16,
+                   height / 2,
+                   juce::Justification::centredLeft);
+        return;
+    }
+
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.filteredEntries.size()))
         return;
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(rowNumber)].originalIndex;
@@ -125,6 +154,8 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
 }
 
 void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
+    if (this->owner.filteredEntries.empty())
+        return;
     if (row < 0 || row >= static_cast<int>(this->owner.filteredEntries.size()))
         return;
     auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;

@@ -1,6 +1,24 @@
 #include "DrumPad.h"
 #include "UITheme.h"
 
+namespace {
+
+juce::String getPadDisplayName(const KitLayout::InstrumentSlot& slot) { return slot.display.isNotEmpty() ? slot.display : slot.id; }
+juce::String getArticulationDisplayName(const KitLayout::InstrumentSlot::ArticulationTrigger& articulation) { return articulation.codeRaw; }
+
+void drawPadLabel(juce::Graphics& g,
+                  const juce::Rectangle<int>& bounds,
+                  const juce::String& text,
+                  const juce::Colour& colour,
+                  juce::Font font,
+                  int maxLines) {
+    g.setColour(colour);
+    g.setFont(std::move(font));
+    g.drawFittedText(text, bounds, juce::Justification::centred, maxLines, 0.9f);
+}
+
+} // namespace
+
 DrumPad::DrumPad() {
 }
 
@@ -63,13 +81,25 @@ void DrumPad::paintZen(juce::Graphics& g) {
         g.drawRect(bounds, 1);
     }
 
-    // Instrument name
-    if (this->slotPtr) {
-        auto displayName = this->slotPtr->display.isNotEmpty() ? this->slotPtr->display : this->slotPtr->id;
-        g.setColour(UITheme::Colours::textPrimary.withAlpha(0.9f));
-        g.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
-        g.drawText(displayName, bounds.reduced(4), juce::Justification::centred);
+    const auto labelBounds = bounds.reduced(6);
+    if (this->slotPtr == nullptr) {
+        drawPadLabel(g,
+                     labelBounds,
+                     "Empty",
+                     UITheme::Colours::textMuted,
+                     UITheme::Fonts::small().withHeight(11.0f),
+                     1);
+        return;
     }
+
+    const float labelHeight = static_cast<float>(juce::jlimit(10, 15,
+        juce::jmin(bounds.getWidth() / 5, bounds.getHeight() / 3)));
+    drawPadLabel(g,
+                 labelBounds,
+                 getPadDisplayName(*this->slotPtr),
+                 UITheme::Colours::textPrimary.withAlpha(0.9f),
+                 UITheme::Fonts::labelBold().withHeight(labelHeight),
+                 2);
 }
 
 void DrumPad::paintZoned(juce::Graphics& g) {
@@ -95,16 +125,21 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         g.fillRect(zoneRect);
 
         // Articulation label
-        g.setColour(UITheme::Colours::textPrimary.withAlpha(0.85f));
-        g.setFont(UITheme::Fonts::label());
-        auto labelText = this->slotPtr->articulations[static_cast<size_t>(idx)].codeRaw;
+        auto labelText = getArticulationDisplayName(this->slotPtr->articulations[static_cast<size_t>(idx)]);
+        auto font = UITheme::Fonts::label().withHeight(static_cast<float>(juce::jlimit(8, 12, zoneRect.getHeight() / 3)));
+        int maxLines = 1;
         if (idx == 0 && artCount == 1) {
             // Single articulation — show instrument name + articulation
-            auto displayName = this->slotPtr->display.isNotEmpty() ? this->slotPtr->display : this->slotPtr->id;
-            labelText = displayName + " [" + labelText + "]";
-            g.setFont(UITheme::Fonts::labelBold().withHeight(11.0f));
+            labelText = getPadDisplayName(*this->slotPtr) + "\n" + labelText;
+            font = UITheme::Fonts::labelBold().withHeight(static_cast<float>(juce::jlimit(9, 12, zoneRect.getHeight() / 3)));
+            maxLines = 2;
         }
-        g.drawText(labelText, zoneRect.reduced(4, 1), juce::Justification::centred);
+        drawPadLabel(g,
+                     zoneRect.reduced(4, 1),
+                     labelText,
+                     UITheme::Colours::textPrimary.withAlpha(0.85f),
+                     font,
+                     maxLines);
     }
 
     // Flash overlay

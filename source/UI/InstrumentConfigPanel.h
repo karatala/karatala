@@ -32,6 +32,7 @@ private:
         juce::String slotId;
         juce::String artName;
         KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
+        juce::String sourcePathHint;
         int selectedSourceIndex = -1;
 
         std::unique_ptr<juce::Label> slotLabel;
@@ -61,6 +62,7 @@ private:
     void applyToEngine();
     void applyRowParametersFast(TableRow* row);
     void timerCallback() override;
+    void updateSourceButtonDisplay(TableRow* row);
     int getMappedLayerIndexForRow(const TableRow* row) const;
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,

@@ -8,8 +8,8 @@ MidiNoteAssignmentControl::MidiNoteAssignmentControl() {
     addAndMakeVisible(this->noteButton1);
     addAndMakeVisible(this->noteButton2);
 
-    this->learnButton1.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
-    this->learnButton2.setColour(juce::TextButton::textColourOffId, UITheme::Colours::midiLearnIdle);
+    UIHelpers::configureControlButton(this->learnButton1);
+    UIHelpers::configureControlButton(this->learnButton2);
     addAndMakeVisible(this->learnButton1);
     addAndMakeVisible(this->learnButton2);
 
@@ -78,10 +78,17 @@ void MidiNoteAssignmentControl::updateNoteButtons() {
 }
 
 void MidiNoteAssignmentControl::updateLearnButtons() {
+    const bool firstLearning = this->learningSlot == 0;
+    const bool secondLearning = this->learningSlot == 1;
+
+    this->learnButton1.setColour(juce::TextButton::buttonColourId,
+                                 firstLearning ? UITheme::Colours::midiLearnActive : UITheme::Colours::bgControlRaised);
     this->learnButton1.setColour(juce::TextButton::textColourOffId,
-                                 this->learningSlot == 0 ? UITheme::Colours::midiLearnActive : UITheme::Colours::midiLearnIdle);
+                                 firstLearning ? UITheme::Colours::keyWhiteText : UITheme::Colours::midiLearnIdle);
+    this->learnButton2.setColour(juce::TextButton::buttonColourId,
+                                 secondLearning ? UITheme::Colours::midiLearnActive : UITheme::Colours::bgControlRaised);
     this->learnButton2.setColour(juce::TextButton::textColourOffId,
-                                 this->learningSlot == 1 ? UITheme::Colours::midiLearnActive : UITheme::Colours::midiLearnIdle);
+                                 secondLearning ? UITheme::Colours::keyWhiteText : UITheme::Colours::midiLearnIdle);
     this->learnButton1.repaint();
     this->learnButton2.repaint();
 }

@@ -132,6 +132,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->slotId = slotId;
     row->artName = artName;
     row->slotType = slotType;
+    row->sourcePathHint = sourceFullPath;
 
     // Slot label
     row->slotLabel = std::make_unique<juce::Label>();
@@ -150,13 +151,10 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     // Source button
     row->sourceButton = std::make_unique<juce::TextButton>();
     row->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
-    if (row->selectedSourceIndex >= 0)
-        row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].displayText());
-    else
-        row->sourceButton->setButtonText("--");
     row->sourceButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     this->contentComponent.addAndMakeVisible(*row->sourceButton);
     row->sourceButton->onClick = [this, row] { this->showPickerPopup(row); };
+    this->updateSourceButtonDisplay(row);
 
     // Sentinel text function for attack/decay sliders
     auto sentinelTextFn = [](double value) -> juce::String {
@@ -270,10 +268,10 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
 
     this->activePopup->onItemSelected = [this, row](int sourceIndex) {
         row->selectedSourceIndex = sourceIndex;
-        if (sourceIndex >= 0)
-            row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(sourceIndex)].displayText());
-        else
-            row->sourceButton->setButtonText("--");
+        row->sourcePathHint = sourceIndex >= 0
+            ? this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath()
+            : juce::String();
+        this->updateSourceButtonDisplay(row);
         juce::MessageManager::callAsync([this, row] {
             this->dismissPopup();
             this->applyToEngine();
@@ -291,6 +289,29 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
 
     addAndMakeVisible(*this->activePopup);
     this->activePopup->toFront(true);
+}
+
+void InstrumentConfigPanel::updateSourceButtonDisplay(TableRow* row) {
+    if (row == nullptr || row->sourceButton == nullptr)
+        return;
+
+    if (row->selectedSourceIndex >= 0) {
+        row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].displayText());
+        row->sourceButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textPrimary);
+        row->sourceButton->setTooltip(row->sourcePathHint);
+        return;
+    }
+
+    if (row->sourcePathHint.isNotEmpty()) {
+        row->sourceButton->setButtonText("Missing source");
+        row->sourceButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accentWarning);
+        row->sourceButton->setTooltip(row->sourcePathHint);
+        return;
+    }
+
+    row->sourceButton->setButtonText("Select source");
+    row->sourceButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
+    row->sourceButton->setTooltip({});
 }
 
 void InstrumentConfigPanel::dismissPopup() {

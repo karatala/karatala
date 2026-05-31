@@ -15,6 +15,7 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     void flushMapText();
+    juce::Rectangle<int> getPreferredBounds(const juce::Rectangle<int>& availableBounds) const;
     void setPreviewVelocityProvider(std::function<int()> provider) { this->previewVelocityProvider = std::move(provider); }
 
     std::function<void()> onDismiss;
@@ -56,6 +57,7 @@ private:
 
     // ─── Instrument map layers ───
     struct LayerRow {
+        juce::String sourcePathHint;
         int selectedSourceIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst/art multiline

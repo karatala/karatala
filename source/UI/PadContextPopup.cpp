@@ -120,10 +120,45 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->rebuildSourceItems();
     this->populateLayers();
 
-    // Set initial size so the editor can position the popup
-    // Don't set initial size here — let the editor control popup size to be 80% of viewport
-    // For now, set a reasonable minimum to avoid zero-size issues
+    // Set a non-zero fallback size; the editor will replace this with content-aware bounds.
     this->setSize(600, 400);
+}
+
+juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<int>& availableBounds) const {
+    constexpr int popupPadding = 8;
+    constexpr int headerHeight = 24;
+    constexpr int headerGap = 6;
+    constexpr int potWidth = 50;
+    constexpr int potHeight = 56;
+    constexpr int flipColumnWidth = 26;
+    constexpr int removeWidth = 16;
+    constexpr int sourceWidth = 170;
+    constexpr int bleedPotWidth = 50;
+    constexpr int groupGap = 6;
+    constexpr int groupPad = 4;
+
+    const int layerRowHeight = potHeight + 8;
+    const int mainGroupWidth = potWidth * 4 + flipColumnWidth + groupPad * 2;
+
+    int maxBleedCount = 0;
+    for (const auto* layer : this->layerRows)
+        maxBleedCount = juce::jmax(maxBleedCount, static_cast<int>(layer->micBleeds.size()));
+
+    const int bleedGroupWidth = maxBleedCount > 0 ? maxBleedCount * bleedPotWidth + groupPad * 2 : 0;
+    const int preferredWidth = popupPadding * 2
+                             + removeWidth
+                             + sourceWidth
+                             + mainGroupWidth
+                             + bleedGroupWidth
+                             + groupGap * 2;
+    const int preferredHeight = popupPadding * 2
+                              + headerHeight
+                              + headerGap
+                              + juce::jmax(1, this->layerRows.size()) * layerRowHeight;
+
+    const int width = juce::jlimit(420, availableBounds.getWidth(), preferredWidth);
+    const int height = juce::jlimit(220, availableBounds.getHeight(), preferredHeight);
+    return juce::Rectangle<int>(width, height).withCentre(availableBounds.getCentre());
 }
 
 void PadContextPopup::populateLayers() {
@@ -198,6 +233,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
                                    float volumeDb, bool flipLR, bool flipPhase,
                                    const std::unordered_map<juce::String, float>& micBleedLevels) {
     auto* layer = this->layerRows.add(new LayerRow());
+    layer->sourcePathHint = sourceFullPath;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
 
     // Source button (opens picker)
@@ -338,8 +374,16 @@ void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
         if (src.artCode.isNotEmpty())
             detail += "\n" + src.artCode;
         layer->sourceDetailLabel->setText(detail, juce::dontSendNotification);
+        layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+        layer->sourceButton->setTooltip(src.fullPath());
+    } else if (layer->sourcePathHint.isNotEmpty()) {
+        layer->sourceDetailLabel->setText("Missing source\n" + layer->sourcePathHint, juce::dontSendNotification);
+        layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::accentWarning);
+        layer->sourceButton->setTooltip(layer->sourcePathHint);
     } else {
-        layer->sourceDetailLabel->setText("--  " + juce::String::charToString(0x25BC), juce::dontSendNotification);
+        layer->sourceDetailLabel->setText("Select source\n" + juce::String::charToString(0x25BC), juce::dontSendNotification);
+        layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
+        layer->sourceButton->setTooltip({});
     }
     layer->sourceButton->setButtonText("");
 }
@@ -537,6 +581,9 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
 
     pickerPopup->onItemSelected = [this, layer](int sourceIndex) {
         layer->selectedSourceIndex = sourceIndex;
+        layer->sourcePathHint = sourceIndex >= 0
+            ? this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath()
+            : juce::String();
         this->updateSourceDisplay(layer);
         juce::MessageManager::callAsync([this] {
             this->dismissSourcePicker();

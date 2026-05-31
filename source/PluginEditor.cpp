@@ -396,13 +396,8 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
         }
     };
 
-    // Set popup to 80% of editor viewport, centered
-    int popupWidth = static_cast<int>(getWidth() * 0.8f);
-    int popupHeight = static_cast<int>(getHeight() * 0.8f);
-    int popupX = (getWidth() - popupWidth) / 2;
-    int popupY = (getHeight() - popupHeight) / 2;
-
-    this->padContextPopup->setBounds(popupX, popupY, popupWidth, popupHeight);
+    const auto availablePopupBounds = getLocalBounds().reduced(24, 18);
+    this->padContextPopup->setBounds(this->padContextPopup->getPreferredBounds(availablePopupBounds));
 
     this->padPopupOverlay = std::make_unique<DismissOverlay>();
     this->padPopupOverlay->onClick = [this] {
