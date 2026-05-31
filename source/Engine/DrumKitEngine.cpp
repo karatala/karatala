@@ -878,67 +878,168 @@ void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::Stri
     }
 }
 
+namespace {
 
-void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
-                                       const juce::String& artCode, juce::uint8 velocity) {
+constexpr int previewVelocityBandSize = 8;
+
+int getPreviewVelocityBucket(juce::uint8 velocity) {
+    return juce::jlimit(0, 15, (static_cast<int>(velocity) - 1) / previewVelocityBandSize);
+}
+
+juce::uint8 getPreviewVelocityForBucket(juce::uint8 velocity) {
+    const int bucket = getPreviewVelocityBucket(velocity);
+    const int bucketVelocity = bucket * previewVelocityBandSize + previewVelocityBandSize / 2;
+    return static_cast<juce::uint8>(juce::jlimit(1, 127, bucketVelocity));
+}
+
+} // namespace
+
+juce::ThreadPoolJob::JobStatus DrumKitEngine::PreviewResolveJob::runJob() {
+    this->owner.resolveAndLoadPreviewTarget(std::move(this->cacheKey),
+                                            this->kitCodeRaw,
+                                            this->instCode,
+                                            this->artCode,
+                                            this->resolveVelocity,
+                                            this->playbackVelocity);
+    return jobHasFinished;
+}
+
+std::string DrumKitEngine::makePreviewTargetCacheKey(const juce::String& kitCodeRaw,
+                                                     const juce::String& instCode,
+                                                     const juce::String& artCode,
+                                                     juce::uint8 velocity) const {
+    const auto key = kitCodeRaw.trim().toLowerCase()
+                   + "|" + instCode.trim().toLowerCase()
+                   + "|" + artCode.trim().toLowerCase()
+                   + "|" + juce::String(getPreviewVelocityBucket(velocity));
+    return key.toStdString();
+}
+
+std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(const juce::String& kitCodeRaw,
+                                                                                 const juce::String& instCode,
+                                                                                 const juce::String& artCode,
+                                                                                 juce::uint8 velocity) {
     auto* libMgr = this->libraryManagerPtr.get();
-    if (libMgr == nullptr) return;
+    if (libMgr == nullptr)
+        return std::nullopt;
 
     auto* kit = libMgr->findKit(kitCodeRaw);
-    if (kit == nullptr) return;
+    if (kit == nullptr)
+        return std::nullopt;
 
     auto* inst = kit->findInstrument(instCode);
-    if (inst == nullptr) return;
+    if (inst == nullptr)
+        return std::nullopt;
 
-    // Ensure samples are scanned
     if (inst->articulationSpecs.empty())
         inst->scanInstrumentSamples();
 
-    // Find the articulation (first if artCode is empty)
     KitLib::ArticulationSpec* artSpec = nullptr;
-    if (artCode.isNotEmpty()) {
+    if (artCode.isNotEmpty())
         artSpec = inst->findArticulation(artCode);
-    }
-    if (artSpec == nullptr && !inst->articulationSpecs.empty()) {
-        artSpec = inst->articulationSpecs[0].get();
-    }
-    if (artSpec == nullptr || artSpec->velocityLayerSpecs.empty()) return;
 
-    // Find closest velocity layer
+    if (artSpec == nullptr && !inst->articulationSpecs.empty())
+        artSpec = inst->articulationSpecs[0].get();
+
+    if (artSpec == nullptr || artSpec->velocityLayerSpecs.empty())
+        return std::nullopt;
+
     KitLib::VelocityLayerSpec* bestLayer = nullptr;
-    int bestDist = 999;
+    int bestDist = std::numeric_limits<int>::max();
     for (auto& layer : artSpec->velocityLayerSpecs) {
-        int dist = std::abs(static_cast<int>(layer->velocity) - static_cast<int>(velocity));
+        const int dist = std::abs(static_cast<int>(layer->velocity) - static_cast<int>(velocity));
         if (dist < bestDist) {
             bestDist = dist;
             bestLayer = layer.get();
         }
     }
-    if (bestLayer == nullptr || bestLayer->sampleVariantSpecs.empty()) return;
 
-    // Pick the first sample variant
+    if (bestLayer == nullptr || bestLayer->sampleVariantSpecs.empty())
+        return std::nullopt;
+
     auto& sampleVariant = bestLayer->sampleVariantSpecs[0];
-    if (!sampleVariant->isValid()) return;
+    if (!sampleVariant->isValid())
+        return std::nullopt;
 
-    juce::File sampleFile = sampleVariant->sampleFile;
-    float volumeTrimDb = sampleVariant->volumeTrimDb;
-    float gain = juce::Decibels::decibelsToGain(volumeTrimDb)
-               * (static_cast<float>(velocity) / 127.0f);
+    PreviewTarget target;
+    target.sampleFile = sampleVariant->sampleFile;
+    target.volumeTrimDb = sampleVariant->volumeTrimDb;
+    return target;
+}
 
-    // Load asynchronously via SampleLoader
+void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::uint8 velocity) {
+    auto* loader = this->sampleLoaderPtr.get();
+
+    if (loader == nullptr || !target.sampleFile.existsAsFile())
+        return;
+
+    const float gain = juce::Decibels::decibelsToGain(target.volumeTrimDb)
+                     * (static_cast<float>(velocity) / 127.0f);
+
     SampleLoadSpec loadSpec;
-    loadSpec.file = sampleFile;
-    loadSpec.volumeTrimDb = 0.0f; // apply gain ourselves for velocity scaling
+    loadSpec.file = target.sampleFile;
+    loadSpec.volumeTrimDb = 0.0f;
     loadSpec.preprocessTag = "preview";
 
-    this->sampleLoaderPtr->requestAsyncLoad(loadSpec, [this, gain](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
-        if (buffer == nullptr) return;
+    loader->requestAsyncLoad(loadSpec, [this, gain](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+        if (buffer == nullptr)
+            return;
         const juce::SpinLock::ScopedLockType scopedLock(this->previewLock);
         this->previewBuffer = buffer;
         this->previewSampleRate = sampleRate;
         this->previewGain = gain;
         this->previewReadPos.store(0);
     });
+}
+
+void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey,
+                                                const juce::String& kitCodeRaw,
+                                                const juce::String& instCode,
+                                                const juce::String& artCode,
+                                                juce::uint8 resolveVelocity,
+                                                juce::uint8 playbackVelocity) {
+    auto target = this->resolvePreviewTarget(kitCodeRaw, instCode, artCode, resolveVelocity);
+
+    {
+        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        this->pendingPreviewTargetKeys.erase(cacheKey);
+        if (target.has_value())
+            this->previewTargetCache[cacheKey] = *target;
+    }
+
+    if (target.has_value())
+        this->requestPreviewPlayback(*target, playbackVelocity);
+}
+
+
+void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
+                                      const juce::String& artCode, juce::uint8 velocity) {
+    const auto cacheKey = this->makePreviewTargetCacheKey(kitCodeRaw, instCode, artCode, velocity);
+    std::optional<PreviewTarget> cachedTarget;
+
+    {
+        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        auto it = this->previewTargetCache.find(cacheKey);
+        if (it != this->previewTargetCache.end())
+            cachedTarget = it->second;
+        else if (!this->pendingPreviewTargetKeys.insert(cacheKey).second)
+            return;
+    }
+
+    if (cachedTarget.has_value()) {
+        this->requestPreviewPlayback(*cachedTarget, velocity);
+        return;
+    }
+
+    const auto resolveVelocity = getPreviewVelocityForBucket(velocity);
+    this->previewResolveThreadPool.addJob(new PreviewResolveJob(*this,
+                                                                cacheKey,
+                                                                kitCodeRaw,
+                                                                instCode,
+                                                                artCode,
+                                                                resolveVelocity,
+                                                                velocity),
+                                          true);
 }
 
 

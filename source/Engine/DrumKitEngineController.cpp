@@ -101,6 +101,14 @@ void DrumKitEngine::initSampleLibrary() {
         return;
     }
 
+    this->previewResolveThreadPool.removeAllJobs(true, 2000);
+
+    {
+        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        this->previewTargetCache.clear();
+        this->pendingPreviewTargetKeys.clear();
+    }
+
     this->libraryManagerPtr = std::make_unique<KitLib::LibraryManager>(this->globalConfig.libraryPath);
     this->libraryManagerPtr->scanAll();
 

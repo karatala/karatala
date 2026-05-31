@@ -9,6 +9,7 @@
 #include <array>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 class DrumKitEngine {
 public:
@@ -39,7 +40,9 @@ public:
         this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
         this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
     }
-    ~DrumKitEngine() {};
+    ~DrumKitEngine() {
+        this->previewResolveThreadPool.removeAllJobs(true, 2000);
+    };
 
     juce::File dataPath;
     const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::commonDocumentsDirectory).getChildFile("Karatala") };
@@ -157,6 +160,42 @@ private:
 
     std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>> articulationFallbackIdMap;
 
+    struct PreviewTarget {
+        juce::File sampleFile;
+        float volumeTrimDb = 0.0f;
+    };
+
+    class PreviewResolveJob : public juce::ThreadPoolJob {
+    public:
+        PreviewResolveJob(DrumKitEngine& owner,
+                          std::string cacheKey,
+                          juce::String kitCodeRaw,
+                          juce::String instCode,
+                          juce::String artCode,
+                          juce::uint8 resolveVelocity,
+                          juce::uint8 playbackVelocity)
+            : juce::ThreadPoolJob("Preview Resolve Job")
+            , owner(owner)
+            , cacheKey(std::move(cacheKey))
+            , kitCodeRaw(std::move(kitCodeRaw))
+            , instCode(std::move(instCode))
+            , artCode(std::move(artCode))
+            , resolveVelocity(resolveVelocity)
+            , playbackVelocity(playbackVelocity) {
+        }
+
+        JobStatus runJob() override;
+
+    private:
+        DrumKitEngine& owner;
+        std::string cacheKey;
+        juce::String kitCodeRaw;
+        juce::String instCode;
+        juce::String artCode;
+        juce::uint8 resolveVelocity = 0;
+        juce::uint8 playbackVelocity = 0;
+    };
+
     // Last known audio block size (samples per block).
     int lastSamplesPerBlock = 0;
     double lastSampleRate = 0.0;
@@ -181,6 +220,21 @@ private:
     void regenerateSuggestedInstrumentMapText();
     void clearShadowSynths();
     void rebuildPrimaryInstrumentNoteRouting();
+    std::string makePreviewTargetCacheKey(const juce::String& kitCodeRaw,
+                                          const juce::String& instCode,
+                                          const juce::String& artCode,
+                                          juce::uint8 velocity) const;
+    std::optional<PreviewTarget> resolvePreviewTarget(const juce::String& kitCodeRaw,
+                                                      const juce::String& instCode,
+                                                      const juce::String& artCode,
+                                                      juce::uint8 velocity);
+    void resolveAndLoadPreviewTarget(std::string cacheKey,
+                                     const juce::String& kitCodeRaw,
+                                     const juce::String& instCode,
+                                     const juce::String& artCode,
+                                     juce::uint8 resolveVelocity,
+                                     juce::uint8 playbackVelocity);
+    void requestPreviewPlayback(const PreviewTarget& target, juce::uint8 velocity);
 
     void saveLatestControllerValues(const juce::MidiBuffer& midiMessages);
 
@@ -190,4 +244,8 @@ private:
     std::atomic<int> previewReadPos { -1 };
     float previewGain = 1.0f;
     juce::SpinLock previewLock;
+    juce::CriticalSection previewTargetResolutionLock;
+    std::unordered_map<std::string, PreviewTarget> previewTargetCache;
+    std::unordered_set<std::string> pendingPreviewTargetKeys;
+    juce::ThreadPool previewResolveThreadPool { 1 };
 };
