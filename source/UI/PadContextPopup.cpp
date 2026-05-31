@@ -133,16 +133,24 @@ void PadContextPopup::populateLayers() {
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto& existingEntries = parseResult.value.entries;
 
+    // Count how many entries for the same slot come before this art group.
+    // This offset aligns the popup's layer indices with the engine's per-slot synth order.
+    this->layerIndexOffset = 0;
+    bool foundFirstMatch = false;
     std::vector<const DrumKitEngine::InstrumentMapEntry*> matchingEntries;
     for (const auto& entry : existingEntries) {
         if (entry.slotId != this->slotId) continue;
-        if (!entry.slotArticulationFilter.empty()) {
-            bool found = false;
+        bool matchesArt = entry.slotArticulationFilter.empty();
+        if (!matchesArt) {
             for (const auto& filter : entry.slotArticulationFilter)
-                if (filter == this->artName) found = true;
-            if (!found) continue;
+                if (filter == this->artName) matchesArt = true;
         }
-        matchingEntries.push_back(&entry);
+        if (matchesArt) {
+            matchingEntries.push_back(&entry);
+            foundFirstMatch = true;
+        } else if (!foundFirstMatch) {
+            ++this->layerIndexOffset;
+        }
     }
 
     // Fallback: entries with no art filter for this slot
@@ -371,7 +379,7 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
 
     this->engine.updateSlotParameters(this->slotId,
                                       this->artName,
-                                      layerIndex,
+                                      this->layerIndexOffset + layerIndex,
                                       tuning,
                                       attack,
                                       decay);
@@ -468,9 +476,33 @@ void PadContextPopup::applyToEngine() {
     this->engine.useInstrumentMap(text);
     this->savedInstrumentMapText = text;
     this->mapTextDirty = false;
+    this->recalculateLayerIndexOffset();
 
     if (this->onMapTextChanged)
         this->onMapTextChanged(text);
+}
+
+void PadContextPopup::recalculateLayerIndexOffset() {
+    auto mapText = this->savedInstrumentMapText.isNotEmpty()
+                       ? this->savedInstrumentMapText
+                       : this->engine.getSuggestedInstrumentMapText();
+    auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
+    const auto& entries = parseResult.value.entries;
+
+    this->layerIndexOffset = 0;
+    bool foundFirstMatch = false;
+    for (const auto& entry : entries) {
+        if (entry.slotId != this->slotId) continue;
+        bool matchesArt = entry.slotArticulationFilter.empty();
+        if (!matchesArt) {
+            for (const auto& filter : entry.slotArticulationFilter)
+                if (filter == this->artName) matchesArt = true;
+        }
+        if (matchesArt)
+            foundFirstMatch = true;
+        else if (!foundFirstMatch)
+            ++this->layerIndexOffset;
+    }
 }
 
 void PadContextPopup::flushMapText() {

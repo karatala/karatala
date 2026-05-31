@@ -1064,6 +1064,7 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
                                          std::optional<int> tuningCents,
                                          std::optional<int> attackMs,
                                          std::optional<int> decayMs) {
+    juce::ignoreUnused(artName);
     if (layerIndex < 0)
         return;
 
@@ -1074,8 +1075,6 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
         if (synthPtr == nullptr)
             continue;
         if (synthPtr->getId() != slotId)
-            continue;
-        if (!synthPtr->supportsArticulation(artName))
             continue;
 
         if (currentLayerIndex == layerIndex) {

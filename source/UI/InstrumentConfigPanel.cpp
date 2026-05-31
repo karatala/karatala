@@ -434,8 +434,6 @@ int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const 
         const auto* currentRow = this->tableRows[idx];
         if (currentRow->slotId != row->slotId)
             continue;
-        if (currentRow->artName != row->artName)
-            continue;
         if (currentRow->selectedSourceIndex < 0)
             continue;
 

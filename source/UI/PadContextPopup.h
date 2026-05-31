@@ -88,10 +88,12 @@ private:
     void updateRemoveButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
     void applyToEngine();
+    void recalculateLayerIndexOffset();
     juce::String generateFullMapText() const;
     void populateLayers();
     std::vector<std::pair<juce::String, juce::String>> getRelevantMics() const;
     bool mapTextDirty = false;
+    int layerIndexOffset = 0;
 
     juce::Component::SafePointer<juce::CallOutBox> activePickerCallout;
 
