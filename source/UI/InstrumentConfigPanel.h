@@ -7,13 +7,15 @@
 #include "SourcePickerPopup.h"
 #include "UITheme.h"
 
-class InstrumentConfigPanel : public juce::Component {
+class InstrumentConfigPanel : public juce::Component,
+                              private juce::Timer {
 public:
     explicit InstrumentConfigPanel(DrumKitEngine& engine);
     ~InstrumentConfigPanel() override = default;
 
     void resized() override;
     void populate(const juce::String& instrumentMapText);
+    void flushMapText();
 
     std::function<void(const juce::String&)> onStatusMessage;
     std::function<void(const juce::String&)> onMapTextChanged;
@@ -58,6 +60,7 @@ private:
     void layoutContent();
     void applyToEngine();
     void applyRowParametersFast(TableRow* row);
+    void timerCallback() override;
     int getMappedLayerIndexForRow(const TableRow* row) const;
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,
@@ -65,6 +68,11 @@ private:
                 int insertionIndex = -1);
     int findSourceIndex(const juce::String& fullPath) const;
     void updateRemoveButtonVisibility();
+    void queueMapTextFlush();
+
+    bool mapTextDirty = false;
+
+    static constexpr int mapTextFlushDebounceMs = 300;
 
     static constexpr int rowHeight = UITheme::Spacing::rowNormal;
 

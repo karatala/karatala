@@ -30,7 +30,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
         this->drumPadGrid.setPadGap(settings.padGap);
     }
-    this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+    this->refreshDrumPadGridIfNeeded(true);
     this->drumPadGrid.onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, float velocity) {
         if (!slot || artIdx < 0 || artIdx >= static_cast<int>(slot->articulations.size()))
             return;
@@ -129,14 +129,16 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         }
 
         this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
-        // Re-populate pad grid after instrument map change
-        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
-        this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+        this->markDrumPadGridDirty();
+        this->markMidiMapTableDirty();
+        this->markInstrumentConfigDirty();
+        this->refreshDrumPadGridIfNeeded();
+        this->refreshMidiMapTableIfNeeded();
     };
 
     // Map mode — MIDI note assignment table
     addChildComponent(this->midiMapTable);
-    this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+    this->refreshMidiMapTableIfNeeded(true);
     this->midiMapTable.onMappingChanged = [this] {
         // Rebuild engine note routing after mapping changes
         auto* layout = this->processorRef.getEngine().getKitLayout();
@@ -163,7 +165,8 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         auto& settings = this->processorRef.getEngine().engineSettings;
         this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
         this->drumPadGrid.setPadGap(settings.padGap);
-        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+        this->markDrumPadGridDirty();
+        this->refreshDrumPadGridIfNeeded();
     };
 
     // Instrument config mode
@@ -171,12 +174,16 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     addChildComponent(*this->instrumentConfigPanel);
     this->instrumentConfigPanel->onStatusMessage = [this](const juce::String& msg) {
         this->statusBar.setStatusText(msg);
-        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
-        this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+        this->markDrumPadGridDirty();
+        this->markMidiMapTableDirty();
+        this->refreshDrumPadGridIfNeeded();
+        this->refreshMidiMapTableIfNeeded();
     };
     this->instrumentConfigPanel->onMapTextChanged = [this](const juce::String& mapText) {
         this->processorRef.getValueTreeState().state.setProperty("instrument_map", mapText, nullptr);
         this->instrumentMapEditor.setText(mapText, false);
+        this->instrumentConfigSnapshot = mapText;
+        this->instrumentConfigDirty = false;
     };
 
     // Show default mode
@@ -189,7 +196,54 @@ PluginEditor::~PluginEditor() {
     this->setLookAndFeel(nullptr);
 }
 
+void PluginEditor::markDrumPadGridDirty() {
+    this->drumPadGridDirty = true;
+}
+
+void PluginEditor::markMidiMapTableDirty() {
+    this->midiMapTableDirty = true;
+}
+
+void PluginEditor::markInstrumentConfigDirty() {
+    this->instrumentConfigDirty = true;
+}
+
+void PluginEditor::refreshDrumPadGridIfNeeded(bool force) {
+    if (!force && !this->drumPadGridDirty)
+        return;
+    if (!force && !this->drumPadGrid.isVisible())
+        return;
+
+    this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+    this->drumPadGridDirty = false;
+}
+
+void PluginEditor::refreshMidiMapTableIfNeeded(bool force) {
+    if (!force && !this->midiMapTableDirty)
+        return;
+    if (!force && !this->midiMapTable.isVisible())
+        return;
+
+    this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+    this->midiMapTableDirty = false;
+}
+
+void PluginEditor::refreshInstrumentConfigIfNeeded(bool force) {
+    auto savedMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
+    if (!force && !this->instrumentConfigDirty && savedMap == this->instrumentConfigSnapshot)
+        return;
+    if (!force && !this->instrumentConfigPanel->isVisible())
+        return;
+
+    this->instrumentConfigPanel->populate(savedMap);
+    this->instrumentConfigSnapshot = savedMap;
+    this->instrumentConfigDirty = false;
+}
+
 void PluginEditor::setViewMode(ViewMode mode) {
+    if (this->activeMode == ViewMode::Instrument && mode != ViewMode::Instrument)
+        this->instrumentConfigPanel->flushMapText();
+
     this->activeMode = mode;
     this->showComponentsForMode(mode);
 
@@ -198,16 +252,14 @@ void PluginEditor::setViewMode(ViewMode mode) {
 
     if (mode == ViewMode::Zen || mode == ViewMode::Zoned) {
         this->drumPadGrid.setPadMode(mode == ViewMode::Zoned ? PadMode::Zoned : PadMode::Zen);
-        this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+        this->refreshDrumPadGridIfNeeded();
     }
 
     if (mode == ViewMode::Map)
-        this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
+        this->refreshMidiMapTableIfNeeded();
 
-    if (mode == ViewMode::Instrument) {
-        auto savedMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
-        this->instrumentConfigPanel->populate(savedMap);
-    }
+    if (mode == ViewMode::Instrument)
+        this->refreshInstrumentConfigIfNeeded();
 
     this->resized();
 }
@@ -324,11 +376,13 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
         this->processorRef.getValueTreeState().state.setProperty("instrument_map", mapText, nullptr);
         this->instrumentMapEditor.setText(mapText, false);
         this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
+        this->markInstrumentConfigDirty();
     };
     this->padContextPopup->onMidiMappingChanged = [this] {
         auto* layout = this->processorRef.getEngine().getKitLayout();
         if (layout) layout->rebuildIndices();
         this->statusBar.setStatusText("MIDI mapping updated");
+        this->markMidiMapTableDirty();
     };
     this->padContextPopup->onMidiLearnStateChanged = [this](bool learning) {
         if (learning) {

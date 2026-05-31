@@ -8,7 +8,8 @@
  * Standalone source (kit/instrument/articulation) picker popup.
  * Used by both PadContextPopup and InstrumentConfigPanel.
  */
-class SourcePickerPopup : public juce::Component {
+class SourcePickerPopup : public juce::Component,
+                          private juce::Timer {
 public:
     explicit SourcePickerPopup(const std::vector<SourceItem>& items);
     ~SourcePickerPopup() override = default;
@@ -39,8 +40,13 @@ private:
         int originalIndex; 
     };
     std::vector<FilteredEntry> filteredEntries;
+    std::vector<juce::String> cachedLowerDisplayText;
 
     void rebuildFiltered();
+    void timerCallback() override;
+    void queueRebuildFiltered();
+
+    static constexpr int filterDebounceMs = 100;
 
     class ListModel : public juce::ListBoxModel {
     public:

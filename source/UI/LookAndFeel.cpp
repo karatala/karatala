@@ -284,5 +284,5 @@ void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, b
 juce::Font LookAndFeel::getTextButtonFont(juce::TextButton& button, int buttonHeight) {
     // For small buttons (like +, x, ●), use a font that actually fits
     // without JUCE's drawFittedText truncating to "..."
-    return UITheme::Fonts::label().withHeight(juce::jmin(14.0f, static_cast<float>(buttonHeight) * 0.7f));
+    return juce::Font(juce::FontOptions(juce::jmin(14.0f, static_cast<float>(buttonHeight) * 0.7f)));
 }

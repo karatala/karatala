@@ -7,10 +7,11 @@
 
 class DrumKitEngine;
 
-class EngineSettingsPanel : public juce::Component {
+class EngineSettingsPanel : public juce::Component,
+                            private juce::Timer {
 public:
     explicit EngineSettingsPanel(DrumKitEngine& engine);
-    ~EngineSettingsPanel() override = default;
+    ~EngineSettingsPanel() override;
 
     void resized() override;
     void loadFromEngine();
@@ -39,6 +40,11 @@ private:
     void addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval);
     void addIntPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal);
     void onSettingChanged();
+    void timerCallback() override;
+    void queueSettingsSave();
+    void flushPendingSettingsSave();
+
+    static constexpr int settingsSaveDebounceMs = 350;
 
 public:
     std::function<void()> onGridSizeChanged;

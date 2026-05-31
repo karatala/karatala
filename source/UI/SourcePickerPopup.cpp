@@ -4,7 +4,7 @@
 SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items)
     : allItems(items) {
     this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
-    this->filterField.onTextChange = [this] { this->rebuildFiltered(); };
+    this->filterField.onTextChange = [this] { this->queueRebuildFiltered(); };
     addAndMakeVisible(this->filterField);
 
     this->relatedOnlyToggle.setToggleState(true, juce::dontSendNotification);
@@ -15,6 +15,10 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items)
     this->listBox.setRowHeight(18);
     this->listBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
     addAndMakeVisible(this->listBox);
+
+    this->cachedLowerDisplayText.reserve(this->allItems.size());
+    for (const auto& item : this->allItems)
+        this->cachedLowerDisplayText.push_back(item.displayText().toLowerCase());
 
     this->rebuildFiltered();
 }
@@ -41,6 +45,7 @@ void SourcePickerPopup::paint(juce::Graphics& g) {
 }
 
 void SourcePickerPopup::rebuildFiltered() {
+    this->stopTimer();
     this->filteredEntries.clear();
     auto filterText = this->filterField.getText().toLowerCase();
     bool relatedOnly = this->relatedOnlyToggle.getToggleState()
@@ -50,13 +55,20 @@ void SourcePickerPopup::rebuildFiltered() {
         const auto& item = this->allItems[static_cast<size_t>(idx)];
         if (relatedOnly && item.instType != this->filterType)
             continue;
-        if (filterText.isNotEmpty() && !item.displayText().toLowerCase().contains(filterText))
+        if (filterText.isNotEmpty() && !this->cachedLowerDisplayText[static_cast<size_t>(idx)].contains(filterText))
             continue;
         this->filteredEntries.push_back({ idx });
     }
 
     this->listBox.updateContent();
-    this->listBox.repaint();
+}
+
+void SourcePickerPopup::timerCallback() {
+    this->rebuildFiltered();
+}
+
+void SourcePickerPopup::queueRebuildFiltered() {
+    this->startTimer(filterDebounceMs);
 }
 
 int SourcePickerPopup::ListModel::getNumRows() {

@@ -59,6 +59,17 @@ private:
     void showPadContextPopup(const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos);
     void flashPadForSlot(const juce::String& slotId, float velocity);
     void flashPadForMidiNote(int midiNote, float velocity);
+    void markDrumPadGridDirty();
+    void markMidiMapTableDirty();
+    void markInstrumentConfigDirty();
+    void refreshDrumPadGridIfNeeded(bool force = false);
+    void refreshMidiMapTableIfNeeded(bool force = false);
+    void refreshInstrumentConfigIfNeeded(bool force = false);
+
+    bool drumPadGridDirty = false;
+    bool midiMapTableDirty = false;
+    bool instrumentConfigDirty = true;
+    juce::String instrumentConfigSnapshot;
 
     ViewMode activeMode = ViewMode::Zen;
     void setViewMode(ViewMode mode);

@@ -39,6 +39,8 @@ int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const
 
 void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->dismissPopup();
+    this->stopTimer();
+    this->mapTextDirty = false;
     this->rebuildSourceItems();
     this->tableRows.clear();
     this->contentComponent.removeAllChildren();
@@ -166,6 +168,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     this->contentComponent.addAndMakeVisible(*row->tuningSlider);
     row->tuningSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->tuningSlider->onDragEnd = [this, row] {
+        this->flushMapText();
         this->engine.playPreviewNote(row->slotId, row->artName, 100);
     };
 
@@ -175,6 +178,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     this->contentComponent.addAndMakeVisible(*row->attackSlider);
     row->attackSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->attackSlider->onDragEnd = [this, row] {
+        this->flushMapText();
         this->engine.playPreviewNote(row->slotId, row->artName, 100);
     };
 
@@ -184,6 +188,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     this->contentComponent.addAndMakeVisible(*row->decaySlider);
     row->decaySlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->decaySlider->onDragEnd = [this, row] {
+        this->flushMapText();
         this->engine.playPreviewNote(row->slotId, row->artName, 100);
     };
 
@@ -456,22 +461,47 @@ void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
     const int decay = static_cast<int>(row->decaySlider->getValue());
 
     this->engine.updateSlotParameters(row->slotId, row->artName, layerIndex, tuning, attack, decay);
+    this->mapTextDirty = true;
+    this->queueMapTextFlush();
+}
 
-    if (this->onMapTextChanged)
-        this->onMapTextChanged(this->generateMapText());
+void InstrumentConfigPanel::timerCallback() {
+    this->flushMapText();
 }
 
 void InstrumentConfigPanel::applyToEngine() {
+    this->stopTimer();
     auto text = this->generateMapText();
     if (text.trim().isEmpty())
         return;
 
     DBG("InstrumentConfigPanel::applyToEngine map text:\n" + text);
     this->engine.useInstrumentMap(text);
+    this->mapTextDirty = false;
 
     if (this->onMapTextChanged)
         this->onMapTextChanged(text);
 
     if (this->onStatusMessage)
         this->onStatusMessage(this->engine.getLastInstrumentMapStatus());
+}
+
+void InstrumentConfigPanel::flushMapText() {
+    if (!this->mapTextDirty)
+        return;
+
+    this->stopTimer();
+
+    const auto text = this->generateMapText();
+    if (text.trim().isEmpty())
+        return;
+
+    this->mapTextDirty = false;
+
+    if (this->onMapTextChanged)
+        this->onMapTextChanged(text);
+}
+
+void InstrumentConfigPanel::queueMapTextFlush() {
+    this->startTimer(mapTextFlushDebounceMs);
 }

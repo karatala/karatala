@@ -85,6 +85,10 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->loadFromEngine();
 }
 
+EngineSettingsPanel::~EngineSettingsPanel() {
+    this->flushPendingSettingsSave();
+}
+
 void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval) {
     auto entry = std::make_unique<PotEntry>();
     entry->target = target;
@@ -99,6 +103,7 @@ void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& t
                                                          makeSettingsPotLayout(false));
     entry->parameterPot->setTooltipText(tooltip);
     entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
+    entry->parameterPot->onDragEnd = [this] { this->flushPendingSettingsSave(); };
     this->contentComponent.addAndMakeVisible(*entry->parameterPot);
 
     UIHelpers::configureControlButton(entry->resetButton,
@@ -125,6 +130,7 @@ void EngineSettingsPanel::addIntPot(const juce::String& name, const juce::String
                                                          makeSettingsPotLayout(true));
     entry->parameterPot->setTooltipText(tooltip);
     entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
+    entry->parameterPot->onDragEnd = [this] { this->flushPendingSettingsSave(); };
     this->contentComponent.addAndMakeVisible(*entry->parameterPot);
 
     UIHelpers::configureControlButton(entry->resetButton,
@@ -158,9 +164,27 @@ void EngineSettingsPanel::onSettingChanged() {
                 gridChanged = true;
         }
     }
-    this->engine.saveSettings();
+
     if (gridChanged && this->onGridSizeChanged)
         this->onGridSizeChanged();
+
+    this->queueSettingsSave();
+}
+
+void EngineSettingsPanel::timerCallback() {
+    this->flushPendingSettingsSave();
+}
+
+void EngineSettingsPanel::queueSettingsSave() {
+    this->startTimer(settingsSaveDebounceMs);
+}
+
+void EngineSettingsPanel::flushPendingSettingsSave() {
+    if (!this->isTimerRunning())
+        return;
+
+    this->stopTimer();
+    this->engine.saveSettings();
 }
 
 void EngineSettingsPanel::resized() {

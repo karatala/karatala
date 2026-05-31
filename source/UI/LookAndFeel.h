@@ -25,6 +25,8 @@ public:
         this->setColour(juce::TabbedComponent::outlineColourId, darkestGrey);
         this->setColour(juce::GroupComponent::outlineColourId, darkerGrey);
         this->setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::bgApp);
+        this->setColour(juce::TextEditor::highlightColourId, UITheme::Colours::listSelection);
+        this->setColour(juce::TextEditor::highlightedTextColourId, UITheme::Colours::textPrimary);
     }
 
     void drawRotarySlider(juce::Graphics&, int x, int y, int width, int height,
