@@ -116,6 +116,12 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
         this->resized();
     };
 
+    // Scrollable layer area
+    this->layerContent.layerRowsPtr = &this->layerRows;
+    this->layerViewport.setViewedComponent(&this->layerContent, false);
+    this->layerViewport.setScrollBarsShown(true, false);
+    addAndMakeVisible(this->layerViewport);
+
     // Build source items and populate layers from existing instrument map
     this->rebuildSourceItems();
     this->populateLayers();
@@ -154,7 +160,7 @@ juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<i
     const int preferredHeight = popupPadding * 2
                               + headerHeight
                               + headerGap
-                              + juce::jmax(1, this->layerRows.size()) * layerRowHeight;
+                              + juce::jmax(1, static_cast<int>(this->layerRows.size())) * layerRowHeight;
 
     const int width = juce::jlimit(420, availableBounds.getWidth(), preferredWidth);
     const int height = juce::jlimit(220, availableBounds.getHeight(), preferredHeight);
@@ -240,7 +246,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->sourceButton = std::make_unique<juce::TextButton>();
     layer->sourceButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControlAlt);
     layer->sourceButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    addAndMakeVisible(*layer->sourceButton);
+    this->layerContent.addAndMakeVisible(*layer->sourceButton);
     layer->sourceButton->onClick = [this, layer] { this->showSourcePicker(layer); };
 
     // Source detail label (multi-line: kit / inst / art)
@@ -249,7 +255,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
     layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
-    addAndMakeVisible(*layer->sourceDetailLabel);
+    this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
     this->updateSourceDisplay(layer);
 
     // Sentinel text function for attack/decay
@@ -259,7 +265,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Tuning pot
     layer->tuningPot = std::make_unique<LabeledPot>("Tuning", -2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
-    addAndMakeVisible(*layer->tuningPot);
+    this->layerContent.addAndMakeVisible(*layer->tuningPot);
     layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->tuningPot->onDragEnd = [this] {
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
@@ -268,7 +274,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     // Attack pot
     layer->attackPot = std::make_unique<LabeledPot>("Attack", -1.0, 500.0, 10.0,
         attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, sentinelTextFn);
-    addAndMakeVisible(*layer->attackPot);
+    this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->attackPot->onDragEnd = [this] {
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
@@ -277,7 +283,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     // Decay pot
     layer->decayPot = std::make_unique<LabeledPot>("Decay", -1.0, 5000.0, 10.0,
         decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, sentinelTextFn);
-    addAndMakeVisible(*layer->decayPot);
+    this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->decayPot->onDragEnd = [this] {
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
@@ -289,7 +295,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
             if (value <= -60.0) return "-inf";
             return juce::String(value, 1);
         });
-    addAndMakeVisible(*layer->gainPot);
+    this->layerContent.addAndMakeVisible(*layer->gainPot);
     layer->gainPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->gainPot->onDragEnd = [this] {
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
@@ -304,7 +310,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->flipLRButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
     layer->flipLRButton->setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     layer->flipLRButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    addAndMakeVisible(*layer->flipLRButton);
+    this->layerContent.addAndMakeVisible(*layer->flipLRButton);
     layer->flipLRButton->onClick = [this] {
         this->mapTextDirty = true;
         this->applyToEngine();
@@ -319,7 +325,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->flipPhaseButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
     layer->flipPhaseButton->setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     layer->flipPhaseButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    addAndMakeVisible(*layer->flipPhaseButton);
+    this->layerContent.addAndMakeVisible(*layer->flipPhaseButton);
     layer->flipPhaseButton->onClick = [this] {
         this->mapTextDirty = true;
         this->applyToEngine();
@@ -337,7 +343,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
             level = it->second;
         bleedCtrl->bleedPot = std::make_unique<LabeledPot>(micName, 0.0, 100.0, 1.0,
             static_cast<double>(level * 100.0f));
-        addAndMakeVisible(*bleedCtrl->bleedPot);
+        this->layerContent.addAndMakeVisible(*bleedCtrl->bleedPot);
         bleedCtrl->bleedPot->onValueChange = [this] {
             this->mapTextDirty = true;
         };
@@ -349,7 +355,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
     layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
     layer->removeButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    addAndMakeVisible(*layer->removeButton);
+    this->layerContent.addAndMakeVisible(*layer->removeButton);
     layer->removeButton->onClick = [this, layer] {
         juce::MessageManager::callAsync([this, layer] {
             this->layerRows.removeObject(layer);
@@ -607,20 +613,22 @@ void PadContextPopup::dismissSourcePicker() {
 
 // ─── Paint / Layout ───────────────────────────────────────────────────────────
 
-void PadContextPopup::paint(juce::Graphics& g) {
-    g.setColour(UITheme::Colours::bgPanelRaised);
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
-    g.setColour(UITheme::Colours::borderStrong);
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
-
-    // Draw group backgrounds for each layer
+void PadContextPopup::LayerContentComponent::paint(juce::Graphics& g) {
+    if (this->layerRowsPtr == nullptr) return;
     g.setColour(UITheme::Colours::bgPanel);
-    for (const auto* layer : this->layerRows) {
+    for (const auto* layer : *this->layerRowsPtr) {
         if (!layer->mainGroupBounds.isEmpty())
             g.fillRoundedRectangle(layer->mainGroupBounds.toFloat(), 4.0f);
         if (!layer->bleedGroupBounds.isEmpty())
             g.fillRoundedRectangle(layer->bleedGroupBounds.toFloat(), 4.0f);
     }
+}
+
+void PadContextPopup::paint(juce::Graphics& g) {
+    g.setColour(UITheme::Colours::bgPanelRaised);
+    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
+    g.setColour(UITheme::Colours::borderStrong);
+    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
 }
 
 void PadContextPopup::resized() {
@@ -643,6 +651,9 @@ void PadContextPopup::resized() {
     this->slotLabel.setBounds(headerRow);
     area.removeFromTop(6);
 
+    // Viewport occupies remaining space
+    this->layerViewport.setBounds(area);
+
     // Layer rows — single row per layer (vertical pot layout):
     // [×] [Source Card] | [Tuning|Attack|Decay|Gain|L/R+Ø] | [Bleed1|Bleed2|...]
     const int potW = 50;
@@ -655,24 +666,29 @@ void PadContextPopup::resized() {
     const int groupGap = 6;
     const int groupPad = 4;
 
+    const int contentHeight = static_cast<int>(this->layerRows.size()) * (layerRowH + 2);
+    this->layerContent.setSize(area.getWidth() - (this->layerViewport.isVerticalScrollBarShown() ? this->layerViewport.getScrollBarThickness() : 0),
+                               juce::jmax(area.getHeight(), contentHeight));
+
+    auto contentArea = this->layerContent.getLocalBounds();
     for (auto* layer : this->layerRows) {
-        auto layerArea = area.removeFromTop(layerRowH);
-        auto layerContent = layerArea.reduced(0, 4);
+        auto layerArea = contentArea.removeFromTop(layerRowH);
+        auto rowArea = layerArea.reduced(0, 4);
 
         // Remove button (×) on far left, vertically centered
         if (layer->removeButton->isVisible())
-            layer->removeButton->setBounds(layerContent.removeFromLeft(removeW).withSizeKeepingCentre(14, 14));
+            layer->removeButton->setBounds(rowArea.removeFromLeft(removeW).withSizeKeepingCentre(14, 14));
 
         // Source card
-        auto srcArea = layerContent.removeFromLeft(sourceW);
+        auto srcArea = rowArea.removeFromLeft(sourceW);
         layer->sourceButton->setBounds(srcArea);
         layer->sourceDetailLabel->setBounds(srcArea.reduced(6, 4));
 
-        layerContent.removeFromLeft(groupGap);
+        rowArea.removeFromLeft(groupGap);
 
         // Main params group: Tuning, Attack, Decay, Gain + L/R, Ø
         const int mainGroupW = potW * 4 + flipColW + groupPad * 2;
-        auto mainGroupArea = layerContent.removeFromLeft(mainGroupW);
+        auto mainGroupArea = rowArea.removeFromLeft(mainGroupW);
         layer->mainGroupBounds = mainGroupArea;
         auto mainInner = mainGroupArea.reduced(groupPad, 0);
         layer->tuningPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
@@ -683,13 +699,13 @@ void PadContextPopup::resized() {
         layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 4));
         layer->flipPhaseButton->setBounds(flipArea.reduced(2, 4));
 
-        layerContent.removeFromLeft(groupGap);
+        rowArea.removeFromLeft(groupGap);
 
         // Bleed group
         const int numBleeds = static_cast<int>(layer->micBleeds.size());
         if (numBleeds > 0) {
-            const int bleedGroupW = juce::jmin(layerContent.getWidth(), numBleeds * bleedPotW + groupPad * 2);
-            auto bleedGroupArea = layerContent.removeFromLeft(bleedGroupW);
+            const int bleedGroupW = juce::jmin(rowArea.getWidth(), numBleeds * bleedPotW + groupPad * 2);
+            auto bleedGroupArea = rowArea.removeFromLeft(bleedGroupW);
             layer->bleedGroupBounds = bleedGroupArea;
             auto bleedInner = bleedGroupArea.reduced(groupPad, 0);
             const int actualBleedW = bleedInner.getWidth() / numBleeds;
@@ -698,6 +714,6 @@ void PadContextPopup::resized() {
             }
         }
 
-        area.removeFromTop(2); // gap between layers
+        contentArea.removeFromTop(2); // gap between layers
     }
 }

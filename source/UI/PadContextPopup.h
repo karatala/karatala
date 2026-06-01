@@ -99,6 +99,14 @@ private:
 
     juce::Component::SafePointer<juce::CallOutBox> activePickerCallout;
 
+    // ─── Scrollable layer area ───
+    struct LayerContentComponent : public juce::Component {
+        juce::OwnedArray<LayerRow>* layerRowsPtr = nullptr;
+        void paint(juce::Graphics& g) override;
+    };
+    LayerContentComponent layerContent;
+    juce::Viewport layerViewport;
+
     void showSourcePicker(LayerRow* layer);
     void dismissSourcePicker();
 

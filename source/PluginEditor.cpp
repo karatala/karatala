@@ -1,5 +1,6 @@
 #include "PluginEditor.h"
 #include "UI/UITheme.h"
+#include <set>
 
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
@@ -50,10 +51,19 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->sidebar.updateKnobLabels();
     };
 
-    // HiHat openness knob — sends CC4
+    // HiHat openness knob — sends CC to all pdl_opn_cls controllers in the layout
     this->sidebar.hihatKnob.onValueChange = [this] {
         int ccValue = static_cast<int>(this->sidebar.hihatKnob.getValue());
-        this->processorRef.injectMidiFromUI(juce::MidiMessage::controllerEvent(1, 4, ccValue));
+        auto* layout = this->processorRef.getEngine().getKitLayout();
+        if (layout != nullptr) {
+            std::set<int> sentCCs;
+            for (const auto& slot : layout->instrumentSlots) {
+                for (const auto& cc : slot.controllers) {
+                    if (cc.codeRaw == "pdl_opn_cls" && sentCCs.insert(cc.number).second)
+                        this->processorRef.injectMidiFromUI(juce::MidiMessage::controllerEvent(1, cc.number, ccValue));
+                }
+            }
+        }
         this->sidebar.updateKnobLabels();
     };
 
