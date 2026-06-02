@@ -47,6 +47,7 @@ private:
     juce::TextButton addLayerButton { "+ Layer" };
     KitLayout::MidiNotes* midiNotesPtr = nullptr;
     KitLayout::MidiNotes midiNotesOwned;
+    int selectedArticulationIndex = -1;
     int activeLearningSlot = -1;
 
     void syncNoteButtons();

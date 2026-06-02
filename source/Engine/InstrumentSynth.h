@@ -362,6 +362,10 @@ public:
     const KitLib::InstrumentSpec* getLoadedInstrumentSpec() const { return this->instrumentSpecstPtr; }
     const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
 
+    /** Rebuild the noteToArticulation[128] lookup from the given layout slot's current notes.
+     *  Call after MIDI note assignments change in the UI without a full reload. */
+    void rebuildNoteToArticulationFromLayout(const KitLayout::InstrumentSlot& layoutSlot);
+
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
         const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
         for (int8_t i = 0; i < count; ++i) {

@@ -36,6 +36,12 @@ void PadContextPopup::syncMidiNotesToActiveLayout() {
         if (slot.id != this->slotId)
             continue;
 
+        if (this->selectedArticulationIndex >= 0
+            && this->selectedArticulationIndex < static_cast<int>(slot.articulations.size())) {
+            slot.articulations[static_cast<size_t>(this->selectedArticulationIndex)].notes = *this->midiNotesPtr;
+            return;
+        }
+
         for (auto& art : slot.articulations) {
             if (normalizeArtName(art.codeRaw) == this->artName) {
                 art.notes = *this->midiNotesPtr;
@@ -86,11 +92,13 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     , savedInstrumentMapText(savedInstrumentMapText) {
     // Resolve articulation
     if (artIdx >= 0 && artIdx < static_cast<int>(slot.articulations.size())) {
+        this->selectedArticulationIndex = artIdx;
         const auto& art = slot.articulations[static_cast<size_t>(artIdx)];
         this->artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
         this->midiNotesOwned = art.notes;
         this->midiNotesPtr = &this->midiNotesOwned;
     } else if (!slot.articulations.empty()) {
+        this->selectedArticulationIndex = 0;
         const auto& art = slot.articulations[0];
         this->artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
         this->midiNotesOwned = art.notes;

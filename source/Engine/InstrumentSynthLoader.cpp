@@ -376,3 +376,24 @@ void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
     }
 }
 
+void InstrumentSynth::rebuildNoteToArticulationFromLayout(const KitLayout::InstrumentSlot& layoutSlot) {
+    this->noteToArticulation.fill(-1);
+
+    for (const auto& layoutArt : layoutSlot.articulations) {
+        // Match this layout articulation to a runtime articulation via nameId/exprId
+        const uint64_t key = (static_cast<uint64_t>(layoutArt.nameId) << 32) | static_cast<uint64_t>(layoutArt.exprId);
+        auto it = this->artIdByNameExprId.find(key);
+        if (it == this->artIdByNameExprId.end())
+            continue;
+
+        const auto artRtIdx = static_cast<ArtRtIdx>(it->second);
+        for (uint8_t note : layoutArt.notes) {
+            if (note < 128)
+                this->noteToArticulation[note] = artRtIdx;
+        }
+    }
+
+    // Also update the synth's internal copy of the instrument slot so it stays consistent
+    this->instrumentSlot = layoutSlot;
+}
+

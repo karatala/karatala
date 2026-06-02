@@ -173,6 +173,7 @@ void PluginEditor::setupMapMode() {
         auto* layout = this->processorRef.getEngine().getKitLayout();
         if (layout) {
             layout->rebuildIndices();
+            this->processorRef.getEngine().rebuildMidiNoteRoutingFromLayout();
         }
         this->statusBar.setStatusText("MIDI mapping updated");
     };
@@ -408,7 +409,10 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
     };
     this->padContextPopup->onMidiMappingChanged = [this] {
         auto* layout = this->processorRef.getEngine().getKitLayout();
-        if (layout) layout->rebuildIndices();
+        if (layout) {
+            layout->rebuildIndices();
+            this->processorRef.getEngine().rebuildMidiNoteRoutingFromLayout();
+        }
         this->statusBar.setStatusText("MIDI mapping updated");
         this->markMidiMapTableDirty();
     };

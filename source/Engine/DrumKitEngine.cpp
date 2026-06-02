@@ -592,12 +592,16 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
         if (it == this->instrumentSynthById.end())
             continue;
 
-        auto* slot = it->second;
+        auto* synth = it->second;
+
+        // Rebuild the synth's internal note->articulation lookup from current layout notes
+        synth->rebuildNoteToArticulationFromLayout(instrumentSlot);
+
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
                 if (note >= 0 && note < 128)
                     this->trackedPAMask[note] = true;
-                this->instrumentSynthsByNote[note].push_back(slot);
+                this->instrumentSynthsByNote[note].push_back(synth);
             }
         }
     }
@@ -608,6 +612,12 @@ void DrumKitEngine::clearShadowSynths() {
         this->instrumentSynthPtrs.erase(this->instrumentSynthPtrs.begin() + this->primaryInstrumentSynthCount, this->instrumentSynthPtrs.end());
 
     this->rebuildPrimaryInstrumentNoteRouting();
+}
+
+void DrumKitEngine::rebuildMidiNoteRoutingFromLayout() {
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+    this->rebuildPrimaryInstrumentNoteRouting();
+    this->buildNoteNameCache();
 }
 
 void DrumKitEngine::buildNoteNameCache() {

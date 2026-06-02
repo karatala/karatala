@@ -119,6 +119,7 @@ public:
      */
     void previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
                            const juce::String& artCode, juce::uint8 velocity);
+    void rebuildMidiNoteRoutingFromLayout();
     void updateSlotParameters(const juce::String& slotId,
                               const juce::String& artName,
                               int layerIndex,
