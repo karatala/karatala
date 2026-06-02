@@ -6,14 +6,11 @@
 
 class LookAndFeel : public juce::LookAndFeel_V4 {
 public:
-    static inline juce::Colour darkestGrey = UITheme::Colours::bgPanelRaised;
-    static inline juce::Colour darkerGrey = UITheme::Colours::borderMid;
-
     LookAndFeel() {
         this->setColourScheme({
             UITheme::Colours::bgApp, // windowBackground
-            darkestGrey,          // widgetBackground
-            darkestGrey,          // menuBackground
+            UITheme::Colours::bgPanelRaised, // widgetBackground
+            UITheme::Colours::bgPanelRaised, // menuBackground
             UITheme::Colours::textPrimary, // outline
             UITheme::Colours::textPrimary, // defaultText
             UITheme::Colours::accent,      // defaultFill
@@ -22,8 +19,8 @@ public:
             UITheme::Colours::textPrimary  // menuText
         });
 
-        this->setColour(juce::TabbedComponent::outlineColourId, darkestGrey);
-        this->setColour(juce::GroupComponent::outlineColourId, darkerGrey);
+        this->setColour(juce::TabbedComponent::outlineColourId, UITheme::Colours::bgPanelRaised);
+        this->setColour(juce::GroupComponent::outlineColourId, UITheme::Colours::borderMid);
         this->setColour(juce::Slider::textBoxOutlineColourId, UITheme::Colours::bgApp);
         this->setColour(juce::TextEditor::highlightColourId, UITheme::Colours::listSelection);
         this->setColour(juce::TextEditor::highlightedTextColourId, UITheme::Colours::textPrimary);

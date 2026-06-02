@@ -23,6 +23,8 @@ void configureRotarySlider(juce::Slider& slider,
 
 void configureControlButton(juce::TextButton& button, int connectedEdges = 0);
 
+juce::String sentinelValueText(double value);
+
 std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager);
 
 int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::String& searchPath);

@@ -58,28 +58,34 @@ namespace Colours {
 }
 
 namespace Fonts {
-    inline juce::Font label() {
-        return juce::Font(juce::FontOptions(10.0f));
+    inline const juce::Font& label() {
+        static const juce::Font font(juce::FontOptions(10.0f));
+        return font;
     }
 
-    inline juce::Font labelBold() {
-        return juce::Font(juce::FontOptions(10.0f).withStyle("Bold"));
+    inline const juce::Font& labelBold() {
+        static const juce::Font font(juce::FontOptions(10.0f).withStyle("Bold"));
+        return font;
     }
 
-    inline juce::Font small() {
-        return juce::Font(juce::FontOptions(9.0f));
+    inline const juce::Font& small() {
+        static const juce::Font font(juce::FontOptions(9.0f));
+        return font;
     }
 
-    inline juce::Font table() {
-        return juce::Font(juce::FontOptions(10.0f));
+    inline const juce::Font& table() {
+        static const juce::Font font(juce::FontOptions(10.0f));
+        return font;
     }
 
-    inline juce::Font mono() {
-        return juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName()));
+    inline const juce::Font& mono() {
+        static const juce::Font font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName()));
+        return font;
     }
 
-    inline juce::Font sectionTitle() {
-        return juce::Font(juce::FontOptions(13.0f).withStyle("Bold"));
+    inline const juce::Font& sectionTitle() {
+        static const juce::Font font(juce::FontOptions(13.0f).withStyle("Bold"));
+        return font;
     }
 }
 

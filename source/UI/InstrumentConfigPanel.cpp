@@ -156,11 +156,6 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->sourceButton->onClick = [this, row] { this->showPickerPopup(row); };
     this->updateSourceButtonDisplay(row);
 
-    // Sentinel text function for attack/decay sliders
-    auto sentinelTextFn = [](double value) -> juce::String {
-        return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
-    };
-
     // Tuning slider
     row->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
     this->contentComponent.addAndMakeVisible(*row->tuningSlider);
@@ -172,7 +167,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
 
     // Attack slider
     row->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 10.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0,
-                                                     UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, sentinelTextFn);
+                                                     UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, UIHelpers::sentinelValueText);
     this->contentComponent.addAndMakeVisible(*row->attackSlider);
     row->attackSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->attackSlider->onDragEnd = [this, row] {
@@ -182,7 +177,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
 
     // Decay slider
     row->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 10.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0,
-                                                    UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, sentinelTextFn);
+                                                    UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, UIHelpers::sentinelValueText);
     this->contentComponent.addAndMakeVisible(*row->decaySlider);
     row->decaySlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
     row->decaySlider->onDragEnd = [this, row] {

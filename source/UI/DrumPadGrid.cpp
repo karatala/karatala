@@ -74,11 +74,8 @@ void DrumPadGrid::flashPad(const juce::String& slotId, float velocity) {
 }
 
 void DrumPadGrid::resized() {
-    if (this->pads.empty())
-        return;
-
-    if (this->gridColumns <= 0 || this->gridRows <= 0)
-        return;
+    if (this->pads.empty()) return;
+    if (this->gridColumns <= 0 || this->gridRows <= 0) return;
 
     auto bounds = getLocalBounds();
     const int gap = this->padGap;
@@ -110,14 +107,10 @@ void DrumPadGrid::resized() {
         int col = idx % this->gridColumns;
         int row = idx / this->gridColumns;
 
-        if (row >= this->gridRows)
+        if (row >= this->gridRows) 
             break;
 
-        auto cellBounds = juce::Rectangle<int>(
-            columnOffsets[static_cast<size_t>(col)],
-            rowOffsets[static_cast<size_t>(row)],
-            columnWidths[static_cast<size_t>(col)],
-            rowHeights[static_cast<size_t>(row)]);
+        auto cellBounds = juce::Rectangle<int>(columnOffsets[static_cast<size_t>(col)], rowOffsets[static_cast<size_t>(row)], columnWidths[static_cast<size_t>(col)], rowHeights[static_cast<size_t>(row)]);
 
         this->pads[static_cast<size_t>(idx)]->setBounds(cellBounds);
     }

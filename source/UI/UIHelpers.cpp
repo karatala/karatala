@@ -46,6 +46,10 @@ void configureControlButton(juce::TextButton& button, int connectedEdges) {
     button.setConnectedEdges(connectedEdges);
 }
 
+juce::String sentinelValueText(double value) {
+    return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
+}
+
 std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager) {
     std::vector<SourceItem> sourceItems;
     if (libraryManager == nullptr) return sourceItems;

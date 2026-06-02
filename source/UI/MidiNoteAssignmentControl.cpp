@@ -31,7 +31,6 @@ MidiNoteAssignmentControl::MidiNoteAssignmentControl() {
 void MidiNoteAssignmentControl::resized() {
     auto area = getLocalBounds();
     const int verticalInset = juce::jmax(0, this->layoutMetrics.verticalInset);
-    const int noteButtonHeight = juce::jmax(0, area.getHeight() - verticalInset * 2);
     const int learnButtonHeight = juce::jmin(this->layoutMetrics.learnButtonSize, juce::jmax(0, area.getHeight() - verticalInset * 2));
 
     this->noteButton1.setBounds(area.removeFromLeft(this->layoutMetrics.noteButtonWidth).reduced(0, verticalInset));
@@ -45,8 +44,6 @@ void MidiNoteAssignmentControl::resized() {
     area.removeFromLeft(this->layoutMetrics.noteLearnGap);
     this->learnButton2.setBounds(area.removeFromLeft(this->layoutMetrics.learnButtonSize)
                                      .withSizeKeepingCentre(this->layoutMetrics.learnButtonSize, learnButtonHeight));
-
-    juce::ignoreUnused(noteButtonHeight);
 }
 
 void MidiNoteAssignmentControl::setNotes(int firstNote, int secondNote) {

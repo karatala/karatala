@@ -258,11 +258,6 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
     this->updateSourceDisplay(layer);
 
-    // Sentinel text function for attack/decay
-    auto sentinelTextFn = [](double value) -> juce::String {
-        return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
-    };
-
     // Tuning pot
     layer->tuningPot = std::make_unique<LabeledPot>("Tuning", -2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
     this->layerContent.addAndMakeVisible(*layer->tuningPot);
@@ -273,7 +268,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Attack pot
     layer->attackPot = std::make_unique<LabeledPot>("Attack", -1.0, 500.0, 10.0,
-        attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, sentinelTextFn);
+        attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->attackPot->onDragEnd = [this] {
@@ -282,7 +277,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Decay pot
     layer->decayPot = std::make_unique<LabeledPot>("Decay", -1.0, 5000.0, 10.0,
-        decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, sentinelTextFn);
+        decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->decayPot->onDragEnd = [this] {

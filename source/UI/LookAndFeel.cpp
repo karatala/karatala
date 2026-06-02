@@ -215,7 +215,7 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
     } else {
         if (isHighlighted) {
             g.setColour(midiNote >= 0 ? juce::Colour::fromHSV(OCTAVE_HUES[(midiNote / 12) % 6], 0.4f, 0.40f, 1.0f)
-                                      : darkerGrey);
+                                      : UITheme::Colours::borderMid);
             g.fillRect(area.reduced(1, 1));
         }
 
@@ -264,7 +264,7 @@ juce::PopupMenu::Options LookAndFeel::getOptionsForComboBoxPopupMenu(juce::Combo
 void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown) {
     const juce::Rectangle<int> activeArea(button.getActiveArea());
 
-    const juce::Colour bkg(darkerGrey);
+    const juce::Colour bkg(UITheme::Colours::borderMid);
 
     g.setGradientFill(juce::ColourGradient(bkg.brighter(0.1f), 0, float(activeArea.getY()), bkg.darker(0.1f), 0, float(activeArea.getBottom()), false));
     g.fillRect(activeArea);
