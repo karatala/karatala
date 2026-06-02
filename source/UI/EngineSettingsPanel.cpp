@@ -18,10 +18,6 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     : engine(engine) {
     auto& settings = this->engine.engineSettings;
 
-    this->viewport.setViewedComponent(&this->contentComponent, false);
-    this->viewport.setScrollBarsShown(true, false);
-    addAndMakeVisible(this->viewport);
-
     // Group labels
     this->chokeGroupLabel.setText("Aftertouch Choke", juce::dontSendNotification);
     UIHelpers::configureSectionLabel(this->chokeGroupLabel);
@@ -193,7 +189,7 @@ void EngineSettingsPanel::flushPendingSettingsSave() {
 }
 
 void EngineSettingsPanel::resized() {
-    this->viewport.setBounds(getLocalBounds());
+    this->layoutViewportToBounds();
 
     const int contentWidth = this->viewport.getWidth() - this->viewport.getScrollBarThickness();
 

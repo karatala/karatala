@@ -5,10 +5,6 @@
 
 InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& engine)
     : engine(engine) {
-    this->viewport.setViewedComponent(&this->contentComponent, false);
-    this->viewport.setScrollBarsShown(true, false);
-    addAndMakeVisible(this->viewport);
-
     auto setupHeader = [this](juce::Label& label, const juce::String& text) {
         label.setText(text, juce::dontSendNotification);
         label.setFont(UITheme::Fonts::small().boldened());
@@ -25,7 +21,7 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& engine)
 
 void InstrumentConfigPanel::resized() {
     this->dismissPopup();
-    this->viewport.setBounds(getLocalBounds());
+    this->layoutViewportToBounds();
     this->layoutContent();
 }
 
@@ -360,16 +356,12 @@ void InstrumentConfigPanel::layoutContent() {
         // Slot label: show only on first row of each slot group
         bool showSlot = (row->slotId != lastSlotId);
         row->slotLabel->setText(showSlot ? row->slotId : "", juce::dontSendNotification);
-        row->slotLabel->setFont(UITheme::Fonts::labelBold());
-        row->slotLabel->setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
         row->slotLabel->setBounds(xPos, yPos, slotCol, rowHeight);
         xPos += slotCol;
 
         // Art label: show only on first row of each slot/art group
         bool showArt = showSlot || (row->artName != lastArtName);
         row->artLabel->setText(showArt ? row->artName : "", juce::dontSendNotification);
-        row->artLabel->setFont(UITheme::Fonts::small());
-        row->artLabel->setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
         row->artLabel->setBounds(xPos, yPos, artCol, rowHeight);
         xPos += artCol;
 

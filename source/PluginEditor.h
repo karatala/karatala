@@ -65,6 +65,14 @@ private:
     void refreshDrumPadGridIfNeeded(bool force = false);
     void refreshMidiMapTableIfNeeded(bool force = false);
     void refreshInstrumentConfigIfNeeded(bool force = false);
+    void setupSidebarAndStatusBar();
+    void setupDrumPadGridMode();
+    void setupRawMode();
+    void setupMapMode();
+    void setupSettingsMode();
+    void setupInstrumentConfigMode();
+    void setupSidebarKnobs();
+    void applyInstrumentMapFromEditor();
 
     bool drumPadGridDirty = false;
     bool midiMapTableDirty = false;

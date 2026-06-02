@@ -3,11 +3,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/EngineSettings.h"
 #include "ParameterPot.h"
+#include "ScrollablePanel.h"
 #include "UITheme.h"
 
 class DrumKitEngine;
 
-class EngineSettingsPanel : public juce::Component,
+class EngineSettingsPanel : public ScrollablePanel,
                             private juce::Timer {
 public:
     explicit EngineSettingsPanel(DrumKitEngine& engine);
@@ -31,9 +32,6 @@ private:
     juce::Label tailGroupLabel;
     juce::Label hihatGroupLabel;
     juce::Label uiGridGroupLabel;
-
-    juce::Viewport viewport;
-    juce::Component contentComponent;
 
     std::vector<std::unique_ptr<PotEntry>> pots;
 

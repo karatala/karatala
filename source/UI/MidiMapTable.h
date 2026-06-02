@@ -3,9 +3,10 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/LayoutManager.h"
 #include "MidiNoteAssignmentControl.h"
+#include "ScrollablePanel.h"
 #include "UITheme.h"
 
-class MidiMapTable : public juce::Component {
+class MidiMapTable : public ScrollablePanel {
 public:
     explicit MidiMapTable();
     ~MidiMapTable() override = default;
@@ -53,9 +54,6 @@ private:
     };
 
     std::vector<std::unique_ptr<MapRow>> rows;
-    juce::Viewport viewport;
-    juce::Component contentComponent;
-
     // MIDI learn state
     int activeLearningRow = -1;
     int activeLearningSlot = -1; // 0 = first button, 1 = second button

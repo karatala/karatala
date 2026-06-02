@@ -8,8 +8,23 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     , processorRef(p) {
     this->setLookAndFeel(&this->lookAndFeel);
 
+    this->setupSidebarAndStatusBar();
+    this->setupDrumPadGridMode();
+    this->setupSidebarKnobs();
+    this->setupRawMode();
+    this->setupMapMode();
+    this->setupSettingsMode();
+    this->setupInstrumentConfigMode();
+
+    // Show default mode
+    this->showComponentsForMode(this->activeMode);
+
+    setSize(1000, 580);
+}
+
+void PluginEditor::setupSidebarAndStatusBar() {
     // Sidebar
-    addAndMakeVisible(this->sidebar);
+    this->addAndMakeVisible(this->sidebar);
     this->sidebar.onModeChanged = [this](ViewMode mode) {
         this->setViewMode(mode);
     };
@@ -22,11 +37,13 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     };
 
     // Status bar
-    addAndMakeVisible(this->statusBar);
+    this->addAndMakeVisible(this->statusBar);
     this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
+}
 
+void PluginEditor::setupDrumPadGridMode() {
     // Drum pad grid (Zen / Zoned modes)
-    addAndMakeVisible(this->drumPadGrid);
+    this->addAndMakeVisible(this->drumPadGrid);
     {
         auto& settings = this->processorRef.getEngine().engineSettings;
         this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
@@ -47,6 +64,9 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->drumPadGrid.onPadRightClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos) {
         this->showPadContextPopup(slot, artIdx, screenPos);
     };
+}
+
+void PluginEditor::setupSidebarKnobs() {
     this->sidebar.velocityKnob.onValueChange = [this] {
         this->drumPadGrid.setClickVelocity(static_cast<float>(this->sidebar.velocityKnob.getValue()));
         this->sidebar.updateKnobLabels();
@@ -73,13 +93,15 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->processorRef.getEngine().engineSettings.roundRobinLock = static_cast<int>(this->sidebar.rrLockKnob.getValue());
         this->sidebar.updateKnobLabels();
     };
+}
 
+void PluginEditor::setupRawMode() {
     // Raw mode components
-    addChildComponent(this->referencePanel);
-    addChildComponent(this->referencePanelLabel);
-    addChildComponent(this->instrumentMapEditor);
-    addChildComponent(this->instrumentMapLabel);
-    addChildComponent(this->applyButton);
+    this->addChildComponent(this->referencePanel);
+    this->addChildComponent(this->referencePanelLabel);
+    this->addChildComponent(this->instrumentMapEditor);
+    this->addChildComponent(this->instrumentMapLabel);
+    this->addChildComponent(this->applyButton);
 
     this->referencePanelLabel.setText("Reference", juce::dontSendNotification);
     this->referencePanelLabel.setFont(UITheme::Fonts::labelBoldMedium());
@@ -106,41 +128,45 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     }
     this->instrumentMapEditor.setText(instrumentMapText, false);
 
-    this->applyButton.onClick = [this] {
-        struct ProcessingSuspendGuard {
-            PluginProcessor& processor;
-            explicit ProcessingSuspendGuard(PluginProcessor& proc)
-                : processor(proc) {
-                this->processor.suspendProcessing(true);
-            }
-            ~ProcessingSuspendGuard() {
-                this->processor.suspendProcessing(false);
-            }
-        } processingSuspendGuard(this->processorRef);
+    this->applyButton.onClick = [this] { this->applyInstrumentMapFromEditor(); };
+}
 
-        const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
-
-        auto text = this->instrumentMapEditor.getText();
-        this->processorRef.getValueTreeState().state.setProperty("instrument_map", text, nullptr);
-
-        const bool applied = this->processorRef.getEngine().useInstrumentMap(text);
-        if (!applied && text.trim().isEmpty()) {
-            this->processorRef.getEngine().mapDefaultKit();
-            const auto generatedMap = this->processorRef.getEngine().getSuggestedInstrumentMapText();
-            this->instrumentMapEditor.setText(generatedMap, false);
-            this->processorRef.getValueTreeState().state.setProperty("instrument_map", generatedMap, nullptr);
+void PluginEditor::applyInstrumentMapFromEditor() {
+    struct ProcessingSuspendGuard {
+        PluginProcessor& processor;
+        explicit ProcessingSuspendGuard(PluginProcessor& proc)
+            : processor(proc) {
+            this->processor.suspendProcessing(true);
         }
+        ~ProcessingSuspendGuard() {
+            this->processor.suspendProcessing(false);
+        }
+    } processingSuspendGuard(this->processorRef);
 
-        this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
-        this->markDrumPadGridDirty();
-        this->markMidiMapTableDirty();
-        this->markInstrumentConfigDirty();
-        this->refreshDrumPadGridIfNeeded();
-        this->refreshMidiMapTableIfNeeded();
-    };
+    const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
 
+    auto text = this->instrumentMapEditor.getText();
+    this->processorRef.getValueTreeState().state.setProperty("instrument_map", text, nullptr);
+
+    const bool applied = this->processorRef.getEngine().useInstrumentMap(text);
+    if (!applied && text.trim().isEmpty()) {
+        this->processorRef.getEngine().mapDefaultKit();
+        const auto generatedMap = this->processorRef.getEngine().getSuggestedInstrumentMapText();
+        this->instrumentMapEditor.setText(generatedMap, false);
+        this->processorRef.getValueTreeState().state.setProperty("instrument_map", generatedMap, nullptr);
+    }
+
+    this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
+    this->markDrumPadGridDirty();
+    this->markMidiMapTableDirty();
+    this->markInstrumentConfigDirty();
+    this->refreshDrumPadGridIfNeeded();
+    this->refreshMidiMapTableIfNeeded();
+}
+
+void PluginEditor::setupMapMode() {
     // Map mode — MIDI note assignment table
-    addChildComponent(this->midiMapTable);
+    this->addChildComponent(this->midiMapTable);
     this->refreshMidiMapTableIfNeeded(true);
     this->midiMapTable.onMappingChanged = [this] {
         // Rebuild engine note routing after mapping changes
@@ -160,10 +186,12 @@ PluginEditor::PluginEditor(PluginProcessor& p)
             this->processorRef.setMidiLearnCallback(nullptr);
         }
     };
+}
 
+void PluginEditor::setupSettingsMode() {
     // Settings mode
     this->settingsPanel = std::make_unique<EngineSettingsPanel>(this->processorRef.getEngine());
-    addChildComponent(*this->settingsPanel);
+    this->addChildComponent(*this->settingsPanel);
     this->settingsPanel->onGridSizeChanged = [this] {
         auto& settings = this->processorRef.getEngine().engineSettings;
         this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
@@ -171,10 +199,12 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->markDrumPadGridDirty();
         this->refreshDrumPadGridIfNeeded();
     };
+}
 
+void PluginEditor::setupInstrumentConfigMode() {
     // Instrument config mode
     this->instrumentConfigPanel = std::make_unique<InstrumentConfigPanel>(this->processorRef.getEngine());
-    addChildComponent(*this->instrumentConfigPanel);
+    this->addChildComponent(*this->instrumentConfigPanel);
     this->instrumentConfigPanel->onStatusMessage = [this](const juce::String& msg) {
         this->statusBar.setStatusText(msg);
         this->markDrumPadGridDirty();
@@ -188,11 +218,6 @@ PluginEditor::PluginEditor(PluginProcessor& p)
         this->instrumentConfigSnapshot = mapText;
         this->instrumentConfigDirty = false;
     };
-
-    // Show default mode
-    this->showComponentsForMode(this->activeMode);
-
-    setSize(1000, 580);
 }
 
 PluginEditor::~PluginEditor() {

@@ -3,9 +3,6 @@
 #include "UIHelpers.h"
 
 MidiMapTable::MidiMapTable() {
-    this->viewport.setViewedComponent(&this->contentComponent, false);
-    this->viewport.setScrollBarsShown(true, false);
-    addAndMakeVisible(this->viewport);
 }
 
 void MidiMapTable::populate(KitLayout* layout) {

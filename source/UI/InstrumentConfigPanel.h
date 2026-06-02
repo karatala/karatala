@@ -3,11 +3,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/DrumKitEngine.h"
 #include "DismissOverlay.h"
+#include "ScrollablePanel.h"
 #include "SourceItem.h"
 #include "SourcePickerPopup.h"
 #include "UITheme.h"
 
-class InstrumentConfigPanel : public juce::Component,
+class InstrumentConfigPanel : public ScrollablePanel,
                               private juce::Timer {
 public:
     explicit InstrumentConfigPanel(DrumKitEngine& engine);
@@ -48,9 +49,6 @@ private:
     juce::OwnedArray<TableRow> tableRows;
 
     juce::Label headerSlot, headerInstrument, headerTuning, headerAttack, headerDecay;
-
-    juce::Component contentComponent;
-    juce::Viewport viewport;
 
     // Popup management
     std::unique_ptr<DismissOverlay> popupOverlay;
