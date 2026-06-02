@@ -386,7 +386,7 @@ void PluginEditor::dismissPadContextPopup() {
     }
 }
 
-void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos) {
+void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> /*screenPos*/) {
     this->dismissPadContextPopup();
     if (!slot)
         return;

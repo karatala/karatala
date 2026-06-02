@@ -58,45 +58,14 @@ namespace Colours {
 }
 
 namespace Fonts {
-    inline const juce::Font& label() {
-        static const juce::Font font(juce::FontOptions(10.0f));
-        return font;
-    }
-
-    inline const juce::Font& labelBold() {
-        static const juce::Font font(juce::FontOptions(10.0f).withStyle("Bold"));
-        return font;
-    }
-
-    inline const juce::Font& small() {
-        static const juce::Font font(juce::FontOptions(9.0f));
-        return font;
-    }
-
-    inline const juce::Font& table() {
-        static const juce::Font font(juce::FontOptions(10.0f));
-        return font;
-    }
-
-    inline const juce::Font& tableSmall() {
-        static const juce::Font font(table().withHeight(11.0f));
-        return font;
-    }
-
-    inline const juce::Font& labelBoldMedium() {
-        static const juce::Font font(labelBold().withHeight(12.0f));
-        return font;
-    }
-
-    inline const juce::Font& mono() {
-        static const juce::Font font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName()));
-        return font;
-    }
-
-    inline const juce::Font& sectionTitle() {
-        static const juce::Font font(juce::FontOptions(13.0f).withStyle("Bold"));
-        return font;
-    }
+    inline juce::Font label() { return juce::Font(juce::FontOptions(10.0f)); }
+    inline juce::Font labelBold() { return juce::Font(juce::FontOptions(10.0f).withStyle("Bold")); }
+    inline juce::Font labelBoldMedium() { return labelBold().withHeight(12.0f); }
+    inline juce::Font small() { return juce::Font(juce::FontOptions(9.0f)); }
+    inline juce::Font table() { return juce::Font(juce::FontOptions(10.0f)); }
+    inline juce::Font tableSmall() { return table().withHeight(11.0f); }
+    inline juce::Font mono() { return juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName())); }
+    inline juce::Font sectionTitle() { return juce::Font(juce::FontOptions(13.0f).withStyle("Bold")); }
 }
 
 namespace Spacing {

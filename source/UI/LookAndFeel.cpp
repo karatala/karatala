@@ -152,8 +152,12 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*
     constexpr int triHeight = 6;
     constexpr int triWidth = 12;
     constexpr float lineThickness = 1.4f;
-    g.drawLine(width - 10 - triWidth, (height - triHeight) / 2.0f, width - 10 - triWidth / 2.0f, (height + triHeight) / 2.0f, lineThickness);
-    g.drawLine(width - 10 - triWidth / 2.0f, (height + triHeight) / 2.0f, width - 10.0f, (height - triHeight) / 2.0f, lineThickness);
+    g.drawLine(static_cast<float>(width - 10 - triWidth), (height - triHeight) / 2.0f,
+               static_cast<float>(width - 10 - triWidth / 2), (height + triHeight) / 2.0f,
+               lineThickness);
+    g.drawLine(static_cast<float>(width - 10 - triWidth / 2), (height + triHeight) / 2.0f,
+               width - 10.0f, (height - triHeight) / 2.0f,
+               lineThickness);
 }
 
 void LookAndFeel::positionComboBoxText(juce::ComboBox& cb, juce::Label& labelToPosition) {
@@ -281,7 +285,7 @@ void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, b
     textLayout.draw(g, button.getTextArea().toFloat());
 }
 
-juce::Font LookAndFeel::getTextButtonFont(juce::TextButton& button, int buttonHeight) {
+juce::Font LookAndFeel::getTextButtonFont(juce::TextButton& /*button*/, int buttonHeight) {
     // For small buttons (like +, x, ●), use a font that actually fits
     // without JUCE's drawFittedText truncating to "..."
     return juce::Font(juce::FontOptions(juce::jmin(14.0f, static_cast<float>(buttonHeight) * 0.7f)));

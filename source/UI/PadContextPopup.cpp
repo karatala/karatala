@@ -128,7 +128,6 @@ juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<i
     constexpr int headerHeight = 24;
     constexpr int headerGap = 6;
     constexpr int potWidth = UITheme::Sizes::potWidth;
-    constexpr int potHeight = UITheme::Sizes::potHeight;
     constexpr int flipColumnWidth = 26;
     constexpr int removeWidth = 16;
     constexpr int sourceWidth = UITheme::Sizes::sourceCardWidth;
@@ -153,7 +152,7 @@ juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<i
     const int preferredHeight = popupPadding * 2
                               + headerHeight
                               + headerGap
-                              + juce::jmax(1, static_cast<int>(this->layerRows.size())) * layerRowHeight;
+                              + 5 * layerRowHeight;
 
     const int width = juce::jlimit(420, availableBounds.getWidth(), preferredWidth);
     const int height = juce::jlimit(220, availableBounds.getHeight(), preferredHeight);
