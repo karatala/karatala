@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../Engine/LayoutManager.h"
 #include "SourceItem.h"
 #include "UITheme.h"
 
@@ -23,7 +24,19 @@ void configureRotarySlider(juce::Slider& slider,
 
 void configureControlButton(juce::TextButton& button, int connectedEdges = 0);
 
+void configureToggleButton(juce::TextButton& button, int connectedEdges = 0);
+
+void configureTableRowLabel(juce::Label& label,
+                            juce::Colour colour = UITheme::Colours::textPrimary,
+                            juce::Justification justification = juce::Justification::centredLeft);
+
+void configureMonoTextEditor(juce::TextEditor& editor,
+                             juce::Colour textColour = UITheme::Colours::textPrimary,
+                             bool multiline = true);
+
 juce::String sentinelValueText(double value);
+
+void applyMidiNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note);
 
 std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager);
 

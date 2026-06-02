@@ -28,8 +28,8 @@ public:
 private:
     static constexpr int rowHeight = UITheme::Spacing::rowLarge;
     static constexpr int headerHeight = UITheme::Spacing::rowLarge + 2;
-    static constexpr int instColWidth = 90;
-    static constexpr int artColWidth = 100;
+    static constexpr int instColWidth = UITheme::Sizes::midiMapInstCol;
+    static constexpr int artColWidth = UITheme::Sizes::midiMapArtCol;
     static constexpr int noteButtonWidth = 84;
     static constexpr int learnButtonSize = 22;
     static constexpr int midiControlGap = 3;

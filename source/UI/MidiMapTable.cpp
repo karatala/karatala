@@ -1,5 +1,6 @@
 #include "MidiMapTable.h"
 #include "UITheme.h"
+#include "UIHelpers.h"
 
 MidiMapTable::MidiMapTable() {
     this->viewport.setViewedComponent(&this->contentComponent, false);
@@ -55,14 +56,10 @@ void MidiMapTable::buildRows() {
             firstRow = false;
 
             row->instrumentLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
-            row->instrumentLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
-            row->instrumentLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
-            row->instrumentLabel.setJustificationType(juce::Justification::centredLeft);
+            UIHelpers::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
 
             row->articulationLabel.setText(art.codeRaw, juce::dontSendNotification);
-            row->articulationLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
-            row->articulationLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
-            row->articulationLabel.setJustificationType(juce::Justification::centredLeft);
+            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textPrimary);
 
             int rowIdx = static_cast<int>(this->rows.size());
             setupRow(row, rowIdx);
@@ -81,14 +78,10 @@ void MidiMapTable::buildRows() {
             firstRow = false;
 
             row->instrumentLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
-            row->instrumentLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
-            row->instrumentLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
-            row->instrumentLabel.setJustificationType(juce::Justification::centredLeft);
+            UIHelpers::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
 
             row->articulationLabel.setText(row->articulationCode, juce::dontSendNotification);
-            row->articulationLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
-            row->articulationLabel.setColour(juce::Label::textColourId, UITheme::Colours::textAccentSoft);
-            row->articulationLabel.setJustificationType(juce::Justification::centredLeft);
+            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccentSoft);
 
             int rowIdx = static_cast<int>(this->rows.size());
             setupRow(row, rowIdx);
@@ -107,14 +100,7 @@ void MidiMapTable::syncNoteButtons(MapRow& row) {
 
 void MidiMapTable::applyNoteToSlot(MapRow& row, int slotIdx, int note) {
     if (!row.notesPtr) return;
-    auto& notes = *row.notesPtr;
-    // Ensure the vector has at least (slotIdx+1) entries
-    while (static_cast<int>(notes.size()) <= slotIdx)
-        notes.push_back(0);
-    if (note >= 0 && note <= 127)
-        notes[static_cast<size_t>(slotIdx)] = static_cast<uint8_t>(note);
-    else
-        notes.erase(notes.begin() + slotIdx);
+    UIHelpers::applyMidiNoteToSlot(*row.notesPtr, slotIdx, note);
     this->syncNoteButtons(row);
     if (this->onMappingChanged)
         this->onMappingChanged();

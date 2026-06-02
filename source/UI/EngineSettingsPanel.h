@@ -38,7 +38,15 @@ private:
     std::vector<std::unique_ptr<PotEntry>> pots;
 
     void addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval);
-    void addIntPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal);
+    void addPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal);
+    void addPotCommon(const juce::String& name,
+                      const juce::String& tooltip,
+                      float* target,
+                      int* intTarget,
+                      double minVal,
+                      double maxVal,
+                      double interval,
+                      bool isInteger);
     void onSettingChanged();
     void timerCallback() override;
     void queueSettingsSave();

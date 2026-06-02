@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "UI/UIHelpers.h"
 #include "UI/UITheme.h"
 #include <set>
 
@@ -81,29 +82,21 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     addChildComponent(this->applyButton);
 
     this->referencePanelLabel.setText("Reference", juce::dontSendNotification);
-    this->referencePanelLabel.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
+    this->referencePanelLabel.setFont(UITheme::Fonts::labelBoldMedium());
     this->referencePanelLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->referencePanelLabel.setJustificationType(juce::Justification::centredLeft);
 
-    this->referencePanel.setMultiLine(true);
+    UIHelpers::configureMonoTextEditor(this->referencePanel, UITheme::Colours::textInfo, true);
     this->referencePanel.setReadOnly(true);
-    this->referencePanel.setScrollbarsShown(true);
-    this->referencePanel.setFont(UITheme::Fonts::mono());
-    this->referencePanel.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgEditor);
-    this->referencePanel.setColour(juce::TextEditor::textColourId, UITheme::Colours::textInfo);
     this->referencePanel.setText(this->processorRef.getEngine().buildReferenceText(), false);
 
     this->instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
-    this->instrumentMapLabel.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
+    this->instrumentMapLabel.setFont(UITheme::Fonts::labelBoldMedium());
     this->instrumentMapLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
 
-    this->instrumentMapEditor.setMultiLine(true);
+    UIHelpers::configureMonoTextEditor(this->instrumentMapEditor, UITheme::Colours::textPrimary, true);
     this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
-    this->instrumentMapEditor.setScrollbarsShown(true);
-    this->instrumentMapEditor.setFont(UITheme::Fonts::mono());
-    this->instrumentMapEditor.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgEditor);
-    this->instrumentMapEditor.setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
     this->instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", UITheme::Colours::textMuted);
     auto instrumentMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
     if (instrumentMapText.trim().isEmpty()) {

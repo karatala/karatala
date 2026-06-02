@@ -78,9 +78,9 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
                  &settings.hihatCrossArtChokeDbMargin, 0.0f, 20.0f, 0.5f);
 
     // ── UI / Grid ──
-    this->addIntPot("Columns", "", &settings.padGridColumns, 1, 12);
-    this->addIntPot("Rows", "", &settings.padGridRows, 1, 8);
-    this->addIntPot("Gap", "", &settings.padGap, 0, 8);
+    this->addPot("Columns", "", &settings.padGridColumns, 1, 12);
+    this->addPot("Rows", "", &settings.padGridRows, 1, 8);
+    this->addPot("Gap", "", &settings.padGap, 0, 8);
 
     this->loadFromEngine();
 }
@@ -90,44 +90,49 @@ EngineSettingsPanel::~EngineSettingsPanel() {
 }
 
 void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval) {
-    auto entry = std::make_unique<PotEntry>();
-    entry->target = target;
-    entry->defaultValue = static_cast<double>(*target);
-
-    entry->parameterPot = std::make_unique<ParameterPot>(name,
-                                                         static_cast<double>(minVal),
-                                                         static_cast<double>(maxVal),
-                                                         static_cast<double>(interval),
-                                                         entry->defaultValue,
-                                                         nullptr,
-                                                         makeSettingsPotLayout(false));
-    entry->parameterPot->setTooltipText(tooltip);
-    entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
-    entry->parameterPot->onDragEnd = [this] { this->flushPendingSettingsSave(); };
-    this->contentComponent.addAndMakeVisible(*entry->parameterPot);
-
-    UIHelpers::configureControlButton(entry->resetButton,
-                                      juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
-    entry->resetButton.onClick = [entry = entry.get()] {
-        entry->parameterPot->setValue(entry->defaultValue, juce::sendNotificationSync);
-    };
-    this->contentComponent.addAndMakeVisible(entry->resetButton);
-
-    this->pots.push_back(std::move(entry));
+    this->addPotCommon(name,
+                       tooltip,
+                       target,
+                       nullptr,
+                       static_cast<double>(minVal),
+                       static_cast<double>(maxVal),
+                       static_cast<double>(interval),
+                       false);
 }
 
-void EngineSettingsPanel::addIntPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal) {
+void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal) {
+    this->addPotCommon(name,
+                       tooltip,
+                       nullptr,
+                       target,
+                       static_cast<double>(minVal),
+                       static_cast<double>(maxVal),
+                       1.0,
+                       true);
+}
+
+void EngineSettingsPanel::addPotCommon(const juce::String& name,
+                                       const juce::String& tooltip,
+                                       float* target,
+                                       int* intTarget,
+                                       double minVal,
+                                       double maxVal,
+                                       double interval,
+                                       bool isInteger) {
     auto entry = std::make_unique<PotEntry>();
-    entry->intTarget = target;
-    entry->defaultValue = static_cast<double>(*target);
+    entry->target = target;
+    entry->intTarget = intTarget;
+    entry->defaultValue = entry->target != nullptr
+        ? static_cast<double>(*entry->target)
+        : static_cast<double>(*entry->intTarget);
 
     entry->parameterPot = std::make_unique<ParameterPot>(name,
-                                                         static_cast<double>(minVal),
-                                                         static_cast<double>(maxVal),
-                                                         1.0,
+                                                         minVal,
+                                                         maxVal,
+                                                         interval,
                                                          entry->defaultValue,
                                                          nullptr,
-                                                         makeSettingsPotLayout(true));
+                                                         makeSettingsPotLayout(isInteger));
     entry->parameterPot->setTooltipText(tooltip);
     entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
     entry->parameterPot->onDragEnd = [this] { this->flushPendingSettingsSave(); };

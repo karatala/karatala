@@ -5,7 +5,7 @@
 #include "SourceItem.h"
 #include "SourcePickerPopup.h"
 #include "MidiNoteAssignmentControl.h"
-#include "LabeledPot.h"
+#include "ParameterPot.h"
 
 class PadContextPopup : public juce::Component {
 public:
@@ -61,17 +61,17 @@ private:
         int selectedSourceIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst/art multiline
-        std::unique_ptr<LabeledPot> tuningPot;
-        std::unique_ptr<LabeledPot> attackPot;
-        std::unique_ptr<LabeledPot> decayPot;
-        std::unique_ptr<LabeledPot> gainPot;
+        std::unique_ptr<ParameterPot> tuningPot;
+        std::unique_ptr<ParameterPot> attackPot;
+        std::unique_ptr<ParameterPot> decayPot;
+        std::unique_ptr<ParameterPot> gainPot;
         std::unique_ptr<juce::TextButton> flipLRButton;
         std::unique_ptr<juce::TextButton> flipPhaseButton;
         // Per-mic bleed pots
         struct MicBleedControl {
             juce::String micCode;
             juce::String micName;
-            std::unique_ptr<LabeledPot> bleedPot;
+            std::unique_ptr<ParameterPot> bleedPot;
         };
         std::vector<std::unique_ptr<MicBleedControl>> micBleeds;
         std::unique_ptr<juce::TextButton> removeButton;

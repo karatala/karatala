@@ -78,6 +78,16 @@ namespace Fonts {
         return font;
     }
 
+    inline const juce::Font& tableSmall() {
+        static const juce::Font font(table().withHeight(11.0f));
+        return font;
+    }
+
+    inline const juce::Font& labelBoldMedium() {
+        static const juce::Font font(labelBold().withHeight(12.0f));
+        return font;
+    }
+
     inline const juce::Font& mono() {
         static const juce::Font font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName()));
         return font;
@@ -111,5 +121,12 @@ namespace Sizes {
     constexpr int settingsTextBoxW = 50;
     constexpr int settingsIntTextBoxW = 40;
     constexpr int settingsTextBoxH = 14;
+    constexpr int popupPadding = 8;
+    constexpr int potWidth = 50;
+    constexpr int potHeight = 56;
+    constexpr int sourceCardWidth = 170;
+    constexpr int layerRowHeight = 64;
+    constexpr int midiMapInstCol = 90;
+    constexpr int midiMapArtCol = 100;
 }
 }

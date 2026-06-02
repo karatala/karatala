@@ -46,8 +46,51 @@ void configureControlButton(juce::TextButton& button, int connectedEdges) {
     button.setConnectedEdges(connectedEdges);
 }
 
+void configureToggleButton(juce::TextButton& button, int connectedEdges) {
+    button.setClickingTogglesState(true);
+    button.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    button.setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::accentWarning);
+    button.setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
+    button.setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
+    button.setConnectedEdges(connectedEdges);
+}
+
+void configureTableRowLabel(juce::Label& label,
+                            juce::Colour colour,
+                            juce::Justification justification) {
+    label.setFont(UITheme::Fonts::tableSmall());
+    label.setColour(juce::Label::textColourId, colour);
+    label.setJustificationType(justification);
+}
+
+void configureMonoTextEditor(juce::TextEditor& editor,
+                             juce::Colour textColour,
+                             bool multiline) {
+    editor.setMultiLine(multiline);
+    editor.setScrollbarsShown(true);
+    editor.setFont(UITheme::Fonts::mono());
+    editor.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgEditor);
+    editor.setColour(juce::TextEditor::textColourId, textColour);
+}
+
 juce::String sentinelValueText(double value) {
     return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
+}
+
+void applyMidiNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note) {
+    if (slotIdx < 0)
+        return;
+
+    while (static_cast<int>(notes.size()) <= slotIdx)
+        notes.push_back(0);
+
+    if (note >= 0 && note <= 127) {
+        notes[static_cast<size_t>(slotIdx)] = static_cast<uint8_t>(note);
+        return;
+    }
+
+    if (slotIdx < static_cast<int>(notes.size()))
+        notes.erase(notes.begin() + slotIdx);
 }
 
 std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryManager) {

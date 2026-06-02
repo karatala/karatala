@@ -16,14 +16,7 @@ void PadContextPopup::syncNoteButtons() {
 
 void PadContextPopup::applyNoteToSlot(int slotIdx, int note) {
     if (!this->midiNotesPtr) return;
-    auto& notes = *this->midiNotesPtr;
-    // Ensure the vector has at least (slotIdx+1) entries
-    while (static_cast<int>(notes.size()) <= slotIdx)
-        notes.push_back(0);
-    if (note >= 0 && note <= 127)
-        notes[static_cast<size_t>(slotIdx)] = static_cast<uint8_t>(note);
-    else
-        notes.erase(notes.begin() + slotIdx);
+    UIHelpers::applyMidiNoteToSlot(*this->midiNotesPtr, slotIdx, note);
     this->syncNoteButtons();
     if (this->onMidiMappingChanged)
         this->onMidiMappingChanged();
@@ -79,7 +72,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     // Header: "Kick / center"
     juce::String headerText = (slot.display.isNotEmpty() ? slot.display : slot.id) + " / " + this->artName;
     this->slotLabel.setText(headerText, juce::dontSendNotification);
-    this->slotLabel.setFont(UITheme::Fonts::labelBold().withHeight(12.0f));
+    this->slotLabel.setFont(UITheme::Fonts::labelBoldMedium());
     this->slotLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     addAndMakeVisible(this->slotLabel);
 
@@ -131,19 +124,19 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
 }
 
 juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<int>& availableBounds) const {
-    constexpr int popupPadding = 8;
+    constexpr int popupPadding = UITheme::Sizes::popupPadding;
     constexpr int headerHeight = 24;
     constexpr int headerGap = 6;
-    constexpr int potWidth = 50;
-    constexpr int potHeight = 56;
+    constexpr int potWidth = UITheme::Sizes::potWidth;
+    constexpr int potHeight = UITheme::Sizes::potHeight;
     constexpr int flipColumnWidth = 26;
     constexpr int removeWidth = 16;
-    constexpr int sourceWidth = 170;
+    constexpr int sourceWidth = UITheme::Sizes::sourceCardWidth;
     constexpr int bleedPotWidth = 50;
     constexpr int groupGap = 6;
     constexpr int groupPad = 4;
 
-    const int layerRowHeight = potHeight + 8;
+    const int layerRowHeight = UITheme::Sizes::layerRowHeight;
     const int mainGroupWidth = potWidth * 4 + flipColumnWidth + groupPad * 2;
 
     int maxBleedCount = 0;
@@ -251,7 +244,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Source detail label (multi-line: kit / inst / art)
     layer->sourceDetailLabel = std::make_unique<juce::Label>();
-    layer->sourceDetailLabel->setFont(UITheme::Fonts::table().withHeight(11.0f));
+    layer->sourceDetailLabel->setFont(UITheme::Fonts::tableSmall());
     layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
     layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
@@ -259,7 +252,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     this->updateSourceDisplay(layer);
 
     // Tuning pot
-    layer->tuningPot = std::make_unique<LabeledPot>("Tuning", -2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
+    layer->tuningPot = std::make_unique<ParameterPot>("Tuning", -2400.0, 2400.0, 10.0, static_cast<double>(tuningCents));
     this->layerContent.addAndMakeVisible(*layer->tuningPot);
     layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->tuningPot->onDragEnd = [this] {
@@ -267,7 +260,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     };
 
     // Attack pot
-    layer->attackPot = std::make_unique<LabeledPot>("Attack", -1.0, 500.0, 10.0,
+    layer->attackPot = std::make_unique<ParameterPot>("Attack", -1.0, 500.0, 10.0,
         attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
@@ -276,7 +269,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     };
 
     // Decay pot
-    layer->decayPot = std::make_unique<LabeledPot>("Decay", -1.0, 5000.0, 10.0,
+    layer->decayPot = std::make_unique<ParameterPot>("Decay", -1.0, 5000.0, 10.0,
         decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
@@ -285,7 +278,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     };
 
     // Gain pot (-60 to +12 dB)
-    layer->gainPot = std::make_unique<LabeledPot>("Gain", -60.0, 12.0, 0.5, static_cast<double>(volumeDb),
+    layer->gainPot = std::make_unique<ParameterPot>("Gain", -60.0, 12.0, 0.5, static_cast<double>(volumeDb),
         [](double value) -> juce::String {
             if (value <= -60.0) return "-inf";
             return juce::String(value, 1);
@@ -298,13 +291,9 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Flip L/R button (toggle)
     layer->flipLRButton = std::make_unique<juce::TextButton>("L/R");
-    layer->flipLRButton->setClickingTogglesState(true);
+    UIHelpers::configureToggleButton(*layer->flipLRButton,
+                                     juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     layer->flipLRButton->setToggleState(flipLR, juce::dontSendNotification);
-    layer->flipLRButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    layer->flipLRButton->setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::accentWarning);
-    layer->flipLRButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
-    layer->flipLRButton->setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
-    layer->flipLRButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     this->layerContent.addAndMakeVisible(*layer->flipLRButton);
     layer->flipLRButton->onClick = [this] {
         this->mapTextDirty = true;
@@ -313,20 +302,16 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
     // Flip Phase button (toggle)
     layer->flipPhaseButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x98")); // Ø
-    layer->flipPhaseButton->setClickingTogglesState(true);
+    UIHelpers::configureToggleButton(*layer->flipPhaseButton,
+                                     juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     layer->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
-    layer->flipPhaseButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    layer->flipPhaseButton->setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::accentWarning);
-    layer->flipPhaseButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
-    layer->flipPhaseButton->setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
-    layer->flipPhaseButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     this->layerContent.addAndMakeVisible(*layer->flipPhaseButton);
     layer->flipPhaseButton->onClick = [this] {
         this->mapTextDirty = true;
         this->applyToEngine();
     };
 
-    // Per-mic bleed as LabeledPots
+    // Per-mic bleed as ParameterPots
     auto relevantMics = this->getRelevantMics();
     for (const auto& [micCode, micName] : relevantMics) {
         auto bleedCtrl = std::make_unique<LayerRow::MicBleedControl>();
@@ -336,7 +321,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
         auto it = micBleedLevels.find(micCode);
         if (it != micBleedLevels.end())
             level = it->second;
-        bleedCtrl->bleedPot = std::make_unique<LabeledPot>(micName, 0.0, 100.0, 1.0,
+        bleedCtrl->bleedPot = std::make_unique<ParameterPot>(micName, 0.0, 100.0, 1.0,
             static_cast<double>(level * 100.0f));
         this->layerContent.addAndMakeVisible(*bleedCtrl->bleedPot);
         bleedCtrl->bleedPot->onValueChange = [this] {

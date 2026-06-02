@@ -3,12 +3,12 @@
 
 StatusBar::StatusBar() {
     this->statusLabel.setJustificationType(juce::Justification::centredLeft);
-    this->statusLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+    this->statusLabel.setFont(UITheme::Fonts::tableSmall());
     this->statusLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSuccess);
     addAndMakeVisible(this->statusLabel);
 
     this->infoLabel.setJustificationType(juce::Justification::centredRight);
-    this->infoLabel.setFont(UITheme::Fonts::table().withHeight(11.0f));
+    this->infoLabel.setFont(UITheme::Fonts::tableSmall());
     this->infoLabel.setColour(juce::Label::textColourId, UITheme::Colours::textInfo);
     addAndMakeVisible(this->infoLabel);
 }
