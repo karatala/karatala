@@ -46,10 +46,12 @@ private:
     std::unique_ptr<MidiNoteAssignmentControl> midiAssignmentControl;
     juce::TextButton addLayerButton { "+ Layer" };
     KitLayout::MidiNotes* midiNotesPtr = nullptr;
+    KitLayout::MidiNotes midiNotesOwned;
     int activeLearningSlot = -1;
 
     void syncNoteButtons();
     void applyNoteToSlot(int slotIdx, int note);
+    void syncMidiNotesToActiveLayout();
 
     std::vector<SourceItem> sourceItems;
     void rebuildSourceItems();

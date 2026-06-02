@@ -96,6 +96,12 @@ void DrumPad::refreshDisplayOrder() {
 }
 
 void DrumPad::flash(float velocity) {
+    if (this->slotPtr == nullptr) {
+        this->flashAlpha = 0.0f;
+        this->stopTimer();
+        return;
+    }
+
     this->flashAlpha = juce::jlimit(0.0f, 1.0f, velocity / 127.0f);
     this->startTimerHz(flashTimerHz);
     repaint();

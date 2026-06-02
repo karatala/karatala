@@ -17,9 +17,37 @@ void PadContextPopup::syncNoteButtons() {
 void PadContextPopup::applyNoteToSlot(int slotIdx, int note) {
     if (!this->midiNotesPtr) return;
     UIHelpers::applyMidiNoteToSlot(*this->midiNotesPtr, slotIdx, note);
+    this->syncMidiNotesToActiveLayout();
     this->syncNoteButtons();
     if (this->onMidiMappingChanged)
         this->onMidiMappingChanged();
+}
+
+void PadContextPopup::syncMidiNotesToActiveLayout() {
+    auto* layout = this->engine.getKitLayout();
+    if (layout == nullptr || this->midiNotesPtr == nullptr)
+        return;
+
+    auto normalizeArtName = [](const juce::String& rawName) {
+        return rawName.upToFirstOccurrenceOf("[", false, false);
+    };
+
+    for (auto& slot : layout->instrumentSlots) {
+        if (slot.id != this->slotId)
+            continue;
+
+        for (auto& art : slot.articulations) {
+            if (normalizeArtName(art.codeRaw) == this->artName) {
+                art.notes = *this->midiNotesPtr;
+                return;
+            }
+        }
+
+        if (!slot.articulations.empty()) {
+            slot.articulations[0].notes = *this->midiNotesPtr;
+        }
+        return;
+    }
 }
 
 void PadContextPopup::midiLearnNoteReceived(int midiNote) {
@@ -58,13 +86,15 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     , savedInstrumentMapText(savedInstrumentMapText) {
     // Resolve articulation
     if (artIdx >= 0 && artIdx < static_cast<int>(slot.articulations.size())) {
-        auto& art = const_cast<KitLayout::InstrumentSlot::ArticulationTrigger&>(slot.articulations[static_cast<size_t>(artIdx)]);
+        const auto& art = slot.articulations[static_cast<size_t>(artIdx)];
         this->artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
-        this->midiNotesPtr = &art.notes;
+        this->midiNotesOwned = art.notes;
+        this->midiNotesPtr = &this->midiNotesOwned;
     } else if (!slot.articulations.empty()) {
-        auto& art = const_cast<KitLayout::InstrumentSlot::ArticulationTrigger&>(slot.articulations[0]);
+        const auto& art = slot.articulations[0];
         this->artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
-        this->midiNotesPtr = &art.notes;
+        this->midiNotesOwned = art.notes;
+        this->midiNotesPtr = &this->midiNotesOwned;
     } else {
         this->artName = "(default)";
     }

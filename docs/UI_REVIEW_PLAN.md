@@ -188,25 +188,6 @@ inline juce::Font labelBoldMedium() { return labelBold().withHeight(12.0f); }
 
 ---
 
-## 6. UX / Visual Improvements
-
-### 6.1 No keyboard navigation
-- None of the custom components (DrumPad, MidiNotePicker, SourcePickerPopup) handle keyboard focus or key events.
-- **Fix**: Add `keyPressed()` override to MidiNotePicker for arrow key navigation. Add tab-stop support to DrumPadGrid.
-
-### 6.2 SourcePickerPopup: No "clear" option
-- Once a source is selected, there's no way to unselect it (set back to "no source").
-- **Fix**: Add a "Clear" button or allow double-click on the selected item to deselect.
-
-### 6.3 DrumPad: No hover feedback
-- Pads don't highlight on mouse hover, making it hard to tell which pad will be clicked.
-- **Fix**: Override `mouseEnter`/`mouseExit`, set a hover flag, paint a subtle highlight.
-
-### 6.4 MidiNotePicker: note names use sharps only
-- `NOTE_NAMES_PICKER` uses C# D# F# G# A# but the class doc says "mixed sharp/flat naming".
-- **Fix**: Match the doc or update the doc. Standard GM convention uses sharps.
-
----
 
 ## 7. Proposed Refactoring Phases
 
@@ -232,10 +213,7 @@ inline juce::Font labelBoldMedium() { return labelBold().withHeight(12.0f); }
 - [ ] 5.3 — Create `ScrollablePanel` base
 - [ ] 2.2 / 2.3 — Remove redundant layout-time property setting
 
-### Phase 4: UX Polish
-- [ ] 6.1 — Keyboard navigation
-- [ ] 6.2 — Clear source option
-- [ ] 6.3 — Pad hover feedback
+### Phase 4: Polish
 - [ ] 1.2 — Guard flash on empty pads
 - [ ] 1.5 — Fix const_cast in PadContextPopup
 - [ ] 2.5 — Use stack arrays in DrumPadGrid::resized()

@@ -1,4 +1,5 @@
 #include "DrumPadGrid.h"
+#include <array>
 
 DrumPadGrid::DrumPadGrid() {
 }
@@ -74,43 +75,64 @@ void DrumPadGrid::flashPad(const juce::String& slotId, float velocity) {
 }
 
 void DrumPadGrid::resized() {
-    if (this->pads.empty()) return;
-    if (this->gridColumns <= 0 || this->gridRows <= 0) return;
+    if (this->pads.empty())
+        return;
+
+    if (this->gridColumns <= 0 || this->gridRows <= 0)
+        return;
+
+    constexpr int maxGridColumns = 12;
+    constexpr int maxGridRows = 8;
+    const int clampedGridColumns = juce::jlimit(1, maxGridColumns, this->gridColumns);
+    const int clampedGridRows = juce::jlimit(1, maxGridRows, this->gridRows);
 
     auto bounds = getLocalBounds();
     const int gap = this->padGap;
-    const int totalGapX = gap * juce::jmax(0, this->gridColumns - 1);
-    const int totalGapY = gap * juce::jmax(0, this->gridRows - 1);
+    const int totalGapX = gap * juce::jmax(0, clampedGridColumns - 1);
+    const int totalGapY = gap * juce::jmax(0, clampedGridRows - 1);
     const int availableWidth = juce::jmax(0, bounds.getWidth() - totalGapX);
     const int availableHeight = juce::jmax(0, bounds.getHeight() - totalGapY);
-    const int baseCellWidth = availableWidth / this->gridColumns;
-    const int baseCellHeight = availableHeight / this->gridRows;
-    const int extraWidthPixels = availableWidth % this->gridColumns;
-    const int extraHeightPixels = availableHeight % this->gridRows;
+    const int baseCellWidth = availableWidth / clampedGridColumns;
+    const int baseCellHeight = availableHeight / clampedGridRows;
+    const int extraWidthPixels = availableWidth % clampedGridColumns;
+    const int extraHeightPixels = availableHeight % clampedGridRows;
 
-    std::vector<int> columnWidths(static_cast<size_t>(this->gridColumns), baseCellWidth);
-    std::vector<int> rowHeights(static_cast<size_t>(this->gridRows), baseCellHeight);
-    std::vector<int> columnOffsets(static_cast<size_t>(this->gridColumns), bounds.getX());
-    std::vector<int> rowOffsets(static_cast<size_t>(this->gridRows), bounds.getY());
+    std::array<int, maxGridColumns> columnWidths {};
+    std::array<int, maxGridRows> rowHeights {};
+    std::array<int, maxGridColumns> columnOffsets {};
+    std::array<int, maxGridRows> rowOffsets {};
+
+    for (int idx = 0; idx < clampedGridColumns; ++idx)
+        columnWidths[static_cast<size_t>(idx)] = baseCellWidth;
+    for (int idx = 0; idx < clampedGridRows; ++idx)
+        rowHeights[static_cast<size_t>(idx)] = baseCellHeight;
+    for (int idx = 0; idx < clampedGridColumns; ++idx)
+        columnOffsets[static_cast<size_t>(idx)] = bounds.getX();
+    for (int idx = 0; idx < clampedGridRows; ++idx)
+        rowOffsets[static_cast<size_t>(idx)] = bounds.getY();
 
     for (int idx = 0; idx < extraWidthPixels; ++idx)
         ++columnWidths[static_cast<size_t>(idx)];
     for (int idx = 0; idx < extraHeightPixels; ++idx)
         ++rowHeights[static_cast<size_t>(idx)];
 
-    for (int idx = 1; idx < this->gridColumns; ++idx)
+    for (int idx = 1; idx < clampedGridColumns; ++idx)
         columnOffsets[static_cast<size_t>(idx)] = columnOffsets[static_cast<size_t>(idx - 1)] + columnWidths[static_cast<size_t>(idx - 1)] + gap;
-    for (int idx = 1; idx < this->gridRows; ++idx)
+    for (int idx = 1; idx < clampedGridRows; ++idx)
         rowOffsets[static_cast<size_t>(idx)] = rowOffsets[static_cast<size_t>(idx - 1)] + rowHeights[static_cast<size_t>(idx - 1)] + gap;
 
     for (int idx = 0; idx < static_cast<int>(this->pads.size()); ++idx) {
-        int col = idx % this->gridColumns;
-        int row = idx / this->gridColumns;
+        int col = idx % clampedGridColumns;
+        int row = idx / clampedGridColumns;
 
-        if (row >= this->gridRows) 
+        if (row >= clampedGridRows)
             break;
 
-        auto cellBounds = juce::Rectangle<int>(columnOffsets[static_cast<size_t>(col)], rowOffsets[static_cast<size_t>(row)], columnWidths[static_cast<size_t>(col)], rowHeights[static_cast<size_t>(row)]);
+        auto cellBounds = juce::Rectangle<int>(
+            columnOffsets[static_cast<size_t>(col)],
+            rowOffsets[static_cast<size_t>(row)],
+            columnWidths[static_cast<size_t>(col)],
+            rowHeights[static_cast<size_t>(row)]);
 
         this->pads[static_cast<size_t>(idx)]->setBounds(cellBounds);
     }
