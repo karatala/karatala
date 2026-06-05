@@ -2,6 +2,7 @@
 #include "UI/UIHelpers.h"
 #include "UI/UITheme.h"
 #include <set>
+#include "Engine/LayoutManager.h"
 
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
@@ -72,7 +73,7 @@ void PluginEditor::setupSidebarKnobs() {
         this->sidebar.updateKnobLabels();
     };
 
-    // HiHat openness knob — sends CC to all pdl_opn_cls controllers in the layout
+    // HiHat openness knob - sends CC to all pdl_opn_cls controllers in the layout
     this->sidebar.hihatKnob.onValueChange = [this] {
         int ccValue = static_cast<int>(this->sidebar.hihatKnob.getValue());
         auto* layout = this->processorRef.getEngine().getKitLayout();
@@ -88,7 +89,7 @@ void PluginEditor::setupSidebarKnobs() {
         this->sidebar.updateKnobLabels();
     };
 
-    // Round-robin lock knob — sets engine setting directly
+    // Round-robin lock knob - sets engine setting directly
     this->sidebar.rrLockKnob.onValueChange = [this] {
         this->processorRef.getEngine().engineSettings.roundRobinLock = static_cast<int>(this->sidebar.rrLockKnob.getValue());
         this->sidebar.updateKnobLabels();
@@ -187,6 +188,37 @@ void PluginEditor::setupMapMode() {
             this->processorRef.setMidiLearnCallback(nullptr);
         }
     };
+    
+    this->midiMapTable.onPresetSelected = [this](const MidiMapTable::PresetEntry& entry) {
+        if (entry.isUser) {
+            auto userFile = this->processorRef.getEngine().getUserPresetsDir().getChildFile(entry.id + ".yml");
+            auto yaml = userFile.loadFileAsString();
+            auto parsed = LayoutTraits<KitLayout>::parseYaml(yaml);
+            if (parsed.ok()) {
+                parsed.value.id = entry.id;
+                parsed.value.rebuildIndices();
+                this->processorRef.getEngine().setKitLayoutDirect(std::move(parsed.value));
+            }
+        } else {
+            this->processorRef.getEngine().useKitLayout(entry.id);
+        }
+        this->statusBar.setStatusText("Loaded preset: " + entry.name);
+        this->markDrumPadGridDirty();
+        this->refreshMidiMapTableIfNeeded(true);
+        this->refreshDrumPadGridIfNeeded();
+    };
+    this->midiMapTable.onPresetSaveRequested = [this] { this->handlePresetSave(); };
+    this->midiMapTable.onPresetCloneRequested = [this] { this->handlePresetClone(); };
+    this->midiMapTable.onPresetDeleteRequested = [this] { this->handlePresetDelete(); };
+    this->midiMapTable.onOpenUserFolderRequested = [this] {
+        this->processorRef.getEngine().getUserPresetsDir().createDirectory();
+        this->processorRef.getEngine().getUserPresetsDir().startAsProcess();
+    };
+    this->midiMapTable.onOpenFactoryFolderRequested = [this] {
+        auto factoryDir = this->processorRef.getEngine().dataPath.getChildFile("kit_layouts");
+        if (factoryDir.isDirectory())
+            factoryDir.startAsProcess();
+    };
 }
 
 void PluginEditor::setupSettingsMode() {
@@ -255,6 +287,7 @@ void PluginEditor::refreshMidiMapTableIfNeeded(bool force) {
 
     this->midiMapTable.populate(this->processorRef.getEngine().getKitLayout());
     this->midiMapTableDirty = false;
+    this->refreshPresetList();
 }
 
 void PluginEditor::refreshInstrumentConfigIfNeeded(bool force) {
@@ -267,6 +300,147 @@ void PluginEditor::refreshInstrumentConfigIfNeeded(bool force) {
     this->instrumentConfigPanel->populate(savedMap);
     this->instrumentConfigSnapshot = savedMap;
     this->instrumentConfigDirty = false;
+}
+
+void PluginEditor::refreshPresetList() {
+    std::vector<MidiMapTable::PresetEntry> entries;
+
+    // Factory presets from kit_layouts dir
+    auto& engine = this->processorRef.getEngine();
+    auto factoryLayouts = engine.getKitLayoutManager()->getLayouts();
+    for (const auto& layout : factoryLayouts) {
+        MidiMapTable::PresetEntry entry;
+        entry.id = layout.id;
+        entry.name = layout.name.isNotEmpty() ? layout.name : layout.id;
+        entry.isUser = false;
+        entries.push_back(entry);
+    }
+
+    // User presets from presets dir
+    auto userDir = engine.getUserPresetsDir();
+    if (userDir.isDirectory()) {
+        auto files = userDir.findChildFiles(juce::File::findFiles, false, "*.yml;*.yaml");
+        for (const auto& file : files) {
+            auto yaml = file.loadFileAsString();
+            auto parsed = LayoutTraits<KitLayout>::parseYaml(yaml);
+            MidiMapTable::PresetEntry entry;
+            entry.id = file.getFileNameWithoutExtension();
+            entry.name = parsed.ok() && parsed.value.name.isNotEmpty() ? parsed.value.name : entry.id;
+            entry.isUser = true;
+            entries.push_back(entry);
+        }
+    }
+
+    auto* layout = engine.getKitLayout();
+    juce::String currentId = layout ? layout->id : juce::String();
+    this->midiMapTable.populatePresets(entries, currentId);
+}
+
+void PluginEditor::saveLayoutToUserPresets(const juce::String& fileName, const KitLayout& layout) {
+    auto userDir = this->processorRef.getEngine().getUserPresetsDir();
+    userDir.createDirectory();
+    auto file = userDir.getChildFile(fileName + ".yml");
+    auto yaml = LayoutTraits<KitLayout>::toYaml(layout);
+    file.replaceWithText(yaml);
+}
+
+juce::String PluginEditor::makeUniqueCopyName(const juce::String& baseName) {
+    auto userDir = this->processorRef.getEngine().getUserPresetsDir();
+    int num = 1;
+    juce::String candidate = baseName + " Copy";
+    while (userDir.getChildFile(candidate + ".yml").exists() ||
+           userDir.getChildFile(candidate + ".yaml").exists()) {
+        num++;
+        candidate = baseName + " Copy " + juce::String(num);
+    }
+    return candidate;
+}
+
+void PluginEditor::handlePresetSave() {
+    auto* layout = this->processorRef.getEngine().getKitLayout();
+    if (!layout) return;
+
+    auto userDir = this->processorRef.getEngine().getUserPresetsDir();
+    bool isUser = userDir.getChildFile(layout->id + ".yml").exists() ||
+                  userDir.getChildFile(layout->id + ".yaml").exists();
+
+    if (isUser) {
+        this->saveLayoutToUserPresets(layout->id, *layout);
+        this->statusBar.setStatusText("Preset saved: " + layout->name);
+        this->refreshPresetList();
+    } else {
+        juce::String defaultName = this->makeUniqueCopyName(layout->name.isNotEmpty() ? layout->name : layout->id);
+        auto* dlg = new juce::AlertWindow("Save As User Preset", "Enter preset name:", juce::MessageBoxIconType::QuestionIcon);
+        dlg->addTextEditor("name", defaultName, "Name:");
+        dlg->addButton("Save", 1);
+        dlg->addButton("Cancel", 0);
+        KitLayout layoutCopy = *layout;
+        dlg->enterModalState(true, juce::ModalCallbackFunction::create([this, dlg, layoutCopy](int result) mutable {
+            if (result == 1) {
+                juce::String name = dlg->getTextEditorContents("name").trim();
+                if (name.isEmpty()) return;
+                juce::String fileName = name.replaceCharacters("\\/:|*?<>\"", "_________");
+                layoutCopy.name = name;
+                layoutCopy.id = fileName;
+                this->saveLayoutToUserPresets(fileName, layoutCopy);
+                this->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
+                this->statusBar.setStatusText("Saved as: " + name);
+                this->refreshPresetList();
+            }
+        }), true);
+    }
+}
+
+void PluginEditor::handlePresetClone() {
+    auto* layout = this->processorRef.getEngine().getKitLayout();
+    if (!layout) return;
+
+    juce::String baseName = layout->name.isNotEmpty() ? layout->name : layout->id;
+    juce::String defaultName = this->makeUniqueCopyName(baseName);
+    auto* dlg = new juce::AlertWindow("Clone Preset", "Enter name for the copy:", juce::MessageBoxIconType::QuestionIcon);
+    dlg->addTextEditor("name", defaultName, "Name:");
+    dlg->addButton("Clone", 1);
+    dlg->addButton("Cancel", 0);
+    KitLayout layoutCopy = *layout;
+    dlg->enterModalState(true, juce::ModalCallbackFunction::create([this, dlg, layoutCopy](int result) mutable {
+        if (result == 1) {
+            juce::String name = dlg->getTextEditorContents("name").trim();
+            if (name.isEmpty()) return;
+            juce::String fileName = name.replaceCharacters("\\/:|*?<>\"", "_________");
+            layoutCopy.name = name;
+            layoutCopy.id = fileName;
+            this->saveLayoutToUserPresets(fileName, layoutCopy);
+            this->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
+            this->statusBar.setStatusText("Cloned as: " + name);
+            this->refreshPresetList();
+        }
+    }), true);
+}
+
+void PluginEditor::handlePresetDelete() {
+    auto* layout = this->processorRef.getEngine().getKitLayout();
+    if (!layout) return;
+
+    auto userDir = this->processorRef.getEngine().getUserPresetsDir();
+    auto file = userDir.getChildFile(layout->id + ".yml");
+    if (!file.exists()) file = userDir.getChildFile(layout->id + ".yaml");
+    if (!file.exists()) return;
+
+    juce::String presetName = layout->name.isNotEmpty() ? layout->name : layout->id;
+    juce::AlertWindow::showAsync(
+        juce::MessageBoxOptions()
+            .withIconType(juce::MessageBoxIconType::WarningIcon)
+            .withTitle("Delete Preset")
+            .withMessage("Delete \"" + presetName + "\"? This cannot be undone.")
+            .withButton("Delete")
+            .withButton("Cancel"),
+        [this, file](int result) {
+            if (result == 1) {
+                file.deleteFile();
+                this->statusBar.setStatusText("Preset deleted");
+                this->refreshPresetList();
+            }
+        });
 }
 
 void PluginEditor::setViewMode(ViewMode mode) {
@@ -294,7 +468,7 @@ void PluginEditor::setViewMode(ViewMode mode) {
 }
 
 void PluginEditor::showComponentsForMode(ViewMode mode) {
-    // Drum pad grid — visible for Zen and Zoned
+    // Drum pad grid - visible for Zen and Zoned
     bool showPads = (mode == ViewMode::Zen || mode == ViewMode::Zoned);
     this->drumPadGrid.setVisible(showPads);
 
@@ -329,7 +503,7 @@ void PluginEditor::resized() {
     // Status bar at bottom
     this->statusBar.setBounds(area.removeFromBottom(UITheme::Sizes::statusBarHeight));
 
-    // Main area — remaining space
+    // Main area - remaining space
     auto mainArea = area;
 
     switch (this->activeMode) {

@@ -3,6 +3,26 @@
 #include "UIHelpers.h"
 
 MidiMapTable::MidiMapTable() {
+    this->addAndMakeVisible(this->presetCombo);
+    this->presetCombo.setTextWhenNothingSelected("(no presets)");
+    this->presetCombo.onChange = [this] {
+        int selectedId = this->presetCombo.getSelectedId();
+        if (selectedId > 0 && selectedId <= static_cast<int>(this->presetEntries.size())) {
+            if (this->onPresetSelected)
+                this->onPresetSelected(this->presetEntries[static_cast<size_t>(selectedId - 1)]);
+        }
+    };
+
+    UIHelpers::configureControlButton(this->saveButton);
+    this->saveButton.onClick = [this] {
+        if (this->onPresetSaveRequested)
+            this->onPresetSaveRequested();
+    };
+    this->addAndMakeVisible(this->saveButton);
+
+    UIHelpers::configureControlButton(this->moreButton);
+    this->moreButton.onClick = [this] { this->showMoreMenu(); };
+    this->addAndMakeVisible(this->moreButton);
 }
 
 void MidiMapTable::populate(KitLayout* layout) {
@@ -10,6 +30,58 @@ void MidiMapTable::populate(KitLayout* layout) {
     this->stopMidiLearn();
     this->buildRows();
     this->resized();
+}
+
+void MidiMapTable::populatePresets(std::vector<PresetEntry> presets, const juce::String& currentId) {
+    this->presetEntries = std::move(presets);
+    this->presetCombo.clear(juce::dontSendNotification);
+
+    int selectedId = 0;
+    for (size_t i = 0; i < this->presetEntries.size(); ++i) {
+        const auto& entry = this->presetEntries[i];
+        juce::String prefix = entry.isUser ? juce::String::fromUTF8("\xf0\x9f\x91\xa4 ") : juce::String::fromUTF8("\xf0\x9f\x93\xa6 ");
+        juce::String label = prefix + (entry.name.isNotEmpty() ? entry.name : entry.id);
+        this->presetCombo.addItem(label, static_cast<int>(i + 1));
+        if (entry.id == currentId)
+            selectedId = static_cast<int>(i + 1);
+    }
+
+    this->presetCombo.setSelectedId(selectedId, juce::dontSendNotification);
+    this->presetCombo.onChange = [this] {
+        int sid = this->presetCombo.getSelectedId();
+        if (sid > 0 && sid <= static_cast<int>(this->presetEntries.size())) {
+            if (this->onPresetSelected)
+                this->onPresetSelected(this->presetEntries[static_cast<size_t>(sid - 1)]);
+        }
+    };
+}
+
+void MidiMapTable::showMoreMenu() {
+    juce::PopupMenu menu;
+    menu.addItem(1, "Clone to user presets");
+    menu.addSeparator();
+    menu.addItem(2, "Open user presets folder");
+    menu.addItem(3, "Open factory presets folder");
+    menu.addSeparator();
+
+    // Enable Delete only for user presets
+    int selectedId = this->presetCombo.getSelectedId();
+    bool isUserPreset = false;
+    if (selectedId > 0 && selectedId <= static_cast<int>(this->presetEntries.size()))
+        isUserPreset = this->presetEntries[static_cast<size_t>(selectedId - 1)].isUser;
+    menu.addItem(4, "Delete preset", isUserPreset);
+
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this->moreButton),
+        [this](int result) {
+            if (result == 1 && this->onPresetCloneRequested)
+                this->onPresetCloneRequested();
+            else if (result == 2 && this->onOpenUserFolderRequested)
+                this->onOpenUserFolderRequested();
+            else if (result == 3 && this->onOpenFactoryFolderRequested)
+                this->onOpenFactoryFolderRequested();
+            else if (result == 4 && this->onPresetDeleteRequested)
+                this->onPresetDeleteRequested();
+        });
 }
 
 void MidiMapTable::buildRows() {
@@ -151,11 +223,31 @@ void MidiMapTable::midiLearnNoteReceived(int midiNote) {
 
 void MidiMapTable::paint(juce::Graphics& g) {
     g.fillAll(UITheme::Colours::bgEditor);
+
+    // Draw toolbar background
+    auto toolbarArea = getLocalBounds().removeFromTop(toolbarHeight);
+    g.setColour(UITheme::Colours::bgPanel);
+    g.fillRect(toolbarArea);
+    g.setColour(UITheme::Colours::borderSubtle);
+    g.drawHorizontalLine(toolbarArea.getBottom() - 1, static_cast<float>(toolbarArea.getX()), static_cast<float>(toolbarArea.getRight()));
 }
 
 void MidiMapTable::resized() {
     auto area = getLocalBounds();
 
+    // Toolbar strip at the top (non-scrolling)
+    auto toolbarArea = area.removeFromTop(toolbarHeight);
+    toolbarArea.reduce(UITheme::Spacing::sm, UITheme::Spacing::xs);
+    const int moreWidth = 28;
+    const int saveWidth = 44;
+    const int gap = UITheme::Spacing::xs;
+    this->moreButton.setBounds(toolbarArea.removeFromRight(moreWidth));
+    toolbarArea.removeFromRight(gap);
+    this->saveButton.setBounds(toolbarArea.removeFromRight(saveWidth));
+    toolbarArea.removeFromRight(gap);
+    this->presetCombo.setBounds(toolbarArea);
+
+    // Scrollable table below toolbar
     this->viewport.setBounds(area);
 
     const int midiControlWidth = noteButtonWidth * 2 + learnButtonSize * 2 + midiControlGap * 3;

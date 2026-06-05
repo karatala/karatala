@@ -211,6 +211,50 @@ struct LayoutTraits<KitLayout> {
 
         return result;
     }
+
+    static juce::String toYaml(const KitLayout& layout) {
+        juce::String yaml;
+        yaml << "id: " << layout.id << "\n";
+        yaml << "name: " << layout.name << "\n";
+        if (layout.description.isNotEmpty())
+            yaml << "description: " << layout.description << "\n";
+        if (layout.vendor.isNotEmpty())
+            yaml << "vendor: " << layout.vendor << "\n";
+        if (layout.version.isNotEmpty())
+            yaml << "version: " << layout.version << "\n";
+        yaml << "instruments:\n";
+        for (const auto& slot : layout.instrumentSlots) {
+            yaml << "  - id: " << slot.id << "\n";
+            if (slot.display.isNotEmpty())
+                yaml << "    display: " << slot.display << "\n";
+            if (!slot.articulations.empty()) {
+                yaml << "    articulations:\n";
+                for (const auto& art : slot.articulations) {
+                    yaml << "      - code: " << art.codeRaw << "\n";
+                    yaml << "        notes: [";
+                    for (size_t i = 0; i < art.notes.size(); ++i) {
+                        if (i > 0) yaml << ", ";
+                        yaml << static_cast<int>(art.notes[i]);
+                    }
+                    yaml << "]\n";
+                }
+            }
+            if (!slot.controllers.empty()) {
+                yaml << "    controllers:\n";
+                for (const auto& cc : slot.controllers) {
+                    yaml << "      - number: " << cc.number << "\n";
+                    yaml << "        code: " << cc.codeRaw << "\n";
+                    yaml << "        notes: [";
+                    for (size_t i = 0; i < cc.notes.size(); ++i) {
+                        if (i > 0) yaml << ", ";
+                        yaml << static_cast<int>(cc.notes[i]);
+                    }
+                    yaml << "]\n";
+                }
+            }
+        }
+        return yaml;
+    }
 };
 
 template <typename LayoutType>

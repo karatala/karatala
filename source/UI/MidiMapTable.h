@@ -8,6 +8,12 @@
 
 class MidiMapTable : public ScrollablePanel {
 public:
+    struct PresetEntry {
+        juce::String id;
+        juce::String name;
+        bool isUser = false;
+    };
+
     explicit MidiMapTable();
     ~MidiMapTable() override = default;
 
@@ -15,9 +21,23 @@ public:
     void paint(juce::Graphics& g) override;
 
     void populate(KitLayout* layout);
+    void populatePresets(std::vector<PresetEntry> presets, const juce::String& currentId);
 
     /** Called when a MIDI note mapping changes. Owner should rebuild engine routing. */
     std::function<void()> onMappingChanged;
+
+    /** Called when user selects a preset from the dropdown. */
+    std::function<void(const PresetEntry&)> onPresetSelected;
+    /** Called when user clicks Save. */
+    std::function<void()> onPresetSaveRequested;
+    /** Called when user clicks Clone (from ... menu). */
+    std::function<void()> onPresetCloneRequested;
+    /** Called when user clicks Delete (from ... menu). */
+    std::function<void()> onPresetDeleteRequested;
+    /** Called when user clicks Open User Folder. */
+    std::function<void()> onOpenUserFolderRequested;
+    /** Called when user clicks Open Factory Folder. */
+    std::function<void()> onOpenFactoryFolderRequested;
 
     /** Call from engine/processor when MIDI learn is active and a note is received. */
     void midiLearnNoteReceived(int midiNote);
@@ -29,6 +49,7 @@ public:
 private:
     static constexpr int rowHeight = UITheme::Spacing::rowLarge;
     static constexpr int headerHeight = UITheme::Spacing::rowLarge + 2;
+    static constexpr int toolbarHeight = 32;
     static constexpr int instColWidth = UITheme::Sizes::midiMapInstCol;
     static constexpr int artColWidth = UITheme::Sizes::midiMapArtCol;
     static constexpr int noteButtonWidth = 84;
@@ -37,6 +58,12 @@ private:
     static constexpr int columnGap = 12;
 
     KitLayout* layoutPtr = nullptr;
+
+    // Preset toolbar
+    juce::ComboBox presetCombo;
+    juce::TextButton saveButton { "Save" };
+    juce::TextButton moreButton { "..." };
+    std::vector<PresetEntry> presetEntries;
 
     struct MapRow {
         juce::String instrumentId;
@@ -63,6 +90,7 @@ private:
     void applyNoteToSlot(MapRow& row, int slotIdx, int note);
     void startMidiLearn(int rowIdx, int slotIdx);
     void stopMidiLearn();
+    void showMoreMenu();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiMapTable)
 };

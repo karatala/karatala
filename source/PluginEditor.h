@@ -74,6 +74,13 @@ private:
     void setupSidebarKnobs();
     void applyInstrumentMapFromEditor();
 
+        void refreshPresetList();
+        void handlePresetSave();
+        void handlePresetClone();
+        void handlePresetDelete();
+        void saveLayoutToUserPresets(const juce::String& fileName, const KitLayout& layout);
+        juce::String makeUniqueCopyName(const juce::String& baseName);
+
     bool drumPadGridDirty = false;
     bool midiMapTableDirty = false;
     bool instrumentConfigDirty = true;

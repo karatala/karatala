@@ -68,8 +68,10 @@ public:
 
     KitLayout* getKitLayout() { return this->activeKitLayoutPtr.get(); }
     MicLayout* getMicLayout() { return this->activeMicLayoutPtr.get(); }
+    juce::File getUserPresetsDir() const { return this->dataPath.getChildFile("presets"); }
 
     bool useKitLayout(juce::String name);
+    bool setKitLayoutDirect(KitLayout layout) { return this->setKitLayout(std::move(layout)); }
     bool useMicLayout(juce::String name);
     bool useInstrumentMap(juce::String text);
 
