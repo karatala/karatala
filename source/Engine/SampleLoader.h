@@ -111,7 +111,8 @@ public:
         this->queuePtr = std::make_unique<SampleLoaderQueue>(*this);
     }
     ~SampleLoader() {
-        threadPool.removeAllJobs(true, 5000);
+        if (this->queuePtr) this->queuePtr->stopProcessing();
+        this->threadPool.removeAllJobs(true, 5000);
     }
 
     void requestAsyncLoad(const SampleLoadSpec& loadSpec, LoadCallback callback);
