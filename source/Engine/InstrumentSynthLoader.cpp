@@ -8,17 +8,54 @@
 const MicLayout* InstrumentSynth::getMicLayout() const { return this->parent ? this->parent->getMicLayout() : nullptr; }
 SampleLoader* InstrumentSynth::getSampleLoader() { return this->parent ? this->parent->getSampleLoader() : nullptr; }
 
-void InstrumentSynth::unloadInstrument() {
-    this->runtimeArticulations.clear();
+void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
+    this->lastRoutingContext.defaultInstrument = defaultInstSpec;
+    this->lastRoutingContext.artSources = artSources;
+    this->lastRoutingContext.allowedArticulationNameIds = allowedArticulationNameIds;
+    this->lastRoutingContext.artNameRemap = artNameRemap;
+}
+
+void InstrumentSynth::resetRoutingTables() {
+    this->noteToArticulation.fill(-1);
     this->noteToControllers.clear();
     this->ccToArticulationMask.fill(false);
-    this->lastCcValue.fill(0);
     this->lastCcArticulation.fill(-1);
+
+    for (auto& map : this->ccToArticulationTable)
+        map.fill(0);
+}
+
+void InstrumentSynth::rebuildArtLookupCache() {
+    this->artIdByNameExprId.clear();
+    for (int artIdx = 0; artIdx < static_cast<int>(this->runtimeArticulations.size()); ++artIdx) {
+        const auto& art = this->runtimeArticulations[artIdx];
+        const uint64_t key = (static_cast<uint64_t>(art.nameId) << 32) | static_cast<uint64_t>(art.exprId);
+        this->artIdByNameExprId.emplace(key, artIdx);
+    }
+}
+
+bool InstrumentSynth::tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx) {
+    if (artSpec == nullptr)
+        return false;
+
+    if (createIfMissing) {
+        artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
+        return true;
+    }
+
+    artIdx = this->findArticulationIndex(artSpec->nameId, artSpec->exprId);
+    return artIdx >= 0;
+}
+
+void InstrumentSynth::unloadInstrument() {
+    this->runtimeArticulations.clear();
+    this->resetRoutingTables();
+    this->lastCcValue.fill(0);
     // stop and clear voices before releasing sounds
     this->clearVoices();
     this->clearSounds();
-    this->noteToArticulation.fill(-1);
     this->instrumentSpecstPtr = nullptr;
+    this->lastRoutingContext = {};
     this->clearParameterOverrides();
 }
 
@@ -80,9 +117,137 @@ KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::Instr
     return nullptr;
 }
 
+std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
+    std::vector<ResolvedArticulationBinding> bindings;
+
+    if (!routingContext.isValid())
+        return bindings;
+
+    bindings.reserve(layoutSlot.articulations.size());
+
+    for (const auto& layoutArt : layoutSlot.articulations) {
+        if (!routingContext.allowedArticulationNameIds.empty()
+            && std::find(routingContext.allowedArticulationNameIds.begin(), routingContext.allowedArticulationNameIds.end(), layoutArt.nameId) == routingContext.allowedArticulationNameIds.end()) {
+            continue;
+        }
+
+        ResolvedArticulationBinding binding(layoutArt);
+        binding.sourceInstrument = routingContext.defaultInstrument;
+
+        auto sourceIt = routingContext.artSources.find(layoutArt.nameId);
+        if (sourceIt != routingContext.artSources.end() && sourceIt->second != nullptr)
+            binding.sourceInstrument = sourceIt->second;
+
+        if (binding.sourceInstrument == nullptr)
+            continue;
+
+        auto remapIt = routingContext.artNameRemap.find(layoutArt.nameId);
+        if (remapIt != routingContext.artNameRemap.end())
+            binding.resolvedLayoutArt.nameId = remapIt->second;
+
+        binding.resolvedSpec = this->resolveArticulationSpec(binding.sourceInstrument, binding.resolvedLayoutArt);
+        if (binding.resolvedSpec == nullptr) {
+            LOG(Warning, binding.sourceInstrument->parent->meta.name + "/" + binding.sourceInstrument->meta.codeRaw
+                + " has no suitable articulations for '" + layoutSlot.id + "' '" + layoutArt.codeRaw + "'");
+            bindings.push_back(std::move(binding));
+            continue;
+        }
+
+        // Cross-art remap is family-wide:
+        // if a layout articulation A resolves as source articulation B,
+        // then note routing, fallback lookup, and CC-driven sibling variants
+        // must all resolve within B's family so runtime behavior stays consistent.
+        for (const auto& artSpec : binding.sourceInstrument->articulationSpecs) {
+            if (artSpec->nameId != binding.resolvedLayoutArt.nameId)
+                continue;
+            if (artSpec->exprId == binding.resolvedLayoutArt.exprId)
+                continue;
+
+            bool hasMatchingController = false;
+            for (const auto& dim : artSpec->expressionDimensions) {
+                for (const auto& controller : layoutSlot.controllers) {
+                    if (dim->type == controller.codeIdx && containsSameValue(controller.notes, layoutArt.notes)) {
+                        hasMatchingController = true;
+                        break;
+                    }
+                }
+                if (hasMatchingController)
+                    break;
+            }
+
+            if (hasMatchingController)
+                binding.controllerSiblingSpecs.push_back(artSpec.get());
+        }
+
+        bindings.push_back(std::move(binding));
+    }
+
+    return bindings;
+}
+
+void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
+    if (artSpec == nullptr || sourceInstrument == nullptr)
+        return;
+
+    ArtRtIdx artIdx = -1;
+    if (!this->tryGetRuntimeArticulationIdx(artSpec, createIfMissing, artIdx)) {
+        LOG(Warning, "Skipping routing rebuild for '" + layoutArt.codeRaw + "' because runtime articulation '" + artSpec->codeRaw + "' is not loaded");
+        return;
+    }
+
+    if (loadSamples) {
+        auto& artRt = this->runtimeArticulations[artIdx];
+        artSpec->sortVelocityLayers();
+        this->processArticulationSpec(sourceInstrument, layoutArt, artSpec, artRt, foundCcDimensions, skippedMicCodes);
+    } else {
+        this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
+    }
+
+    for (uint8_t note : layoutArt.notes)
+        this->noteToArticulation[note] = artIdx;
+}
+
+void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing) {
+    CcDimensionsMap foundCcDimensions;
+    std::set<juce::String> skippedMicCodes;
+
+    for (const auto& binding : bindings) {
+        LOG(Info, "  Loading articulation: " + binding.layoutArt.codeRaw + " (notes " + midiVectorToString(binding.layoutArt.notes) + ")");
+
+        if (binding.layoutArt.nameId != binding.resolvedLayoutArt.nameId) {
+            LOG(Info, "    remap: layout art '" + binding.layoutArt.codeRaw + "' (nameId=" + juce::String((int)binding.layoutArt.nameId)
+                + ") -> resolve as nameId=" + juce::String((int)binding.resolvedLayoutArt.nameId)
+                + " ('" + StringsDictSingleton::nameOf(binding.resolvedLayoutArt.nameId) + "')");
+        }
+
+        if (binding.resolvedSpec != nullptr) {
+            LOG(Info, "    resolved: layout='" + binding.layoutArt.codeRaw + "' -> artSpec='" + binding.resolvedSpec->codeRaw
+                + "' (nameId=" + juce::String((int)binding.resolvedSpec->nameId) + " exprId=" + juce::String((int)binding.resolvedSpec->exprId) + ")");
+        }
+
+        this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, binding.resolvedSpec, loadSamples, createIfMissing, foundCcDimensions, skippedMicCodes);
+
+        for (auto* siblingSpec : binding.controllerSiblingSpecs)
+            this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, siblingSpec, loadSamples, createIfMissing, foundCcDimensions, skippedMicCodes);
+    }
+
+    if (loadSamples && !skippedMicCodes.empty() && LOG_ENABLED(Notice)) {
+        juce::String codes;
+        for (const auto& c : skippedMicCodes) {
+            if (codes.isNotEmpty()) codes += ", ";
+            codes += "'" + c + "'";
+        }
+        LOG(Notice, "    Skipping samples for mic(s) " + codes + " - not present in active mic layout");
+    }
+
+    this->processCcDimensions(foundCcDimensions);
+}
+
 void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
     if (defaultInstSpec == nullptr)
         return;
+
+    this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, artNameRemap);
 
     LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + defaultInstSpec->meta.codeRaw + ":");
     for (const auto& artSpec : defaultInstSpec->articulationSpecs) {
@@ -95,85 +260,10 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* default
             LOG(Debug, "  nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " exprDims=" + dims + " artSpec=" + artSpec->codeRaw);
         }
     }
-    CcDimensionsMap foundCcDimensions;
-    std::set<juce::String> skippedMicCodes; // mic raw codes with no matching layout entry — logged once below
-    for (const auto& layoutArt : this->instrumentSlot.articulations) {
-        if (!allowedArticulationNameIds.empty() && std::find(allowedArticulationNameIds.begin(), allowedArticulationNameIds.end(), layoutArt.nameId) == allowedArticulationNameIds.end())
-            continue;
 
-        LOG(Info, "  Loading articulation: " + layoutArt.codeRaw + " (notes " + midiVectorToString(layoutArt.notes) + ")");
-
-        KitLib::InstrumentSpec* sourceInstrument = defaultInstSpec;
-        auto sourceIt = artSources.find(layoutArt.nameId);
-        if (sourceIt != artSources.end() && sourceIt->second != nullptr)
-            sourceInstrument = sourceIt->second;
-
-        // Cross-art remap: resolve using the remapped nameId so we load source art samples
-        // but map them to the slot art's MIDI notes
-        LayoutArticulation resolveArt = layoutArt;
-        auto remapIt = artNameRemap.find(layoutArt.nameId);
-        if (remapIt != artNameRemap.end()) {
-            resolveArt.nameId = remapIt->second;
-            LOG(Info, "    remap: layout art '" + layoutArt.codeRaw + "' (nameId=" + juce::String((int)layoutArt.nameId)
-                + ") -> resolve as nameId=" + juce::String((int)resolveArt.nameId)
-                + " ('" + StringsDictSingleton::nameOf(resolveArt.nameId) + "')");
-        }
-
-        KitLib::ArticulationSpec* resolvedSpec = this->resolveArticulationSpec(sourceInstrument, resolveArt);
-
-        if (resolvedSpec != nullptr) {
-            LOG(Info, "    resolved: layout='" + layoutArt.codeRaw + "' -> artSpec='" + resolvedSpec->codeRaw
-                + "' (nameId=" + juce::String((int)resolvedSpec->nameId) + " exprId=" + juce::String((int)resolvedSpec->exprId) + ")");
-            const auto artIdx = this->getOrAddRuntimeArticulationIdx(resolvedSpec->nameId, resolvedSpec->exprId);
-            auto& artRt = this->runtimeArticulations[artIdx];
-            resolvedSpec->sortVelocityLayers();
-            this->processArticulationSpec(sourceInstrument, layoutArt, resolvedSpec, artRt, artIdx, foundCcDimensions, skippedMicCodes);
-        } else {
-            LOG(Warning, sourceInstrument->parent->meta.name + "/" + sourceInstrument->meta.codeRaw + " has no suitable articulations for '" + this->instrumentSlot.id + "' '" + layoutArt.codeRaw + "'");
-        }
-
-        // 4. ALSO collect CC thresholds from sibling exprIds
-
-        for (const auto& artSpec : sourceInstrument->articulationSpecs) {
-            if (artSpec->nameId != layoutArt.nameId) continue;
-            if (artSpec->exprId == layoutArt.exprId) continue; // already processed
-            bool hasMatchingController = false;
-            for (const auto& dim : artSpec->expressionDimensions) {
-                for (const auto& controller : this->instrumentSlot.controllers) {
-                    if (dim->type == controller.codeIdx && containsSameValue(controller.notes, layoutArt.notes)) {
-                        hasMatchingController = true;
-                        break;
-                    }
-                }
-                if (hasMatchingController) break;
-            }
-            if (!hasMatchingController) continue;
-            const auto artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
-            this->processArticulationSpec(sourceInstrument, layoutArt, artSpec.get(), this->runtimeArticulations[artIdx], artIdx, foundCcDimensions, skippedMicCodes);
-        }
-    }
-
-    // Log skipped mic codes once per instrument load (suppresses per-sample spam)
-    if (!skippedMicCodes.empty() && LOG_ENABLED(Notice)) {
-        juce::String codes;
-        for (const auto& c : skippedMicCodes) {
-            if (codes.isNotEmpty()) codes += ", ";
-            codes += "'" + c + "'";
-        }
-        LOG(Notice, "    Skipping samples for mic(s) " + codes + " - not present in active mic layout");
-    }
-
-    // Build final CC threshold maps
-    this->processCcDimensions(foundCcDimensions);
-    // this->buildCcDimensionTables(instSpec, foundCcDimensions);
-
-    // Rebuild O(1) articulation-index lookup cache (nameId<<32|exprId -> index)
-    this->artIdByNameExprId.clear();
-    for (int artIdx = 0; artIdx < static_cast<int>(this->runtimeArticulations.size()); ++artIdx) {
-        const auto& art = this->runtimeArticulations[artIdx];
-        const uint64_t key = (static_cast<uint64_t>(art.nameId) << 32) | static_cast<uint64_t>(art.exprId);
-        this->artIdByNameExprId.emplace(key, artIdx);
-    }
+    const auto bindings = this->collectResolvedLayoutArticulations(this->instrumentSlot, this->lastRoutingContext);
+    this->applyResolvedRouting(bindings, true, true);
+    this->rebuildArtLookupCache();
 }
 
 
@@ -181,7 +271,6 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
   , const LayoutArticulation& layoutArt
   , KitLib::ArticulationSpec* artSpec
   , ArticulationRuntime& artRt
-  , ArtRtIdx artRtIdx
   , CcDimensionsMap& foundCcDimensions
   , std::set<juce::String>& skippedMicCodes
 ) {
@@ -203,8 +292,6 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
             }
         }
     }
-
-    for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artRtIdx;
 
     this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
 }
@@ -376,24 +463,16 @@ void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
     }
 }
 
-void InstrumentSynth::rebuildNoteToArticulationFromLayout(const KitLayout::InstrumentSlot& layoutSlot) {
-    this->noteToArticulation.fill(-1);
-
-    for (const auto& layoutArt : layoutSlot.articulations) {
-        // Match this layout articulation to a runtime articulation via nameId/exprId
-        const uint64_t key = (static_cast<uint64_t>(layoutArt.nameId) << 32) | static_cast<uint64_t>(layoutArt.exprId);
-        auto it = this->artIdByNameExprId.find(key);
-        if (it == this->artIdByNameExprId.end())
-            continue;
-
-        const auto artRtIdx = static_cast<ArtRtIdx>(it->second);
-        for (uint8_t note : layoutArt.notes) {
-            if (note < 128)
-                this->noteToArticulation[note] = artRtIdx;
-        }
-    }
-
-    // Also update the synth's internal copy of the instrument slot so it stays consistent
+void InstrumentSynth::rebuildRoutingFromLayout(const KitLayout::InstrumentSlot& layoutSlot) {
     this->instrumentSlot = layoutSlot;
-}
+    this->resetRoutingTables();
 
+    LOG(Info, "Rebuilding routing from layout for slot '" + layoutSlot.id + "' with " + juce::String((int)layoutSlot.articulations.size()) + " articulations");
+
+    RoutingContext routingContext = this->lastRoutingContext;
+    if (!routingContext.isValid())
+        routingContext.defaultInstrument = this->instrumentSpecstPtr;
+
+    const auto bindings = this->collectResolvedLayoutArticulations(layoutSlot, routingContext);
+    this->applyResolvedRouting(bindings, false, false);
+}

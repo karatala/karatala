@@ -581,6 +581,7 @@ bool DrumKitEngine::applyKitLayout() {
 
 void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
     this->instrumentSynthsByNote.clear();
+    this->trackedCCMask.fill(false);
     this->latestPAValues.fill(0);
     this->trackedPAMask.fill(false);
 
@@ -594,8 +595,13 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
 
         auto* synth = it->second;
 
-        // Rebuild the synth's internal note->articulation lookup from current layout notes
-        synth->rebuildNoteToArticulationFromLayout(instrumentSlot);
+        // Rebuild the synth's internal note/CC routing from current layout data.
+        synth->rebuildRoutingFromLayout(instrumentSlot);
+
+        for (const auto& cc : instrumentSlot.controllers) {
+            if (cc.number >= 0 && cc.number < 128)
+                this->trackedCCMask[cc.number] = true;
+        }
 
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {

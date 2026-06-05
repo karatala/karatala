@@ -222,6 +222,15 @@ public:
         }
     };
 
+    struct RoutingContext {
+        KitLib::InstrumentSpec* defaultInstrument = nullptr;
+        ArticulationSourceMap artSources;
+        std::vector<uint32_t> allowedArticulationNameIds;
+        ArticulationNameRemap artNameRemap;
+
+        bool isValid() const { return defaultInstrument != nullptr; }
+    };
+
     InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrumentSlot
         //DUNNO: add params to instrument or do it somewhere else?
         // ,juce::RangedAudioParameter& gainParameter
@@ -362,9 +371,9 @@ public:
     const KitLib::InstrumentSpec* getLoadedInstrumentSpec() const { return this->instrumentSpecstPtr; }
     const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
 
-    /** Rebuild the noteToArticulation[128] lookup from the given layout slot's current notes.
-     *  Call after MIDI note assignments change in the UI without a full reload. */
-    void rebuildNoteToArticulationFromLayout(const KitLayout::InstrumentSlot& layoutSlot);
+    /** Rebuild note/CC routing from the given layout slot without reloading samples.
+     *  Call after MIDI note or controller assignments change in the UI. */
+    void rebuildRoutingFromLayout(const KitLayout::InstrumentSlot& layoutSlot);
 
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
         const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
@@ -413,6 +422,7 @@ private:
     int mMicChannelCount = 2;
     // Keep a copy of the kit layout instrument definition for note->articulation lookup
     KitLayout::InstrumentSlot instrumentSlot;
+    RoutingContext lastRoutingContext;
 
     juce::uint32 lastNoteOnCounter = 0;
     juce::CriticalSection lock;
@@ -428,6 +438,19 @@ private:
 
     using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
     using CcDimensionsMap = std::unordered_map<int8_t, std::vector<std::pair<int8_t, int8_t>>>;
+
+    struct ResolvedArticulationBinding {
+        LayoutArticulation layoutArt;
+        LayoutArticulation resolvedLayoutArt;
+        KitLib::InstrumentSpec* sourceInstrument = nullptr;
+        KitLib::ArticulationSpec* resolvedSpec = nullptr;
+        std::vector<KitLib::ArticulationSpec*> controllerSiblingSpecs;
+
+        explicit ResolvedArticulationBinding(const LayoutArticulation& layoutArt)
+            : layoutArt(layoutArt)
+            , resolvedLayoutArt(layoutArt)
+        {}
+    };
 
     // Runtime optimized tables for fast selection (populated by loadInstrument)
     // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
@@ -459,13 +482,18 @@ private:
     std::optional<int> attackOverrideMs;
     std::optional<int> decayOverrideMs;
 
-
+    void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap);
+    void resetRoutingTables();
+    void rebuildArtLookupCache();
+    bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
+    std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
+    void applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
+    void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
     void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const ArticulationNameRemap& artNameRemap = {});
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec
         , ArticulationRuntime& artRt
-        , ArtRtIdx artRtIdx
         , CcDimensionsMap& foundCcDimensions
         , std::set<juce::String>& skippedMicCodes
     );

@@ -143,7 +143,8 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
 
     auto instrumentMap = treeState.state["instrument_map"].toString();
     if (instrumentMap.isEmpty()) {
-        this->mapDefaultKit();
+        LOG(Notice, "SKIP mapping default kit for now...");
+        // this->mapDefaultKit();
     } else {
         if (!this->useInstrumentMap(instrumentMap))
             this->mapDefaultKit();
