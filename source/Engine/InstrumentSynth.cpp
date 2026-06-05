@@ -7,6 +7,9 @@
 
 void InstrumentSynth::renderNextBlock(juce::AudioBuffer<float>& outputAudio, const juce::MidiBuffer& inputMidi, int startSample, int numSamples) {
     jassert(!juce::exactlyEqual(sampleRate, 0.0));
+    if (juce::exactlyEqual(sampleRate, 0.0))
+        return;
+
     const int targetChannels = outputAudio.getNumChannels();
 
     auto midiIterator = inputMidi.findNextSamplePosition(startSample);

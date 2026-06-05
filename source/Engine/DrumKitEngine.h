@@ -219,6 +219,7 @@ private:
 
     bool applyKitLayout();
     bool applyMicLayout();
+    bool applyMicLayoutUnlocked();
     void buildNoteNameCache();
     void regenerateSuggestedInstrumentMapText();
     void clearShadowSynths();

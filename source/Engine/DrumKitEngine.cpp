@@ -160,6 +160,74 @@ static std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(co
         result[entry.slotId] += makeInstrumentMapEntryFingerprint(entry) + "\n";
     return result;
 }
+
+static bool canReuseSlotWithoutReload(const KitLayout::InstrumentSlot& oldSlot, const KitLayout::InstrumentSlot& newSlot) {
+    if (oldSlot.type != newSlot.type)
+        return false;
+
+    if (oldSlot.articulations.size() != newSlot.articulations.size())
+        return false;
+
+    for (size_t idx = 0; idx < oldSlot.articulations.size(); ++idx) {
+        const auto& oldArt = oldSlot.articulations[idx];
+        const auto& newArt = newSlot.articulations[idx];
+        if (oldArt.nameId != newArt.nameId || oldArt.exprId != newArt.exprId)
+            return false;
+    }
+
+    return true;
+}
+
+static void copySynthOverrides(InstrumentSynth& target, const InstrumentSynth& source) {
+    target.setTuningOffsetCents(source.getTuningOffsetCents());
+
+    const auto attackOverride = source.getAttackOverrideMs();
+    if (attackOverride.has_value())
+        target.setAttackOverrideMs(*attackOverride);
+
+    const auto decayOverride = source.getDecayOverrideMs();
+    if (decayOverride.has_value())
+        target.setDecayOverrideMs(*decayOverride);
+}
+
+static void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int samplesPerBlock) {
+    if (sampleRate <= 0.0 || samplesPerBlock <= 0)
+        return;
+
+    synth.setCurrentPlaybackSampleRate(sampleRate);
+    synth.prepareToPlay(sampleRate, samplesPerBlock);
+}
+
+static std::unique_ptr<InstrumentSynth> createReplacementSynth(DrumKitEngine* owner,
+                                                               const KitLayout::InstrumentSlot& layoutSlot,
+                                                               const InstrumentSynth& source,
+                                                               double sampleRate,
+                                                               int samplesPerBlock) {
+    auto replacement = std::make_unique<InstrumentSynth>(owner, layoutSlot);
+    replacement->setMicOutputMapping(source.getMicOutputMapping());
+    replacement->setMicChannelCount(source.getMicChannelCount());
+
+    const auto& routingContext = source.getLastRoutingContext();
+    if (routingContext.isValid()) {
+        replacement->loadInstrumentWithSources(routingContext.defaultInstrument,
+                                               routingContext.artSources,
+                                               routingContext.allowedArticulationNameIds,
+                                               routingContext.artNameRemap);
+    } else if (auto* loadedInstrument = source.getLoadedInstrumentSpec()) {
+        replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument));
+    }
+
+    copySynthOverrides(*replacement, source);
+    prepareSynthIfNeeded(*replacement, sampleRate, samplesPerBlock);
+    return replacement;
+}
+
+static juce::String getSlotArticulationName(const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
+    auto artName = StringsDictSingleton::nameOf(art.nameId);
+    if (artName.isEmpty())
+        artName = art.codeRaw;
+    return artName;
+}
 }
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
@@ -538,42 +606,151 @@ void DrumKitEngine::saveSettings() {
 }
 
 bool DrumKitEngine::applyKitLayout() {
-    const juce::ScopedLock graphLock(this->engineGraphLock);
     if (this->activeKitLayoutPtr == nullptr) {
         LOG(Warning, "kit layout was not set");
         return false;
     }
-    this->instrumentSynthPtrs.clear();
-    this->instrumentSynthById.clear();
-    this->instrumentSynthsByNote.clear();
-    this->latestCCValues.fill(0);
-    this->trackedCCMask.fill(false);
-    this->latestPAValues.fill(0);
-    this->trackedPAMask.fill(false);
 
-    for (const auto& instrumentSlot : this->getKitLayout()->instrumentSlots) {
-        auto slot = std::make_unique<InstrumentSynth>(this, instrumentSlot);
-        auto ptr = slot.get();
+    struct ExistingSynthState {
+        std::vector<InstrumentSynth*> rawSynths;
+        std::unordered_map<juce::String, int> primaryIndexById;
+        std::unordered_map<juce::String, std::vector<int>> shadowIndicesBySlotId;
+    } existingState;
 
-        this->instrumentSynthById[slot->getId()] = ptr;
-        this->instrumentSynthPtrs.push_back(std::move(slot));
-
-        for (const auto& cc : instrumentSlot.controllers) {
-            if (cc.number >= 0 && cc.number < 128)
-                this->trackedCCMask[cc.number] = true;
-        }
-        for (const auto& art : instrumentSlot.articulations) {
-            for (const int note : art.notes) {
-                if (note >= 0 && note < 128)
-                    this->trackedPAMask[note] = true;
-                this->instrumentSynthsByNote[note].push_back(ptr); //TODO: check ptr safety
-            }
+    {
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        existingState.rawSynths.reserve(this->instrumentSynthPtrs.size());
+        for (int idx = 0; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
+            auto* synth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
+            existingState.rawSynths.push_back(synth);
+            if (idx < this->primaryInstrumentSynthCount)
+                existingState.primaryIndexById[synth->getId()] = idx;
+            else
+                existingState.shadowIndicesBySlotId[synth->getId()].push_back(idx);
         }
     }
 
-    this->primaryInstrumentSynthCount = static_cast<int>(this->instrumentSynthPtrs.size());
+    struct PreparedShadow {
+        int oldIndex = -1;
+        std::unique_ptr<InstrumentSynth> replacement;
+    };
 
-    LOG(Info, "Applied kit layout: " + this->activeKitLayoutPtr->id);
+    struct PreparedSlot {
+        KitLayout::InstrumentSlot layoutSlot;
+        juce::String slotId;
+        int oldPrimaryIndex = -1;
+        std::unique_ptr<InstrumentSynth> primaryReplacement;
+        std::vector<PreparedShadow> shadows;
+    };
+
+    std::vector<PreparedSlot> preparedSlots;
+    preparedSlots.reserve(this->activeKitLayoutPtr->instrumentSlots.size());
+
+    for (const auto& layoutSlot : this->activeKitLayoutPtr->instrumentSlots) {
+        PreparedSlot prepared;
+        prepared.layoutSlot = layoutSlot;
+        prepared.slotId = layoutSlot.id;
+
+        auto primaryIt = existingState.primaryIndexById.find(layoutSlot.id);
+        if (primaryIt != existingState.primaryIndexById.end()) {
+            prepared.oldPrimaryIndex = primaryIt->second;
+            auto* oldPrimary = existingState.rawSynths[static_cast<size_t>(prepared.oldPrimaryIndex)];
+            if (!canReuseSlotWithoutReload(oldPrimary->getInstrumentSlot(), layoutSlot))
+                prepared.primaryReplacement = createReplacementSynth(this, layoutSlot, *oldPrimary, this->lastSampleRate, this->lastSamplesPerBlock);
+
+            auto shadowIt = existingState.shadowIndicesBySlotId.find(layoutSlot.id);
+            if (shadowIt != existingState.shadowIndicesBySlotId.end()) {
+                prepared.shadows.reserve(shadowIt->second.size());
+                for (const int shadowIndex : shadowIt->second) {
+                    PreparedShadow shadow;
+                    shadow.oldIndex = shadowIndex;
+
+                    auto* oldShadow = existingState.rawSynths[static_cast<size_t>(shadowIndex)];
+                    if (!canReuseSlotWithoutReload(oldShadow->getInstrumentSlot(), layoutSlot))
+                        shadow.replacement = createReplacementSynth(this, layoutSlot, *oldShadow, this->lastSampleRate, this->lastSamplesPerBlock);
+
+                    prepared.shadows.push_back(std::move(shadow));
+                }
+            }
+        } else {
+            prepared.primaryReplacement = std::make_unique<InstrumentSynth>(this, layoutSlot);
+            prepareSynthIfNeeded(*prepared.primaryReplacement, this->lastSampleRate, this->lastSamplesPerBlock);
+        }
+
+        preparedSlots.push_back(std::move(prepared));
+    }
+
+    std::vector<std::unique_ptr<InstrumentSynth>> oldSynths;
+    {
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        auto previousSynths = std::move(this->instrumentSynthPtrs);
+
+        this->instrumentSynthPtrs.clear();
+        this->instrumentSynthById.clear();
+        this->primaryInstrumentSynthCount = 0;
+
+        for (auto& prepared : preparedSlots) {
+            if (prepared.oldPrimaryIndex >= 0 && !prepared.primaryReplacement) {
+                this->instrumentSynthPtrs.push_back(std::move(previousSynths[static_cast<size_t>(prepared.oldPrimaryIndex)]));
+            } else {
+                this->instrumentSynthPtrs.push_back(std::move(prepared.primaryReplacement));
+            }
+
+            auto* inserted = this->instrumentSynthPtrs.back().get();
+            this->instrumentSynthById[prepared.slotId] = inserted;
+        }
+
+        this->primaryInstrumentSynthCount = static_cast<int>(this->instrumentSynthPtrs.size());
+        this->clearShadowSynths();
+
+        for (auto& prepared : preparedSlots) {
+            for (auto& shadow : prepared.shadows) {
+                if (shadow.oldIndex >= 0 && !shadow.replacement) {
+                    this->instrumentSynthPtrs.push_back(std::move(previousSynths[static_cast<size_t>(shadow.oldIndex)]));
+                } else if (shadow.replacement) {
+                    this->instrumentSynthPtrs.push_back(std::move(shadow.replacement));
+                }
+
+                auto* shadowSynth = this->instrumentSynthPtrs.back().get();
+                shadowSynth->rebuildRoutingFromLayout(prepared.layoutSlot);
+
+                for (const auto& art : prepared.layoutSlot.articulations) {
+                    if (!shadowSynth->supportsArticulation(getSlotArticulationName(art)))
+                        continue;
+
+                    for (const int note : art.notes) {
+                        if (note >= 0 && note < 128)
+                            this->instrumentSynthsByNote[note].push_back(shadowSynth);
+                    }
+                }
+            }
+        }
+
+        std::unordered_set<juce::String> activeSlotIds;
+        activeSlotIds.reserve(preparedSlots.size());
+        for (const auto& prepared : preparedSlots)
+            activeSlotIds.insert(prepared.slotId);
+
+        for (auto it = this->lastAppliedSlotFingerprints.begin(); it != this->lastAppliedSlotFingerprints.end();) {
+            if (it->first != "*" && activeSlotIds.find(it->first) == activeSlotIds.end())
+                it = this->lastAppliedSlotFingerprints.erase(it);
+            else
+                ++it;
+        }
+
+        if (this->activeMicLayoutPtr != nullptr)
+            this->applyMicLayoutUnlocked();
+
+        for (auto& synth : previousSynths) {
+            if (synth)
+                oldSynths.push_back(std::move(synth));
+        }
+    }
+
+    LOG(Info, "Applied kit layout: " + this->activeKitLayoutPtr->id
+        + " (primary slots: " + juce::String(this->primaryInstrumentSynthCount)
+        + ", recycled synths: " + juce::String(static_cast<int>(existingState.rawSynths.size()) - static_cast<int>(oldSynths.size()))
+        + ", retired synths: " + juce::String(static_cast<int>(oldSynths.size())) + ")");
 
     this->buildNoteNameCache();
     return true;
@@ -656,6 +833,10 @@ void DrumKitEngine::buildNoteNameCache() {
 
 bool DrumKitEngine::applyMicLayout() {
     const juce::ScopedLock graphLock(this->engineGraphLock);
+    return this->applyMicLayoutUnlocked();
+}
+
+bool DrumKitEngine::applyMicLayoutUnlocked() {
     if (this->activeMicLayoutPtr == nullptr) {
         LOG(Warning, "mic layout was not set");
         return false;

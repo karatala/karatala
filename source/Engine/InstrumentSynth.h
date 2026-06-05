@@ -369,7 +369,9 @@ public:
 
     const juce::String& getId() const { return id; }
     const KitLib::InstrumentSpec* getLoadedInstrumentSpec() const { return this->instrumentSpecstPtr; }
+    KitLib::InstrumentSpec* getLoadedInstrumentSpec() { return this->instrumentSpecstPtr; }
     const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
+    const RoutingContext& getLastRoutingContext() const { return this->lastRoutingContext; }
 
     /** Rebuild note/CC routing from the given layout slot without reloading samples.
      *  Call after MIDI note or controller assignments change in the UI. */
