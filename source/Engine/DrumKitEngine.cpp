@@ -595,8 +595,8 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "#     pedalMinRemainingSec: 0.05\n";
     result += "#     crossArtChokeDbMargin: 3.0\n";
     result += "#   ui_grid:\n";
-    result += "#     padGridColumns: 6\n";
-    result += "#     padGridRows: 4\n";
+    result += "#     padGridColumns: 0  # auto\n";
+    result += "#     padGridRows: 0     # auto\n";
     result += "#     padGap: 0\n";
     return result;
 }

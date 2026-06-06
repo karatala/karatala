@@ -1,0 +1,65 @@
+name: Alesis Crimson II
+id: alesis-crimson-ii
+description: Crimson II module compatible layout (might be incorrect)
+vendor: Alesis
+
+instruments:
+  - id: kick1
+    display: Kick
+    articulations:
+      - { notes: [36], code: center }
+
+  - id: snare1
+    display: Snare 1
+    articulations:
+      - { notes: [38], code: center }
+      - { notes: [40], code: rim }
+
+  - id: tom1
+    display: Tom 1
+    articulations:
+      - { notes: [50], code: center }
+      - { notes: [82], code: rim }
+
+  - id: tom2
+    display: Tom 2
+    articulations:
+      - { notes: [47], code: center }
+      - { notes: [80], code: rim }
+
+  - id: tom3
+    display: Tom 3
+    articulations:
+      - { notes: [43], code: center }
+      - { notes: [75], code: rim }
+
+  - id: tom4
+    display: Tom 4
+    articulations:
+      - { notes: [41], code: center }
+      - { notes: [73], code: rim }
+
+  - id: hihat1
+    display: Hi-Hat 1
+    articulations:
+      - { notes: [8], code: bow[open] }
+      - { notes: [22,23], code: pedal }
+    controllers:
+      - { notes: [8], code: pdl_opn_cls, number: 4 }
+
+  - id: ride1
+    display: Ride 1
+    articulations:
+      - { notes: [51], code: bow }
+      - { notes: [59], code: edge }
+      - { notes: [53], code: bell }
+
+  - id: crash1
+    display: Crash 1
+    articulations:
+      - { notes: [49], code: bow }
+
+  - id: crash2
+    display: Crash 2
+    articulations:
+      - { notes: [57], code: bow }

@@ -69,7 +69,7 @@ description: default layout
 vendor: Haribol
 version: 1.0
 instruments:
-  - id: kick
+  - id: kick1
     display: Kick
     articulations:
       - { notes: [35,36], code: center }
@@ -145,43 +145,42 @@ instruments:
   - id: hihat1
     display: Hi-Hat 1
     articulations:
-      - { notes: [18], code: edge[tight] }
-      - { notes: [22], code: edge[open] }
-      - { notes: [42], code: bow[tight] }
-      - { notes: [44], code: pedal }
-      - { notes: [44], code: pedal[splash] }
       - { notes: [46], code: bow[open] }
+      - { notes: [42], code: bow[tight] }
+      - { notes: [22], code: edge[open] }
+      - { notes: [18], code: edge[tight] }
+      - { notes: [44], code: pedal }
     controllers:
       - { notes: [22,46], code: pdl_opn_cls, number: 1 }
-      - { notes: [20,42,46], code: zon_bow_edg, number: 19 }
+      - { notes: [42,46], code: zon_bow_edg, number: 19 }
       - { notes: [18,22,42,46], code: zon_lft_rgt, number: 83 }
 
   - id: hihat2
     display: Hi-Hat Stax
     articulations:
       - { notes: [ 6], code: bow[tight] }
-      - { notes: [ 3], code: edge[tight] }
-      - { notes: [ 8], code: pedal }
       - { notes: [10], code: bow[open] }
+      - { notes: [ 3], code: edge[tight] }
       - { notes: [ 7], code: edge[open] }
+      - { notes: [ 8], code: pedal }
     controllers:
       - { notes: [ 6,10], code: pdl_opn_cls, number: 4 }
 
   - id: ride1
     display: Ride 1
     articulations:
+      - { notes: [53], code: bell }
       - { notes: [51], code: bow }
       - { notes: [59], code: edge }
-      - { notes: [53], code: bell }
     controllers:
       - { code: zon_bow_edg, number: 17 }
 
   - id: ride2
     display: Ride 2
     articulations:
+      - { notes: [29], code: bell }
       - { notes: [27], code: bow }
       - { notes: [11], code: edge }
-      - { notes: [29], code: bell }
 
   - id: crash1
     display: Crash 1

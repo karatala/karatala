@@ -1,0 +1,92 @@
+name: Alesis Strata Prime
+id: alesis-strata-prime
+description: Strata Prime module compatible layout (might be incorrect)
+vendor: Alesis
+
+instruments:
+  - id: kick1
+    display: Kick
+    articulations:
+      - { notes: [24], code: center }
+
+  - id: snare1
+    display: Snare 1
+    articulations:
+      - { notes: [26], code: center }
+      - { notes: [29,88], code: rim }
+      - { notes: [25], code: sidestick }
+
+  - id: tom1
+    display: Tom 1
+    articulations:
+      - { notes: [38], code: center }
+      - { notes: [70,93], code: rim }
+
+  - id: tom2
+    display: Tom 2
+    articulations:
+      - { notes: [35], code: center }
+      - { notes: [66,91], code: rim }
+
+  - id: tom3
+    display: Tom 3
+    articulations:
+      - { notes: [31], code: center }
+      - { notes: [61,89], code: rim }
+
+  - id: tom4
+    display: Tom 4
+    articulations:
+      - { notes: [33], code: center }
+      - { notes: [63,90], code: rim }
+
+  - id: hihat1
+    display: Hi-Hat 1
+    articulations:
+      - { notes: [18], code: bow[open] }
+      - { notes: [20], code: edge[open] }
+      - { notes: [22], code: bell }
+      - { notes: [32,56], code: pedal }
+    controllers:
+      - { notes: [18,20,22], code: pdl_opn_cls, number: 4 }
+
+  - id: ride1
+    display: Ride 1
+    articulations:
+      - { notes: [60], code: bow }
+      - { notes: [50], code: edge }
+      - { notes: [71], code: bell }
+
+  - id: crash1
+    display: Crash 1
+    articulations:
+      - { notes: [52], code: bow }
+      - { notes: [41], code: edge }
+      - { notes: [62], code: bell }
+
+  - id: crash2
+    display: Crash 2
+    articulations:
+      - { notes: [55], code: bow }
+      - { notes: [45], code: edge }
+      - { notes: [65], code: bell }
+
+  - id: crash3
+    display: Crash 3
+    articulations:
+      - { notes: [53], code: bow }
+      - { notes: [43], code: edge }
+      - { notes: [64], code: bell }
+
+  - id: crash4
+    display: Crash 4
+    articulations:
+      - { notes: [57], code: bow }
+      - { notes: [47], code: edge }
+      - { notes: [67], code: bell }
+
+  - id: aux1
+    display: Aux 1
+    articulations:
+      - { notes: [40], code: center }
+      - { notes: [73,94], code: rim }

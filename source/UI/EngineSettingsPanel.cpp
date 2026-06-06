@@ -74,8 +74,8 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
                  &settings.hihatCrossArtChokeDbMargin, 0.0f, 20.0f, 0.5f);
 
     // ── UI / Grid ──
-    this->addPot("Columns", "", &settings.padGridColumns, 1, 12);
-    this->addPot("Rows", "", &settings.padGridRows, 1, 8);
+    this->addPot("Columns", "Grid columns. 0 - auto detect from the active kit layout.", &settings.padGridColumns, 0, 12);
+    this->addPot("Rows", "Grid rows. 0 - auto detect from the active kit layout.", &settings.padGridRows, 0, 8);
     this->addPot("Gap", "", &settings.padGap, 0, 8);
 
     this->loadFromEngine();

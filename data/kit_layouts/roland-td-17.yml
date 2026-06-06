@@ -1,0 +1,84 @@
+name: Roland TD-17
+id: roland-td-17
+description: TD-17 compatible layout
+vendor: Roland
+
+instruments:
+  - id: kick1
+    display: Kick
+    articulations:
+      - { notes: [35,36], code: center }
+
+  - id: snare1
+    display: Snare 1
+    articulations:
+      - { notes: [38], code: center }
+      - { notes: [40], code: rim }
+      - { notes: [37], code: sidestick }
+    controllers:
+      - { notes: [38], code: zon_ctr_rim, number: 16 }
+
+
+  - id: tom1
+    display: Tom 1
+    articulations:
+      - { notes: [48], code: center }
+      - { notes: [50], code: rim }
+    controllers:
+      - { notes: [48], code: zon_ctr_rim, number: 18 }
+
+  - id: tom2
+    display: Tom 2
+    articulations:
+      - { notes: [45], code: center }
+      - { notes: [47], code: rim }
+    controllers:
+      - { notes: [45], code: zon_ctr_rim, number: 18 }
+
+  - id: tom3
+    display: Tom 3
+    articulations:
+      - { notes: [43], code: center }
+      - { notes: [58], code: rim }
+    controllers:
+      - { notes: [43], code: zon_ctr_rim, number: 18 }
+
+  - id: hihat1
+    display: Hi-Hat 1
+    articulations:
+      - { notes: [46], code: bow[open] }
+      - { notes: [42], code: bow[tight] }
+      - { notes: [26], code: edge[open] }
+      - { notes: [22], code: edge[tight] }
+      - { notes: [44], code: pedal }
+    controllers:
+      - { notes: [26,46], code: pdl_opn_cls, number: 1 }
+      - { notes: [42,46], code: zon_bow_edg, number: 19 }
+      - { notes: [22,26,42,46], code: zon_lft_rgt, number: 83 }
+
+  - id: ride1
+    display: Ride 1
+    articulations:
+      - { notes: [51], code: bow }
+      - { notes: [59], code: edge }
+      - { notes: [53], code: bell }
+    controllers:
+      - { code: zon_bow_edg, number: 17 }
+
+  - id: crash1
+    display: Crash 1
+    articulations:
+      - { notes: [49], code: bow }
+      - { notes: [55], code: edge }
+
+  - id: crash2
+    display: Crash 2
+    articulations:
+      - { notes: [57], code: bow }
+      - { notes: [52], code: edge }
+
+  - id: aux1
+    display: Aux 1
+    articulations:
+      - { notes: [27], code: bow }
+      - { notes: [28], code: edge }

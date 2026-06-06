@@ -27,7 +27,7 @@ struct EngineSettings {
     int roundRobinLock = 0;  // 0 = normal cycling, 1+ = force variant index (1-based)
 
     // -- UI / Grid --
-    int padGridColumns = 6;
-    int padGridRows = 4;
+    int padGridColumns = 0;  // 0 = derive from active kit layout
+    int padGridRows = 0;     // 0 = derive from active kit layout
     int padGap = 0;
 };

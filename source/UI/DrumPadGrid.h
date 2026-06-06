@@ -25,9 +25,13 @@ private:
     std::vector<std::unique_ptr<DrumPad>> pads;
     std::vector<juce::String> padSlotIds;
     PadMode padMode = PadMode::Zen;
-    int gridColumns = 6;
-    int gridRows = 4;
+    int gridColumns = 0;
+    int gridRows = 0;
+    int effectiveGridColumns = 1;
+    int effectiveGridRows = 1;
     int padGap = 0;
+
+    void resolveGridSize(int instrumentCount);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPadGrid)
 };

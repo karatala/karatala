@@ -228,7 +228,7 @@ void SampleLoader::requestAsyncLoad(const SampleLoadSpec& loadSpec, LoadCallback
             auto buf = it->second.buffer;
             auto cachedSr = it->second.sampleRate;
             juce::MessageManager::callAsync([buf, cachedSr, callback, loadSpec]() {
-                LOG(Debug, "SampleLoader: cache hit for " + loadSpec.file.getFullPathName());
+                // LOG(Debug, "SampleLoader: cache hit for " + loadSpec.file.getFullPathName());
                 callback(buf, cachedSr);
             });
             return;
