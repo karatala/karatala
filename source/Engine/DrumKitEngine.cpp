@@ -307,24 +307,27 @@ MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
 
 
 bool DrumKitEngine::useKitLayout(juce::String name) {
+    if (name == "default") return this->setKitLayout(this->getKitLayoutManager()->getDefault());
+
     const KitLayout* ptr = this->getKitLayoutManager()->getLayoutById(name);
-    if (ptr != nullptr)
-        return this->setKitLayout(*ptr);
-    if (name != "default") LOG(Warning, "KitLayout not found: " + name);
+    if (ptr != nullptr) return this->setKitLayout(*ptr);
+    LOG(Warning, "KitLayout not found: " + name);
     return false;
 }
 
 bool DrumKitEngine::useMicLayout(juce::String name) {
     const MicLayout* ptr = this->getMicLayoutManager()->getLayoutById(name);
-    if (ptr != nullptr)
-        return this->setMicLayout(*ptr);
+    if (ptr != nullptr) return this->setMicLayout(*ptr);
     if (name != "default") LOG(Warning, "MicLayout not found: " + name);
     return false;
 }
 
 bool DrumKitEngine::setKitLayout(KitLayout layout) {
     this->activeKitLayoutPtr = std::make_unique<KitLayout>(layout);
-    return this->applyKitLayout();
+    const bool layoutApplied = this->applyKitLayout();
+    if (layoutApplied && this->lastAppliedInstrumentMapText.isNotEmpty())
+        this->useInstrumentMap(this->lastAppliedInstrumentMapText);
+    return layoutApplied;
 }
 
 bool DrumKitEngine::setMicLayout(MicLayout layout) {
@@ -340,14 +343,18 @@ void DrumKitEngine::mapDefaultKit() {
         this->mapKit(*kit);
         this->regenerateSuggestedInstrumentMapText();
         auto parsedSuggestedMap = DrumKitEngine::parseInstrumentMapText(this->suggestedInstrumentMapText);
-        if (parsedSuggestedMap.ok())
+        if (parsedSuggestedMap.ok()) {
             this->lastAppliedSlotFingerprints = buildSlotFingerprintMap(parsedSuggestedMap.value);
-        else
+            this->lastAppliedInstrumentMapText = this->suggestedInstrumentMapText;
+        } else {
             this->lastAppliedSlotFingerprints.clear();
+            this->lastAppliedInstrumentMapText.clear();
+        }
         this->lastInstrumentMapStatus = "Mapped default kit and generated starter instrument map";//FIXME: refactor, ui relates shit out
     } else {
         this->suggestedInstrumentMapText.clear();
         this->lastAppliedSlotFingerprints.clear();
+        this->lastAppliedInstrumentMapText.clear();
     }
 }
 
@@ -357,8 +364,10 @@ void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, m
 
 void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
     auto parsed = DrumKitEngine::parseInstrumentMapText(mapText);
-    if (parsed.ok())
+    if (parsed.ok()) {
         this->lastAppliedSlotFingerprints = buildSlotFingerprintMap(parsed.value);
+        this->lastAppliedInstrumentMapText = mapText;
+    }
 }
 
 juce::String DrumKitEngine::buildReferenceText() const {
@@ -1451,6 +1460,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
     // Wildcard handling: detect if a full kit reload is needed
     KitLib::DrumKitSpec* wildcardKitSpec = nullptr;
     bool wildcardChanged = false;
+    bool hasUnloadedPrimarySynth = false;
+    for (int idx = 0; idx < this->primaryInstrumentSynthCount; ++idx) {
+        if (!this->instrumentSynthPtrs[static_cast<size_t>(idx)]->isLoaded()) {
+            hasUnloadedPrimarySynth = true;
+            break;
+        }
+    }
 
     // Per-slot preparation: replacement synths and shadow synths built outside the lock
     struct PreparedShadow {
@@ -1477,7 +1493,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 statusLines.add("Kit not found for wildcard entry: " + wildcardEntry.kitRef);
                 continue;
             }
-            wildcardChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
+            wildcardChanged = hasUnloadedPrimarySynth
+                           || this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
             if (wildcardChanged) {
                 forceApplyAllSlots = true;
                 ++applied;
@@ -1485,13 +1502,15 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             continue;
         }
 
-        const bool slotChanged = forceApplyAllSlots || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
-
         auto slotIt = this->instrumentSynthById.find(slotId);
         if (slotIt == this->instrumentSynthById.end()) {
             statusLines.add("Instrument slot not found: " + slotId);
             continue;
         }
+        auto* primarySlot = slotIt->second;
+        const bool slotChanged = forceApplyAllSlots
+                              || !primarySlot->isLoaded()
+                              || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
 
         struct ResolvedEntry {
             const InstrumentMapEntry* entry = nullptr;
@@ -1567,7 +1586,6 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         if (resolvedEntries.empty())
             continue;
 
-        auto* primarySlot = slotIt->second;
         const auto& slotLayout = primarySlot->getInstrumentSlot();
         const auto& primary = resolvedEntries.front();
         InstrumentSynth::ArticulationSourceMap artSources;
@@ -1783,6 +1801,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
 
         this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
+        this->lastAppliedInstrumentMapText = text;
     }
     // Old synths destroyed here outside the lock — audio thread cannot access them
 

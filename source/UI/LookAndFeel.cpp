@@ -144,11 +144,10 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*
     const bool enabled = cb.isEnabled();
     const auto bounds = cb.getLocalBounds();
 
-    g.setColour(cb.findColour(juce::TextButton::ColourIds::buttonColourId));
-    g.fillRoundedRectangle(bounds.toFloat(), bounds.getHeight() / 2.0f);
+    g.setColour(cb.findColour(juce::ComboBox::backgroundColourId));
+    g.fillRect(bounds);
 
-    g.setColour(cb.findColour(juce::TextButton::ColourIds::buttonColourId).withAlpha(enabled ? 0.5f : 0.1f));
-
+    g.setColour(cb.findColour(juce::ComboBox::arrowColourId).withAlpha(enabled ? 0.8f : 0.2f));
     constexpr int triHeight = 6;
     constexpr int triWidth = 12;
     constexpr float lineThickness = 1.4f;
@@ -161,7 +160,7 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*
 }
 
 void LookAndFeel::positionComboBoxText(juce::ComboBox& cb, juce::Label& labelToPosition) {
-    labelToPosition.setBounds(cb.getLocalBounds().reduced(cb.getHeight() / 2, 0));
+    labelToPosition.setBounds(cb.getLocalBounds().reduced(6));
 }
 
 void LookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar& /*scrollbar*/, int x, int y, int width, int height, bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown) {
@@ -179,38 +178,9 @@ void LookAndFeel::drawPopupMenuBackground(juce::Graphics& g, int /*width*/, int 
     g.fillAll(UITheme::Colours::bgPanelRaised);
 }
 
-// Returns MIDI note 0-127 if text matches format "127 / G 8", else -1.
-static int parseMidiNoteFromItemText(const juce::String& text) {
-    const auto trimmed = text.trim();
-    if (trimmed.isEmpty() || trimmed == "--") return -1;
-    // Number is the leading token before " /"
-    const auto numStr = trimmed.upToFirstOccurrenceOf(" /", false, false).trim();
-    if (numStr.isEmpty() || !numStr.containsOnly("0123456789")) return -1;
-    const int note = numStr.getIntValue();
-    return (note >= 0 && note <= 127) ? note : -1;
-}
-
-// True for MIDI semitones that are black keys: C# D# F# G# A#
-static bool isMidiBlackKey(int note) {
-    static const bool BK[12] = { false,true,false,true,false,false,true,false,true,false,true,false };
-    return BK[note % 12];
-}
-
 void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String& text, const juce::String& /*shortcutKeyText*/, const juce::Drawable* /*icon*/, const juce::Colour* /*textColour*/) {
-    // Piano-key colouring: each octave gets a distinct hue; black keys are darker.
-    // 6 hues cycle across the 11 MIDI octaves (0..10).
-    static const float OCTAVE_HUES[6] = { 0.00f, 0.12f, 0.35f, 0.55f, 0.67f, 0.80f };
-
-    int midiNote = parseMidiNoteFromItemText(text);
-    if (midiNote >= 0) {
-        const float hue = OCTAVE_HUES[(midiNote / 12) % 6];
-        const bool  bk  = isMidiBlackKey(midiNote);
-        g.setColour(juce::Colour::fromHSV(hue, bk ? 0.55f : 0.30f, bk ? 0.13f : 0.22f, 1.0f));
-        g.fillRect(area);
-    } else {
-        g.setColour(UITheme::Colours::bgPanelRaised);
-        g.fillRect(area);
-    }
+    g.setColour(UITheme::Colours::bgPanelRaised);
+    g.fillRect(area);
 
     if (isSeparator) {
         g.setColour(UITheme::Colours::textPrimary.withAlpha(0.2f));
@@ -218,15 +188,12 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
         g.fillRect(separatorRect);
     } else {
         if (isHighlighted) {
-            g.setColour(midiNote >= 0 ? juce::Colour::fromHSV(OCTAVE_HUES[(midiNote / 12) % 6], 0.4f, 0.40f, 1.0f)
-                                      : UITheme::Colours::borderMid);
+            g.setColour(UITheme::Colours::borderMid);
             g.fillRect(area.reduced(1, 1));
         }
 
         g.setColour(UITheme::Colours::textPrimary.withAlpha(isActive ? 0.85f : 0.25f));
-        // Note items: tight left margin (no tick); other items: standard 25 px margin for tick dot
-        const int leftPad = (midiNote >= 0) ? 4 : 25;
-        g.drawText(text, area.withTrimmedLeft(leftPad).withTrimmedRight(4), juce::Justification::left);
+        g.drawText(text, area.withTrimmedLeft(25).withTrimmedRight(4), juce::Justification::left);
 
         if (hasSubMenu) {
             constexpr int subTriWidth = 6;
@@ -253,16 +220,21 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
 juce::PopupMenu::Options LookAndFeel::getOptionsForComboBoxPopupMenu(juce::ComboBox& cb, juce::Label& label) {
     auto options = juce::LookAndFeel_V4::getOptionsForComboBoxPopupMenu(cb, label);
 
-    const bool isMidiGrid = cb.getProperties().getWithDefault("midiNoteGrid", false);
-    if (!isMidiGrid)
-        return options;
+    const bool isLayoutSelector = cb.getProperties().getWithDefault("layoutSelector", false);
+    if (isLayoutSelector) {
+        return juce::PopupMenu::Options()
+            .withTargetComponent(cb)
+            .withTargetScreenArea(cb.getScreenBounds())
+            .withInitiallySelectedItem(cb.getSelectedId())
+            .withMinimumWidth(juce::jmax(280, cb.getWidth()))
+            .withMaximumNumColumns(1)
+            .withStandardItemHeight(juce::jmax(22, label.getHeight()))
+            .withPreferredPopupDirection(juce::PopupMenu::Options::PopupDirection::downwards);
+    }
 
-    const int configuredColumns = static_cast<int>(cb.getProperties().getWithDefault("midiNoteGridColumns", 6));
-    const int columns = juce::jmax(1, configuredColumns);
-
-    return options.withStandardItemHeight(16)
-                  .withMinimumNumColumns(columns)
-                  .withMaximumNumColumns(columns);
+    const bool isMidiControllerList = cb.getProperties().getWithDefault("midiControllerList", false);
+    if (isMidiControllerList) return options.withStandardItemHeight(18).withMinimumNumColumns(4).withMaximumNumColumns(4);
+    return options;
 }
 
 void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown) {

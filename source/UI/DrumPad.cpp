@@ -83,7 +83,6 @@ void DrumPad::setSlot(const KitLayout::InstrumentSlot* slot) {
 
 void DrumPad::setPadMode(PadMode mode) {
     this->padMode = mode;
-    this->refreshDisplayOrder();
     repaint();
 }
 

@@ -1,9 +1,27 @@
 #include "MidiMapTable.h"
 #include "UITheme.h"
 #include "UIHelpers.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+
+namespace {
+juce::String getControllerItemText(int controllerNumber) {
+    const auto* controllerName = juce::MidiMessage::getControllerName(controllerNumber);
+    return controllerName != nullptr
+        ? juce::String(controllerNumber) + " / " + juce::String(controllerName)
+        : juce::String(controllerNumber);
+}
+}
 
 MidiMapTable::MidiMapTable() {
+    this->layoutLabel.setText("Layout", juce::dontSendNotification);
+    UIHelpers::configureCaptionLabel(this->layoutLabel, juce::Justification::centredRight, UITheme::Colours::textSecondary);
+    this->addAndMakeVisible(this->layoutLabel);
+
     this->addAndMakeVisible(this->presetCombo);
+    this->presetCombo.getProperties().set("squareCorners", true);
+    this->presetCombo.getProperties().set("layoutSelector", true);
+    this->presetCombo.setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
+    this->presetCombo.setColour(juce::ComboBox::textColourId, UITheme::Colours::textPrimary);
     this->presetCombo.setTextWhenNothingSelected("(no presets)");
     this->presetCombo.onChange = [this] {
         int selectedId = this->presetCombo.getSelectedId();
@@ -15,8 +33,7 @@ MidiMapTable::MidiMapTable() {
 
     UIHelpers::configureControlButton(this->saveButton);
     this->saveButton.onClick = [this] {
-        if (this->onPresetSaveRequested)
-            this->onPresetSaveRequested();
+        if (this->onPresetSaveRequested) this->onPresetSaveRequested();
     };
     this->addAndMakeVisible(this->saveButton);
 
@@ -50,14 +67,14 @@ void MidiMapTable::populatePresets(std::vector<PresetEntry> presets, const juce:
     this->presetCombo.onChange = [this] {
         int sid = this->presetCombo.getSelectedId();
         if (sid > 0 && sid <= static_cast<int>(this->presetEntries.size())) {
-            if (this->onPresetSelected)
-                this->onPresetSelected(this->presetEntries[static_cast<size_t>(sid - 1)]);
+            if (this->onPresetSelected) this->onPresetSelected(this->presetEntries[static_cast<size_t>(sid - 1)]);
         }
     };
 }
 
 void MidiMapTable::showMoreMenu() {
     juce::PopupMenu menu;
+    menu.setLookAndFeel(&this->getLookAndFeel());
     menu.addItem(1, "Clone to user presets");
     menu.addSeparator();
     menu.addItem(2, "Open user presets folder");
@@ -73,14 +90,10 @@ void MidiMapTable::showMoreMenu() {
 
     menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this->moreButton),
         [this](int result) {
-            if (result == 1 && this->onPresetCloneRequested)
-                this->onPresetCloneRequested();
-            else if (result == 2 && this->onOpenUserFolderRequested)
-                this->onOpenUserFolderRequested();
-            else if (result == 3 && this->onOpenFactoryFolderRequested)
-                this->onOpenFactoryFolderRequested();
-            else if (result == 4 && this->onPresetDeleteRequested)
-                this->onPresetDeleteRequested();
+            if (result == 1 && this->onPresetCloneRequested) this->onPresetCloneRequested();
+            else if (result == 2 && this->onOpenUserFolderRequested) this->onOpenUserFolderRequested();
+            else if (result == 3 && this->onOpenFactoryFolderRequested) this->onOpenFactoryFolderRequested();
+            else if (result == 4 && this->onPresetDeleteRequested) this->onPresetDeleteRequested();
         });
 }
 
@@ -88,15 +101,16 @@ void MidiMapTable::buildRows() {
     this->rows.clear();
     this->contentComponent.removeAllChildren();
 
-    if (!this->layoutPtr)
-        return;
+    if (!this->layoutPtr) return;
 
-    auto setupRow = [this](std::unique_ptr<MapRow>& row, int rowIdx) {
+    auto setupCommonRow = [this](std::unique_ptr<MapRow>& row) {
         this->contentComponent.addAndMakeVisible(row->instrumentLabel);
         row->instrumentLabel.setVisible(row->showInstrumentLabel);
-
         this->contentComponent.addAndMakeVisible(row->articulationLabel);
+    };
 
+    auto setupNoteRow = [this, &setupCommonRow](std::unique_ptr<MapRow>& row, int rowIdx) {
+        setupCommonRow(row);
         row->midiAssignmentControl = std::make_unique<MidiNoteAssignmentControl>();
         row->midiAssignmentControl->setLayoutMetrics({ noteButtonWidth, learnButtonSize, midiControlGap, midiControlGap, 2 });
         row->midiAssignmentControl->onNoteSelected = [this, rowIdx](int slotIdx, int note) {
@@ -109,6 +123,26 @@ void MidiMapTable::buildRows() {
         this->contentComponent.addAndMakeVisible(*row->midiAssignmentControl);
 
         this->syncNoteButtons(*row);
+    };
+
+    auto setupControllerRow = [this, &setupCommonRow](std::unique_ptr<MapRow>& row, int rowIdx) {
+        setupCommonRow(row);
+        row->controllerCombo = std::make_unique<juce::ComboBox>();
+        row->controllerCombo->getProperties().set("squareCorners", true);
+        row->controllerCombo->getProperties().set("midiControllerList", true);
+        row->controllerCombo->setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
+        row->controllerCombo->setColour(juce::ComboBox::textColourId, UITheme::Colours::textPrimary);
+        for (int controllerNumber = 0; controllerNumber <= 127; ++controllerNumber)
+            row->controllerCombo->addItem(getControllerItemText(controllerNumber), controllerNumber + 1);
+
+        row->controllerCombo->setSelectedId(row->controllerNumber + 1, juce::dontSendNotification);
+        row->controllerCombo->onChange = [this, rowIdx] {
+            if (rowIdx < static_cast<int>(this->rows.size())) {
+                auto& changedRow = *this->rows[static_cast<size_t>(rowIdx)];
+                this->applyControllerNumber(changedRow, changedRow.controllerCombo->getSelectedId() - 1);
+            }
+        };
+        this->contentComponent.addAndMakeVisible(*row->controllerCombo);
     };
 
     for (auto& slot : this->layoutPtr->instrumentSlots) {
@@ -131,7 +165,7 @@ void MidiMapTable::buildRows() {
             UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textPrimary);
 
             int rowIdx = static_cast<int>(this->rows.size());
-            setupRow(row, rowIdx);
+            setupNoteRow(row, rowIdx);
             this->rows.push_back(std::move(row));
         }
 
@@ -142,7 +176,7 @@ void MidiMapTable::buildRows() {
             row->articulationCode = "CC: " + cc.codeRaw;
             row->isController = true;
             row->controllerNumber = cc.number;
-            row->notesPtr = &cc.notes;
+            row->controllerPtr = &cc;
             row->showInstrumentLabel = firstRow;
             firstRow = false;
 
@@ -153,7 +187,7 @@ void MidiMapTable::buildRows() {
             UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccentSoft);
 
             int rowIdx = static_cast<int>(this->rows.size());
-            setupRow(row, rowIdx);
+            setupControllerRow(row, rowIdx);
             this->rows.push_back(std::move(row));
         }
     }
@@ -171,8 +205,15 @@ void MidiMapTable::applyNoteToSlot(MapRow& row, int slotIdx, int note) {
     if (!row.notesPtr) return;
     UIHelpers::applyMidiNoteToSlot(*row.notesPtr, slotIdx, note);
     this->syncNoteButtons(row);
-    if (this->onMappingChanged)
-        this->onMappingChanged();
+    if (this->onMappingChanged) this->onMappingChanged();
+}
+
+void MidiMapTable::applyControllerNumber(MapRow& row, int controllerNumber) {
+    if (!row.controllerPtr || !juce::isPositiveAndBelow(controllerNumber, 128)) return;
+
+    row.controllerPtr->number = controllerNumber;
+    row.controllerNumber = controllerNumber;
+    if (this->onMappingChanged) this->onMappingChanged();
 }
 
 void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
@@ -190,18 +231,14 @@ void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
 
     // Highlight active learn button
     auto& row = *this->rows[static_cast<size_t>(rowIdx)];
-    if (row.midiAssignmentControl)
-        row.midiAssignmentControl->setLearningSlot(slotIdx);
-
-    if (this->onMidiLearnStateChanged)
-        this->onMidiLearnStateChanged(true);
+    if (row.midiAssignmentControl) row.midiAssignmentControl->setLearningSlot(slotIdx);
+    if (this->onMidiLearnStateChanged) this->onMidiLearnStateChanged(true);
 }
 
 void MidiMapTable::stopMidiLearn() {
     if (this->activeLearningRow >= 0 && this->activeLearningRow < static_cast<int>(this->rows.size())) {
         auto& row = *this->rows[static_cast<size_t>(this->activeLearningRow)];
-        if (row.midiAssignmentControl)
-            row.midiAssignmentControl->setLearningSlot(-1);
+        if (row.midiAssignmentControl) row.midiAssignmentControl->setLearningSlot(-1);
     }
 
     bool wasLearning = (this->activeLearningRow >= 0);
@@ -213,8 +250,7 @@ void MidiMapTable::stopMidiLearn() {
 }
 
 void MidiMapTable::midiLearnNoteReceived(int midiNote) {
-    if (this->activeLearningRow < 0 || this->activeLearningRow >= static_cast<int>(this->rows.size()))
-        return;
+    if (this->activeLearningRow < 0 || this->activeLearningRow >= static_cast<int>(this->rows.size())) return;
 
     auto& row = *this->rows[static_cast<size_t>(this->activeLearningRow)];
     this->applyNoteToSlot(row, this->activeLearningSlot, midiNote);
@@ -245,7 +281,11 @@ void MidiMapTable::resized() {
     toolbarArea.removeFromRight(gap);
     this->saveButton.setBounds(toolbarArea.removeFromRight(saveWidth));
     toolbarArea.removeFromRight(gap);
-    this->presetCombo.setBounds(toolbarArea);
+    const int selectorWidth = toolbarArea.getWidth() / 2;
+    auto selectorArea = toolbarArea.removeFromRight(selectorWidth);
+    this->layoutLabel.setBounds(selectorArea.removeFromLeft(layoutLabelWidth));
+    selectorArea.removeFromLeft(gap);
+    this->presetCombo.setBounds(selectorArea);
 
     // Scrollable table below toolbar
     this->viewport.setBounds(area);
@@ -296,6 +336,8 @@ void MidiMapTable::resized() {
 
             if (row.midiAssignmentControl)
                 row.midiAssignmentControl->setBounds(xPos, yPos, midiControlWidth, rowHeight);
+            if (row.controllerCombo)
+                row.controllerCombo->setBounds(juce::Rectangle<int>(xPos, yPos, midiControlWidth, rowHeight).reduced(0, 2));
 
             yPos += rowHeight;
         }

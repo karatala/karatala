@@ -56,10 +56,12 @@ private:
     static constexpr int learnButtonSize = 22;
     static constexpr int midiControlGap = 3;
     static constexpr int columnGap = 12;
+    static constexpr int layoutLabelWidth = 38;
 
     KitLayout* layoutPtr = nullptr;
 
     // Preset toolbar
+    juce::Label layoutLabel;
     juce::ComboBox presetCombo;
     juce::TextButton saveButton { "Save" };
     juce::TextButton moreButton { "..." };
@@ -71,12 +73,14 @@ private:
         bool isController = false;
         int controllerNumber = -1;
 
-        // Pointers into the layout's notes vector for direct editing
+        // Pointers into the active layout for direct editing
         KitLayout::MidiNotes* notesPtr = nullptr;
+        KitLayout::InstrumentSlot::ContinuousController* controllerPtr = nullptr;
 
         juce::Label instrumentLabel;
         juce::Label articulationLabel;
         std::unique_ptr<MidiNoteAssignmentControl> midiAssignmentControl;
+        std::unique_ptr<juce::ComboBox> controllerCombo;
         bool showInstrumentLabel = false;
     };
 
@@ -88,6 +92,7 @@ private:
     void buildRows();
     void syncNoteButtons(MapRow& row);
     void applyNoteToSlot(MapRow& row, int slotIdx, int note);
+    void applyControllerNumber(MapRow& row, int controllerNumber);
     void startMidiLearn(int rowIdx, int slotIdx);
     void stopMidiLearn();
     void showMoreMenu();

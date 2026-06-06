@@ -305,10 +305,18 @@ void PluginEditor::refreshInstrumentConfigIfNeeded(bool force) {
 void PluginEditor::refreshPresetList() {
     std::vector<MidiMapTable::PresetEntry> entries;
 
+    MidiMapTable::PresetEntry defaultEntry;
+    auto defaultLayout = KitLayout::getDefault();
+    defaultEntry.id = defaultLayout.id;
+    defaultEntry.name = defaultLayout.name.isNotEmpty() ? defaultLayout.name : defaultLayout.id;
+    defaultEntry.isUser = false;
+    entries.push_back(defaultEntry);
+
     // Factory presets from kit_layouts dir
     auto& engine = this->processorRef.getEngine();
     auto factoryLayouts = engine.getKitLayoutManager()->getLayouts();
     for (const auto& layout : factoryLayouts) {
+        if (layout.id == defaultEntry.id) continue;
         MidiMapTable::PresetEntry entry;
         entry.id = layout.id;
         entry.name = layout.name.isNotEmpty() ? layout.name : layout.id;
@@ -385,7 +393,9 @@ void PluginEditor::handlePresetSave() {
                 this->saveLayoutToUserPresets(fileName, layoutCopy);
                 this->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
                 this->statusBar.setStatusText("Saved as: " + name);
-                this->refreshPresetList();
+                this->markDrumPadGridDirty();
+                this->refreshMidiMapTableIfNeeded(true);
+                this->refreshDrumPadGridIfNeeded();
             }
         }), true);
     }
@@ -412,7 +422,9 @@ void PluginEditor::handlePresetClone() {
             this->saveLayoutToUserPresets(fileName, layoutCopy);
             this->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
             this->statusBar.setStatusText("Cloned as: " + name);
-            this->refreshPresetList();
+            this->markDrumPadGridDirty();
+            this->refreshMidiMapTableIfNeeded(true);
+            this->refreshDrumPadGridIfNeeded();
         }
     }), true);
 }
@@ -454,8 +466,8 @@ void PluginEditor::setViewMode(ViewMode mode) {
         this->settingsPanel->loadFromEngine();
 
     if (mode == ViewMode::Zen || mode == ViewMode::Zoned) {
-        this->drumPadGrid.setPadMode(mode == ViewMode::Zoned ? PadMode::Zoned : PadMode::Zen);
         this->refreshDrumPadGridIfNeeded();
+        this->drumPadGrid.setPadMode(mode == ViewMode::Zoned ? PadMode::Zoned : PadMode::Zen);
     }
 
     if (mode == ViewMode::Map)
