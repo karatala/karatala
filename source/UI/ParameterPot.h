@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ParameterSlider.h"
 
 class ParameterPot : public juce::Component {
 public:
@@ -43,6 +44,9 @@ public:
     }
 
     void setTooltipText(const juce::String& tooltip);
+    void setInteraction(double defaultValue, double wheelStep, double fineWheelStep = 0.0) {
+        this->pot.setInteraction(defaultValue, wheelStep, fineWheelStep);
+    }
 
     std::function<void()> onValueChange;
     std::function<void()> onDragEnd;
@@ -53,7 +57,7 @@ private:
     LayoutOptions layoutOptions;
     juce::Label titleLabel;
     juce::Label valueLabel;
-    juce::Slider pot;
+    ParameterSlider pot;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ParameterPot)
 };

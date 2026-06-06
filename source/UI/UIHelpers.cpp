@@ -159,14 +159,18 @@ std::unique_ptr<juce::Slider> createParamSlider(
     double maxVal, 
     double interval,
     double initialValue,
+    double defaultValue,
+    double wheelStep,
+    double fineWheelStep,
     int textBoxWidth, 
     int textBoxHeight,
     std::function<juce::String(double)> textFromValueFn) {
 
-    auto slider = std::make_unique<juce::Slider>();
+    auto slider = std::make_unique<ParameterSlider>();
     slider->setSliderStyle(juce::Slider::LinearHorizontal);
     slider->setTextBoxStyle(juce::Slider::TextBoxRight, false, textBoxWidth, textBoxHeight);
     slider->setRange(minVal, maxVal, interval);
+    slider->setInteraction(defaultValue, wheelStep, fineWheelStep);
     
     if (textFromValueFn) {
         slider->textFromValueFunction = textFromValueFn;
@@ -183,17 +187,18 @@ std::unique_ptr<juce::Slider> createCompactPot(
     double maxVal, 
     double interval,
     double initialValue,
-    std::function<juce::String(double)> textFromValueFn) {
+    double defaultValue,
+    double wheelStep,
+    double fineWheelStep,
+    std::function<juce::String(double)> textFromValueFn
+) {
 
-    auto pot = std::make_unique<juce::Slider>();
-    configureRotarySlider(*pot,
-                          juce::Slider::TextBoxBelow,
-                          UITheme::Sizes::compactPotTextBoxW,
-                          UITheme::Sizes::compactPotTextBoxH);
+    auto pot = std::make_unique<ParameterSlider>();
+    configureRotarySlider(*pot, juce::Slider::TextBoxBelow, UITheme::Sizes::compactPotTextBoxW, UITheme::Sizes::compactPotTextBoxH);
     pot->setRange(minVal, maxVal, interval);
+    pot->setInteraction(defaultValue, wheelStep, fineWheelStep);
 
-    if (textFromValueFn)
-        pot->textFromValueFunction = textFromValueFn;
+    if (textFromValueFn) pot->textFromValueFunction = textFromValueFn;
 
     pot->setValue(initialValue, juce::dontSendNotification);
     pot->updateText();

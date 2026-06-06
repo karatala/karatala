@@ -25,6 +25,7 @@ Sidebar::Sidebar() {
 
     UIHelpers::configureRotarySlider(this->hihatKnob, juce::Slider::NoTextBox, 0, 0);
     this->hihatKnob.setRange(0.0, 127.0, 1.0);
+    this->hihatKnob.setInteraction(0.0, 1.0);
     this->hihatKnob.setValue(0.0, juce::dontSendNotification);
     this->hihatKnob.onValueChange = [this] { this->updateKnobLabels(); };
     addAndMakeVisible(this->hihatKnob);
@@ -35,6 +36,7 @@ Sidebar::Sidebar() {
 
     UIHelpers::configureRotarySlider(this->velocityKnob, juce::Slider::NoTextBox, 0, 0);
     this->velocityKnob.setRange(1.0, 127.0, 1.0);
+    this->velocityKnob.setInteraction(100.0, 1.0);
     this->velocityKnob.setValue(100.0, juce::dontSendNotification);
     this->velocityKnob.onValueChange = [this] { this->updateKnobLabels(); };
     addAndMakeVisible(this->velocityKnob);
@@ -45,6 +47,7 @@ Sidebar::Sidebar() {
 
     UIHelpers::configureRotarySlider(this->rrLockKnob, juce::Slider::NoTextBox, 0, 0);
     this->rrLockKnob.setRange(0.0, 8.0, 1.0);
+    this->rrLockKnob.setInteraction(0.0, 1.0);
     this->rrLockKnob.setValue(0.0, juce::dontSendNotification);
     this->rrLockKnob.onValueChange = [this] { this->updateKnobLabels(); };
     addAndMakeVisible(this->rrLockKnob);

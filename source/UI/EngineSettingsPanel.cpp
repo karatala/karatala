@@ -86,56 +86,26 @@ EngineSettingsPanel::~EngineSettingsPanel() {
 }
 
 void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval) {
-    this->addPotCommon(name,
-                       tooltip,
-                       target,
-                       nullptr,
-                       static_cast<double>(minVal),
-                       static_cast<double>(maxVal),
-                       static_cast<double>(interval),
-                       false);
+    this->addPotCommon(name, tooltip, target, nullptr, static_cast<double>(minVal), static_cast<double>(maxVal), static_cast<double>(interval), false);
 }
 
 void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal) {
-    this->addPotCommon(name,
-                       tooltip,
-                       nullptr,
-                       target,
-                       static_cast<double>(minVal),
-                       static_cast<double>(maxVal),
-                       1.0,
-                       true);
+    this->addPotCommon(name, tooltip, nullptr, target, static_cast<double>(minVal), static_cast<double>(maxVal), 1.0, true);
 }
 
-void EngineSettingsPanel::addPotCommon(const juce::String& name,
-                                       const juce::String& tooltip,
-                                       float* target,
-                                       int* intTarget,
-                                       double minVal,
-                                       double maxVal,
-                                       double interval,
-                                       bool isInteger) {
+void EngineSettingsPanel::addPotCommon(const juce::String& name, const juce::String& tooltip, float* target, int* intTarget, double minVal, double maxVal, double interval, bool isInteger) {
     auto entry = std::make_unique<PotEntry>();
     entry->target = target;
     entry->intTarget = intTarget;
-    entry->defaultValue = entry->target != nullptr
-        ? static_cast<double>(*entry->target)
-        : static_cast<double>(*entry->intTarget);
-
-    entry->parameterPot = std::make_unique<ParameterPot>(name,
-                                                         minVal,
-                                                         maxVal,
-                                                         interval,
-                                                         entry->defaultValue,
-                                                         nullptr,
-                                                         makeSettingsPotLayout(isInteger));
+    entry->defaultValue = entry->target != nullptr ? static_cast<double>(*entry->target) : static_cast<double>(*entry->intTarget);
+    entry->parameterPot = std::make_unique<ParameterPot>(name, minVal, maxVal, interval, entry->defaultValue, nullptr, makeSettingsPotLayout(isInteger));
+    entry->parameterPot->setInteraction(entry->defaultValue, interval);
     entry->parameterPot->setTooltipText(tooltip);
     entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
     entry->parameterPot->onDragEnd = [this] { this->flushPendingSettingsSave(); };
     this->contentComponent.addAndMakeVisible(*entry->parameterPot);
 
-    UIHelpers::configureControlButton(entry->resetButton,
-                                      juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
+    UIHelpers::configureControlButton(entry->resetButton, juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     entry->resetButton.onClick = [entry = entry.get()] {
         entry->parameterPot->setValue(entry->defaultValue, juce::sendNotificationSync);
     };
@@ -165,25 +135,16 @@ void EngineSettingsPanel::onSettingChanged() {
                 gridChanged = true;
         }
     }
-
-    if (gridChanged && this->onGridSizeChanged)
-        this->onGridSizeChanged();
-
+    if (gridChanged && this->onGridSizeChanged) this->onGridSizeChanged();
     this->queueSettingsSave();
 }
 
-void EngineSettingsPanel::timerCallback() {
-    this->flushPendingSettingsSave();
-}
+void EngineSettingsPanel::timerCallback() { this->flushPendingSettingsSave(); }
 
-void EngineSettingsPanel::queueSettingsSave() {
-    this->startTimer(settingsSaveDebounceMs);
-}
+void EngineSettingsPanel::queueSettingsSave() { this->startTimer(settingsSaveDebounceMs); }
 
 void EngineSettingsPanel::flushPendingSettingsSave() {
-    if (!this->isTimerRunning())
-        return;
-
+    if (!this->isTimerRunning()) return;
     this->stopTimer();
     this->engine.saveSettings();
 }

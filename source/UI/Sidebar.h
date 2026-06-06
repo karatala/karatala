@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "ParameterSlider.h"
 #include "UITheme.h"
 
 enum class ViewMode {
@@ -25,9 +26,9 @@ public:
 
     std::function<void(ViewMode)> onModeChanged;
 
-    juce::Slider velocityKnob;
-    juce::Slider hihatKnob;
-    juce::Slider rrLockKnob;
+    ParameterSlider velocityKnob;
+    ParameterSlider hihatKnob;
+    ParameterSlider rrLockKnob;
     juce::TextButton inspectButton { "?" };
 
 private:

@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/LayoutManager.h"
+#include "ParameterSlider.h"
 #include "SourceItem.h"
 #include "UITheme.h"
 
@@ -47,6 +48,9 @@ std::unique_ptr<juce::Slider> createParamSlider(
     double maxVal,
     double interval,
     double initialValue,
+    double defaultValue,
+    double wheelStep,
+    double fineWheelStep = 0.0,
     int textBoxWidth = UITheme::Sizes::sliderTextBoxW,
     int textBoxHeight = UITheme::Sizes::sliderTextBoxH,
     std::function<juce::String(double)> textFromValueFn = nullptr);
@@ -56,6 +60,9 @@ std::unique_ptr<juce::Slider> createCompactPot(
     double maxVal,
     double interval,
     double initialValue,
+    double defaultValue,
+    double wheelStep,
+    double fineWheelStep = 0.0,
     std::function<juce::String(double)> textFromValueFn = nullptr);
 
 } // namespace UIHelpers
