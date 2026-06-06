@@ -303,7 +303,13 @@ void InstrumentSynthVoice::updateEstimatedDb() {
     const double srcRate = s->sampleRate > 0.0 ? s->sampleRate : 44100.0;
     const float elapsedMs = static_cast<float>((this->sourceSamplePosition / srcRate) * 1000.0);
     const float velDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, this->velocityGain), -100.0f);
-    this->cachedEstimatedDb = s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb;
+    float layerGainDb = 0.0f;
+    if (this->owner != nullptr) {
+        const float layerGain = juce::Decibels::decibelsToGain(this->owner->getVolumeDb(), -100.0f);
+        const float bleedGain = this->owner->getMicBleedLevel(s->routedMicCode);
+        layerGainDb = juce::Decibels::gainToDecibels(juce::jmax(0.0001f, layerGain * bleedGain), -100.0f);
+    }
+    this->cachedEstimatedDb = s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb + layerGainDb;
 }
 
 void InstrumentSynthVoice::stopNote(bool allowTailOff) {
@@ -339,6 +345,11 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     }
 
     const int destChCount = outputBuffer.getNumChannels();
+    const bool flipLR = this->owner != nullptr && this->owner->getFlipLR();
+    const float phaseMultiplier = (this->owner != nullptr && this->owner->getFlipPhase()) ? -1.0f : 1.0f;
+    const float layerGain = this->owner != nullptr ? juce::Decibels::decibelsToGain(this->owner->getVolumeDb(), -100.0f) : 1.0f;
+    const float bleedGain = this->owner != nullptr ? this->owner->getMicBleedLevel(s->routedMicCode) : 1.0f;
+    const float voiceGain = layerGain * bleedGain;
 
     if (this->chokeProcessor.isMuted()) {
         this->stopNote(false);
@@ -386,13 +397,14 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         if (idx >= 0 && idx < srcLen) {
             const auto env = this->adsr.getNextSample();
             this->lastEnvelopeValue = env;
-            const float gain = env * this->velocityGain * chokeGain;
+            const float gain = env * this->velocityGain * chokeGain * voiceGain * phaseMultiplier;
 
             for (int sc = 0; sc < effectiveSrcCount; ++sc) {
+                const int destIndex = (flipLR && effectiveSrcCount == 2) ? (effectiveSrcCount - 1 - sc) : sc;
                 float v0 = srcPtrs[sc][idx];
                 float v1 = (idx + 1 < srcLen) ? srcPtrs[sc][idx + 1] : 0.0f;
                 float sample = static_cast<float>(v0 + (v1 - v0) * frac) * gain;
-                destPtrs[sc][startSample + i] += sample;
+                destPtrs[destIndex][startSample + i] += sample;
             }
         } else {
             // still advance envelope even if out of source range

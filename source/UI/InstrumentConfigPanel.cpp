@@ -29,7 +29,7 @@ void InstrumentConfigPanel::rebuildSourceItems() {
     this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
 }
 
-int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const {
+int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const { //TODO: why wrapper?
     return UIHelpers::findSourceIndex(this->sourceItems, searchPath);
 }
 
@@ -427,40 +427,29 @@ juce::String InstrumentConfigPanel::generateMapText() const {
 
         lines.add(line);
     }
-
     return lines.joinIntoString("\n");
 }
 
 int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const {
-    if (row == nullptr)
-        return -1;
-    if (row->selectedSourceIndex < 0)
-        return -1;
+    if (row == nullptr) return -1;
+    if (row->selectedSourceIndex < 0) return -1;
 
     int mappedLayerIndex = 0;
     for (int idx = 0; idx < this->tableRows.size(); ++idx) {
         const auto* currentRow = this->tableRows[idx];
-        if (currentRow->slotId != row->slotId)
-            continue;
-        if (currentRow->selectedSourceIndex < 0)
-            continue;
-
-        if (currentRow == row)
-            return mappedLayerIndex;
-
+        if (currentRow->slotId != row->slotId) continue;
+        if (currentRow->selectedSourceIndex < 0) continue;
+        if (currentRow == row) return mappedLayerIndex;
         ++mappedLayerIndex;
     }
-
     return -1;
 }
 
 void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
-    if (row == nullptr)
-        return;
+    if (row == nullptr) return;
 
     const int layerIndex = this->getMappedLayerIndexForRow(row);
-    if (layerIndex < 0)
-        return;
+    if (layerIndex < 0) return;
 
     const int tuning = static_cast<int>(row->tuningSlider->getValue());
     const int attack = static_cast<int>(row->attackSlider->getValue());
@@ -471,43 +460,26 @@ void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
     this->queueMapTextFlush();
 }
 
-void InstrumentConfigPanel::timerCallback() {
-    this->flushMapText();
-}
+void InstrumentConfigPanel::timerCallback() { this->flushMapText(); }
 
 void InstrumentConfigPanel::applyToEngine() {
     this->stopTimer();
     auto text = this->generateMapText();
-    if (text.trim().isEmpty())
-        return;
-
+    if (text.trim().isEmpty()) return;
     DBG("InstrumentConfigPanel::applyToEngine map text:\n" + text);
     this->engine.useInstrumentMap(text);
     this->mapTextDirty = false;
-
-    if (this->onMapTextChanged)
-        this->onMapTextChanged(text);
-
-    if (this->onStatusMessage)
-        this->onStatusMessage(this->engine.getLastInstrumentMapStatus());
+    if (this->onMapTextChanged) this->onMapTextChanged(text);
+    if (this->onStatusMessage) this->onStatusMessage(this->engine.getLastInstrumentMapStatus());
 }
 
 void InstrumentConfigPanel::flushMapText() {
-    if (!this->mapTextDirty)
-        return;
-
+    if (!this->mapTextDirty) return;
     this->stopTimer();
-
     const auto text = this->generateMapText();
-    if (text.trim().isEmpty())
-        return;
-
+    if (text.trim().isEmpty()) return;
     this->mapTextDirty = false;
-
-    if (this->onMapTextChanged)
-        this->onMapTextChanged(text);
+    if (this->onMapTextChanged) this->onMapTextChanged(text);
 }
 
-void InstrumentConfigPanel::queueMapTextFlush() {
-    this->startTimer(mapTextFlushDebounceMs);
-}
+void InstrumentConfigPanel::queueMapTextFlush() { this->startTimer(mapTextFlushDebounceMs); }

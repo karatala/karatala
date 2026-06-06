@@ -140,6 +140,26 @@ static juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::Instr
         return out;
     };
 
+    auto joinBleedValues = [](const std::unordered_map<juce::String, float>& values) {
+        std::vector<juce::String> keys;
+        keys.reserve(values.size());
+        for (const auto& [key, value] : values) {
+            juce::ignoreUnused(value);
+            keys.push_back(key);
+        }
+        std::sort(keys.begin(), keys.end(), [](const juce::String& a, const juce::String& b) {
+            return a.compareIgnoreCase(b) < 0;
+        });
+
+        juce::String out;
+        for (size_t idx = 0; idx < keys.size(); ++idx) {
+            if (idx > 0) out += ",";
+            const auto& key = keys[idx];
+            out += key.trim().toLowerCase() + ":" + juce::String(values.at(key), 4);
+        }
+        return out;
+    };
+
     juce::String fp;
     fp += entry.slotId.trim().toLowerCase() + "|";
     fp += entry.kitRef.trim().toLowerCase() + "|";
@@ -151,6 +171,14 @@ static juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::Instr
     fp += entry.attackTimeMs.has_value() ? juce::String(*entry.attackTimeMs) : "_";
     fp += "|";
     fp += entry.decayTimeMs.has_value() ? juce::String(*entry.decayTimeMs) : "_";
+    fp += "|";
+    fp += entry.volumeDb.has_value() ? juce::String(*entry.volumeDb, 4) : "_";
+    fp += "|";
+    fp += entry.flipLR ? "1" : "0";
+    fp += "|";
+    fp += entry.flipPhase ? "1" : "0";
+    fp += "|";
+    fp += joinBleedValues(entry.micBleedLevels);
     return fp;
 }
 
@@ -188,6 +216,11 @@ static void copySynthOverrides(InstrumentSynth& target, const InstrumentSynth& s
     const auto decayOverride = source.getDecayOverrideMs();
     if (decayOverride.has_value())
         target.setDecayOverrideMs(*decayOverride);
+
+    target.setVolumeDb(source.getVolumeDb());
+    target.setFlipLR(source.getFlipLR());
+    target.setFlipPhase(source.getFlipPhase());
+    target.setMicBleedLevels(source.getMicBleedLevels());
 }
 
 static void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int samplesPerBlock) {
@@ -1261,6 +1294,14 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
                                          std::optional<int> tuningCents,
                                          std::optional<int> attackMs,
                                          std::optional<int> decayMs) {
+    LayerParameterUpdate update;
+    update.tuningCents = tuningCents;
+    update.attackMs = attackMs;
+    update.decayMs = decayMs;
+    this->updateSlotParameters(slotId, artName, layerIndex, update);
+}
+
+void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, const LayerParameterUpdate& update) {
     juce::ignoreUnused(artName);
     if (layerIndex < 0)
         return;
@@ -1275,33 +1316,13 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
             continue;
 
         if (currentLayerIndex == layerIndex) {
-            int nextTuning = synthPtr->getTuningOffsetCents();
-            if (tuningCents.has_value())
-                nextTuning = *tuningCents;
-
-            auto nextAttack = synthPtr->getAttackOverrideMs();
-            auto nextDecay = synthPtr->getDecayOverrideMs();
-
-            if (attackMs.has_value()) {
-                if (*attackMs < 0)
-                    nextAttack.reset();
-                else
-                    nextAttack = *attackMs;
-            }
-
-            if (decayMs.has_value()) {
-                if (*decayMs < 0)
-                    nextDecay.reset();
-                else
-                    nextDecay = *decayMs;
-            }
-
-            synthPtr->clearParameterOverrides();
-            synthPtr->setTuningOffsetCents(nextTuning);
-            if (nextAttack.has_value())
-                synthPtr->setAttackOverrideMs(*nextAttack);
-            if (nextDecay.has_value())
-                synthPtr->setDecayOverrideMs(*nextDecay);
+            if (update.tuningCents.has_value()) synthPtr->setTuningOffsetCents(*update.tuningCents);
+            if (update.attackMs.has_value()) synthPtr->setAttackOverrideMs(*update.attackMs);
+            if (update.decayMs.has_value()) synthPtr->setDecayOverrideMs(*update.decayMs);
+            if (update.volumeDb.has_value()) synthPtr->setVolumeDb(*update.volumeDb);
+            if (update.flipLR.has_value()) synthPtr->setFlipLR(*update.flipLR);
+            if (update.flipPhase.has_value()) synthPtr->setFlipPhase(*update.flipPhase);
+            if (update.micBleedLevels.has_value()) synthPtr->setMicBleedLevels(*update.micBleedLevels);
             return;
         }
 
@@ -1390,6 +1411,10 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             synth.setAttackOverrideMs(*entry.attackTimeMs);
         if (entry.decayTimeMs.has_value())
             synth.setDecayOverrideMs(*entry.decayTimeMs);
+        synth.setVolumeDb(entry.volumeDb.value_or(0.0f));
+        synth.setFlipLR(entry.flipLR);
+        synth.setFlipPhase(entry.flipPhase);
+        synth.setMicBleedLevels(entry.micBleedLevels);
     };
 
     std::vector<juce::String> slotOrder;
@@ -1581,7 +1606,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             }
 
             std::vector<juce::String> layeredArts;
-            const bool hasParameterOverrides = resolved.entry->tuningCents.has_value() || resolved.entry->attackTimeMs.has_value() || resolved.entry->decayTimeMs.has_value();
+            const bool hasParameterOverrides = resolved.entry->tuningCents.has_value()
+                                            || resolved.entry->attackTimeMs.has_value()
+                                            || resolved.entry->decayTimeMs.has_value()
+                                            || resolved.entry->volumeDb.has_value()
+                                            || resolved.entry->flipLR
+                                            || resolved.entry->flipPhase
+                                            || !resolved.entry->micBleedLevels.empty();
             for (const auto& artName : resolved.effectiveFilter) {
                 if (artName.isEmpty())
                     continue;

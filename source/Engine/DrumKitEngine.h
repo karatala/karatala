@@ -122,12 +122,17 @@ public:
     void previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
                            const juce::String& artCode, juce::uint8 velocity);
     void rebuildMidiNoteRoutingFromLayout();
-    void updateSlotParameters(const juce::String& slotId,
-                              const juce::String& artName,
-                              int layerIndex,
-                              std::optional<int> tuningCents,
-                              std::optional<int> attackMs,
-                              std::optional<int> decayMs);
+    struct LayerParameterUpdate {
+        std::optional<int> tuningCents;
+        std::optional<int> attackMs;
+        std::optional<int> decayMs;
+        std::optional<float> volumeDb;
+        std::optional<bool> flipLR;
+        std::optional<bool> flipPhase;
+        std::optional<std::unordered_map<juce::String, float>> micBleedLevels;
+    };
+    void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, std::optional<int> tuningCents, std::optional<int> attackMs, std::optional<int> decayMs);
+    void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, const LayerParameterUpdate& update);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
     
     void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }

@@ -13,6 +13,7 @@
 
 class DrumKitEngine;
 class SampleLoader;
+class InstrumentSynth;
 
 class SampledSound {
 public:
@@ -26,6 +27,7 @@ public:
     double sampleRate = 0.0;
     int micBufferChannelStart = 0;
     int micBufferChannelCount = 0;
+    juce::String routedMicCode;
     KitLib::DecayEnvelope decayEnvelope;
 
     SampledSound(KitLib::InstrumentSpec* instrumentSpec = nullptr, KitLib::SampleVariantSpec* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
@@ -85,6 +87,7 @@ public:
     EnvelopeState getEnvelopeState() const noexcept { return this->envelopeState; }
 
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
+    void setOwner(InstrumentSynth* synth) noexcept { this->owner = synth; }
 
     bool wasStartedBefore(const InstrumentSynthVoice& other) const noexcept { return this->noteOnTime < other.noteOnTime; }
 
@@ -113,6 +116,8 @@ public:
 
 private:
     friend class InstrumentSynth;
+
+    InstrumentSynth* owner = nullptr;
 
     uint32_t artNameId;
     uint32_t artExprId;
@@ -253,10 +258,19 @@ public:
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
-    void setAttackOverrideMs(int ms) { this->attackOverrideMs = ms; }
+    void setAttackOverrideMs(int ms) { if (ms < 0) this->attackOverrideMs.reset(); else this->attackOverrideMs = ms; }
     std::optional<int> getAttackOverrideMs() const { return this->attackOverrideMs; }
-    void setDecayOverrideMs(int ms) { this->decayOverrideMs = ms; }
+    void setDecayOverrideMs(int ms) { if (ms < 0) this->decayOverrideMs.reset(); else this->decayOverrideMs = ms; }
     std::optional<int> getDecayOverrideMs() const { return this->decayOverrideMs; }
+    void setVolumeDb(float db) { this->volumeDb = db; }
+    float getVolumeDb() const { return this->volumeDb; }
+    void setFlipLR(bool shouldFlip) { this->flipLR = shouldFlip; }
+    bool getFlipLR() const { return this->flipLR; }
+    void setFlipPhase(bool shouldFlip) { this->flipPhase = shouldFlip; }
+    bool getFlipPhase() const { return this->flipPhase; }
+    void setMicBleedLevels(std::unordered_map<juce::String, float> levels);
+    float getMicBleedLevel(const juce::String& micCode) const;
+    const std::unordered_map<juce::String, float>& getMicBleedLevels() const { return this->micBleedLevels; }
     void clearParameterOverrides();
     
     void clearSounds() {
@@ -299,6 +313,7 @@ public:
     InstrumentSynthVoice* addVoice(InstrumentSynthVoice* const newVoice) {
         const juce::ScopedLock sl(this->lock);
         newVoice->setCurrentPlaybackSampleRate(this->sampleRate);
+        newVoice->setOwner(this);
         return this->voices.add(newVoice);
     }
     InstrumentSynthVoice* findFreeVoice(int midiChannel, int midiNoteNumber, const int groupId) const {
@@ -483,6 +498,10 @@ private:
     int tuningOffsetCents = 0;
     std::optional<int> attackOverrideMs;
     std::optional<int> decayOverrideMs;
+    float volumeDb = 0.0f;
+    bool flipLR = false;
+    bool flipPhase = false;
+    std::unordered_map<juce::String, float> micBleedLevels;
 
     void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap);
     void resetRoutingTables();

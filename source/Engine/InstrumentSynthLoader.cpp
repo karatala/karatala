@@ -20,9 +20,7 @@ void InstrumentSynth::resetRoutingTables() {
     this->noteToControllers.clear();
     this->ccToArticulationMask.fill(false);
     this->lastCcArticulation.fill(-1);
-
-    for (auto& map : this->ccToArticulationTable)
-        map.fill(0);
+    for (auto& map : this->ccToArticulationTable) map.fill(0);
 }
 
 void InstrumentSynth::rebuildArtLookupCache() {
@@ -35,14 +33,11 @@ void InstrumentSynth::rebuildArtLookupCache() {
 }
 
 bool InstrumentSynth::tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx) {
-    if (artSpec == nullptr)
-        return false;
-
+    if (artSpec == nullptr) return false;
     if (createIfMissing) {
         artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
         return true;
     }
-
     artIdx = this->findArticulationIndex(artSpec->nameId, artSpec->exprId);
     return artIdx >= 0;
 }
@@ -87,41 +82,54 @@ void InstrumentSynth::clearParameterOverrides() {
     this->tuningOffsetCents = 0;
     this->attackOverrideMs.reset();
     this->decayOverrideMs.reset();
+    this->volumeDb = 0.0f;
+    this->flipLR = false;
+    this->flipPhase = false;
+    this->micBleedLevels.clear();
+}
+
+void InstrumentSynth::setMicBleedLevels(std::unordered_map<juce::String, float> levels) {
+    this->micBleedLevels.clear();
+    for (auto& [micCode, level] : levels) {
+        const float clamped = juce::jlimit(0.0f, 1.0f, level);
+        if (clamped < 0.999f) this->micBleedLevels[micCode] = clamped;
+    }
+}
+
+float InstrumentSynth::getMicBleedLevel(const juce::String& micCode) const {
+    if (micCode.isEmpty()) return 1.0f;
+
+    const auto it = this->micBleedLevels.find(micCode);
+    if (it == this->micBleedLevels.end()) return 1.0f;
+
+    return juce::jlimit(0.0f, 1.0f, it->second);
 }
 
 
 KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt) {
-    if (instSpec == nullptr)
-        return nullptr;
+    if (instSpec == nullptr) return nullptr;
 
     for (const auto& artSpec : instSpec->articulationSpecs) {
-        if (artSpec->nameId == layoutArt.nameId && artSpec->exprId == layoutArt.exprId)
-            return artSpec.get();
+        if (artSpec->nameId == layoutArt.nameId && artSpec->exprId == layoutArt.exprId) return artSpec.get();
     }
-
-    if (this->getEngine() == nullptr)
-        return nullptr;
+    if (this->getEngine() == nullptr) return nullptr;
 
     const auto& fallbackIdMap = this->getEngine()->getArticulationFallbackIdMap();
     auto it = fallbackIdMap.find(layoutArt.nameId);
-    if (it == fallbackIdMap.end())
-        return nullptr;
+    if (it == fallbackIdMap.end()) return nullptr;
 
     for (const auto& fallbackId : it->second) {
         for (const auto& artSpec : instSpec->articulationSpecs) {
-            if (artSpec->nameId == fallbackId && artSpec->exprId == layoutArt.exprId)
-                return artSpec.get();
+            if (artSpec->nameId == fallbackId && artSpec->exprId == layoutArt.exprId) return artSpec.get();
         }
     }
-
     return nullptr;
 }
 
 std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
     std::vector<ResolvedArticulationBinding> bindings;
 
-    if (!routingContext.isValid())
-        return bindings;
+    if (!routingContext.isValid()) return bindings;
 
     bindings.reserve(layoutSlot.articulations.size());
 
@@ -138,8 +146,7 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
         if (sourceIt != routingContext.artSources.end() && sourceIt->second != nullptr)
             binding.sourceInstrument = sourceIt->second;
 
-        if (binding.sourceInstrument == nullptr)
-            continue;
+        if (binding.sourceInstrument == nullptr) continue;
 
         auto remapIt = routingContext.artNameRemap.find(layoutArt.nameId);
         if (remapIt != routingContext.artNameRemap.end())
@@ -153,15 +160,10 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
             continue;
         }
 
-        // Cross-art remap is family-wide:
-        // if a layout articulation A resolves as source articulation B,
-        // then note routing, fallback lookup, and CC-driven sibling variants
-        // must all resolve within B's family so runtime behavior stays consistent.
+        // Cross-art remap
         for (const auto& artSpec : binding.sourceInstrument->articulationSpecs) {
-            if (artSpec->nameId != binding.resolvedLayoutArt.nameId)
-                continue;
-            if (artSpec->exprId == binding.resolvedLayoutArt.exprId)
-                continue;
+            if (artSpec->nameId != binding.resolvedLayoutArt.nameId) continue;
+            if (artSpec->exprId == binding.resolvedLayoutArt.exprId) continue;
 
             bool hasMatchingController = false;
             for (const auto& dim : artSpec->expressionDimensions) {
@@ -171,30 +173,24 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
                         break;
                     }
                 }
-                if (hasMatchingController)
-                    break;
+                if (hasMatchingController) break;
             }
 
-            if (hasMatchingController)
-                binding.controllerSiblingSpecs.push_back(artSpec.get());
+            if (hasMatchingController) binding.controllerSiblingSpecs.push_back(artSpec.get());
         }
-
         bindings.push_back(std::move(binding));
     }
-
     return bindings;
 }
 
 void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
-    if (artSpec == nullptr || sourceInstrument == nullptr)
-        return;
+    if (artSpec == nullptr || sourceInstrument == nullptr) return;
 
     ArtRtIdx artIdx = -1;
     if (!this->tryGetRuntimeArticulationIdx(artSpec, createIfMissing, artIdx)) {
         LOG(Warning, "Skipping routing rebuild for '" + layoutArt.codeRaw + "' because runtime articulation '" + artSpec->codeRaw + "' is not loaded");
         return;
     }
-
     if (loadSamples) {
         auto& artRt = this->runtimeArticulations[artIdx];
         artSpec->sortVelocityLayers();
@@ -202,9 +198,7 @@ void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation&
     } else {
         this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
     }
-
-    for (uint8_t note : layoutArt.notes)
-        this->noteToArticulation[note] = artIdx;
+    for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artIdx;
 }
 
 void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing) {
@@ -219,12 +213,10 @@ void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulatio
                 + ") -> resolve as nameId=" + juce::String((int)binding.resolvedLayoutArt.nameId)
                 + " ('" + StringsDictSingleton::nameOf(binding.resolvedLayoutArt.nameId) + "')");
         }
-
         if (binding.resolvedSpec != nullptr) {
             LOG(Info, "    resolved: layout='" + binding.layoutArt.codeRaw + "' -> artSpec='" + binding.resolvedSpec->codeRaw
                 + "' (nameId=" + juce::String((int)binding.resolvedSpec->nameId) + " exprId=" + juce::String((int)binding.resolvedSpec->exprId) + ")");
         }
-
         this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, binding.resolvedSpec, loadSamples, createIfMissing, foundCcDimensions, skippedMicCodes);
 
         for (auto* siblingSpec : binding.controllerSiblingSpecs)
@@ -239,13 +231,11 @@ void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulatio
         }
         LOG(Notice, "    Skipping samples for mic(s) " + codes + " - not present in active mic layout");
     }
-
     this->processCcDimensions(foundCcDimensions);
 }
 
 void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
-    if (defaultInstSpec == nullptr)
-        return;
+    if (defaultInstSpec == nullptr) return;
 
     this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, artNameRemap);
 
@@ -260,7 +250,6 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* default
             LOG(Debug, "  nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " exprDims=" + dims + " artSpec=" + artSpec->codeRaw);
         }
     }
-
     const auto bindings = this->collectResolvedLayoutArticulations(this->instrumentSlot, this->lastRoutingContext);
     this->applyResolvedRouting(bindings, true, true);
     this->rebuildArtLookupCache();
@@ -292,7 +281,6 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
             }
         }
     }
-
     this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
 }
 
@@ -325,6 +313,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             }
             sound->micBufferChannelStart = assignment.globalStart;
             sound->micBufferChannelCount = assignment.channels;
+            sound->routedMicCode = assignment.micCode;
 
             this->addSound(sound);
             SampleEntry se;
@@ -349,8 +338,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                     KitLib::SampleVariantSpec::letterToIdx(varSpec->letter),
                     [weakSound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
                         auto soundLocked = weakSound.lock();
-                        if (!soundLocked)
-                            return;
+                        if (!soundLocked) return;
                         soundLocked->buffer = buf;
                         soundLocked->sampleRate = sr;
                         soundLocked->loaded.store(buf != nullptr, std::memory_order_release);
@@ -366,8 +354,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
 void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions) {
 
     { // Debug: report articulation and its expression dimensions
-        auto code = artSpec->codeRaw;
         if (LOG_ENABLED(Debug)) {
+            auto code = artSpec->codeRaw;
             LOG(Debug, "buildCcMappings: processing artSpec=" + code + " nameId=" + juce::String((int)artSpec->nameId) + " exprId=" + juce::String((int)artSpec->exprId) + " layoutArt=" + layoutArt.codeRaw);
             if (artSpec->expressionDimensions.empty()) {
                 LOG(Debug, "buildCcMappings: artSpec has no expressionDimensions");
@@ -413,22 +401,6 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
     }
 }
 
-
-// void InstrumentSynth::buildCcDimensionTables(KitLib::InstrumentSpec* instSpec, CcDimensionsMap& foundCcDimensions) {
-//     for (const auto& artSpec : instSpec->articulationSpecs) {
-//         int8_t artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
-
-//         for (const auto& dim : artSpec->expressionDimensions) {
-//             uint8_t ccNum = this->controllerNumberFromType(dim->type);
-
-//             for (auto val : dim->values) {
-//                 foundCcDimensions[ccNum].push_back({ static_cast<int8_t>(val), artIdx });
-//             }
-//         }
-//     }
-
-//     this->processCcDimensions(foundCcDimensions);
-// }
 void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
     for (auto&[ccNum, valArtPairs] : foundCcDimensions) {
         LOG(Debug, "processCcDimensions: CC " + juce::String((int)ccNum) + " has " + juce::String((int)valArtPairs.size()) + " mappings");

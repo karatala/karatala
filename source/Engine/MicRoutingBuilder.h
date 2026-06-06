@@ -18,6 +18,7 @@ public:
     struct Assignment {
         int globalStart = -1; // -1 means unmatched — voice renders silently (destCh guard in render loop)
         int channels    = 0;
+        juce::String micCode;
     };
 
     explicit MicRoutingBuilder(InstrumentSynth* synth) : synth(synth) {
@@ -30,8 +31,11 @@ public:
     // All unmatched raw codes are accumulated in skippedRawCodes for a single summary log.
     Assignment resolve(const KitLib::MicSpec& micSpec, int fileChannelCount) {
         for (const auto& e : micEntries)
-            if (micKeyEq(micSpec, e.mic->specs))
-                return e.assignment;
+            if (micKeyEq(micSpec, e.mic->specs)) {
+                auto assignment = e.assignment;
+                assignment.micCode = e.mic->code;
+                return assignment;
+            }
 
         skippedRawCodes.insert(micSpec.raw);
         return { -1, fileChannelCount };
@@ -110,7 +114,12 @@ private:
                 const int globalStart = (localCursor < static_cast<int>(globalMapping.size()))
                     ? globalMapping[localCursor]
                     : localCursor;
-                micEntries.push_back({ &mic, { globalStart, ch } });
+                MicEntryInfo info;
+                info.mic = &mic;
+                info.assignment.globalStart = globalStart;
+                info.assignment.channels = ch;
+                info.assignment.micCode = mic.code;
+                micEntries.push_back(std::move(info));
                 if (!firstEntry) debug += ", ";
                 debug += mic.name + " -> ch " + juce::String(globalStart) + " (" + juce::String(ch) + "ch)";
                 firstEntry = false;

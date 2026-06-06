@@ -92,11 +92,13 @@ private:
     void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
+    void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {});
     void applyToEngine();
     void recalculateLayerIndexOffset();
     juce::String generateFullMapText() const;
     void populateLayers();
-    std::vector<std::pair<juce::String, juce::String>> getRelevantMics() const;
+    std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
+    std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourceIndex(int sourceIndex) const;
     bool mapTextDirty = false;
     int layerIndexOffset = 0;
 

@@ -2,6 +2,16 @@
 #include "UIHelpers.h"
 #include "UITheme.h"
 
+#include <algorithm>
+#include <cmath>
+#include <unordered_set>
+
+namespace {
+bool micSpecMatches(const KitLib::MicSpec& left, const KitLib::MicSpec& right) {
+    return left.type == right.type && left.position == right.position && left.format == right.format;
+}
+}
+
 // ─── MIDI utility ─────────────────────────────────────────────────────────────
 
 // ─── MIDI note button helpers ─────────────────────────────────────────────────
@@ -19,36 +29,31 @@ void PadContextPopup::applyNoteToSlot(int slotIdx, int note) {
     UIHelpers::applyMidiNoteToSlot(*this->midiNotesPtr, slotIdx, note);
     this->syncMidiNotesToActiveLayout();
     this->syncNoteButtons();
-    if (this->onMidiMappingChanged)
-        this->onMidiMappingChanged();
+    if (this->onMidiMappingChanged) this->onMidiMappingChanged();
 }
 
 void PadContextPopup::syncMidiNotesToActiveLayout() {
     auto* layout = this->engine.getKitLayout();
-    if (layout == nullptr || this->midiNotesPtr == nullptr)
-        return;
+    if (layout == nullptr || this->midiNotesPtr == nullptr) return;
 
     auto normalizeArtName = [](const juce::String& rawName) {
         return rawName.upToFirstOccurrenceOf("[", false, false);
     };
 
     for (auto& slot : layout->instrumentSlots) {
-        if (slot.id != this->slotId)
-            continue;
+        if (slot.id != this->slotId) continue;
 
         if (this->selectedArticulationIndex >= 0
             && this->selectedArticulationIndex < static_cast<int>(slot.articulations.size())) {
             slot.articulations[static_cast<size_t>(this->selectedArticulationIndex)].notes = *this->midiNotesPtr;
             return;
         }
-
         for (auto& art : slot.articulations) {
             if (normalizeArtName(art.codeRaw) == this->artName) {
                 art.notes = *this->midiNotesPtr;
                 return;
             }
         }
-
         if (!slot.articulations.empty()) {
             slot.articulations[0].notes = *this->midiNotesPtr;
         }
@@ -60,16 +65,12 @@ void PadContextPopup::midiLearnNoteReceived(int midiNote) {
     if (this->activeLearningSlot < 0) return;
     this->applyNoteToSlot(this->activeLearningSlot, midiNote);
     this->activeLearningSlot = -1;
-    if (this->midiAssignmentControl)
-        this->midiAssignmentControl->setLearningSlot(-1);
-    if (this->onMidiLearnStateChanged)
-        this->onMidiLearnStateChanged(false);
+    if (this->midiAssignmentControl) this->midiAssignmentControl->setLearningSlot(-1);
+    if (this->onMidiLearnStateChanged) this->onMidiLearnStateChanged(false);
 }
 // ─── Source items ─────────────────────────────────────────────────────────────
 
-void PadContextPopup::rebuildSourceItems() {
-    this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
-}
+void PadContextPopup::rebuildSourceItems() { this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager()); }
 
 int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
     return UIHelpers::findSourceIndex(this->sourceItems, searchPath);
@@ -89,7 +90,8 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     : engine(engine)
     , slotId(slot.id)
     , slotType(slot.type)
-    , savedInstrumentMapText(savedInstrumentMapText) {
+    , savedInstrumentMapText(savedInstrumentMapText
+) {
     // Resolve articulation
     if (artIdx >= 0 && artIdx < static_cast<int>(slot.articulations.size())) {
         this->selectedArticulationIndex = artIdx;
@@ -181,16 +183,8 @@ juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<i
         maxBleedCount = juce::jmax(maxBleedCount, static_cast<int>(layer->micBleeds.size()));
 
     const int bleedGroupWidth = maxBleedCount > 0 ? maxBleedCount * bleedPotWidth + groupPad * 2 : 0;
-    const int preferredWidth = popupPadding * 2
-                             + removeWidth
-                             + sourceWidth
-                             + mainGroupWidth
-                             + bleedGroupWidth
-                             + groupGap * 2;
-    const int preferredHeight = popupPadding * 2
-                              + headerHeight
-                              + headerGap
-                              + 5 * layerRowHeight;
+    const int preferredWidth = popupPadding * 2 + removeWidth + sourceWidth + mainGroupWidth + bleedGroupWidth + groupGap * 2;
+    const int preferredHeight = popupPadding * 2 + headerHeight + headerGap + 5 * layerRowHeight;
 
     const int width = juce::jlimit(420, availableBounds.getWidth(), preferredWidth);
     const int height = juce::jlimit(220, availableBounds.getHeight(), preferredHeight);
@@ -253,21 +247,158 @@ void PadContextPopup::populateLayers() {
     this->updateRemoveButtonVisibility();
 }
 
-std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMics() const {
+std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourcePath(const juce::String& sourcePath) const {
     std::vector<std::pair<juce::String, juce::String>> result;
-    auto* micLayout = this->engine.getMicLayout();
-    if (micLayout == nullptr)
+    const auto normalizedPath = sourcePath.trim();
+    if (normalizedPath.isEmpty()) return result;
+
+    const auto* micLayout = this->engine.getMicLayout();
+    const auto* libraryManager = this->engine.getInstrumentManager();
+    if (micLayout == nullptr || libraryManager == nullptr)
         return result;
-    for (const auto& mic : micLayout->mics) {
-        if (mic.instrument.isEmpty() || mic.instrument == this->slotId)
-            result.push_back({ mic.code, mic.name });
+
+    const int matchingIndex = this->findSourceIndex(normalizedPath);
+    SourceItem sourceItem;
+    if (matchingIndex >= 0) {
+        sourceItem = this->sourceItems[static_cast<size_t>(matchingIndex)];
+    } else {
+        juce::StringArray pathParts;
+        pathParts.addTokens(normalizedPath, "/", "");
+        pathParts.removeEmptyStrings();
+        if (pathParts.isEmpty()) return result;
+
+        sourceItem.kitCodeRaw = pathParts[0];
+        sourceItem.instCode = pathParts.size() > 1 ? pathParts[1] : juce::String();
+        sourceItem.artCode = pathParts.size() > 2 ? pathParts[2] : juce::String();
     }
+
+    const KitLib::InstrumentSpec* sourceInstrument = nullptr;
+    for (const auto& kitPtr : libraryManager->getKits()) {
+        if (kitPtr == nullptr) continue;
+        if (kitPtr->meta.codeRaw.compareIgnoreCase(sourceItem.kitCodeRaw) != 0) continue;
+
+        const auto& instruments = kitPtr->getInstrumentSpecsMap();
+        auto instIt = instruments.find(sourceItem.instCode);
+        if (instIt == instruments.end()) break;
+
+        sourceInstrument = instIt->second.get();
+        break;
+    }
+
+    if (sourceInstrument == nullptr) return result;
+
+    std::vector<const KitLib::ArticulationSpec*> sourceArts;
+    if (sourceItem.artCode.isNotEmpty()) {
+        for (const auto& artPtr : sourceInstrument->articulationSpecs) {
+            if (artPtr == nullptr) continue;
+            const auto resolvedArtName = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
+            if (resolvedArtName == sourceItem.artCode) {
+                sourceArts.push_back(artPtr.get());
+                break;
+            }
+        }
+    } else {
+        for (const auto& artPtr : sourceInstrument->articulationSpecs) {
+            if (artPtr != nullptr) sourceArts.push_back(artPtr.get());
+        }
+    }
+
+    if (sourceArts.empty())
+        return result;
+
+    std::unordered_set<juce::String> seenCodes;
+    for (const auto& mic : micLayout->mics) {
+        if (seenCodes.find(mic.code) != seenCodes.end()) continue;
+
+        bool routable = false;
+        for (const auto* artSpec : sourceArts) {
+            if (artSpec == nullptr) continue;
+
+            for (const auto& velLayer : artSpec->velocityLayerSpecs) {
+                if (velLayer == nullptr) continue;
+
+                for (const auto& varSpec : velLayer->sampleVariantSpecs) {
+                    if (varSpec == nullptr) continue;
+
+                    if (micSpecMatches(varSpec->micSpec, mic.specs)) {
+                        routable = true;
+                        break;
+                    }
+                }
+
+                if (routable) break;
+            }
+
+            if (routable) break;
+        }
+
+        if (routable) {
+            seenCodes.insert(mic.code);
+            result.push_back({ mic.code, mic.name });
+        }
+    }
+
     return result;
 }
 
-void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                                   float volumeDb, bool flipLR, bool flipPhase,
-                                   const std::unordered_map<juce::String, float>& micBleedLevels) {
+std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourceIndex(int sourceIndex) const {
+    if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return {};
+    return this->getRelevantMicsForSourcePath(this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath());
+}
+
+void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels) {
+    if (layer == nullptr) return;
+
+    std::unordered_map<juce::String, float> existingLevels = seedLevels;
+    if (!layer->micBleeds.empty()) {
+        existingLevels.clear();
+        for (const auto& bleedCtrl : layer->micBleeds) {
+            if (bleedCtrl == nullptr || bleedCtrl->bleedPot == nullptr || bleedCtrl->micCode.isEmpty()) continue;
+            existingLevels[bleedCtrl->micCode] = static_cast<float>(bleedCtrl->bleedPot->getValue() / 100.0);
+        }
+    }
+
+    layer->micBleeds.clear();
+
+    juce::String sourcePath;
+    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size()))
+        sourcePath = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].fullPath();
+    else
+        sourcePath = layer->sourcePathHint;
+
+    const auto micEntries = this->getRelevantMicsForSourcePath(sourcePath);
+    std::vector<std::pair<juce::String, juce::String>> entriesToShow = micEntries;
+    if (entriesToShow.empty() && !existingLevels.empty()) {
+        for (const auto& [micCode, level] : existingLevels) {
+            juce::ignoreUnused(level);
+            entriesToShow.push_back({ micCode, micCode });
+        }
+        std::sort(entriesToShow.begin(), entriesToShow.end(), [](const auto& a, const auto& b) {
+            return a.first.compareIgnoreCase(b.first) < 0;
+        });
+    }
+
+    for (const auto& [micCode, micName] : entriesToShow) {
+        auto bleedCtrl = std::make_unique<LayerRow::MicBleedControl>();
+        bleedCtrl->micCode = micCode;
+        bleedCtrl->micName = micName;
+        float level = 1.0f;
+        const auto it = existingLevels.find(micCode);
+        if (it != existingLevels.end())
+            level = juce::jlimit(0.0f, 1.0f, it->second);
+        bleedCtrl->bleedPot = std::make_unique<ParameterPot>(micName, 0.0, 100.0, 1.0, static_cast<double>(level * 100.0f));
+        this->layerContent.addAndMakeVisible(*bleedCtrl->bleedPot);
+        bleedCtrl->bleedPot->onValueChange = [this, layer] {
+            this->applyLayerParametersFast(layer);
+        };
+        bleedCtrl->bleedPot->onDragEnd = [this] {
+            this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+        };
+        layer->micBleeds.push_back(std::move(bleedCtrl));
+    }
+}
+
+void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, bool flipLR, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels) {
     auto* layer = this->layerRows.add(new LayerRow());
     layer->sourcePathHint = sourceFullPath;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
@@ -332,9 +463,8 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
                                      juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     layer->flipLRButton->setToggleState(flipLR, juce::dontSendNotification);
     this->layerContent.addAndMakeVisible(*layer->flipLRButton);
-    layer->flipLRButton->onClick = [this] {
-        this->mapTextDirty = true;
-        this->applyToEngine();
+    layer->flipLRButton->onClick = [this, layer] {
+        this->applyLayerParametersFast(layer);
     };
 
     // Flip Phase button (toggle)
@@ -343,29 +473,12 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
                                      juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     layer->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
     this->layerContent.addAndMakeVisible(*layer->flipPhaseButton);
-    layer->flipPhaseButton->onClick = [this] {
-        this->mapTextDirty = true;
-        this->applyToEngine();
+    layer->flipPhaseButton->onClick = [this, layer] {
+        this->applyLayerParametersFast(layer);
     };
 
     // Per-mic bleed as ParameterPots
-    auto relevantMics = this->getRelevantMics();
-    for (const auto& [micCode, micName] : relevantMics) {
-        auto bleedCtrl = std::make_unique<LayerRow::MicBleedControl>();
-        bleedCtrl->micCode = micCode;
-        bleedCtrl->micName = micName;
-        float level = 1.0f;
-        auto it = micBleedLevels.find(micCode);
-        if (it != micBleedLevels.end())
-            level = it->second;
-        bleedCtrl->bleedPot = std::make_unique<ParameterPot>(micName, 0.0, 100.0, 1.0,
-            static_cast<double>(level * 100.0f));
-        this->layerContent.addAndMakeVisible(*bleedCtrl->bleedPot);
-        bleedCtrl->bleedPot->onValueChange = [this] {
-            this->mapTextDirty = true;
-        };
-        layer->micBleeds.push_back(std::move(bleedCtrl));
-    }
+    this->rebuildBleedControls(layer, micBleedLevels);
 
     // Remove button (×)
     layer->removeButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x97")); // ×
@@ -385,8 +498,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 
 void PadContextPopup::updateRemoveButtonVisibility() {
     bool showRemove = this->layerRows.size() > 1;
-    for (auto* layer : this->layerRows)
-        layer->removeButton->setVisible(showRemove);
+    for (auto* layer : this->layerRows) layer->removeButton->setVisible(showRemove);
 }
 
 void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
@@ -394,8 +506,7 @@ void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
         const auto& src = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
         juce::String line1 = src.kitDisplayName + "  " + juce::String::charToString(0x25BC);
         juce::String detail = line1 + "\n" + src.instCode;
-        if (src.artCode.isNotEmpty())
-            detail += "\n" + src.artCode;
+        if (src.artCode.isNotEmpty()) detail += "\n" + src.artCode;
         layer->sourceDetailLabel->setText(detail, juce::dontSendNotification);
         layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
         layer->sourceButton->setTooltip(src.fullPath());
@@ -412,20 +523,14 @@ void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
 }
 
 int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
-    if (layer == nullptr)
-        return -1;
-    if (layer->selectedSourceIndex < 0)
-        return -1;
+    if (layer == nullptr) return -1;
+    if (layer->selectedSourceIndex < 0) return -1;
 
     int mappedLayerIndex = 0;
     for (int idx = 0; idx < this->layerRows.size(); ++idx) {
         const auto* currentLayer = this->layerRows[idx];
-        if (currentLayer->selectedSourceIndex < 0)
-            continue;
-
-        if (currentLayer == layer)
-            return mappedLayerIndex;
-
+        if (currentLayer->selectedSourceIndex < 0) continue;
+        if (currentLayer == layer) return mappedLayerIndex;
         ++mappedLayerIndex;
     }
 
@@ -437,19 +542,27 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
         return;
 
     const int layerIndex = this->getLayerIndex(layer);
-    if (layerIndex < 0)
+    if (layerIndex < 0) {
+        this->mapTextDirty = true;
         return;
+    }
 
-    const int tuning = static_cast<int>(layer->tuningPot->getValue());
-    const int attack = static_cast<int>(layer->attackPot->getValue());
-    const int decay = static_cast<int>(layer->decayPot->getValue());
+    DrumKitEngine::LayerParameterUpdate update;
+    update.tuningCents = static_cast<int>(layer->tuningPot->getValue());
+    update.attackMs = static_cast<int>(layer->attackPot->getValue());
+    update.decayMs = static_cast<int>(layer->decayPot->getValue());
+    update.volumeDb = static_cast<float>(layer->gainPot->getValue());
+    update.flipLR = layer->flipLRButton->getToggleState();
+    update.flipPhase = layer->flipPhaseButton->getToggleState();
 
-    this->engine.updateSlotParameters(this->slotId,
-                                      this->artName,
-                                      this->layerIndexOffset + layerIndex,
-                                      tuning,
-                                      attack,
-                                      decay);
+    std::unordered_map<juce::String, float> bleedLevels;
+    for (const auto& bleedCtrl : layer->micBleeds) {
+        if (bleedCtrl == nullptr || bleedCtrl->bleedPot == nullptr || bleedCtrl->micCode.isEmpty()) continue;
+        bleedLevels[bleedCtrl->micCode] = static_cast<float>(bleedCtrl->bleedPot->getValue() / 100.0);
+    }
+    update.micBleedLevels = std::move(bleedLevels);
+
+    this->engine.updateSlotParameters(this->slotId, this->artName, this->layerIndexOffset + layerIndex, update);
     this->mapTextDirty = true;
 }
 
@@ -472,8 +585,7 @@ juce::String PadContextPopup::generateFullMapText() const {
         // Remove lines matching this slot/art
         if (trimmed.startsWith(slotArtPrefix1)) continue;
         // For (default) articulation or unfiltered entries: remove if matches slot
-        if (this->artName == "(default)" && trimmed.startsWith(slotArtPrefix2) && !trimmed.substring(slotArtPrefix2.length()).contains("/"))
-            continue;
+        if (this->artName == "(default)" && trimmed.startsWith(slotArtPrefix2) && !trimmed.substring(slotArtPrefix2.length()).contains("/")) continue;
         // Also remove lines that match this slot with exact art filter
         // Parse the slot part to check
         auto colonPos = trimmed.indexOf(":");
@@ -483,8 +595,7 @@ juce::String PadContextPopup::generateFullMapText() const {
             if (slashPos > 0) {
                 auto lineSlotId = slotPart.substring(0, slashPos);
                 auto lineArt = slotPart.substring(slashPos + 1);
-                if (lineSlotId == this->slotId && lineArt == this->artName)
-                    continue;
+                if (lineSlotId == this->slotId && lineArt == this->artName) continue;
             }
         }
         result.add(trimmed);
@@ -496,14 +607,11 @@ juce::String PadContextPopup::generateFullMapText() const {
 
         const auto& srcItem = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
         juce::String slotRef = this->slotId;
-        if (this->artName != "(default)")
-            slotRef += "/" + this->artName;
+        if (this->artName != "(default)") slotRef += "/" + this->artName;
 
         juce::String targetRef = srcItem.kitCodeRaw;
-        if (srcItem.instCode.isNotEmpty())
-            targetRef += "/" + srcItem.instCode;
-        if (srcItem.artCode.isNotEmpty())
-            targetRef += "/" + srcItem.artCode;
+        if (srcItem.instCode.isNotEmpty()) targetRef += "/" + srcItem.instCode;
+        if (srcItem.artCode.isNotEmpty()) targetRef += "/" + srcItem.artCode;
 
         juce::StringArray params;
         int tuning = static_cast<int>(layer->tuningPot->getValue());
@@ -521,15 +629,12 @@ juce::String PadContextPopup::generateFullMapText() const {
         juce::StringArray bleedParts;
         for (const auto& bleedCtrl : layer->micBleeds) {
             double bleedVal = bleedCtrl->bleedPot->getValue() / 100.0;
-            if (bleedVal < 0.99)
-                bleedParts.add(bleedCtrl->micCode + ":" + juce::String(bleedVal, 2));
+            if (bleedVal < 0.99) bleedParts.add(bleedCtrl->micCode + ":" + juce::String(bleedVal, 2));
         }
-        if (!bleedParts.isEmpty())
-            params.add("bleed=" + bleedParts.joinIntoString(","));
+        if (!bleedParts.isEmpty()) params.add("bleed=" + bleedParts.joinIntoString(","));
 
         juce::String line = slotRef + ":" + targetRef;
-        if (!params.isEmpty())
-            line += ":" + params.joinIntoString(",");
+        if (!params.isEmpty()) line += ":" + params.joinIntoString(",");
         result.add(line);
     }
 
@@ -545,14 +650,13 @@ void PadContextPopup::applyToEngine() {
     this->mapTextDirty = false;
     this->recalculateLayerIndexOffset();
 
-    if (this->onMapTextChanged)
-        this->onMapTextChanged(text);
+    if (this->onMapTextChanged) this->onMapTextChanged(text);
 }
 
 void PadContextPopup::recalculateLayerIndexOffset() {
     auto mapText = this->savedInstrumentMapText.isNotEmpty()
-                       ? this->savedInstrumentMapText
-                       : this->engine.getSuggestedInstrumentMapText();
+        ? this->savedInstrumentMapText
+        : this->engine.getSuggestedInstrumentMapText();
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto& entries = parseResult.value.entries;
 
@@ -565,26 +669,21 @@ void PadContextPopup::recalculateLayerIndexOffset() {
             for (const auto& filter : entry.slotArticulationFilter)
                 if (filter == this->artName) matchesArt = true;
         }
-        if (matchesArt)
-            foundFirstMatch = true;
-        else if (!foundFirstMatch)
-            ++this->layerIndexOffset;
+        if (matchesArt) foundFirstMatch = true;
+        else if (!foundFirstMatch) ++this->layerIndexOffset;
     }
 }
 
 void PadContextPopup::flushMapText() {
-    if (!this->mapTextDirty)
-        return;
+    if (!this->mapTextDirty) return;
 
     auto text = this->generateFullMapText();
-    if (text.trim().isEmpty())
-        return;
+    if (text.trim().isEmpty()) return;
 
     this->savedInstrumentMapText = text;
     this->mapTextDirty = false;
 
-    if (this->onMapTextChanged)
-        this->onMapTextChanged(text);
+    if (this->onMapTextChanged) this->onMapTextChanged(text);
 }
 
 // ─── Source picker ────────────────────────────────────────────────────────────
@@ -608,6 +707,8 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
             ? this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath()
             : juce::String();
         this->updateSourceDisplay(layer);
+        this->rebuildBleedControls(layer);
+        this->resized();
         juce::MessageManager::callAsync([this] {
             this->dismissSourcePicker();
             this->applyToEngine();
@@ -615,9 +716,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
         });
     };
 
-    auto& pickerCallout = juce::CallOutBox::launchAsynchronously(std::move(pickerPopup),
-                                                                 layer->sourceButton->getScreenBounds(),
-                                                                 nullptr);
+    auto& pickerCallout = juce::CallOutBox::launchAsynchronously(std::move(pickerPopup), layer->sourceButton->getScreenBounds(), nullptr);
     this->activePickerCallout = &pickerCallout;
 }
 
@@ -659,8 +758,7 @@ void PadContextPopup::resized() {
 
     // MIDI: right-aligned in header
     const int midiControlW = this->midiAssignmentControl ? this->midiAssignmentControl->getPreferredWidth() : 0;
-    if (this->midiAssignmentControl)
-        this->midiAssignmentControl->setBounds(headerRow.removeFromRight(midiControlW).reduced(0, 2));
+    if (this->midiAssignmentControl) this->midiAssignmentControl->setBounds(headerRow.removeFromRight(midiControlW).reduced(0, 2));
     headerRow.removeFromRight(4);
     this->midiHeaderLabel.setBounds(headerRow.removeFromRight(32).reduced(0, 2));
 
@@ -684,8 +782,7 @@ void PadContextPopup::resized() {
     const int groupPad = 4;
 
     const int contentHeight = static_cast<int>(this->layerRows.size()) * (layerRowH + 2);
-    this->layerContent.setSize(area.getWidth() - (this->layerViewport.isVerticalScrollBarShown() ? this->layerViewport.getScrollBarThickness() : 0),
-                               juce::jmax(area.getHeight(), contentHeight));
+    this->layerContent.setSize(area.getWidth() - (this->layerViewport.isVerticalScrollBarShown() ? this->layerViewport.getScrollBarThickness() : 0), juce::jmax(area.getHeight(), contentHeight));
 
     auto contentArea = this->layerContent.getLocalBounds();
     for (auto* layer : this->layerRows) {
@@ -729,6 +826,8 @@ void PadContextPopup::resized() {
             for (auto& bleedCtrl : layer->micBleeds) {
                 bleedCtrl->bleedPot->setBounds(bleedInner.removeFromLeft(actualBleedW).withHeight(potH));
             }
+        } else {
+            layer->bleedGroupBounds = {};
         }
 
         contentArea.removeFromTop(2); // gap between layers
