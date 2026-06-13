@@ -38,8 +38,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->outputGroupLabel.setText("Advanced / Output Layout", juce::dontSendNotification);
     UIHelpers::configureSectionLabel(this->outputGroupLabel);
     this->contentComponent.addAndMakeVisible(this->outputGroupLabel);
-    this->micLayoutCombo.getProperties().set("squareCorners", true);
-    this->micLayoutCombo.setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
+    UIHelpers::configureComboBox(this->micLayoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
     this->contentComponent.addAndMakeVisible(this->micLayoutCombo);
     UIHelpers::configureControlButton(this->saveMicLayoutButton);
     this->contentComponent.addAndMakeVisible(this->saveMicLayoutButton);
@@ -87,9 +86,9 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     // ── Hi-Hat / Polyphony ──
     this->addPot("Poly Xfade", "Crossfade time when same zone re-triggers. Lower = harder choke, higher = smoother overlap.",
                  &settings.polyphonyCrossfadeTimeoutSec, 0.01f, 2.0f, 0.01f);
-    this->addPot("Pedal Xfade", "Crossfade time for hi-hat pedal transitions. Lower = tighter response, higher = smoother.",
+    this->addPot("Pdl Xfade", "Crossfade time for hi-hat pedal transitions. Lower = tighter response, higher = smoother.",
                  &settings.hihatPedalCrossfadeSec, 0.01f, 1.0f, 0.01f);
-    this->addPot("Pedal Min", "Min remaining audio before pedal can replace voice. Prevents audible cuts on fast pedaling.",
+    this->addPot("Pdl Min", "Min remaining audio (sec) before pedal can replace voice. Prevents audible cuts on fast pedaling.",
                  &settings.hihatPedalMinRemainingSec, 0.01f, 0.5f, 0.01f);
     this->addPot("Cross-Art dB", "dB margin for cross-articulation hi-hat choke. Higher = more forgiving, lower = stricter choking.",
                  &settings.hihatCrossArtChokeDbMargin, 0.0f, 20.0f, 0.5f);

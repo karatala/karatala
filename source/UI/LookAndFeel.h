@@ -47,6 +47,8 @@ public:
     void drawScrollbar(juce::Graphics& g, juce::ScrollBar& scrollbar, int x, int y, int width, int height, bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown) override;
     void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override;
     void drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area, bool isSeparator, bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu, const juce::String& text, const juce::String& shortcutKeyText, const juce::Drawable* icon, const juce::Colour* textColour) override;
+    juce::Font getComboBoxFont(juce::ComboBox& comboBox) override;
+    juce::Font getPopupMenuFont() override;
     juce::Font getTextButtonFont(juce::TextButton& button, int buttonHeight) override;
     juce::PopupMenu::Options getOptionsForComboBoxPopupMenu(juce::ComboBox& cb, juce::Label& label) override;
     void drawTabButton(juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown) override;

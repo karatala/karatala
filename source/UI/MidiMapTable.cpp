@@ -18,10 +18,7 @@ MidiMapTable::MidiMapTable() {
     this->addAndMakeVisible(this->layoutLabel);
 
     this->addAndMakeVisible(this->presetCombo);
-    this->presetCombo.getProperties().set("squareCorners", true);
-    this->presetCombo.getProperties().set("layoutSelector", true);
-    this->presetCombo.setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
-    this->presetCombo.setColour(juce::ComboBox::textColourId, UITheme::Colours::textPrimary);
+    UIHelpers::configureComboBox(this->presetCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
     this->presetCombo.setTextWhenNothingSelected("(no presets)");
     this->presetCombo.onChange = [this] {
         int selectedId = this->presetCombo.getSelectedId();
@@ -128,10 +125,7 @@ void MidiMapTable::buildRows() {
     auto setupControllerRow = [this, &setupCommonRow](std::unique_ptr<MapRow>& row, int rowIdx) {
         setupCommonRow(row);
         row->controllerCombo = std::make_unique<juce::ComboBox>();
-        row->controllerCombo->getProperties().set("squareCorners", true);
-        row->controllerCombo->getProperties().set("midiControllerList", true);
-        row->controllerCombo->setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
-        row->controllerCombo->setColour(juce::ComboBox::textColourId, UITheme::Colours::textPrimary);
+        UIHelpers::configureComboBox(*row->controllerCombo, UIHelpers::ComboBoxStyle::MidiControllerList);
         for (int controllerNumber = 0; controllerNumber <= 127; ++controllerNumber)
             row->controllerCombo->addItem(getControllerItemText(controllerNumber), controllerNumber + 1);
 

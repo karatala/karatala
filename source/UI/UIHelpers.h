@@ -8,6 +8,14 @@
 
 namespace UIHelpers {
 
+enum class ComboBoxStyle {
+    Standard,
+    LayoutSelector,
+    MidiControllerList
+};
+
+void configureComboBox(juce::ComboBox& comboBox, ComboBoxStyle style = ComboBoxStyle::Standard);
+
 void configureCaptionLabel(juce::Label& label,
                            juce::Justification justification = juce::Justification::centred,
                            juce::Colour colour = UITheme::Colours::textSecondary);

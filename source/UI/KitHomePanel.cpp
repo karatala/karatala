@@ -54,10 +54,10 @@ KitHomePanel::KitHomePanel(DrumKitEngine& engine)
     this->contentComponent.addAndMakeVisible(this->micWarningLabel);
     this->contentComponent.addAndMakeVisible(this->loadButton);
 
-    for (auto* combo : { &this->layoutCombo, &this->kitCombo, &this->presetCombo, &this->micCombo }) {
-        combo->getProperties().set("squareCorners", true);
-        combo->setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
-    }
+    UIHelpers::configureComboBox(this->layoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
+    UIHelpers::configureComboBox(this->kitCombo);
+    UIHelpers::configureComboBox(this->presetCombo);
+    UIHelpers::configureComboBox(this->micCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
     for (auto* button : { &this->presetLoadButton, &this->presetSaveButton, &this->presetDuplicateButton, &this->presetDeleteButton, &this->loadButton })
         UIHelpers::configureControlButton(*button);
 
@@ -244,6 +244,7 @@ void KitHomePanel::rebuildSlotRows() {
         row->slotLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
         UIHelpers::configureTableRowLabel(row->slotLabel);
         this->contentComponent.addAndMakeVisible(row->slotLabel);
+        UIHelpers::configureComboBox(row->sourceCombo);
         this->contentComponent.addAndMakeVisible(row->sourceCombo);
         row->sourceCombo.addItem("(empty)", 1);
 

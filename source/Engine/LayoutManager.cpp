@@ -202,8 +202,8 @@ instruments:
     display: China 1
     position: right
     articulations:
-      - { notes: [52], code: edge }
       - { notes: [4], code: bow }
+      - { notes: [52], code: edge }
 
   - id: china2
     display: China 2
@@ -233,7 +233,7 @@ instruments:
       - { notes: [32], code: edge }
 
   - id: perc1
-    display: Vibraslap/Sticks
+    display: Vibraslap/Cowbel
     articulations:
       - { notes: [34], code: center }
       - { notes: [58], code: rim }

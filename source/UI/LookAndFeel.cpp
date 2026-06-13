@@ -160,7 +160,9 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*
 }
 
 void LookAndFeel::positionComboBoxText(juce::ComboBox& cb, juce::Label& labelToPosition) {
-    labelToPosition.setBounds(cb.getLocalBounds().reduced(6));
+    labelToPosition.setFont(this->getComboBoxFont(cb));
+    labelToPosition.setJustificationType(juce::Justification::centredLeft);
+    labelToPosition.setBounds(cb.getLocalBounds().reduced(8, 2).withTrimmedRight(18));
 }
 
 void LookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar& /*scrollbar*/, int x, int y, int width, int height, bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown) {
@@ -192,6 +194,7 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
             g.fillRect(area.reduced(1, 1));
         }
 
+        g.setFont(UITheme::Fonts::popupMenu());
         g.setColour(UITheme::Colours::textPrimary.withAlpha(isActive ? 0.85f : 0.25f));
         g.drawText(text, area.withTrimmedLeft(25).withTrimmedRight(4), juce::Justification::left);
 
@@ -217,6 +220,14 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
     }
 }
 
+juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& /*comboBox*/) {
+    return UITheme::Fonts::comboBox();
+}
+
+juce::Font LookAndFeel::getPopupMenuFont() {
+    return UITheme::Fonts::popupMenu();
+}
+
 juce::PopupMenu::Options LookAndFeel::getOptionsForComboBoxPopupMenu(juce::ComboBox& cb, juce::Label& label) {
     auto options = juce::LookAndFeel_V4::getOptionsForComboBoxPopupMenu(cb, label);
 
@@ -234,7 +245,10 @@ juce::PopupMenu::Options LookAndFeel::getOptionsForComboBoxPopupMenu(juce::Combo
 
     const bool isMidiControllerList = cb.getProperties().getWithDefault("midiControllerList", false);
     if (isMidiControllerList) return options.withStandardItemHeight(18).withMinimumNumColumns(4).withMaximumNumColumns(4);
-    return options;
+    return options
+        .withMinimumWidth(cb.getWidth())
+        .withStandardItemHeight(22)
+        .withMaximumNumColumns(1);
 }
 
 void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, bool isMouseOver, bool isMouseDown) {

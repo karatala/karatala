@@ -4,6 +4,16 @@
 
 namespace UIHelpers {
 
+void configureComboBox(juce::ComboBox& comboBox, ComboBoxStyle style) {
+    comboBox.getProperties().set("squareCorners", true);
+    comboBox.getProperties().set("layoutSelector", style == ComboBoxStyle::LayoutSelector);
+    comboBox.getProperties().set("midiControllerList", style == ComboBoxStyle::MidiControllerList);
+    comboBox.setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
+    comboBox.setColour(juce::ComboBox::textColourId, UITheme::Colours::textPrimary);
+    comboBox.setColour(juce::ComboBox::arrowColourId, UITheme::Colours::textSecondary);
+    comboBox.setColour(juce::ComboBox::outlineColourId, UITheme::Colours::borderSubtle);
+}
+
 void configureCaptionLabel(juce::Label& label,
                            juce::Justification justification,
                            juce::Colour colour) {

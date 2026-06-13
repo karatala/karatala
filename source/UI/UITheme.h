@@ -64,6 +64,8 @@ namespace Fonts {
     inline juce::Font small() { return juce::Font(juce::FontOptions(9.0f)); }
     inline juce::Font table() { return juce::Font(juce::FontOptions(10.0f)); }
     inline juce::Font tableSmall() { return table().withHeight(11.0f); }
+    inline juce::Font comboBox() { return juce::Font(juce::FontOptions(12.0f)); }
+    inline juce::Font popupMenu() { return comboBox(); }
     inline juce::Font mono() { return juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName())); }
     inline juce::Font sectionTitle() { return juce::Font(juce::FontOptions(13.0f).withStyle("Bold")); }
 }
