@@ -1,14 +1,7 @@
 #include "InstrumentSynth.h"
 #include "DrumKitEngine.h"
+#include "HiHatTransitionPolicy.h"
 #include <cmath>
-
-// Small hysteresis (in CC units 0..127) to avoid rapid flips when controller
-// value jitters around an articulation boundary.
-// static constexpr int HIHAT_PEDAL_CC_HYSTERESIS = 2;
-// When true, CC-driven hi-hat transitions that would target a struck articulation
-// (e.g. edge[tight]) will be redirected to the "pedal" articulation at the same
-// poc rank if one exists.  Pedal samples carry no stick-attack transient and
-// sound more natural for pure foot-closure moves.
 
 void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     if (midiMessage.isNoteOn()) {
@@ -53,7 +46,6 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     const float minRemainingSec = settings.hihatTransitionMinRemainingSec.load();
     const float silenceFloorDb = settings.hihatTransitionSilenceFloorDb.load();
     const auto missingDecayPolicy = settings.hihatMissingDecayPolicy.load();
-    //FIXME: currently this spams sample change on each tiny change of controller, need to make it make change only if articulation index actually changes, and also avoid spamming when controller value is around articulation change threshold +-
     
     // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
     // so new more open sample plays from offset based on rms level, for example we have analyzed data
@@ -70,44 +62,34 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     if (!this->ccToArticulationMask[controllerNumber]) return;
 
     const auto& mapArr = this->ccToArticulationTable[controllerNumber];
-    uint8_t newArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
-    if (newArtIdx >= this->runtimeArticulations.size()) {
+    const uint8_t mappedArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
+    if (mappedArtIdx >= this->runtimeArticulations.size()) {
         if (LOG_ENABLED(Warning))
             LOG(Warning, "handleController: CC " + juce::String(controllerNumber) 
-                + " mapped to out-of-range articulation idx=" + juce::String((int)newArtIdx)
+                + " mapped to out-of-range articulation idx=" + juce::String((int)mappedArtIdx)
                 + " (runtime size=" + juce::String((int)this->runtimeArticulations.size()) + ")");
         this->lastCcValue[controllerNumber] = controllerValue;
         return;
     }
 
-    // Check cached last seen value/articulation for this CC to avoid spamming
-    // articulation change logic on tiny controller changes.
+    const int cachedArtIdx = this->lastCcArticulation[controllerNumber];
+    std::array<int, 256> pocByArticulation {};
+    const size_t articulationCount = juce::jmin(this->runtimeArticulations.size(), pocByArticulation.size());
+    for (size_t articulationIdx = 0; articulationIdx < articulationCount; ++articulationIdx)
+        pocByArticulation[articulationIdx] = this->runtimeArticulations[articulationIdx].pocValue;
 
-    if (this->lastCcArticulation[controllerNumber] >= 0 && this->lastCcArticulation[controllerNumber] == static_cast<int8_t>(newArtIdx)) {
-        // Articulation already applied for this controller; just remember latest value
+    const int selectedArtIdx = HiHatTransitionPolicy::selectOpennessArticulation(
+        mapArr,
+        std::span<const int>(pocByArticulation.data(), articulationCount),
+        controllerValue,
+        this->lastCcValue[controllerNumber],
+        cachedArtIdx,
+        boundaryHysteresisCc);
+    if (selectedArtIdx == cachedArtIdx) {
         this->lastCcValue[controllerNumber] = controllerValue;
         return;
     }
-
-    const int cachedArtIdx = this->lastCcArticulation[controllerNumber];
-    if (boundaryHysteresisCc > 0
-        && cachedArtIdx >= 0
-        && cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())) {
-        const int lastControllerValue = this->lastCcValue[controllerNumber];
-        const int direction = controllerValue > lastControllerValue ? 1 : (controllerValue < lastControllerValue ? -1 : 0);
-        if (direction != 0) {
-            const int probeValue = juce::jlimit(0, 127, controllerValue - direction * boundaryHysteresisCc);
-            const uint8_t probeArtIdx = mapArr[probeValue];
-            if (probeArtIdx < this->runtimeArticulations.size()) {
-                const int candidatePoc = this->runtimeArticulations[newArtIdx].pocValue;
-                const int probePoc = this->runtimeArticulations[probeArtIdx].pocValue;
-                if (candidatePoc != probePoc) {
-                    this->lastCcValue[controllerNumber] = controllerValue;
-                    return;
-                }
-            }
-        }
-    }
+    const uint8_t newArtIdx = static_cast<uint8_t>(selectedArtIdx);
 
     LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
@@ -198,64 +180,58 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         const auto& oldEnv = ss->decayEnvelope;
         const auto& newEnv = targetSe->sound->decayEnvelope;
         const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
-        const double elapsedMs = (voice->sourceSamplePosition / oldSrcRate) * 1000.0;
-        if (elapsedMs < static_cast<double>(attackGuardSec * 1000.0f)) {
-            ++skippedOther;
-            continue;
-        }
+        const float elapsedMs = static_cast<float>((voice->sourceSamplePosition / oldSrcRate) * 1000.0);
 
         const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
         const float currentAudibleDb = oldEnv.isValid()
-            ? oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs)) + oldVelDb
+            ? oldEnv.getAbsoluteDbAtMs(elapsedMs) + oldVelDb
             : voice->getEstimatedCurrentDb();
-        if (currentAudibleDb < silenceFloorDb) {
-            ++skippedOther;
-            continue;
-        }
-
-        const float replacementVelDb = oldVelDb;
-        const float targetRelativeDb = currentAudibleDb + tailMatchBiasDb - replacementVelDb;
 
         const auto& targetBuffer = *targetSe->sound->buffer;
         const double targetSrcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-        const double sampleLengthMs = targetSrcRate > 0.0
-            ? (static_cast<double>(targetBuffer.getNumSamples()) / targetSrcRate) * 1000.0
-            : 0.0;
-        if (sampleLengthMs <= 0.0) {
-            ++skippedNoTarget;
-            continue;
-        }
-
-        const bool hasDecayMatch = oldEnv.isValid() && newEnv.isValid();
-        if (!hasDecayMatch && missingDecayPolicy == HiHatMissingDecayPolicy::KeepTail) {
-            ++skippedNoEnvelope;
-            continue;
-        }
-
-        const float maximumOffsetMs = static_cast<float>(sampleLengthMs);
-        const float targetPeakMs = juce::jmin(newEnv.isValid() ? newEnv.peakMs : 0.0f, maximumOffsetMs);
-        const float fallbackMs = juce::jlimit(
-            targetPeakMs,
-            maximumOffsetMs,
-            juce::jmax(targetPeakMs, static_cast<float>(elapsedMs)));
-        float targetMs = fallbackMs;
-        if (hasDecayMatch) {
-            const float matchedMs = newEnv.getMsAtAbsoluteDb(targetRelativeDb);
-            if (matchedMs < 0.0f) {
-                ++skippedNoDbMatch;
-                continue;
+        const float sampleLengthMs = targetSrcRate > 0.0
+            ? static_cast<float>((static_cast<double>(targetBuffer.getNumSamples()) / targetSrcRate) * 1000.0)
+            : 0.0f;
+        const HiHatTransitionPolicy::OffsetResult offsetResult = HiHatTransitionPolicy::calculateDecayMatchedOffset({
+            &oldEnv,
+            &newEnv,
+            elapsedMs,
+            currentAudibleDb,
+            oldVelDb,
+            sampleLengthMs,
+            attackGuardSec * 1000.0f,
+            silenceFloorDb,
+            tailMatchAmount,
+            tailMatchBiasDb,
+            minRemainingSec * 1000.0f,
+            missingDecayPolicy,
+        });
+        if (!offsetResult.succeeded()) {
+            switch (offsetResult.status) {
+                case HiHatTransitionPolicy::OffsetStatus::MissingEnvelope:
+                    ++skippedNoEnvelope;
+                    break;
+                case HiHatTransitionPolicy::OffsetStatus::NoDecayMatch:
+                    ++skippedNoDbMatch;
+                    break;
+                case HiHatTransitionPolicy::OffsetStatus::TooLittleRemaining:
+                    ++skippedTooLate;
+                    break;
+                case HiHatTransitionPolicy::OffsetStatus::InvalidSampleLength:
+                    ++skippedNoTarget;
+                    break;
+                case HiHatTransitionPolicy::OffsetStatus::AttackGuard:
+                case HiHatTransitionPolicy::OffsetStatus::BelowSilenceFloor:
+                    ++skippedOther;
+                    break;
+                case HiHatTransitionPolicy::OffsetStatus::Success:
+                    break;
             }
-            targetMs = fallbackMs + tailMatchAmount * (matchedMs - fallbackMs);
-        }
-
-        const float clampedMs = juce::jlimit(targetPeakMs, maximumOffsetMs, targetMs);
-
-        // If the offset leaves less than minimum useful audio, skip replacement
-        const float remainingMs = static_cast<float>(sampleLengthMs) - clampedMs;
-        if (remainingMs < minRemainingSec * 1000.0f) {
-            ++skippedTooLate;
             continue;
         }
+
+        const float targetRelativeDb = offsetResult.targetRelativeDb;
+        const float clampedMs = offsetResult.offsetMs;
 
         const double offsetMs = static_cast<double>(clampedMs);
 
@@ -332,7 +308,8 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         }
 
         const auto& currentArt = this->runtimeArticulations[static_cast<size_t>(currentArtIdx)];
-        const float transitionCrossfadeSec = newArt.pocValue > currentArt.pocValue
+        const auto transitionDirection = HiHatTransitionPolicy::getDirection(currentArt.pocValue, newArt.pocValue);
+        const float transitionCrossfadeSec = transitionDirection == HiHatTransitionPolicy::Direction::Closing
             ? closeCrossfadeSec
             : openCrossfadeSec;
         voice->requestFadeOut(transitionCrossfadeSec);

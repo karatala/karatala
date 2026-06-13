@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress. Phase 1 was completed on June 13, 2026. Phases 2-6 remain proposed.
+In progress. Phases 1 and 2 were completed on June 13, 2026. Phases 3-6 remain proposed.
 
 Phase 1 completion:
 
@@ -13,6 +13,17 @@ Phase 1 completion:
 - migrated UI, YAML, editor, and realtime consumers to explicit settings loads/stores;
 - added focused `EngineSettings` tests;
 - verified the full suite: 40 test cases and 323 assertions passed.
+
+Phase 2 completion:
+
+- added allocation-free `HiHatTransitionPolicy` helpers with non-owning `std::span` inputs;
+- extracted openness selection with bidirectional hysteresis and MIDI endpoint handling;
+- extracted opening/closing direction, bounded eligible-group ranking, and canonical reference-mic selection;
+- extracted decay-matched offset calculation with explicit failure statuses and missing-data fallback;
+- added linear, smooth-step, and equal-power transition gain calculations;
+- added independent foot-sample policy decisions;
+- delegated the current controller path to the shared hysteresis, direction, and offset helpers;
+- added focused policy coverage: 8 test cases and 40 assertions passed.
 
 ## Goal
 
@@ -273,6 +284,8 @@ Exit criteria:
 - no UI control writes directly to audio-thread-read storage.
 
 ### Phase 2: Pure Transition Policy
+
+Status: Complete.
 
 Extract non-owning, allocation-free policy helpers for:
 
