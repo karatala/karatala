@@ -10,6 +10,7 @@
 #include "UI/DismissOverlay.h"
 #include "UI/MidiMapTable.h"
 #include "UI/InstrumentConfigPanel.h"
+#include "UI/KitHomePanel.h"
 #include "UI/PadContextPopup.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
@@ -33,7 +34,10 @@ private:
     Sidebar sidebar;
     StatusBar statusBar;
 
-    // Mode: Zen / Zoned — drum pad grid
+    // Mode: Kit - first-run setup and instrument-map presets
+    std::unique_ptr<KitHomePanel> kitHomePanel;
+
+    // Mode: Zen / Zone — drum pad grid
     DrumPadGrid drumPadGrid;
 
     // Mode: Map — MIDI note assignment table
@@ -66,6 +70,7 @@ private:
     void refreshMidiMapTableIfNeeded(bool force = false);
     void refreshInstrumentConfigIfNeeded(bool force = false);
     void setupSidebarAndStatusBar();
+    void setupKitMode();
     void setupDrumPadGridMode();
     void setupRawMode();
     void setupMapMode();
@@ -86,7 +91,7 @@ private:
     bool instrumentConfigDirty = true;
     juce::String instrumentConfigSnapshot;
 
-    ViewMode activeMode = ViewMode::Zen;
+    ViewMode activeMode = ViewMode::Kit;
     void setViewMode(ViewMode mode);
     void showComponentsForMode(ViewMode mode);
 

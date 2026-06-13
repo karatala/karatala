@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <numeric>
 
-namespace { //FIXME: do we really need this?
+namespace { //FIXME: do we really need namespace?
 
 juce::String getPadDisplayName(const KitLayout::InstrumentSlot& slot) { return slot.display.isNotEmpty() ? slot.display : slot.id; }
 
@@ -19,42 +19,42 @@ void drawPadLabel(juce::Graphics& gfx,
     gfx.drawFittedText(text, bounds, juce::Justification::centred, maxLines, 0.9f);
 }
 
-int articulationSortKey(const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
-    auto name = art.codeRaw.toLowerCase();
-    auto baseName = name.upToFirstOccurrenceOf("[", false, false).trim();
-    auto expr = name.fromFirstOccurrenceOf("[", false, false).upToFirstOccurrenceOf("]", false, false).trim();
+// int articulationSortKey(const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
+//     auto name = art.codeRaw.toLowerCase();
+//     auto baseName = name.upToFirstOccurrenceOf("[", false, false).trim();
+//     auto expr = name.fromFirstOccurrenceOf("[", false, false).upToFirstOccurrenceOf("]", false, false).trim();
 
-    if (baseName == "bell") return 0;
-    if (baseName == "center") return 0;
-    if (baseName == "bow") {
-        if (expr == "tight") return 10;
-        if (expr == "open") return 12;
-        if (expr.isEmpty()) return 14;
-        return 16;
-    }
-    if (baseName == "edge") {
-        if (expr == "tight") return 20;
-        if (expr == "open") return 22;
-        if (expr.isEmpty()) return 24;
-        return 23;
-    }
-    if (baseName == "rim") return 30;
-    if (baseName == "sidestick") return 40;
-    if (baseName == "pedal") {
-        if (expr.isEmpty()) return 50;
-        return 52;
-    }
-    return 100;
-}
+//     if (baseName == "bell") return 0;
+//     if (baseName == "center") return 0;
+//     if (baseName == "bow") {
+//         if (expr == "tight") return 10;
+//         if (expr == "open") return 12;
+//         if (expr.isEmpty()) return 14;
+//         return 16;
+//     }
+//     if (baseName == "edge") {
+//         if (expr == "tight") return 20;
+//         if (expr == "open") return 22;
+//         if (expr.isEmpty()) return 24;
+//         return 23;
+//     }
+//     if (baseName == "rim") return 30;
+//     if (baseName == "sidestick") return 40;
+//     if (baseName == "pedal") {
+//         if (expr.isEmpty()) return 50;
+//         return 52;
+//     }
+//     return 100;
+// }
 
 // Build a display-order permutation: result[displayIdx] = originalIdx
 std::vector<int> buildDisplayOrder(const std::vector<KitLayout::InstrumentSlot::ArticulationTrigger>& articulations) {
     std::vector<int> order(articulations.size());
     std::iota(order.begin(), order.end(), 0);
-    std::sort(order.begin(), order.end(), [&](int lhs, int rhs) {
-        return articulationSortKey(articulations[static_cast<size_t>(lhs)])
-             < articulationSortKey(articulations[static_cast<size_t>(rhs)]);
-    });
+    // std::sort(order.begin(), order.end(), [&](int lhs, int rhs) {
+    //     return articulationSortKey(articulations[static_cast<size_t>(lhs)])
+    //          < articulationSortKey(articulations[static_cast<size_t>(rhs)]);
+    // });
     return order;
 }
 
@@ -72,9 +72,6 @@ int findMainArticulationDisplayIdx(const std::vector<KitLayout::InstrumentSlot::
 
 } // namespace
 
-DrumPad::DrumPad() {
-}
-
 void DrumPad::setSlot(const KitLayout::InstrumentSlot* slot) {
     this->slotPtr = slot;
     this->refreshDisplayOrder();
@@ -86,7 +83,7 @@ void DrumPad::setPadMode(PadMode mode) {
     repaint();
 }
 
-void DrumPad::refreshDisplayOrder() {
+void DrumPad::refreshDisplayOrder() { //FIXME: get rid of display order, we will keep default order as it was specified in kit layout yaml
     this->displayOrder.clear();
     if (!this->slotPtr || this->slotPtr->articulations.empty())
         return;
@@ -120,7 +117,7 @@ void DrumPad::timerCallback() {
 juce::Colour DrumPad::getColourForType(KitLib::InstrumentSpec::Type type) { return UITheme::Colours::instrumentType(type); }
 
 void DrumPad::paint(juce::Graphics& g) {
-    if (this->padMode == PadMode::Zoned) this->paintZoned(g);
+    if (this->padMode == PadMode::Zone) this->paintZoned(g);
     else this->paintZen(g);
 }
 
@@ -226,7 +223,7 @@ void DrumPad::mouseDown(const juce::MouseEvent& event) {
     if (!this->slotPtr)
         return;
     int artIdx = 0;
-    if (this->padMode == PadMode::Zoned)
+    if (this->padMode == PadMode::Zone)
         artIdx = this->getZoneIndexAt(event.getPosition().getY());
 
     if (event.mods.isPopupMenu()) {

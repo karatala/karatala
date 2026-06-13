@@ -70,7 +70,7 @@ vendor: Haribol
 version: 1.0
 instruments:
   - id: kick1
-    display: Kick
+    display: Kick 1
     articulations:
       - { notes: [35,36], code: center }
 
@@ -130,7 +130,6 @@ instruments:
     controllers:
       - { notes: [41], code: zon_ctr_rim, number: 18 }
 
-
   - id: drum1
     display: Octoban 1
     articulations:
@@ -141,9 +140,9 @@ instruments:
     articulations:
       - { notes: [26], code: center }
 
-
   - id: hihat1
     display: Hi-Hat 1
+    position: left
     articulations:
       - { notes: [46], code: bow[open] }
       - { notes: [42], code: bow[tight] }
@@ -157,6 +156,7 @@ instruments:
 
   - id: hihat2
     display: Hi-Hat Stax
+    position: right
     articulations:
       - { notes: [ 6], code: bow[tight] }
       - { notes: [10], code: bow[open] }
@@ -168,6 +168,7 @@ instruments:
 
   - id: ride1
     display: Ride 1
+    position: right
     articulations:
       - { notes: [53], code: bell }
       - { notes: [51], code: bow }
@@ -177,6 +178,7 @@ instruments:
 
   - id: ride2
     display: Ride 2
+    position: left
     articulations:
       - { notes: [29], code: bell }
       - { notes: [27], code: bow }
@@ -184,69 +186,69 @@ instruments:
 
   - id: crash1
     display: Crash 1
+    position: left
     articulations:
       - { notes: [25], code: bow }
       - { notes: [49], code: edge }
 
   - id: crash2
     display: Crash 2
+    position: right
     articulations:
       - { notes: [33], code: bow }
       - { notes: [57], code: edge }
 
+  - id: china1
+    display: China 1
+    position: right
+    articulations:
+      - { notes: [52], code: edge }
+      - { notes: [4], code: bow }
+
+  - id: china2
+    display: China 2
+    position: left
+    articulations:
+      - { notes: [28], code: edge }
+
   - id: splash1
     display: Splash 1
+    position: left
     articulations:
       - { notes: [54], code: bow }
       - { notes: [55], code: edge }
 
   - id: splash2
     display: Splash 2
+    position: right
     articulations:
       - { notes: [30], code: bow }
       - { notes: [31], code: edge }
 
-  - id: china1
-    display: China 1
+  - id: cymbal1
+    display: Cymbal 1
+    position: right
     articulations:
-      - { notes: [52], code: edge }
-
-  - id: china2
-    display: China 2
-    articulations:
-      - { notes: [28], code: edge }
-
+      - { notes: [32], code: bow }
+      - { notes: [32], code: edge }
 
   - id: perc1
-    display: Snap Clap
-    articulations:
-      - { notes: [15], code: center }
-      - { notes: [39], code: rim }
-    
-  - id: perc2
-    display: Snap/Clap
-    articulations:
-      - { notes: [15], code: center }
-      - { notes: [39], code: rim }
-
-  - id: perc3
-    display: Timbale/Block 1
-    articulations:
-      - { notes: [65], code: center }
-      - { notes: [76], code: rim }
-
-  - id: perc4
-    display: Timbale/Block 2
-    articulations:
-      - { notes: [66], code: center }
-      - { notes: [77], code: rim }
-
-  - id: perc5
     display: Vibraslap/Sticks
     articulations:
       - { notes: [34], code: center }
       - { notes: [58], code: rim }
 
+  - id: perc2
+    display: Timbale/Block 1
+    articulations:
+      - { notes: [65], code: center }
+      - { notes: [76], code: rim }
+
+  - id: perc3
+    display: Timbale/Block 2
+    articulations:
+      - { notes: [66], code: center }
+      - { notes: [77], code: rim }
 
 )yaml";
     auto result = LayoutTraits<KitLayout>::parseYaml(defaultYaml);

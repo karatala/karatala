@@ -5,9 +5,10 @@
 #include "UITheme.h"
 
 enum class ViewMode {
-    Zen = 0,
-    Zoned,
+    Kit = 0,
     Map,
+    Zen,
+    Zone,
     Instrument,
     Raw,
     Settings
@@ -35,12 +36,11 @@ private:
     static constexpr int buttonSize = UITheme::Sizes::modeButton;
     static constexpr int knobSize = UITheme::Sizes::sidebarKnob;
 
-    ViewMode activeMode = ViewMode::Zen;
+    ViewMode activeMode = ViewMode::Kit;
 
     struct ModeButton : public juce::TextButton {
         ViewMode mode;
-        explicit ModeButton(ViewMode mode, const juce::String& label)
-            : mode(mode) {
+        explicit ModeButton(ViewMode mode, const juce::String& label) : mode(mode) {
             this->setButtonText(label);
             this->setClickingTogglesState(false);
         }

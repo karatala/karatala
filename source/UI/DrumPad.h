@@ -4,11 +4,11 @@
 #include <vector>
 #include "../Engine/LayoutManager.h"
 
-enum class PadMode { Zen, Zoned };
+enum class PadMode { Zen, Zone };
 
 class DrumPad : public juce::Component, private juce::Timer {
 public:
-    explicit DrumPad();
+    explicit DrumPad() {}
     ~DrumPad() override = default;
 
     void paint(juce::Graphics& g) override;

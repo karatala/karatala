@@ -129,16 +129,11 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
         }
     }
 
-    auto micLayout = treeState.state["mic_layout"].toString();
+    auto micLayout = this->globalConfig.micLayout;
     if (micLayout.isEmpty() || !this->useMicLayout(micLayout)) {
-        if (this->activeMicLayoutPtr == nullptr) {
-            micLayout = this->globalConfig.micLayout;
-            if (micLayout.isEmpty() || !this->useMicLayout(micLayout)) {
-                LOG(Notice, "Using default mic layout");
-                auto src = this->getMicLayoutManager()->getDefault();
-                this->setMicLayout(src);
-            }
-        }
+        LOG(Notice, "Using default mic layout");
+        auto src = this->getMicLayoutManager()->getDefault();
+        this->setMicLayout(src);
     }
 
     auto instrumentMap = treeState.state["instrument_map"].toString();

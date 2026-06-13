@@ -71,11 +71,13 @@ public:
     juce::File getUserPresetsDir() const { return this->dataPath.getChildFile("presets"); }
 
     bool useKitLayout(juce::String name);
-    bool setKitLayoutDirect(KitLayout layout) { return this->setKitLayout(std::move(layout)); }
+    bool setKitLayoutDirect(KitLayout layout, bool reapplyCurrentMap = true) { return this->setKitLayout(std::move(layout), reapplyCurrentMap); }
     bool useMicLayout(juce::String name);
     bool useInstrumentMap(juce::String text);
 
     static ParseResult<InstrumentMap> parseInstrumentMapText(const juce::String& text);
+    static juce::String serializeInstrumentMap(const InstrumentMap& instrumentMap);
+    juce::String buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& kit) const;
 
     void mapDefaultKit();
     void mapKit(const KitLib::DrumKitSpec& kit);
@@ -87,6 +89,10 @@ public:
     const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
     const juce::String& getLastInstrumentMapStatus() const { return this->lastInstrumentMapStatus; }
     const juce::String& getSuggestedInstrumentMapText() const { return this->suggestedInstrumentMapText; }
+    const juce::String& getGlobalKitLayoutId() const { return this->globalConfig.kitLayout; }
+    const juce::String& getGlobalMicLayoutId() const { return this->globalConfig.micLayout; }
+    bool setGlobalKitLayoutId(const juce::String& layoutId);
+    bool setGlobalMicLayoutId(const juce::String& layoutId);
     void seedInstrumentMapFingerprints(const juce::String& mapText);
     juce::String buildReferenceText() const;
 
@@ -220,7 +226,7 @@ private:
     void initMicLayouts();
     void initSampleLibrary();
 
-    bool setKitLayout(KitLayout layout);
+    bool setKitLayout(KitLayout layout, bool reapplyCurrentMap = true);
     bool setMicLayout(MicLayout layout);
 
     bool applyKitLayout();

@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/EngineSettings.h"
+#include "../Engine/LayoutManager.h"
 #include "ParameterPot.h"
 #include "ScrollablePanel.h"
 #include "UITheme.h"
@@ -32,6 +33,11 @@ private:
     juce::Label tailGroupLabel;
     juce::Label hihatGroupLabel;
     juce::Label uiGridGroupLabel;
+    juce::Label outputGroupLabel;
+    juce::ComboBox micLayoutCombo;
+    juce::TextButton saveMicLayoutButton { "Set for future instances" };
+    juce::Label micLayoutWarningLabel;
+    std::vector<MicLayout> micLayouts;
 
     std::vector<std::unique_ptr<PotEntry>> pots;
 
@@ -49,6 +55,7 @@ private:
     void timerCallback() override;
     void queueSettingsSave();
     void flushPendingSettingsSave();
+    void rebuildMicLayouts();
 
     static constexpr int settingsSaveDebounceMs = 350;
 

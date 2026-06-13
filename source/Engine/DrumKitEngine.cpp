@@ -231,21 +231,14 @@ static void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int 
     synth.prepareToPlay(sampleRate, samplesPerBlock);
 }
 
-static std::unique_ptr<InstrumentSynth> createReplacementSynth(DrumKitEngine* owner,
-                                                               const KitLayout::InstrumentSlot& layoutSlot,
-                                                               const InstrumentSynth& source,
-                                                               double sampleRate,
-                                                               int samplesPerBlock) {
+static std::unique_ptr<InstrumentSynth> createReplacementSynth(DrumKitEngine* owner, const KitLayout::InstrumentSlot& layoutSlot, const InstrumentSynth& source, double sampleRate, int samplesPerBlock) {
     auto replacement = std::make_unique<InstrumentSynth>(owner, layoutSlot);
     replacement->setMicOutputMapping(source.getMicOutputMapping());
     replacement->setMicChannelCount(source.getMicChannelCount());
 
     const auto& routingContext = source.getLastRoutingContext();
     if (routingContext.isValid()) {
-        replacement->loadInstrumentWithSources(routingContext.defaultInstrument,
-                                               routingContext.artSources,
-                                               routingContext.allowedArticulationNameIds,
-                                               routingContext.artNameRemap);
+        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.artNameRemap);
     } else if (auto* loadedInstrument = source.getLoadedInstrumentSpec()) {
         replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument));
     }
@@ -260,6 +253,67 @@ static juce::String getSlotArticulationName(const KitLayout::InstrumentSlot::Art
     if (artName.isEmpty())
         artName = art.codeRaw;
     return artName;
+}
+
+static KitLib::InstrumentSpec* findMatchingKitInstrument(
+    const KitLayout::InstrumentSlot& layoutInstrument,
+    const KitLib::DrumKitSpec& kit,
+    std::unordered_set<KitLib::InstrumentSpec*>& usedInstruments,
+    std::map<KitLib::InstrumentSpec::Type, int>& nextIndexByType) {
+    KitLib::InstrumentSpec* matched = nullptr;
+
+    if (layoutInstrument.type != KitLib::InstrumentSpec::Type::Unknown) {
+        auto candidates = kit.getInstrumentsByType(layoutInstrument.type);
+        int requestedIdx = -1;
+        int pos = static_cast<int>(layoutInstrument.id.length()) - 1;
+        while (pos >= 0 && juce::CharacterFunctions::isDigit(layoutInstrument.id[pos])) --pos;
+        const auto digits = layoutInstrument.id.substring(pos + 1);
+        if (digits.isNotEmpty()) requestedIdx = digits.getIntValue() - 1;
+
+        if (requestedIdx >= 0 && requestedIdx < static_cast<int>(candidates.size()) 
+          && usedInstruments.find(candidates[static_cast<size_t>(requestedIdx)]) == usedInstruments.end()
+        ) {
+            matched = candidates[static_cast<size_t>(requestedIdx)];
+        }
+
+        if (matched == nullptr) {
+            int& next = nextIndexByType[layoutInstrument.type];
+            for (int idx = next; idx < static_cast<int>(candidates.size()); ++idx) {
+                if (usedInstruments.find(candidates[static_cast<size_t>(idx)]) == usedInstruments.end()) {
+                    matched = candidates[static_cast<size_t>(idx)];
+                    next = idx + 1;
+                    break;
+                }
+            }
+        }
+
+        if (matched == nullptr) {
+            for (int idx = 0; idx < static_cast<int>(candidates.size()); ++idx) {
+                if (usedInstruments.find(candidates[static_cast<size_t>(idx)]) == usedInstruments.end()) {
+                    matched = candidates[static_cast<size_t>(idx)];
+                    nextIndexByType[layoutInstrument.type] = idx + 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (matched == nullptr) {
+        const auto needle = layoutInstrument.id.trim().toLowerCase();
+        for (const auto& [id, instPtr] : kit.getInstrumentSpecsMap()) {
+            juce::ignoreUnused(id);
+            auto* candidate = instPtr.get();
+            if (candidate == nullptr || usedInstruments.find(candidate) != usedInstruments.end()) continue;
+            if (candidate->meta.codeRaw.trim().toLowerCase().contains(needle)
+                || candidate->meta.name.trim().toLowerCase().contains(needle)) {
+                matched = candidate;
+                break;
+            }
+        }
+    }
+
+    if (matched != nullptr) usedInstruments.insert(matched);
+    return matched;
 }
 }
 
@@ -311,6 +365,18 @@ bool DrumKitEngine::useKitLayout(juce::String name) {
 
     const KitLayout* ptr = this->getKitLayoutManager()->getLayoutById(name);
     if (ptr != nullptr) return this->setKitLayout(*ptr);
+
+    auto userFile = this->getUserPresetsDir().getChildFile(name + ".yml");
+    if (!userFile.existsAsFile())
+        userFile = this->getUserPresetsDir().getChildFile(name + ".yaml");
+    if (userFile.existsAsFile()) {
+        auto parsed = LayoutTraits<KitLayout>::parseYaml(userFile.loadFileAsString());
+        if (parsed.ok()) {
+            parsed.value.id = name;
+            parsed.value.rebuildIndices();
+            return this->setKitLayout(std::move(parsed.value));
+        }
+    }
     LOG(Warning, "KitLayout not found: " + name);
     return false;
 }
@@ -322,12 +388,34 @@ bool DrumKitEngine::useMicLayout(juce::String name) {
     return false;
 }
 
-bool DrumKitEngine::setKitLayout(KitLayout layout) {
+bool DrumKitEngine::setKitLayout(KitLayout layout, bool reapplyCurrentMap) {
     this->activeKitLayoutPtr = std::make_unique<KitLayout>(layout);
     const bool layoutApplied = this->applyKitLayout();
-    if (layoutApplied && this->lastAppliedInstrumentMapText.isNotEmpty())
+    if (layoutApplied && reapplyCurrentMap && this->lastAppliedInstrumentMapText.isNotEmpty())
         this->useInstrumentMap(this->lastAppliedInstrumentMapText);
     return layoutApplied;
+}
+
+bool DrumKitEngine::setGlobalKitLayoutId(const juce::String& layoutId) {
+    const auto trimmed = layoutId.trim();
+    if (trimmed.isEmpty()) return false;
+    if (trimmed != "default" && this->kitLayoutManagerPtr->getLayoutById(trimmed) == nullptr) {
+        const auto yml = this->getUserPresetsDir().getChildFile(trimmed + ".yml");
+        const auto yaml = this->getUserPresetsDir().getChildFile(trimmed + ".yaml");
+        if (!yml.existsAsFile() && !yaml.existsAsFile()) return false;
+    }
+    this->globalConfig.kitLayout = trimmed;
+    this->saveSettings();
+    return true;
+}
+
+bool DrumKitEngine::setGlobalMicLayoutId(const juce::String& layoutId) {
+    const auto trimmed = layoutId.trim();
+    if (trimmed.isEmpty()) return false;
+    if (trimmed != "default" && this->micLayoutManagerPtr->getLayoutById(trimmed) == nullptr) return false;
+    this->globalConfig.micLayout = trimmed;
+    this->saveSettings();
+    return true;
 }
 
 bool DrumKitEngine::setMicLayout(MicLayout layout) {
@@ -358,6 +446,79 @@ void DrumKitEngine::mapDefaultKit() {
     }
 }
 
+juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& kit) const {
+    InstrumentMap result;
+    std::unordered_set<KitLib::InstrumentSpec*> usedInstruments;
+    std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType;
+
+    for (const auto& slot : layout.instrumentSlots) {
+        auto* matched = findMatchingKitInstrument(slot, kit, usedInstruments, nextIndexByType);
+        if (matched == nullptr) continue;
+        InstrumentMapEntry entry;
+        entry.slotId = slot.id;
+        entry.kitRef = kit.meta.codeRaw;
+        entry.instCode = matched->meta.codeRaw;
+        result.entries.push_back(std::move(entry));
+    }
+
+    return serializeInstrumentMap(result);
+}
+
+juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrumentMap) {
+    juce::StringArray lines;
+
+    auto joinNames = [](const std::vector<juce::String>& names) {
+        juce::StringArray values;
+        for (const auto& name : names)
+            if (name.trim().isNotEmpty()) values.add(name.trim());
+        return values.joinIntoString(",");
+    };
+
+    for (const auto& entry : instrumentMap.entries) {
+        if (entry.slotId.trim().isEmpty() || entry.kitRef.trim().isEmpty()) continue;
+
+        juce::String slotRef = entry.slotId.trim();
+        const auto slotArts = joinNames(entry.slotArticulationFilter);
+        if (slotArts.isNotEmpty())
+            slotRef += "/" + slotArts;
+
+        juce::String targetRef = entry.kitRef.trim();
+        if (entry.instCode.trim().isNotEmpty())
+            targetRef += "/" + entry.instCode.trim();
+        const auto sourceArts = joinNames(entry.articulationFilter);
+        if (sourceArts.isNotEmpty())
+            targetRef += "/" + sourceArts;
+
+        juce::StringArray params;
+        if (entry.tuningCents.has_value()) params.add("tuning=" + juce::String(*entry.tuningCents));
+        if (entry.attackTimeMs.has_value()) params.add("attack=" + juce::String(*entry.attackTimeMs));
+        if (entry.decayTimeMs.has_value()) params.add("decay=" + juce::String(*entry.decayTimeMs));
+        if (entry.volumeDb.has_value()) params.add("vol=" + juce::String(*entry.volumeDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
+        if (entry.flipLR) params.add("flipLR=1");
+        if (entry.flipPhase) params.add("flipPhase=1");
+        if (!entry.micBleedLevels.empty()) {
+            std::vector<juce::String> keys;
+            keys.reserve(entry.micBleedLevels.size());
+            for (const auto& [key, value] : entry.micBleedLevels) {
+                juce::ignoreUnused(value);
+                keys.push_back(key);
+            }
+            std::sort(keys.begin(), keys.end());
+            juce::StringArray bleedValues;
+            for (const auto& key : keys)
+                bleedValues.add(key + ":" + juce::String(entry.micBleedLevels.at(key), 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
+            params.add("bleed=" + bleedValues.joinIntoString(","));
+        }
+
+        auto line = slotRef + ":" + targetRef;
+        if (!params.isEmpty())
+            line += ":" + params.joinIntoString(",");
+        lines.add(line);
+    }
+
+    return lines.joinIntoString("\n");
+}
+
 void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, move to ui related helper, or generate on demand in UI instead of storing in engine
     this->suggestedInstrumentMapText = DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentSynthById);
 }
@@ -380,15 +541,11 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
         return;
     }
 
-    // simple matching pass: by layout id -> kit instrument code, then fuzzy by name/code containment
     std::unordered_set<KitLib::InstrumentSpec*> usedInstSpecSet;
-
-    std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType; // for sequential assignment when layout uses numbering (kick1, kick2)
+    std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType;
     
 
     for (const auto& layoutInstrument : this->activeKitLayoutPtr->instrumentSlots) { //FIXME: rewrite loop thru instrumentSynthById
-        KitLib::InstrumentSpec* matched = nullptr;
-
         auto sit = this->instrumentSynthById.find(layoutInstrument.id);
         if (sit == this->instrumentSynthById.end()) {
             LOG(Warning, "layout instrument slot not present: " + layoutInstrument.id);
@@ -396,71 +553,7 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
         }
         InstrumentSynth* slot = sit->second;
 
-        // resolve layout type to KitLib::InstrumentSpec::Type
-        KitLib::InstrumentSpec::Type desiredType = layoutInstrument.type;
-        
-        // If we have a valid type, try type-based selection
-        if (desiredType != KitLib::InstrumentSpec::Type::Unknown) {
-            auto candidates = kit.getInstrumentsByType(desiredType);
-        
-            // parse numeric suffix from layout id (e.g., 'kick1' -> index 1)
-            int requestedIdx = -1;
-            {
-                // find trailing digits
-                int pos = static_cast<int>(layoutInstrument.id.length()) - 1;
-                while (pos >= 0 && juce::CharacterFunctions::isDigit(layoutInstrument.id[pos]))
-                    --pos;
-                auto digits = layoutInstrument.id.substring(pos + 1);
-                if (digits.isNotEmpty()) {
-                    requestedIdx = digits.getIntValue() - 1; // convert to 0-based
-                }
-            }
-        
-            if (requestedIdx >= 0 && requestedIdx < static_cast<int>(candidates.size())) {
-                // pick by explicit position if available and not used
-                if (usedInstSpecSet.find(candidates[requestedIdx]) == usedInstSpecSet.end()) {
-                    matched = candidates[requestedIdx];
-                }
-            }
-        
-            // otherwise pick next unused of that type
-            if (matched == nullptr) {
-                int& next = nextIndexByType[layoutInstrument.type];
-                for (int i = next; i < static_cast<int>(candidates.size()); ++i) {
-                    if (usedInstSpecSet.find(candidates[i]) == usedInstSpecSet.end()) {
-                        matched = candidates[i];
-                        next = i + 1;
-                        break;
-                    }
-                }
-                // wrap-around search from beginning if none found after 'next'
-                if (matched == nullptr) {
-                    for (int i = 0; i < static_cast<int>(candidates.size()); ++i) {
-                        if (usedInstSpecSet.find(candidates[i]) == usedInstSpecSet.end()) {
-                            matched = candidates[i];
-                            next = i + 1;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-    
-        // Fallback: attempt fuzzy match by name/code if still not matched
-        if (matched == nullptr) {
-            juce::String needle = layoutInstrument.id.trim().toLowerCase();
-            for (const auto&[id, instPtr] : kit.getInstrumentSpecsMap()) {
-                auto* candidate = instPtr.get();
-                if (candidate == nullptr)
-                    continue;
-                if (usedInstSpecSet.find(candidate) != usedInstSpecSet.end())
-                    continue;
-                if (candidate->meta.codeRaw.trim().toLowerCase().contains(needle) || candidate->meta.name.trim().toLowerCase().contains(needle)) {
-                    matched = candidate;
-                    break;
-                }
-            }
-        }
+        auto* matched = findMatchingKitInstrument(layoutInstrument, kit, usedInstSpecSet, nextIndexByType);
 
         if (matched == nullptr) {
             LOG(Warning, "no matching instrument found in kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
@@ -471,7 +564,6 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
         LOG(Info, "Loading instrument '" + matched->meta.codeRaw + "' from kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
 
         slot->loadInstrument(matched); //TODO: wrap in performance measuring block
-        usedInstSpecSet.insert(matched);
     }
 
     if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {

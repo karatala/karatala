@@ -35,6 +35,27 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     UIHelpers::configureSectionLabel(this->uiGridGroupLabel);
     this->contentComponent.addAndMakeVisible(this->uiGridGroupLabel);
 
+    this->outputGroupLabel.setText("Advanced / Output Layout", juce::dontSendNotification);
+    UIHelpers::configureSectionLabel(this->outputGroupLabel);
+    this->contentComponent.addAndMakeVisible(this->outputGroupLabel);
+    this->micLayoutCombo.getProperties().set("squareCorners", true);
+    this->micLayoutCombo.setColour(juce::ComboBox::backgroundColourId, UITheme::Colours::bgControl);
+    this->contentComponent.addAndMakeVisible(this->micLayoutCombo);
+    UIHelpers::configureControlButton(this->saveMicLayoutButton);
+    this->contentComponent.addAndMakeVisible(this->saveMicLayoutButton);
+    this->micLayoutWarningLabel.setText(
+        "This machine-wide setting changes output bus names only for plugin instances created afterward. The current instance cannot be changed.",
+        juce::dontSendNotification);
+    this->micLayoutWarningLabel.setFont(UITheme::Fonts::small());
+    this->micLayoutWarningLabel.setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
+    this->micLayoutWarningLabel.setJustificationType(juce::Justification::topLeft);
+    this->contentComponent.addAndMakeVisible(this->micLayoutWarningLabel);
+    this->saveMicLayoutButton.onClick = [this] {
+        const int idx = this->micLayoutCombo.getSelectedId() - 1;
+        if (idx >= 0 && idx < static_cast<int>(this->micLayouts.size()))
+            this->engine.setGlobalMicLayoutId(this->micLayouts[static_cast<size_t>(idx)].id);
+    };
+
     // ── Aftertouch Choke ──
     this->addPot("Max Duck", "How much to duck the volume on aftertouch press. Higher = more muting, lower = subtler effect.",
                  &settings.chokeMaxDuckDepth, 0.0f, 1.0f, 0.01f);
@@ -78,6 +99,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->addPot("Rows", "Grid rows. 0 - auto detect from the active kit layout.", &settings.padGridRows, 0, 8);
     this->addPot("Gap", "", &settings.padGap, 0, 8);
 
+    this->rebuildMicLayouts();
     this->loadFromEngine();
 }
 
@@ -121,6 +143,24 @@ void EngineSettingsPanel::loadFromEngine() {
         else if (entry->intTarget != nullptr)
             entry->parameterPot->setValue(static_cast<double>(*entry->intTarget), juce::dontSendNotification);
     }
+    this->rebuildMicLayouts();
+}
+
+void EngineSettingsPanel::rebuildMicLayouts() {
+    this->micLayouts.clear();
+    this->micLayoutCombo.clear(juce::dontSendNotification);
+    this->micLayouts.push_back(this->engine.getMicLayoutManager()->getDefault());
+    for (const auto& layout : this->engine.getMicLayoutManager()->getLayouts())
+        this->micLayouts.push_back(layout);
+
+    int selectedId = 1;
+    for (size_t idx = 0; idx < this->micLayouts.size(); ++idx) {
+        const auto& layout = this->micLayouts[idx];
+        this->micLayoutCombo.addItem(layout.name.isNotEmpty() ? layout.name : layout.id, static_cast<int>(idx + 1));
+        if (layout.id == this->engine.getGlobalMicLayoutId())
+            selectedId = static_cast<int>(idx + 1);
+    }
+    this->micLayoutCombo.setSelectedId(selectedId, juce::dontSendNotification);
 }
 
 void EngineSettingsPanel::onSettingChanged() {
@@ -171,6 +211,7 @@ void EngineSettingsPanel::resized() {
     totalHeight += groupLabelHeight + gap + groupRows(6) * potCellH + gap; // tail (6 pots)
     totalHeight += groupLabelHeight + gap + groupRows(4) * potCellH + gap; // hihat (4 pots)
     totalHeight += groupLabelHeight + gap + groupRows(3) * potCellH + gap; // grid (3 pots)
+    totalHeight += groupLabelHeight + 64 + gap; // output layout
     totalHeight += 8; // bottom padding
 
     this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 400), totalHeight);
@@ -216,4 +257,11 @@ void EngineSettingsPanel::resized() {
 
     placeGroupLabel(this->uiGridGroupLabel);
     placePotGrid(16, 3);
+
+    placeGroupLabel(this->outputGroupLabel);
+    auto outputRow = area.removeFromTop(26);
+    this->micLayoutCombo.setBounds(outputRow.removeFromLeft(260).reduced(0, 2));
+    outputRow.removeFromLeft(6);
+    this->saveMicLayoutButton.setBounds(outputRow.removeFromLeft(180).reduced(0, 2));
+    this->micLayoutWarningLabel.setBounds(area.removeFromTop(38));
 }

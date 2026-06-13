@@ -10,6 +10,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->setLookAndFeel(&this->lookAndFeel);
 
     this->setupSidebarAndStatusBar();
+    this->setupKitMode();
     this->setupDrumPadGridMode();
     this->setupSidebarKnobs();
     this->setupRawMode();
@@ -17,10 +18,68 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->setupSettingsMode();
     this->setupInstrumentConfigMode();
 
-    // Show default mode
+    const auto instrumentMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
+    this->activeMode = instrumentMap.trim().isEmpty() ? ViewMode::Kit : ViewMode::Zen;
+    this->sidebar.setActiveMode(this->activeMode);
     this->showComponentsForMode(this->activeMode);
 
     setSize(1000, 580);
+}
+
+void PluginEditor::setupKitMode() {
+    this->kitHomePanel = std::make_unique<KitHomePanel>(this->processorRef.getEngine());
+    this->addChildComponent(*this->kitHomePanel);
+    this->kitHomePanel->onStatusMessage = [this](const juce::String& message) {
+        this->statusBar.setStatusText(message);
+    };
+    this->kitHomePanel->onLoadRequested = [this](KitHomePanel::Commit commit) {
+        struct ProcessingSuspendGuard {
+            PluginProcessor& processor;
+            explicit ProcessingSuspendGuard(PluginProcessor& processor)
+                : processor(processor) {
+                this->processor.suspendProcessing(true);
+            }
+            ~ProcessingSuspendGuard() {
+                this->processor.suspendProcessing(false);
+            }
+        } processingGuard(this->processorRef);
+
+        const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
+        auto& engine = this->processorRef.getEngine();
+        if (!engine.setKitLayoutDirect(commit.layout, false)) {
+            this->statusBar.setStatusText("Could not apply kit layout");
+            return;
+        }
+        if (!engine.useInstrumentMap(commit.instrumentMapText)) {
+            this->statusBar.setStatusText(engine.getLastInstrumentMapStatus());
+            return;
+        }
+
+        auto& state = this->processorRef.getValueTreeState().state;
+        state.setProperty("kit_layout", commit.layout.id, nullptr);
+        state.setProperty("instrument_map", commit.instrumentMapText, nullptr);
+        this->instrumentMapEditor.setText(commit.instrumentMapText, false);
+        this->referencePanel.setText(engine.buildReferenceText(), false);
+
+        juce::StringArray status;
+        status.add(engine.getLastInstrumentMapStatus());
+        if (commit.setGlobalKitLayout && !engine.setGlobalKitLayoutId(commit.layout.id))
+            status.add("Could not save the default kit layout");
+        if (commit.globalMicLayoutId.isNotEmpty()
+            && commit.globalMicLayoutId != engine.getGlobalMicLayoutId()) {
+            if (engine.setGlobalMicLayoutId(commit.globalMicLayoutId))
+                status.add("Mic layout saved for newly created plugin instances");
+            else
+                status.add("Could not save the global mic layout");
+        }
+
+        this->markDrumPadGridDirty();
+        this->markMidiMapTableDirty();
+        this->markInstrumentConfigDirty();
+        this->statusBar.setStatusText(status.joinIntoString(" | "));
+        this->setViewMode(ViewMode::Zen);
+    };
+    this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 }
 
 void PluginEditor::setupSidebarAndStatusBar() {
@@ -43,7 +102,7 @@ void PluginEditor::setupSidebarAndStatusBar() {
 }
 
 void PluginEditor::setupDrumPadGridMode() {
-    // Drum pad grid (Zen / Zoned modes)
+    // Drum pad grid (Zen / Zone modes)
     this->addAndMakeVisible(this->drumPadGrid);
     {
         auto& settings = this->processorRef.getEngine().engineSettings;
@@ -122,11 +181,8 @@ void PluginEditor::setupRawMode() {
     this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
     this->instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", UITheme::Colours::textMuted);
     auto instrumentMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
-    if (instrumentMapText.trim().isEmpty()) {
+    if (instrumentMapText.trim().isEmpty())
         instrumentMapText = this->processorRef.getEngine().getSuggestedInstrumentMapText();
-        if (instrumentMapText.isNotEmpty())
-            this->processorRef.getValueTreeState().state.setProperty("instrument_map", instrumentMapText, nullptr);
-    }
     this->instrumentMapEditor.setText(instrumentMapText, false);
 
     this->applyButton.onClick = [this] { this->applyInstrumentMapFromEditor(); };
@@ -460,14 +516,18 @@ void PluginEditor::setViewMode(ViewMode mode) {
         this->instrumentConfigPanel->flushMapText();
 
     this->activeMode = mode;
+    this->sidebar.setActiveMode(mode);
     this->showComponentsForMode(mode);
 
     if (mode == ViewMode::Settings)
         this->settingsPanel->loadFromEngine();
 
-    if (mode == ViewMode::Zen || mode == ViewMode::Zoned) {
+    if (mode == ViewMode::Kit)
+        this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+
+    if (mode == ViewMode::Zen || mode == ViewMode::Zone) {
         this->refreshDrumPadGridIfNeeded();
-        this->drumPadGrid.setPadMode(mode == ViewMode::Zoned ? PadMode::Zoned : PadMode::Zen);
+        this->drumPadGrid.setPadMode(mode == ViewMode::Zone ? PadMode::Zone : PadMode::Zen);
     }
 
     if (mode == ViewMode::Map)
@@ -480,8 +540,10 @@ void PluginEditor::setViewMode(ViewMode mode) {
 }
 
 void PluginEditor::showComponentsForMode(ViewMode mode) {
-    // Drum pad grid - visible for Zen and Zoned
-    bool showPads = (mode == ViewMode::Zen || mode == ViewMode::Zoned);
+    this->kitHomePanel->setVisible(mode == ViewMode::Kit);
+
+    // Drum pad grid - visible for Zen and Zone
+    bool showPads = (mode == ViewMode::Zen || mode == ViewMode::Zone);
     this->drumPadGrid.setVisible(showPads);
 
     // Raw mode components
@@ -519,8 +581,12 @@ void PluginEditor::resized() {
     auto mainArea = area;
 
     switch (this->activeMode) {
+        case ViewMode::Kit:
+            this->kitHomePanel->setBounds(mainArea);
+            break;
+
         case ViewMode::Zen:
-        case ViewMode::Zoned:
+        case ViewMode::Zone:
             this->drumPadGrid.setBounds(mainArea);
             break;
 

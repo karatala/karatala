@@ -104,6 +104,49 @@ TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[I
     CHECK(parserMessages.find("'art=' is deprecated") == std::string::npos);
 }
 
+TEST_CASE("InstrumentMap serializer preserves parsed assignments and parameters", "[InstrumentMap]") {
+    const juce::String original =
+        "snare1/rim:MixedKit/snare-14/sidestick:tuning=-25,attack=12,decay=450,vol=-3.5,flipLR=1,flipPhase=1,bleed=oh:0.25,room:0.5";
+
+    auto parsed = DrumKitEngine::parseInstrumentMapText(original);
+    REQUIRE(parsed.ok());
+
+    const auto serialized = DrumKitEngine::serializeInstrumentMap(parsed.value);
+    auto reparsed = DrumKitEngine::parseInstrumentMapText(serialized);
+    REQUIRE(reparsed.ok());
+    REQUIRE(reparsed.value.entries.size() == 1);
+
+    const auto& entry = reparsed.value.entries.front();
+    CHECK(entry.slotId == "snare1");
+    REQUIRE(entry.slotArticulationFilter.size() == 1);
+    CHECK(entry.slotArticulationFilter.front() == "rim");
+    CHECK(entry.kitRef == "MixedKit");
+    CHECK(entry.instCode == "snare-14");
+    REQUIRE(entry.articulationFilter.size() == 1);
+    CHECK(entry.articulationFilter.front() == "sidestick");
+    CHECK(entry.tuningCents == -25);
+    CHECK(entry.attackTimeMs == 12);
+    CHECK(entry.decayTimeMs == 450);
+    CHECK(entry.volumeDb == -3.5f);
+    CHECK(entry.flipLR);
+    CHECK(entry.flipPhase);
+    CHECK(entry.micBleedLevels.at("oh") == 0.25f);
+    CHECK(entry.micBleedLevels.at("room") == 0.5f);
+}
+
+TEST_CASE("InstrumentMap serializer omits entries without slot or kit", "[InstrumentMap]") {
+    DrumKitEngine::InstrumentMap map;
+    map.entries.push_back({});
+
+    DrumKitEngine::InstrumentMapEntry valid;
+    valid.slotId = "kick1";
+    valid.kitRef = "FactoryKit";
+    valid.instCode = "kick-22";
+    map.entries.push_back(valid);
+
+    CHECK(DrumKitEngine::serializeInstrumentMap(map) == "kick1:FactoryKit/kick-22");
+}
+
 TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[InstrumentMap]") {
     const juce::String text = "kick1:MyKit/kick-24:unknown=1,broken";
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
