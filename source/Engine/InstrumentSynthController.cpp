@@ -44,8 +44,15 @@ void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
 
 void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
     const auto& settings = this->parent->getEngineSettings();
-    const float pedalMinRemainingSec = settings.hihatPedalMinRemainingSec.load();
-    const float pedalCrossfadeSec = settings.hihatPedalCrossfadeSec.load();
+    const float openCrossfadeSec = settings.hihatOpenCrossfadeSec.load();
+    const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
+    const int boundaryHysteresisCc = settings.hihatBoundaryHysteresisCc.load();
+    const float tailMatchAmount = settings.hihatTailMatchAmount.load();
+    const float tailMatchBiasDb = settings.hihatTailMatchBiasDb.load();
+    const float attackGuardSec = settings.hihatTransitionAttackGuardSec.load();
+    const float minRemainingSec = settings.hihatTransitionMinRemainingSec.load();
+    const float silenceFloorDb = settings.hihatTransitionSilenceFloorDb.load();
+    const auto missingDecayPolicy = settings.hihatMissingDecayPolicy.load();
     //FIXME: currently this spams sample change on each tiny change of controller, need to make it make change only if articulation index actually changes, and also avoid spamming when controller value is around articulation change threshold +-
     
     // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
@@ -73,30 +80,6 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         return;
     }
 
-    // redirect target to "pedal" articulation when CC would otherwise
-    // land on a struck type (e.g. edge[tight]) that shares the same poc rank.
-    // Done BEFORE the cache check so jitter within the tight/pedal zone benefits
-    // from the early-return: once transitioned to pedal, subsequent cc micro-moves
-    // see newArtIdx==pedal==cache and return immediately without touching voices.
-    if (true) { // HIHAT_CC_PREFER_PEDAL_ART — always enabled, kept as code structure
-        static const StringsDictSingleton::Id pedalNameId = StringsDictSingleton::getId("pedal");
-        const auto& targetArt = this->runtimeArticulations[newArtIdx];
-        const bool targetIsPedal = targetArt.nameId == pedalNameId;
-        if (!targetIsPedal && targetArt.pocValue >= 0) {
-            for (size_t idx = 0; idx < this->runtimeArticulations.size(); ++idx) {
-                const auto& candArt = this->runtimeArticulations[idx];
-                if (candArt.nameId == pedalNameId && candArt.pocValue == targetArt.pocValue) {
-                    const uint8_t redirectedIdx = static_cast<uint8_t>(idx);
-                    // Only log when this redirect produces a new transition (not already cached).
-                    if (this->lastCcArticulation[controllerNumber] != static_cast<int8_t>(redirectedIdx))
-                        LOG(Verbose, "HiHat CC: prefer-pedal redirect from " + targetArt.getCodeRaw() + " to " + candArt.getCodeRaw());
-                    newArtIdx = redirectedIdx;
-                    break;
-                }
-            }
-        }
-    }
-
     // Check cached last seen value/articulation for this CC to avoid spamming
     // articulation change logic on tiny controller changes.
 
@@ -106,15 +89,25 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         return;
     }
 
-    // if (lastValIt != this->lastCcValue.end()) {
-    //     const int lastVal = lastValIt->second;
-    //     if (std::abs(controllerValue - lastVal) < HIHAT_PEDAL_CC_HYSTERESIS) {
-    //         // Value changed only slightly within hysteresis window — skip processing
-    //         // but keep cached last value up-to-date.
-    //         this->lastCcValue[controllerNumber] = controllerValue;
-    //         return;
-    //     }
-    // }
+    const int cachedArtIdx = this->lastCcArticulation[controllerNumber];
+    if (boundaryHysteresisCc > 0
+        && cachedArtIdx >= 0
+        && cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())) {
+        const int lastControllerValue = this->lastCcValue[controllerNumber];
+        const int direction = controllerValue > lastControllerValue ? 1 : (controllerValue < lastControllerValue ? -1 : 0);
+        if (direction != 0) {
+            const int probeValue = juce::jlimit(0, 127, controllerValue - direction * boundaryHysteresisCc);
+            const uint8_t probeArtIdx = mapArr[probeValue];
+            if (probeArtIdx < this->runtimeArticulations.size()) {
+                const int candidatePoc = this->runtimeArticulations[newArtIdx].pocValue;
+                const int probePoc = this->runtimeArticulations[probeArtIdx].pocValue;
+                if (candidatePoc != probePoc) {
+                    this->lastCcValue[controllerNumber] = controllerValue;
+                    return;
+                }
+            }
+        }
+    }
 
     LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
@@ -204,36 +197,62 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         // in pre-peak / near-silent regions and die quickly.
         const auto& oldEnv = ss->decayEnvelope;
         const auto& newEnv = targetSe->sound->decayEnvelope;
-        if (!oldEnv.isValid() || !newEnv.isValid()) {
-            ++skippedNoEnvelope;
-            continue;
-        }
-
         const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
         const double elapsedMs = (voice->sourceSamplePosition / oldSrcRate) * 1000.0;
-        const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
-        const float currentAudibleDb = oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs)) + oldVelDb;
-
-        const float replacementVelDb = oldVelDb;
-        const float targetRelativeDb = currentAudibleDb - replacementVelDb;
-        float targetMs = newEnv.getMsAtAbsoluteDb(targetRelativeDb);
-
-        if (targetMs < 0.0f) {
-            ++skippedNoDbMatch;
+        if (elapsedMs < static_cast<double>(attackGuardSec * 1000.0f)) {
+            ++skippedOther;
             continue;
         }
+
+        const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
+        const float currentAudibleDb = oldEnv.isValid()
+            ? oldEnv.getAbsoluteDbAtMs(static_cast<float>(elapsedMs)) + oldVelDb
+            : voice->getEstimatedCurrentDb();
+        if (currentAudibleDb < silenceFloorDb) {
+            ++skippedOther;
+            continue;
+        }
+
+        const float replacementVelDb = oldVelDb;
+        const float targetRelativeDb = currentAudibleDb + tailMatchBiasDb - replacementVelDb;
 
         const auto& targetBuffer = *targetSe->sound->buffer;
         const double targetSrcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
         const double sampleLengthMs = targetSrcRate > 0.0
             ? (static_cast<double>(targetBuffer.getNumSamples()) / targetSrcRate) * 1000.0
             : 0.0;
+        if (sampleLengthMs <= 0.0) {
+            ++skippedNoTarget;
+            continue;
+        }
 
-        const float clampedMs = juce::jlimit(newEnv.peakMs, static_cast<float>(sampleLengthMs), targetMs);
+        const bool hasDecayMatch = oldEnv.isValid() && newEnv.isValid();
+        if (!hasDecayMatch && missingDecayPolicy == HiHatMissingDecayPolicy::KeepTail) {
+            ++skippedNoEnvelope;
+            continue;
+        }
+
+        const float maximumOffsetMs = static_cast<float>(sampleLengthMs);
+        const float targetPeakMs = juce::jmin(newEnv.isValid() ? newEnv.peakMs : 0.0f, maximumOffsetMs);
+        const float fallbackMs = juce::jlimit(
+            targetPeakMs,
+            maximumOffsetMs,
+            juce::jmax(targetPeakMs, static_cast<float>(elapsedMs)));
+        float targetMs = fallbackMs;
+        if (hasDecayMatch) {
+            const float matchedMs = newEnv.getMsAtAbsoluteDb(targetRelativeDb);
+            if (matchedMs < 0.0f) {
+                ++skippedNoDbMatch;
+                continue;
+            }
+            targetMs = fallbackMs + tailMatchAmount * (matchedMs - fallbackMs);
+        }
+
+        const float clampedMs = juce::jlimit(targetPeakMs, maximumOffsetMs, targetMs);
 
         // If the offset leaves less than minimum useful audio, skip replacement
         const float remainingMs = static_cast<float>(sampleLengthMs) - clampedMs;
-        if (remainingMs < pedalMinRemainingSec * 1000.0f) {
+        if (remainingMs < minRemainingSec * 1000.0f) {
             ++skippedTooLate;
             continue;
         }
@@ -305,15 +324,18 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             // Relative threshold: envelope predicts content at ~targetRelativeDb,
             // allow 24dB margin for cymbal interference patterns & envelope imprecision.
             // Absolute floor at -90dB catches true digital silence.
-            const float silenceThreshold = juce::jmax(targetRelativeDb - 24.0f, -90.0f);
+            const float silenceThreshold = juce::jmax(targetRelativeDb - 24.0f, silenceFloorDb);
             if (rmsDb < silenceThreshold) {
                 ++skippedSilentTarget;
                 continue;
             }
         }
 
-        // Only now fade old voice — replacement is confirmed
-        voice->requestFadeOut(pedalCrossfadeSec);
+        const auto& currentArt = this->runtimeArticulations[static_cast<size_t>(currentArtIdx)];
+        const float transitionCrossfadeSec = newArt.pocValue > currentArt.pocValue
+            ? closeCrossfadeSec
+            : openCrossfadeSec;
+        voice->requestFadeOut(transitionCrossfadeSec);
 
         float vel = voice->getVelocityGain();
         this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
@@ -551,7 +573,7 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
 bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
     const juce::ScopedLock sl(this->lock);
     const auto& settings = this->parent->getEngineSettings();
-    const float pedalCrossfadeSec = settings.hihatPedalCrossfadeSec.load();
+    const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
 
     //temporary disabled to debug cc hat transitions
     this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
@@ -560,7 +582,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
     // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
     // fades out ringing voices from more-open articulations.
     if (this->type == KitLib::InstrumentSpec::Type::HiHat)
-        this->chokeHiHatVoicesByPoc(art.pocValue, pedalCrossfadeSec);
+        this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
 
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
@@ -593,7 +615,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
 void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity) {
     const auto& settings = this->parent->getEngineSettings();
     const float polyphonyCrossfadeSec = settings.polyphonyCrossfadeTimeoutSec.load();
-    const float crossArtChokeDbMargin = settings.hihatCrossArtChokeDbMargin.load();
+    const float crossArtChokeDbMargin = settings.hihatHitChokeDbMargin.load();
     const float newVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, newVelocity), -100.0f);
 
     for (auto* voice : voices) {

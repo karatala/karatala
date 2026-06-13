@@ -579,6 +579,32 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
     }
 }
 
+static juce::String hiHatTransitionCurveToYaml(HiHatTransitionCurve curve) {
+    switch (curve) {
+        case HiHatTransitionCurve::Linear: return "linear";
+        case HiHatTransitionCurve::Smooth: return "smooth";
+        case HiHatTransitionCurve::EqualPower: return "equal_power";
+    }
+    return "equal_power";
+}
+
+static juce::String hiHatFootSampleModeToYaml(HiHatFootSampleMode mode) {
+    switch (mode) {
+        case HiHatFootSampleMode::Off: return "off";
+        case HiHatFootSampleMode::CloseOnly: return "close_only";
+        case HiHatFootSampleMode::Always: return "always";
+    }
+    return "close_only";
+}
+
+static juce::String hiHatMissingDecayPolicyToYaml(HiHatMissingDecayPolicy policy) {
+    switch (policy) {
+        case HiHatMissingDecayPolicy::KeepTail: return "keep_tail";
+        case HiHatMissingDecayPolicy::SimpleFade: return "simple_fade";
+    }
+    return "keep_tail";
+}
+
 ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::String yamlStr) {
     ParseResult<DrumKitEngine::Config> result;
 
@@ -640,9 +666,95 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
         const auto& hihatNode = engineNode["hihat"];
         if (hihatNode.isMap()) {
             parseFloat(hihatNode, "polyphonyCrossfadeTimeoutSec", this->engineSettings.polyphonyCrossfadeTimeoutSec);
-            parseFloat(hihatNode, "pedalCrossfadeSec", this->engineSettings.hihatPedalCrossfadeSec);
-            parseFloat(hihatNode, "pedalMinRemainingSec", this->engineSettings.hihatPedalMinRemainingSec);
-            parseFloat(hihatNode, "crossArtChokeDbMargin", this->engineSettings.hihatCrossArtChokeDbMargin);
+
+            const auto hitChokeDbMargin = hihatNode["hitChokeDbMargin"].asString();
+            const auto legacyHitChokeDbMargin = hihatNode["crossArtChokeDbMargin"].asString();
+            if (hitChokeDbMargin.isNotEmpty())
+                this->engineSettings.hihatHitChokeDbMargin.store(juce::jlimit(0.0f, 20.0f, hitChokeDbMargin.getFloatValue()));
+            else if (legacyHitChokeDbMargin.isNotEmpty())
+                this->engineSettings.hihatHitChokeDbMargin.store(juce::jlimit(0.0f, 20.0f, legacyHitChokeDbMargin.getFloatValue()));
+
+            const auto& transitionNode = hihatNode["transition"];
+            const auto legacyCrossfade = hihatNode["pedalCrossfadeSec"].asString();
+            const auto legacyMinRemaining = hihatNode["pedalMinRemainingSec"].asString();
+
+            if (transitionNode.isMap()) {
+                auto parseClampedFloat = [&transitionNode](const juce::String& key,
+                                                          RealtimeSetting<float>& target,
+                                                          float minimum,
+                                                          float maximum) {
+                    const auto value = transitionNode[key].asString();
+                    if (value.isNotEmpty())
+                        target.store(juce::jlimit(minimum, maximum, value.getFloatValue()));
+                };
+                auto parseClampedInt = [&transitionNode](const juce::String& key,
+                                                        RealtimeSetting<int>& target,
+                                                        int minimum,
+                                                        int maximum) {
+                    const auto value = transitionNode[key].asString();
+                    if (value.isNotEmpty())
+                        target.store(juce::jlimit(minimum, maximum, value.getIntValue()));
+                };
+
+                parseClampedFloat("openCrossfadeSec", this->engineSettings.hihatOpenCrossfadeSec, 0.005f, 0.250f);
+                parseClampedFloat("closeCrossfadeSec", this->engineSettings.hihatCloseCrossfadeSec, 0.002f, 0.150f);
+                parseClampedFloat("controllerSmoothingSec", this->engineSettings.hihatControllerSmoothingSec, 0.0f, 0.100f);
+                parseClampedInt("boundaryHysteresisCc", this->engineSettings.hihatBoundaryHysteresisCc, 0, 8);
+                parseClampedFloat("tailMatchAmount", this->engineSettings.hihatTailMatchAmount, 0.0f, 1.0f);
+                parseClampedFloat("tailMatchBiasDb", this->engineSettings.hihatTailMatchBiasDb, -12.0f, 6.0f);
+                parseClampedFloat("attackGuardSec", this->engineSettings.hihatTransitionAttackGuardSec, 0.0f, 0.100f);
+                parseClampedInt("maxActiveGroups", this->engineSettings.hihatTransitionMaxActiveGroups, 1, 4);
+                parseClampedFloat("minRemainingSec", this->engineSettings.hihatTransitionMinRemainingSec, 0.010f, 0.500f);
+                parseClampedFloat("silenceFloorDb", this->engineSettings.hihatTransitionSilenceFloorDb, -90.0f, -36.0f);
+
+                const auto curve = transitionNode["curve"].asString().trim().toLowerCase();
+                if (curve == "linear")
+                    this->engineSettings.hihatTransitionCurve.store(HiHatTransitionCurve::Linear);
+                else if (curve == "smooth")
+                    this->engineSettings.hihatTransitionCurve.store(HiHatTransitionCurve::Smooth);
+                else if (curve == "equal_power")
+                    this->engineSettings.hihatTransitionCurve.store(HiHatTransitionCurve::EqualPower);
+                else if (curve.isNotEmpty()) {
+                    LOG(Warning, "Unknown hi-hat transition curve '" + curve + "'; using equal_power.");
+                    this->engineSettings.hihatTransitionCurve.store(HiHatTransitionCurve::EqualPower);
+                }
+
+                const auto footSampleMode = transitionNode["footSampleMode"].asString().trim().toLowerCase();
+                if (footSampleMode == "off")
+                    this->engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::Off);
+                else if (footSampleMode == "close_only")
+                    this->engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::CloseOnly);
+                else if (footSampleMode == "always")
+                    this->engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::Always);
+                else if (footSampleMode.isNotEmpty()) {
+                    LOG(Warning, "Unknown hi-hat foot sample mode '" + footSampleMode + "'; using close_only.");
+                    this->engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::CloseOnly);
+                }
+
+                const auto missingDecayPolicy = transitionNode["missingDecayPolicy"].asString().trim().toLowerCase();
+                if (missingDecayPolicy == "keep_tail")
+                    this->engineSettings.hihatMissingDecayPolicy.store(HiHatMissingDecayPolicy::KeepTail);
+                else if (missingDecayPolicy == "simple_fade")
+                    this->engineSettings.hihatMissingDecayPolicy.store(HiHatMissingDecayPolicy::SimpleFade);
+                else if (missingDecayPolicy.isNotEmpty()) {
+                    LOG(Warning, "Unknown hi-hat missing decay policy '" + missingDecayPolicy + "'; using keep_tail.");
+                    this->engineSettings.hihatMissingDecayPolicy.store(HiHatMissingDecayPolicy::KeepTail);
+                }
+            }
+
+            if (legacyCrossfade.isNotEmpty()) {
+                const float legacyCrossfadeSec = legacyCrossfade.getFloatValue();
+                if (!transitionNode.isMap() || transitionNode["openCrossfadeSec"].asString().isEmpty())
+                    this->engineSettings.hihatOpenCrossfadeSec.store(juce::jlimit(0.005f, 0.250f, legacyCrossfadeSec));
+                if (!transitionNode.isMap() || transitionNode["closeCrossfadeSec"].asString().isEmpty())
+                    this->engineSettings.hihatCloseCrossfadeSec.store(juce::jlimit(0.002f, 0.150f, juce::jmin(legacyCrossfadeSec, 0.030f)));
+            }
+
+            if (legacyMinRemaining.isNotEmpty()
+                && (!transitionNode.isMap() || transitionNode["minRemainingSec"].asString().isEmpty())) {
+                this->engineSettings.hihatTransitionMinRemainingSec.store(
+                    juce::jlimit(0.010f, 0.500f, legacyMinRemaining.getFloatValue()));
+            }
         }
 
         const auto& uiGridNode = engineNode["ui_grid"];
@@ -683,9 +795,21 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "#     cullThresholdDb: 12.0\n";
     result += "#   hihat:\n";
     result += "#     polyphonyCrossfadeTimeoutSec: 0.3\n";
-    result += "#     pedalCrossfadeSec: 0.2\n";
-    result += "#     pedalMinRemainingSec: 0.05\n";
-    result += "#     crossArtChokeDbMargin: 3.0\n";
+    result += "#     hitChokeDbMargin: 3.0\n";
+    result += "#     transition:\n";
+    result += "#       openCrossfadeSec: 0.06\n";
+    result += "#       closeCrossfadeSec: 0.02\n";
+    result += "#       controllerSmoothingSec: 0.015\n";
+    result += "#       boundaryHysteresisCc: 2\n";
+    result += "#       tailMatchAmount: 0.75\n";
+    result += "#       tailMatchBiasDb: -3.0\n";
+    result += "#       attackGuardSec: 0.025\n";
+    result += "#       maxActiveGroups: 1\n";
+    result += "#       curve: equal_power\n";
+    result += "#       footSampleMode: close_only\n";
+    result += "#       minRemainingSec: 0.05\n";
+    result += "#       silenceFloorDb: -72.0\n";
+    result += "#       missingDecayPolicy: keep_tail\n";
     result += "#   ui_grid:\n";
     result += "#     padGridColumns: 0  # auto\n";
     result += "#     padGridRows: 0     # auto\n";
@@ -698,9 +822,7 @@ static juce::String floatToYaml(float value) {
     return juce::String(value, 4).trimCharactersAtEnd("0").trimCharactersAtEnd(".");
 }
 
-void DrumKitEngine::saveSettings() {
-    juce::File configFile = dataPath.getChildFile("config.yaml");
-
+juce::String DrumKitEngine::serializeSettingsYaml() const {
     juce::String yaml;
     yaml += "kitLayout: " + this->globalConfig.kitLayout + "\n";
     yaml += "micLayout: " + this->globalConfig.micLayout + "\n";
@@ -726,13 +848,31 @@ void DrumKitEngine::saveSettings() {
     yaml += "    cullThresholdDb: " + floatToYaml(settings.voiceCullThresholdDb.load()) + "\n";
     yaml += "  hihat:\n";
     yaml += "    polyphonyCrossfadeTimeoutSec: " + floatToYaml(settings.polyphonyCrossfadeTimeoutSec.load()) + "\n";
-    yaml += "    pedalCrossfadeSec: " + floatToYaml(settings.hihatPedalCrossfadeSec.load()) + "\n";
-    yaml += "    pedalMinRemainingSec: " + floatToYaml(settings.hihatPedalMinRemainingSec.load()) + "\n";
-    yaml += "    crossArtChokeDbMargin: " + floatToYaml(settings.hihatCrossArtChokeDbMargin.load()) + "\n";
+    yaml += "    hitChokeDbMargin: " + floatToYaml(settings.hihatHitChokeDbMargin.load()) + "\n";
+    yaml += "    transition:\n";
+    yaml += "      openCrossfadeSec: " + floatToYaml(settings.hihatOpenCrossfadeSec.load()) + "\n";
+    yaml += "      closeCrossfadeSec: " + floatToYaml(settings.hihatCloseCrossfadeSec.load()) + "\n";
+    yaml += "      controllerSmoothingSec: " + floatToYaml(settings.hihatControllerSmoothingSec.load()) + "\n";
+    yaml += "      boundaryHysteresisCc: " + juce::String(settings.hihatBoundaryHysteresisCc.load()) + "\n";
+    yaml += "      tailMatchAmount: " + floatToYaml(settings.hihatTailMatchAmount.load()) + "\n";
+    yaml += "      tailMatchBiasDb: " + floatToYaml(settings.hihatTailMatchBiasDb.load()) + "\n";
+    yaml += "      attackGuardSec: " + floatToYaml(settings.hihatTransitionAttackGuardSec.load()) + "\n";
+    yaml += "      maxActiveGroups: " + juce::String(settings.hihatTransitionMaxActiveGroups.load()) + "\n";
+    yaml += "      curve: " + hiHatTransitionCurveToYaml(settings.hihatTransitionCurve.load()) + "\n";
+    yaml += "      footSampleMode: " + hiHatFootSampleModeToYaml(settings.hihatFootSampleMode.load()) + "\n";
+    yaml += "      minRemainingSec: " + floatToYaml(settings.hihatTransitionMinRemainingSec.load()) + "\n";
+    yaml += "      silenceFloorDb: " + floatToYaml(settings.hihatTransitionSilenceFloorDb.load()) + "\n";
+    yaml += "      missingDecayPolicy: " + hiHatMissingDecayPolicyToYaml(settings.hihatMissingDecayPolicy.load()) + "\n";
     yaml += "  ui_grid:\n";
     yaml += "    padGridColumns: " + juce::String(settings.padGridColumns.load()) + "\n";
     yaml += "    padGridRows: " + juce::String(settings.padGridRows.load()) + "\n";
     yaml += "    padGap: " + juce::String(settings.padGap.load()) + "\n";
+    return yaml;
+}
+
+void DrumKitEngine::saveSettings() {
+    const juce::File configFile = this->dataPath.getChildFile("config.yaml");
+    const auto yaml = this->serializeSettingsYaml();
 
     if (!configFile.replaceWithText(yaml)) {
         LOG(Warning, "Could not write config.yaml");

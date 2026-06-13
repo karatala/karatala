@@ -31,7 +31,8 @@ public:
                  double interval,
                  double initialValue,
                  std::function<juce::String(double)> textFromValueFn = nullptr,
-                 LayoutOptions options = {});
+                 LayoutOptions options = {},
+                 std::function<double(const juce::String&)> valueFromTextFn = nullptr);
 
     void resized() override;
 

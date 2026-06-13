@@ -6,6 +6,7 @@
 #include "ParameterPot.h"
 #include "ScrollablePanel.h"
 #include "UITheme.h"
+#include <limits>
 
 class DrumKitEngine;
 
@@ -29,6 +30,15 @@ private:
         double defaultValue = 0.0;
     };
 
+    struct ChoiceEntry {
+        juce::Label label;
+        juce::ComboBox comboBox;
+        juce::TextButton resetButton { "x" };
+        std::function<int()> loadSelectedId;
+        std::function<void(int)> storeSelectedId;
+        int defaultSelectedId = 1;
+    };
+
     juce::Label chokeGroupLabel;
     juce::Label tailGroupLabel;
     juce::Label hihatGroupLabel;
@@ -40,9 +50,23 @@ private:
     std::vector<MicLayout> micLayouts;
 
     std::vector<std::unique_ptr<PotEntry>> pots;
+    std::vector<std::unique_ptr<ChoiceEntry>> choices;
 
-    void addPot(const juce::String& name, const juce::String& tooltip, RealtimeSetting<float>* target, float minVal, float maxVal, float interval);
-    void addPot(const juce::String& name, const juce::String& tooltip, RealtimeSetting<int>* target, int minVal, int maxVal);
+    void addPot(const juce::String& name,
+                const juce::String& tooltip,
+                RealtimeSetting<float>* target,
+                float minVal,
+                float maxVal,
+                float interval,
+                std::function<juce::String(double)> textFromValueFn = nullptr,
+                std::function<double(const juce::String&)> valueFromTextFn = nullptr,
+                double defaultValue = std::numeric_limits<double>::quiet_NaN());
+    void addPot(const juce::String& name,
+                const juce::String& tooltip,
+                RealtimeSetting<int>* target,
+                int minVal,
+                int maxVal,
+                int defaultValue = std::numeric_limits<int>::min());
     void addPotCommon(const juce::String& name,
                       const juce::String& tooltip,
                       RealtimeSetting<float>* target,
@@ -50,7 +74,16 @@ private:
                       double minVal,
                       double maxVal,
                       double interval,
-                      bool isInteger);
+                      bool isInteger,
+                      std::function<juce::String(double)> textFromValueFn = nullptr,
+                      std::function<double(const juce::String&)> valueFromTextFn = nullptr,
+                      double defaultValue = std::numeric_limits<double>::quiet_NaN());
+    void addChoice(const juce::String& name,
+                   const juce::String& tooltip,
+                   const juce::StringArray& items,
+                   int defaultSelectedId,
+                   std::function<int()> loadSelectedId,
+                   std::function<void(int)> storeSelectedId);
     void onSettingChanged();
     void timerCallback() override;
     void queueSettingsSave();

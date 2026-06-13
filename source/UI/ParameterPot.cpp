@@ -8,7 +8,8 @@ ParameterPot::ParameterPot(const juce::String& name,
                            double interval,
                            double initialValue,
                            std::function<juce::String(double)> textFromValueFn,
-                           LayoutOptions options)
+                           LayoutOptions options,
+                           std::function<double(const juce::String&)> valueFromTextFn)
     : layoutOptions(std::move(options)) {
     this->titleLabel.setText(name, juce::dontSendNotification);
     UIHelpers::configureCaptionLabel(this->titleLabel,
@@ -24,6 +25,8 @@ ParameterPot::ParameterPot(const juce::String& name,
     this->pot.setRange(minVal, maxVal, interval);
     if (textFromValueFn)
         this->pot.textFromValueFunction = std::move(textFromValueFn);
+    if (valueFromTextFn)
+        this->pot.valueFromTextFunction = std::move(valueFromTextFn);
     this->pot.setValue(initialValue, juce::dontSendNotification);
     addAndMakeVisible(this->pot);
 

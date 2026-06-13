@@ -2,6 +2,23 @@
 
 #include <atomic>
 
+enum class HiHatTransitionCurve {
+    Linear,
+    Smooth,
+    EqualPower,
+};
+
+enum class HiHatFootSampleMode {
+    Off,
+    CloseOnly,
+    Always,
+};
+
+enum class HiHatMissingDecayPolicy {
+    KeepTail,
+    SimpleFade,
+};
+
 template <typename ValueType>
 class RealtimeSetting {
 public:
@@ -55,9 +72,20 @@ struct EngineSettings {
 
     // -- Hi-Hat / Polyphony --
     RealtimeSetting<float> polyphonyCrossfadeTimeoutSec { 0.3f };   // re-trigger crossfade duration
-    RealtimeSetting<float> hihatPedalCrossfadeSec { 0.20f };        // CC-driven hi-hat crossfade
-    RealtimeSetting<float> hihatPedalMinRemainingSec { 0.050f };    // min remaining audio for replacement
-    RealtimeSetting<float> hihatCrossArtChokeDbMargin { 3.0f };     // cross-articulation choke dB margin
+    RealtimeSetting<float> hihatHitChokeDbMargin { 3.0f };          // struck-hit cross-articulation choke margin
+    RealtimeSetting<float> hihatOpenCrossfadeSec { 0.060f };
+    RealtimeSetting<float> hihatCloseCrossfadeSec { 0.020f };
+    RealtimeSetting<float> hihatControllerSmoothingSec { 0.015f };
+    RealtimeSetting<int> hihatBoundaryHysteresisCc { 2 };
+    RealtimeSetting<float> hihatTailMatchAmount { 0.75f };
+    RealtimeSetting<float> hihatTailMatchBiasDb { -3.0f };
+    RealtimeSetting<float> hihatTransitionAttackGuardSec { 0.025f };
+    RealtimeSetting<int> hihatTransitionMaxActiveGroups { 1 };
+    RealtimeSetting<HiHatTransitionCurve> hihatTransitionCurve { HiHatTransitionCurve::EqualPower };
+    RealtimeSetting<HiHatFootSampleMode> hihatFootSampleMode { HiHatFootSampleMode::CloseOnly };
+    RealtimeSetting<float> hihatTransitionMinRemainingSec { 0.050f };
+    RealtimeSetting<float> hihatTransitionSilenceFloorDb { -72.0f };
+    RealtimeSetting<HiHatMissingDecayPolicy> hihatMissingDecayPolicy { HiHatMissingDecayPolicy::KeepTail };
 
     // -- Round-Robin --
     RealtimeSetting<int> roundRobinLock { 0 };  // 0 = normal cycling, 1+ = force variant index (1-based)

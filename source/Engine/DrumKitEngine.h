@@ -57,6 +57,7 @@ public:
 
     ParseResult<Config> parseConfigYaml(const juce::String yamlStr);
     juce::String getDefaultYaml();
+    juce::String serializeSettingsYaml() const;
 
     void init(const juce::AudioProcessorValueTreeState& treeState);
     void useState(const juce::AudioProcessorValueTreeState& treeState);
