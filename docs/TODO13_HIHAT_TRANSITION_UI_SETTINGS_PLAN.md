@@ -13,13 +13,13 @@ Active engine controls:
 - minimum remaining tail;
 - silence floor;
 - missing-decay fallback policy;
+- active-tail group limit;
+- linear, smooth-step, and equal-power transition curves;
 - renamed struck-hit choke margin.
 
 Persisted and live-safe controls awaiting later TODO12 phases:
 
 - controller smoothing requires deferred transition scheduling;
-- active-tail limits require canonical hit grouping;
-- transition curves require shaped source/target gain ramps;
 - foot-sample modes require independent foot-event triggering.
 
 ## Goal

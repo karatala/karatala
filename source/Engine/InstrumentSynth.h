@@ -14,6 +14,7 @@
 class DrumKitEngine;
 class SampleLoader;
 class InstrumentSynth;
+struct InstrumentSynthTestAccess;
 
 class SampledSound {
 public:
@@ -80,11 +81,15 @@ public:
     float getVelocityGain() const { return this->velocityGain; }
     void setVelocityGain(float value) { this->velocityGain = value; }
     void requestFadeOut(float durationSec);
+    void requestTransitionFadeIn(float durationSec, HiHatTransitionCurve curve);
+    void requestTransitionFadeOut(float durationSec, HiHatTransitionCurve curve);
     void requestRelease();
     void killImmediately();
     float getEstimatedCurrentDb() const;
     void updateEstimatedDb();
     EnvelopeState getEnvelopeState() const noexcept { return this->envelopeState; }
+    juce::uint32 getEventId() const noexcept { return this->noteOnTime; }
+    int getRuntimeArticulationIndex() const noexcept { return this->runtimeArticulationIdx; }
 
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
     void setOwner(InstrumentSynth* synth) noexcept { this->owner = synth; }
@@ -100,6 +105,7 @@ public:
         this->currentlyPlayingNote = -1;
         this->currentlyPlayingSound = nullptr;
         this->currentPlayingMidiChannel = 0;
+        this->runtimeArticulationIdx = -1;
         this->envelopeState = EnvelopeState::Idle;
     }
 
@@ -116,6 +122,7 @@ public:
 
 private:
     friend class InstrumentSynth;
+    friend struct InstrumentSynthTestAccess;
 
     InstrumentSynth* owner = nullptr;
 
@@ -127,6 +134,7 @@ private:
 
     double currentSampleRate = 44100.0;
     juce::uint32 noteOnTime = 0;
+    int runtimeArticulationIdx = -1;
     EnvelopeState envelopeState = EnvelopeState::Idle;
 
     // double releaseStartTimeMs = 0.0;
@@ -144,7 +152,7 @@ public:
     void setUseOneShotDecayEnvelope(bool shouldUse) { this->useOneShotDecayEnvelope = shouldUse; }
     void setPitchRatioMultiplier(double multiplier) { this->pitchRatioMultiplier = multiplier; }
     
-    float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain; }
+    float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain * this->lastTransitionGain; }
     
     // juce::RangedAudioParameter* gainParam = nullptr; //TODO?
     // juce::RangedAudioParameter* panParam = nullptr; //TODO?
@@ -163,6 +171,19 @@ public:
     uint8_t dbUpdateCounter = 0; // throttle updateEstimatedDb to every N-th render call
     int hitGroupId = -1;
 
+private:
+    enum class TransitionRamp { None, FadeIn, FadeOut };
+
+    float getNextTransitionGain();
+
+    TransitionRamp transitionRamp = TransitionRamp::None;
+    HiHatTransitionCurve transitionCurve = HiHatTransitionCurve::EqualPower;
+    float transitionProgress = 1.0f;
+    float transitionProgressStep = 0.0f;
+    float lastTransitionGain = 1.0f;
+    bool transitionStopRequested = false;
+
+public:
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
 };
 
@@ -286,9 +307,9 @@ public:
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
     int resolveArticulation(int midiNoteNumber);
     int resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity);
-    bool startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
+    bool startLayerVoices(ArtRtIdx artIdx, ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
     void fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity);
-    void startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity);
+    void startSampleVoice(InstrumentSynthVoice& voice, ArtRtIdx artIdx, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity, juce::uint32 eventId);
     void applyAftertouch(int midiChannel, int midiNoteNumber);
 
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
@@ -324,7 +345,9 @@ public:
         return this->findVoiceToSteal(midiChannel, midiNoteNumber, groupId);
     }
 
-    void startVoice(InstrumentSynthVoice* const voice, SampledSound* const sound, const int midiChannel, const int midiNoteNumber, const float velocity) {
+    juce::uint32 allocateEventId() noexcept { return ++this->lastNoteOnCounter; }
+
+    void startVoice(InstrumentSynthVoice* const voice, SampledSound* const sound, const int midiChannel, const int midiNoteNumber, const float velocity, juce::uint32 eventId = 0) {
         if (voice == nullptr || sound == nullptr) return;
         // LOG(Debug, "Start voice note=" + juce::String(midiNoteNumber) + " group=" + juce::String(voice->hitGroupId) + " active voices=" + juce::String(voices.size()));
         if (voice->currentlyPlayingSound != nullptr)
@@ -332,7 +355,7 @@ public:
 
         voice->currentlyPlayingNote = midiNoteNumber;
         voice->currentPlayingMidiChannel = midiChannel;
-        voice->noteOnTime = ++lastNoteOnCounter;
+        voice->noteOnTime = eventId != 0 ? eventId : this->allocateEventId();
         voice->currentlyPlayingSound = sound;
         voice->startNote(midiNoteNumber, velocity, sound);
     }
@@ -431,6 +454,8 @@ public:
     void applyAdaptiveTailShortening();
 
 private:
+    friend struct InstrumentSynthTestAccess;
+
     DrumKitEngine* parent = nullptr;
     KitLib::InstrumentSpec* instrumentSpecstPtr = nullptr;
     juce::String id;
@@ -531,6 +556,7 @@ private:
     bool hasAnyLoadedVariant(const VelocityLayerRuntime& layer) const;
     bool isVariantReady(const VelocityLayerRuntime& layer, uint8_t variantIdx) const;
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
+    bool transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtIdx);
     // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
     void chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec);

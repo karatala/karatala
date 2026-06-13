@@ -96,6 +96,27 @@ TEST_CASE("HiHatTransitionPolicy - reference mic prefers direct then overhead th
     REQUIRE(HiHatTransitionPolicy::selectReferenceMic({}) == -1);
 }
 
+TEST_CASE("HiHatTransitionPolicy - exact target matching preserves variant and mic route", "[HiHatTransitionPolicy]") {
+    const std::array<HiHatTransitionPolicy::TargetSampleCandidate, 4> candidates {
+        HiHatTransitionPolicy::TargetSampleCandidate { 1, 0, true },
+        HiHatTransitionPolicy::TargetSampleCandidate { 1, 2, false },
+        HiHatTransitionPolicy::TargetSampleCandidate { 2, 2, true },
+        HiHatTransitionPolicy::TargetSampleCandidate { 1, 4, true },
+    };
+
+    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 1, 0) == 0);
+    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 1, 2) == -1);
+    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 2, 2) == 2);
+    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 2, 4) == -1);
+}
+
+TEST_CASE("HiHatTransitionPolicy - complete reservation is required before group commit", "[HiHatTransitionPolicy]") {
+    REQUIRE(HiHatTransitionPolicy::canCommitGroupTransition(3, 3, 3));
+    REQUIRE_FALSE(HiHatTransitionPolicy::canCommitGroupTransition(3, 2, 3));
+    REQUIRE_FALSE(HiHatTransitionPolicy::canCommitGroupTransition(3, 3, 2));
+    REQUIRE_FALSE(HiHatTransitionPolicy::canCommitGroupTransition(0, 0, 0));
+}
+
 TEST_CASE("HiHatTransitionPolicy - decay matching blends fallback and matched offsets", "[HiHatTransitionPolicy]") {
     const auto sourceEnvelope = makeEnvelope();
     const auto targetEnvelope = makeEnvelope();

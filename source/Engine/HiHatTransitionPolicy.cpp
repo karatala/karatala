@@ -128,6 +128,20 @@ int selectReferenceMic(std::span<const ReferenceMicCandidate> candidates) noexce
     return selectedIdx;
 }
 
+int findExactTargetSample(std::span<const TargetSampleCandidate> candidates, uint8_t variantIdx, int micChannelStart) noexcept {
+    for (size_t candidateIdx = 0; candidateIdx < candidates.size(); ++candidateIdx) {
+        const auto& candidate = candidates[candidateIdx];
+        if (candidate.available && candidate.variantIdx == variantIdx && candidate.micChannelStart == micChannelStart) {
+            return static_cast<int>(candidateIdx);
+        }
+    }
+    return -1;
+}
+
+bool canCommitGroupTransition(size_t sourceVoiceCount, size_t resolvedTargetCount, size_t reservedVoiceCount) noexcept {
+    return sourceVoiceCount > 0 && resolvedTargetCount == sourceVoiceCount && reservedVoiceCount == sourceVoiceCount;
+}
+
 OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept {
     OffsetResult result;
     if (input.elapsedMs < input.attackGuardMs) {

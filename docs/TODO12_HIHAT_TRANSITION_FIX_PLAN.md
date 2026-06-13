@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress. Phases 1 and 2 were completed on June 13, 2026. Phases 3-6 remain proposed.
+In progress. Phases 1-3 were completed on June 13, 2026. Phases 4-6 remain proposed.
 
 Phase 1 completion:
 
@@ -24,6 +24,19 @@ Phase 2 completion:
 - added independent foot-sample policy decisions;
 - delegated the current controller path to the shared hysteresis, direction, and offset helpers;
 - added focused policy coverage: 8 test cases and 40 assertions passed.
+
+Phase 3 completion:
+
+- stamped every voice with its runtime articulation index;
+- assigned one shared event ID to all microphones started by a sampled hit;
+- grouped controller transitions by that event ID and excluded non-playing voices;
+- selected only the configured newest audible hit groups;
+- resolved exact round-robin variant and routed-mic targets for the complete group;
+- reserved every required idle voice before starting targets or fading sources;
+- selected one canonical direct/overhead/room reference and applied one millisecond offset to every target mic;
+- preserved the event ID and committed the target articulation on every replacement voice;
+- added complementary selectable source/target transition ramps;
+- added synth-level tests proving complete group commit, shared offsets, and unchanged sources when one target mic is missing.
 
 ## Goal
 
@@ -304,6 +317,8 @@ Exit criteria:
 - opening and closing behavior have separate tests.
 
 ### Phase 3: Group-Coherent Voice Transition
+
+Status: Complete.
 
 1. Stamp or retain runtime articulation index directly on each voice.
 2. Group active voices by `noteOnTime`.

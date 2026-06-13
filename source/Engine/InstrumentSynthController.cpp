@@ -37,15 +37,7 @@ void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
 
 void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
     const auto& settings = this->parent->getEngineSettings();
-    const float openCrossfadeSec = settings.hihatOpenCrossfadeSec.load();
-    const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
     const int boundaryHysteresisCc = settings.hihatBoundaryHysteresisCc.load();
-    const float tailMatchAmount = settings.hihatTailMatchAmount.load();
-    const float tailMatchBiasDb = settings.hihatTailMatchBiasDb.load();
-    const float attackGuardSec = settings.hihatTransitionAttackGuardSec.load();
-    const float minRemainingSec = settings.hihatTransitionMinRemainingSec.load();
-    const float silenceFloorDb = settings.hihatTransitionSilenceFloorDb.load();
-    const auto missingDecayPolicy = settings.hihatMissingDecayPolicy.load();
     
     // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
     // so new more open sample plays from offset based on rms level, for example we have analyzed data
@@ -90,7 +82,13 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         return;
     }
     const uint8_t newArtIdx = static_cast<uint8_t>(selectedArtIdx);
-
+    if (this->transitionHiHatGroups(midiChannel, static_cast<ArtRtIdx>(newArtIdx)))
+        this->lastCcArticulation[controllerNumber] = static_cast<int8_t>(newArtIdx);
+    this->lastCcValue[controllerNumber] = controllerValue;
+    return;
+/*
+    // Superseded by the group-coherent transaction above. Remove with the Phase 4
+    // controller hot-path cleanup after its performance counters are extracted.
     LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
     int activeMismatchedVoices = 0;
@@ -389,6 +387,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
             + ", other=" + juce::String(skippedOther) + "}"
         );
     }
+*/
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
@@ -412,7 +411,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
 
     this->lastRequestedVelocity.store(velf);
 
-    bool anyStarted = this->startLayerVoices(art, layer, chosenVariant, midiChannel, midiNoteNumber, velf);
+    bool anyStarted = this->startLayerVoices(static_cast<ArtRtIdx>(artIdx), art, layer, chosenVariant, midiChannel, midiNoteNumber, velf);
     if (!anyStarted) return false;
 
     this->applyAftertouch(midiChannel, midiNoteNumber);
@@ -547,7 +546,7 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
     return lowestSetBit(remaining);
 }
 
-bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
+bool InstrumentSynth::startLayerVoices(ArtRtIdx artIdx, ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
     const juce::ScopedLock sl(this->lock);
     const auto& settings = this->parent->getEngineSettings();
     const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
@@ -561,6 +560,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
     if (this->type == KitLib::InstrumentSpec::Type::HiHat)
         this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
 
+    const juce::uint32 eventId = this->allocateEventId();
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
         if (!se.sound || se.variantIdx != chosenVariant) continue;
@@ -571,7 +571,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
         }
         auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
         if (!voice) continue;
-        this->startSampleVoice(*voice, art, se, midiChannel, midiNoteNumber, velocity);
+        this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, eventId);
         anyStarted = true;
     }
 
@@ -581,7 +581,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
             if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) continue;
             auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
             if (!voice) continue;
-            this->startSampleVoice(*voice, art, se, midiChannel, midiNoteNumber, velocity);
+            this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, eventId);
             anyStarted = true;
         }
     }
@@ -753,7 +753,7 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSe
     }
 }
 
-void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity) {
+void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArtRtIdx artIdx, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity, juce::uint32 eventId) {
     if (LOG_ENABLED(Verbose)) {
         auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.codeRaw;
         auto& artCode = se.sound->sampleVariantSpec->parent->parent->codeRaw;
@@ -771,8 +771,9 @@ void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, Articulation
     voice.setReleaseTimeSec(this->decayOverrideMs.has_value() ? static_cast<float>(*this->decayOverrideMs) / 1000.0f : 0.1f);
     voice.setUseOneShotDecayEnvelope(this->decayOverrideMs.has_value());
 
-    this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocity);
+    this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocity, eventId);
 
+    voice.runtimeArticulationIdx = artIdx;
     voice.artNameId = art.nameId;
     voice.artExprId = art.exprId;
     voice.setVelocityGain(velocity);

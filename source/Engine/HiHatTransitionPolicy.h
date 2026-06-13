@@ -35,6 +35,12 @@ struct ReferenceMicCandidate {
     bool valid = false;
 };
 
+struct TargetSampleCandidate {
+    uint8_t variantIdx = 0;
+    int micChannelStart = -1;
+    bool available = false;
+};
+
 enum class OffsetStatus {
     Success,
     AttackGuard,
@@ -88,6 +94,10 @@ size_t selectEligibleHitGroups(std::span<const HitGroupCandidate> candidates,
                                std::span<size_t> selectedCandidateIndices) noexcept;
 
 int selectReferenceMic(std::span<const ReferenceMicCandidate> candidates) noexcept;
+
+int findExactTargetSample(std::span<const TargetSampleCandidate> candidates, uint8_t variantIdx, int micChannelStart) noexcept;
+
+bool canCommitGroupTransition(size_t sourceVoiceCount, size_t resolvedTargetCount, size_t reservedVoiceCount) noexcept;
 
 OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept;
 

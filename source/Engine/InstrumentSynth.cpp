@@ -1,5 +1,6 @@
 #include "InstrumentSynth.h"
 #include "DrumKitEngine.h"
+#include "HiHatTransitionPolicy.h"
 #include <limits>
 
 
@@ -242,6 +243,11 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     this->adsr.noteOn();
 
     this->tailShortenFactor = 1.0f;
+    this->transitionRamp = TransitionRamp::None;
+    this->transitionProgress = 1.0f;
+    this->transitionProgressStep = 0.0f;
+    this->lastTransitionGain = 1.0f;
+    this->transitionStopRequested = false;
     this->dbUpdateCounter = 3; // force immediate dB update on first render
 
     this->chokeProcessor.noteStarted();
@@ -264,6 +270,42 @@ void InstrumentSynthVoice::requestFadeOut(float durationSec) {
     p.release = releaseSec;
     this->adsr.setParameters(p);
     this->adsr.noteOff();
+}
+
+void InstrumentSynthVoice::requestTransitionFadeIn(float durationSec, HiHatTransitionCurve curve) {
+    const float sampleRate = static_cast<float>(juce::jmax(1.0, this->getSampleRate()));
+    const float durationSamples = juce::jmax(1.0f, durationSec * sampleRate);
+    this->transitionRamp = TransitionRamp::FadeIn;
+    this->transitionCurve = curve;
+    this->transitionProgress = 0.0f;
+    this->transitionProgressStep = 1.0f / durationSamples;
+    this->lastTransitionGain = 0.0f;
+    this->transitionStopRequested = false;
+}
+
+void InstrumentSynthVoice::requestTransitionFadeOut(float durationSec, HiHatTransitionCurve curve) {
+    if (this->envelopeState == EnvelopeState::Idle) return;
+    const float sampleRate = static_cast<float>(juce::jmax(1.0, this->getSampleRate()));
+    const float durationSamples = juce::jmax(1.0f, durationSec * sampleRate);
+    this->envelopeState = EnvelopeState::FadingOut;
+    this->transitionRamp = TransitionRamp::FadeOut;
+    this->transitionCurve = curve;
+    this->transitionProgress = 0.0f;
+    this->transitionProgressStep = 1.0f / durationSamples;
+    this->lastTransitionGain = 1.0f;
+    this->transitionStopRequested = false;
+}
+
+float InstrumentSynthVoice::getNextTransitionGain() {
+    if (this->transitionRamp == TransitionRamp::None) return 1.0f;
+    const auto gains = HiHatTransitionPolicy::calculateTransitionGains(this->transitionProgress, this->transitionCurve);
+    this->lastTransitionGain = this->transitionRamp == TransitionRamp::FadeIn ? gains.targetGain : gains.sourceGain;
+    this->transitionProgress = juce::jmin(1.0f, this->transitionProgress + this->transitionProgressStep);
+    if (this->transitionProgress >= 1.0f) {
+        if (this->transitionRamp == TransitionRamp::FadeOut) this->transitionStopRequested = true;
+        else this->transitionRamp = TransitionRamp::None;
+    }
+    return this->lastTransitionGain;
 }
 
 void InstrumentSynthVoice::requestRelease() {
@@ -314,7 +356,8 @@ void InstrumentSynthVoice::updateEstimatedDb() {
         const float bleedGain = this->owner->getMicBleedLevel(s->routedMicCode);
         layerGainDb = juce::Decibels::gainToDecibels(juce::jmax(0.0001f, layerGain * bleedGain), -100.0f);
     }
-    this->cachedEstimatedDb = s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb + layerGainDb;
+    const float transitionGainDb = juce::Decibels::gainToDecibels(juce::jmax(0.0001f, this->lastTransitionGain), -100.0f);
+    this->cachedEstimatedDb = s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb + layerGainDb + transitionGainDb;
 }
 
 void InstrumentSynthVoice::stopNote(bool allowTailOff) {
@@ -365,8 +408,14 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     const int destChBase = s->micBufferChannelStart;
     if (destChBase < 0 || destChBase >= destChCount) {
         // Advance ADSR to keep envelope state consistent
-        for (int i = 0; i < numSamples; ++i)
+        for (int i = 0; i < numSamples; ++i) {
             (void) this->adsr.getNextSample();
+            (void) this->getNextTransitionGain();
+            if (this->transitionStopRequested) {
+                this->stopNote(false);
+                break;
+            }
+        }
         this->sourceSamplePosition += this->pitchRatio * numSamples;
         if (!this->adsr.isActive() || this->sourceSamplePosition >= srcLen)
             this->stopNote(false);
@@ -402,7 +451,8 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         if (idx >= 0 && idx < srcLen) {
             const auto env = this->adsr.getNextSample();
             this->lastEnvelopeValue = env;
-            const float gain = env * this->velocityGain * chokeGain * voiceGain * phaseMultiplier;
+            const float transitionGain = this->getNextTransitionGain();
+            const float gain = env * this->velocityGain * chokeGain * voiceGain * transitionGain * phaseMultiplier;
 
             for (int sc = 0; sc < effectiveSrcCount; ++sc) {
                 const int destIndex = (flipLR && effectiveSrcCount == 2) ? (effectiveSrcCount - 1 - sc) : sc;
@@ -417,6 +467,10 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         }
 
         this->sourceSamplePosition += this->pitchRatio;
+        if (this->transitionStopRequested) {
+            this->stopNote(false);
+            break;
+        }
         if (this->sourceSamplePosition >= srcLen) {
             
             // reached end
