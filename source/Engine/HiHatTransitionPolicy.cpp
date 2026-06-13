@@ -157,9 +157,20 @@ OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept {
         return result;
     }
 
+    const float matchAmount = std::clamp(input.matchAmount, 0.0f, 1.0f);
     const bool sourceEnvelopeValid = input.sourceEnvelope != nullptr && input.sourceEnvelope->isValid();
     const bool targetEnvelopeValid = input.targetEnvelope != nullptr && input.targetEnvelope->isValid();
     const bool hasDecayMatch = sourceEnvelopeValid && targetEnvelopeValid;
+    if (matchAmount <= 0.0f) {
+        result.targetRelativeDb = input.currentAudibleDb + input.matchBiasDb - input.replacementGainDb;
+        result.offsetMs = std::clamp(input.elapsedMs, 0.0f, input.sampleLengthMs);
+        if (input.sampleLengthMs - result.offsetMs < input.minimumRemainingMs) {
+            result.status = OffsetStatus::TooLittleRemaining;
+            return result;
+        }
+        result.status = OffsetStatus::Success;
+        return result;
+    }
     if (!hasDecayMatch && input.missingDecayPolicy == HiHatMissingDecayPolicy::KeepTail) {
         result.status = OffsetStatus::MissingEnvelope;
         return result;
@@ -182,7 +193,6 @@ OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept {
             result.status = OffsetStatus::NoDecayMatch;
             return result;
         }
-        const float matchAmount = std::clamp(input.matchAmount, 0.0f, 1.0f);
         targetMs = fallbackMs + matchAmount * (matchedMs - fallbackMs);
     }
 

@@ -2,7 +2,14 @@
 
 ## Status
 
-In progress. Phases 1-5 were completed on June 13, 2026. Phase 6 remains proposed.
+In progress.
+
+- Phases 1 and 2 are complete.
+- Phase 3 is implemented but was not accepted because it regressed closed-to-open tail transitions and foot-splash behavior.
+- Phase 3.1 is implemented and automated tests pass; listening acceptance is still required.
+- Phase 4 is implemented but must be revalidated after Phase 3.1.
+- Phase 5 is partially implemented: settings storage, YAML, and UI controls exist, but foot-sample runtime behavior is incomplete.
+- Phase 6 remains pending.
 
 Phase 1 completion:
 
@@ -25,7 +32,7 @@ Phase 2 completion:
 - delegated the current controller path to the shared hysteresis, direction, and offset helpers;
 - added focused policy coverage: 8 test cases and 40 assertions passed.
 
-Phase 3 completion:
+Phase 3 implementation:
 
 - stamped every voice with its runtime articulation index;
 - assigned one shared event ID to all microphones started by a sampled hit;
@@ -38,7 +45,37 @@ Phase 3 completion:
 - added complementary selectable source/target transition ramps;
 - added synth-level tests proving complete group commit, shared offsets, and unchanged sources when one target mic is missing.
 
-Phase 4 completion:
+Known Phase 3 regressions:
+
+- opening a ringing closed hi-hat may fail to start the corresponding open sound;
+- a transition with no selected group can be reported as successful and cached, preventing a later retry;
+- exact variant and routed-mic requirements can reject target groups that the earlier per-voice path could transition;
+- pedal and foot-splash voices are not separated from struck-tail morph transactions;
+- the foot-sample policy and UI setting exist, but no runtime path currently triggers the foot sample.
+
+Phase 3.1 implementation:
+
+- added explicit `NoRelevantTail`, `Completed`, and `Skipped` transition results;
+- retained skipped eligible transitions as bounded retries and allowed newer CC input to supersede them;
+- resolved target articulations from desired openness plus the struck source zone;
+- added one common loaded round-robin fallback variant for complete mic groups;
+- marked pedal articulations as foot events and excluded their voices from struck-tail morphing;
+- connected foot-sample modes to mapped pedal sample triggering;
+- added regression coverage for delayed opening retries, zone preservation, coherent fallback, and foot-event separation;
+- verified 61 test cases and 436 assertions;
+- measured a 128-value controller sweep at approximately `44.6 us` mean in the Debug benchmark.
+
+Phase 3.1 listening follow-up:
+
+- the first listening pass still sounded effectively unchanged with the active NakedDrums mapping;
+- source-zone preservation was too strict for kits or remaps without a same-zone target, so mapped-articulation fallback is now allowed;
+- plain ringing `pedal` voices may again morph into an opening tail, restoring the splash-like behavior present before Phase 3;
+- explicit `pedal[splash]` voices remain independent and are not reused as morph sources;
+- `Tail Match = 0%` now bypasses decay-envelope matching instead of failing on missing or unmatched metadata;
+- tests now model asymmetric zones and pedal samples without decay metadata;
+- the Debug standalone and VST3 product targets were rebuilt for listening verification.
+
+Phase 4 implementation:
 
 - added fixed target-entry lookup tables keyed by round-robin variant and routed mic;
 - published sample length and usable-audio validation metadata with loaded buffers;
@@ -49,12 +86,13 @@ Phase 4 completion:
 - added lock-free processed, coalesced, skipped, and completed transition counters;
 - added controller coalescing coverage and a focused 128-value CC sweep benchmark.
 
-Phase 5 completion:
+Phase 5 partial implementation:
 
 - TODO13 added live controls backed by lock-free realtime settings;
 - YAML loading, migration, defaults, and serialization cover the transition settings;
 - Phase 4 activated the persisted `controllerSmoothingSec` control in the audio-thread scheduler;
 - existing configuration files retain documented defaults for missing values.
+- foot-sample mode is persisted and exposed in the UI, but is not yet connected to runtime triggering.
 
 ## Goal
 
@@ -336,7 +374,7 @@ Exit criteria:
 
 ### Phase 3: Group-Coherent Voice Transition
 
-Status: Complete.
+Status: Implemented, regression repair required before acceptance.
 
 1. Stamp or retain runtime articulation index directly on each voice.
 2. Group active voices by `noteOnTime`.
@@ -350,10 +388,57 @@ Exit criteria:
 - a transition cannot partially replace a mic group;
 - no fading/dying voice creates another replacement;
 - room/direct timing relationships remain unchanged.
+- closed-to-open and open-to-closed transitions remain functional;
+- pedal and foot-splash playback remain functional.
+
+### Phase 3.1: Regression Repair
+
+Status: Implemented with listening-follow-up fixes; awaiting another listening pass.
+
+This phase restores the musical behavior present before Phase 3 while retaining shared event IDs, atomic mic-group commits, canonical offsets, and complementary ramps.
+
+1. Correct transition result semantics.
+   - Distinguish `no relevant active tail`, `transition completed`, and `transition skipped`.
+   - Cache `lastCcArticulation` only when a group completed or when no relevant active tail exists.
+   - Keep a bounded pending request when an eligible group exists but cannot currently transition.
+2. Restore closed-to-open tail transitions.
+   - Reproduce the failure with a controller-level test.
+   - Verify the selected source group, target articulation, velocity layer, offset, and voice reservation independently.
+   - Ensure a skipped early request can retry after the attack guard or smoothing interval.
+3. Preserve the struck zone during openness changes.
+   - Morph `edge` tails through `edge` openness articulations and `bow` tails through `bow` openness articulations.
+   - Do not redirect a struck tail to `pedal`, chick, or foot-splash articulations.
+4. Add coherent target fallback.
+   - Prefer exact variant and routed-mic matches.
+   - When an exact round-robin variant is unavailable, select one common loaded fallback variant for the complete mic group.
+   - Never fall back independently per microphone or commit a partial group.
+5. Separate foot voices from tail morphing.
+   - Exclude pedal, chick, and foot-splash events from struck-tail group selection.
+   - Pedal voices may choke or finish according to their own event policy but must not become openness-morph sources.
+6. Restore independent foot-sample triggering.
+   - Use `hihatFootSampleMode` and `HiHatTransitionPolicy::shouldTriggerFootSample()`.
+   - Trigger the mapped pedal/chick sample on qualifying closure without replacing the struck tail with that articulation.
+   - Restore existing foot-splash playback paths; advanced splash-gesture inference remains out of scope.
+
+Exit criteria:
+
+- a ringing closed `edge` or `bow` hit transitions to its corresponding open articulation;
+- an initially skipped transition can retry instead of being cached as complete;
+- exact target matching remains preferred, but a coherent common fallback variant can transition the full group;
+- pedal/chick and foot-splash voices are never used as struck-tail morph sources;
+- `Foot Sample = Off`, `Close Only`, and `Always` affect runtime behavior as documented;
+- regression tests fail on the current Phase 3 behavior and pass after the repair;
+- all Phase 3 group-coherence tests continue to pass.
+
+Automated verification:
+
+- focused `[InstrumentSynth][HiHatTransition]`: 11 test cases and 44 assertions passed;
+- full suite: 64 test cases and 443 assertions passed;
+- focused Debug benchmark remains bounded after the follow-up changes.
 
 ### Phase 4: Realtime Work Reduction
 
-Status: Complete.
+Status: Implemented; revalidation depends on Phase 3.1.
 
 1. Precompute target entry lookup tables during load/rebuild.
 2. Replace target-buffer RMS scans with load-time validation metadata.
@@ -367,10 +452,11 @@ Exit criteria:
 - no sample-window scan occurs in `handleController()`;
 - no heap allocation occurs during a controller transition;
 - worst-case work is bounded by configured active groups and mic count.
+- Phase 3.1 retries, fallback selection, and foot triggering remain bounded and allocation-free.
 
 ### Phase 5: UI and Persistence
 
-Status: Complete through TODO13 and Phase 4.
+Status: Partial. Continue after Phase 3.1 and Phase 4 revalidation.
 
 Implement the settings contract in [TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md](TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md).
 
@@ -380,8 +466,12 @@ Exit criteria:
 - values persist to YAML;
 - old configuration files load with documented defaults;
 - UI changes are race-free.
+- every exposed setting has implemented runtime behavior;
+- foot-sample mode changes are audible and follow the documented policy.
 
 ### Phase 6: Listening and Performance Validation
+
+Status: Pending Phase 3.1, Phase 4 revalidation, and Phase 5 completion.
 
 Test:
 
@@ -426,6 +516,11 @@ Required cases:
 10. Opening and closing use different durations.
 11. Missing metadata follows the configured fallback.
 12. Foot sample policy does not replace a struck tail with `pedal`.
+13. Closed `edge` and `bow` tails transition to their matching open zones.
+14. A skipped eligible transition is not cached as complete and can retry.
+15. A missing exact round-robin target uses one coherent fallback variant for every mic.
+16. Pedal, chick, and foot-splash voices are excluded from struck-tail morph groups.
+17. Foot-sample modes trigger the expected runtime event.
 
 ## Performance Measurement
 
@@ -454,6 +549,7 @@ Record:
 | `source/Engine/InstrumentSynth.h` | Hit-group transition state and precomputed lookup structures |
 | `source/Engine/InstrumentSynthLoader.cpp` | Build target lookup and validation metadata |
 | `source/Engine/InstrumentSynthController.cpp` | Coalescing, policy, group transaction, and foot-event separation |
+| `source/Engine/InstrumentSynthHiHatTransition.cpp` | Group transition results, zone-preserving target resolution, coherent fallback, and retry behavior |
 | `source/Engine/InstrumentSynth.cpp` | Transition gain ramp rendering and audible-level cache |
 | `source/Engine/DrumKitEngine.cpp` | YAML load/save and settings publication |
 | `source/UI/EngineSettingsPanel.cpp` | Live controls through the thread-safe settings API |
@@ -465,5 +561,5 @@ Record:
 - Physical modeling of continuous cymbal aperture.
 - Time-stretching or spectral morphing between recordings.
 - Automatic generation of missing openness articulations.
-- Foot-splash velocity inference beyond a separately approved policy.
+- New foot-splash gesture or velocity inference beyond restoring existing mapped playback behavior.
 - Changes to sample filename metadata encoding.

@@ -24,6 +24,7 @@ void InstrumentSynth::resetRoutingTables() {
     this->pendingCcValue.fill(0);
     this->pendingCcMidiChannel.fill(0);
     this->pendingCcTransition.fill(false);
+    this->pendingCcArticulation.fill(-1);
     this->lastCcProcessedSample.fill(0);
     this->hasProcessedCcTransition.fill(false);
     this->renderedSampleCount = 0;
@@ -275,6 +276,10 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
 ) {
     MicRoutingBuilder micRouting(this);
 
+    const bool isPedalArticulation = artSpec->nameId == StringsDictSingleton::getId("pedal");
+    artRt.isFootEvent = artRt.isFootEvent || isPedalArticulation;
+    artRt.isFootSplash = artRt.isFootSplash
+        || (isPedalArticulation && artSpec->exprId == StringsDictSingleton::getId("splash"));
     this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, micRouting);
     micRouting.mergeSkippedInto(skippedMicCodes);
     artRt.buildVelocityMapping();

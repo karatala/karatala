@@ -169,6 +169,20 @@ TEST_CASE("HiHatTransitionPolicy - missing decay policy keeps or simply fades", 
             == HiHatTransitionPolicy::OffsetStatus::TooLittleRemaining);
 }
 
+TEST_CASE("HiHatTransitionPolicy - zero tail matching does not require decay metadata", "[HiHatTransitionPolicy]") {
+    HiHatTransitionPolicy::OffsetInput input;
+    input.elapsedMs = 40.0f;
+    input.currentAudibleDb = -30.0f;
+    input.sampleLengthMs = 200.0f;
+    input.minimumRemainingMs = 50.0f;
+    input.matchAmount = 0.0f;
+    input.missingDecayPolicy = HiHatMissingDecayPolicy::KeepTail;
+
+    const auto result = HiHatTransitionPolicy::calculateDecayMatchedOffset(input);
+    REQUIRE(result.succeeded());
+    REQUIRE(result.offsetMs == Catch::Approx(40.0f));
+}
+
 TEST_CASE("HiHatTransitionPolicy - transition curves have stable endpoints and midpoint", "[HiHatTransitionPolicy]") {
     const auto linearMidpoint = HiHatTransitionPolicy::calculateTransitionGains(0.5f, HiHatTransitionCurve::Linear);
     REQUIRE(linearMidpoint.sourceGain == Catch::Approx(0.5f));

@@ -9,6 +9,7 @@
 #include <optional>
 #include "AftertouchChokeProcessor.h"
 #include "EngineSettings.h"
+#include "HiHatTransitionPolicy.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
 
@@ -268,9 +269,23 @@ public:
         uint64_t completed = 0;
     };
 
+    enum class HiHatTransitionStatus {
+        NoRelevantTail,
+        Completed,
+        Skipped,
+    };
+
+    struct HiHatTransitionResult {
+        HiHatTransitionStatus status = HiHatTransitionStatus::NoRelevantTail;
+        size_t selectedGroupCount = 0;
+        size_t completedGroupCount = 0;
+    };
+
     struct ArticulationRuntime {
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
+        bool isFootEvent = false;
+        bool isFootSplash = false;
         // pdl_opn_cls value extracted from ArticulationSpec expression dimensions.
         // Higher value = more closed/tight = stronger (mutes articulations with lower pocValue).
         // -1 = not a PedalOpenClose articulation.
@@ -328,6 +343,7 @@ public:
         , type(instrumentSlot.type)
     {
         this->lastCcArticulation.fill(-1);
+        this->pendingCcArticulation.fill(-1);
     }
     ~InstrumentSynth() {}
 
@@ -582,6 +598,7 @@ private:
     std::array<int, 128> pendingCcValue {};
     std::array<int, 128> pendingCcMidiChannel {};
     std::array<bool, 128> pendingCcTransition {};
+    std::array<ArtRtIdx, 128> pendingCcArticulation {};
     std::array<uint64_t, 128> lastCcProcessedSample {};
     std::array<bool, 128> hasProcessedCcTransition {};
     uint64_t renderedSampleCount = 0;
@@ -635,7 +652,9 @@ private:
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
     void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
     void processPendingHiHatControllers();
-    bool transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtIdx);
+    ArtRtIdx resolveHiHatTargetArticulation(ArtRtIdx sourceArtIdx, ArtRtIdx desiredArtIdx) const;
+    bool triggerHiHatFootSample(int midiChannel, ArtRtIdx desiredArtIdx, HiHatTransitionPolicy::Direction direction, int controllerDelta);
+    HiHatTransitionResult transitionHiHatGroups(int midiChannel, ArtRtIdx desiredArtIdx);
     // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
     void chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec);

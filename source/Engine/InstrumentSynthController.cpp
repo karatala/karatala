@@ -46,6 +46,10 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
     const int clampedControllerValue = juce::jlimit(0, 127, controllerValue);
     const size_t controllerIdx = static_cast<size_t>(controllerNumber);
+    if (this->pendingCcArticulation[controllerIdx] >= 0
+        && this->pendingCcValue[controllerIdx] != clampedControllerValue) {
+        this->pendingCcArticulation[controllerIdx] = -1;
+    }
     this->pendingCcValue[controllerIdx] = clampedControllerValue;
     this->pendingCcMidiChannel[controllerIdx] = midiChannel;
 
@@ -119,25 +123,52 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     }
 
     const int cachedArtIdx = this->lastCcArticulation[controllerNumber];
+    const bool isRetry = this->pendingCcArticulation[controllerNumber] >= 0;
     std::array<int, 256> pocByArticulation {};
     const size_t articulationCount = juce::jmin(this->runtimeArticulations.size(), pocByArticulation.size());
     for (size_t articulationIdx = 0; articulationIdx < articulationCount; ++articulationIdx)
         pocByArticulation[articulationIdx] = this->runtimeArticulations[articulationIdx].pocValue;
 
-    const int selectedArtIdx = HiHatTransitionPolicy::selectOpennessArticulation(
-        mapArr,
-        std::span<const int>(pocByArticulation.data(), articulationCount),
-        controllerValue,
-        this->lastCcValue[controllerNumber],
-        cachedArtIdx,
-        boundaryHysteresisCc);
+    const int selectedArtIdx = isRetry
+        ? this->pendingCcArticulation[controllerNumber]
+        : HiHatTransitionPolicy::selectOpennessArticulation(
+            mapArr,
+            std::span<const int>(pocByArticulation.data(), articulationCount),
+            controllerValue,
+            this->lastCcValue[controllerNumber],
+            cachedArtIdx,
+            boundaryHysteresisCc);
     if (selectedArtIdx == cachedArtIdx) {
+        this->pendingCcArticulation[controllerNumber] = -1;
         this->lastCcValue[controllerNumber] = controllerValue;
         return;
     }
-    const uint8_t newArtIdx = static_cast<uint8_t>(selectedArtIdx);
-    if (this->transitionHiHatGroups(midiChannel, static_cast<ArtRtIdx>(newArtIdx)))
-        this->lastCcArticulation[controllerNumber] = static_cast<int8_t>(newArtIdx);
+
+    const auto desiredArtIdx = static_cast<ArtRtIdx>(selectedArtIdx);
+    const int previousControllerValue = this->lastCcValue[controllerNumber];
+    HiHatTransitionPolicy::Direction pedalDirection = HiHatTransitionPolicy::Direction::Unknown;
+    if (cachedArtIdx >= 0 && cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())) {
+        pedalDirection = HiHatTransitionPolicy::getDirection(
+            this->runtimeArticulations[static_cast<size_t>(cachedArtIdx)].pocValue,
+            this->runtimeArticulations[static_cast<size_t>(desiredArtIdx)].pocValue);
+    }
+
+    const auto transitionResult = this->transitionHiHatGroups(midiChannel, desiredArtIdx);
+    if (!isRetry) {
+        this->triggerHiHatFootSample(
+            midiChannel,
+            desiredArtIdx,
+            pedalDirection,
+            std::abs(controllerValue - previousControllerValue));
+    }
+    if (transitionResult.status == HiHatTransitionStatus::Completed
+        || transitionResult.status == HiHatTransitionStatus::NoRelevantTail) {
+        this->lastCcArticulation[controllerNumber] = desiredArtIdx;
+        this->pendingCcArticulation[controllerNumber] = -1;
+    } else {
+        this->pendingCcArticulation[controllerNumber] = desiredArtIdx;
+        this->pendingCcTransition[controllerNumber] = true;
+    }
     this->lastCcValue[controllerNumber] = controllerValue;
     return;
 /*

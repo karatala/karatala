@@ -9,9 +9,102 @@ constexpr size_t maximumTransitionGroups = 32;
 
 } // namespace
 
-bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtIdx) {
-    if (targetArtIdx < 0 || targetArtIdx >= static_cast<int>(this->runtimeArticulations.size()))
+InstrumentSynth::ArtRtIdx InstrumentSynth::resolveHiHatTargetArticulation(ArtRtIdx sourceArtIdx, ArtRtIdx desiredArtIdx) const {
+    if (sourceArtIdx < 0
+        || desiredArtIdx < 0
+        || sourceArtIdx >= static_cast<int>(this->runtimeArticulations.size())
+        || desiredArtIdx >= static_cast<int>(this->runtimeArticulations.size())) {
+        return -1;
+    }
+
+    const auto& sourceArt = this->runtimeArticulations[static_cast<size_t>(sourceArtIdx)];
+    const auto& desiredArt = this->runtimeArticulations[static_cast<size_t>(desiredArtIdx)];
+    if (desiredArt.pocValue < 0)
+        return -1;
+    if (sourceArt.isFootSplash)
+        return -1;
+    if (sourceArt.isFootEvent)
+        return desiredArt.isFootEvent ? -1 : desiredArtIdx;
+
+    for (size_t articulationIdx = 0; articulationIdx < this->runtimeArticulations.size(); ++articulationIdx) {
+        const auto& candidateArt = this->runtimeArticulations[articulationIdx];
+        if (!candidateArt.isFootEvent
+            && candidateArt.nameId == sourceArt.nameId
+            && candidateArt.pocValue == desiredArt.pocValue) {
+            return static_cast<ArtRtIdx>(articulationIdx);
+        }
+    }
+    return desiredArt.isFootEvent ? -1 : desiredArtIdx;
+}
+
+bool InstrumentSynth::triggerHiHatFootSample(int midiChannel, ArtRtIdx desiredArtIdx, HiHatTransitionPolicy::Direction direction, int controllerDelta) {
+    if (desiredArtIdx < 0 || desiredArtIdx >= static_cast<int>(this->runtimeArticulations.size()))
         return false;
+
+    int maximumNonFootPoc = -1;
+    for (const auto& articulation : this->runtimeArticulations) {
+        if (!articulation.isFootEvent)
+            maximumNonFootPoc = juce::jmax(maximumNonFootPoc, articulation.pocValue);
+    }
+    const bool entersMostClosedArticulation = maximumNonFootPoc >= 0
+        && this->runtimeArticulations[static_cast<size_t>(desiredArtIdx)].pocValue >= maximumNonFootPoc;
+    if (!HiHatTransitionPolicy::shouldTriggerFootSample(
+            this->parent->getEngineSettings().hihatFootSampleMode.load(),
+            direction,
+            entersMostClosedArticulation)) {
+        return false;
+    }
+
+    ArtRtIdx footArtIdx = -1;
+    int selectedFootPoc = direction == HiHatTransitionPolicy::Direction::Opening
+        ? std::numeric_limits<int>::max()
+        : std::numeric_limits<int>::min();
+    for (size_t articulationIdx = 0; articulationIdx < this->runtimeArticulations.size(); ++articulationIdx) {
+        const auto& articulation = this->runtimeArticulations[articulationIdx];
+        if (!articulation.isFootEvent)
+            continue;
+        const bool preferred = footArtIdx < 0
+            || (direction == HiHatTransitionPolicy::Direction::Opening && articulation.pocValue < selectedFootPoc)
+            || (direction == HiHatTransitionPolicy::Direction::Closing && articulation.pocValue > selectedFootPoc);
+        if (preferred) {
+            footArtIdx = static_cast<ArtRtIdx>(articulationIdx);
+            selectedFootPoc = articulation.pocValue;
+        }
+    }
+    if (footArtIdx < 0)
+        return false;
+
+    int midiNoteNumber = -1;
+    for (size_t noteIdx = 0; noteIdx < this->noteToArticulation.size(); ++noteIdx) {
+        if (this->noteToArticulation[noteIdx] == footArtIdx) {
+            midiNoteNumber = static_cast<int>(noteIdx);
+            break;
+        }
+    }
+    if (midiNoteNumber < 0)
+        return false;
+
+    auto& footArt = this->runtimeArticulations[static_cast<size_t>(footArtIdx)];
+    const int velocity = juce::jlimit(1, 127, controllerDelta * 2);
+    const int layerIdx = this->resolveVelocityLayer(footArt, static_cast<juce::uint8>(velocity));
+    if (layerIdx < 0)
+        return false;
+    auto& layer = footArt.layers[static_cast<size_t>(layerIdx)];
+    const uint8_t variantIdx = this->chooseVariantGroup(layer);
+    return this->startLayerVoices(
+        footArtIdx,
+        footArt,
+        layer,
+        variantIdx,
+        midiChannel,
+        midiNoteNumber,
+        static_cast<float>(velocity) / 127.0f);
+}
+
+InstrumentSynth::HiHatTransitionResult InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx desiredArtIdx) {
+    HiHatTransitionResult result;
+    if (desiredArtIdx < 0 || desiredArtIdx >= static_cast<int>(this->runtimeArticulations.size()))
+        return { HiHatTransitionStatus::Skipped, 0, 0 };
 
     const auto& settings = this->parent->getEngineSettings();
     const float openCrossfadeSec = settings.hihatOpenCrossfadeSec.load();
@@ -33,8 +126,23 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
             || !voice->isVoiceActive()
             || voice->getEnvelopeState() != InstrumentSynthVoice::EnvelopeState::Playing
             || voice->getRuntimeArticulationIndex() < 0
-            || voice->getRuntimeArticulationIndex() == targetArtIdx
             || (midiChannel > 0 && !voice->isPlayingChannel(midiChannel))) {
+            continue;
+        }
+        const auto sourceArtIdx = voice->getRuntimeArticulationIndex();
+        const auto& sourceArt = this->runtimeArticulations[static_cast<size_t>(sourceArtIdx)];
+        if (sourceArt.isFootSplash)
+            continue;
+        const auto targetArtIdx = this->resolveHiHatTargetArticulation(
+            static_cast<ArtRtIdx>(sourceArtIdx),
+            desiredArtIdx);
+        if (targetArtIdx < 0 || targetArtIdx == sourceArtIdx)
+            continue;
+        if (sourceArt.isFootEvent
+            && HiHatTransitionPolicy::getDirection(
+                sourceArt.pocValue,
+                this->runtimeArticulations[static_cast<size_t>(targetArtIdx)].pocValue)
+                != HiHatTransitionPolicy::Direction::Opening) {
             continue;
         }
 
@@ -66,6 +174,9 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
         maximumActiveGroups,
         silenceFloorDb,
         selectedGroupIndices);
+    result.selectedGroupCount = selectedGroupCount;
+    if (selectedGroupCount == 0)
+        return result;
     size_t completedGroupCount = 0;
 
     for (size_t selectedGroupIdx = 0; selectedGroupIdx < selectedGroupCount; ++selectedGroupIdx) {
@@ -111,11 +222,15 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
 
         if (!sourceGroupValid
             || sourceVoiceCount == 0
-            || sourceArtIdx == targetArtIdx
             || sourceArtIdx >= static_cast<int>(this->runtimeArticulations.size())) {
             continue;
         }
 
+        const ArtRtIdx targetArtIdx = this->resolveHiHatTargetArticulation(
+            static_cast<ArtRtIdx>(sourceArtIdx),
+            desiredArtIdx);
+        if (targetArtIdx < 0 || sourceArtIdx == targetArtIdx)
+            continue;
         const auto& targetArt = this->runtimeArticulations[static_cast<size_t>(targetArtIdx)];
         const int referenceSourceIdx = HiHatTransitionPolicy::selectReferenceMic(
             std::span<const HiHatTransitionPolicy::ReferenceMicCandidate>(referenceCandidates.data(), sourceVoiceCount));
@@ -130,18 +245,32 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
             continue;
         const auto& targetLayer = targetArt.layers[static_cast<size_t>(layerIdx)];
 
-        size_t resolvedTargetCount = 0;
-        for (size_t sourceIdx = 0; sourceIdx < sourceVoiceCount; ++sourceIdx) {
-            auto* sourceSound = sourceVoices[sourceIdx]->getCurrentlyPlayingSound();
-            const uint8_t variantIdx = KitLib::SampleVariantSpec::letterToIdx(
-                sourceSound->sampleVariantSpec->letter);
-            const auto* targetEntry = targetLayer.findTransitionEntry(
-                variantIdx,
-                sourceSound->micBufferChannelStart);
-            if (targetEntry == nullptr)
-                break;
-            targetEntries[sourceIdx] = targetEntry;
-            ++resolvedTargetCount;
+        const auto resolveVariant = [&](uint8_t variantIdx) {
+            size_t resolvedTargetCount = 0;
+            for (size_t sourceIdx = 0; sourceIdx < sourceVoiceCount; ++sourceIdx) {
+                auto* sourceSound = sourceVoices[sourceIdx]->getCurrentlyPlayingSound();
+                const auto* targetEntry = targetLayer.findTransitionEntry(
+                    variantIdx,
+                    sourceSound->micBufferChannelStart);
+                if (targetEntry == nullptr)
+                    return size_t { 0 };
+                targetEntries[sourceIdx] = targetEntry;
+                ++resolvedTargetCount;
+            }
+            return resolvedTargetCount;
+        };
+
+        const uint8_t preferredVariantIdx = KitLib::SampleVariantSpec::letterToIdx(
+            referenceVoice->getCurrentlyPlayingSound()->sampleVariantSpec->letter);
+        size_t resolvedTargetCount = resolveVariant(preferredVariantIdx);
+        if (resolvedTargetCount == 0) {
+            for (uint8_t fallbackVariantIdx = 0; fallbackVariantIdx < VelocityLayerRuntime::maximumVariantCount; ++fallbackVariantIdx) {
+                if (fallbackVariantIdx == preferredVariantIdx)
+                    continue;
+                resolvedTargetCount = resolveVariant(fallbackVariantIdx);
+                if (resolvedTargetCount == sourceVoiceCount)
+                    break;
+            }
         }
 
         size_t reservedVoiceCount = 0;
@@ -162,6 +291,7 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
 
         auto* referenceSourceSound = referenceVoice->getCurrentlyPlayingSound();
         auto* referenceTargetSound = targetEntries[static_cast<size_t>(referenceSourceIdx)]->sound;
+        const auto& sourceArt = this->runtimeArticulations[static_cast<size_t>(sourceArtIdx)];
         const double sourceRate = referenceSourceSound->sampleRate > 0.0
             ? referenceSourceSound->sampleRate
             : 44100.0;
@@ -185,7 +315,7 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
             tailMatchAmount,
             tailMatchBiasDb,
             minimumRemainingMs,
-            missingDecayPolicy,
+            sourceArt.isFootEvent ? HiHatMissingDecayPolicy::SimpleFade : missingDecayPolicy,
         });
         if (!offsetResult.succeeded())
             continue;
@@ -201,7 +331,6 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
         if (!targetsHaveRemainingAudio)
             continue;
 
-        const auto& sourceArt = this->runtimeArticulations[static_cast<size_t>(sourceArtIdx)];
         const auto transitionDirection = HiHatTransitionPolicy::getDirection(
             sourceArt.pocValue,
             targetArt.pocValue);
@@ -240,8 +369,12 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
         this->completedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     }
 
+    result.completedGroupCount = completedGroupCount;
     this->skippedHiHatTransitions.fetch_add(
         static_cast<uint64_t>(selectedGroupCount - completedGroupCount),
         std::memory_order_relaxed);
-    return selectedGroupCount == 0 || completedGroupCount == selectedGroupCount;
+    result.status = completedGroupCount == selectedGroupCount
+        ? HiHatTransitionStatus::Completed
+        : HiHatTransitionStatus::Skipped;
+    return result;
 }
