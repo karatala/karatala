@@ -7,9 +7,9 @@ In progress.
 - Phases 1 and 2 are complete.
 - Phase 3 is implemented but was not accepted because it regressed closed-to-open tail transitions and foot-splash behavior.
 - Phase 3.1 is implemented and automated tests pass; listening acceptance is still required.
-- Phase 4 is implemented but must be revalidated after Phase 3.1.
-- Phase 5 is partially implemented: settings storage, YAML, and UI controls exist, but foot-sample runtime behavior is incomplete.
-- Phase 6 remains pending.
+- Phase 4 has been revalidated with the Phase 3.1 regression repairs; listening acceptance is still required.
+- Phase 5 is objectively complete for settings storage, YAML, UI controls, runtime behavior, and automated round-trip coverage.
+- Phase 6 automated validation is complete; musical listening acceptance remains open and the latest feedback reports worse sound than the pre-Phase-3 implementation.
 
 Phase 1 completion:
 
@@ -72,8 +72,11 @@ Phase 3.1 listening follow-up:
 - plain ringing `pedal` voices may again morph into an opening tail, restoring the splash-like behavior present before Phase 3;
 - explicit `pedal[splash]` voices remain independent and are not reused as morph sources;
 - `Tail Match = 0%` now bypasses decay-envelope matching instead of failing on missing or unmatched metadata;
+- opening transitions now start the decay-matched target at its audible level and release the old tight/pedal source underneath it, avoiding the zero-gain hole introduced by complementary opening ramps;
+- CC-generated foot samples no longer run normal hit culling or articulation-order choking, so they cannot re-choke the transition target they accompany;
 - tests now model asymmetric zones and pedal samples without decay metadata;
-- the Debug standalone and VST3 product targets were rebuilt for listening verification.
+- the current Debug standalone was rebuilt for listening verification;
+- the VST3 artifact could not be relinked because its binary is open in a plugin host.
 
 Phase 4 implementation:
 
@@ -86,13 +89,13 @@ Phase 4 implementation:
 - added lock-free processed, coalesced, skipped, and completed transition counters;
 - added controller coalescing coverage and a focused 128-value CC sweep benchmark.
 
-Phase 5 partial implementation:
+Phase 5 implementation:
 
 - TODO13 added live controls backed by lock-free realtime settings;
 - YAML loading, migration, defaults, and serialization cover the transition settings;
 - Phase 4 activated the persisted `controllerSmoothingSec` control in the audio-thread scheduler;
-- existing configuration files retain documented defaults for missing values.
-- foot-sample mode is persisted and exposed in the UI, but is not yet connected to runtime triggering.
+- existing configuration files retain documented defaults for missing values;
+- foot-sample mode is persisted, exposed in the UI, and connected to independent runtime triggering.
 
 ## Goal
 
@@ -312,21 +315,21 @@ For each eligible `noteOnTime` group:
 4. Calculate one decay-matched target offset.
 5. Validate target buffers and reserve idle voices.
 6. Start all replacement voices with the shared offset.
-7. Start complementary source/target gain ramps.
+7. Start a complementary ramp for closing, or start the matched target immediately while releasing the source for opening.
 8. Commit the group target articulation.
 
 If steps 2-5 fail, leave the source group unchanged.
 
 ### Transition Curve
 
-Use equal-power gain ramps by default:
+Use equal-power gain ramps by default for closing:
 
 ```text
 sourceGain = cos(progress * pi / 2)
 targetGain = sin(progress * pi / 2)
 ```
 
-This avoids the level dip of two linear ramps. Linear and smooth-step curves may remain selectable for tuning.
+This avoids the level dip of two linear closing ramps. Opening uses an immediate decay-matched target plus a configurable source release because fading the target up from zero caused an audible duck with real cymbal tails.
 
 ### Opening and Closing
 
@@ -438,7 +441,7 @@ Automated verification:
 
 ### Phase 4: Realtime Work Reduction
 
-Status: Implemented; revalidation depends on Phase 3.1.
+Status: Implemented and automated-revalidated with Phase 3.1; listening acceptance remains pending.
 
 1. Precompute target entry lookup tables during load/rebuild.
 2. Replace target-buffer RMS scans with load-time validation metadata.
@@ -454,9 +457,17 @@ Exit criteria:
 - worst-case work is bounded by configured active groups and mic count.
 - Phase 3.1 retries, fallback selection, and foot triggering remain bounded and allocation-free.
 
+Revalidation:
+
+- focused `[InstrumentSynth][HiHatTransition]`: 11 test cases and 50 assertions passed;
+- full suite: 64 test cases and 449 assertions passed;
+- Debug 128-value controller sweep: approximately `49.6 us` mean;
+- Debug standalone rebuilt successfully for listening;
+- VST3 relink was blocked by the plugin binary being open in a host.
+
 ### Phase 5: UI and Persistence
 
-Status: Partial. Continue after Phase 3.1 and Phase 4 revalidation.
+Status: Objectively complete; listening-based tuning remains part of Phase 6.
 
 Implement the settings contract in [TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md](TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md).
 
@@ -469,9 +480,16 @@ Exit criteria:
 - every exposed setting has implemented runtime behavior;
 - foot-sample mode changes are audible and follow the documented policy.
 
+Automated verification:
+
+- all transition values survive YAML serialize/parse round trip;
+- legacy migration, range clamping, and invalid enum fallback remain covered;
+- foot modes `Off`, `Close Only`, and `Always` are covered by policy and synth-level tests;
+- UI controls read/write lock-free settings and retain debounced message-thread persistence.
+
 ### Phase 6: Listening and Performance Validation
 
-Status: Pending Phase 3.1, Phase 4 revalidation, and Phase 5 completion.
+Status: Automated validation complete; listening acceptance failed/pending.
 
 Test:
 
@@ -493,6 +511,22 @@ Acceptance criteria:
 - rapid CC input does not multiply voices without bound;
 - closure remains responsive at the default settings;
 - CPU usage does not spike materially during dense pedal input.
+
+Automated results:
+
+- focused settings/transition validation: 19 test cases and 115 assertions passed;
+- full suite: 68 test cases and 480 assertions passed;
+- complete mic-group, missing target, voice pressure, active-tail limit, retry, zone, fallback, foot mode, and synthetic gain-hole scenarios are covered;
+- synthetic phase-aligned opening and closing transitions do not create an envelope/ramp level hole;
+- Debug 128-value raw CC sweep: approximately `49.4 us` mean;
+- Debug 128-message coalesced burst: approximately `8.3 us` mean;
+- bounded selection of 1/2/4 groups: approximately `0.78/0.97/2.03 us` mean.
+
+Listening gate:
+
+- the latest listening feedback reports foot-splash and tight-to-open behavior still sounds worse than before Phase 3;
+- Phase 6 must not be marked musically accepted until a new standalone/plugin listening pass succeeds;
+- if it remains unacceptable, `e6cdaac` is the last Phase-2 commit before Phase 3 (`864acc4`) and provides the comparison point for reverting the Phase-3+ transition strategy.
 
 ## Tests to Add
 

@@ -98,7 +98,8 @@ bool InstrumentSynth::triggerHiHatFootSample(int midiChannel, ArtRtIdx desiredAr
         variantIdx,
         midiChannel,
         midiNoteNumber,
-        static_cast<float>(velocity) / 127.0f);
+        static_cast<float>(velocity) / 127.0f,
+        true);
 }
 
 InstrumentSynth::HiHatTransitionResult InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx desiredArtIdx) {
@@ -360,10 +361,15 @@ InstrumentSynth::HiHatTransitionResult InstrumentSynth::transitionHiHatGroups(in
                 juce::jmax(0.0, static_cast<double>(targetSound->sampleLengthSamples - 1)),
                 (static_cast<double>(offsetResult.offsetMs) / 1000.0) * targetRate);
             targetVoice->setVelocityGain(velocity);
-            targetVoice->requestTransitionFadeIn(transitionCrossfadeSec, transitionCurve);
+            if (transitionDirection == HiHatTransitionPolicy::Direction::Closing)
+                targetVoice->requestTransitionFadeIn(transitionCrossfadeSec, transitionCurve);
         }
-        for (size_t sourceIdx = 0; sourceIdx < sourceVoiceCount; ++sourceIdx)
-            sourceVoices[sourceIdx]->requestTransitionFadeOut(transitionCrossfadeSec, transitionCurve);
+        for (size_t sourceIdx = 0; sourceIdx < sourceVoiceCount; ++sourceIdx) {
+            if (transitionDirection == HiHatTransitionPolicy::Direction::Closing)
+                sourceVoices[sourceIdx]->requestTransitionFadeOut(transitionCrossfadeSec, transitionCurve);
+            else
+                sourceVoices[sourceIdx]->requestFadeOut(transitionCrossfadeSec);
+        }
 
         ++completedGroupCount;
         this->completedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);

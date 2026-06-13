@@ -382,7 +382,15 @@ public:
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
     int resolveArticulation(int midiNoteNumber);
     int resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity);
-    bool startLayerVoices(ArtRtIdx artIdx, ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
+    bool startLayerVoices(
+        ArtRtIdx artIdx,
+        ArticulationRuntime& art,
+        VelocityLayerRuntime& layer,
+        uint8_t chosenVariant,
+        int midiChannel,
+        int midiNoteNumber,
+        float velocity,
+        bool isIndependentFootEvent = false);
     void fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity);
     void startSampleVoice(InstrumentSynthVoice& voice, ArtRtIdx artIdx, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity, juce::uint32 eventId);
     void applyAftertouch(int midiChannel, int midiNoteNumber);

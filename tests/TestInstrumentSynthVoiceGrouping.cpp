@@ -44,6 +44,10 @@ struct InstrumentSynthTestAccess {
     static bool triggerFootSample(InstrumentSynth& synth, int midiChannel, InstrumentSynth::ArtRtIdx desiredArtIdx, HiHatTransitionPolicy::Direction direction, int controllerDelta) {
         return synth.triggerHiHatFootSample(midiChannel, desiredArtIdx, direction, controllerDelta);
     }
+
+    static float transitionGain(const InstrumentSynthVoice& voice) {
+        return voice.lastTransitionGain;
+    }
 };
 
 namespace {
@@ -183,6 +187,8 @@ TEST_CASE("InstrumentSynth - hi-hat group transition commits every mic with one 
     REQUIRE(targetRoomVoice->getRuntimeArticulationIndex() == 1);
     REQUIRE(targetDirectVoice->getEventId() == eventId);
     REQUIRE(targetRoomVoice->getEventId() == eventId);
+    REQUIRE(InstrumentSynthTestAccess::transitionGain(*targetDirectVoice) == Catch::Approx(0.0f));
+    REQUIRE(InstrumentSynthTestAccess::transitionGain(*targetRoomVoice) == Catch::Approx(0.0f));
 
     const double directOffsetMs = targetDirectVoice->sourceSamplePosition / targetDirect.sampleRate * 1000.0;
     const double roomOffsetMs = targetRoomVoice->sourceSamplePosition / targetRoom.sampleRate * 1000.0;
@@ -332,6 +338,7 @@ TEST_CASE("InstrumentSynth - skipped opening retries without another CC movement
     REQUIRE(InstrumentSynthTestAccess::pendingArticulation(synth, 4) == -1);
     REQUIRE(sourceVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
     REQUIRE(targetVoice->getRuntimeArticulationIndex() == 1);
+    REQUIRE(InstrumentSynthTestAccess::transitionGain(*targetVoice) == Catch::Approx(1.0f));
 }
 
 TEST_CASE("InstrumentSynth - openness transition preserves the struck zone", "[InstrumentSynth][HiHatTransition]") {
@@ -541,6 +548,36 @@ TEST_CASE("InstrumentSynth - foot voices are excluded and foot mode triggers map
     REQUIRE((footVoice->getRuntimeArticulationIndex() == 2
         || spareVoice->getRuntimeArticulationIndex() == 2));
 
+    footVoice->killImmediately();
+    spareVoice->killImmediately();
+    synth.startVoice(footVoice, &footSound, 1, 42, 0.8f);
+    InstrumentSynthTestAccess::setVoiceArticulation(*footVoice, 0);
+    REQUIRE(InstrumentSynthTestAccess::triggerFootSample(
+        synth,
+        1,
+        1,
+        HiHatTransitionPolicy::Direction::Closing,
+        40));
+    REQUIRE(footVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+
+    footVoice->killImmediately();
+    spareVoice->killImmediately();
+    engine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::CloseOnly);
+    REQUIRE_FALSE(InstrumentSynthTestAccess::triggerFootSample(
+        synth,
+        1,
+        0,
+        HiHatTransitionPolicy::Direction::Opening,
+        40));
+
+    engine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::Always);
+    REQUIRE(InstrumentSynthTestAccess::triggerFootSample(
+        synth,
+        1,
+        0,
+        HiHatTransitionPolicy::Direction::Opening,
+        40));
+
     engine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::Off);
     footVoice->killImmediately();
     spareVoice->killImmediately();
@@ -596,4 +633,181 @@ TEST_CASE("InstrumentSynth - opening a ringing pedal sample creates an open tail
     REQUIRE(InstrumentSynthTestAccess::transition(synth, 1, 0).status == InstrumentSynth::HiHatTransitionStatus::Completed);
     REQUIRE(pedalVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
     REQUIRE(openVoice->getRuntimeArticulationIndex() == 0);
+    REQUIRE(InstrumentSynthTestAccess::transitionGain(*openVoice) == Catch::Approx(1.0f));
+}
+
+TEST_CASE("InstrumentSynth - active-tail limit selects only the newest complete groups", "[InstrumentSynth][HiHatTransition]") {
+    DrumKitEngine engine;
+    engine.engineSettings.hihatTransitionAttackGuardSec.store(0.0f);
+    engine.engineSettings.hihatTransitionMinRemainingSec.store(0.01f);
+    engine.engineSettings.hihatTransitionSilenceFloorDb.store(-90.0f);
+    engine.engineSettings.hihatTransitionMaxActiveGroups.store(1);
+
+    KitLayout::InstrumentSlot slot;
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+    InstrumentSynth synth(&engine, slot);
+    synth.setCurrentPlaybackSampleRate(44100.0);
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(1, 1);
+    articulations.back().pocValue = 90;
+    articulations.emplace_back(1, 2);
+    articulations.back().pocValue = 10;
+    articulations.back().layers.emplace_back();
+    articulations.back().velocityToLayer.fill(0);
+
+    const auto directMic = makeMicSpec(KitLib::MicSpec::Type::Direct);
+    KitLib::SampleVariantSpec sourceVariant(nullptr, {}, 'a', directMic);
+    KitLib::SampleVariantSpec targetVariant(nullptr, {}, 'a', directMic);
+    SampledSound sourceSound(nullptr, &sourceVariant);
+    SampledSound targetSound(nullptr, &targetVariant);
+    sourceSound.sampleRate = 44100.0;
+    targetSound.sampleRate = 44100.0;
+    sourceSound.decayEnvelope = makeTransitionEnvelope();
+    targetSound.decayEnvelope = makeTransitionEnvelope();
+    targetSound.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 88200);
+    publishTestBufferMetadata(targetSound);
+    articulations[1].layers[0].samples.push_back({ &targetSound, 1 });
+    articulations[1].layers[0].rebuildTransitionLookup();
+
+    auto* olderSourceVoice = synth.addVoice(new InstrumentSynthVoice());
+    auto* newerSourceVoice = synth.addVoice(new InstrumentSynthVoice());
+    auto* targetVoice = synth.addVoice(new InstrumentSynthVoice());
+    synth.addVoice(new InstrumentSynthVoice());
+    synth.startVoice(olderSourceVoice, &sourceSound, 1, 42, 0.7f);
+    synth.startVoice(newerSourceVoice, &sourceSound, 1, 42, 0.8f);
+    InstrumentSynthTestAccess::setVoiceArticulation(*olderSourceVoice, 0);
+    InstrumentSynthTestAccess::setVoiceArticulation(*newerSourceVoice, 0);
+    olderSourceVoice->sourceSamplePosition = 4410.0;
+    newerSourceVoice->sourceSamplePosition = 4410.0;
+    olderSourceVoice->cachedEstimatedDb = -20.0f;
+    newerSourceVoice->cachedEstimatedDb = -30.0f;
+
+    const auto result = InstrumentSynthTestAccess::transition(synth, 1, 1);
+
+    REQUIRE(result.status == InstrumentSynth::HiHatTransitionStatus::Completed);
+    REQUIRE(result.selectedGroupCount == 1);
+    REQUIRE(result.completedGroupCount == 1);
+    REQUIRE(olderSourceVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+    REQUIRE(newerSourceVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    REQUIRE(targetVoice->getRuntimeArticulationIndex() == 1);
+}
+
+TEST_CASE("InstrumentSynth - voice pressure leaves the source group unchanged", "[InstrumentSynth][HiHatTransition]") {
+    DrumKitEngine engine;
+    engine.engineSettings.hihatTransitionAttackGuardSec.store(0.0f);
+    engine.engineSettings.hihatTransitionMinRemainingSec.store(0.01f);
+    engine.engineSettings.hihatTransitionSilenceFloorDb.store(-90.0f);
+
+    KitLayout::InstrumentSlot slot;
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+    InstrumentSynth synth(&engine, slot);
+    synth.setCurrentPlaybackSampleRate(44100.0);
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(1, 1);
+    articulations.back().pocValue = 90;
+    articulations.emplace_back(1, 2);
+    articulations.back().pocValue = 10;
+    articulations.back().layers.emplace_back();
+    articulations.back().velocityToLayer.fill(0);
+
+    const auto directMic = makeMicSpec(KitLib::MicSpec::Type::Direct);
+    KitLib::SampleVariantSpec sourceVariant(nullptr, {}, 'a', directMic);
+    KitLib::SampleVariantSpec targetVariant(nullptr, {}, 'a', directMic);
+    SampledSound sourceSound(nullptr, &sourceVariant);
+    SampledSound targetSound(nullptr, &targetVariant);
+    sourceSound.sampleRate = 44100.0;
+    targetSound.sampleRate = 44100.0;
+    sourceSound.decayEnvelope = makeTransitionEnvelope();
+    targetSound.decayEnvelope = makeTransitionEnvelope();
+    targetSound.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 88200);
+    publishTestBufferMetadata(targetSound);
+    articulations[1].layers[0].samples.push_back({ &targetSound, 1 });
+    articulations[1].layers[0].rebuildTransitionLookup();
+
+    auto* sourceVoice = synth.addVoice(new InstrumentSynthVoice());
+    synth.startVoice(sourceVoice, &sourceSound, 1, 42, 0.8f);
+    InstrumentSynthTestAccess::setVoiceArticulation(*sourceVoice, 0);
+    sourceVoice->sourceSamplePosition = 4410.0;
+    sourceVoice->cachedEstimatedDb = -24.0f;
+
+    const auto result = InstrumentSynthTestAccess::transition(synth, 1, 1);
+
+    REQUIRE(result.status == InstrumentSynth::HiHatTransitionStatus::Skipped);
+    REQUIRE(result.selectedGroupCount == 1);
+    REQUIRE(result.completedGroupCount == 0);
+    REQUIRE(sourceVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+    REQUIRE(sourceVoice->getRuntimeArticulationIndex() == 0);
+}
+
+TEST_CASE("InstrumentSynth - synthetic transition ramps do not create a level hole", "[InstrumentSynth][HiHatTransition][audio]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    synth.setCurrentPlaybackSampleRate(1000.0);
+
+    auto* sourceVoice = synth.addVoice(new InstrumentSynthVoice());
+    auto* targetVoice = synth.addVoice(new InstrumentSynthVoice());
+    SampledSound sourceSound;
+    SampledSound targetSound;
+    sourceSound.sampleRate = 1000.0;
+    targetSound.sampleRate = 1000.0;
+    sourceSound.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 1000);
+    targetSound.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 1000);
+    for (int sampleIdx = 0; sampleIdx < 1000; ++sampleIdx) {
+        sourceSound.buffer->setSample(0, sampleIdx, 1.0f);
+        targetSound.buffer->setSample(0, sampleIdx, 1.0f);
+    }
+
+    const auto renderMinimum = [&](bool isClosing) {
+        sourceVoice->killImmediately();
+        targetVoice->killImmediately();
+        synth.startVoice(sourceVoice, &sourceSound, 1, 42, 1.0f);
+
+        juce::AudioBuffer<float> warmupBuffer(1, 100);
+        warmupBuffer.clear();
+        sourceVoice->renderNextBlock(warmupBuffer, 0, warmupBuffer.getNumSamples());
+
+        synth.startVoice(targetVoice, &targetSound, 1, 42, 1.0f);
+        if (isClosing) {
+            sourceVoice->requestTransitionFadeOut(0.100f, HiHatTransitionCurve::EqualPower);
+            targetVoice->requestTransitionFadeIn(0.100f, HiHatTransitionCurve::EqualPower);
+        } else {
+            sourceVoice->requestFadeOut(0.100f);
+        }
+
+        juce::AudioBuffer<float> sourceBuffer(1, 100);
+        juce::AudioBuffer<float> targetBuffer(1, 100);
+        sourceBuffer.clear();
+        targetBuffer.clear();
+        sourceVoice->renderNextBlock(sourceBuffer, 0, sourceBuffer.getNumSamples());
+        targetVoice->renderNextBlock(targetBuffer, 0, targetBuffer.getNumSamples());
+
+        float minimumSample = std::numeric_limits<float>::max();
+        int minimumSampleIdx = -1;
+        for (int sampleIdx = 0; sampleIdx < sourceBuffer.getNumSamples(); ++sampleIdx) {
+            const float sample = sourceBuffer.getSample(0, sampleIdx) + targetBuffer.getSample(0, sampleIdx);
+            if (sample < minimumSample) {
+                minimumSample = sample;
+                minimumSampleIdx = sampleIdx;
+            }
+        }
+        return std::array<float, 6> {
+            minimumSample,
+            static_cast<float>(minimumSampleIdx),
+            sourceBuffer.getSample(0, 0),
+            targetBuffer.getSample(0, 0),
+            sourceBuffer.getSample(0, sourceBuffer.getNumSamples() - 1),
+            targetBuffer.getSample(0, targetBuffer.getNumSamples() - 1),
+        };
+    };
+
+    const auto closingLevels = renderMinimum(true);
+    INFO("closing minimum index=" << closingLevels[1] << " source first=" << closingLevels[2] << " target first=" << closingLevels[3]
+        << " source last=" << closingLevels[4] << " target last=" << closingLevels[5]);
+    REQUIRE(closingLevels[0] >= 0.95f);
+
+    const auto openingLevels = renderMinimum(false);
+    INFO("opening minimum index=" << openingLevels[1] << " source first=" << openingLevels[2] << " target first=" << openingLevels[3]
+        << " source last=" << openingLevels[4] << " target last=" << openingLevels[5]);
+    REQUIRE(openingLevels[0] >= 0.95f);
 }

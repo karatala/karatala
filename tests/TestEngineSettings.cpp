@@ -107,3 +107,42 @@ TEST_CASE("EngineSettings - realtime settings remain copyable snapshots", "[Engi
     REQUIRE(sourceSettings.hihatTransitionCurve.load() == HiHatTransitionCurve::Smooth);
     REQUIRE(sourceSettings.roundRobinLock.load() == 3);
 }
+
+TEST_CASE("EngineSettings - all hi-hat transition settings survive YAML round trip", "[EngineSettings][yaml]") {
+    DrumKitEngine sourceEngine;
+    sourceEngine.engineSettings.polyphonyCrossfadeTimeoutSec.store(0.45f);
+    sourceEngine.engineSettings.hihatHitChokeDbMargin.store(7.5f);
+    sourceEngine.engineSettings.hihatOpenCrossfadeSec.store(0.125f);
+    sourceEngine.engineSettings.hihatCloseCrossfadeSec.store(0.035f);
+    sourceEngine.engineSettings.hihatControllerSmoothingSec.store(0.042f);
+    sourceEngine.engineSettings.hihatBoundaryHysteresisCc.store(6);
+    sourceEngine.engineSettings.hihatTailMatchAmount.store(0.35f);
+    sourceEngine.engineSettings.hihatTailMatchBiasDb.store(-7.0f);
+    sourceEngine.engineSettings.hihatTransitionAttackGuardSec.store(0.055f);
+    sourceEngine.engineSettings.hihatTransitionMaxActiveGroups.store(3);
+    sourceEngine.engineSettings.hihatTransitionCurve.store(HiHatTransitionCurve::Linear);
+    sourceEngine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::Off);
+    sourceEngine.engineSettings.hihatTransitionMinRemainingSec.store(0.175f);
+    sourceEngine.engineSettings.hihatTransitionSilenceFloorDb.store(-54.0f);
+    sourceEngine.engineSettings.hihatMissingDecayPolicy.store(HiHatMissingDecayPolicy::SimpleFade);
+
+    DrumKitEngine restoredEngine;
+    const auto parseResult = restoredEngine.parseConfigYaml(sourceEngine.serializeSettingsYaml());
+
+    REQUIRE(parseResult.ok());
+    REQUIRE(restoredEngine.engineSettings.polyphonyCrossfadeTimeoutSec.load() == 0.45f);
+    REQUIRE(restoredEngine.engineSettings.hihatHitChokeDbMargin.load() == 7.5f);
+    REQUIRE(restoredEngine.engineSettings.hihatOpenCrossfadeSec.load() == 0.125f);
+    REQUIRE(restoredEngine.engineSettings.hihatCloseCrossfadeSec.load() == 0.035f);
+    REQUIRE(restoredEngine.engineSettings.hihatControllerSmoothingSec.load() == 0.042f);
+    REQUIRE(restoredEngine.engineSettings.hihatBoundaryHysteresisCc.load() == 6);
+    REQUIRE(restoredEngine.engineSettings.hihatTailMatchAmount.load() == 0.35f);
+    REQUIRE(restoredEngine.engineSettings.hihatTailMatchBiasDb.load() == -7.0f);
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionAttackGuardSec.load() == 0.055f);
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionMaxActiveGroups.load() == 3);
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionCurve.load() == HiHatTransitionCurve::Linear);
+    REQUIRE(restoredEngine.engineSettings.hihatFootSampleMode.load() == HiHatFootSampleMode::Off);
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionMinRemainingSec.load() == 0.175f);
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionSilenceFloorDb.load() == -54.0f);
+    REQUIRE(restoredEngine.engineSettings.hihatMissingDecayPolicy.load() == HiHatMissingDecayPolicy::SimpleFade);
+}

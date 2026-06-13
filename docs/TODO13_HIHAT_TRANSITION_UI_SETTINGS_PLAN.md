@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented on June 13, 2026 for settings storage, YAML migration/serialization, realtime UI controls, and the transition behavior supported by TODO12 Phase 1.
+Implemented on June 13, 2026 for settings storage, YAML migration/serialization, realtime UI controls, and TODO12 runtime behavior.
 
 Active engine controls:
 
@@ -17,13 +17,12 @@ Active engine controls:
 - linear, smooth-step, and equal-power transition curves;
 - renamed struck-hit choke margin.
 
-Persisted and live-safe control activated by TODO12 Phase 4:
+Runtime-complete controls:
 
-- controller smoothing now drives deferred, sample-domain transition scheduling.
-
-Persisted control awaiting independent engine behavior:
-
-- foot-sample modes require independent foot-event triggering.
+- controller smoothing drives deferred, sample-domain transition scheduling;
+- foot-sample modes trigger independent mapped foot events without re-choking transitioned tails;
+- opening time releases the previous tail while the decay-matched target starts directly;
+- closing time and curve control complementary source/target overlap.
 
 ## Goal
 
@@ -95,7 +94,7 @@ Keep existing unrelated controls:
 |---|---|---|---|---|
 | Attack Guard | `hihatTransitionAttackGuardSec` | 0-0.100 s | 0.025 s | Avoid morphing a newly struck hit during its attack |
 | Active Tails | `hihatTransitionMaxActiveGroups` | 1-4 | 1 | Maximum historical hit groups eligible for one transition update |
-| Curve | `hihatTransitionCurve` | Linear, Smooth, Equal Power | Equal Power | Gain shape used during source/target overlap |
+| Curve | `hihatTransitionCurve` | Linear, Smooth, Equal Power | Equal Power | Gain shape used during closing source/target overlap |
 | Foot Sample | `hihatFootSampleMode` | Off, Close Only, Always | Close Only | Whether a pedal sample is layered as a separate physical foot event |
 | Min Remaining | `hihatPedalMinRemainingSec` | 0.010-0.500 s | 0.050 s | Minimum usable target tail required to start a replacement |
 | Silence Floor | `hihatTransitionSilenceFloorDb` | -90 to -36 dB | -72 dB | Groups below this level are not transitioned |
@@ -113,7 +112,7 @@ Keep existing unrelated controls:
 
 `Curve`
 
-> Shape of the overlap between old and new tails. Equal Power usually keeps loudness most stable.
+> Shape of closing overlap between old and new tails. Opening uses a direct matched target plus source release to avoid a fade-in hole.
 
 `Foot Sample`
 
@@ -232,7 +231,7 @@ UI callbacks must:
 
 ### Open Xfade
 
-Used when the target `pocValue` represents a more open state than the source.
+Used as the release time for the previous tail when the target `pocValue` represents a more open state. The decay-matched target starts directly instead of fading up from zero.
 
 ### Close Xfade
 
@@ -289,13 +288,22 @@ Select at most this many newest audible `noteOnTime` groups. The value bounds CP
 - Smooth: use smooth-step progress before applying gains.
 - Equal Power: use sine/cosine gains.
 
+The selectable curve applies to closing overlap. Opening deliberately avoids a complementary target fade-in because it produced a pronounced gain hole with real hi-hat tails.
+
 ### Foot Sample
 
 - Off: never generate a separate foot sample from openness CC transitions.
 - Close Only: trigger on a transition into the most closed/pedal region.
 - Always: trigger on each qualifying pedal articulation transition.
 
-Foot-sample triggering needs its own velocity/rate-limit policy. It must not redirect the struck tail to a `pedal` articulation.
+Foot-sample triggering must not redirect the struck tail to a `pedal` articulation.
+
+Implemented policy:
+
+- velocity is derived from the controller movement magnitude;
+- triggering occurs only on a qualifying articulation transition;
+- controller smoothing/coalescing limits the maximum trigger rate;
+- generated foot events bypass struck-hit culling and articulation-order choking.
 
 ### Missing Data
 
@@ -362,7 +370,7 @@ Do not silently overwrite explicitly configured new keys.
 - `Equal Power`: minimizes perceived crossfade dips.
 - `Foot Sample = Close Only`: matches the most common physical event without repeated pedal-sample chatter.
 
-These defaults require listening validation with several libraries before release.
+These defaults require listening validation with several libraries before release. Current listening feedback reports Phase 3+ transitions still sound worse than the pre-Phase-3 path, so the defaults and runtime strategy are not musically accepted yet.
 
 ## Validation
 
@@ -407,7 +415,7 @@ These defaults require listening validation with several libraries before releas
 5. Add enum controls and advanced settings.
 6. Update panel layout calculations.
 7. Add settings/persistence tests.
-8. Perform multi-library listening validation and tune defaults.
+8. Perform multi-library listening validation and tune defaults. Pending; current listening acceptance failed.
 
 ## Out of Scope
 

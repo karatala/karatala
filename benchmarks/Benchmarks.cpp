@@ -2,6 +2,7 @@
 #include "../source/Engine/InstrumentSynth.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <array>
 
 struct InstrumentSynthTestAccess {
     static std::vector<InstrumentSynth::ArticulationRuntime>& articulations(InstrumentSynth& synth) {
@@ -13,6 +14,11 @@ struct InstrumentSynthTestAccess {
         auto& mapping = synth.ccToArticulationTable[static_cast<size_t>(controllerNumber)];
         for (size_t controllerValue = 0; controllerValue < mapping.size(); ++controllerValue)
             mapping[controllerValue] = controllerValue < 64 ? 0 : 1;
+    }
+
+    static void advanceRenderedSamples(InstrumentSynth& synth, uint64_t sampleCount) {
+        synth.renderedSampleCount += sampleCount;
+        synth.processPendingHiHatControllers();
     }
 };
 
@@ -66,5 +72,52 @@ TEST_CASE("Hi-hat controller transition performance", "[benchmark][HiHatTransiti
         for (int controllerValue = 0; controllerValue < 128; ++controllerValue)
             synth.handleController(1, 4, controllerValue);
         return synth.getHiHatTransitionCounters().processed;
+    };
+}
+
+TEST_CASE("Hi-hat controller coalescing performance", "[benchmark][HiHatTransition]") {
+    DrumKitEngine engine;
+    engine.engineSettings.hihatControllerSmoothingSec.store(0.015f);
+
+    KitLayout::InstrumentSlot slot;
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+    InstrumentSynth synth(&engine, slot);
+    synth.setCurrentPlaybackSampleRate(48000.0);
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(1, 1);
+    articulations.back().pocValue = 10;
+    articulations.emplace_back(1, 2);
+    articulations.back().pocValue = 90;
+    InstrumentSynthTestAccess::configureController(synth, 4);
+
+    BENCHMARK("Coalesce a 128-message burst and process its latest value") {
+        for (int controllerValue = 0; controllerValue < 128; ++controllerValue)
+            synth.handleController(1, 4, controllerValue);
+        InstrumentSynthTestAccess::advanceRenderedSamples(synth, 720);
+        return synth.getHiHatTransitionCounters().processed;
+    };
+}
+
+TEST_CASE("Hi-hat active-group selection performance", "[benchmark][HiHatTransition]") {
+    std::array<HiHatTransitionPolicy::HitGroupCandidate, 32> candidates {};
+    for (size_t candidateIdx = 0; candidateIdx < candidates.size(); ++candidateIdx) {
+        candidates[candidateIdx] = {
+            static_cast<juce::uint32>(candidateIdx + 1),
+            static_cast<juce::uint32>(candidateIdx + 1),
+            -20.0f - static_cast<float>(candidateIdx),
+            HiHatTransitionPolicy::HitGroupState::Playing,
+        };
+    }
+    std::array<size_t, 4> selectedIndices {};
+
+    BENCHMARK("Select one active hi-hat group") {
+        return HiHatTransitionPolicy::selectEligibleHitGroups(candidates, 1, -72.0f, selectedIndices);
+    };
+    BENCHMARK("Select two active hi-hat groups") {
+        return HiHatTransitionPolicy::selectEligibleHitGroups(candidates, 2, -72.0f, selectedIndices);
+    };
+    BENCHMARK("Select four active hi-hat groups") {
+        return HiHatTransitionPolicy::selectEligibleHitGroups(candidates, 4, -72.0f, selectedIndices);
     };
 }

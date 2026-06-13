@@ -631,19 +631,27 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
     return lowestSetBit(remaining);
 }
 
-bool InstrumentSynth::startLayerVoices(ArtRtIdx artIdx, ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
+bool InstrumentSynth::startLayerVoices(
+    ArtRtIdx artIdx,
+    ArticulationRuntime& art,
+    VelocityLayerRuntime& layer,
+    uint8_t chosenVariant,
+    int midiChannel,
+    int midiNoteNumber,
+    float velocity,
+    bool isIndependentFootEvent) {
     const juce::ScopedLock sl(this->lock);
     const auto& settings = this->parent->getEngineSettings();
     const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
 
-    //temporary disabled to debug cc hat transitions
-    this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
-    // this->fadeOutExistingVoices(art, midiChannel, midiNoteNumber, velocity);
+    if (!isIndependentFootEvent) {
+        this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
 
-    // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
-    // fades out ringing voices from more-open articulations.
-    if (this->type == KitLib::InstrumentSpec::Type::HiHat)
-        this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
+        // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
+        // fades out ringing voices from more-open articulations.
+        if (this->type == KitLib::InstrumentSpec::Type::HiHat)
+            this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
+    }
 
     const juce::uint32 eventId = this->allocateEventId();
     bool anyStarted = false;

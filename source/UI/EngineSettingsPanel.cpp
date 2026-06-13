@@ -126,7 +126,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->addPot("Silence Floor", "Very quiet historical tails below this level do not create replacement voices.",
                  &settings.hihatTransitionSilenceFloorDb, -90.0f, -36.0f, 1.0f, nullptr, nullptr, -72.0);
 
-    this->addChoice("Curve", "Gain shape used during source and target overlap. Equal Power usually keeps loudness most stable.",
+    this->addChoice("Curve", "Gain shape used for closing source/target overlap. Opening starts the matched tail directly and releases the previous tail.",
                     { "Linear", "Smooth", "Equal Power" }, 3,
                     [&settings] { return static_cast<int>(settings.hihatTransitionCurve.load()) + 1; },
                     [&settings](int selectedId) {
