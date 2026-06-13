@@ -15,6 +15,18 @@ struct InstrumentSynthTestAccess {
     static bool transition(InstrumentSynth& synth, int midiChannel, InstrumentSynth::ArtRtIdx targetArtIdx) {
         return synth.transitionHiHatGroups(midiChannel, targetArtIdx);
     }
+
+    static void configureController(InstrumentSynth& synth, int controllerNumber, uint8_t lowArticulationIdx, uint8_t highArticulationIdx) {
+        synth.ccToArticulationMask[static_cast<size_t>(controllerNumber)] = true;
+        auto& mapping = synth.ccToArticulationTable[static_cast<size_t>(controllerNumber)];
+        for (size_t controllerValue = 0; controllerValue < mapping.size(); ++controllerValue)
+            mapping[controllerValue] = controllerValue < 64 ? lowArticulationIdx : highArticulationIdx;
+    }
+
+    static void advanceRenderedSamples(InstrumentSynth& synth, uint64_t sampleCount) {
+        synth.renderedSampleCount += sampleCount;
+        synth.processPendingHiHatControllers();
+    }
 };
 
 namespace {
@@ -34,6 +46,15 @@ KitLib::MicSpec makeMicSpec(KitLib::MicSpec::Type type) {
     micSpec.type = type;
     micSpec.channels = 1;
     return micSpec;
+}
+
+void publishTestBufferMetadata(SampledSound& sound) {
+    sound.sampleLengthSamples = sound.buffer != nullptr ? sound.buffer->getNumSamples() : 0;
+    sound.sampleLengthMs = sound.sampleRate > 0.0
+        ? static_cast<float>((static_cast<double>(sound.sampleLengthSamples) / sound.sampleRate) * 1000.0)
+        : 0.0f;
+    sound.transitionAudioValid = sound.buffer != nullptr;
+    sound.loaded.store(sound.buffer != nullptr);
 }
 
 } // namespace
@@ -118,10 +139,11 @@ TEST_CASE("InstrumentSynth - hi-hat group transition commits every mic with one 
     targetRoom.decayEnvelope = makeTransitionEnvelope();
     targetDirect.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 88200);
     targetRoom.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 96000);
-    targetDirect.loaded.store(true);
-    targetRoom.loaded.store(true);
+    publishTestBufferMetadata(targetDirect);
+    publishTestBufferMetadata(targetRoom);
     articulations.back().layers.back().samples.push_back({ &targetDirect, 1 });
     articulations.back().layers.back().samples.push_back({ &targetRoom, 1 });
+    articulations.back().layers.back().rebuildTransitionLookup();
 
     auto* sourceDirectVoice = synth.addVoice(new InstrumentSynthVoice());
     auto* sourceRoomVoice = synth.addVoice(new InstrumentSynthVoice());
@@ -186,8 +208,9 @@ TEST_CASE("InstrumentSynth - missing target mic leaves the source group unchange
     sourceRoom.decayEnvelope = makeTransitionEnvelope();
     targetDirect.decayEnvelope = makeTransitionEnvelope();
     targetDirect.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 88200);
-    targetDirect.loaded.store(true);
+    publishTestBufferMetadata(targetDirect);
     articulations.back().layers.back().samples.push_back({ &targetDirect, 1 });
+    articulations.back().layers.back().rebuildTransitionLookup();
 
     auto* sourceDirectVoice = synth.addVoice(new InstrumentSynthVoice());
     auto* sourceRoomVoice = synth.addVoice(new InstrumentSynthVoice());
@@ -204,4 +227,37 @@ TEST_CASE("InstrumentSynth - missing target mic leaves the source group unchange
     REQUIRE_FALSE(InstrumentSynthTestAccess::transition(synth, 1, 1));
     REQUIRE(sourceDirectVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
     REQUIRE(sourceRoomVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+}
+
+TEST_CASE("InstrumentSynth - hi-hat controller coalescing retains the latest value", "[InstrumentSynth][HiHatTransition]") {
+    DrumKitEngine engine;
+    engine.engineSettings.hihatControllerSmoothingSec.store(0.010f);
+
+    KitLayout::InstrumentSlot slot;
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+    InstrumentSynth synth(&engine, slot);
+    synth.setCurrentPlaybackSampleRate(1000.0);
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(1, 1);
+    articulations.back().pocValue = 10;
+    articulations.emplace_back(1, 2);
+    articulations.back().pocValue = 90;
+    InstrumentSynthTestAccess::configureController(synth, 4, 0, 1);
+
+    synth.handleController(1, 4, 10);
+    synth.handleController(1, 4, 80);
+    synth.handleController(1, 4, 100);
+
+    auto counters = synth.getHiHatTransitionCounters();
+    REQUIRE(counters.processed == 1);
+    REQUIRE(counters.coalesced == 2);
+
+    InstrumentSynthTestAccess::advanceRenderedSamples(synth, 10);
+
+    counters = synth.getHiHatTransitionCounters();
+    REQUIRE(counters.processed == 2);
+    REQUIRE(counters.coalesced == 2);
+    REQUIRE(counters.skipped == 0);
+    REQUIRE(counters.completed == 0);
 }

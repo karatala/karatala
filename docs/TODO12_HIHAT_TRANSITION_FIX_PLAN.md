@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress. Phases 1-3 were completed on June 13, 2026. Phases 4-6 remain proposed.
+In progress. Phases 1-5 were completed on June 13, 2026. Phase 6 remains proposed.
 
 Phase 1 completion:
 
@@ -37,6 +37,24 @@ Phase 3 completion:
 - preserved the event ID and committed the target articulation on every replacement voice;
 - added complementary selectable source/target transition ramps;
 - added synth-level tests proving complete group commit, shared offsets, and unchanged sources when one target mic is missing.
+
+Phase 4 completion:
+
+- added fixed target-entry lookup tables keyed by round-robin variant and routed mic;
+- published sample length and usable-audio validation metadata with loaded buffers;
+- removed target candidate construction and buffer-length queries from controller transitions;
+- activated sample-domain coalescing through the existing `controllerSmoothingSec` setting;
+- retained only the latest pending CC value and processed it at the next permitted render boundary;
+- kept group and voice work bounded by fixed capacities and `maxActiveGroups`;
+- added lock-free processed, coalesced, skipped, and completed transition counters;
+- added controller coalescing coverage and a focused 128-value CC sweep benchmark.
+
+Phase 5 completion:
+
+- TODO13 added live controls backed by lock-free realtime settings;
+- YAML loading, migration, defaults, and serialization cover the transition settings;
+- Phase 4 activated the persisted `controllerSmoothingSec` control in the audio-thread scheduler;
+- existing configuration files retain documented defaults for missing values.
 
 ## Goal
 
@@ -335,6 +353,8 @@ Exit criteria:
 
 ### Phase 4: Realtime Work Reduction
 
+Status: Complete.
+
 1. Precompute target entry lookup tables during load/rebuild.
 2. Replace target-buffer RMS scans with load-time validation metadata.
 3. Coalesce CC updates.
@@ -349,6 +369,8 @@ Exit criteria:
 - worst-case work is bounded by configured active groups and mic count.
 
 ### Phase 5: UI and Persistence
+
+Status: Complete through TODO13 and Phase 4.
 
 Implement the settings contract in [TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md](TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md).
 

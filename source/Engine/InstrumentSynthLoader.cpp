@@ -20,6 +20,17 @@ void InstrumentSynth::resetRoutingTables() {
     this->noteToControllers.clear();
     this->ccToArticulationMask.fill(false);
     this->lastCcArticulation.fill(-1);
+    this->lastCcValue.fill(0);
+    this->pendingCcValue.fill(0);
+    this->pendingCcMidiChannel.fill(0);
+    this->pendingCcTransition.fill(false);
+    this->lastCcProcessedSample.fill(0);
+    this->hasProcessedCcTransition.fill(false);
+    this->renderedSampleCount = 0;
+    this->processedHiHatTransitions.store(0, std::memory_order_relaxed);
+    this->coalescedHiHatTransitions.store(0, std::memory_order_relaxed);
+    this->skippedHiHatTransitions.store(0, std::memory_order_relaxed);
+    this->completedHiHatTransitions.store(0, std::memory_order_relaxed);
     for (auto& map : this->ccToArticulationTable) map.fill(0);
 }
 
@@ -45,7 +56,6 @@ bool InstrumentSynth::tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpe
 void InstrumentSynth::unloadInstrument() {
     this->runtimeArticulations.clear();
     this->resetRoutingTables();
-    this->lastCcValue.fill(0);
     // stop and clear voices before releasing sounds
     this->clearVoices();
     this->clearSounds();
@@ -341,11 +351,35 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                         if (!soundLocked) return;
                         soundLocked->buffer = buf;
                         soundLocked->sampleRate = sr;
+                        soundLocked->sampleLengthSamples = buf != nullptr ? buf->getNumSamples() : 0;
+                        soundLocked->sampleLengthMs = buf != nullptr && sr > 0.0
+                            ? static_cast<float>((static_cast<double>(soundLocked->sampleLengthSamples) / sr) * 1000.0)
+                            : 0.0f;
+                        soundLocked->transitionAudioValid = false;
+                        if (buf != nullptr && buf->getNumChannels() > 0 && buf->getNumSamples() > 0) {
+                            int sourceChannelStart = 0;
+                            int sourceChannelCount = buf->getNumChannels();
+                            if (soundLocked->sampleVariantSpec != nullptr) {
+                                sourceChannelStart = soundLocked->sampleVariantSpec->fileChannelStart;
+                                if (soundLocked->sampleVariantSpec->fileChannelCount > 0)
+                                    sourceChannelCount = soundLocked->sampleVariantSpec->fileChannelCount;
+                            }
+                            const int sourceChannelEnd = juce::jmin(
+                                buf->getNumChannels(),
+                                sourceChannelStart + sourceChannelCount);
+                            for (int sourceChannel = juce::jmax(0, sourceChannelStart); sourceChannel < sourceChannelEnd; ++sourceChannel) {
+                                if (buf->getMagnitude(sourceChannel, 0, buf->getNumSamples()) > 0.000001f) {
+                                    soundLocked->transitionAudioValid = true;
+                                    break;
+                                }
+                            }
+                        }
                         soundLocked->loaded.store(buf != nullptr, std::memory_order_release);
                     }
                 );
             }
         }
+        layer.rebuildTransitionLookup();
         artRt.layers.push_back(std::move(layer));
     }
 }

@@ -130,31 +130,17 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
             continue;
         const auto& targetLayer = targetArt.layers[static_cast<size_t>(layerIdx)];
 
-        std::array<HiHatTransitionPolicy::TargetSampleCandidate, maximumTransitionVoices> targetCandidates {};
-        const size_t targetCandidateCount = juce::jmin(targetLayer.samples.size(), targetCandidates.size());
-        for (size_t targetCandidateIdx = 0; targetCandidateIdx < targetCandidateCount; ++targetCandidateIdx) {
-            const auto& targetEntry = targetLayer.samples[targetCandidateIdx];
-            targetCandidates[targetCandidateIdx] = {
-                targetEntry.variantIdx,
-                targetEntry.sound != nullptr ? targetEntry.sound->micBufferChannelStart : -1,
-                targetEntry.sound != nullptr
-                    && targetEntry.sound->loaded.load(std::memory_order_acquire)
-                    && targetEntry.sound->buffer != nullptr,
-            };
-        }
-
         size_t resolvedTargetCount = 0;
         for (size_t sourceIdx = 0; sourceIdx < sourceVoiceCount; ++sourceIdx) {
             auto* sourceSound = sourceVoices[sourceIdx]->getCurrentlyPlayingSound();
             const uint8_t variantIdx = KitLib::SampleVariantSpec::letterToIdx(
                 sourceSound->sampleVariantSpec->letter);
-            const int targetEntryIdx = HiHatTransitionPolicy::findExactTargetSample(
-                std::span<const HiHatTransitionPolicy::TargetSampleCandidate>(targetCandidates.data(), targetCandidateCount),
+            const auto* targetEntry = targetLayer.findTransitionEntry(
                 variantIdx,
                 sourceSound->micBufferChannelStart);
-            if (targetEntryIdx < 0)
+            if (targetEntry == nullptr)
                 break;
-            targetEntries[sourceIdx] = &targetLayer.samples[static_cast<size_t>(targetEntryIdx)];
+            targetEntries[sourceIdx] = targetEntry;
             ++resolvedTargetCount;
         }
 
@@ -187,18 +173,13 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
         const float currentAudibleDb = referenceSourceSound->decayEnvelope.isValid()
             ? referenceSourceSound->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velocityDb
             : referenceVoice->getEstimatedCurrentDb();
-        const double referenceTargetRate = referenceTargetSound->sampleRate > 0.0
-            ? referenceTargetSound->sampleRate
-            : 44100.0;
-        const float referenceTargetLengthMs = static_cast<float>(
-            (static_cast<double>(referenceTargetSound->buffer->getNumSamples()) / referenceTargetRate) * 1000.0);
         const auto offsetResult = HiHatTransitionPolicy::calculateDecayMatchedOffset({
             &referenceSourceSound->decayEnvelope,
             &referenceTargetSound->decayEnvelope,
             elapsedMs,
             currentAudibleDb,
             velocityDb,
-            referenceTargetLengthMs,
+            referenceTargetSound->sampleLengthMs,
             attackGuardMs,
             silenceFloorDb,
             tailMatchAmount,
@@ -212,10 +193,7 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
         bool targetsHaveRemainingAudio = true;
         for (size_t sourceIdx = 0; sourceIdx < sourceVoiceCount; ++sourceIdx) {
             auto* targetSound = targetEntries[sourceIdx]->sound;
-            const double targetRate = targetSound->sampleRate > 0.0 ? targetSound->sampleRate : 44100.0;
-            const float targetLengthMs = static_cast<float>(
-                (static_cast<double>(targetSound->buffer->getNumSamples()) / targetRate) * 1000.0);
-            if (targetLengthMs - offsetResult.offsetMs < minimumRemainingMs) {
+            if (targetSound->sampleLengthMs - offsetResult.offsetMs < minimumRemainingMs) {
                 targetsHaveRemainingAudio = false;
                 break;
             }
@@ -250,7 +228,7 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
             const double targetRate = targetSound->sampleRate > 0.0 ? targetSound->sampleRate : 44100.0;
             targetVoice->sourceSamplePosition = juce::jlimit(
                 0.0,
-                juce::jmax(0.0, static_cast<double>(targetSound->buffer->getNumSamples() - 1)),
+                juce::jmax(0.0, static_cast<double>(targetSound->sampleLengthSamples - 1)),
                 (static_cast<double>(offsetResult.offsetMs) / 1000.0) * targetRate);
             targetVoice->setVelocityGain(velocity);
             targetVoice->requestTransitionFadeIn(transitionCrossfadeSec, transitionCurve);
@@ -259,7 +237,11 @@ bool InstrumentSynth::transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtI
             sourceVoices[sourceIdx]->requestTransitionFadeOut(transitionCrossfadeSec, transitionCurve);
 
         ++completedGroupCount;
+        this->completedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     }
 
+    this->skippedHiHatTransitions.fetch_add(
+        static_cast<uint64_t>(selectedGroupCount - completedGroupCount),
+        std::memory_order_relaxed);
     return selectedGroupCount == 0 || completedGroupCount == selectedGroupCount;
 }

@@ -63,6 +63,8 @@ void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSa
     }
     this->activeVoiceCount = activeCount;
     this->applyAdaptiveTailShortening();
+    this->renderedSampleCount += static_cast<uint64_t>(juce::jmax(0, numSamples));
+    this->processPendingHiHatControllers();
 }
 
 void InstrumentSynth::applyAdaptiveTailShortening() {

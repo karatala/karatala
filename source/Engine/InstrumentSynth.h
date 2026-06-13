@@ -4,6 +4,7 @@
 #include <atomic>
 #include <memory>
 #include <algorithm>
+#include <limits>
 #include <set>
 #include <optional>
 #include "AftertouchChokeProcessor.h"
@@ -26,6 +27,9 @@ public:
     std::vector<uint8_t> notes; 
 
     double sampleRate = 0.0;
+    int sampleLengthSamples = 0;
+    float sampleLengthMs = 0.0f;
+    bool transitionAudioValid = false;
     int micBufferChannelStart = 0;
     int micBufferChannelCount = 0;
     juce::String routedMicCode;
@@ -203,10 +207,65 @@ public:
     };
 
     struct VelocityLayerRuntime {
+        static constexpr size_t maximumVariantCount = 32;
+        static constexpr size_t maximumMicRouteCount = 32;
+
         uint8_t velocity = 0; // base velocity for layer
         std::vector<SampleEntry> samples; // contiguous sample entries
         // Use shared_ptr to an atomic so the runtime struct remains copyable/movable
         std::shared_ptr<std::atomic<uint32_t>> roundRobinCounter = std::make_shared<std::atomic<uint32_t>>(0);
+        std::array<std::array<int16_t, maximumMicRouteCount>, maximumVariantCount> transitionEntryIndices;
+
+        VelocityLayerRuntime() {
+            for (auto& variantEntries : this->transitionEntryIndices)
+                variantEntries.fill(-1);
+        }
+
+        void rebuildTransitionLookup() {
+            for (auto& variantEntries : this->transitionEntryIndices)
+                variantEntries.fill(-1);
+            for (size_t sampleIdx = 0; sampleIdx < this->samples.size(); ++sampleIdx) {
+                const auto& sampleEntry = this->samples[sampleIdx];
+                if (sampleEntry.sound == nullptr
+                    || sampleEntry.variantIdx >= maximumVariantCount
+                    || sampleEntry.sound->micBufferChannelStart < 0
+                    || sampleEntry.sound->micBufferChannelStart >= static_cast<int>(maximumMicRouteCount)
+                    || sampleIdx > static_cast<size_t>(std::numeric_limits<int16_t>::max())) {
+                    continue;
+                }
+                auto& entryIdx = this->transitionEntryIndices[sampleEntry.variantIdx][static_cast<size_t>(sampleEntry.sound->micBufferChannelStart)];
+                if (entryIdx < 0)
+                    entryIdx = static_cast<int16_t>(sampleIdx);
+            }
+        }
+
+        const SampleEntry* findTransitionEntry(uint8_t variantIdx, int micBufferChannelStart) const {
+            if (variantIdx >= maximumVariantCount
+                || micBufferChannelStart < 0
+                || micBufferChannelStart >= static_cast<int>(maximumMicRouteCount)) {
+                return nullptr;
+            }
+            const int entryIdx = this->transitionEntryIndices[variantIdx][static_cast<size_t>(micBufferChannelStart)];
+            if (entryIdx < 0 || entryIdx >= static_cast<int>(this->samples.size()))
+                return nullptr;
+            const auto& sampleEntry = this->samples[static_cast<size_t>(entryIdx)];
+            if (sampleEntry.sound == nullptr
+                || !sampleEntry.sound->loaded.load(std::memory_order_acquire)
+                || sampleEntry.sound->buffer == nullptr
+                || sampleEntry.sound->sampleLengthSamples <= 0
+                || sampleEntry.sound->sampleLengthMs <= 0.0f
+                || !sampleEntry.sound->transitionAudioValid) {
+                return nullptr;
+            }
+            return &sampleEntry;
+        }
+    };
+
+    struct HiHatTransitionCounters {
+        uint64_t processed = 0;
+        uint64_t coalesced = 0;
+        uint64_t skipped = 0;
+        uint64_t completed = 0;
     };
 
     struct ArticulationRuntime {
@@ -313,6 +372,14 @@ public:
     void applyAftertouch(int midiChannel, int midiNoteNumber);
 
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
+    HiHatTransitionCounters getHiHatTransitionCounters() const noexcept {
+        return {
+            this->processedHiHatTransitions.load(std::memory_order_relaxed),
+            this->coalescedHiHatTransitions.load(std::memory_order_relaxed),
+            this->skippedHiHatTransitions.load(std::memory_order_relaxed),
+            this->completedHiHatTransitions.load(std::memory_order_relaxed),
+        };
+    }
     void handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue) {
         for (auto* voice : voices)
             if (voice->getCurrentlyPlayingNote() == midiNoteNumber && (midiChannel <= 0 || voice->isPlayingChannel(midiChannel)))
@@ -512,6 +579,16 @@ private:
     // threshold.
     std::array<int, 128> lastCcValue {};
     std::array<int8_t, 128> lastCcArticulation; // -1 = not cached
+    std::array<int, 128> pendingCcValue {};
+    std::array<int, 128> pendingCcMidiChannel {};
+    std::array<bool, 128> pendingCcTransition {};
+    std::array<uint64_t, 128> lastCcProcessedSample {};
+    std::array<bool, 128> hasProcessedCcTransition {};
+    uint64_t renderedSampleCount = 0;
+    std::atomic<uint64_t> processedHiHatTransitions { 0 };
+    std::atomic<uint64_t> coalescedHiHatTransitions { 0 };
+    std::atomic<uint64_t> skippedHiHatTransitions { 0 };
+    std::atomic<uint64_t> completedHiHatTransitions { 0 };
     
     // (owned) storage for all SampledSound instances created for this synth
     // (use `sampledSoundPtrs` above which holds shared_ptrs)
@@ -556,6 +633,8 @@ private:
     bool hasAnyLoadedVariant(const VelocityLayerRuntime& layer) const;
     bool isVariantReady(const VelocityLayerRuntime& layer, uint8_t variantIdx) const;
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
+    void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
+    void processPendingHiHatControllers();
     bool transitionHiHatGroups(int midiChannel, ArtRtIdx targetArtIdx);
     // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.

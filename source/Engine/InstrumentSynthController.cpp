@@ -36,6 +36,64 @@ void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
 }
 
 void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
+    if (this->parent == nullptr
+        || this->getType() != KitLib::InstrumentSpec::Type::HiHat
+        || controllerNumber < 0
+        || controllerNumber >= static_cast<int>(this->ccToArticulationMask.size())
+        || !this->ccToArticulationMask[static_cast<size_t>(controllerNumber)]) {
+        return;
+    }
+
+    const int clampedControllerValue = juce::jlimit(0, 127, controllerValue);
+    const size_t controllerIdx = static_cast<size_t>(controllerNumber);
+    this->pendingCcValue[controllerIdx] = clampedControllerValue;
+    this->pendingCcMidiChannel[controllerIdx] = midiChannel;
+
+    const float smoothingSec = this->parent->getEngineSettings().hihatControllerSmoothingSec.load();
+    const uint64_t smoothingSamples = static_cast<uint64_t>(
+        juce::jmax(0.0, std::round(smoothingSec * juce::jmax(1.0, this->sampleRate))));
+    const bool canProcessNow = !this->hasProcessedCcTransition[controllerIdx]
+        || smoothingSamples == 0
+        || this->renderedSampleCount - this->lastCcProcessedSample[controllerIdx] >= smoothingSamples;
+    if (canProcessNow) {
+        this->pendingCcTransition[controllerIdx] = false;
+        this->hasProcessedCcTransition[controllerIdx] = true;
+        this->lastCcProcessedSample[controllerIdx] = this->renderedSampleCount;
+        this->processHiHatControllerTransition(midiChannel, controllerNumber, clampedControllerValue);
+        return;
+    }
+
+    this->pendingCcTransition[controllerIdx] = true;
+    this->coalescedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
+}
+
+void InstrumentSynth::processPendingHiHatControllers() {
+    if (this->getType() != KitLib::InstrumentSpec::Type::HiHat || this->parent == nullptr)
+        return;
+
+    const float smoothingSec = this->parent->getEngineSettings().hihatControllerSmoothingSec.load();
+    const uint64_t smoothingSamples = static_cast<uint64_t>(
+        juce::jmax(0.0, std::round(smoothingSec * juce::jmax(1.0, this->sampleRate))));
+    for (size_t controllerIdx = 0; controllerIdx < this->pendingCcTransition.size(); ++controllerIdx) {
+        if (!this->pendingCcTransition[controllerIdx])
+            continue;
+        if (smoothingSamples > 0
+            && this->renderedSampleCount - this->lastCcProcessedSample[controllerIdx] < smoothingSamples) {
+            continue;
+        }
+
+        this->pendingCcTransition[controllerIdx] = false;
+        this->hasProcessedCcTransition[controllerIdx] = true;
+        this->lastCcProcessedSample[controllerIdx] = this->renderedSampleCount;
+        this->processHiHatControllerTransition(
+            this->pendingCcMidiChannel[controllerIdx],
+            static_cast<int>(controllerIdx),
+            this->pendingCcValue[controllerIdx]);
+    }
+}
+
+void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue) {
+    this->processedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     const auto& settings = this->parent->getEngineSettings();
     const int boundaryHysteresisCc = settings.hihatBoundaryHysteresisCc.load();
     
@@ -49,10 +107,6 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     // then when we start opening pedal, and we know that half-open hat has -42dB at about 50+2800ms, we can start new half-open sample from offset around 2850ms, (question what will be faster and seamless, phase align or crossfade) 
     // so it need to sound seamless and natural, without noticeable attack transient if thing is happened early or unnatural choke+fadein effect that happens when you just stop one sample and start another from the beginning.
     // Only handle hi-hat pedal crossfades here for now
-    if (this->getType() != KitLib::InstrumentSpec::Type::HiHat) return;
-
-    if (!this->ccToArticulationMask[controllerNumber]) return;
-
     const auto& mapArr = this->ccToArticulationTable[controllerNumber];
     const uint8_t mappedArtIdx = mapArr[juce::jlimit(0, 127, controllerValue)];
     if (mappedArtIdx >= this->runtimeArticulations.size()) {

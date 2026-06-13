@@ -17,9 +17,12 @@ Active engine controls:
 - linear, smooth-step, and equal-power transition curves;
 - renamed struck-hit choke margin.
 
-Persisted and live-safe controls awaiting later TODO12 phases:
+Persisted and live-safe control activated by TODO12 Phase 4:
 
-- controller smoothing requires deferred transition scheduling;
+- controller smoothing now drives deferred, sample-domain transition scheduling.
+
+Persisted control awaiting independent engine behavior:
+
 - foot-sample modes require independent foot-event triggering.
 
 ## Goal
