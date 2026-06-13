@@ -608,13 +608,13 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
     // Parse engine settings
     const auto& engineNode = root["engine"];
     if (engineNode.isMap()) {
-        auto parseFloat = [](const YamlHelper::YamlNode& node, const juce::String& key, float& target) {
+        auto parseFloat = [](const YamlHelper::YamlNode& node, const juce::String& key, RealtimeSetting<float>& target) {
             const auto val = node[key].asString();
-            if (val.isNotEmpty()) target = val.getFloatValue();
+            if (val.isNotEmpty()) target.store(val.getFloatValue());
         };
-        auto parseInt = [](const YamlHelper::YamlNode& node, const juce::String& key, int& target) {
+        auto parseInt = [](const YamlHelper::YamlNode& node, const juce::String& key, RealtimeSetting<int>& target) {
             const auto val = node[key].asString();
-            if (val.isNotEmpty()) target = val.getIntValue();
+            if (val.isNotEmpty()) target.store(val.getIntValue());
         };
 
         const auto& chokeNode = engineNode["aftertouch_choke"];
@@ -711,28 +711,28 @@ void DrumKitEngine::saveSettings() {
     const auto& settings = this->engineSettings;
     yaml += "\nengine:\n";
     yaml += "  aftertouch_choke:\n";
-    yaml += "    maxDuckDepth: " + floatToYaml(settings.chokeMaxDuckDepth) + "\n";
-    yaml += "    duckTimeSec: " + floatToYaml(settings.chokeDuckTimeSec) + "\n";
-    yaml += "    releaseTimeSec: " + floatToYaml(settings.chokeReleaseTimeSec) + "\n";
-    yaml += "    muteTailSec: " + floatToYaml(settings.chokeMuteTailSec) + "\n";
-    yaml += "    releaseBoost: " + floatToYaml(settings.chokeReleaseBoost) + "\n";
-    yaml += "    muteThresholdRatio: " + floatToYaml(settings.chokeMuteThresholdRatio) + "\n";
+    yaml += "    maxDuckDepth: " + floatToYaml(settings.chokeMaxDuckDepth.load()) + "\n";
+    yaml += "    duckTimeSec: " + floatToYaml(settings.chokeDuckTimeSec.load()) + "\n";
+    yaml += "    releaseTimeSec: " + floatToYaml(settings.chokeReleaseTimeSec.load()) + "\n";
+    yaml += "    muteTailSec: " + floatToYaml(settings.chokeMuteTailSec.load()) + "\n";
+    yaml += "    releaseBoost: " + floatToYaml(settings.chokeReleaseBoost.load()) + "\n";
+    yaml += "    muteThresholdRatio: " + floatToYaml(settings.chokeMuteThresholdRatio.load()) + "\n";
     yaml += "  tail_shortening:\n";
-    yaml += "    loadThreshold: " + floatToYaml(settings.tailShortenLoadThreshold) + "\n";
-    yaml += "    ageMultiplier: " + floatToYaml(settings.tailShortenAgeMultiplier) + "\n";
-    yaml += "    ampProtect: " + floatToYaml(settings.tailShortenAmpProtect) + "\n";
-    yaml += "    minFactor: " + floatToYaml(settings.tailShortenMinFactor) + "\n";
-    yaml += "    voiceMinClamp: " + floatToYaml(settings.voiceTailShortenMinClamp) + "\n";
-    yaml += "    cullThresholdDb: " + floatToYaml(settings.voiceCullThresholdDb) + "\n";
+    yaml += "    loadThreshold: " + floatToYaml(settings.tailShortenLoadThreshold.load()) + "\n";
+    yaml += "    ageMultiplier: " + floatToYaml(settings.tailShortenAgeMultiplier.load()) + "\n";
+    yaml += "    ampProtect: " + floatToYaml(settings.tailShortenAmpProtect.load()) + "\n";
+    yaml += "    minFactor: " + floatToYaml(settings.tailShortenMinFactor.load()) + "\n";
+    yaml += "    voiceMinClamp: " + floatToYaml(settings.voiceTailShortenMinClamp.load()) + "\n";
+    yaml += "    cullThresholdDb: " + floatToYaml(settings.voiceCullThresholdDb.load()) + "\n";
     yaml += "  hihat:\n";
-    yaml += "    polyphonyCrossfadeTimeoutSec: " + floatToYaml(settings.polyphonyCrossfadeTimeoutSec) + "\n";
-    yaml += "    pedalCrossfadeSec: " + floatToYaml(settings.hihatPedalCrossfadeSec) + "\n";
-    yaml += "    pedalMinRemainingSec: " + floatToYaml(settings.hihatPedalMinRemainingSec) + "\n";
-    yaml += "    crossArtChokeDbMargin: " + floatToYaml(settings.hihatCrossArtChokeDbMargin) + "\n";
+    yaml += "    polyphonyCrossfadeTimeoutSec: " + floatToYaml(settings.polyphonyCrossfadeTimeoutSec.load()) + "\n";
+    yaml += "    pedalCrossfadeSec: " + floatToYaml(settings.hihatPedalCrossfadeSec.load()) + "\n";
+    yaml += "    pedalMinRemainingSec: " + floatToYaml(settings.hihatPedalMinRemainingSec.load()) + "\n";
+    yaml += "    crossArtChokeDbMargin: " + floatToYaml(settings.hihatCrossArtChokeDbMargin.load()) + "\n";
     yaml += "  ui_grid:\n";
-    yaml += "    padGridColumns: " + juce::String(settings.padGridColumns) + "\n";
-    yaml += "    padGridRows: " + juce::String(settings.padGridRows) + "\n";
-    yaml += "    padGap: " + juce::String(settings.padGap) + "\n";
+    yaml += "    padGridColumns: " + juce::String(settings.padGridColumns.load()) + "\n";
+    yaml += "    padGridRows: " + juce::String(settings.padGridRows.load()) + "\n";
+    yaml += "    padGap: " + juce::String(settings.padGap.load()) + "\n";
 
     if (!configFile.replaceWithText(yaml)) {
         LOG(Warning, "Could not write config.yaml");

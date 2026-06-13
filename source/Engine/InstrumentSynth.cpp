@@ -66,12 +66,17 @@ void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSa
 
 void InstrumentSynth::applyAdaptiveTailShortening() {
     const auto& settings = this->parent->getEngineSettings();
+    const float loadThreshold = settings.tailShortenLoadThreshold.load();
+    const float minimumFactor = settings.tailShortenMinFactor.load();
+    const float amplitudeProtect = settings.tailShortenAmpProtect.load();
+    const float ageMultiplier = settings.tailShortenAgeMultiplier.load();
+    const float minimumClamp = settings.voiceTailShortenMinClamp.load();
     const int maxVoices = this->voices.size();
-    if (this->activeVoiceCount < maxVoices * settings.tailShortenLoadThreshold) return;
+    if (this->activeVoiceCount < maxVoices * loadThreshold) return;
     const int activeVoices = this->activeVoiceCount;
     const float load = static_cast<float>(activeVoices) / static_cast<float>(maxVoices);
-    const float minTailShortenFactor = juce::jmap(load, settings.tailShortenLoadThreshold, 1.0f, 1.0f, settings.tailShortenMinFactor);
-    const float protectDb = juce::Decibels::gainToDecibels(settings.tailShortenAmpProtect, -100.0f);
+    const float minTailShortenFactor = juce::jmap(load, loadThreshold, 1.0f, 1.0f, minimumFactor);
+    const float protectDb = juce::Decibels::gainToDecibels(amplitudeProtect, -100.0f);
     for (auto* voice : this->voices) {
         if (!voice->isVoiceActive()) continue;
         const auto state = voice->getEnvelopeState();
@@ -83,9 +88,9 @@ void InstrumentSynth::applyAdaptiveTailShortening() {
         const float estimatedDb = voice->getEstimatedCurrentDb();
         if (estimatedDb > protectDb) continue;
         const float age = static_cast<float>(lastNoteOnCounter - voice->noteOnTime);
-        const float ageFactor = juce::jlimit(0.0f, 1.0f, age * settings.tailShortenAgeMultiplier);
+        const float ageFactor = juce::jlimit(0.0f, 1.0f, age * ageMultiplier);
         const float finalFactor = juce::jmap(ageFactor, 0.0f, 1.0f, 1.0f, minTailShortenFactor);
-        voice->setTailShorteningFactor(finalFactor, settings.voiceTailShortenMinClamp);
+        voice->setTailShorteningFactor(finalFactor, minimumClamp);
     }
 }
 

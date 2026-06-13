@@ -50,29 +50,29 @@ TEST_CASE("KitLib - InstrumentSpec::parseInfo handles optional description", "[I
 
 TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain", "[InstrumentSpec]") {
     {
-        auto r = InstrumentSpec::parseSampleFile("127a-dim_dom_ons.flac");
-        REQUIRE(r.ok());
-        REQUIRE(r.value.velocity == 127);
-        REQUIRE(r.value.sampleVariant == "a");
-        REQUIRE(r.value.micDescriptors.size() == 3);
-        REQUIRE(r.value.micDescriptors[0].raw == "dim");
-        REQUIRE(r.value.micDescriptors[1].raw == "dom");
-        REQUIRE(r.value.micDescriptors[2].raw == "ons");
+        auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-127a-dim_dom_ons.flac");
+        REQUIRE(parsed.ok());
+        REQUIRE(parsed.value.velocity == 127);
+        REQUIRE(parsed.value.sampleVariant == "a");
+        REQUIRE(parsed.value.micDescriptors.size() == 3);
+        REQUIRE(parsed.value.micDescriptors[0].raw == "dim");
+        REQUIRE(parsed.value.micDescriptors[1].raw == "dom");
+        REQUIRE(parsed.value.micDescriptors[2].raw == "ons");
     }
     {// missing leading digits
-        auto r = InstrumentSpec::parseSampleFile("a12-dim.wav");
-        REQUIRE(!r.ok());
+        auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-a12-dim.wav");
+        REQUIRE(!parsed.ok());
     }
     {// velocity out of range
-        auto r = InstrumentSpec::parseSampleFile("000a-dim.wav");
-        REQUIRE(!r.ok());
+        auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-000a-dim.wav");
+        REQUIRE(!parsed.ok());
     }
     {// multi-letter rr variant -> warning but still parsed; we check that first letter is used
-        auto r = InstrumentSpec::parseSampleFile("100ab-dim.wav");
-        REQUIRE(r.ok());
-        REQUIRE(r.value.sampleVariant.length() >= 1);
+        auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-100ab-dim.wav");
+        REQUIRE(parsed.ok());
+        REQUIRE(parsed.value.sampleVariant.length() >= 1);
         // first letter should be used by warning logic (function does not alter stored value here)
-        REQUIRE(r.value.micDescriptors.size() == 1);
+        REQUIRE(parsed.value.micDescriptors.size() == 1);
     }
 }
 
@@ -147,21 +147,61 @@ TEST_CASE("KitLib - DecayEnvelope decode accumulates deltas", "[DecayEnvelope]")
 }
 
 TEST_CASE("KitLib - DecayEnvelope level and inverse lookups", "[DecayEnvelope]") {
-    DecayEnvelope env;
-    env.peakDb = -20.0f;
-    env.peakMs = 10.0f;
-    env.validPoints = 3;
-    env.points[0] = 20.0f; // -6dB
-    env.points[1] = 40.0f; // -12dB
-    env.points[2] = 60.0f; // -18dB
+    DecayEnvelope envelope;
+    envelope.peakDb = -20.0f;
+    envelope.peakMs = 10.0f;
+    envelope.validPoints = 3;
+    envelope.points[0] = 20.0f; // -6dB
+    envelope.points[1] = 40.0f; // -12dB
+    envelope.points[2] = 60.0f; // -18dB
 
-    CHECK_THAT(env.getAbsoluteDbAtMs(10.0f), Catch::Matchers::WithinAbs(-20.0f, 0.001f));
-    CHECK_THAT(env.getAbsoluteDbAtMs(15.0f), Catch::Matchers::WithinAbs(-23.0f, 0.001f));
-    CHECK_THAT(env.getAbsoluteDbAtMs(30.0f), Catch::Matchers::WithinAbs(-29.0f, 0.001f));
-    CHECK_THAT(env.getAbsoluteDbAtMs(100.0f), Catch::Matchers::WithinAbs(-38.0f, 0.001f));
+    CHECK_THAT(envelope.getAbsoluteDbAtMs(10.0f), Catch::Matchers::WithinAbs(-20.0f, 0.001f));
+    CHECK_THAT(envelope.getAbsoluteDbAtMs(15.0f), Catch::Matchers::WithinAbs(-23.0f, 0.001f));
+    CHECK_THAT(envelope.getAbsoluteDbAtMs(20.0f), Catch::Matchers::WithinAbs(-26.0f, 0.001f));
+    CHECK_THAT(envelope.getAbsoluteDbAtMs(30.0f), Catch::Matchers::WithinAbs(-29.0f, 0.001f));
+    CHECK_THAT(envelope.getAbsoluteDbAtMs(40.0f), Catch::Matchers::WithinAbs(-32.0f, 0.001f));
+    CHECK_THAT(envelope.getAbsoluteDbAtMs(60.0f), Catch::Matchers::WithinAbs(-38.0f, 0.001f));
+    CHECK_THAT(envelope.getAbsoluteDbAtMs(100.0f), Catch::Matchers::WithinAbs(-38.0f, 0.001f));
 
-    CHECK_THAT(env.getMsAtAbsoluteDb(-19.0f), Catch::Matchers::WithinAbs(10.0f, 0.001f));
-    CHECK_THAT(env.getMsAtAbsoluteDb(-23.0f), Catch::Matchers::WithinAbs(15.0f, 0.001f));
-    CHECK_THAT(env.getMsAtAbsoluteDb(-29.0f), Catch::Matchers::WithinAbs(30.0f, 0.001f));
-    CHECK(env.getMsAtAbsoluteDb(-50.0f) < 0.0f);
+    CHECK_THAT(envelope.getMsAtAbsoluteDb(-19.0f), Catch::Matchers::WithinAbs(10.0f, 0.001f));
+    CHECK_THAT(envelope.getMsAtAbsoluteDb(-20.0f), Catch::Matchers::WithinAbs(10.0f, 0.001f));
+    CHECK_THAT(envelope.getMsAtAbsoluteDb(-23.0f), Catch::Matchers::WithinAbs(15.0f, 0.001f));
+    CHECK_THAT(envelope.getMsAtAbsoluteDb(-26.0f), Catch::Matchers::WithinAbs(20.0f, 0.001f));
+    CHECK_THAT(envelope.getMsAtAbsoluteDb(-29.0f), Catch::Matchers::WithinAbs(30.0f, 0.001f));
+    CHECK_THAT(envelope.getMsAtAbsoluteDb(-32.0f), Catch::Matchers::WithinAbs(40.0f, 0.001f));
+    CHECK_THAT(envelope.getMsAtAbsoluteDb(-38.0f), Catch::Matchers::WithinAbs(60.0f, 0.001f));
+    CHECK(envelope.getMsAtAbsoluteDb(-50.0f) < 0.0f);
+}
+
+TEST_CASE("KitLib - DecayEnvelope lookup round trips measured range", "[DecayEnvelope]") {
+    DecayEnvelope envelope;
+    envelope.peakDb = -12.0f;
+    envelope.peakMs = 8.0f;
+    envelope.validPoints = 4;
+    envelope.points[0] = 20.0f;
+    envelope.points[1] = 44.0f;
+    envelope.points[2] = 80.0f;
+    envelope.points[3] = 128.0f;
+
+    constexpr std::array<float, 8> timesMs { 8.0f, 14.0f, 20.0f, 32.0f, 44.0f, 62.0f, 80.0f, 104.0f };
+    for (const float timeMs : timesMs) {
+        const float absoluteDb = envelope.getAbsoluteDbAtMs(timeMs);
+        CHECK_THAT(envelope.getMsAtAbsoluteDb(absoluteDb), Catch::Matchers::WithinAbs(timeMs, 0.001f));
+    }
+}
+
+TEST_CASE("KitLib - DecayEnvelope handles invalid and incomplete data", "[DecayEnvelope]") {
+    DecayEnvelope invalidEnvelope;
+    CHECK_THAT(invalidEnvelope.getAbsoluteDbAtMs(50.0f), Catch::Matchers::WithinAbs(-100.0f, 0.001f));
+    CHECK(invalidEnvelope.getMsAtAbsoluteDb(-30.0f) < 0.0f);
+
+    DecayEnvelope incompleteEnvelope;
+    incompleteEnvelope.peakDb = -18.0f;
+    incompleteEnvelope.peakMs = 5.0f;
+    incompleteEnvelope.validPoints = 1;
+    incompleteEnvelope.points[0] = 25.0f;
+
+    CHECK_THAT(incompleteEnvelope.getAbsoluteDbAtMs(15.0f), Catch::Matchers::WithinAbs(-21.0f, 0.001f));
+    CHECK_THAT(incompleteEnvelope.getMsAtAbsoluteDb(-21.0f), Catch::Matchers::WithinAbs(15.0f, 0.001f));
+    CHECK(incompleteEnvelope.getMsAtAbsoluteDb(-30.0f) < 0.0f);
 }

@@ -24,8 +24,8 @@ private:
     struct PotEntry {
         std::unique_ptr<ParameterPot> parameterPot;
         juce::TextButton resetButton { "x" };
-        float* target = nullptr;
-        int* intTarget = nullptr;
+        RealtimeSetting<float>* target = nullptr;
+        RealtimeSetting<int>* intTarget = nullptr;
         double defaultValue = 0.0;
     };
 
@@ -41,12 +41,12 @@ private:
 
     std::vector<std::unique_ptr<PotEntry>> pots;
 
-    void addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval);
-    void addPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal);
+    void addPot(const juce::String& name, const juce::String& tooltip, RealtimeSetting<float>* target, float minVal, float maxVal, float interval);
+    void addPot(const juce::String& name, const juce::String& tooltip, RealtimeSetting<int>* target, int minVal, int maxVal);
     void addPotCommon(const juce::String& name,
                       const juce::String& tooltip,
-                      float* target,
-                      int* intTarget,
+                      RealtimeSetting<float>* target,
+                      RealtimeSetting<int>* intTarget,
                       double minVal,
                       double maxVal,
                       double interval,

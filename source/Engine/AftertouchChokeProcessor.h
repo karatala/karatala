@@ -39,7 +39,7 @@ public:
         if (pa > 0.0f) {
             this->maxPA = juce::jmax(this->maxPA, pa);
 
-            this->targetGain = 1.0f - pa * this->engineSettings->chokeMaxDuckDepth;
+            this->targetGain = 1.0f - pa * this->engineSettings->chokeMaxDuckDepth.load();
 
             if (this->state != State::Muted) {
                 this->state = State::Ducking;
@@ -50,7 +50,7 @@ public:
                 this->state = State::Releasing;
                 this->releaseElapsed = 0.0f;
 
-                float boosted = juce::jmin(1.0f, this->currentGain + this->engineSettings->chokeReleaseBoost);
+                const float boosted = juce::jmin(1.0f, this->currentGain + this->engineSettings->chokeReleaseBoost.load());
                 this->targetGain = boosted;
             }
         }
@@ -61,11 +61,12 @@ public:
 
         switch (this->state) {
             case State::Ducking: {
+                const float duckTimeSec = this->engineSettings->chokeDuckTimeSec.load();
                 this->duckElapsed += dt;
-                this->moveTowards(this->targetGain, this->engineSettings->chokeDuckTimeSec);
+                this->moveTowards(this->targetGain, duckTimeSec);
 
-                if (this->duckElapsed >= this->engineSettings->chokeDuckTimeSec) {
-                    if (this->currentPA >= this->maxPA * this->engineSettings->chokeMuteThresholdRatio) {
+                if (this->duckElapsed >= duckTimeSec) {
+                    if (this->currentPA >= this->maxPA * this->engineSettings->chokeMuteThresholdRatio.load()) {
                         this->state = State::Muted;
                         this->muteElapsed = 0.0f;
                         // small tail instead of hard zero
@@ -79,10 +80,11 @@ public:
             }
 
             case State::Releasing: {
+                const float releaseTimeSec = this->engineSettings->chokeReleaseTimeSec.load();
                 this->releaseElapsed += dt;
-                this->moveTowards(this->targetGain, this->engineSettings->chokeReleaseTimeSec);
+                this->moveTowards(this->targetGain, releaseTimeSec);
 
-                if (this->releaseElapsed >= this->engineSettings->chokeReleaseTimeSec) {
+                if (this->releaseElapsed >= releaseTimeSec) {
                     this->state = State::Idle;
                     this->maxPA = 0.0f;
                 }
@@ -92,7 +94,7 @@ public:
             case State::Muted: {
                 this->muteElapsed += dt;
                 // smooth short tail
-                this->moveTowards(0.0f, this->engineSettings->chokeMuteTailSec);
+                this->moveTowards(0.0f, this->engineSettings->chokeMuteTailSec.load());
                 break;
             }
 

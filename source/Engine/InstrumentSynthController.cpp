@@ -44,6 +44,8 @@ void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
 
 void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
     const auto& settings = this->parent->getEngineSettings();
+    const float pedalMinRemainingSec = settings.hihatPedalMinRemainingSec.load();
+    const float pedalCrossfadeSec = settings.hihatPedalCrossfadeSec.load();
     //FIXME: currently this spams sample change on each tiny change of controller, need to make it make change only if articulation index actually changes, and also avoid spamming when controller value is around articulation change threshold +-
     
     // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
@@ -231,7 +233,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
 
         // If the offset leaves less than minimum useful audio, skip replacement
         const float remainingMs = static_cast<float>(sampleLengthMs) - clampedMs;
-        if (remainingMs < settings.hihatPedalMinRemainingSec * 1000.0f) {
+        if (remainingMs < pedalMinRemainingSec * 1000.0f) {
             ++skippedTooLate;
             continue;
         }
@@ -311,7 +313,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
         }
 
         // Only now fade old voice — replacement is confirmed
-        voice->requestFadeOut(settings.hihatPedalCrossfadeSec);
+        voice->requestFadeOut(pedalCrossfadeSec);
 
         float vel = voice->getVelocityGain();
         this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
@@ -514,8 +516,9 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
 
     // RR lock: force a specific variant index (1-based setting)
     const auto& settings = this->parent->getEngineSettings();
-    if (settings.roundRobinLock > 0) {
-        int lockIdx = settings.roundRobinLock - 1;
+    const int roundRobinLock = settings.roundRobinLock.load();
+    if (roundRobinLock > 0) {
+        const int lockIdx = roundRobinLock - 1;
         int count = 0;
         for (uint32_t mask = allMask; mask != 0; mask = clearLowestSetBit(mask)) {
             if (count == lockIdx)
@@ -548,6 +551,7 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
 bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
     const juce::ScopedLock sl(this->lock);
     const auto& settings = this->parent->getEngineSettings();
+    const float pedalCrossfadeSec = settings.hihatPedalCrossfadeSec.load();
 
     //temporary disabled to debug cc hat transitions
     this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
@@ -556,7 +560,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
     // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
     // fades out ringing voices from more-open articulations.
     if (this->type == KitLib::InstrumentSpec::Type::HiHat)
-        this->chokeHiHatVoicesByPoc(art.pocValue, settings.hihatPedalCrossfadeSec);
+        this->chokeHiHatVoicesByPoc(art.pocValue, pedalCrossfadeSec);
 
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
@@ -588,6 +592,8 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
 
 void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity) {
     const auto& settings = this->parent->getEngineSettings();
+    const float polyphonyCrossfadeSec = settings.polyphonyCrossfadeTimeoutSec.load();
+    const float crossArtChokeDbMargin = settings.hihatCrossArtChokeDbMargin.load();
     const float newVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, newVelocity), -100.0f);
 
     for (auto* voice : voices) {
@@ -597,7 +603,7 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
 
         if (voice->artNameId == art.nameId && voice->artExprId == art.exprId) {
             if (newVelocity >= voice->getVelocityGain() - 0.05f)
-                voice->requestFadeOut(settings.polyphonyCrossfadeTimeoutSec);  
+                voice->requestFadeOut(polyphonyCrossfadeSec);
             continue;
         }
 
@@ -611,8 +617,8 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
             }
 
             const float oldCurrentDb = voice->getEstimatedCurrentDb();
-            if (newHitPeakDbEstimate >= oldCurrentDb - settings.hihatCrossArtChokeDbMargin) {
-                voice->requestFadeOut(settings.polyphonyCrossfadeTimeoutSec);
+            if (newHitPeakDbEstimate >= oldCurrentDb - crossArtChokeDbMargin) {
+                voice->requestFadeOut(polyphonyCrossfadeSec);
             }
         }
     }
@@ -620,6 +626,7 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
 
 void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity) {
     const auto& settings = this->parent->getEngineSettings();
+    const float voiceCullThresholdDb = settings.voiceCullThresholdDb.load();
     float newPeakDb = -100.0f;
     bool hasPeak = false;
     bool hasDirectPeak = false;
@@ -692,7 +699,7 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     juce::uint32 cullTimes[MAX_GROUPS];
     int cullCount = 0;
     for (int idx = 0; idx < groupCount; ++idx) {
-        if (groups[idx].peakDb < (newPeakDb - settings.voiceCullThresholdDb))
+        if (groups[idx].peakDb < (newPeakDb - voiceCullThresholdDb))
             cullTimes[cullCount++] = groups[idx].noteOnTime;
     }
 

@@ -106,19 +106,19 @@ EngineSettingsPanel::~EngineSettingsPanel() {
     this->flushPendingSettingsSave();
 }
 
-void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, float* target, float minVal, float maxVal, float interval) {
+void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, RealtimeSetting<float>* target, float minVal, float maxVal, float interval) {
     this->addPotCommon(name, tooltip, target, nullptr, static_cast<double>(minVal), static_cast<double>(maxVal), static_cast<double>(interval), false);
 }
 
-void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, int* target, int minVal, int maxVal) {
+void EngineSettingsPanel::addPot(const juce::String& name, const juce::String& tooltip, RealtimeSetting<int>* target, int minVal, int maxVal) {
     this->addPotCommon(name, tooltip, nullptr, target, static_cast<double>(minVal), static_cast<double>(maxVal), 1.0, true);
 }
 
-void EngineSettingsPanel::addPotCommon(const juce::String& name, const juce::String& tooltip, float* target, int* intTarget, double minVal, double maxVal, double interval, bool isInteger) {
+void EngineSettingsPanel::addPotCommon(const juce::String& name, const juce::String& tooltip, RealtimeSetting<float>* target, RealtimeSetting<int>* intTarget, double minVal, double maxVal, double interval, bool isInteger) {
     auto entry = std::make_unique<PotEntry>();
     entry->target = target;
     entry->intTarget = intTarget;
-    entry->defaultValue = entry->target != nullptr ? static_cast<double>(*entry->target) : static_cast<double>(*entry->intTarget);
+    entry->defaultValue = entry->target != nullptr ? static_cast<double>(entry->target->load()) : static_cast<double>(entry->intTarget->load());
     entry->parameterPot = std::make_unique<ParameterPot>(name, minVal, maxVal, interval, entry->defaultValue, nullptr, makeSettingsPotLayout(isInteger));
     entry->parameterPot->setInteraction(entry->defaultValue, interval);
     entry->parameterPot->setTooltipText(tooltip);
@@ -138,9 +138,9 @@ void EngineSettingsPanel::addPotCommon(const juce::String& name, const juce::Str
 void EngineSettingsPanel::loadFromEngine() {
     for (auto& entry : this->pots) {
         if (entry->target != nullptr)
-            entry->parameterPot->setValue(static_cast<double>(*entry->target), juce::dontSendNotification);
+            entry->parameterPot->setValue(static_cast<double>(entry->target->load()), juce::dontSendNotification);
         else if (entry->intTarget != nullptr)
-            entry->parameterPot->setValue(static_cast<double>(*entry->intTarget), juce::dontSendNotification);
+            entry->parameterPot->setValue(static_cast<double>(entry->intTarget->load()), juce::dontSendNotification);
     }
     this->rebuildMicLayouts();
 }
@@ -166,11 +166,12 @@ void EngineSettingsPanel::onSettingChanged() {
     bool gridChanged = false;
     for (auto& entry : this->pots) {
         if (entry->target != nullptr)
-            *entry->target = static_cast<float>(entry->parameterPot->getValue());
+            entry->target->store(static_cast<float>(entry->parameterPot->getValue()));
         else if (entry->intTarget != nullptr) {
-            int oldVal = *entry->intTarget;
-            *entry->intTarget = static_cast<int>(entry->parameterPot->getValue());
-            if (oldVal != *entry->intTarget)
+            const int oldValue = entry->intTarget->load();
+            const int newValue = static_cast<int>(entry->parameterPot->getValue());
+            entry->intTarget->store(newValue);
+            if (oldValue != newValue)
                 gridChanged = true;
         }
     }

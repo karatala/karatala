@@ -106,8 +106,8 @@ void PluginEditor::setupDrumPadGridMode() {
     this->addAndMakeVisible(this->drumPadGrid);
     {
         auto& settings = this->processorRef.getEngine().engineSettings;
-        this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
-        this->drumPadGrid.setPadGap(settings.padGap);
+        this->drumPadGrid.setGridSize(settings.padGridColumns.load(), settings.padGridRows.load());
+        this->drumPadGrid.setPadGap(settings.padGap.load());
     }
     this->refreshDrumPadGridIfNeeded(true);
     this->drumPadGrid.onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, float velocity) {
@@ -150,7 +150,7 @@ void PluginEditor::setupSidebarKnobs() {
 
     // Round-robin lock knob - sets engine setting directly
     this->sidebar.rrLockKnob.onValueChange = [this] {
-        this->processorRef.getEngine().engineSettings.roundRobinLock = static_cast<int>(this->sidebar.rrLockKnob.getValue());
+        this->processorRef.getEngine().engineSettings.roundRobinLock.store(static_cast<int>(this->sidebar.rrLockKnob.getValue()));
         this->sidebar.updateKnobLabels();
     };
 }
@@ -283,8 +283,8 @@ void PluginEditor::setupSettingsMode() {
     this->addChildComponent(*this->settingsPanel);
     this->settingsPanel->onGridSizeChanged = [this] {
         auto& settings = this->processorRef.getEngine().engineSettings;
-        this->drumPadGrid.setGridSize(settings.padGridColumns, settings.padGridRows);
-        this->drumPadGrid.setPadGap(settings.padGap);
+        this->drumPadGrid.setGridSize(settings.padGridColumns.load(), settings.padGridRows.load());
+        this->drumPadGrid.setPadGap(settings.padGap.load());
         this->markDrumPadGridDirty();
         this->refreshDrumPadGridIfNeeded();
     };

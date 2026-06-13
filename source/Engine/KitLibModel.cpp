@@ -1,4 +1,5 @@
 #include "KitLibModel.h"
+#include <cmath>
 
 using namespace KitLib;
 
@@ -91,10 +92,13 @@ float DecayEnvelope::getMsAtAbsoluteDb(float targetAbsDb) const {
         if (targetRelDb >= pointRelDb) {
             const float prevMs = (i == 0 ? this->peakMs : this->points[static_cast<size_t>(i - 1)]);
             const float prevRelDb = (i == 0 ? 0.0f : static_cast<float>(i) * DB_STEP);
-            const float denom = juce::jmax(0.001f, pointRelDb - prevRelDb);
-            const float t = juce::jlimit(0.0f, 1.0f, (targetRelDb - prevRelDb) / denom);
+            const float dbInterval = pointRelDb - prevRelDb;
+            if (std::abs(dbInterval) < 0.001f)
+                return prevMs;
+
+            const float interpolation = juce::jlimit(0.0f, 1.0f, (targetRelDb - prevRelDb) / dbInterval);
             const float pointMs = this->points[static_cast<size_t>(i)];
-            return prevMs + t * (pointMs - prevMs);
+            return prevMs + interpolation * (pointMs - prevMs);
         }
     }
 
