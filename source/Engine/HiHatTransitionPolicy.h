@@ -15,32 +15,6 @@ enum class Direction {
     Closing,
 };
 
-enum class HitGroupState {
-    Playing,
-    FadingOut,
-    Releasing,
-    Dying,
-};
-
-struct HitGroupCandidate {
-    uint32_t groupId = 0;
-    uint32_t noteOnTime = 0;
-    float audibleDb = -100.0f;
-    HitGroupState state = HitGroupState::Playing;
-};
-
-struct ReferenceMicCandidate {
-    KitLib::MicSpec::Type micType = KitLib::MicSpec::Type::Unknown;
-    float audibleDb = -100.0f;
-    bool valid = false;
-};
-
-struct TargetSampleCandidate {
-    uint8_t variantIdx = 0;
-    int micChannelStart = -1;
-    bool available = false;
-};
-
 enum class OffsetStatus {
     Success,
     AttackGuard,
@@ -74,11 +48,6 @@ struct OffsetResult {
     bool succeeded() const noexcept { return this->status == OffsetStatus::Success; }
 };
 
-struct TransitionGains {
-    float sourceGain = 1.0f;
-    float targetGain = 0.0f;
-};
-
 int selectOpennessArticulation(std::span<const uint8_t, 128> articulationByCc,
                                std::span<const int> pocByArticulation,
                                int controllerValue,
@@ -88,24 +57,6 @@ int selectOpennessArticulation(std::span<const uint8_t, 128> articulationByCc,
 
 Direction getDirection(int sourcePocValue, int targetPocValue) noexcept;
 
-size_t selectEligibleHitGroups(std::span<const HitGroupCandidate> candidates,
-                               int maximumGroups,
-                               float silenceFloorDb,
-                               std::span<size_t> selectedCandidateIndices) noexcept;
-
-int selectReferenceMic(std::span<const ReferenceMicCandidate> candidates) noexcept;
-
-int findExactTargetSample(std::span<const TargetSampleCandidate> candidates, uint8_t variantIdx, int micChannelStart) noexcept;
-
-bool canCommitGroupTransition(size_t sourceVoiceCount, size_t resolvedTargetCount, size_t reservedVoiceCount) noexcept;
-
 OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept;
-
-TransitionGains calculateTransitionGains(float progress, HiHatTransitionCurve curve) noexcept;
-
-bool shouldTriggerFootSample(HiHatFootSampleMode mode,
-                             Direction direction,
-                             bool entersMostClosedArticulation,
-                             bool qualifyingTransition = true) noexcept;
 
 } // namespace HiHatTransitionPolicy

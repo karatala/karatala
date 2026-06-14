@@ -119,25 +119,11 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
                  &settings.hihatHitChokeDbMargin, 0.0f, 20.0f, 0.5f, nullptr, nullptr, 3.0);
     this->addPot("Attack Guard", "Protects the initial stick attack from being replaced by pedal movement.",
                  &settings.hihatTransitionAttackGuardSec, 0.0f, 0.100f, 0.001f, millisecondsText, millisecondsValue, 0.025);
-    this->addPot("Active Tails", "Number of recent ringing hits eligible to follow pedal openness. Higher values use more voices.",
-                 &settings.hihatTransitionMaxActiveGroups, 1, 4, 1);
     this->addPot("Min Remaining", "Skips replacement samples that do not have enough audio left after matching the current decay level.",
                  &settings.hihatTransitionMinRemainingSec, 0.010f, 0.500f, 0.001f, millisecondsText, millisecondsValue, 0.050);
     this->addPot("Silence Floor", "Very quiet historical tails below this level do not create replacement voices.",
                  &settings.hihatTransitionSilenceFloorDb, -90.0f, -36.0f, 1.0f, nullptr, nullptr, -60.0);
 
-    this->addChoice("Curve", "Gain shape used for closing source/target overlap. Opening starts the matched tail directly and releases the previous tail.",
-                    { "Linear", "Smooth", "Equal Power" }, 3,
-                    [&settings] { return static_cast<int>(settings.hihatTransitionCurve.load()) + 1; },
-                    [&settings](int selectedId) {
-                        settings.hihatTransitionCurve.store(static_cast<HiHatTransitionCurve>(selectedId - 1));
-                    });
-    this->addChoice("Foot Sample", "Controls separate pedal sample playback; it does not choose the articulation used to morph a struck tail.",
-                    { "Off", "Close Only", "Always" }, 2,
-                    [&settings] { return static_cast<int>(settings.hihatFootSampleMode.load()) + 1; },
-                    [&settings](int selectedId) {
-                        settings.hihatFootSampleMode.store(static_cast<HiHatFootSampleMode>(selectedId - 1));
-                    });
     this->addChoice("Missing Data", "Keeps the original tail or uses a simple crossfade when decay metadata is unavailable.",
                     { "Keep Tail", "Simple Fade" }, 1,
                     [&settings] { return static_cast<int>(settings.hihatMissingDecayPolicy.load()) + 1; },
@@ -336,7 +322,7 @@ void EngineSettingsPanel::resized() {
     totalHeight += groupLabelHeight + gap + groupRows(6) * potCellH + gap; // choke (6 pots)
     totalHeight += groupLabelHeight + gap + groupRows(6) * potCellH + gap; // tail (6 pots)
     const int choiceRows = (static_cast<int>(this->choices.size()) + choicesPerRow - 1) / choicesPerRow;
-    totalHeight += groupLabelHeight + gap + groupRows(12) * potCellH + choiceRows * choiceCellH + gap; // hihat
+    totalHeight += groupLabelHeight + gap + groupRows(11) * potCellH + choiceRows * choiceCellH + gap; // hihat
     totalHeight += groupLabelHeight + gap + groupRows(3) * potCellH + gap; // grid (3 pots)
     totalHeight += groupLabelHeight + 64 + gap; // output layout
     totalHeight += 8; // bottom padding
@@ -398,11 +384,11 @@ void EngineSettingsPanel::resized() {
     placePotGrid(6, 6);
 
     placeGroupLabel(this->hihatGroupLabel);
-    placePotGrid(12, 12);
+    placePotGrid(12, 11);
     placeChoiceGrid();
 
     placeGroupLabel(this->uiGridGroupLabel);
-    placePotGrid(24, 3);
+    placePotGrid(23, 3);
 
     placeGroupLabel(this->outputGroupLabel);
     auto outputRow = area.removeFromTop(26);

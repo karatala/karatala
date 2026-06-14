@@ -1,32 +1,8 @@
 #include "HiHatTransitionPolicy.h"
 #include <algorithm>
 #include <cmath>
-#include <limits>
-#include <numbers>
 
 namespace HiHatTransitionPolicy {
-namespace {
-
-int micPriority(KitLib::MicSpec::Type micType) noexcept {
-    switch (micType) {
-        case KitLib::MicSpec::Type::Direct: return 0;
-        case KitLib::MicSpec::Type::Overhead: return 1;
-        case KitLib::MicSpec::Type::Room: return 2;
-        case KitLib::MicSpec::Type::Unknown: return 3;
-    }
-    return 3;
-}
-
-bool isCandidatePreferred(const HitGroupCandidate& candidate, const HitGroupCandidate& selected) noexcept {
-    if (candidate.noteOnTime != selected.noteOnTime)
-        return candidate.noteOnTime > selected.noteOnTime;
-    if (candidate.audibleDb != selected.audibleDb)
-        return candidate.audibleDb > selected.audibleDb;
-    return candidate.groupId > selected.groupId;
-}
-
-} // namespace
-
 int selectOpennessArticulation(std::span<const uint8_t, 128> articulationByCc,
                                std::span<const int> pocByArticulation,
                                int controllerValue,
@@ -70,76 +46,6 @@ Direction getDirection(int sourcePocValue, int targetPocValue) noexcept {
     if (targetPocValue > sourcePocValue)
         return Direction::Closing;
     return Direction::Unchanged;
-}
-
-size_t selectEligibleHitGroups(std::span<const HitGroupCandidate> candidates,
-                               int maximumGroups,
-                               float silenceFloorDb,
-                               std::span<size_t> selectedCandidateIndices) noexcept {
-    const size_t selectionLimit = std::min(
-        selectedCandidateIndices.size(),
-        static_cast<size_t>(std::max(0, maximumGroups)));
-    size_t selectedCount = 0;
-
-    for (size_t candidateIdx = 0; candidateIdx < candidates.size(); ++candidateIdx) {
-        const auto& candidate = candidates[candidateIdx];
-        if (candidate.state != HitGroupState::Playing || candidate.audibleDb < silenceFloorDb)
-            continue;
-
-        size_t insertionIdx = 0;
-        while (insertionIdx < selectedCount
-               && !isCandidatePreferred(candidate, candidates[selectedCandidateIndices[insertionIdx]])) {
-            ++insertionIdx;
-        }
-        if (insertionIdx >= selectionLimit)
-            continue;
-
-        const size_t moveEnd = std::min(selectedCount, selectionLimit - 1);
-        for (size_t moveIdx = moveEnd; moveIdx > insertionIdx; --moveIdx)
-            selectedCandidateIndices[moveIdx] = selectedCandidateIndices[moveIdx - 1];
-
-        selectedCandidateIndices[insertionIdx] = candidateIdx;
-        if (selectedCount < selectionLimit)
-            ++selectedCount;
-    }
-
-    return selectedCount;
-}
-
-int selectReferenceMic(std::span<const ReferenceMicCandidate> candidates) noexcept {
-    int selectedIdx = -1;
-    int selectedPriority = 4;
-    float selectedAudibleDb = -std::numeric_limits<float>::infinity();
-
-    for (size_t candidateIdx = 0; candidateIdx < candidates.size(); ++candidateIdx) {
-        const auto& candidate = candidates[candidateIdx];
-        if (!candidate.valid)
-            continue;
-
-        const int candidatePriority = micPriority(candidate.micType);
-        if (candidatePriority < selectedPriority
-            || (candidatePriority == selectedPriority && candidate.audibleDb > selectedAudibleDb)) {
-            selectedIdx = static_cast<int>(candidateIdx);
-            selectedPriority = candidatePriority;
-            selectedAudibleDb = candidate.audibleDb;
-        }
-    }
-
-    return selectedIdx;
-}
-
-int findExactTargetSample(std::span<const TargetSampleCandidate> candidates, uint8_t variantIdx, int micChannelStart) noexcept {
-    for (size_t candidateIdx = 0; candidateIdx < candidates.size(); ++candidateIdx) {
-        const auto& candidate = candidates[candidateIdx];
-        if (candidate.available && candidate.variantIdx == variantIdx && candidate.micChannelStart == micChannelStart) {
-            return static_cast<int>(candidateIdx);
-        }
-    }
-    return -1;
-}
-
-bool canCommitGroupTransition(size_t sourceVoiceCount, size_t resolvedTargetCount, size_t reservedVoiceCount) noexcept {
-    return sourceVoiceCount > 0 && resolvedTargetCount == sourceVoiceCount && reservedVoiceCount == sourceVoiceCount;
 }
 
 OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept {
@@ -204,38 +110,6 @@ OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept {
 
     result.status = OffsetStatus::Success;
     return result;
-}
-
-TransitionGains calculateTransitionGains(float progress, HiHatTransitionCurve curve) noexcept {
-    const float clampedProgress = std::clamp(progress, 0.0f, 1.0f);
-    float shapedProgress = clampedProgress;
-    if (curve == HiHatTransitionCurve::Smooth)
-        shapedProgress = clampedProgress * clampedProgress * (3.0f - 2.0f * clampedProgress);
-
-    if (curve == HiHatTransitionCurve::EqualPower) {
-        const float angle = clampedProgress * std::numbers::pi_v<float> * 0.5f;
-        return { std::cos(angle), std::sin(angle) };
-    }
-
-    return { 1.0f - shapedProgress, shapedProgress };
-}
-
-bool shouldTriggerFootSample(HiHatFootSampleMode mode,
-                             Direction direction,
-                             bool entersMostClosedArticulation,
-                             bool qualifyingTransition) noexcept {
-    if (!qualifyingTransition || direction == Direction::Unknown || direction == Direction::Unchanged)
-        return false;
-
-    switch (mode) {
-        case HiHatFootSampleMode::Off:
-            return false;
-        case HiHatFootSampleMode::CloseOnly:
-            return direction == Direction::Closing && entersMostClosedArticulation;
-        case HiHatFootSampleMode::Always:
-            return true;
-    }
-    return false;
 }
 
 } // namespace HiHatTransitionPolicy

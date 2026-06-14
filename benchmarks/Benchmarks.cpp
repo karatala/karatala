@@ -2,7 +2,6 @@
 #include "../source/Engine/InstrumentSynth.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
-#include <array>
 
 struct InstrumentSynthTestAccess {
     static std::vector<InstrumentSynth::ArticulationRuntime>& articulations(InstrumentSynth& synth) {
@@ -96,28 +95,5 @@ TEST_CASE("Hi-hat controller coalescing performance", "[benchmark][HiHatTransiti
             synth.handleController(1, 4, controllerValue);
         InstrumentSynthTestAccess::advanceRenderedSamples(synth, 720);
         return synth.getHiHatTransitionCounters().processed;
-    };
-}
-
-TEST_CASE("Hi-hat active-group selection performance", "[benchmark][HiHatTransition]") {
-    std::array<HiHatTransitionPolicy::HitGroupCandidate, 32> candidates {};
-    for (size_t candidateIdx = 0; candidateIdx < candidates.size(); ++candidateIdx) {
-        candidates[candidateIdx] = {
-            static_cast<juce::uint32>(candidateIdx + 1),
-            static_cast<juce::uint32>(candidateIdx + 1),
-            -20.0f - static_cast<float>(candidateIdx),
-            HiHatTransitionPolicy::HitGroupState::Playing,
-        };
-    }
-    std::array<size_t, 4> selectedIndices {};
-
-    BENCHMARK("Select one active hi-hat group") {
-        return HiHatTransitionPolicy::selectEligibleHitGroups(candidates, 1, -72.0f, selectedIndices);
-    };
-    BENCHMARK("Select two active hi-hat groups") {
-        return HiHatTransitionPolicy::selectEligibleHitGroups(candidates, 2, -72.0f, selectedIndices);
-    };
-    BENCHMARK("Select four active hi-hat groups") {
-        return HiHatTransitionPolicy::selectEligibleHitGroups(candidates, 4, -72.0f, selectedIndices);
     };
 }

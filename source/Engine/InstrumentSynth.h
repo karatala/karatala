@@ -86,15 +86,12 @@ public:
     float getVelocityGain() const { return this->velocityGain; }
     void setVelocityGain(float value) { this->velocityGain = value; }
     void requestFadeOut(float durationSec);
-    void requestTransitionFadeIn(float durationSec, HiHatTransitionCurve curve);
-    void requestTransitionFadeOut(float durationSec, HiHatTransitionCurve curve);
     void requestRelease();
     void killImmediately();
     float getEstimatedCurrentDb() const;
     void updateEstimatedDb();
     EnvelopeState getEnvelopeState() const noexcept { return this->envelopeState; }
     juce::uint32 getEventId() const noexcept { return this->noteOnTime; }
-    int getRuntimeArticulationIndex() const noexcept { return this->runtimeArticulationIdx; }
 
     SampledSound* getCurrentlyPlayingSound() const noexcept { return this->currentlyPlayingSound; }
     void setOwner(InstrumentSynth* synth) noexcept { this->owner = synth; }
@@ -110,7 +107,6 @@ public:
         this->currentlyPlayingNote = -1;
         this->currentlyPlayingSound = nullptr;
         this->currentPlayingMidiChannel = 0;
-        this->runtimeArticulationIdx = -1;
         this->envelopeState = EnvelopeState::Idle;
     }
 
@@ -139,7 +135,6 @@ private:
 
     double currentSampleRate = 44100.0;
     juce::uint32 noteOnTime = 0;
-    int runtimeArticulationIdx = -1;
     EnvelopeState envelopeState = EnvelopeState::Idle;
 
     // double releaseStartTimeMs = 0.0;
@@ -157,7 +152,7 @@ public:
     void setUseOneShotDecayEnvelope(bool shouldUse) { this->useOneShotDecayEnvelope = shouldUse; }
     void setPitchRatioMultiplier(double multiplier) { this->pitchRatioMultiplier = multiplier; }
     
-    float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain * this->lastTransitionGain; }
+    float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain; }
     
     // juce::RangedAudioParameter* gainParam = nullptr; //TODO?
     // juce::RangedAudioParameter* panParam = nullptr; //TODO?
@@ -175,18 +170,6 @@ public:
     float cachedEstimatedDb = -100.0f;
     uint8_t dbUpdateCounter = 0; // throttle updateEstimatedDb to every N-th render call
     int hitGroupId = -1;
-
-private:
-    enum class TransitionRamp { None, FadeIn, FadeOut };
-
-    float getNextTransitionGain();
-
-    TransitionRamp transitionRamp = TransitionRamp::None;
-    HiHatTransitionCurve transitionCurve = HiHatTransitionCurve::EqualPower;
-    float transitionProgress = 1.0f;
-    float transitionProgressStep = 0.0f;
-    float lastTransitionGain = 1.0f;
-    bool transitionStopRequested = false;
 
 public:
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
@@ -208,58 +191,10 @@ public:
     };
 
     struct VelocityLayerRuntime {
-        static constexpr size_t maximumVariantCount = 32;
-        static constexpr size_t maximumMicRouteCount = 32;
-
         uint8_t velocity = 0; // base velocity for layer
         std::vector<SampleEntry> samples; // contiguous sample entries
         // Use shared_ptr to an atomic so the runtime struct remains copyable/movable
         std::shared_ptr<std::atomic<uint32_t>> roundRobinCounter = std::make_shared<std::atomic<uint32_t>>(0);
-        std::array<std::array<int16_t, maximumMicRouteCount>, maximumVariantCount> transitionEntryIndices;
-
-        VelocityLayerRuntime() {
-            for (auto& variantEntries : this->transitionEntryIndices)
-                variantEntries.fill(-1);
-        }
-
-        void rebuildTransitionLookup() {
-            for (auto& variantEntries : this->transitionEntryIndices)
-                variantEntries.fill(-1);
-            for (size_t sampleIdx = 0; sampleIdx < this->samples.size(); ++sampleIdx) {
-                const auto& sampleEntry = this->samples[sampleIdx];
-                if (sampleEntry.sound == nullptr
-                    || sampleEntry.variantIdx >= maximumVariantCount
-                    || sampleEntry.sound->micBufferChannelStart < 0
-                    || sampleEntry.sound->micBufferChannelStart >= static_cast<int>(maximumMicRouteCount)
-                    || sampleIdx > static_cast<size_t>(std::numeric_limits<int16_t>::max())) {
-                    continue;
-                }
-                auto& entryIdx = this->transitionEntryIndices[sampleEntry.variantIdx][static_cast<size_t>(sampleEntry.sound->micBufferChannelStart)];
-                if (entryIdx < 0)
-                    entryIdx = static_cast<int16_t>(sampleIdx);
-            }
-        }
-
-        const SampleEntry* findTransitionEntry(uint8_t variantIdx, int micBufferChannelStart) const {
-            if (variantIdx >= maximumVariantCount
-                || micBufferChannelStart < 0
-                || micBufferChannelStart >= static_cast<int>(maximumMicRouteCount)) {
-                return nullptr;
-            }
-            const int entryIdx = this->transitionEntryIndices[variantIdx][static_cast<size_t>(micBufferChannelStart)];
-            if (entryIdx < 0 || entryIdx >= static_cast<int>(this->samples.size()))
-                return nullptr;
-            const auto& sampleEntry = this->samples[static_cast<size_t>(entryIdx)];
-            if (sampleEntry.sound == nullptr
-                || !sampleEntry.sound->loaded.load(std::memory_order_acquire)
-                || sampleEntry.sound->buffer == nullptr
-                || sampleEntry.sound->sampleLengthSamples <= 0
-                || sampleEntry.sound->sampleLengthMs <= 0.0f
-                || !sampleEntry.sound->transitionAudioValid) {
-                return nullptr;
-            }
-            return &sampleEntry;
-        }
     };
 
     struct HiHatTransitionCounters {
@@ -269,23 +204,9 @@ public:
         uint64_t completed = 0;
     };
 
-    enum class HiHatTransitionStatus {
-        NoRelevantTail,
-        Completed,
-        Skipped,
-    };
-
-    struct HiHatTransitionResult {
-        HiHatTransitionStatus status = HiHatTransitionStatus::NoRelevantTail;
-        size_t selectedGroupCount = 0;
-        size_t completedGroupCount = 0;
-    };
-
     struct ArticulationRuntime {
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
-        bool isFootEvent = false;
-        bool isFootSplash = false;
         // pdl_opn_cls value extracted from ArticulationSpec expression dimensions.
         // Higher value = more closed/tight = stronger (mutes articulations with lower pocValue).
         // -1 = not a PedalOpenClose articulation.
@@ -382,17 +303,9 @@ public:
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
     int resolveArticulation(int midiNoteNumber);
     int resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity);
-    bool startLayerVoices(
-        ArtRtIdx artIdx,
-        ArticulationRuntime& art,
-        VelocityLayerRuntime& layer,
-        uint8_t chosenVariant,
-        int midiChannel,
-        int midiNoteNumber,
-        float velocity,
-        bool isIndependentFootEvent = false);
+    bool startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
     void fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity);
-    void startSampleVoice(InstrumentSynthVoice& voice, ArtRtIdx artIdx, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity, juce::uint32 eventId);
+    void startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity);
     void applyAftertouch(int midiChannel, int midiNoteNumber);
 
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
@@ -436,9 +349,7 @@ public:
         return this->findVoiceToSteal(midiChannel, midiNoteNumber, groupId);
     }
 
-    juce::uint32 allocateEventId() noexcept { return ++this->lastNoteOnCounter; }
-
-    void startVoice(InstrumentSynthVoice* const voice, SampledSound* const sound, const int midiChannel, const int midiNoteNumber, const float velocity, juce::uint32 eventId = 0) {
+    void startVoice(InstrumentSynthVoice* const voice, SampledSound* const sound, const int midiChannel, const int midiNoteNumber, const float velocity) {
         if (voice == nullptr || sound == nullptr) return;
         // LOG(Debug, "Start voice note=" + juce::String(midiNoteNumber) + " group=" + juce::String(voice->hitGroupId) + " active voices=" + juce::String(voices.size()));
         if (voice->currentlyPlayingSound != nullptr)
@@ -446,7 +357,7 @@ public:
 
         voice->currentlyPlayingNote = midiNoteNumber;
         voice->currentPlayingMidiChannel = midiChannel;
-        voice->noteOnTime = eventId != 0 ? eventId : this->allocateEventId();
+        voice->noteOnTime = ++this->lastNoteOnCounter;
         voice->currentlyPlayingSound = sound;
         voice->startNote(midiNoteNumber, velocity, sound);
     }
@@ -660,9 +571,6 @@ private:
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
     void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
     void processPendingHiHatControllers();
-    ArtRtIdx resolveHiHatTargetArticulation(ArtRtIdx sourceArtIdx, ArtRtIdx desiredArtIdx) const;
-    bool triggerHiHatFootSample(int midiChannel, ArtRtIdx desiredArtIdx, HiHatTransitionPolicy::Direction direction, int controllerDelta);
-    HiHatTransitionResult transitionHiHatGroups(int midiChannel, ArtRtIdx desiredArtIdx);
     // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
     void chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec);

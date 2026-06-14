@@ -276,10 +276,6 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
 ) {
     MicRoutingBuilder micRouting(this);
 
-    const bool isPedalArticulation = artSpec->nameId == StringsDictSingleton::getId("pedal");
-    artRt.isFootEvent = artRt.isFootEvent || isPedalArticulation;
-    artRt.isFootSplash = artRt.isFootSplash
-        || (isPedalArticulation && artSpec->exprId == StringsDictSingleton::getId("splash"));
     this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, micRouting);
     micRouting.mergeSkippedInto(skippedMicCodes);
     artRt.buildVelocityMapping();
@@ -384,7 +380,6 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                 );
             }
         }
-        layer.rebuildTransitionLookup();
         artRt.layers.push_back(std::move(layer));
     }
 }

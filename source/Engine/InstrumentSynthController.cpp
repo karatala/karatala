@@ -151,7 +151,8 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
 
     this->pendingCcArticulation[controllerNumber] = -1;
     const uint8_t newArtIdx = static_cast<uint8_t>(selectedArtIdx);
-    LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
+    if (LOG_ENABLED(Verbose))
+        LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
     int activeMismatchedVoices = 0;
     int replacementsStarted = 0;
@@ -232,11 +233,9 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             }
         }
 
-        // Compute offset for THIS voice independently from its own mic-specific
-        // decay envelopes. Each mic has different decay characteristics (direct
-        // mics peak early, room mics peak late), so sharing a single offset
-        // across all mics produces wrong results — room mic replacements end up
-        // in pre-peak / near-silent regions and die quickly.
+        // Compute the offset independently from this voice's mic-specific decay
+        // envelopes. Sharing one offset puts room replacements in pre-peak or
+        // near-silent regions because direct and room mics decay differently.
         const auto& oldEnv = ss->decayEnvelope;
         const auto& newEnv = targetSe->sound->decayEnvelope;
         const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
@@ -316,10 +315,8 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         const double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
 
         // Guard against replacing with an effectively silent region.
-        // Use a threshold RELATIVE to the expected level from the decay envelope,
-        // not an absolute floor. Quiet mics (overheads, rooms) have naturally low
-        // peak levels and at late offsets their content can be at -60 to -80dB —
-        // legitimate level-matched audio that must not be rejected.
+        // Use a threshold relative to the expected decay-envelope level. Quiet
+        // overhead and room content at -60 to -80 dB can still be legitimate.
         // Only skip if measured content is >24dB below the envelope's prediction
         // (indicating corrupt/empty sample), with an absolute floor at -90dB
         // to catch true digital silence.
@@ -383,32 +380,33 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         newVoice->setVelocityGain(vel);
         ++replacementsStarted;
 
-        juce::String oldArtCode = "unknown";
-        if (ss->sampleVariantSpec != nullptr && ss->sampleVariantSpec->parent != nullptr && ss->sampleVariantSpec->parent->parent != nullptr)
-            oldArtCode = ss->sampleVariantSpec->parent->parent->codeRaw;
+        if (LOG_ENABLED(Verbose)) {
+            juce::String oldArtCode = "unknown";
+            if (ss->sampleVariantSpec != nullptr && ss->sampleVariantSpec->parent != nullptr && ss->sampleVariantSpec->parent->parent != nullptr)
+                oldArtCode = ss->sampleVariantSpec->parent->parent->codeRaw;
 
-        juce::String newArtCode = "unknown";
-        if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr
-            && targetSe->sound->sampleVariantSpec->parent != nullptr
-            && targetSe->sound->sampleVariantSpec->parent->parent != nullptr)
-            newArtCode = targetSe->sound->sampleVariantSpec->parent->parent->codeRaw;
+            juce::String newArtCode = "unknown";
+            if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr
+                && targetSe->sound->sampleVariantSpec->parent != nullptr
+                && targetSe->sound->sampleVariantSpec->parent->parent != nullptr)
+                newArtCode = targetSe->sound->sampleVariantSpec->parent->parent->codeRaw;
 
-        juce::String sampleName = "unknown";
-        if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr)
-            sampleName = targetSe->sound->sampleVariantSpec->sampleFile.getFileName();
+            juce::String sampleName = "unknown";
+            if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr)
+                sampleName = targetSe->sound->sampleVariantSpec->sampleFile.getFileName();
 
-        LOG(Verbose, "PedalVoiceStart inst=" + this->getId()
-            + " ch=" + juce::String(midiChannel)
-            + " note=" + juce::String(voice->getCurrentlyPlayingNote())
-            + " vel=" + juce::String(vel, 3)
-            + " fromArt=" + oldArtCode
-            + " toArt=" + newArtCode
-            + " micStart=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelStart : -1)
-            + " micCount=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelCount : 0)
-            + " offsetMs=" + juce::String(offsetMs, 2)
-            + " offsetSamples=" + juce::String(clampedOffset, 2)
-            + " sample=" + sampleName
-        );
+            LOG(Verbose, "PedalVoiceStart inst=" + this->getId()
+                + " ch=" + juce::String(midiChannel)
+                + " note=" + juce::String(voice->getCurrentlyPlayingNote())
+                + " vel=" + juce::String(vel, 3)
+                + " fromArt=" + oldArtCode
+                + " toArt=" + newArtCode
+                + " micStart=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelStart : -1)
+                + " micCount=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelCount : 0)
+                + " offsetMs=" + juce::String(offsetMs, 2)
+                + " offsetSamples=" + juce::String(clampedOffset, 2)
+                + " sample=" + sampleName);
+        }
 
     }
 
@@ -418,7 +416,12 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         this->lastCcArticulation[controllerNumber] = static_cast<int8_t>(newArtIdx);
     this->lastCcValue[controllerNumber] = controllerValue;
 
-    if (activeMismatchedVoices > 0 && replacementsStarted == 0) {
+    if (replacementsStarted > 0)
+        this->completedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
+    else if (activeMismatchedVoices > 0)
+        this->skippedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
+
+    if (LOG_ENABLED(Verbose) && activeMismatchedVoices > 0 && replacementsStarted == 0) {
         LOG(Verbose, "HiHat pedal transition skipped: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
             + " targetArt=" + juce::String((int)newArtIdx)
@@ -434,7 +437,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     }
 
     const int totalSkipped = skippedNoEnvelope + skippedNoTarget + skippedNoVoice + skippedTooLate + skippedNoDbMatch + skippedSilentTarget + skippedOther;
-    if (replacementsStarted > 0 && totalSkipped > 0) {
+    if (LOG_ENABLED(Verbose) && replacementsStarted > 0 && totalSkipped > 0) {
         LOG(Verbose, "HiHat pedal transition partial: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
             + " targetArt=" + juce::String((int)newArtIdx)
@@ -472,7 +475,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
 
     this->lastRequestedVelocity.store(velf);
 
-    bool anyStarted = this->startLayerVoices(static_cast<ArtRtIdx>(artIdx), art, layer, chosenVariant, midiChannel, midiNoteNumber, velf);
+    bool anyStarted = this->startLayerVoices(art, layer, chosenVariant, midiChannel, midiNoteNumber, velf);
     if (!anyStarted) return false;
 
     this->applyAftertouch(midiChannel, midiNoteNumber);
@@ -607,27 +610,17 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
     return lowestSetBit(remaining);
 }
 
-bool InstrumentSynth::startLayerVoices(
-    ArtRtIdx artIdx,
-    ArticulationRuntime& art,
-    VelocityLayerRuntime& layer,
-    uint8_t chosenVariant,
-    int midiChannel,
-    int midiNoteNumber,
-    float velocity,
-    bool isIndependentFootEvent) {
+bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
     const juce::ScopedLock sl(this->lock);
     const auto& settings = this->parent->getEngineSettings();
     const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
 
-    if (!isIndependentFootEvent) {
-        this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
+    this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
 
-        // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
-        // fades out ringing voices from more-open articulations.
-        if (this->type == KitLib::InstrumentSpec::Type::HiHat)
-            this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
-    }
+    // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
+    // fades out ringing voices from more-open articulations.
+    if (this->type == KitLib::InstrumentSpec::Type::HiHat)
+        this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
 
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
@@ -639,7 +632,7 @@ bool InstrumentSynth::startLayerVoices(
         }
         auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
         if (!voice) continue;
-        this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, 0);
+        this->startSampleVoice(*voice, art, se, midiChannel, midiNoteNumber, velocity);
         anyStarted = true;
     }
 
@@ -649,7 +642,7 @@ bool InstrumentSynth::startLayerVoices(
             if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) continue;
             auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
             if (!voice) continue;
-            this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, 0);
+            this->startSampleVoice(*voice, art, se, midiChannel, midiNoteNumber, velocity);
             anyStarted = true;
         }
     }
@@ -821,7 +814,7 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSe
     }
 }
 
-void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArtRtIdx artIdx, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity, juce::uint32 eventId) {
+void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity) {
     if (LOG_ENABLED(Verbose)) {
         auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.codeRaw;
         auto& artCode = se.sound->sampleVariantSpec->parent->parent->codeRaw;
@@ -839,9 +832,8 @@ void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArtRtIdx art
     voice.setReleaseTimeSec(this->decayOverrideMs.has_value() ? static_cast<float>(*this->decayOverrideMs) / 1000.0f : 0.1f);
     voice.setUseOneShotDecayEnvelope(this->decayOverrideMs.has_value());
 
-    this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocity, eventId);
+    this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocity);
 
-    voice.runtimeArticulationIdx = artIdx;
     voice.artNameId = art.nameId;
     voice.artExprId = art.exprId;
     voice.setVelocityGain(velocity);

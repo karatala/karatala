@@ -2,14 +2,15 @@
 
 ## Status
 
-In progress.
+Resolved with listening acceptance on June 14, 2026.
 
-- Phases 1 and 2 are complete.
-- Phase 3 is implemented but was not accepted because it regressed closed-to-open tail transitions and foot-splash behavior.
-- Phase 3.1 is implemented and automated tests pass; listening acceptance is still required.
-- Phase 4 has been revalidated with the Phase 3.1 regression repairs; listening acceptance is still required.
-- Phase 5 is objectively complete for settings storage, YAML, UI controls, runtime behavior, and automated round-trip coverage.
-- Phase 6 automated validation is complete; musical listening acceptance remains open and the latest feedback reports worse sound than the pre-Phase-3 implementation.
+- Phases 1 and 2 remain complete.
+- Phase 3's group-coherent transaction was rejected: it caused broken splash behavior, harsh opening transitions, ducking, and pedal-like double mutes.
+- Phase 3.1 repairs did not restore the accepted sound.
+- The runtime now uses the confirmed-good `e6cdaac` per-voice replacement behavior with Phase 4 CC coalescing retained.
+- Shared event IDs, atomic all-mic commits, canonical reference-mic matching, transition ramps, generated CC foot layers, and group retries were removed.
+- Phase 5 retains only controls that affect the accepted runtime; inactive `Active Tails`, `Curve`, and `Foot Sample` controls were removed from the UI while YAML compatibility remains.
+- Phase 6 listening acceptance passed after the full Phase 3 group solution was undone.
 
 Phase 1 completion:
 
@@ -25,14 +26,14 @@ Phase 2 completion:
 
 - added allocation-free `HiHatTransitionPolicy` helpers with non-owning `std::span` inputs;
 - extracted openness selection with bidirectional hysteresis and MIDI endpoint handling;
-- extracted opening/closing direction, bounded eligible-group ranking, and canonical reference-mic selection;
+- extracted opening/closing direction and decay matching;
 - extracted decay-matched offset calculation with explicit failure statuses and missing-data fallback;
 - added linear, smooth-step, and equal-power transition gain calculations;
 - added independent foot-sample policy decisions;
 - delegated the current controller path to the shared hysteresis, direction, and offset helpers;
 - added focused policy coverage: 8 test cases and 40 assertions passed.
 
-Phase 3 implementation:
+Rejected Phase 3 implementation history:
 
 - stamped every voice with its runtime articulation index;
 - assigned one shared event ID to all microphones started by a sampled hit;
@@ -45,7 +46,7 @@ Phase 3 implementation:
 - added complementary selectable source/target transition ramps;
 - added synth-level tests proving complete group commit and unchanged sources when one target mic is missing.
 
-Known Phase 3 regressions:
+Confirmed Phase 3 regressions:
 
 - opening a ringing closed hi-hat may fail to start the corresponding open sound;
 - a transition with no selected group can be reported as successful and cached, preventing a later retry;
@@ -53,7 +54,7 @@ Known Phase 3 regressions:
 - pedal and foot-splash voices are not separated from struck-tail morph transactions;
 - the foot-sample policy and UI setting exist, but no runtime path currently triggers the foot sample.
 
-Phase 3.1 implementation:
+Superseded Phase 3.1 repair history:
 
 - added explicit `NoRelevantTail`, `Completed`, and `Skipped` transition results;
 - retained skipped eligible transitions as bounded retries and allowed newer CC input to supersede them;
@@ -80,12 +81,9 @@ Phase 3.1 listening follow-up:
 
 Phase 4 implementation:
 
-- added fixed target-entry lookup tables keyed by round-robin variant and routed mic;
 - published sample length and usable-audio validation metadata with loaded buffers;
-- removed target candidate construction and buffer-length queries from controller transitions;
 - activated sample-domain coalescing through the existing `controllerSmoothingSec` setting;
 - retained only the latest pending CC value and processed it at the next permitted render boundary;
-- kept group and voice work bounded by fixed capacities and `maxActiveGroups`;
 - added lock-free processed, coalesced, skipped, and completed transition counters;
 - added controller coalescing coverage and a focused 128-value CC sweep benchmark.
 
@@ -95,7 +93,7 @@ Phase 5 implementation:
 - YAML loading, migration, defaults, and serialization cover the transition settings;
 - Phase 4 activated the persisted `controllerSmoothingSec` control in the audio-thread scheduler;
 - existing configuration files retain documented defaults for missing values;
-- foot-sample mode is persisted, exposed in the UI, and connected to independent runtime triggering.
+- legacy group, curve, and generated-foot settings remain parseable for configuration compatibility but are not exposed as active controls.
 
 ## Goal
 
@@ -376,7 +374,7 @@ Exit criteria:
 
 ### Phase 3: Group-Coherent Voice Transition
 
-Status: Implemented, regression repair required before acceptance.
+Status: Rejected and removed after listening comparison. The steps below are retained as implementation history.
 
 1. Stamp or retain runtime articulation index directly on each voice.
 2. Group active voices by `noteOnTime`.
@@ -395,9 +393,9 @@ Exit criteria:
 
 ### Phase 3.1: Regression Repair
 
-Status: Implemented with listening-follow-up fixes; awaiting another listening pass.
+Status: Superseded. These repairs did not restore the accepted sound and were removed with the Phase 3 transaction model.
 
-This phase restores the musical behavior present before Phase 3 while retaining shared event IDs, atomic mic-group commits, bounded selection, and realtime-safe lookup.
+This phase attempted to restore the musical behavior while retaining shared event IDs and atomic mic-group commits. Listening showed that premise was unsuccessful.
 
 1. Correct transition result semantics.
    - Distinguish `no relevant active tail`, `transition completed`, and `transition skipped`.
@@ -428,7 +426,7 @@ Exit criteria:
 - an initially skipped transition can retry instead of being cached as complete;
 - exact target matching remains preferred, but a coherent common fallback variant can transition the full group;
 - pedal/chick and foot-splash voices are never used as struck-tail morph sources;
-- `Foot Sample = Off`, `Close Only`, and `Always` affect runtime behavior as documented;
+- foot-sample modes were evaluated during the rejected group-transition implementation;
 - regression tests fail on the current Phase 3 behavior and pass after the repair;
 - all Phase 3 group-coherence tests continue to pass.
 
@@ -440,7 +438,7 @@ Automated verification:
 
 ### Phase 4: Realtime Work Reduction
 
-Status: Implemented and automated-revalidated with Phase 3.1; listening acceptance remains pending.
+Status: Partially retained. Controller coalescing, bounded scheduling, guarded logging, and counters remain; group lookup and load-time transition tables were removed.
 
 1. Precompute target entry lookup tables during load/rebuild.
 2. Replace target-buffer RMS scans with load-time validation metadata.
@@ -449,12 +447,14 @@ Status: Implemented and automated-revalidated with Phase 3.1; listening acceptan
 5. Guard verbose formatting.
 6. Add counters for processed, coalesced, skipped, and completed transitions without formatting strings on the audio thread.
 
-Exit criteria:
+Original exit criteria:
 
 - no sample-window scan occurs in `handleController()`;
 - no heap allocation occurs during a controller transition;
 - worst-case work is bounded by configured active groups and mic count.
 - Phase 3.1 retries, fallback selection, and foot triggering remain bounded and allocation-free.
+
+Only controller coalescing, guarded logging, bounded scheduling, and counters remain applicable. The bounded 1024-sample validation scan is retained as known performance debt because removing it changed the accepted sound.
 
 Revalidation:
 
@@ -466,7 +466,7 @@ Revalidation:
 
 ### Phase 5: UI and Persistence
 
-Status: Objectively complete; listening-based tuning remains part of Phase 6.
+Status: Complete for controls that affect the accepted runtime. Inactive Phase 3 controls remain YAML-compatible but are hidden from the UI.
 
 Implement the settings contract in [TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md](TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.md).
 
@@ -488,7 +488,7 @@ Automated verification:
 
 ### Phase 6: Listening and Performance Validation
 
-Status: Automated validation complete; listening acceptance failed/pending.
+Status: Complete. Listening was accepted on June 14, 2026 after restoring per-voice replacement behavior and retaining the Phase 4 controller scheduler.
 
 Test:
 
@@ -513,19 +513,16 @@ Acceptance criteria:
 
 Automated results:
 
-- focused settings/transition validation: 19 test cases and 115 assertions passed;
-- full suite: 68 test cases and 480 assertions passed;
-- complete mic-group, mic-specific offsets, missing target, voice pressure, active-tail limit, retry, zone, fallback, foot mode, and synthetic gain-hole scenarios are covered;
-- synthetic phase-aligned opening and closing transitions do not create an envelope/ramp level hole;
-- Debug 128-value raw CC sweep: approximately `49.4 us` mean;
-- Debug 128-message coalesced burst: approximately `8.3 us` mean;
-- bounded selection of 1/2/4 groups: approximately `0.78/0.97/2.03 us` mean.
+- full suite: 52 test cases and 407 assertions passed after final dead-policy cleanup;
+- production-path tests cover independent event IDs, per-voice replacement, missing targets, cache behavior, and CC coalescing;
+- Debug 128-value raw CC sweep: approximately `54.7 us` mean;
+- Debug 128-message coalesced burst: approximately `11.8 us` mean.
 
 Listening gate:
 
-- the latest listening feedback reports foot-splash and tight-to-open behavior still sounds worse than before Phase 3;
-- Phase 6 must not be marked musically accepted until a new standalone/plugin listening pass succeeds;
-- if it remains unacceptable, `e6cdaac` is the last Phase-2 commit before Phase 3 (`864acc4`) and provides the comparison point for reverting the Phase-3+ transition strategy.
+- accepted on June 14, 2026 after restoring the pre-Phase-3 per-voice transition behavior;
+- foot-splash and tight-to-open behavior were confirmed fixed;
+- future group-coherent transition work requires a separate listening comparison before replacing this path.
 
 ## Tests to Add
 
@@ -540,20 +537,11 @@ Required cases:
 1. Decay lookup and inverse lookup round-trip.
 2. Articulation boundary hysteresis in both directions.
 3. CC coalescing retains the latest value.
-4. Only the newest configured hit groups are selected.
-5. Fading and dying groups are excluded.
-6. Complete mic-group reservation succeeds atomically.
-7. Partial target availability leaves the source group unchanged.
-8. Canonical offset is shared across direct, overhead, and room voices.
-9. Equal-power midpoint gains are approximately `0.707`.
-10. Opening and closing use different durations.
-11. Missing metadata follows the configured fallback.
-12. Foot sample policy does not replace a struck tail with `pedal`.
-13. Closed `edge` and `bow` tails transition to their matching open zones.
-14. A skipped eligible transition is not cached as complete and can retry.
-15. A missing exact round-robin target uses one coherent fallback variant for every mic.
-16. Pedal, chick, and foot-splash voices are excluded from struck-tail morph groups.
-17. Foot-sample modes trigger the expected runtime event.
+4. Independent active voices can transition without sharing an event ID.
+5. A missing target leaves the source voice playing and does not cache the request as complete.
+6. Opening and closing use different source release durations.
+7. Missing metadata follows the configured fallback.
+8. CC coalescing retains and eventually applies the latest value.
 
 ## Performance Measurement
 

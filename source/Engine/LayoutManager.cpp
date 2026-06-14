@@ -225,30 +225,25 @@ instruments:
       - { notes: [30], code: bow }
       - { notes: [31], code: edge }
 
-  - id: cymbal1
-    display: Cymbal 1
+  - id: crash3
+    display: Crash 3
     position: right
     articulations:
-      - { notes: [32], code: bow }
+      - { notes: [9], code: bow }
       - { notes: [32], code: edge }
+
+  - id: stax1
+    display: Stax 1
+    position: right
+    articulations:
+      - { notes: [30], code: bow }
+      - { notes: [15], code: edge }
 
   - id: perc1
     display: Vibraslap/Cowbel
     articulations:
-      - { notes: [34], code: center }
-      - { notes: [58], code: rim }
-
-  - id: perc2
-    display: Timbale/Block 1
-    articulations:
-      - { notes: [65], code: center }
-      - { notes: [76], code: rim }
-
-  - id: perc3
-    display: Timbale/Block 2
-    articulations:
-      - { notes: [66], code: center }
-      - { notes: [77], code: rim }
+      - { notes: [58], code: center }
+      - { notes: [56], code: rim }
 
 )yaml";
     auto result = LayoutTraits<KitLayout>::parseYaml(defaultYaml);

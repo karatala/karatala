@@ -64,59 +64,6 @@ TEST_CASE("HiHatTransitionPolicy - direction distinguishes opening and closing",
             == closeDurationSec);
 }
 
-TEST_CASE("HiHatTransitionPolicy - eligible groups are bounded newest playing audible groups", "[HiHatTransitionPolicy]") {
-    const std::array<HiHatTransitionPolicy::HitGroupCandidate, 6> candidates {
-        HiHatTransitionPolicy::HitGroupCandidate { 1, 10, -20.0f, HiHatTransitionPolicy::HitGroupState::Playing },
-        HiHatTransitionPolicy::HitGroupCandidate { 2, 30, -30.0f, HiHatTransitionPolicy::HitGroupState::Playing },
-        HiHatTransitionPolicy::HitGroupCandidate { 3, 40, -10.0f, HiHatTransitionPolicy::HitGroupState::FadingOut },
-        HiHatTransitionPolicy::HitGroupCandidate { 4, 50, -80.0f, HiHatTransitionPolicy::HitGroupState::Playing },
-        HiHatTransitionPolicy::HitGroupCandidate { 5, 20, -15.0f, HiHatTransitionPolicy::HitGroupState::Playing },
-        HiHatTransitionPolicy::HitGroupCandidate { 6, 25, -12.0f, HiHatTransitionPolicy::HitGroupState::Dying },
-    };
-    std::array<size_t, 4> selectedIndices {};
-
-    const size_t selectedCount = HiHatTransitionPolicy::selectEligibleHitGroups(
-        candidates, 2, -72.0f, selectedIndices);
-
-    REQUIRE(selectedCount == 2);
-    REQUIRE(candidates[selectedIndices[0]].groupId == 2);
-    REQUIRE(candidates[selectedIndices[1]].groupId == 5);
-}
-
-TEST_CASE("HiHatTransitionPolicy - reference mic prefers direct then overhead then room", "[HiHatTransitionPolicy]") {
-    const std::array<HiHatTransitionPolicy::ReferenceMicCandidate, 5> candidates {
-        HiHatTransitionPolicy::ReferenceMicCandidate { KitLib::MicSpec::Type::Room, -20.0f, true },
-        HiHatTransitionPolicy::ReferenceMicCandidate { KitLib::MicSpec::Type::Overhead, -30.0f, true },
-        HiHatTransitionPolicy::ReferenceMicCandidate { KitLib::MicSpec::Type::Direct, -40.0f, true },
-        HiHatTransitionPolicy::ReferenceMicCandidate { KitLib::MicSpec::Type::Direct, -10.0f, false },
-        HiHatTransitionPolicy::ReferenceMicCandidate { KitLib::MicSpec::Type::Direct, -25.0f, true },
-    };
-
-    REQUIRE(HiHatTransitionPolicy::selectReferenceMic(candidates) == 4);
-    REQUIRE(HiHatTransitionPolicy::selectReferenceMic({}) == -1);
-}
-
-TEST_CASE("HiHatTransitionPolicy - exact target matching preserves variant and mic route", "[HiHatTransitionPolicy]") {
-    const std::array<HiHatTransitionPolicy::TargetSampleCandidate, 4> candidates {
-        HiHatTransitionPolicy::TargetSampleCandidate { 1, 0, true },
-        HiHatTransitionPolicy::TargetSampleCandidate { 1, 2, false },
-        HiHatTransitionPolicy::TargetSampleCandidate { 2, 2, true },
-        HiHatTransitionPolicy::TargetSampleCandidate { 1, 4, true },
-    };
-
-    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 1, 0) == 0);
-    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 1, 2) == -1);
-    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 2, 2) == 2);
-    REQUIRE(HiHatTransitionPolicy::findExactTargetSample(candidates, 2, 4) == -1);
-}
-
-TEST_CASE("HiHatTransitionPolicy - complete reservation is required before group commit", "[HiHatTransitionPolicy]") {
-    REQUIRE(HiHatTransitionPolicy::canCommitGroupTransition(3, 3, 3));
-    REQUIRE_FALSE(HiHatTransitionPolicy::canCommitGroupTransition(3, 2, 3));
-    REQUIRE_FALSE(HiHatTransitionPolicy::canCommitGroupTransition(3, 3, 2));
-    REQUIRE_FALSE(HiHatTransitionPolicy::canCommitGroupTransition(0, 0, 0));
-}
-
 TEST_CASE("HiHatTransitionPolicy - decay matching blends fallback and matched offsets", "[HiHatTransitionPolicy]") {
     const auto sourceEnvelope = makeEnvelope();
     const auto targetEnvelope = makeEnvelope();
@@ -181,36 +128,4 @@ TEST_CASE("HiHatTransitionPolicy - zero tail matching does not require decay met
     const auto result = HiHatTransitionPolicy::calculateDecayMatchedOffset(input);
     REQUIRE(result.succeeded());
     REQUIRE(result.offsetMs == Catch::Approx(40.0f));
-}
-
-TEST_CASE("HiHatTransitionPolicy - transition curves have stable endpoints and midpoint", "[HiHatTransitionPolicy]") {
-    const auto linearMidpoint = HiHatTransitionPolicy::calculateTransitionGains(0.5f, HiHatTransitionCurve::Linear);
-    REQUIRE(linearMidpoint.sourceGain == Catch::Approx(0.5f));
-    REQUIRE(linearMidpoint.targetGain == Catch::Approx(0.5f));
-
-    const auto equalPowerMidpoint = HiHatTransitionPolicy::calculateTransitionGains(0.5f, HiHatTransitionCurve::EqualPower);
-    REQUIRE(equalPowerMidpoint.sourceGain == Catch::Approx(0.7071067f).margin(0.0001f));
-    REQUIRE(equalPowerMidpoint.targetGain == Catch::Approx(0.7071067f).margin(0.0001f));
-
-    const auto smoothStart = HiHatTransitionPolicy::calculateTransitionGains(-1.0f, HiHatTransitionCurve::Smooth);
-    const auto smoothEnd = HiHatTransitionPolicy::calculateTransitionGains(2.0f, HiHatTransitionCurve::Smooth);
-    REQUIRE(smoothStart.sourceGain == Catch::Approx(1.0f));
-    REQUIRE(smoothStart.targetGain == Catch::Approx(0.0f));
-    REQUIRE(smoothEnd.sourceGain == Catch::Approx(0.0f));
-    REQUIRE(smoothEnd.targetGain == Catch::Approx(1.0f));
-}
-
-TEST_CASE("HiHatTransitionPolicy - foot samples are independent policy decisions", "[HiHatTransitionPolicy]") {
-    REQUIRE_FALSE(HiHatTransitionPolicy::shouldTriggerFootSample(
-        HiHatFootSampleMode::Off, HiHatTransitionPolicy::Direction::Closing, true));
-    REQUIRE(HiHatTransitionPolicy::shouldTriggerFootSample(
-        HiHatFootSampleMode::CloseOnly, HiHatTransitionPolicy::Direction::Closing, true));
-    REQUIRE_FALSE(HiHatTransitionPolicy::shouldTriggerFootSample(
-        HiHatFootSampleMode::CloseOnly, HiHatTransitionPolicy::Direction::Opening, true));
-    REQUIRE_FALSE(HiHatTransitionPolicy::shouldTriggerFootSample(
-        HiHatFootSampleMode::CloseOnly, HiHatTransitionPolicy::Direction::Closing, false));
-    REQUIRE(HiHatTransitionPolicy::shouldTriggerFootSample(
-        HiHatFootSampleMode::Always, HiHatTransitionPolicy::Direction::Opening, false));
-    REQUIRE_FALSE(HiHatTransitionPolicy::shouldTriggerFootSample(
-        HiHatFootSampleMode::Always, HiHatTransitionPolicy::Direction::Closing, true, false));
 }

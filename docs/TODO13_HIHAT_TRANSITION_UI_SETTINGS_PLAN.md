@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented on June 13, 2026 for settings storage, YAML migration/serialization, realtime UI controls, and TODO12 runtime behavior.
+Implemented, then revised after listening acceptance on June 14, 2026.
 
 Active engine controls:
 
@@ -13,16 +13,18 @@ Active engine controls:
 - minimum remaining tail;
 - silence floor;
 - missing-decay fallback policy;
-- active-tail group limit;
-- linear, smooth-step, and equal-power transition curves;
 - renamed struck-hit choke margin.
 
 Runtime-complete controls:
 
 - controller smoothing drives deferred, sample-domain transition scheduling;
-- foot-sample modes trigger independent mapped foot events without re-choking transitioned tails;
-- opening time releases the previous tail while the decay-matched target starts directly;
-- closing time and curve control complementary source/target overlap.
+- opening and closing times release each source voice while its decay-matched target starts directly.
+
+Persisted legacy settings hidden from the UI because the accepted runtime does not consume them:
+
+- active-tail group limit;
+- transition curve;
+- generated CC foot-sample mode.
 
 ## Goal
 
@@ -93,9 +95,6 @@ Keep existing unrelated controls:
 | UI label | Setting identifier | Range/options | Default | Meaning |
 |---|---|---|---|---|
 | Attack Guard | `hihatTransitionAttackGuardSec` | 0-0.100 s | 0.025 s | Avoid morphing a newly struck hit during its attack |
-| Active Tails | `hihatTransitionMaxActiveGroups` | 1-4 | 1 | Maximum historical hit groups eligible for one transition update |
-| Curve | `hihatTransitionCurve` | Linear, Smooth, Equal Power | Equal Power | Gain shape used during closing source/target overlap |
-| Foot Sample | `hihatFootSampleMode` | Off, Close Only, Always | Close Only | Whether a pedal sample is layered as a separate physical foot event |
 | Min Remaining | `hihatPedalMinRemainingSec` | 0.010-0.500 s | 0.050 s | Minimum usable target tail required to start a replacement |
 | Silence Floor | `hihatTransitionSilenceFloorDb` | -90 to -36 dB | -72 dB | Groups below this level are not transitioned |
 | Missing Data | `hihatMissingDecayPolicy` | Keep Tail, Simple Fade | Keep Tail | Behavior when source or target decay metadata is unavailable |
@@ -105,18 +104,6 @@ Keep existing unrelated controls:
 `Attack Guard`
 
 > Protects the initial stick attack from being replaced by pedal movement.
-
-`Active Tails`
-
-> Number of recent ringing hits that can follow pedal openness. Higher values sound denser but use more voices.
-
-`Curve`
-
-> Shape of closing overlap between old and new tails. Opening uses a direct matched target plus source release to avoid a fade-in hole.
-
-`Foot Sample`
-
-> Controls separate pedal chick playback. It does not choose the articulation used to morph a struck tail.
 
 `Min Remaining`
 
@@ -162,9 +149,6 @@ Secondary row:
 1. `Poly Xfade`
 2. `Hit Choke dB`
 3. `Attack Guard`
-4. `Active Tails`
-5. `Curve`
-6. `Foot Sample`
 
 Advanced expandable row:
 
@@ -178,11 +162,11 @@ If the panel does not yet support expandable groups, include the advanced contro
 
 Use:
 
-- `ParameterPot` for seconds, dB, percentages, and integer tail count;
-- `ComboBox` for curve, foot-sample mode, and missing-data policy;
+- `ParameterPot` for seconds, dB, and percentages;
+- `ComboBox` for missing-data policy;
 - millisecond formatting for time values below one second;
 - percentage formatting for `Tail Match`;
-- integer formatting for `Hysteresis` and `Active Tails`.
+- integer formatting for `Hysteresis`.
 
 The panel's layout counts and pot indices must be derived from group data or updated together with constructor ordering. Avoid another set of unrelated hard-coded indices if the panel is being refactored.
 
@@ -276,34 +260,11 @@ A default of `-3 dB` makes the introduced target tail slightly quieter and reduc
 
 ### Attack Guard
 
-Do not morph a hit group while its canonical reference voice is younger than the configured duration. Continue tracking desired openness so the latest state can be applied after the guard expires.
+Do not morph a voice while it is younger than the configured duration. Continue tracking desired openness so the latest state can be applied after the guard expires.
 
-### Active Tails
+### Legacy Persisted Settings
 
-Select at most this many newest audible `noteOnTime` groups. The value bounds CPU and polyphony cost.
-
-### Curve
-
-- Linear: `source = 1-progress`, `target = progress`.
-- Smooth: use smooth-step progress before applying gains.
-- Equal Power: use sine/cosine gains.
-
-The selectable curve applies to closing overlap. Opening deliberately avoids a complementary target fade-in because it produced a pronounced gain hole with real hi-hat tails.
-
-### Foot Sample
-
-- Off: never generate a separate foot sample from openness CC transitions.
-- Close Only: trigger on a transition into the most closed/pedal region.
-- Always: trigger on each qualifying pedal articulation transition.
-
-Foot-sample triggering must not redirect the struck tail to a `pedal` articulation.
-
-Implemented policy:
-
-- velocity is derived from the controller movement magnitude;
-- triggering occurs only on a qualifying articulation transition;
-- controller smoothing/coalescing limits the maximum trigger rate;
-- generated foot events bypass struck-hit culling and articulation-order choking.
+`maxActiveGroups`, `curve`, and `footSampleMode` remain readable and writable for configuration compatibility. They do not affect the accepted per-voice runtime and are not exposed in the UI.
 
 ### Missing Data
 
@@ -366,11 +327,7 @@ Do not silently overwrite explicitly configured new keys.
 - `Tail Match = 75%`: uses envelope metadata while avoiding over-precise jumps to very late sample offsets.
 - `Match Bias = -3 dB`: reduces replacement level bumps.
 - `Attack Guard = 25 ms`: protects the main stick transient.
-- `Active Tails = 1`: provides predictable CPU use and avoids transforming historical hits.
-- `Equal Power`: minimizes perceived crossfade dips.
-- `Foot Sample = Close Only`: matches the most common physical event without repeated pedal-sample chatter.
-
-These defaults require listening validation with several libraries before release. Current listening feedback reports Phase 3+ transitions still sound worse than the pre-Phase-3 path, so the defaults and runtime strategy are not musically accepted yet.
+The active defaults were accepted by listening on June 14, 2026 with the restored per-voice runtime. Legacy hidden values are preserved only for configuration compatibility.
 
 ## Validation
 
@@ -396,8 +353,7 @@ These defaults require listening validation with several libraries before releas
 2. Closing remains responsive at 5, 20, and 80 ms.
 3. Hysteresis prevents boundary chatter.
 4. Tail Match and Match Bias produce audible but controlled differences.
-5. Active Tails values do not break multi-mic coherence.
-6. Foot Sample modes behave independently from struck-tail articulation.
+5. Foot-splash and tight-to-open transitions retain the accepted behavior.
 
 ### UI
 
@@ -415,7 +371,7 @@ These defaults require listening validation with several libraries before releas
 5. Add enum controls and advanced settings.
 6. Update panel layout calculations.
 7. Add settings/persistence tests.
-8. Perform multi-library listening validation and tune defaults. Pending; current listening acceptance failed.
+8. Perform listening validation and tune defaults. Completed for the restored per-voice runtime on June 14, 2026.
 
 ## Out of Scope
 
