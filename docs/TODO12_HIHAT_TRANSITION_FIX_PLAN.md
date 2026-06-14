@@ -43,7 +43,7 @@ Phase 3 implementation:
 - selected one canonical direct/overhead/room reference and applied one millisecond offset to every target mic;
 - preserved the event ID and committed the target articulation on every replacement voice;
 - added complementary selectable source/target transition ramps;
-- added synth-level tests proving complete group commit, shared offsets, and unchanged sources when one target mic is missing.
+- added synth-level tests proving complete group commit and unchanged sources when one target mic is missing.
 
 Known Phase 3 regressions:
 
@@ -202,19 +202,18 @@ Required correction:
 - default to one newest audible group;
 - apply one transition decision to the complete group.
 
-### P1: Independent Per-Mic Offsets Break Multi-Mic Coherence
+### P1: Multi-Mic Offset Strategy Must Follow Library Timing Metadata
 
-Calculating a separate envelope-matched offset for each mic can change direct/overhead/room timing and phase relationships.
+The original Phase 3 assumption was that one shared sample timestamp would best preserve direct/overhead/room coherence. Comparison with the confirmed-good `e6cdaac` implementation and listening feedback showed that assumption is wrong for the active library: microphones have materially different envelope peak timing, and a shared timestamp can place room targets before their useful decay or near silence.
 
-Required correction:
+Current correction:
 
-- select one canonical reference voice per hit group;
-- prefer a direct mic, then overhead, then room;
-- compute one source level and one target offset from that reference;
-- apply the same source-time offset to every replacement in the group;
-- preserve any existing per-mic sample alignment metadata rather than deriving new offsets from each mic envelope.
+- retain atomic group reservation and commit;
+- calculate the current level and matched target offset from each source/target microphone envelope;
+- start every target microphone in the same transaction, using its own validated decay position;
+- keep exact routed-mic and common-variant selection coherent across the group.
 
-Per-mic envelope data may validate target availability, but it must not independently retime the recording.
+This restores the confirmed-good pre-Phase-3 matching behavior without returning to unbounded historical-voice processing.
 
 ### P1: Matching Omits Current Voice Gain State
 
@@ -311,10 +310,10 @@ For each eligible `noteOnTime` group:
 
 1. Collect source voices belonging to the group.
 2. Resolve the complete target sample group.
-3. Choose one reference mic.
-4. Calculate one decay-matched target offset.
+3. Choose one reference mic for group-level velocity/layer selection.
+4. Calculate a decay-matched target offset for each routed microphone.
 5. Validate target buffers and reserve idle voices.
-6. Start all replacement voices with the shared offset.
+6. Start all replacement voices atomically with their validated mic-specific offsets.
 7. Start a complementary ramp for closing, or start the matched target immediately while releasing the source for opening.
 8. Commit the group target articulation.
 
@@ -383,14 +382,14 @@ Status: Implemented, regression repair required before acceptance.
 2. Group active voices by `noteOnTime`.
 3. Transition only eligible groups.
 4. Build and validate the complete target group before mutating source voices.
-5. Apply one canonical offset to all target mics.
+5. Apply one validated decay-matched offset per target mic.
 6. Commit articulation state per group.
 
 Exit criteria:
 
 - a transition cannot partially replace a mic group;
 - no fading/dying voice creates another replacement;
-- room/direct timing relationships remain unchanged.
+- direct/overhead/room targets do not land in pre-peak or near-silent regions.
 - closed-to-open and open-to-closed transitions remain functional;
 - pedal and foot-splash playback remain functional.
 
@@ -398,7 +397,7 @@ Exit criteria:
 
 Status: Implemented with listening-follow-up fixes; awaiting another listening pass.
 
-This phase restores the musical behavior present before Phase 3 while retaining shared event IDs, atomic mic-group commits, canonical offsets, and complementary ramps.
+This phase restores the musical behavior present before Phase 3 while retaining shared event IDs, atomic mic-group commits, bounded selection, and realtime-safe lookup.
 
 1. Correct transition result semantics.
    - Distinguish `no relevant active tail`, `transition completed`, and `transition skipped`.
@@ -516,7 +515,7 @@ Automated results:
 
 - focused settings/transition validation: 19 test cases and 115 assertions passed;
 - full suite: 68 test cases and 480 assertions passed;
-- complete mic-group, missing target, voice pressure, active-tail limit, retry, zone, fallback, foot mode, and synthetic gain-hole scenarios are covered;
+- complete mic-group, mic-specific offsets, missing target, voice pressure, active-tail limit, retry, zone, fallback, foot mode, and synthetic gain-hole scenarios are covered;
 - synthetic phase-aligned opening and closing transitions do not create an envelope/ramp level hole;
 - Debug 128-value raw CC sweep: approximately `49.4 us` mean;
 - Debug 128-message coalesced burst: approximately `8.3 us` mean;

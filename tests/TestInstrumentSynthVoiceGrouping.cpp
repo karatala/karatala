@@ -115,7 +115,7 @@ TEST_CASE("InstrumentSynth - implicit voice starts allocate distinct event ids",
     REQUIRE(firstVoice->getEventId() != secondVoice->getEventId());
 }
 
-TEST_CASE("InstrumentSynth - hi-hat group transition commits every mic with one time offset", "[InstrumentSynth][HiHatTransition]") {
+TEST_CASE("InstrumentSynth - hi-hat group transition commits every mic with mic-specific decay offsets", "[InstrumentSynth][HiHatTransition]") {
     DrumKitEngine engine;
     engine.engineSettings.hihatTransitionAttackGuardSec.store(0.0f);
     engine.engineSettings.hihatTransitionMinRemainingSec.store(0.01f);
@@ -158,6 +158,9 @@ TEST_CASE("InstrumentSynth - hi-hat group transition commits every mic with one 
     sourceRoom.decayEnvelope = makeTransitionEnvelope();
     targetDirect.decayEnvelope = makeTransitionEnvelope();
     targetRoom.decayEnvelope = makeTransitionEnvelope();
+    targetRoom.decayEnvelope.peakMs = 30.0f;
+    targetRoom.decayEnvelope.points[0] = 300.0f;
+    targetRoom.decayEnvelope.points[1] = 500.0f;
     targetDirect.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 88200);
     targetRoom.buffer = std::make_shared<juce::AudioBuffer<float>>(1, 96000);
     publishTestBufferMetadata(targetDirect);
@@ -192,7 +195,8 @@ TEST_CASE("InstrumentSynth - hi-hat group transition commits every mic with one 
 
     const double directOffsetMs = targetDirectVoice->sourceSamplePosition / targetDirect.sampleRate * 1000.0;
     const double roomOffsetMs = targetRoomVoice->sourceSamplePosition / targetRoom.sampleRate * 1000.0;
-    REQUIRE(directOffsetMs == Catch::Approx(roomOffsetMs).margin(0.001));
+    REQUIRE(directOffsetMs != Catch::Approx(roomOffsetMs).margin(0.001));
+    REQUIRE(roomOffsetMs > directOffsetMs);
 }
 
 TEST_CASE("InstrumentSynth - missing target mic leaves the source group unchanged", "[InstrumentSynth][HiHatTransition]") {

@@ -99,7 +99,15 @@ void InstrumentSynth::processPendingHiHatControllers() {
 void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue) {
     this->processedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     const auto& settings = this->parent->getEngineSettings();
+    const float openCrossfadeSec = settings.hihatOpenCrossfadeSec.load();
+    const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
     const int boundaryHysteresisCc = settings.hihatBoundaryHysteresisCc.load();
+    const float tailMatchAmount = settings.hihatTailMatchAmount.load();
+    const float tailMatchBiasDb = settings.hihatTailMatchBiasDb.load();
+    const float attackGuardSec = settings.hihatTransitionAttackGuardSec.load();
+    const float minRemainingSec = settings.hihatTransitionMinRemainingSec.load();
+    const float silenceFloorDb = settings.hihatTransitionSilenceFloorDb.load();
+    const auto missingDecayPolicy = settings.hihatMissingDecayPolicy.load();
     
     // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
     // so new more open sample plays from offset based on rms level, for example we have analyzed data
@@ -123,57 +131,26 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     }
 
     const int cachedArtIdx = this->lastCcArticulation[controllerNumber];
-    const bool isRetry = this->pendingCcArticulation[controllerNumber] >= 0;
     std::array<int, 256> pocByArticulation {};
     const size_t articulationCount = juce::jmin(this->runtimeArticulations.size(), pocByArticulation.size());
     for (size_t articulationIdx = 0; articulationIdx < articulationCount; ++articulationIdx)
         pocByArticulation[articulationIdx] = this->runtimeArticulations[articulationIdx].pocValue;
 
-    const int selectedArtIdx = isRetry
-        ? this->pendingCcArticulation[controllerNumber]
-        : HiHatTransitionPolicy::selectOpennessArticulation(
-            mapArr,
-            std::span<const int>(pocByArticulation.data(), articulationCount),
-            controllerValue,
-            this->lastCcValue[controllerNumber],
-            cachedArtIdx,
-            boundaryHysteresisCc);
+    const int selectedArtIdx = HiHatTransitionPolicy::selectOpennessArticulation(
+        mapArr,
+        std::span<const int>(pocByArticulation.data(), articulationCount),
+        controllerValue,
+        this->lastCcValue[controllerNumber],
+        cachedArtIdx,
+        boundaryHysteresisCc);
     if (selectedArtIdx == cachedArtIdx) {
         this->pendingCcArticulation[controllerNumber] = -1;
         this->lastCcValue[controllerNumber] = controllerValue;
         return;
     }
 
-    const auto desiredArtIdx = static_cast<ArtRtIdx>(selectedArtIdx);
-    const int previousControllerValue = this->lastCcValue[controllerNumber];
-    HiHatTransitionPolicy::Direction pedalDirection = HiHatTransitionPolicy::Direction::Unknown;
-    if (cachedArtIdx >= 0 && cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())) {
-        pedalDirection = HiHatTransitionPolicy::getDirection(
-            this->runtimeArticulations[static_cast<size_t>(cachedArtIdx)].pocValue,
-            this->runtimeArticulations[static_cast<size_t>(desiredArtIdx)].pocValue);
-    }
-
-    const auto transitionResult = this->transitionHiHatGroups(midiChannel, desiredArtIdx);
-    if (!isRetry) {
-        this->triggerHiHatFootSample(
-            midiChannel,
-            desiredArtIdx,
-            pedalDirection,
-            std::abs(controllerValue - previousControllerValue));
-    }
-    if (transitionResult.status == HiHatTransitionStatus::Completed
-        || transitionResult.status == HiHatTransitionStatus::NoRelevantTail) {
-        this->lastCcArticulation[controllerNumber] = desiredArtIdx;
-        this->pendingCcArticulation[controllerNumber] = -1;
-    } else {
-        this->pendingCcArticulation[controllerNumber] = desiredArtIdx;
-        this->pendingCcTransition[controllerNumber] = true;
-    }
-    this->lastCcValue[controllerNumber] = controllerValue;
-    return;
-/*
-    // Superseded by the group-coherent transaction above. Remove with the Phase 4
-    // controller hot-path cleanup after its performance counters are extracted.
+    this->pendingCcArticulation[controllerNumber] = -1;
+    const uint8_t newArtIdx = static_cast<uint8_t>(selectedArtIdx);
     LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
     int activeMismatchedVoices = 0;
@@ -472,7 +449,6 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             + ", other=" + juce::String(skippedOther) + "}"
         );
     }
-*/
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
@@ -653,7 +629,6 @@ bool InstrumentSynth::startLayerVoices(
             this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
     }
 
-    const juce::uint32 eventId = this->allocateEventId();
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
         if (!se.sound || se.variantIdx != chosenVariant) continue;
@@ -664,7 +639,7 @@ bool InstrumentSynth::startLayerVoices(
         }
         auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
         if (!voice) continue;
-        this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, eventId);
+        this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, 0);
         anyStarted = true;
     }
 
@@ -674,7 +649,7 @@ bool InstrumentSynth::startLayerVoices(
             if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) continue;
             auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
             if (!voice) continue;
-            this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, eventId);
+            this->startSampleVoice(*voice, artIdx, art, se, midiChannel, midiNoteNumber, velocity, 0);
             anyStarted = true;
         }
     }

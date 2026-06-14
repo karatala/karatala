@@ -124,7 +124,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->addPot("Min Remaining", "Skips replacement samples that do not have enough audio left after matching the current decay level.",
                  &settings.hihatTransitionMinRemainingSec, 0.010f, 0.500f, 0.001f, millisecondsText, millisecondsValue, 0.050);
     this->addPot("Silence Floor", "Very quiet historical tails below this level do not create replacement voices.",
-                 &settings.hihatTransitionSilenceFloorDb, -90.0f, -36.0f, 1.0f, nullptr, nullptr, -72.0);
+                 &settings.hihatTransitionSilenceFloorDb, -90.0f, -36.0f, 1.0f, nullptr, nullptr, -60.0);
 
     this->addChoice("Curve", "Gain shape used for closing source/target overlap. Opening starts the matched tail directly and releases the previous tail.",
                     { "Linear", "Smooth", "Equal Power" }, 3,

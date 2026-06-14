@@ -185,6 +185,7 @@ InstrumentSynth::HiHatTransitionResult InstrumentSynth::transitionHiHatGroups(in
         std::array<InstrumentSynthVoice*, maximumTransitionVoices> sourceVoices {};
         std::array<InstrumentSynthVoice*, maximumTransitionVoices> reservedVoices {};
         std::array<const SampleEntry*, maximumTransitionVoices> targetEntries {};
+        std::array<float, maximumTransitionVoices> targetOffsetMs {};
         std::array<HiHatTransitionPolicy::ReferenceMicCandidate, maximumTransitionVoices> referenceCandidates {};
         size_t sourceVoiceCount = 0;
         int sourceArtIdx = -1;
@@ -290,46 +291,41 @@ InstrumentSynth::HiHatTransitionResult InstrumentSynth::transitionHiHatGroups(in
             continue;
         }
 
-        auto* referenceSourceSound = referenceVoice->getCurrentlyPlayingSound();
-        auto* referenceTargetSound = targetEntries[static_cast<size_t>(referenceSourceIdx)]->sound;
         const auto& sourceArt = this->runtimeArticulations[static_cast<size_t>(sourceArtIdx)];
-        const double sourceRate = referenceSourceSound->sampleRate > 0.0
-            ? referenceSourceSound->sampleRate
-            : 44100.0;
-        const float elapsedMs = static_cast<float>(
-            (referenceVoice->sourceSamplePosition / sourceRate) * 1000.0);
-        const float velocityDb = juce::Decibels::gainToDecibels(
-            juce::jmax(0.001f, referenceVoice->getVelocityGain()),
-            -100.0f);
-        const float currentAudibleDb = referenceSourceSound->decayEnvelope.isValid()
-            ? referenceSourceSound->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velocityDb
-            : referenceVoice->getEstimatedCurrentDb();
-        const auto offsetResult = HiHatTransitionPolicy::calculateDecayMatchedOffset({
-            &referenceSourceSound->decayEnvelope,
-            &referenceTargetSound->decayEnvelope,
-            elapsedMs,
-            currentAudibleDb,
-            velocityDb,
-            referenceTargetSound->sampleLengthMs,
-            attackGuardMs,
-            silenceFloorDb,
-            tailMatchAmount,
-            tailMatchBiasDb,
-            minimumRemainingMs,
-            sourceArt.isFootEvent ? HiHatMissingDecayPolicy::SimpleFade : missingDecayPolicy,
-        });
-        if (!offsetResult.succeeded())
-            continue;
-
-        bool targetsHaveRemainingAudio = true;
+        bool offsetsValid = true;
         for (size_t sourceIdx = 0; sourceIdx < sourceVoiceCount; ++sourceIdx) {
+            auto* sourceVoice = sourceVoices[sourceIdx];
+            auto* sourceSound = sourceVoice->getCurrentlyPlayingSound();
             auto* targetSound = targetEntries[sourceIdx]->sound;
-            if (targetSound->sampleLengthMs - offsetResult.offsetMs < minimumRemainingMs) {
-                targetsHaveRemainingAudio = false;
+            const double sourceRate = sourceSound->sampleRate > 0.0 ? sourceSound->sampleRate : 44100.0;
+            const float elapsedMs = static_cast<float>((sourceVoice->sourceSamplePosition / sourceRate) * 1000.0);
+            const float velocityDb = juce::Decibels::gainToDecibels(
+                juce::jmax(0.001f, sourceVoice->getVelocityGain()),
+                -100.0f);
+            const float currentAudibleDb = sourceSound->decayEnvelope.isValid()
+                ? sourceSound->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velocityDb
+                : sourceVoice->getEstimatedCurrentDb();
+            const auto offsetResult = HiHatTransitionPolicy::calculateDecayMatchedOffset({
+                &sourceSound->decayEnvelope,
+                &targetSound->decayEnvelope,
+                elapsedMs,
+                currentAudibleDb,
+                velocityDb,
+                targetSound->sampleLengthMs,
+                attackGuardMs,
+                silenceFloorDb,
+                tailMatchAmount,
+                tailMatchBiasDb,
+                minimumRemainingMs,
+                sourceArt.isFootEvent ? HiHatMissingDecayPolicy::SimpleFade : missingDecayPolicy,
+            });
+            if (!offsetResult.succeeded()) {
+                offsetsValid = false;
                 break;
             }
+            targetOffsetMs[sourceIdx] = offsetResult.offsetMs;
         }
-        if (!targetsHaveRemainingAudio)
+        if (!offsetsValid)
             continue;
 
         const auto transitionDirection = HiHatTransitionPolicy::getDirection(
@@ -359,7 +355,7 @@ InstrumentSynth::HiHatTransitionResult InstrumentSynth::transitionHiHatGroups(in
             targetVoice->sourceSamplePosition = juce::jlimit(
                 0.0,
                 juce::jmax(0.0, static_cast<double>(targetSound->sampleLengthSamples - 1)),
-                (static_cast<double>(offsetResult.offsetMs) / 1000.0) * targetRate);
+                (static_cast<double>(targetOffsetMs[sourceIdx]) / 1000.0) * targetRate);
             targetVoice->setVelocityGain(velocity);
             if (transitionDirection == HiHatTransitionPolicy::Direction::Closing)
                 targetVoice->requestTransitionFadeIn(transitionCrossfadeSec, transitionCurve);
