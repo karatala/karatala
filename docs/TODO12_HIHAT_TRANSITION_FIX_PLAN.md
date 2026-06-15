@@ -9,7 +9,7 @@ Resolved with listening acceptance on June 14, 2026.
 - Phase 3.1 repairs did not restore the accepted sound.
 - The runtime now uses the confirmed-good `e6cdaac` per-voice replacement behavior with Phase 4 CC coalescing retained.
 - Shared event IDs, atomic all-mic commits, canonical reference-mic matching, transition ramps, generated CC foot layers, and group retries were removed.
-- Phase 5 retains only controls that affect the accepted runtime; inactive `Active Tails`, `Curve`, and `Foot Sample` controls were removed from the UI while YAML compatibility remains.
+- Phase 5 hides `Active Tails`, `Curve`, and `Foot Sample`; `footSampleMode` remains runtime-active for implicit audible-tail closure events, while the other two remain compatibility-only.
 - Phase 6 listening acceptance passed after the full Phase 3 group solution was undone.
 
 Phase 1 completion:

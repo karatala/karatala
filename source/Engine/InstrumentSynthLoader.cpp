@@ -25,8 +25,18 @@ void InstrumentSynth::resetRoutingTables() {
     this->pendingCcMidiChannel.fill(0);
     this->pendingCcTransition.fill(false);
     this->pendingCcArticulation.fill(-1);
+    this->hihatPedalClosedState.fill(false);
+    this->hihatImplicitPedalEligible.fill(false);
     this->lastCcProcessedSample.fill(0);
     this->hasProcessedCcTransition.fill(false);
+    this->hihatPedalNote = -1;
+    const auto pedalNameId = StringsDictSingleton::getId("pedal");
+    for (const auto& articulation : this->instrumentSlot.articulations) {
+        if (articulation.nameId == pedalNameId && !articulation.notes.empty()) {
+            this->hihatPedalNote = articulation.notes.front();
+            break;
+        }
+    }
     this->renderedSampleCount = 0;
     this->processedHiHatTransitions.store(0, std::memory_order_relaxed);
     this->coalescedHiHatTransitions.store(0, std::memory_order_relaxed);

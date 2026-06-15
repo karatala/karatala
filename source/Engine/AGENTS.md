@@ -16,6 +16,8 @@
 - Realtime settings shared with the message thread must use atomics or an immutable snapshot; do not introduce unsynchronized mutable scalar reads/writes.
 - Precompute routing, articulation, velocity, variant, and envelope lookup data during load/rebuild work where practical.
 - Hi-hat CC tail transitions use the listening-approved per-voice replacement path. Do not reintroduce shared event IDs, atomic all-mic commits, canonical reference-mic offsets, or complementary target ramps without a separate listening comparison.
+- Entirely skipped hi-hat transitions caused by the attack guard or temporary voice pressure retry at the existing controller-smoothing interval, even when no newer CC message arrives.
+- Entering the most-closed mapped hi-hat controller state may trigger the layout's `pedal` note only when the closure gesture contains an audible open/half tail. Its velocity follows that tail's remaining estimated loudness; silence and equal-POC tight-only playback do not generate an implicit pedal event.
 - Publish asynchronously loaded buffers before setting their `loaded` flag with release semantics; audio-thread readers check the flag with acquire semantics first.
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
 

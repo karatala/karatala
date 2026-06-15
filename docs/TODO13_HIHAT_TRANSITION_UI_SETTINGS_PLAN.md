@@ -19,12 +19,13 @@ Runtime-complete controls:
 
 - controller smoothing drives deferred, sample-domain transition scheduling;
 - opening and closing times release each source voice while its decay-matched target starts directly.
+- foot-sample mode controls implicit pedal events when an audible open/half tail reaches the most-closed state.
 
-Persisted legacy settings hidden from the UI because the accepted runtime does not consume them:
+Persisted settings hidden from the UI:
 
 - active-tail group limit;
 - transition curve;
-- generated CC foot-sample mode.
+- foot-sample mode.
 
 ## Goal
 
@@ -262,9 +263,9 @@ A default of `-3 dB` makes the introduced target tail slightly quieter and reduc
 
 Do not morph a voice while it is younger than the configured duration. Continue tracking desired openness so the latest state can be applied after the guard expires.
 
-### Legacy Persisted Settings
+### Hidden Persisted Settings
 
-`maxActiveGroups`, `curve`, and `footSampleMode` remain readable and writable for configuration compatibility. They do not affect the accepted per-voice runtime and are not exposed in the UI.
+`maxActiveGroups`, `curve`, and `footSampleMode` remain readable and writable but are not exposed in the UI. `maxActiveGroups` and `curve` are compatibility-only. `footSampleMode = off` disables implicit pedal events; enabled modes allow one only when an audible open/half tail reaches the most-closed state. Event velocity follows the tail's remaining estimated loudness, and silence or tight-only playback does not trigger it.
 
 ### Missing Data
 

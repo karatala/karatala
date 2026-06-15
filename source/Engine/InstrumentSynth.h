@@ -518,8 +518,11 @@ private:
     std::array<int, 128> pendingCcMidiChannel {};
     std::array<bool, 128> pendingCcTransition {};
     std::array<ArtRtIdx, 128> pendingCcArticulation {};
+    std::array<bool, 128> hihatPedalClosedState {};
+    std::array<bool, 128> hihatImplicitPedalEligible {};
     std::array<uint64_t, 128> lastCcProcessedSample {};
     std::array<bool, 128> hasProcessedCcTransition {};
+    int hihatPedalNote = -1;
     uint64_t renderedSampleCount = 0;
     std::atomic<uint64_t> processedHiHatTransitions { 0 };
     std::atomic<uint64_t> coalescedHiHatTransitions { 0 };
@@ -571,6 +574,7 @@ private:
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
     void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
     void processPendingHiHatControllers();
+    bool triggerHiHatPedalSample(int midiChannel, float sourceAudibleDb);
     // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
     void chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec);

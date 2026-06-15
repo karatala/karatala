@@ -136,13 +136,73 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     for (size_t articulationIdx = 0; articulationIdx < articulationCount; ++articulationIdx)
         pocByArticulation[articulationIdx] = this->runtimeArticulations[articulationIdx].pocValue;
 
-    const int selectedArtIdx = HiHatTransitionPolicy::selectOpennessArticulation(
-        mapArr,
-        std::span<const int>(pocByArticulation.data(), articulationCount),
-        controllerValue,
-        this->lastCcValue[controllerNumber],
-        cachedArtIdx,
-        boundaryHysteresisCc);
+    const int pendingArtIdx = this->pendingCcArticulation[controllerNumber];
+    const int selectedArtIdx = pendingArtIdx >= 0
+        ? pendingArtIdx
+        : HiHatTransitionPolicy::selectOpennessArticulation(
+            mapArr,
+            std::span<const int>(pocByArticulation.data(), articulationCount),
+            controllerValue,
+            this->lastCcValue[controllerNumber],
+            cachedArtIdx,
+            boundaryHysteresisCc);
+    int maximumMappedPoc = -1;
+    int secondHighestMappedPoc = -1;
+    std::array<bool, 128> mappedPocValues {};
+    int mappedPocValueCount = 0;
+    for (int mappedControllerValue = 0; mappedControllerValue <= 127; ++mappedControllerValue) {
+        const auto articulationIdx = mapArr[static_cast<size_t>(mappedControllerValue)];
+        if (articulationIdx >= this->runtimeArticulations.size())
+            continue;
+        const int mappedPoc = this->runtimeArticulations[articulationIdx].pocValue;
+        if (mappedPoc >= 0 && mappedPoc < static_cast<int>(mappedPocValues.size()) && !mappedPocValues[static_cast<size_t>(mappedPoc)]) {
+            mappedPocValues[static_cast<size_t>(mappedPoc)] = true;
+            ++mappedPocValueCount;
+        }
+        if (mappedPoc > maximumMappedPoc) {
+            secondHighestMappedPoc = maximumMappedPoc;
+            maximumMappedPoc = mappedPoc;
+        } else if (mappedPoc < maximumMappedPoc && mappedPoc > secondHighestMappedPoc) {
+            secondHighestMappedPoc = mappedPoc;
+        }
+    }
+    const bool isMostClosedState = selectedArtIdx >= 0 && maximumMappedPoc >= 0
+        && selectedArtIdx < static_cast<int>(this->runtimeArticulations.size())
+        && this->runtimeArticulations[static_cast<size_t>(selectedArtIdx)].pocValue >= maximumMappedPoc;
+    const bool enteredMostClosedState = isMostClosedState && !this->hihatPedalClosedState[controllerNumber];
+    this->hihatPedalClosedState[controllerNumber] = isMostClosedState;
+    const int openHalfPocLimit = mappedPocValueCount <= 2 || secondHighestMappedPoc < 0 ? maximumMappedPoc : secondHighestMappedPoc;
+    float loudestLowerPocDb = -100.0f;
+    bool hasAudibleLowerPocVoice = false;
+    bool hasAudibleOpenHalfVoice = false;
+    for (auto* voice : this->voices) {
+        if (voice == nullptr || !voice->isVoiceActive() || voice->getEnvelopeState() != InstrumentSynthVoice::EnvelopeState::Playing)
+            continue;
+        if (midiChannel > 0 && !voice->isPlayingChannel(midiChannel))
+            continue;
+
+        int voicePocValue = -1;
+        for (const auto& articulation : this->runtimeArticulations) {
+            if (articulation.nameId == voice->artNameId && articulation.exprId == voice->artExprId) {
+                voicePocValue = articulation.pocValue;
+                break;
+            }
+        }
+        if (voicePocValue < 0 || voicePocValue >= maximumMappedPoc)
+            continue;
+
+        const float voiceAudibleDb = voice->getEstimatedCurrentDb();
+        if (voiceAudibleDb < silenceFloorDb)
+            continue;
+        hasAudibleLowerPocVoice = true;
+        loudestLowerPocDb = juce::jmax(loudestLowerPocDb, voiceAudibleDb);
+        if (voicePocValue < openHalfPocLimit)
+            hasAudibleOpenHalfVoice = true;
+    }
+    if (hasAudibleOpenHalfVoice)
+        this->hihatImplicitPedalEligible[controllerNumber] = true;
+    else if (!isMostClosedState && !hasAudibleLowerPocVoice)
+        this->hihatImplicitPedalEligible[controllerNumber] = false;
     if (selectedArtIdx == cachedArtIdx) {
         this->pendingCcArticulation[controllerNumber] = -1;
         this->lastCcValue[controllerNumber] = controllerValue;
@@ -163,6 +223,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     int skippedNoDbMatch = 0;
     int skippedSilentTarget = 0;
     int skippedOther = 0;
+    bool encounteredTransientSkip = false;
 
     // For each active voice, if its articulation differs from newArtIdx, crossfade
     for (auto* voice : this->voices) {
@@ -280,6 +341,9 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
                     ++skippedNoTarget;
                     break;
                 case HiHatTransitionPolicy::OffsetStatus::AttackGuard:
+                    encounteredTransientSkip = true;
+                    ++skippedOther;
+                    break;
                 case HiHatTransitionPolicy::OffsetStatus::BelowSilenceFloor:
                     ++skippedOther;
                     break;
@@ -307,6 +371,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
 
         if (newVoice == nullptr) {
             ++skippedNoVoice;
+            encounteredTransientSkip = true;
             continue;
         }
 
@@ -416,6 +481,28 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         this->lastCcArticulation[controllerNumber] = static_cast<int8_t>(newArtIdx);
     this->lastCcValue[controllerNumber] = controllerValue;
 
+    if (replacementsStarted == 0 && activeMismatchedVoices > 0 && encounteredTransientSkip) {
+        this->pendingCcArticulation[controllerNumber] = static_cast<ArtRtIdx>(newArtIdx);
+        this->pendingCcTransition[controllerNumber] = true;
+    }
+
+    const auto footSampleMode = settings.hihatFootSampleMode.load();
+    const auto controllerDirection = cachedArtIdx >= 0 && cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())
+        ? HiHatTransitionPolicy::getDirection(
+            this->runtimeArticulations[static_cast<size_t>(cachedArtIdx)].pocValue,
+            this->runtimeArticulations[static_cast<size_t>(newArtIdx)].pocValue)
+        : HiHatTransitionPolicy::Direction::Unknown;
+    const bool isClosingTransition = controllerDirection == HiHatTransitionPolicy::Direction::Closing;
+    const bool shouldTriggerPedal = footSampleMode != HiHatFootSampleMode::Off
+        && isClosingTransition
+        && enteredMostClosedState
+        && this->hihatImplicitPedalEligible[controllerNumber]
+        && hasAudibleLowerPocVoice;
+    if (shouldTriggerPedal)
+        this->triggerHiHatPedalSample(midiChannel, loudestLowerPocDb);
+    if (enteredMostClosedState)
+        this->hihatImplicitPedalEligible[controllerNumber] = false;
+
     if (replacementsStarted > 0)
         this->completedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     else if (activeMismatchedVoices > 0)
@@ -452,6 +539,30 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             + ", other=" + juce::String(skippedOther) + "}"
         );
     }
+}
+
+bool InstrumentSynth::triggerHiHatPedalSample(int midiChannel, float sourceAudibleDb) {
+    if (this->hihatPedalNote < 0)
+        return false;
+
+    const int pedalArtIdx = this->noteToArticulation[static_cast<size_t>(this->hihatPedalNote)];
+    if (pedalArtIdx < 0 || pedalArtIdx >= static_cast<int>(this->runtimeArticulations.size()))
+        return false;
+
+    float pedalPeakDb = -100.0f;
+    for (const auto& layer : this->runtimeArticulations[static_cast<size_t>(pedalArtIdx)].layers) {
+        for (const auto& sampleEntry : layer.samples) {
+            if (sampleEntry.sound == nullptr || !sampleEntry.sound->decayEnvelope.isValid())
+                continue;
+            pedalPeakDb = juce::jmax(pedalPeakDb, sampleEntry.sound->decayEnvelope.peakDb);
+        }
+    }
+    if (pedalPeakDb <= -100.0f)
+        return false;
+
+    const float velocityGain = juce::jlimit(1.0f / 127.0f, 1.0f, juce::Decibels::decibelsToGain(sourceAudibleDb - pedalPeakDb, -100.0f));
+    const int velocity = juce::jlimit(1, 127, static_cast<int>(std::round(velocityGain * 127.0f)));
+    return this->playNote(midiChannel, this->hihatPedalNote, static_cast<juce::uint8>(velocity));
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
