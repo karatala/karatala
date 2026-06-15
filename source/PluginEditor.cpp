@@ -244,6 +244,7 @@ void PluginEditor::setupMapMode() {
             this->processorRef.setMidiLearnCallback(nullptr);
         }
     };
+    this->midiMapTable.onCrosstalkPopupRequested = [this] { this->showCrosstalkPopup(); };
     
     this->midiMapTable.onPresetSelected = [this](const MidiMapTable::PresetEntry& entry) {
         if (entry.isUser) {
@@ -310,6 +311,9 @@ void PluginEditor::setupInstrumentConfigMode() {
 }
 
 PluginEditor::~PluginEditor() {
+    this->dismissCrosstalkPopup();
+    this->processorRef.setMidiLearnCallback(nullptr);
+    this->processorRef.setMidiCaptureEnabled(false);
     this->setLookAndFeel(nullptr);
 }
 
@@ -512,6 +516,8 @@ void PluginEditor::handlePresetDelete() {
 }
 
 void PluginEditor::setViewMode(ViewMode mode) {
+    if (mode != ViewMode::Map)
+        this->dismissCrosstalkPopup();
     if (this->activeMode == ViewMode::Instrument && mode != ViewMode::Instrument)
         this->instrumentConfigPanel->flushMapText();
 
@@ -537,6 +543,58 @@ void PluginEditor::setViewMode(ViewMode mode) {
         this->refreshInstrumentConfigIfNeeded();
 
     this->resized();
+}
+
+void PluginEditor::showCrosstalkPopup() {
+    this->dismissCrosstalkPopup();
+    this->dismissPadContextPopup();
+    this->processorRef.setMidiLearnCallback(nullptr);
+
+    this->crosstalkPopup = std::make_unique<CrosstalkCalibrationPopup>(this->processorRef.getEngine());
+    this->crosstalkPopup->onCaptureStateChanged = [this](bool enabled) {
+        this->processorRef.setMidiCaptureEnabled(enabled);
+    };
+    this->crosstalkPopup->onMidiPoll = [this](int& noteNumber, int& velocity) {
+        const bool received = this->processorRef.popCapturedMidiNote(noteNumber, velocity);
+        if (received)
+            this->flashPadForMidiNote(noteNumber, static_cast<float>(velocity));
+        return received;
+    };
+    this->crosstalkPopup->onStatusMessage = [this](const juce::String& message) {
+        this->statusBar.setStatusText(message);
+    };
+    this->crosstalkPopup->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissCrosstalkPopup(); });
+    };
+
+    const auto availableBounds = this->getLocalBounds().reduced(32, 24);
+    this->crosstalkPopup->setBounds(this->crosstalkPopup->getPreferredBounds(availableBounds));
+
+    this->crosstalkPopupOverlay = std::make_unique<DismissOverlay>();
+    this->crosstalkPopupOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissCrosstalkPopup(); });
+    };
+    this->crosstalkPopupOverlay->setBounds(this->getLocalBounds());
+    this->addAndMakeVisible(*this->crosstalkPopupOverlay);
+    this->crosstalkPopupOverlay->toFront(false);
+
+    this->addAndMakeVisible(*this->crosstalkPopup);
+    this->crosstalkPopup->toFront(true);
+}
+
+void PluginEditor::dismissCrosstalkPopup() {
+    if (this->crosstalkPopup) {
+        this->crosstalkPopup->cancelAndRestore();
+        this->processorRef.setMidiCaptureEnabled(false);
+    }
+    if (this->crosstalkPopupOverlay) {
+        this->removeChildComponent(this->crosstalkPopupOverlay.get());
+        this->crosstalkPopupOverlay.reset();
+    }
+    if (this->crosstalkPopup) {
+        this->removeChildComponent(this->crosstalkPopup.get());
+        this->crosstalkPopup.reset();
+    }
 }
 
 void PluginEditor::showComponentsForMode(ViewMode mode) {
@@ -619,6 +677,13 @@ void PluginEditor::resized() {
         case ViewMode::Map:
             this->midiMapTable.setBounds(mainArea);
             break;
+    }
+
+    if (this->crosstalkPopupOverlay)
+        this->crosstalkPopupOverlay->setBounds(this->getLocalBounds());
+    if (this->crosstalkPopup) {
+        const auto availableBounds = this->getLocalBounds().reduced(32, 24);
+        this->crosstalkPopup->setBounds(this->crosstalkPopup->getPreferredBounds(availableBounds));
     }
 }
 

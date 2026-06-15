@@ -146,3 +146,23 @@ TEST_CASE("EngineSettings - all hi-hat transition settings survive YAML round tr
     REQUIRE(restoredEngine.engineSettings.hihatTransitionSilenceFloorDb.load() == -54.0f);
     REQUIRE(restoredEngine.engineSettings.hihatMissingDecayPolicy.load() == HiHatMissingDecayPolicy::SimpleFade);
 }
+
+TEST_CASE("EngineSettings - aftertouch noise threshold and crosstalk profile round trip", "[EngineSettings][yaml][MidiCrosstalk]") {
+    DrumKitEngine sourceEngine;
+    sourceEngine.engineSettings.polyAftertouchMinPressure.store(14);
+    sourceEngine.engineSettings.crosstalkWindowMs.store(55);
+    sourceEngine.setCrosstalkThreshold(49, 48, 31);
+    sourceEngine.setCrosstalkThreshold(38, 40, 18);
+
+    DrumKitEngine restoredEngine;
+    const auto parseResult = restoredEngine.parseConfigYaml(sourceEngine.serializeSettingsYaml());
+
+    REQUIRE(parseResult.ok());
+    REQUIRE(restoredEngine.engineSettings.polyAftertouchMinPressure.load() == 14);
+    REQUIRE(restoredEngine.engineSettings.crosstalkWindowMs.load() == 55);
+    REQUIRE(restoredEngine.getCrosstalkProfileEntryCount() == 2);
+    REQUIRE(restoredEngine.serializeSettingsYaml().contains("{ primary: 49, secondary: 48, ratio: 31 }"));
+    REQUIRE(restoredEngine.buildCrosstalkProfileText().contains("49 "));
+    REQUIRE(restoredEngine.buildCrosstalkProfileText().contains("-> 48 "));
+    REQUIRE(restoredEngine.buildCrosstalkProfileText().contains("suppress <= 24%"));
+}

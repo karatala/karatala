@@ -73,6 +73,8 @@ public:
     /** Set a callback to receive MIDI note-on events for MIDI learn.
      *  The callback will be posted to the message thread. Pass nullptr to disable. */
     void setMidiLearnCallback(std::function<void(int)> callback);
+    void setMidiCaptureEnabled(bool enabled);
+    bool popCapturedMidiNote(int& noteNumber, int& velocity);
 
 private:
     std::unique_ptr<juce::AudioFormatManager> mAudioFormatManagerPtr;
@@ -88,6 +90,11 @@ private:
 
     std::function<void(int)> midiLearnCallback;
     juce::CriticalSection midiLearnLock;
+    static constexpr int midiCaptureQueueSize = 256;
+    juce::AbstractFifo midiCaptureFifo { midiCaptureQueueSize };
+    std::array<int, midiCaptureQueueSize> capturedMidiNotes {};
+    std::array<int, midiCaptureQueueSize> capturedMidiVelocities {};
+    std::atomic<bool> midiCaptureEnabled { false };
 
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 

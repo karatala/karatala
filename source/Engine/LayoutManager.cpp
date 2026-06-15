@@ -236,7 +236,7 @@ instruments:
     display: Stax 1
     position: right
     articulations:
-      - { notes: [30], code: bow }
+      - { notes: [39], code: bow }
       - { notes: [15], code: edge }
 
   - id: perc1

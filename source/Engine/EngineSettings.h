@@ -61,6 +61,10 @@ struct EngineSettings {
     RealtimeSetting<float> chokeMuteTailSec { 0.04f };          // mute tail duration (sec)
     RealtimeSetting<float> chokeReleaseBoost { 0.1f };          // boost on aftertouch release (0..0.5)
     RealtimeSetting<float> chokeMuteThresholdRatio { 0.5f };    // mute trigger threshold (% of maxPA)
+    RealtimeSetting<int> polyAftertouchMinPressure { 10 };      // lower pressure is treated as release (1..20)
+
+    // -- MIDI Crosstalk --
+    RealtimeSetting<int> crosstalkWindowMs { 40 };               // correlation window for learned secondary hits
 
     // -- Tail Shortening --
     RealtimeSetting<float> tailShortenLoadThreshold { 0.5f };   // voice load % to start shortening

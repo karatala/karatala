@@ -8,6 +8,7 @@
 #include "UI/StatusBar.h"
 #include "UI/DrumPadGrid.h"
 #include "UI/DismissOverlay.h"
+#include "UI/CrosstalkCalibrationPopup.h"
 #include "UI/MidiMapTable.h"
 #include "UI/InstrumentConfigPanel.h"
 #include "UI/KitHomePanel.h"
@@ -42,6 +43,10 @@ private:
 
     // Mode: Map — MIDI note assignment table
     MidiMapTable midiMapTable;
+    std::unique_ptr<CrosstalkCalibrationPopup> crosstalkPopup;
+    std::unique_ptr<DismissOverlay> crosstalkPopupOverlay;
+    void showCrosstalkPopup();
+    void dismissCrosstalkPopup();
 
     // Mode: Raw — existing instrument map editor
     juce::TextEditor referencePanel;

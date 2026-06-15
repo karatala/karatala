@@ -37,6 +37,12 @@ MidiMapTable::MidiMapTable() {
     UIHelpers::configureControlButton(this->moreButton);
     this->moreButton.onClick = [this] { this->showMoreMenu(); };
     this->addAndMakeVisible(this->moreButton);
+
+    UIHelpers::configureControlButton(this->crosstalkButton);
+    this->crosstalkButton.onClick = [this] {
+        if (this->onCrosstalkPopupRequested) this->onCrosstalkPopupRequested();
+    };
+    this->addAndMakeVisible(this->crosstalkButton);
 }
 
 void MidiMapTable::populate(KitLayout* layout) {
@@ -270,10 +276,13 @@ void MidiMapTable::resized() {
     toolbarArea.reduce(UITheme::Spacing::sm, UITheme::Spacing::xs);
     const int moreWidth = 28;
     const int saveWidth = 44;
+    const int crosstalkWidth = 88;
     const int gap = UITheme::Spacing::xs;
     this->moreButton.setBounds(toolbarArea.removeFromRight(moreWidth));
     toolbarArea.removeFromRight(gap);
     this->saveButton.setBounds(toolbarArea.removeFromRight(saveWidth));
+    toolbarArea.removeFromRight(gap);
+    this->crosstalkButton.setBounds(toolbarArea.removeFromRight(crosstalkWidth));
     toolbarArea.removeFromRight(gap);
     const int selectorWidth = toolbarArea.getWidth() / 2;
     auto selectorArea = toolbarArea.removeFromRight(selectorWidth);

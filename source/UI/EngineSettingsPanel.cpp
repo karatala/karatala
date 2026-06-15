@@ -85,6 +85,8 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
                  &settings.chokeReleaseBoost, 0.0f, 0.5f, 0.01f);
     this->addPot("Mute Threshold", "Aftertouch pressure needed to trigger full mute (as ratio of max). Lower = easier to mute.",
                  &settings.chokeMuteThresholdRatio, 0.0f, 1.0f, 0.01f);
+    this->addPot("Min Pressure", "Poly-aftertouch values below this are treated as release, filtering low-level sensor noise.",
+                 &settings.polyAftertouchMinPressure, 1, 20, 10);
 
     // ── Tail Shortening ──
     this->addPot("Load Thresh", "Voice load percentage before tail shortening kicks in. Lower = starts cutting sooner when busy.",
@@ -319,7 +321,7 @@ void EngineSettingsPanel::resized() {
     auto groupRows = [&](int count) { return (count + potsPerRow - 1) / potsPerRow; };
 
     int totalHeight = 8; // top padding
-    totalHeight += groupLabelHeight + gap + groupRows(6) * potCellH + gap; // choke (6 pots)
+    totalHeight += groupLabelHeight + gap + groupRows(7) * potCellH + gap; // choke (7 pots)
     totalHeight += groupLabelHeight + gap + groupRows(6) * potCellH + gap; // tail (6 pots)
     const int choiceRows = (static_cast<int>(this->choices.size()) + choicesPerRow - 1) / choicesPerRow;
     totalHeight += groupLabelHeight + gap + groupRows(11) * potCellH + choiceRows * choiceCellH + gap; // hihat
@@ -378,17 +380,17 @@ void EngineSettingsPanel::resized() {
     };
 
     placeGroupLabel(this->chokeGroupLabel);
-    placePotGrid(0, 6);
+    placePotGrid(0, 7);
 
     placeGroupLabel(this->tailGroupLabel);
-    placePotGrid(6, 6);
+    placePotGrid(7, 6);
 
     placeGroupLabel(this->hihatGroupLabel);
-    placePotGrid(12, 11);
+    placePotGrid(13, 11);
     placeChoiceGrid();
 
     placeGroupLabel(this->uiGridGroupLabel);
-    placePotGrid(23, 3);
+    placePotGrid(24, 3);
 
     placeGroupLabel(this->outputGroupLabel);
     auto outputRow = area.removeFromTop(26);

@@ -45,6 +45,7 @@ public:
     /** Callback fired when MIDI learn starts (true) or stops (false).
      *  Owner should forward incoming MIDI notes to midiLearnNoteReceived(). */
     std::function<void(bool)> onMidiLearnStateChanged;
+    std::function<void()> onCrosstalkPopupRequested;
 
 private:
     static constexpr int rowHeight = UITheme::Spacing::rowLarge;
@@ -65,6 +66,7 @@ private:
     juce::ComboBox presetCombo;
     juce::TextButton saveButton { "Save" };
     juce::TextButton moreButton { "..." };
+    juce::TextButton crosstalkButton { "Crosstalk..." };
     std::vector<PresetEntry> presetEntries;
 
     struct MapRow {

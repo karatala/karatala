@@ -5,6 +5,7 @@
 #include "EngineSettings.h"
 #include "InstrumentSynth.h"
 #include "LayoutManager.h"
+#include "MidiCrosstalkFilter.h"
 #include "SampleLoader.h"
 #include <array>
 #include <optional>
@@ -129,6 +130,13 @@ public:
     void previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
                            const juce::String& artCode, juce::uint8 velocity);
     void rebuildMidiNoteRoutingFromLayout();
+    void clearCrosstalkProfile();
+    void beginCrosstalkCalibration();
+    void cancelCrosstalkCalibration();
+    void finishCrosstalkCalibration();
+    void setCrosstalkThreshold(int primaryNote, int secondaryNote, int velocityRatio);
+    int getCrosstalkProfileEntryCount() const { return this->crosstalkProfile.getEntryCount(); }
+    juce::String buildCrosstalkProfileText() const;
     struct LayerParameterUpdate {
         std::optional<int> tuningCents;
         std::optional<int> attackMs;
@@ -162,6 +170,9 @@ private:
     std::array<int, 128> latestPAValues {};
     std::array<bool, 128> trackedPAMask {};
     mutable juce::CriticalSection engineGraphLock;
+    MidiCrosstalkProfile crosstalkProfile;
+    std::optional<MidiCrosstalkProfile> crosstalkProfileBeforeCalibration;
+    MidiCrosstalkFilter crosstalkFilter;
 
     std::unique_ptr<KitLib::LibraryManager> libraryManagerPtr;
     std::unique_ptr<SampleLoader> sampleLoaderPtr;

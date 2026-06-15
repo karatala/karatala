@@ -146,6 +146,20 @@ void PluginProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
                 this->pendingUiMidiMessages.clear();
             }
         }
+        if (this->midiCaptureEnabled.load(std::memory_order_acquire)) {
+            for (const auto metadata : midiMessages) {
+                const auto message = metadata.getMessage();
+                if (!message.isNoteOn())
+                    continue;
+                const auto writeScope = this->midiCaptureFifo.write(1);
+                if (writeScope.blockSize1 <= 0)
+                    break;
+                const size_t writeIdx = static_cast<size_t>(writeScope.startIndex1);
+                this->capturedMidiNotes[writeIdx] = message.getNoteNumber();
+                this->capturedMidiVelocities[writeIdx] = message.getVelocity();
+            }
+        }
+
         this->drumKitEnginePtr->processBlock(buffer, midiMessages);
 
         // Forward note-on events to MIDI learn callback (if active)
@@ -176,6 +190,25 @@ void PluginProcessor::injectMidiFromUI(const juce::MidiMessage& msg) {
 void PluginProcessor::setMidiLearnCallback(std::function<void(int)> callback) {
     const juce::ScopedLock lock(this->midiLearnLock);
     this->midiLearnCallback = std::move(callback);
+}
+
+void PluginProcessor::setMidiCaptureEnabled(bool enabled) {
+    if (enabled) {
+        this->midiCaptureFifo.reset();
+        this->midiCaptureEnabled.store(true, std::memory_order_release);
+    } else {
+        this->midiCaptureEnabled.store(false, std::memory_order_release);
+    }
+}
+
+bool PluginProcessor::popCapturedMidiNote(int& noteNumber, int& velocity) {
+    const auto readScope = this->midiCaptureFifo.read(1);
+    if (readScope.blockSize1 <= 0)
+        return false;
+    const size_t readIdx = static_cast<size_t>(readScope.startIndex1);
+    noteNumber = this->capturedMidiNotes[readIdx];
+    velocity = this->capturedMidiVelocities[readIdx];
+    return true;
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout PluginProcessor::createParameterLayout() {

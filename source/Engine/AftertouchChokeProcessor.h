@@ -32,6 +32,8 @@ public:
     }
 
     void handlePolyAftertouch(int value) {
+        if (value < this->engineSettings->polyAftertouchMinPressure.load())
+            value = 0;
         float pa = juce::jlimit(0.0f, 1.0f, static_cast<float>(value) / 127.0f);
         pa = applyCurve(pa);
         this->currentPA = pa;

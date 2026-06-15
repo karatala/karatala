@@ -651,6 +651,25 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
             parseFloat(chokeNode, "muteTailSec", this->engineSettings.chokeMuteTailSec);
             parseFloat(chokeNode, "releaseBoost", this->engineSettings.chokeReleaseBoost);
             parseFloat(chokeNode, "muteThresholdRatio", this->engineSettings.chokeMuteThresholdRatio);
+            const auto minPressure = chokeNode["minPressure"].asString();
+            if (minPressure.isNotEmpty())
+                this->engineSettings.polyAftertouchMinPressure.store(juce::jlimit(1, 20, minPressure.getIntValue()));
+        }
+
+        const auto& crosstalkNode = engineNode["midi_crosstalk"];
+        if (crosstalkNode.isMap()) {
+            const auto windowMs = crosstalkNode["windowMs"].asString();
+            if (windowMs.isNotEmpty())
+                this->engineSettings.crosstalkWindowMs.store(juce::jlimit(5, 100, windowMs.getIntValue()));
+
+            this->crosstalkProfile.clear();
+            const auto& profileNode = crosstalkNode["profile"];
+            if (profileNode.isSequence()) {
+                for (size_t idx = 0; idx < profileNode.size(); ++idx) {
+                    const auto& entry = profileNode[idx];
+                    this->crosstalkProfile.setThreshold(entry["primary"].asInt(), entry["secondary"].asInt(), entry["ratio"].asInt());
+                }
+            }
         }
 
         const auto& tailNode = engineNode["tail_shortening"];
@@ -786,6 +805,10 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "#     muteTailSec: 0.04\n";
     result += "#     releaseBoost: 0.1\n";
     result += "#     muteThresholdRatio: 0.5\n";
+    result += "#     minPressure: 10\n";
+    result += "#   midi_crosstalk:\n";
+    result += "#     windowMs: 40\n";
+    result += "#     profile: []\n";
     result += "#   tail_shortening:\n";
     result += "#     loadThreshold: 0.5\n";
     result += "#     ageMultiplier: 0.02\n";
@@ -839,6 +862,17 @@ juce::String DrumKitEngine::serializeSettingsYaml() const {
     yaml += "    muteTailSec: " + floatToYaml(settings.chokeMuteTailSec.load()) + "\n";
     yaml += "    releaseBoost: " + floatToYaml(settings.chokeReleaseBoost.load()) + "\n";
     yaml += "    muteThresholdRatio: " + floatToYaml(settings.chokeMuteThresholdRatio.load()) + "\n";
+    yaml += "    minPressure: " + juce::String(settings.polyAftertouchMinPressure.load()) + "\n";
+    yaml += "  midi_crosstalk:\n";
+    yaml += "    windowMs: " + juce::String(settings.crosstalkWindowMs.load()) + "\n";
+    yaml += "    profile:\n";
+    for (int primaryNote = 0; primaryNote < 128; ++primaryNote) {
+        for (int secondaryNote = 0; secondaryNote < 128; ++secondaryNote) {
+            const int ratio = this->crosstalkProfile.getThreshold(primaryNote, secondaryNote);
+            if (ratio > 0)
+                yaml += "      - { primary: " + juce::String(primaryNote) + ", secondary: " + juce::String(secondaryNote) + ", ratio: " + juce::String(ratio) + " }\n";
+        }
+    }
     yaml += "  tail_shortening:\n";
     yaml += "    loadThreshold: " + floatToYaml(settings.tailShortenLoadThreshold.load()) + "\n";
     yaml += "    ageMultiplier: " + floatToYaml(settings.tailShortenAgeMultiplier.load()) + "\n";
@@ -1257,6 +1291,7 @@ void DrumKitEngine::prepareToPlay(double sampleRate, int samplesPerBlock) {
     const juce::ScopedLock graphLock(this->engineGraphLock);
     this->lastSampleRate = sampleRate;
     this->lastSamplesPerBlock = samplesPerBlock;
+    this->crosstalkFilter.prepare(sampleRate, juce::jmax(1024, samplesPerBlock * 8));
     for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
         instrumentSynthPtr->setCurrentPlaybackSampleRate(sampleRate);
         instrumentSynthPtr->prepareToPlay(sampleRate, samplesPerBlock);
@@ -1274,6 +1309,7 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     const auto outputBufferNumSamples = outputBuffer.getNumSamples();
     
     this->saveLatestControllerValues(midiMessages);
+    this->crosstalkFilter.process(midiMessages, this->crosstalkProfile, this->engineSettings.crosstalkWindowMs.load(), outputBufferNumSamples);
 
     // Each instrument's SampledSound now stores *global* host channel indices in
     // micBufferChannelStart, so voices can render directly into outputBuffer.
@@ -1303,6 +1339,45 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
             this->previewReadPos.store(-1);
         }
     }
+}
+
+void DrumKitEngine::clearCrosstalkProfile() {
+    this->crosstalkProfile.clear();
+}
+
+void DrumKitEngine::beginCrosstalkCalibration() {
+    this->crosstalkProfileBeforeCalibration = this->crosstalkProfile;
+    this->crosstalkProfile.clear();
+}
+
+void DrumKitEngine::cancelCrosstalkCalibration() {
+    if (this->crosstalkProfileBeforeCalibration.has_value())
+        this->crosstalkProfile = *this->crosstalkProfileBeforeCalibration;
+    this->crosstalkProfileBeforeCalibration.reset();
+}
+
+void DrumKitEngine::finishCrosstalkCalibration() {
+    this->crosstalkProfileBeforeCalibration.reset();
+}
+
+void DrumKitEngine::setCrosstalkThreshold(int primaryNote, int secondaryNote, int velocityRatio) {
+    this->crosstalkProfile.setThreshold(primaryNote, secondaryNote, velocityRatio);
+}
+
+juce::String DrumKitEngine::buildCrosstalkProfileText() const {
+    juce::String text;
+    for (int primaryNote = 0; primaryNote < 128; ++primaryNote) {
+        for (int secondaryNote = 0; secondaryNote < 128; ++secondaryNote) {
+            const int ratio = this->crosstalkProfile.getThreshold(primaryNote, secondaryNote);
+            if (ratio <= 0)
+                continue;
+            const auto primaryName = juce::MidiMessage::getMidiNoteName(primaryNote, true, true, 3);
+            const auto secondaryName = juce::MidiMessage::getMidiNoteName(secondaryNote, true, true, 3);
+            const int percentage = static_cast<int>(std::round(static_cast<double>(ratio) * 100.0 / 127.0));
+            text += juce::String(primaryNote) + " " + primaryName + " -> " + juce::String(secondaryNote) + " " + secondaryName + ": suppress <= " + juce::String(percentage) + "% of primary velocity\n";
+        }
+    }
+    return text.isNotEmpty() ? text : "No learned crosstalk pairs.";
 }
 
 std::optional<juce::String> DrumKitEngine::getNameForMidiNoteNumber(int note, int /* midiChannel */) {
