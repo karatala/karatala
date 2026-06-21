@@ -7,7 +7,6 @@ Usage: python converter.py todo/ --output-dir instruments
 """
 import argparse
 import csv
-import json
 import os
 import shutil
 import sys
@@ -368,6 +367,12 @@ def map_channel_to_mic(channel_name: str) -> str:
         return code
 
     channel_lower = channel_name.lower()
+    if 'snare' in channel_lower and ('bottom' in channel_lower or 'btm' in channel_lower):
+        return 'dbm'
+    if 'snare' in channel_lower and 'trigger' in channel_lower:
+        return 'dtm1'
+    if 'snare' in channel_lower:
+        return 'dtm'
     if ('kick' in channel_lower or 'kdrum' in channel_lower) and is_right_channel(channel_name):
         return 'dom'
     if ('kick' in channel_lower or 'kdrum' in channel_lower) and is_left_channel(channel_name):
@@ -376,8 +381,6 @@ def map_channel_to_mic(channel_name: str) -> str:
         if key in channel_lower:
             return value
 
-    if 'snare' in channel_lower:
-        return 'dtm'
     if 'kdrum' in channel_lower or 'kick' in channel_lower:
         return 'dim'
     if 'hihat' in channel_lower or 'hh' in channel_lower:
@@ -1040,6 +1043,7 @@ class OutputFilePlan:
     source_channel_indices: list
     target_relative: str
     filename_template: str
+    default_keep: bool = True
     quarantined: bool = False
     quarantine_reasons: list = field(default_factory=list)
 
@@ -1138,14 +1142,19 @@ def map_channel_group_key(channel_name: str, mic_code: str) -> str:
         return 'KICK_IN'
     if 'snare' in lowered and ('bottom' in lowered or 'btm' in lowered):
         return 'SNARE_BOTTOM'
+    if 'snare' in lowered and 'trigger' in lowered:
+        return 'SNARE_TRIGGER'
     if 'snare' in lowered:
         return 'SNARE_TOP'
     if 'hihat' in lowered or 'hh' in lowered:
-        return 'DIRECT'
+        return 'HIHAT'
     if 'ride' in lowered:
-        return 'DIRECT'
+        return 'RIDE'
     if 'tom' in lowered:
-        return 'DIRECT'
+        digit_match = re.search(r'tom\s*([0-9]+)', lowered)
+        if digit_match:
+            return 'TOM' + digit_match.group(1)
+        return 'TOM'
     return safe_var_token(mic_code or channel_name)
 
 
@@ -1158,10 +1167,10 @@ def build_channel_decisions(inst_file: Path, sample: dict, inst_type: str, inst_
         filechannel = int(audiofile['filechannel'] or 0)
         source_channel_index = filechannel_to_source_index(audiofiles, filechannel)
         relevant = is_channel_relevant_for_type(inst_type, channel_name, inst_name)
-        mic_code = map_channel_to_mic(channel_name) if relevant else ''
-        group_key = map_channel_group_key(channel_name, mic_code) if relevant else 'DROP'
+        mic_code = map_channel_to_mic(channel_name)
+        group_key = map_channel_group_key(channel_name, mic_code)
         reason = 'keep useful mic' if relevant else 'drop bleed/non-current instrument mic'
-        if relevant and not VALID_MIC_RE.match(mic_code):
+        if not VALID_MIC_RE.match(mic_code):
             reason = 'invalid mic code'
         decisions.append(SourceChannelDecision(
             channel_name=channel_name,
@@ -1177,8 +1186,8 @@ def build_channel_decisions(inst_file: Path, sample: dict, inst_type: str, inst_
     return decisions
 
 
-def group_channel_decisions(decisions: list) -> list:
-    kept = [decision for decision in decisions if decision.keep]
+def group_channel_decisions(decisions: list, include_disabled: bool = False) -> list:
+    kept = decisions if include_disabled else [decision for decision in decisions if decision.keep]
     groups = []
     decision_idx = 0
     while decision_idx < len(kept):
@@ -1286,7 +1295,7 @@ def build_output_plans(kit_dir: Path, source_root: Path, audio_format: str) -> t
                 **asdict(decision)
             } for decision in decisions])
 
-            groups = group_channel_decisions(decisions)
+            groups = group_channel_decisions(decisions, include_disabled=True)
             if not groups:
                 plans.append(OutputFilePlan(
                     kit=output_name,
@@ -1311,12 +1320,14 @@ def build_output_plans(kit_dir: Path, source_root: Path, audio_format: str) -> t
                     source_channel_indices=[],
                     target_relative='',
                     filename_template='',
+                    default_keep=False,
                     quarantined=True,
                     quarantine_reasons=['no kept useful mic channels'],
                 ))
                 continue
 
             for group_key, group_label, mic_code, group in groups:
+                default_keep = all(decision.keep for decision in group)
                 group_token = safe_var_token(group_key)
                 keep_var = f"__KEEP_{instrument_key}_{group_token}"
                 mic_var = f"__MIC_{instrument_key}_{group_token}"
@@ -1346,6 +1357,7 @@ def build_output_plans(kit_dir: Path, source_root: Path, audio_format: str) -> t
                     source_channel_indices=[decision.source_channel_index for decision in group],
                     target_relative=target_relative,
                     filename_template=filename_template,
+                    default_keep=default_keep,
                 )
                 default_ok, default_error = parse_filename_like_kitlib(default_filename)
                 if not default_ok:
@@ -1371,14 +1383,22 @@ def build_output_plans(kit_dir: Path, source_root: Path, audio_format: str) -> t
     for duplicates in target_counts.values():
         if len(duplicates) <= 1:
             continue
-        for plan in duplicates:
+        disabled_duplicates = [plan for plan in duplicates if not plan.quarantined and not plan.default_keep]
+        if disabled_duplicates:
+            for plan in disabled_duplicates:
+                if 'disabled duplicate target if enabled' not in plan.quarantine_reasons:
+                    plan.quarantine_reasons.append('disabled duplicate target if enabled')
+        clean_duplicates = [plan for plan in duplicates if not plan.quarantined and plan.default_keep]
+        if len(clean_duplicates) <= 1:
+            continue
+        for plan in clean_duplicates:
             plan.quarantined = True
             if 'duplicate target path' not in plan.quarantine_reasons:
                 plan.quarantine_reasons.append('duplicate target path')
 
     summary.channel_decisions = len(channel_decisions)
     summary.output_plans = len(plans)
-    summary.clean_outputs = sum(1 for plan in plans if not plan.quarantined)
+    summary.clean_outputs = sum(1 for plan in plans if not plan.quarantined and plan.default_keep)
     summary.quarantined_outputs = sum(1 for plan in plans if plan.quarantined)
     return kit, plans, channel_decisions, summary
 
@@ -1403,116 +1423,397 @@ def collect_instrument_defaults(plans: list) -> dict:
                 'groups': {},
             }
         if plan.group_key and plan.mic_default:
+            existing = result[plan.instrument_key]['groups'].get(plan.group_key)
+            group_keep = plan.default_keep or (existing is not None and existing.get('keep', False))
             result[plan.instrument_key]['groups'][plan.group_key] = {
                 'label': plan.group_label,
                 'mic': plan.mic_default,
+                'keep': group_keep,
                 'keep_var': plan.keep_var,
                 'mic_var': plan.mic_var,
             }
     return result
 
 
-def generate_env_bat(source_root: Path, output_dir: Path, tmp_root: str, ffmpeg: str) -> str:
+def python_module_name(name: str) -> str:
+    module_name = re.sub(r'[^A-Za-z0-9_]+', '_', name).strip('_') or 'kit'
+    if module_name[0].isdigit():
+        module_name = 'kit_' + module_name
+    return module_name
+
+
+def python_repr(value) -> str:
+    return repr(value)
+
+
+def generate_settings_py(source_root: Path, output_dir: Path, tmp_root: str, ffmpeg: str, audio_format: str) -> str:
     source_root_text = os.path.abspath(source_root)
     output_dir_text = os.path.abspath(output_dir)
     lines = [
-        '@echo off',
-        'REM Shared DrumGizmo -> Karatala conversion settings.',
-        f'set "SRC_ROOT={source_root_text}"',
-        f'set "OUT_ROOT={output_dir_text}"',
-        f'set "TMP_ROOT={tmp_root}"',
-        f'set "FFMPEG={ffmpeg}"',
+        'from pathlib import Path',
+        'import os',
+        '',
+        '# Shared DrumGizmo -> Karatala conversion settings.',
+        '# Edit these before running generated convert_*.py files.',
+        f'SRC_ROOT = Path(r{python_repr(source_root_text)})',
+        f'OUT_ROOT = Path(r{python_repr(output_dir_text)})',
+        f'TMP_ROOT = Path(os.path.expandvars(r{python_repr(tmp_root)}))',
+        f'FFMPEG = r{python_repr(ffmpeg)}',
+        f'AUDIO_FORMAT = {python_repr(audio_format)}',
         '',
     ]
     return '\n'.join(lines)
 
 
-def generate_map_bat(kit_dir: Path, plans: list) -> str:
+def generate_runtime_py() -> str:
+    return r'''import argparse
+import csv
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True)
+class Operation:
+    kit: str
+    source_instrument: str
+    mic_group: str
+    sample_name: str
+    source_xml: str
+    power: float
+    velocity: int
+    round_robin: str
+    group_label: str
+    sources: list
+    output_channels: str
+    default_mic_code: str
+    default_keep: bool
+    quarantined: bool
+    quarantine_reasons: list
+
+
+def _relative_path(path_text: str) -> Path:
+    return Path(*str(path_text).replace('\\', '/').split('/'))
+
+
+def _source_path(settings, source_text: str) -> Path:
+    return settings.SRC_ROOT / _relative_path(source_text)
+
+
+def operation_output_path(operation: Operation, instruments: dict, microphones: dict, settings) -> Path:
+    instrument_info = instruments[operation.source_instrument]
+    microphone_info = microphones.get((operation.source_instrument, operation.mic_group), {})
+    instrument = instrument_info['instrument']
+    articulation = instrument_info['articulation']
+    parameter = instrument_info.get('parameter', '')
+    microphone_code = microphone_info.get('code', operation.default_mic_code)
+    filename = f'{instrument}-{articulation}-{operation.velocity:03d}{operation.round_robin}-{microphone_code}.{settings.AUDIO_FORMAT}'
+    return settings.OUT_ROOT / operation.kit / instrument / f'{articulation}{parameter}' / filename
+
+
+def operation_target_relative(operation: Operation, instruments: dict, microphones: dict, settings) -> str:
+    try:
+        return str(operation_output_path(operation, instruments, microphones, settings).relative_to(settings.OUT_ROOT))
+    except Exception:
+        try:
+            return str(operation_output_path(operation, instruments, microphones, settings))
+        except Exception:
+            return ''
+
+
+def operation_enabled(operation: Operation, microphones: dict) -> bool:
+    microphone_info = microphones.get((operation.source_instrument, operation.mic_group))
+    return microphone_info is not None and microphone_info.get('keep', True)
+
+
+def enabled_duplicate_targets(operations: list, instruments: dict, microphones: dict, settings) -> set:
+    target_counts = {}
+    for operation in operations:
+        if operation.quarantined or not operation_enabled(operation, microphones):
+            continue
+        target = operation_target_relative(operation, instruments, microphones, settings).lower()
+        if target:
+            target_counts[target] = target_counts.get(target, 0) + 1
+    return {target for target, count in target_counts.items() if count > 1}
+
+
+def ffmpeg_command(operation: Operation, instruments: dict, microphones: dict, settings) -> list:
+    output_path = operation_output_path(operation, instruments, microphones, settings)
+    sources = operation.sources
+    if len(sources) == 1:
+        source_path = _source_path(settings, sources[0]['path'])
+        channel_index = int(sources[0].get('channel', 0))
+        return [settings.FFMPEG, '-y', '-i', str(source_path), '-map_channel', f'0.0.{channel_index}', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
+    if len(sources) == 2 and sources[0]['path'].lower() == sources[1]['path'].lower():
+        source_path = _source_path(settings, sources[0]['path'])
+        left_index = int(sources[0].get('channel', 0))
+        right_index = int(sources[1].get('channel', 1))
+        return [settings.FFMPEG, '-y', '-i', str(source_path), '-filter_complex', f'[0:a]pan=stereo|c0=c{left_index}|c1=c{right_index}[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
+    if len(sources) == 2:
+        left_path = _source_path(settings, sources[0]['path'])
+        right_path = _source_path(settings, sources[1]['path'])
+        return [settings.FFMPEG, '-y', '-i', str(left_path), '-i', str(right_path), '-filter_complex', '[0:a][1:a]amerge=inputs=2[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
+    raise ValueError(f'Unsupported source grouping for {operation.source_instrument}/{operation.sample_name}/{operation.mic_group}')
+
+
+def _format_command(command: list) -> str:
+    return subprocess.list2cmdline([str(part) for part in command])
+
+
+def review_status(operation: Operation, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
+    if operation.quarantined:
+        return 'QUARANTINED'
+    if target_relative.lower() in duplicate_targets:
+        return 'QUARANTINED'
+    if not operation_enabled(operation, microphones):
+        return 'SKIPPED'
+    return 'READY'
+
+
+def review_action(operation: Operation, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
+    if target_relative.lower() in duplicate_targets:
+        return 'fix map; enabled rows would write the same target file'
+    if operation.quarantined:
+        return 'review generator warning before enabling manually'
+    if not operation_enabled(operation, microphones):
+        return 'optional/off by default; set keep True in map if you intentionally want this mic'
+    return 'review optional; emitted by convert script'
+
+
+def write_review_csv(operations: list, instruments: dict, microphones: dict, settings, review_path: Path) -> None:
+    duplicate_targets = enabled_duplicate_targets(operations, instruments, microphones, settings)
+    review_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        'status',
+        'action',
+        'reasons',
+        'kit',
+        'source_instrument',
+        'sample_name',
+        'velocity',
+        'round_robin',
+        'mic_group',
+        'mic_code',
+        'source_channels',
+        'source_channel_indices',
+        'source_files',
+        'target_relative',
+        'instrument',
+        'articulation',
+        'parameter',
+        'source_xml',
+        'power',
+    ]
+    with review_path.open('w', encoding='utf-8', newline='') as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for operation in operations:
+            instrument_info = instruments.get(operation.source_instrument, {})
+            microphone_info = microphones.get((operation.source_instrument, operation.mic_group), {})
+            target_relative = operation_target_relative(operation, instruments, microphones, settings)
+            reasons = [reason for reason in operation.quarantine_reasons if reason != 'disabled duplicate target if enabled']
+            if target_relative.lower() in duplicate_targets and 'enabled duplicate target path after map edits' not in reasons:
+                reasons.append('enabled duplicate target path after map edits')
+            writer.writerow({
+                'status': review_status(operation, microphones, duplicate_targets, target_relative),
+                'action': review_action(operation, microphones, duplicate_targets, target_relative),
+                'reasons': '; '.join(reasons),
+                'kit': operation.kit,
+                'source_instrument': operation.source_instrument,
+                'sample_name': operation.sample_name,
+                'velocity': f'{operation.velocity:03d}',
+                'round_robin': operation.round_robin,
+                'mic_group': operation.mic_group,
+                'mic_code': microphone_info.get('code', operation.default_mic_code),
+                'source_channels': ' + '.join(source.get('name', '') for source in operation.sources),
+                'source_channel_indices': ' + '.join(str(source.get('channel', '')) for source in operation.sources),
+                'source_files': ' + '.join(source.get('path', '') for source in operation.sources),
+                'target_relative': target_relative,
+                'instrument': instrument_info.get('instrument', ''),
+                'articulation': instrument_info.get('articulation', ''),
+                'parameter': instrument_info.get('parameter', ''),
+                'source_xml': operation.source_xml,
+                'power': f'{operation.power:.12g}',
+            })
+
+
+def run_operations(operations: list, instruments: dict, microphones: dict, settings, kit_name: str, review_path: Path) -> int:
+    parser = argparse.ArgumentParser(description=f'Run generated DrumGizmo -> Karatala conversion for {kit_name}')
+    parser.add_argument('--execute', action='store_true', help='Actually run ffmpeg. Without this, commands are only printed.')
+    parser.add_argument('--write-review', action='store_true', help='Rewrite review CSV using the current edited map_*.py values.')
+    parser.add_argument('--only-instrument', default='', help='Run only one source instrument name from map_*.py.')
+    parser.add_argument('--only-mic', default='', help='Run only one mic group key, for example AMB, OH, DIRECT.')
+    parser.add_argument('--limit', type=int, default=0, help='Stop after this many kept operations.')
+    args = parser.parse_args()
+
+    if args.write_review:
+        write_review_csv(operations, instruments, microphones, settings, review_path)
+        print(f'wrote {review_path}')
+        return 0
+
+    duplicate_targets = enabled_duplicate_targets(operations, instruments, microphones, settings)
+    selected_count = 0
+    skipped_count = 0
+    for operation in operations:
+        if args.only_instrument and operation.source_instrument != args.only_instrument:
+            continue
+        if args.only_mic and operation.mic_group != args.only_mic:
+            continue
+
+        microphone_info = microphones.get((operation.source_instrument, operation.mic_group))
+        if operation.quarantined or not microphone_info or not microphone_info.get('keep', True):
+            skipped_count += 1
+            continue
+
+        output_path = operation_output_path(operation, instruments, microphones, settings)
+        target_relative = operation_target_relative(operation, instruments, microphones, settings).lower()
+        if target_relative in duplicate_targets:
+            print(f'skip duplicate target after map edits: {output_path}')
+            skipped_count += 1
+            continue
+
+        command = ffmpeg_command(operation, instruments, microphones, settings)
+        print(_format_command(command))
+        selected_count += 1
+
+        if args.execute:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(command, check=True)
+
+        if args.limit and selected_count >= args.limit:
+            break
+
+    mode = 'executed' if args.execute else 'planned'
+    print(f'{kit_name}: {mode} {selected_count} kept operation(s), skipped {skipped_count} disabled operation(s).')
+    return 0
+'''
+
+
+def generate_map_py(kit_dir: Path, plans: list) -> str:
     defaults = collect_instrument_defaults(plans)
     lines = [
-        '@echo off',
-        f'REM Auto-generated review map for {kit_dir.name}.',
-        'REM Edit values here, then run the corresponding convert batch.',
+        f'# Auto-generated review map for {kit_dir.name}.',
+        '# Edit values here, then run the corresponding convert_*.py script.',
         '',
+        'INSTRUMENTS = {',
     ]
     for instrument_key, info in defaults.items():
         lines.extend([
-            f'REM ######### source instrument: {info["source_instrument"]} #########',
-            f'REM Planned slot: {info["source_instrument"]} -> {info["instrument"]}\\{info["articulation"]}{info["param"]}',
-            f'set "__INS_{instrument_key}={info["instrument"]}"',
-            f'set "__ART_{instrument_key}={info["articulation"]}"',
-            f'set "__PRM_{instrument_key}={info["param"]}"',
-            '',
-            f'REM Microphone groups for {info["source_instrument"]}.',
+            # f'    # {info["source_instrument"]} -> {info["instrument"]}\\{info["articulation"]}{info["param"]}',
+            f'    {python_repr(info["source_instrument"])}: {{',
+												f'        "instrument": {python_repr(info["instrument"])},',
+            f'        "articulation": {python_repr(info["articulation"])},',
+												f'        "parameter": {python_repr(info["param"])},',
+            '    },',
         ])
-        for _, group in sorted(info['groups'].items()):
+    lines.extend([
+        '}',
+        '',
+        'MICS = {',
+    ])
+    for _, info in defaults.items():
+        lines.append(f'    # Microphone groups for {info["source_instrument"]}.')
+        for group_key, group in sorted(info['groups'].items()):
+            comment_prefix = '# ' if not group['keep'] else ''
             lines.extend([
-                f'REM {group["label"]} -> {group["mic"]}',
-                f'set "{group["keep_var"]}=1"',
-                f'set "{group["mic_var"]}={group["mic"]}"',
-                '',
+                f'    {comment_prefix}({python_repr(info["source_instrument"])}, {python_repr(group_key)}): {{"keep": {group["keep"]}, "code": {python_repr(group["mic"])} }},			# {group["label"]}',
             ])
         lines.append('')
+    lines.extend([
+        '}',
+        '',
+    ])
     return '\n'.join(lines)
 
 
-def path_with_src_root(source_file: str) -> str:
-    return batch_path_var(source_file, 'SRC_ROOT')
-
-
-def target_folder_for_plan(plan: OutputFilePlan) -> str:
-    return f"%OUT_ROOT%\\{plan.kit}\\%__INS_{plan.instrument_key}%\\%__ART_{plan.instrument_key}%%__PRM_{plan.instrument_key}%"
-
-
-def target_path_for_plan(plan: OutputFilePlan) -> str:
-    return target_folder_for_plan(plan) + '\\' + plan.filename_template
-
-
-def ffmpeg_command_for_plan(plan: OutputFilePlan) -> str:
-    output = target_path_for_plan(plan)
-    if len(plan.source_files) == 1:
-        source = path_with_src_root(plan.source_files[0])
-        channel_index = plan.source_channel_indices[0] if plan.source_channel_indices else 0
-        return f'"%FFMPEG%" -y -i "{source}" -map_channel 0.0.{channel_index} -c:a flac "{output}"'
-    if len(plan.source_files) == 2 and plan.source_files[0].lower() == plan.source_files[1].lower():
-        source = path_with_src_root(plan.source_files[0])
-        left_idx = plan.source_channel_indices[0]
-        right_idx = plan.source_channel_indices[1]
-        return f'"%FFMPEG%" -y -i "{source}" -filter_complex "[0:a]pan=stereo|c0=c{left_idx}|c1=c{right_idx}[a]" -map "[a]" -c:a flac "{output}"'
-    if len(plan.source_files) == 2:
-        left = path_with_src_root(plan.source_files[0])
-        right = path_with_src_root(plan.source_files[1])
-        return f'"%FFMPEG%" -y -i "{left}" -i "{right}" -filter_complex "[0:a][1:a]amerge=inputs=2[a]" -map "[a]" -c:a flac "{output}"'
-    sources = ' '.join(f'-i "{path_with_src_root(source)}"' for source in plan.source_files)
-    return f'REM Unsupported source grouping, review manually: "%FFMPEG%" -y {sources} -c:a flac "{output}"'
-
-
-def generate_convert_bat(kit_dir: Path, plans: list) -> str:
+def generate_convert_py(kit_dir: Path, plans: list) -> str:
+    module_name = python_module_name(kit_dir.name)
+    map_module = f'map_{module_name}'
     safe_kit = re.sub(r'[^A-Za-z0-9_.-]+', '_', kit_dir.name).strip('_') or 'kit'
     lines = [
-        '@echo off',
-        'setlocal EnableExtensions',
-        'call "%~dp0..\\_common\\drumgizmo-env.bat"',
-        f'call "%~dp0map-{safe_kit}.bat"',
+        'from pathlib import Path',
+        'import sys',
         '',
-        f'REM Generated clean conversion commands for {kit_dir.name}.',
-        'if not exist "%OUT_ROOT%" mkdir "%OUT_ROOT%"',
-        'if not exist "%TMP_ROOT%" mkdir "%TMP_ROOT%"',
+        'SCRIPT_DIR = Path(__file__).resolve().parent',
+        'OUTPUT_ROOT = SCRIPT_DIR.parent',
+        'if str(OUTPUT_ROOT) not in sys.path:',
+        '    sys.path.insert(0, str(OUTPUT_ROOT))',
         '',
+        'from _common import drumgizmo_settings as settings',
+        'from _common.drumgizmo_runtime import Operation, run_operations',
+        f'from {map_module} import INSTRUMENTS, MICS',
+        '',
+        f'KIT_NAME = {python_repr(kit_dir.name)}',
+        f'REVIEW_PATH = SCRIPT_DIR / "_audit" / {python_repr("review-" + safe_kit + ".csv")}',
+        '',
+        'OPERATIONS = [',
     ]
     for plan in plans:
-        if plan.quarantined:
-            continue
-        folder = target_folder_for_plan(plan)
         lines.extend([
-            f'REM XML: %SRC_ROOT%\\{plan.source_xml}',
-            f'REM sample: {plan.sample_name} power={plan.power:.12g} velocity={plan.velocity:03d} rr={plan.variant}',
-            f'REM channels: {", ".join(plan.source_channels)} -> %{plan.mic_var}% keep=%{plan.keep_var}%',
-            f'if not exist "{folder}" mkdir "{folder}"',
-            f'if "%{plan.keep_var}%"=="1" {ffmpeg_command_for_plan(plan)}',
+            '    Operation(',
+            f'        kit={python_repr(plan.kit)},',
+            f'        source_instrument={python_repr(plan.source_instrument)},',
+            f'        mic_group={python_repr(plan.group_key)},',
+            f'        sample_name={python_repr(plan.sample_name)},',
+            f'        source_xml={python_repr(plan.source_xml)},',
+            f'        power={plan.power:.12g},',
+            f'        velocity={plan.velocity},',
+            f'        round_robin={python_repr(plan.variant)},',
+            f'        group_label={python_repr(plan.group_label)},',
+            '        sources=[',
+        ])
+        for source_file, channel_name, channel_index in zip(plan.source_files, plan.source_channels, plan.source_channel_indices):
+            lines.append(f'            {{"path": {python_repr(source_file)}, "channel": {channel_index}, "name": {python_repr(channel_name)}}},')
+        lines.extend([
+            '        ],',
+            f'        output_channels={python_repr("stereo" if len(plan.source_files) == 2 else "mono")},',
+            f'        default_mic_code={python_repr(plan.mic_default)},',
+            f'        default_keep={plan.default_keep},',
+            f'        quarantined={plan.quarantined},',
+            f'        quarantine_reasons={python_repr(plan.quarantine_reasons)},',
+            '    ),',
             '',
         ])
+    lines.extend([
+        ']',
+        '',
+        '',
+        "if __name__ == '__main__':",
+        '    raise SystemExit(run_operations(OPERATIONS, INSTRUMENTS, MICS, settings, KIT_NAME, REVIEW_PATH))',
+        '',
+    ])
     return '\n'.join(lines)
+
+
+def review_action_for_plan(plan: OutputFilePlan) -> str:
+    reasons = set(plan.quarantine_reasons)
+    if not plan.quarantined and not plan.default_keep:
+        if 'disabled duplicate target if enabled' in reasons:
+            return 'optional/off by default; change mic code or enable only one row before setting keep True'
+        return 'optional bleed/off by default; set keep True in map if you intentionally want this mic'
+    if not plan.quarantined:
+        return 'review optional; emitted in convert script'
+    if 'duplicate target path' in reasons:
+        return 'fix mic code/group or articulation so target filename becomes unique'
+    if any(reason.startswith('unknown instrument type:') for reason in reasons):
+        return 'edit generated map instrument name or add script alias if this source type is real'
+    if any(reason.startswith('missing source:') for reason in reasons):
+        return 'check source XML/file path; do not run until source exists'
+    if 'no kept useful mic channels' in reasons:
+        return 'usually ignore; no useful mic was found for this source sample'
+    if any(reason.startswith('invalid mic token') for reason in reasons):
+        return 'fix mic code in generated map; valid examples: dtm, dbm, dim, dom, ons, rfs'
+    if 'round-robin letter overflow' in reasons:
+        return 'split velocity layer or adjust variant naming manually'
+    return 'review manually before adding to conversion script'
+
+
+def review_status_for_plan(plan: OutputFilePlan) -> str:
+    if plan.quarantined:
+        return 'QUARANTINED'
+    if not plan.default_keep:
+        return 'SKIPPED'
+    return 'READY'
 
 
 def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: list, channel_decisions: list, summary: KitGenerationSummary) -> list:
@@ -1520,42 +1821,57 @@ def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: l
     audit_dir.mkdir(parents=True, exist_ok=True)
     written = []
 
-    audit_csv = audit_dir / f'audit-{safe_kit}.csv'
-    with audit_csv.open('w', encoding='utf-8', newline='') as csv_file:
-        fieldnames = ['kit', 'source_instrument', 'sample', 'channel_name', 'source_file', 'filechannel', 'source_channel_index', 'keep', 'mic_code', 'group_key', 'group_label', 'reason']
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in channel_decisions:
-            writer.writerow({key: row.get(key, '') for key in fieldnames})
-    written.append(str(audit_csv))
-
-    quarantine_csv = audit_dir / f'quarantine-{safe_kit}.csv'
-    with quarantine_csv.open('w', encoding='utf-8', newline='') as csv_file:
-        fieldnames = ['kit', 'source_instrument', 'sample_name', 'group_label', 'target_relative', 'reasons']
+    review_csv = audit_dir / f'review-{safe_kit}.csv'
+    with review_csv.open('w', encoding='utf-8', newline='') as csv_file:
+        fieldnames = [
+            'status',
+            'action',
+            'reasons',
+            'kit',
+            'source_instrument',
+            'sample_name',
+            'velocity',
+            'round_robin',
+            'mic_group',
+            'mic_code',
+            'source_channels',
+            'source_channel_indices',
+            'source_files',
+            'target_relative',
+            'instrument',
+            'articulation',
+            'parameter',
+            'source_xml',
+            'power',
+        ]
         writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
         writer.writeheader()
         for plan in plans:
-            if plan.quarantined:
-                writer.writerow({
-                    'kit': plan.kit,
-                    'source_instrument': plan.source_instrument,
-                    'sample_name': plan.sample_name,
-                    'group_label': plan.group_label,
-                    'target_relative': plan.target_relative,
-                    'reasons': '; '.join(plan.quarantine_reasons),
-                })
-    written.append(str(quarantine_csv))
-
-    manifest_json = audit_dir / f'manifest-{safe_kit}.json'
-    manifest_json.write_text(json.dumps({
-        'kit': kit_dir.name,
-        'output_dir': str(output_dir.resolve()),
-        'summary': asdict(summary),
-        'plans': [asdict(plan) for plan in plans],
-    }, indent=2), encoding='utf-8')
-    written.append(str(manifest_json))
+            writer.writerow({
+                'status': review_status_for_plan(plan),
+                'action': review_action_for_plan(plan),
+                'reasons': '; '.join(plan.quarantine_reasons),
+                'kit': plan.kit,
+                'source_instrument': plan.source_instrument,
+                'sample_name': plan.sample_name,
+                'velocity': f'{plan.velocity:03d}',
+                'round_robin': plan.variant,
+                'mic_group': plan.group_key,
+                'mic_code': plan.mic_default,
+                'source_channels': ' + '.join(plan.source_channels),
+                'source_channel_indices': ' + '.join(str(channel_index) for channel_index in plan.source_channel_indices),
+                'source_files': ' + '.join(plan.source_files),
+                'target_relative': plan.target_relative,
+                'instrument': plan.instrument_default,
+                'articulation': plan.articulation_default,
+                'parameter': plan.param_default,
+                'source_xml': plan.source_xml,
+                'power': f'{plan.power:.12g}',
+            })
+    written.append(str(review_csv))
 
     summary_md = audit_dir / f'summary-{safe_kit}.md'
+    skipped_outputs = sum(1 for plan in plans if not plan.quarantined and not plan.default_keep)
     summary_lines = [
         f'# DrumGizmo Migration Summary: {kit_dir.name}',
         '',
@@ -1563,10 +1879,17 @@ def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: l
         f'- Samples: {summary.samples}',
         f'- Channel decisions: {summary.channel_decisions}',
         f'- Output plans: {summary.output_plans}',
-        f'- Clean outputs in batch: {summary.clean_outputs}',
+        f'- Ready outputs enabled by default: {summary.clean_outputs}',
+        f'- Skipped optional outputs in convert script: {skipped_outputs}',
         f'- Quarantined outputs: {summary.quarantined_outputs}',
         f'- Missing sources: {summary.missing_sources}',
         f'- ffmpeg on PATH: {"yes" if shutil.which("ffmpeg") else "no"}',
+        '',
+        '## Review Files',
+        '',
+        f'- `review-{safe_kit}.csv`: main review file. Use `status=READY`, `SKIPPED`, or `QUARANTINED`.',
+        f'- `../map_{python_module_name(kit_dir.name)}.py`: edit instrument/articulation/mic keep/code values here.',
+        f'- `../convert_{python_module_name(kit_dir.name)}.py`: rewrite review CSV, dry-run, or execute rows after map review.',
         '',
         '## Warnings',
         '',
@@ -1579,10 +1902,11 @@ def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: l
         '',
         '## Next Actions',
         '',
-        '1. Review the generated map batch and quarantine CSV.',
-        '2. Edit map variables for any desired instrument/articulation/mic replacements.',
-        '3. Install or point `FFMPEG` to ffmpeg before running conversion batches.',
-        '4. Run the generated conversion batch for one kit first, then scan the output in Karatala.',
+        '1. Open the review CSV and inspect `status=QUARANTINED` and any `SKIPPED` rows you may want to promote.',
+        '2. Fix mapping mistakes or flip skipped mic groups in the map Python file.',
+        '3. Run the convert script with `--write-review` and inspect the refreshed CSV.',
+        '4. Run the convert script without `--execute` to inspect commands.',
+        '5. Run the convert script with `--execute --limit 5` for a tiny real conversion check.',
         '',
     ])
     summary_md.write_text('\n'.join(summary_lines), encoding='utf-8', newline='\n')
@@ -1592,19 +1916,21 @@ def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: l
 
 def process_kit_v2(kit_dir: Path, output_dir: Path, source_root: Path, args) -> KitGenerationSummary:
     _, plans, channel_decisions, summary = build_output_plans(kit_dir, source_root, args.audio_format)
-    safe_kit = re.sub(r'[^A-Za-z0-9_.-]+', '_', kit_dir.name).strip('_') or 'kit'
+    module_name = python_module_name(kit_dir.name)
     kit_output_dir = output_dir / kit_dir.name
     audit_dir = Path(args.audit_dir) if args.audit_dir and len(args.kits_to_process) == 1 else kit_output_dir / '_audit'
     common_dir = output_dir / '_common'
 
-    env_path = common_dir / 'drumgizmo-env.bat'
-    map_path = kit_output_dir / f'map-{safe_kit}.bat'
-    convert_path = kit_output_dir / f'convert-{safe_kit}.bat'
+    settings_path = common_dir / 'drumgizmo_settings.py'
+    runtime_path = common_dir / 'drumgizmo_runtime.py'
+    map_path = kit_output_dir / f'map_{module_name}.py'
+    convert_path = kit_output_dir / f'convert_{module_name}.py'
 
-    write_text_if_allowed(env_path, generate_env_bat(source_root, output_dir, args.tmp_root, args.ffmpeg), overwrite=True)
-    map_written = write_text_if_allowed(map_path, generate_map_bat(kit_dir, plans), overwrite=args.overwrite_map)
-    write_text_if_allowed(convert_path, generate_convert_bat(kit_dir, plans), overwrite=True)
-    summary.written_files.extend([str(env_path), str(convert_path)])
+    write_text_if_allowed(settings_path, generate_settings_py(source_root, output_dir, args.tmp_root, args.ffmpeg, args.audio_format), overwrite=True)
+    write_text_if_allowed(runtime_path, generate_runtime_py(), overwrite=True)
+    map_written = write_text_if_allowed(map_path, generate_map_py(kit_dir, plans), overwrite=args.overwrite_map)
+    write_text_if_allowed(convert_path, generate_convert_py(kit_dir, plans), overwrite=True)
+    summary.written_files.extend([str(settings_path), str(runtime_path), str(convert_path)])
     if map_written:
         summary.written_files.append(str(map_path))
     else:
@@ -1619,14 +1945,14 @@ def process_kit_v2(kit_dir: Path, output_dir: Path, source_root: Path, args) -> 
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Generate DrumGizmo -> Karatala audit reports and conversion batches')
+    parser = argparse.ArgumentParser(description='Generate DrumGizmo -> Karatala audit reports and Python conversion scripts')
     parser.add_argument('todo_path', nargs='?', default='todo', help='Path to one DrumGizmo kit or a root containing kit folders')
-    parser.add_argument('--output-dir', default='instruments', help='Output directory for generated batches and planned library output')
+    parser.add_argument('--output-dir', default='instruments', help='Output directory for generated scripts and planned library output')
     parser.add_argument('--audit-dir', default='', help='Override audit output directory for single-kit runs')
-    parser.add_argument('--tmp-root', default=r'%TEMP%\karatala-drumgizmo', help='Batch temp root')
-    parser.add_argument('--ffmpeg', default='ffmpeg', help='ffmpeg executable/path to place in generated env batch')
+    parser.add_argument('--tmp-root', default=r'%TEMP%\karatala-drumgizmo', help='Conversion temp root used by generated settings')
+    parser.add_argument('--ffmpeg', default='ffmpeg', help='ffmpeg executable/path to place in generated settings')
     parser.add_argument('--audio-format', default='flac', choices=['flac'], help='Generated audio format')
-    parser.add_argument('--overwrite-map', action='store_true', help='Overwrite existing map-<kit>.bat files')
+    parser.add_argument('--overwrite-map', action='store_true', help='Overwrite existing map_<kit>.py files')
     args = parser.parse_args()
 
     todo = Path(args.todo_path)

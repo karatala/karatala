@@ -2,9 +2,9 @@
 
 ## Summary
 
-Revise `scripts/convert-drumgizmo2karatala.py` into a one-off, deterministic audit and batch generator. It should not execute conversion itself. It should generate safe `.bat` files for clean rows, FLAC extraction commands for useful mic channels, and separate audit/quarantine artifacts for anything ambiguous.
+Revise `scripts/convert-drumgizmo2karatala.py` into a one-off, deterministic review and Python conversion-script generator. The generator itself should not execute conversion. It should generate readable Python files for clean rows, FLAC extraction commands for useful mic channels, and one consolidated review CSV where ambiguous rows are marked in context.
 
-Default behavior remains non-destructive: inspect DrumGizmo XML/audio references, generate reports and scripts, and leave actual conversion to manually running reviewed batches.
+Default behavior remains non-destructive: inspect DrumGizmo XML/audio references, generate reports and scripts, and leave actual conversion to manually running reviewed Python scripts.
 
 ## Key Changes
 
@@ -15,48 +15,50 @@ Add options:
 - `--output-dir`, default `instruments`.
 - `--audit-dir`, default `<output-dir>/<kit>/_audit`.
 - `--tmp-root`, default `%TEMP%\karatala-drumgizmo`.
-- `--ffmpeg`, default `ffmpeg`, emitted as `set FFMPEG=...` in generated `.bat` files.
+- `--ffmpeg`, default `ffmpeg`, emitted as `FFMPEG = ...` in generated settings.
 - `--audio-format flac`, fixed/default for this migration.
-- `--clean-only-bat`, default true: runnable batch includes only non-quarantined rows.
+- Runnable conversion scripts include non-quarantined rows. Rows with `keep: False` are present but skipped by default.
 
 ### Generated Files
 
 Generate per kit:
 
-- `convert-<kit>.bat`: clean extraction/conversion commands only.
-- `map-<kit>.bat`: editable per-kit instrument, articulation, parameter, keep/drop, and mic-code mapping variables.
-- `_audit/audit-<kit>.csv`: one row per source sample/channel decision.
-- `_audit/manifest-<kit>.json`: structured source XML to Karatala mapping.
-- `_audit/quarantine-<kit>.csv`: duplicate targets, unknown types, bad filenames, ambiguous channels.
+- `convert_<kit>.py`: extraction/conversion operations plus review-refresh mode; dry-run by default, `--execute` to run ffmpeg, `--write-review` to rewrite the CSV after map edits.
+- `map_<kit>.py`: editable per-kit instrument, articulation, parameter, keep/drop, and mic-code mapping dictionaries. It includes both useful mics and skipped bleed mics.
+- `_audit/review-<kit>.csv`: main review file. Ready, skipped, and quarantined rows are together; filter the `status` column.
 - `_audit/summary-<kit>.md`: readable counts, mappings, warnings, and next actions.
 
-Generate one shared include file:
+Generate shared helper files:
 
-- `_common/drumgizmo-env.bat`: editable global paths and tool variables shared by every generated kit batch.
+- `_common/drumgizmo_settings.py`: editable global paths and tool variables shared by every generated kit script.
+- `_common/drumgizmo_runtime.py`: shared dry-run/execution, path building, and ffmpeg command construction.
 
-### Batch Format
+### Python Script Format
 
-Batch files must not duplicate global path/tool variables. Each `convert-<kit>.bat` starts by calling a shared env include and then the kit-local mapping include:
+Generated conversion scripts must not duplicate global path/tool variables. Each `convert_<kit>.py` imports shared settings/runtime helpers and the kit-local mapping module:
 
-```bat
-@echo off
-setlocal EnableExtensions
-call "%~dp0..\_common\drumgizmo-env.bat"
-call "%~dp0map-aasimonster.bat"
+```python
+from _common import drumgizmo_settings as settings
+from _common.drumgizmo_runtime import Operation, run_operations
+from map_aasimonster import INSTRUMENTS, MICS
 ```
 
-`_common/drumgizmo-env.bat` owns shared variables:
+`_common/drumgizmo_settings.py` owns shared variables:
 
-```bat
-set "SRC_ROOT=T:\source\repos\karatala\assets\drumgizmo"
-set "OUT_ROOT=T:\source\repos\karatala\assets\sample_library_pending"
-set "TMP_ROOT=%TEMP%\karatala-drumgizmo"
-set "FFMPEG=ffmpeg"
+```python
+from pathlib import Path
+import os
+
+SRC_ROOT = Path(r"T:\source\repos\karatala\assets\drumgizmo")
+OUT_ROOT = Path(r"T:\source\repos\karatala\assets\sample_library_pending")
+TMP_ROOT = Path(os.path.expandvars(r"%TEMP%\karatala-drumgizmo"))
+FFMPEG = r"ffmpeg"
+AUDIO_FORMAT = "flac"
 ```
 
-`map-<kit>.bat` is the main human review/correction surface. The generator should create it with all source instruments, articulations, parameters, and planned mic groups enumerated near the top. Existing map files should not be overwritten unless an explicit overwrite option is added later.
+`map_<kit>.py` is the main human review/correction surface. The generator should create it with all source instruments, articulations, parameters, useful mic groups, and skipped bleed mic groups enumerated near the top. Existing map files should not be overwritten unless `--overwrite-map` is used.
 
-Use active `mkdir`, not commented `mkdir`. Prefer `if not exist` guards for folders.
+Generated `convert_<kit>.py` scripts default to dry-run: they print ffmpeg commands and do not create folders or audio files. Passing `--write-review` rewrites the review CSV using the current edited map values. Passing `--execute` creates folders and runs ffmpeg.
 
 Before each sample group, emit a readable `REM` block documenting:
 
@@ -70,77 +72,72 @@ Before each sample group, emit a readable `REM` block documenting:
 
 ### Editable Kit Mapping Example
 
-For an `aasimonster` kit, `map-aasimonster.bat` should look like this style:
+For an `aasimonster` kit, `map_aasimonster.py` should look like this style:
 
-```bat
-REM Auto-generated review map for aasimonster.
-REM Edit values here, then run convert-aasimonster.bat.
+```python
+# Auto-generated review map for aasimonster.
+# Edit values here, then run convert_aasimonster.py.
 
-REM ######### source instrument: china #########
-REM Planned slot: china -> china-X1\edge
-set "__INS_CHINA=china-X1"
-set "__ART_CHINA=edge"
-set "__PRM_CHINA="
+INSTRUMENTS = {
+    "china": {
+        "instrument": "china-X1",
+        "articulation": "edge",
+        "parameter": "",
+    },
+    "hihat-closed": {
+        "instrument": "hihat-X1",
+        "articulation": "bow[close]",
+        "parameter": "-pdl_opn_cls078",
+    },
+}
 
-REM Microphone groups for china.
-REM Amb L-20 + Amb R-20 -> room far stereo
-set "__KEEP_CHINA_AMB=1"
-set "__MIC_CHINA_AMB=rfs"
-
-REM OH L-20 + OH R-20 -> overhead normal stereo
-set "__KEEP_CHINA_OH=1"
-set "__MIC_CHINA_OH=ons"
-
-REM Hihat-20, Kick L-20, Kick R-20, Ride-20, Snare*, Tom* are bleed for china.
-REM They are recorded in audit files and intentionally not emitted to output filenames.
-
-REM ######### source instrument: hihat-closed #########
-REM Planned slot: hihat-closed -> hihat-X1\bow[close]-pdl_opn_cls078
-set "__INS_HIHAT_CLOSED=hihat-X1"
-set "__ART_HIHAT_CLOSED=bow[close]"
-set "__PRM_HIHAT_CLOSED=-pdl_opn_cls078"
-
-REM Hihat-15 -> direct mono
-set "__KEEP_HIHAT_CLOSED_DIRECT=1"
-set "__MIC_HIHAT_CLOSED_DIRECT=dtm"
-
-REM Amb L-15 + Amb R-15 -> room far stereo
-set "__KEEP_HIHAT_CLOSED_AMB=1"
-set "__MIC_HIHAT_CLOSED_AMB=rfs"
-
-REM OH L-15 + OH R-15 -> overhead normal stereo
-set "__KEEP_HIHAT_CLOSED_OH=1"
-set "__MIC_HIHAT_CLOSED_OH=ons"
+MICS = {
+    ("china", "AMB"): {"keep": True, "code": "rfs"},
+    ("china", "HIHAT"): {"keep": False, "code": "dtm"},
+    ("china", "KICK_IN"): {"keep": False, "code": "dim"},
+    ("china", "KICK_OUT"): {"keep": False, "code": "dom"},
+    ("china", "OH"): {"keep": True, "code": "ons"},
+    ("china", "RIDE"): {"keep": False, "code": "dtm"},
+    ("china", "SNARE_BOTTOM"): {"keep": False, "code": "dbm"},
+    ("china", "SNARE_TOP"): {"keep": False, "code": "dtm"},
+    ("china", "SNARE_TRIGGER"): {"keep": False, "code": "dtm1"},
+    ("china", "TOM1"): {"keep": False, "code": "dtm"},
+    ("china", "TOM2"): {"keep": False, "code": "dtm"},
+    ("china", "TOM3"): {"keep": False, "code": "dtm"},
+    ("china", "TOM4"): {"keep": False, "code": "dtm"},
+    ("hihat-closed", "DIRECT"): {"keep": True, "code": "dtm"},
+    ("hihat-closed", "AMB"): {"keep": True, "code": "rfs"},
+    ("hihat-closed", "OH"): {"keep": True, "code": "ons"},
+}
 ```
 
-The generated `convert-aasimonster.bat` should use only those variables, so corrections in `map-aasimonster.bat` affect every command consistently:
+The generated `convert_aasimonster.py` should use only those dictionaries, so corrections in `map_aasimonster.py` affect every command consistently:
 
-```bat
-REM XML: %SRC_ROOT%\aasimonster\china\china.xml
-REM sample: 1-china power=... velocity=034 rr=a
-REM channels:
-REM   Amb L-20 + Amb R-20 -> %__MIC_CHINA_AMB% keep=%__KEEP_CHINA_AMB%
-REM   OH L-20 + OH R-20   -> %__MIC_CHINA_OH% keep=%__KEEP_CHINA_OH%
-
-if not exist "%OUT_ROOT%\aasimonster\%__INS_CHINA%\%__ART_CHINA%%__PRM_CHINA%" mkdir "%OUT_ROOT%\aasimonster\%__INS_CHINA%\%__ART_CHINA%%__PRM_CHINA%"
-
-if "%__KEEP_CHINA_AMB%"=="1" "%FFMPEG%" -y -i "%SRC_ROOT%\aasimonster\china\samples\1-china-Amb L-20.wav" -i "%SRC_ROOT%\aasimonster\china\samples\1-china-Amb R-20.wav" -filter_complex "[0:a][1:a]amerge=inputs=2[a]" -map "[a]" -c:a flac "%OUT_ROOT%\aasimonster\%__INS_CHINA%\%__ART_CHINA%%__PRM_CHINA%\%__INS_CHINA%-%__ART_CHINA%-034a-%__MIC_CHINA_AMB%.flac"
-
-if "%__KEEP_CHINA_OH%"=="1" "%FFMPEG%" -y -i "%SRC_ROOT%\aasimonster\china\samples\1-china-OH L-20.wav" -i "%SRC_ROOT%\aasimonster\china\samples\1-china-OH R-20.wav" -filter_complex "[0:a][1:a]amerge=inputs=2[a]" -map "[a]" -c:a flac "%OUT_ROOT%\aasimonster\%__INS_CHINA%\%__ART_CHINA%%__PRM_CHINA%\%__INS_CHINA%-%__ART_CHINA%-034a-%__MIC_CHINA_OH%.flac"
-
-REM XML: %SRC_ROOT%\aasimonster\hihat-closed\hihat-closed.xml
-REM sample: 1-hihat-closed power=... velocity=078 rr=a
-REM folder includes %__PRM_HIHAT_CLOSED%; filename keeps only articulation name so KitLibModel parses velocity correctly.
-
-if not exist "%OUT_ROOT%\aasimonster\%__INS_HIHAT_CLOSED%\%__ART_HIHAT_CLOSED%%__PRM_HIHAT_CLOSED%" mkdir "%OUT_ROOT%\aasimonster\%__INS_HIHAT_CLOSED%\%__ART_HIHAT_CLOSED%%__PRM_HIHAT_CLOSED%"
-
-if "%__KEEP_HIHAT_CLOSED_DIRECT%"=="1" "%FFMPEG%" -y -i "%SRC_ROOT%\aasimonster\hihat-closed\samples\1-hihat-closed-Hihat-15.wav" -c:a flac "%OUT_ROOT%\aasimonster\%__INS_HIHAT_CLOSED%\%__ART_HIHAT_CLOSED%%__PRM_HIHAT_CLOSED%\%__INS_HIHAT_CLOSED%-%__ART_HIHAT_CLOSED%-078a-%__MIC_HIHAT_CLOSED_DIRECT%.flac"
+```python
+OPERATIONS = [
+    Operation(
+        kit="aasimonster",
+        source_instrument="china",
+        mic_group="AMB",
+        sample_name="1-china",
+        source_xml="aasimonster\\china\\china.xml",
+        power=0.1,
+        velocity=34,
+        round_robin="a",
+        group_label="Amb L-20 + Amb R-20",
+        sources=[
+            {"path": "aasimonster\\china\\samples\\1-china-Amb L-20.wav", "channel": 0, "name": "Amb L-20"},
+            {"path": "aasimonster\\china\\samples\\1-china-Amb R-20.wav", "channel": 0, "name": "Amb R-20"},
+        ],
+        output_channels="stereo",
+    ),
+]
 ```
 
 The map variables intentionally separate folder parameters from filename articulations:
 
-- Folder: `%__ART_HIHAT_CLOSED%%__PRM_HIHAT_CLOSED%` -> `bow[close]-pdl_opn_cls078`.
-- Filename: `%__INS_HIHAT_CLOSED%-%__ART_HIHAT_CLOSED%-078a-...` -> parseable by `KitLibModel`.
+- Folder: `articulation + parameter` -> `bow[close]-pdl_opn_cls078`.
+- Filename: `instrument-articulation-078a-mic.flac` -> parseable by `KitLibModel`.
 
 For multichannel WAV kits, commands should use source channel extraction instead of separate mono inputs, while still using the same editable map variables.
 
@@ -150,7 +147,7 @@ Replace current `copy` behavior with ffmpeg extraction to FLAC:
 
 - Stereo pairs become one stereo FLAC mic file, for example `rfs` or `ons`.
 - Useful mono channels become mono FLAC mic files, for example `dim`, `dom`, `dtm`, `dbm`, or `rcm`.
-- Dropped bleed channels are recorded in audit artifacts but are never represented as `x` in final filenames.
+- Dropped bleed channels are omitted from conversion output and never represented as `x` in final filenames.
 - No final Karatala filename may contain `x`.
 
 For `aasimonster`, where sources are mostly separate mono files, the generator should either pair L/R mono files into stereo FLAC outputs or emit single useful mono outputs. For multichannel kits such as `CrocellKit`, `artstar`, and `MuldjordKit3`, extract selected channels from the multichannel WAV source.
@@ -161,8 +158,9 @@ Fix filename/folder generation:
 
 - Hi-hat expression codes stay in the articulation folder only, not duplicated into the sample filename velocity segment.
 - All hi-hat openness variants for one physical hat should resolve to the same instrument slot unless source naming clearly indicates a different physical hat.
-- Unknown instrument types are quarantined unless mapped explicitly in a small mapping table.
-- Duplicate target filenames are quarantined, not emitted into the runnable batch.
+- Unknown instrument types are marked `QUARANTINED` in the review CSV unless mapped explicitly in a small mapping table.
+- Enabled duplicate target filenames are marked `QUARANTINED`, not emitted into the runnable conversion script.
+- Disabled duplicate target filenames stay `SKIPPED` with an action note, so the user can enable one or change mic codes manually.
 
 Add explicit mapping tables near the top of the script:
 
@@ -178,7 +176,6 @@ Refactor around small data records:
 - `SourceSample`
 - `ChannelDecision`
 - `OutputFilePlan`
-- `QuarantineIssue`
 - `KitReport`
 
 Build the plan in memory first, then validate before writing any generated artifacts:
@@ -189,13 +186,15 @@ Build the plan in memory first, then validate before writing any generated artif
 - no duplicate output paths
 - no round-robin letter overflow in clean output
 
-Quarantine policy:
+Review/quarantine policy:
 
-- Clean rows go to `.bat`.
-- Ambiguous rows go to quarantine with reason and enough source context to edit manually.
-- A kit may still produce a runnable partial `.bat` when only some rows are quarantined.
+- Clean rows go to `convert_<kit>.py`.
+- Optional bleed rows go to `convert_<kit>.py` and `map_<kit>.py` with `keep: False`, and stay in `review-<kit>.csv` with `status=SKIPPED`.
+- Ambiguous rows stay in `review-<kit>.csv` with `status=QUARANTINED`, `reasons`, `action`, source channels, proposed mic, and proposed target path.
+- After editing `map_<kit>.py`, run `convert_<kit>.py --write-review` to regenerate the CSV from the edited map before executing conversion.
+- A kit may still produce a runnable partial conversion script when only some rows are quarantined.
 
-Because `ffmpeg` is not currently on `PATH`, generated batches must rely on the editable `set FFMPEG=ffmpeg` line. The summary should warn when local preflight cannot find ffmpeg.
+Because `ffmpeg` is not currently on `PATH`, generated conversion scripts must rely on the editable `FFMPEG = "ffmpeg"` setting. The summary should warn when local preflight cannot find ffmpeg.
 
 ## Test Plan
 
@@ -211,7 +210,7 @@ Validate generated clean filenames with a Python mirror of `InstrumentSpec::pars
 - no hi-hat velocity parse failures
 - no `x` mic tokens
 - no unknown mic codes
-- no duplicate destinations in clean batch
+- no duplicate destinations in clean conversion script
 
 Compare against working `assets/sample_library` naming rules:
 
@@ -219,12 +218,12 @@ Compare against working `assets/sample_library` naming rules:
 - filename segment order
 - mic-code validity
 
-Run one small batch manually only after review, then scan the generated output with Karatala's library scanner or the focused `Tests` target.
+Run one small conversion script manually only after review, then scan the generated output with Karatala's library scanner or the focused `Tests` target.
 
 ## Assumptions
 
 - The converter is a one-off migration helper, not a polished long-term tool.
 - Generated audio target is lossless FLAC.
-- The Python script produces audit artifacts and `.bat` files but does not execute ffmpeg itself.
+- The generator produces review artifacts and Python conversion scripts but does not execute ffmpeg itself.
 - Quarantine is preferred over failing a whole kit when only some rows are ambiguous.
 - Any implementation touching `T:/source/repos/karatala/scripts/convert-drumgizmo2karatala.py` may need write approval if current sandbox writable roots remain limited to `source`.
