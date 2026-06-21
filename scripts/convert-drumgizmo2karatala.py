@@ -6,11 +6,15 @@ Defaults to dry-run: prints platform-specific commands without executing.
 Usage: python converter.py todo/ --output-dir instruments
 """
 import argparse
+import csv
+import json
 import os
+import shutil
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from collections import defaultdict
+from dataclasses import asdict, dataclass, field
 import re
 
 
@@ -31,6 +35,18 @@ CHANNEL_KEYWORD_MAP = {
     'ride': 'dtm', 
     'tom': 'dtm', 'ftom': 'dtm',
     # 'crash': 'dtm', 'china': 'dtm', 'splash': 'dtm' only hat and ride of cymbals might have direct mic
+}
+
+KNOWN_INSTRUMENT_TYPES = {
+    'percussion', 'drum', 'cymbal', 'kick', 'tom', 'snare', 'ride', 'hihat', 'crash', 'splash', 'china'
+}
+
+INSTRUMENT_TYPE_ALIASES = {
+    'zilbel': 'percussion',
+    'cowbell': 'percussion',
+    'bellchime': 'percussion',
+    'stagg': 'percussion',
+    'cowbell_muff_hi': 'percussion',
 }
 
 # Hi-hat variant mapping: variant_key -> (expression_name, expression_code, default_velocity)
@@ -352,6 +368,10 @@ def map_channel_to_mic(channel_name: str) -> str:
         return code
 
     channel_lower = channel_name.lower()
+    if ('kick' in channel_lower or 'kdrum' in channel_lower) and is_right_channel(channel_name):
+        return 'dom'
+    if ('kick' in channel_lower or 'kdrum' in channel_lower) and is_left_channel(channel_name):
+        return 'dim'
     for key, value in CHANNEL_KEYWORD_MAP.items():
         if key in channel_lower:
             return value
@@ -381,7 +401,11 @@ def parse_instrument_name(name: str):
         'crash': 'crash',
         'splash': 'splash',
         'china': 'china',
-        'cymb': 'crash'
+        'cymb': 'crash',
+        'zilbel': 'percussion',
+        'cowbell': 'percussion',
+        'bellchime': 'percussion',
+        'stagg': 'percussion',
     }
 
     ARTIC = {
@@ -451,7 +475,8 @@ def parse_instrument_name(name: str):
                     articulation = hv[0]
                 break
 
-    return {'type': inst_type or lname, 'size': size, 'articulation': articulation, 'hihat_variant': hihat_variant}
+    resolved_type = INSTRUMENT_TYPE_ALIASES.get(inst_type or lname, inst_type or lname)
+    return {'type': resolved_type, 'source_type': inst_type or lname, 'size': size, 'articulation': articulation, 'hihat_variant': hihat_variant}
 
 
 def _first_number(parts: list) -> int:
@@ -553,16 +578,22 @@ def enumerate_instrument_slots(instruments: list, parsed_by_path: dict) -> dict:
     for idx, (_, _, _, path_key) in enumerate(tom_entries, start=1):
         slot_by_path[path_key] = f"X{idx}"
 
-    # Hi-hat family: always use X-index labels.
+    # Hi-hat family: keep openness/articulation variants for one physical hat in the same slot.
     hihat_entries = []
     for inst in instruments:
         path_key = str(inst['path'])
         parsed = parsed_by_path[path_key]
         if (parsed.get('type') or '').lower() == 'hihat':
-            hihat_entries.append((inst['name'].lower(), path_key))
+            stem_key = _strip_articulation_suffix(inst['name'])
+            hihat_entries.append((stem_key, inst['name'].lower(), path_key))
     hihat_entries.sort()
-    for idx, (_, path_key) in enumerate(hihat_entries, start=1):
-        slot_by_path[path_key] = f"X{idx}"
+    hihat_stem_to_index = {}
+    next_hihat_index = 1
+    for stem_key, _, path_key in hihat_entries:
+        if stem_key not in hihat_stem_to_index:
+            hihat_stem_to_index[stem_key] = next_hihat_index
+            next_hihat_index += 1
+        slot_by_path[path_key] = f"X{hihat_stem_to_index[stem_key]}"
 
     # Side-based cymbals: letter must always have numeric suffix (L1, R1...).
     for side_type in ('crash', 'china', 'splash', 'ride'):
@@ -916,7 +947,7 @@ def process_kit(kit_dir: Path, output_dir: Path, os_name: str):
     return summary
 
 
-def main():
+def legacy_copy_main():
     p = argparse.ArgumentParser(description='Convert Drumgizmo kits to Karatala format (dry-run default)')
     p.add_argument('todo_path', nargs='?', default='todo', help='Path to todo kits root')
     p.add_argument('--output-dir', default='instruments', help='Output dir for organized kits')
@@ -967,6 +998,664 @@ def main():
             f"samples={totals['samples']} commands={totals['commands']} "
             f"missing_source={totals['missing_source']} errors={totals['errors']}"
         )
+
+
+VALID_MIC_RE = re.compile(r'^[dor][ustbionwcf][msi][0-9]?$')
+
+
+@dataclass
+class SourceChannelDecision:
+    channel_name: str
+    source_file: str
+    filechannel: int
+    source_channel_index: int
+    keep: bool
+    mic_code: str
+    group_key: str
+    group_label: str
+    reason: str
+
+
+@dataclass
+class OutputFilePlan:
+    kit: str
+    source_instrument: str
+    instrument_key: str
+    sample_name: str
+    sample_index: int
+    power: float
+    velocity: int
+    variant: str
+    source_xml: str
+    instrument_default: str
+    articulation_default: str
+    param_default: str
+    group_key: str
+    group_label: str
+    mic_default: str
+    keep_var: str
+    mic_var: str
+    source_files: list
+    source_channels: list
+    source_channel_indices: list
+    target_relative: str
+    filename_template: str
+    quarantined: bool = False
+    quarantine_reasons: list = field(default_factory=list)
+
+
+@dataclass
+class KitGenerationSummary:
+    kit: str
+    instruments: int = 0
+    samples: int = 0
+    channel_decisions: int = 0
+    output_plans: int = 0
+    clean_outputs: int = 0
+    quarantined_outputs: int = 0
+    missing_sources: int = 0
+    written_files: list = field(default_factory=list)
+    warnings: list = field(default_factory=list)
+
+
+def split_articulation_param(articulation: str) -> tuple:
+    parts = articulation.split('-')
+    if len(parts) >= 2 and re.match(r'^[a-z_]+\d{1,3}$', parts[-1]):
+        return '-'.join(parts[:-1]), '-' + parts[-1]
+    return articulation, ''
+
+
+def safe_var_token(value: str) -> str:
+    token = re.sub(r'[^A-Za-z0-9]+', '_', value.upper()).strip('_')
+    if not token:
+        token = 'ITEM'
+    if token[0].isdigit():
+        token = 'N_' + token
+    return token
+
+
+def rel_to_root(path: Path, root: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(root.resolve())).replace('/', '\\')
+    except Exception:
+        return str(path.resolve()).replace('/', '\\')
+
+
+def batch_path_var(path: str, root_var: str) -> str:
+    normalized = path.replace('/', '\\')
+    return f"%{root_var}%\\{normalized}"
+
+
+def normalize_channel_name(channel_name: str) -> str:
+    parts = [part.lower() for part in split_camel(channel_name)]
+    parts = [part for part in parts if part not in ('left', 'right', 'l', 'r') and not part.isdigit()]
+    if parts:
+        return ''.join(parts)
+    lowered = channel_name.lower()
+    lowered = re.sub(r'\b(left|right|l|r)\b', '', lowered)
+    lowered = re.sub(r'\d+', '', lowered)
+    return re.sub(r'[^a-z0-9]+', '', lowered)
+
+
+def is_left_channel(channel_name: str) -> bool:
+    parts = [part.lower() for part in split_camel(channel_name)]
+    return any(part in ('left', 'l') for part in parts) or re.search(r'(^|[^a-z])(left|l)([^a-z]|$)', channel_name.lower()) is not None
+
+
+def is_right_channel(channel_name: str) -> bool:
+    parts = [part.lower() for part in split_camel(channel_name)]
+    return any(part in ('right', 'r') for part in parts) or re.search(r'(^|[^a-z])(right|r)([^a-z]|$)', channel_name.lower()) is not None
+
+
+def is_stereo_pair(left_name: str, right_name: str, left_mic: str, right_mic: str) -> bool:
+    if left_mic != right_mic:
+        return False
+    if left_mic not in ('rfs', 'ons', 'ows', 'oni'):
+        return False
+    return normalize_channel_name(left_name) == normalize_channel_name(right_name) and is_left_channel(left_name) and is_right_channel(right_name)
+
+
+def filechannel_to_source_index(audiofiles: list, filechannel: int) -> int:
+    positive_channels = [int(af.get('filechannel') or 0) for af in audiofiles if int(af.get('filechannel') or 0) > 0]
+    if positive_channels:
+        return max(0, filechannel - 1)
+    return max(0, filechannel)
+
+
+def map_channel_group_key(channel_name: str, mic_code: str) -> str:
+    lowered = channel_name.lower()
+    if 'amb' in lowered or 'room' in lowered:
+        return 'AMB'
+    if 'ohcenter' in lowered or ('oh' in lowered and 'center' in lowered):
+        return 'OH_CENTER'
+    if 'oh' in lowered:
+        return 'OH'
+    if 'kdrumoutside' in lowered:
+        return 'KICK_OUT'
+    if ('kick' in lowered or 'kdrum' in lowered) and is_right_channel(channel_name):
+        return 'KICK_OUT'
+    if 'kick' in lowered or 'kdruminside' in lowered:
+        return 'KICK_IN'
+    if 'snare' in lowered and ('bottom' in lowered or 'btm' in lowered):
+        return 'SNARE_BOTTOM'
+    if 'snare' in lowered:
+        return 'SNARE_TOP'
+    if 'hihat' in lowered or 'hh' in lowered:
+        return 'DIRECT'
+    if 'ride' in lowered:
+        return 'DIRECT'
+    if 'tom' in lowered:
+        return 'DIRECT'
+    return safe_var_token(mic_code or channel_name)
+
+
+def build_channel_decisions(inst_file: Path, sample: dict, inst_type: str, inst_name: str, source_root: Path) -> list:
+    audiofiles = sorted(sample['audiofiles'], key=lambda item: int(item['filechannel']))
+    decisions = []
+    for audiofile in audiofiles:
+        channel_name = audiofile['channel'] or ''
+        source = (inst_file.parent / audiofile['file']).resolve()
+        filechannel = int(audiofile['filechannel'] or 0)
+        source_channel_index = filechannel_to_source_index(audiofiles, filechannel)
+        relevant = is_channel_relevant_for_type(inst_type, channel_name, inst_name)
+        mic_code = map_channel_to_mic(channel_name) if relevant else ''
+        group_key = map_channel_group_key(channel_name, mic_code) if relevant else 'DROP'
+        reason = 'keep useful mic' if relevant else 'drop bleed/non-current instrument mic'
+        if relevant and not VALID_MIC_RE.match(mic_code):
+            reason = 'invalid mic code'
+        decisions.append(SourceChannelDecision(
+            channel_name=channel_name,
+            source_file=rel_to_root(source, source_root),
+            filechannel=filechannel,
+            source_channel_index=source_channel_index,
+            keep=relevant and VALID_MIC_RE.match(mic_code) is not None,
+            mic_code=mic_code,
+            group_key=group_key,
+            group_label=channel_name,
+            reason=reason,
+        ))
+    return decisions
+
+
+def group_channel_decisions(decisions: list) -> list:
+    kept = [decision for decision in decisions if decision.keep]
+    groups = []
+    decision_idx = 0
+    while decision_idx < len(kept):
+        current = kept[decision_idx]
+        if decision_idx + 1 < len(kept):
+            following = kept[decision_idx + 1]
+            if is_stereo_pair(current.channel_name, following.channel_name, current.mic_code, following.mic_code):
+                group = [current, following]
+                group_label = current.channel_name + ' + ' + following.channel_name
+                groups.append((current.group_key, group_label, current.mic_code, group))
+                decision_idx += 2
+                continue
+        groups.append((current.group_key, current.channel_name, current.mic_code, [current]))
+        decision_idx += 1
+    return groups
+
+
+def build_filename_template(inst_var: str, art_var: str, velocity: int, variant: str, mic_var: str, audio_format: str) -> str:
+    return f"%{inst_var}%-%{art_var}%-{velocity:03d}{variant}-%{mic_var}%.{audio_format}"
+
+
+def build_default_filename(instrument: str, articulation: str, velocity: int, variant: str, mic_code: str, audio_format: str) -> str:
+    return f"{instrument}-{articulation}-{velocity:03d}{variant}-{mic_code}.{audio_format}"
+
+
+def parse_filename_like_kitlib(file_name: str) -> tuple:
+    stem = Path(file_name).stem
+    parts = stem.split('-')
+    if len(parts) < 5:
+        return False, 'too few dash-separated filename parts'
+    vel_rr = parts[3]
+    split_index = 0
+    while split_index < len(vel_rr) and vel_rr[split_index].isdigit():
+        split_index += 1
+    if split_index == 0:
+        return False, 'velocity segment does not start with digits'
+    velocity = int(vel_rr[:split_index])
+    if velocity <= 0 or velocity > 127:
+        return False, 'velocity out of 1-127 range'
+    mic_tokens = [token for token in parts[4].split('_') if token]
+    if not mic_tokens:
+        return False, 'missing mic token'
+    invalid_mics = [token for token in mic_tokens if not VALID_MIC_RE.match(token)]
+    if invalid_mics:
+        return False, 'invalid mic token(s): ' + ', '.join(invalid_mics)
+    return True, ''
+
+
+def build_output_plans(kit_dir: Path, source_root: Path, audio_format: str) -> tuple:
+    kit = get_kit_info(kit_dir)
+    output_name = kit_dir.name
+    parsed_map = {}
+    parsed_by_path = {}
+    for inst in kit['instruments']:
+        parsed = parse_instrument_name(inst['name'])
+        parsed_map[inst['name']] = parsed
+        parsed_by_path[str(inst['path'])] = parsed
+
+    slot_by_path = enumerate_instrument_slots(kit['instruments'], parsed_by_path)
+    plans = []
+    channel_decisions = []
+    summary = KitGenerationSummary(kit=output_name, instruments=len(kit['instruments']))
+    used_instrument_keys = {}
+
+    for inst in kit['instruments']:
+        inst_name = inst['name']
+        parsed = parsed_map[inst_name]
+        inst_type = (parsed['type'] or inst_name).lower()
+        inst_type = INSTRUMENT_TYPE_ALIASES.get(inst_type, inst_type)
+        size_label = slot_by_path.get(str(inst['path']), 'X1')
+        instrument_default = inst_type + (f"-{size_label}" if size_label else '')
+        articulation_with_param = resolve_articulation(parsed, inst_type)
+        articulation_default, param_default = split_articulation_param(articulation_with_param)
+        instrument_key = safe_var_token(inst_name)
+        if instrument_key in used_instrument_keys and used_instrument_keys[instrument_key] != inst_name:
+            instrument_key = instrument_key + '_' + str(len(used_instrument_keys) + 1)
+        used_instrument_keys[instrument_key] = inst_name
+
+        inst_file = inst.get('path')
+        if not inst_file or not Path(inst_file).exists():
+            summary.warnings.append(f"Instrument XML missing: {inst_file}")
+            continue
+
+        samples = parse_instrument_xml(inst_file)
+        summary.samples += len(samples)
+        max_power = max((sample['power'] for sample in samples), default=0.0)
+        velocity_counters = defaultdict(int)
+
+        for sample_idx, sample in enumerate(samples):
+            if not sample['audiofiles']:
+                summary.warnings.append(f"No audiofiles: {inst_name}/{sample.get('name')}")
+                continue
+
+            hihat_variant = parsed.get('hihat_variant') if parsed else None
+            velocity = infer_velocity(sample['power'], max_power, sample['name'], sample_idx, len(samples), inst_type=inst_type, hihat_variant=hihat_variant)
+            variant_count = velocity_counters[velocity]
+            variant = assign_variant(variant_count)
+            velocity_counters[velocity] += 1
+
+            decisions = build_channel_decisions(Path(inst_file), sample, inst_type, inst_name, source_root)
+            channel_decisions.extend([{
+                'kit': output_name,
+                'source_instrument': inst_name,
+                'sample': sample['name'],
+                **asdict(decision)
+            } for decision in decisions])
+
+            groups = group_channel_decisions(decisions)
+            if not groups:
+                plans.append(OutputFilePlan(
+                    kit=output_name,
+                    source_instrument=inst_name,
+                    instrument_key=instrument_key,
+                    sample_name=sample['name'],
+                    sample_index=sample_idx,
+                    power=sample['power'],
+                    velocity=velocity,
+                    variant=variant,
+                    source_xml=rel_to_root(Path(inst_file), source_root),
+                    instrument_default=instrument_default,
+                    articulation_default=articulation_default,
+                    param_default=param_default,
+                    group_key='NO_MIC',
+                    group_label='No kept mic',
+                    mic_default='',
+                    keep_var=f"__KEEP_{instrument_key}_NO_MIC",
+                    mic_var=f"__MIC_{instrument_key}_NO_MIC",
+                    source_files=[],
+                    source_channels=[],
+                    source_channel_indices=[],
+                    target_relative='',
+                    filename_template='',
+                    quarantined=True,
+                    quarantine_reasons=['no kept useful mic channels'],
+                ))
+                continue
+
+            for group_key, group_label, mic_code, group in groups:
+                group_token = safe_var_token(group_key)
+                keep_var = f"__KEEP_{instrument_key}_{group_token}"
+                mic_var = f"__MIC_{instrument_key}_{group_token}"
+                filename_template = build_filename_template(f"__INS_{instrument_key}", f"__ART_{instrument_key}", velocity, variant, mic_var, audio_format)
+                default_filename = build_default_filename(instrument_default, articulation_default, velocity, variant, mic_code, audio_format)
+                target_relative = str(Path(output_name) / instrument_default / (articulation_default + param_default) / default_filename).replace('/', '\\')
+                plan = OutputFilePlan(
+                    kit=output_name,
+                    source_instrument=inst_name,
+                    instrument_key=instrument_key,
+                    sample_name=sample['name'],
+                    sample_index=sample_idx,
+                    power=sample['power'],
+                    velocity=velocity,
+                    variant=variant,
+                    source_xml=rel_to_root(Path(inst_file), source_root),
+                    instrument_default=instrument_default,
+                    articulation_default=articulation_default,
+                    param_default=param_default,
+                    group_key=group_token,
+                    group_label=group_label,
+                    mic_default=mic_code,
+                    keep_var=keep_var,
+                    mic_var=mic_var,
+                    source_files=[decision.source_file for decision in group],
+                    source_channels=[decision.channel_name for decision in group],
+                    source_channel_indices=[decision.source_channel_index for decision in group],
+                    target_relative=target_relative,
+                    filename_template=filename_template,
+                )
+                default_ok, default_error = parse_filename_like_kitlib(default_filename)
+                if not default_ok:
+                    plan.quarantined = True
+                    plan.quarantine_reasons.append(default_error)
+                if inst_type not in KNOWN_INSTRUMENT_TYPES:
+                    plan.quarantined = True
+                    plan.quarantine_reasons.append(f"unknown instrument type: {inst_type}")
+                if variant_count >= 26:
+                    plan.quarantined = True
+                    plan.quarantine_reasons.append('round-robin letter overflow')
+                for source_file in plan.source_files:
+                    if not (source_root / source_file).exists():
+                        plan.quarantined = True
+                        plan.quarantine_reasons.append(f"missing source: {source_file}")
+                        summary.missing_sources += 1
+                plans.append(plan)
+
+    target_counts = defaultdict(list)
+    for plan in plans:
+        if plan.target_relative:
+            target_counts[plan.target_relative.lower()].append(plan)
+    for duplicates in target_counts.values():
+        if len(duplicates) <= 1:
+            continue
+        for plan in duplicates:
+            plan.quarantined = True
+            if 'duplicate target path' not in plan.quarantine_reasons:
+                plan.quarantine_reasons.append('duplicate target path')
+
+    summary.channel_decisions = len(channel_decisions)
+    summary.output_plans = len(plans)
+    summary.clean_outputs = sum(1 for plan in plans if not plan.quarantined)
+    summary.quarantined_outputs = sum(1 for plan in plans if plan.quarantined)
+    return kit, plans, channel_decisions, summary
+
+
+def write_text_if_allowed(path: Path, text: str, overwrite: bool = True) -> bool:
+    if path.exists() and not overwrite:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding='utf-8', newline='\n')
+    return True
+
+
+def collect_instrument_defaults(plans: list) -> dict:
+    result = {}
+    for plan in plans:
+        if plan.instrument_key not in result:
+            result[plan.instrument_key] = {
+                'source_instrument': plan.source_instrument,
+                'instrument': plan.instrument_default,
+                'articulation': plan.articulation_default,
+                'param': plan.param_default,
+                'groups': {},
+            }
+        if plan.group_key and plan.mic_default:
+            result[plan.instrument_key]['groups'][plan.group_key] = {
+                'label': plan.group_label,
+                'mic': plan.mic_default,
+                'keep_var': plan.keep_var,
+                'mic_var': plan.mic_var,
+            }
+    return result
+
+
+def generate_env_bat(source_root: Path, output_dir: Path, tmp_root: str, ffmpeg: str) -> str:
+    source_root_text = os.path.abspath(source_root)
+    output_dir_text = os.path.abspath(output_dir)
+    lines = [
+        '@echo off',
+        'REM Shared DrumGizmo -> Karatala conversion settings.',
+        f'set "SRC_ROOT={source_root_text}"',
+        f'set "OUT_ROOT={output_dir_text}"',
+        f'set "TMP_ROOT={tmp_root}"',
+        f'set "FFMPEG={ffmpeg}"',
+        '',
+    ]
+    return '\n'.join(lines)
+
+
+def generate_map_bat(kit_dir: Path, plans: list) -> str:
+    defaults = collect_instrument_defaults(plans)
+    lines = [
+        '@echo off',
+        f'REM Auto-generated review map for {kit_dir.name}.',
+        'REM Edit values here, then run the corresponding convert batch.',
+        '',
+    ]
+    for instrument_key, info in defaults.items():
+        lines.extend([
+            f'REM ######### source instrument: {info["source_instrument"]} #########',
+            f'REM Planned slot: {info["source_instrument"]} -> {info["instrument"]}\\{info["articulation"]}{info["param"]}',
+            f'set "__INS_{instrument_key}={info["instrument"]}"',
+            f'set "__ART_{instrument_key}={info["articulation"]}"',
+            f'set "__PRM_{instrument_key}={info["param"]}"',
+            '',
+            f'REM Microphone groups for {info["source_instrument"]}.',
+        ])
+        for _, group in sorted(info['groups'].items()):
+            lines.extend([
+                f'REM {group["label"]} -> {group["mic"]}',
+                f'set "{group["keep_var"]}=1"',
+                f'set "{group["mic_var"]}={group["mic"]}"',
+                '',
+            ])
+        lines.append('')
+    return '\n'.join(lines)
+
+
+def path_with_src_root(source_file: str) -> str:
+    return batch_path_var(source_file, 'SRC_ROOT')
+
+
+def target_folder_for_plan(plan: OutputFilePlan) -> str:
+    return f"%OUT_ROOT%\\{plan.kit}\\%__INS_{plan.instrument_key}%\\%__ART_{plan.instrument_key}%%__PRM_{plan.instrument_key}%"
+
+
+def target_path_for_plan(plan: OutputFilePlan) -> str:
+    return target_folder_for_plan(plan) + '\\' + plan.filename_template
+
+
+def ffmpeg_command_for_plan(plan: OutputFilePlan) -> str:
+    output = target_path_for_plan(plan)
+    if len(plan.source_files) == 1:
+        source = path_with_src_root(plan.source_files[0])
+        channel_index = plan.source_channel_indices[0] if plan.source_channel_indices else 0
+        return f'"%FFMPEG%" -y -i "{source}" -map_channel 0.0.{channel_index} -c:a flac "{output}"'
+    if len(plan.source_files) == 2 and plan.source_files[0].lower() == plan.source_files[1].lower():
+        source = path_with_src_root(plan.source_files[0])
+        left_idx = plan.source_channel_indices[0]
+        right_idx = plan.source_channel_indices[1]
+        return f'"%FFMPEG%" -y -i "{source}" -filter_complex "[0:a]pan=stereo|c0=c{left_idx}|c1=c{right_idx}[a]" -map "[a]" -c:a flac "{output}"'
+    if len(plan.source_files) == 2:
+        left = path_with_src_root(plan.source_files[0])
+        right = path_with_src_root(plan.source_files[1])
+        return f'"%FFMPEG%" -y -i "{left}" -i "{right}" -filter_complex "[0:a][1:a]amerge=inputs=2[a]" -map "[a]" -c:a flac "{output}"'
+    sources = ' '.join(f'-i "{path_with_src_root(source)}"' for source in plan.source_files)
+    return f'REM Unsupported source grouping, review manually: "%FFMPEG%" -y {sources} -c:a flac "{output}"'
+
+
+def generate_convert_bat(kit_dir: Path, plans: list) -> str:
+    safe_kit = re.sub(r'[^A-Za-z0-9_.-]+', '_', kit_dir.name).strip('_') or 'kit'
+    lines = [
+        '@echo off',
+        'setlocal EnableExtensions',
+        'call "%~dp0..\\_common\\drumgizmo-env.bat"',
+        f'call "%~dp0map-{safe_kit}.bat"',
+        '',
+        f'REM Generated clean conversion commands for {kit_dir.name}.',
+        'if not exist "%OUT_ROOT%" mkdir "%OUT_ROOT%"',
+        'if not exist "%TMP_ROOT%" mkdir "%TMP_ROOT%"',
+        '',
+    ]
+    for plan in plans:
+        if plan.quarantined:
+            continue
+        folder = target_folder_for_plan(plan)
+        lines.extend([
+            f'REM XML: %SRC_ROOT%\\{plan.source_xml}',
+            f'REM sample: {plan.sample_name} power={plan.power:.12g} velocity={plan.velocity:03d} rr={plan.variant}',
+            f'REM channels: {", ".join(plan.source_channels)} -> %{plan.mic_var}% keep=%{plan.keep_var}%',
+            f'if not exist "{folder}" mkdir "{folder}"',
+            f'if "%{plan.keep_var}%"=="1" {ffmpeg_command_for_plan(plan)}',
+            '',
+        ])
+    return '\n'.join(lines)
+
+
+def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: list, channel_decisions: list, summary: KitGenerationSummary) -> list:
+    safe_kit = re.sub(r'[^A-Za-z0-9_.-]+', '_', kit_dir.name).strip('_') or 'kit'
+    audit_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+
+    audit_csv = audit_dir / f'audit-{safe_kit}.csv'
+    with audit_csv.open('w', encoding='utf-8', newline='') as csv_file:
+        fieldnames = ['kit', 'source_instrument', 'sample', 'channel_name', 'source_file', 'filechannel', 'source_channel_index', 'keep', 'mic_code', 'group_key', 'group_label', 'reason']
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in channel_decisions:
+            writer.writerow({key: row.get(key, '') for key in fieldnames})
+    written.append(str(audit_csv))
+
+    quarantine_csv = audit_dir / f'quarantine-{safe_kit}.csv'
+    with quarantine_csv.open('w', encoding='utf-8', newline='') as csv_file:
+        fieldnames = ['kit', 'source_instrument', 'sample_name', 'group_label', 'target_relative', 'reasons']
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+        for plan in plans:
+            if plan.quarantined:
+                writer.writerow({
+                    'kit': plan.kit,
+                    'source_instrument': plan.source_instrument,
+                    'sample_name': plan.sample_name,
+                    'group_label': plan.group_label,
+                    'target_relative': plan.target_relative,
+                    'reasons': '; '.join(plan.quarantine_reasons),
+                })
+    written.append(str(quarantine_csv))
+
+    manifest_json = audit_dir / f'manifest-{safe_kit}.json'
+    manifest_json.write_text(json.dumps({
+        'kit': kit_dir.name,
+        'output_dir': str(output_dir.resolve()),
+        'summary': asdict(summary),
+        'plans': [asdict(plan) for plan in plans],
+    }, indent=2), encoding='utf-8')
+    written.append(str(manifest_json))
+
+    summary_md = audit_dir / f'summary-{safe_kit}.md'
+    summary_lines = [
+        f'# DrumGizmo Migration Summary: {kit_dir.name}',
+        '',
+        f'- Instruments: {summary.instruments}',
+        f'- Samples: {summary.samples}',
+        f'- Channel decisions: {summary.channel_decisions}',
+        f'- Output plans: {summary.output_plans}',
+        f'- Clean outputs in batch: {summary.clean_outputs}',
+        f'- Quarantined outputs: {summary.quarantined_outputs}',
+        f'- Missing sources: {summary.missing_sources}',
+        f'- ffmpeg on PATH: {"yes" if shutil.which("ffmpeg") else "no"}',
+        '',
+        '## Warnings',
+        '',
+    ]
+    if summary.warnings:
+        summary_lines.extend(f'- {warning}' for warning in summary.warnings)
+    else:
+        summary_lines.append('- None')
+    summary_lines.extend([
+        '',
+        '## Next Actions',
+        '',
+        '1. Review the generated map batch and quarantine CSV.',
+        '2. Edit map variables for any desired instrument/articulation/mic replacements.',
+        '3. Install or point `FFMPEG` to ffmpeg before running conversion batches.',
+        '4. Run the generated conversion batch for one kit first, then scan the output in Karatala.',
+        '',
+    ])
+    summary_md.write_text('\n'.join(summary_lines), encoding='utf-8', newline='\n')
+    written.append(str(summary_md))
+    return written
+
+
+def process_kit_v2(kit_dir: Path, output_dir: Path, source_root: Path, args) -> KitGenerationSummary:
+    _, plans, channel_decisions, summary = build_output_plans(kit_dir, source_root, args.audio_format)
+    safe_kit = re.sub(r'[^A-Za-z0-9_.-]+', '_', kit_dir.name).strip('_') or 'kit'
+    kit_output_dir = output_dir / kit_dir.name
+    audit_dir = Path(args.audit_dir) if args.audit_dir and len(args.kits_to_process) == 1 else kit_output_dir / '_audit'
+    common_dir = output_dir / '_common'
+
+    env_path = common_dir / 'drumgizmo-env.bat'
+    map_path = kit_output_dir / f'map-{safe_kit}.bat'
+    convert_path = kit_output_dir / f'convert-{safe_kit}.bat'
+
+    write_text_if_allowed(env_path, generate_env_bat(source_root, output_dir, args.tmp_root, args.ffmpeg), overwrite=True)
+    map_written = write_text_if_allowed(map_path, generate_map_bat(kit_dir, plans), overwrite=args.overwrite_map)
+    write_text_if_allowed(convert_path, generate_convert_bat(kit_dir, plans), overwrite=True)
+    summary.written_files.extend([str(env_path), str(convert_path)])
+    if map_written:
+        summary.written_files.append(str(map_path))
+    else:
+        summary.warnings.append(f"Map file exists and was not overwritten: {map_path}")
+
+    summary.written_files.extend(write_audit_files(kit_dir, output_dir, audit_dir, plans, channel_decisions, summary))
+    print(
+        f"{kit_dir.name}: instruments={summary.instruments} samples={summary.samples} "
+        f"clean_outputs={summary.clean_outputs} quarantined={summary.quarantined_outputs}"
+    )
+    return summary
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Generate DrumGizmo -> Karatala audit reports and conversion batches')
+    parser.add_argument('todo_path', nargs='?', default='todo', help='Path to one DrumGizmo kit or a root containing kit folders')
+    parser.add_argument('--output-dir', default='instruments', help='Output directory for generated batches and planned library output')
+    parser.add_argument('--audit-dir', default='', help='Override audit output directory for single-kit runs')
+    parser.add_argument('--tmp-root', default=r'%TEMP%\karatala-drumgizmo', help='Batch temp root')
+    parser.add_argument('--ffmpeg', default='ffmpeg', help='ffmpeg executable/path to place in generated env batch')
+    parser.add_argument('--audio-format', default='flac', choices=['flac'], help='Generated audio format')
+    parser.add_argument('--overwrite-map', action='store_true', help='Overwrite existing map-<kit>.bat files')
+    args = parser.parse_args()
+
+    todo = Path(args.todo_path)
+    if not todo.exists():
+        print(f"Path not found: {todo}")
+        sys.exit(1)
+
+    kit_xml = todo / f"{todo.name}.xml"
+    is_single_kit = kit_xml.exists() or (list(todo.glob('*.xml')) and find_all_instruments(todo))
+    kits = [todo] if is_single_kit else find_kits(todo)
+    args.kits_to_process = kits
+    source_root = todo.parent if is_single_kit else todo
+    output_dir = Path(args.output_dir)
+
+    totals = KitGenerationSummary(kit='TOTAL')
+    for kit_dir in kits:
+        kit_summary = process_kit_v2(kit_dir, output_dir, source_root, args)
+        totals.instruments += kit_summary.instruments
+        totals.samples += kit_summary.samples
+        totals.channel_decisions += kit_summary.channel_decisions
+        totals.output_plans += kit_summary.output_plans
+        totals.clean_outputs += kit_summary.clean_outputs
+        totals.quarantined_outputs += kit_summary.quarantined_outputs
+        totals.missing_sources += kit_summary.missing_sources
+
+    print(
+        f"Total: kits={len(kits)} instruments={totals.instruments} samples={totals.samples} "
+        f"clean_outputs={totals.clean_outputs} quarantined={totals.quarantined_outputs}"
+    )
 
 
 if __name__ == '__main__':
