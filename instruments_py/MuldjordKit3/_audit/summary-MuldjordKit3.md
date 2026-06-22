@@ -3,10 +3,10 @@
 - Instruments: 17
 - Samples: 302
 - Channel decisions: 4832
-- Output plans: 4530
-- Ready outputs enabled by default: 646
-- Skipped optional outputs in convert script: 3127
-- Quarantined outputs: 757
+- Output plans: 4228
+- Ready outputs enabled by default: 859
+- Skipped optional outputs in convert script: 3169
+- Quarantined outputs: 200
 - Missing sources: 0
 - ffmpeg on PATH: yes
 

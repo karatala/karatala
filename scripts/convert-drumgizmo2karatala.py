@@ -367,14 +367,20 @@ def map_channel_to_mic(channel_name: str) -> str:
         return code
 
     channel_lower = channel_name.lower()
+    if 'amb' in channel_lower or 'room' in channel_lower:
+        return 'rfs'
+    if 'oh' in channel_lower:
+        return 'ons'
     if 'snare' in channel_lower and ('bottom' in channel_lower or 'btm' in channel_lower):
         return 'dbm'
     if 'snare' in channel_lower and 'trigger' in channel_lower:
         return 'dtm1'
     if 'snare' in channel_lower:
         return 'dtm'
-    if ('kick' in channel_lower or 'kdrum' in channel_lower) and is_right_channel(channel_name):
+    if ('kick' in channel_lower or 'kdrum' in channel_lower) and ('out' in channel_lower or 'outside' in channel_lower):
         return 'dom'
+    if ('kick' in channel_lower or 'kdrum' in channel_lower) and is_right_channel(channel_name):
+        return 'dim'
     if ('kick' in channel_lower or 'kdrum' in channel_lower) and is_left_channel(channel_name):
         return 'dim'
     for key, value in CHANNEL_KEYWORD_MAP.items():
@@ -717,6 +723,12 @@ def is_channel_relevant_for_type(inst_type: str, channel_name: str, inst_name: s
             return has_word(['tom', 'ftom'])
     if t == 'hihat':
         return has_word(['hihat', 'hh']) or ambient or overhead
+    if t == 'ride':
+        if ambient or overhead:
+            return True
+        if inst_name:
+            return cl.startswith(inst_name.lower())
+        return has_word(['ride'])
     # default: allow amb/oh and exact type matches
     return ambient or overhead or t in parts_lower
 
@@ -1094,21 +1106,29 @@ def normalize_channel_name(channel_name: str) -> str:
     parts = [part.lower() for part in split_camel(channel_name)]
     parts = [part for part in parts if part not in ('left', 'right', 'l', 'r') and not part.isdigit()]
     if parts:
-        return ''.join(parts)
+        compact = ''.join(parts)
+        if len(compact) > 1 and compact[-1] in ('l', 'r'):
+            return compact[:-1]
+        return compact
     lowered = channel_name.lower()
     lowered = re.sub(r'\b(left|right|l|r)\b', '', lowered)
     lowered = re.sub(r'\d+', '', lowered)
-    return re.sub(r'[^a-z0-9]+', '', lowered)
+    compact = re.sub(r'[^a-z0-9]+', '', lowered)
+    if len(compact) > 1 and compact[-1] in ('l', 'r'):
+        return compact[:-1]
+    return compact
 
 
 def is_left_channel(channel_name: str) -> bool:
     parts = [part.lower() for part in split_camel(channel_name)]
-    return any(part in ('left', 'l') for part in parts) or re.search(r'(^|[^a-z])(left|l)([^a-z]|$)', channel_name.lower()) is not None
+    compact = re.sub(r'[^a-z0-9]+', '', channel_name.lower())
+    return any(part in ('left', 'l') for part in parts) or compact.endswith('l') or re.search(r'(^|[^a-z])(left|l)([^a-z]|$)', channel_name.lower()) is not None
 
 
 def is_right_channel(channel_name: str) -> bool:
     parts = [part.lower() for part in split_camel(channel_name)]
-    return any(part in ('right', 'r') for part in parts) or re.search(r'(^|[^a-z])(right|r)([^a-z]|$)', channel_name.lower()) is not None
+    compact = re.sub(r'[^a-z0-9]+', '', channel_name.lower())
+    return any(part in ('right', 'r') for part in parts) or compact.endswith('r') or re.search(r'(^|[^a-z])(right|r)([^a-z]|$)', channel_name.lower()) is not None
 
 
 def is_stereo_pair(left_name: str, right_name: str, left_mic: str, right_mic: str) -> bool:
@@ -1128,17 +1148,28 @@ def filechannel_to_source_index(audiofiles: list, filechannel: int) -> int:
 
 def map_channel_group_key(channel_name: str, mic_code: str) -> str:
     lowered = channel_name.lower()
+    compact = re.sub(r'[^a-z0-9]+', '', lowered)
     if 'amb' in lowered or 'room' in lowered:
         return 'AMB'
     if 'ohcenter' in lowered or ('oh' in lowered and 'center' in lowered):
         return 'OH_CENTER'
     if 'oh' in lowered:
         return 'OH'
+    if compact == 'kdruml':
+        return 'KDRUML'
+    if compact == 'kdrumr':
+        return 'KDRUMR'
+    if ('kick' in lowered or 'kdrum' in lowered) and ('trg' in lowered or 'trigger' in lowered):
+        return 'KICK_TRIGGER'
     if 'kdrumoutside' in lowered:
         return 'KICK_OUT'
-    if ('kick' in lowered or 'kdrum' in lowered) and is_right_channel(channel_name):
-        return 'KICK_OUT'
-    if 'kick' in lowered or 'kdruminside' in lowered:
+    if 'kdruminside' in lowered:
+        return 'KICK_IN'
+    if 'kick' in lowered and is_left_channel(channel_name):
+        return 'KICK_L'
+    if 'kick' in lowered and is_right_channel(channel_name):
+        return 'KICK_R'
+    if 'kick' in lowered:
         return 'KICK_IN'
     if 'snare' in lowered and ('bottom' in lowered or 'btm' in lowered):
         return 'SNARE_BOTTOM'
@@ -1148,6 +1179,10 @@ def map_channel_group_key(channel_name: str, mic_code: str) -> str:
         return 'SNARE_TOP'
     if 'hihat' in lowered or 'hh' in lowered:
         return 'HIHAT'
+    if compact == 'ridel':
+        return 'RIDEL'
+    if compact == 'rider':
+        return 'RIDER'
     if 'ride' in lowered:
         return 'RIDE'
     ftom_match = re.search(r'ftom\s*([0-9]+)', lowered)
@@ -1413,6 +1448,13 @@ def write_text_if_allowed(path: Path, text: str, overwrite: bool = True) -> bool
     path.write_text(text, encoding='utf-8', newline='\n')
     return True
 
+def format_group_label_with_indices(label: str, source_channel_indices: list) -> str:
+    if not source_channel_indices:
+        return label
+    labels = label.split(' + ')
+    if len(labels) == len(source_channel_indices):
+        return ' + '.join(f'{name}[srcch{source_channel_indices[idx]}]' for idx, name in enumerate(labels))
+    return label + ' [' + ','.join(f'srcch{idx}' for idx in source_channel_indices) + ']'
 
 def collect_instrument_defaults(plans: list) -> dict:
     result = {}
@@ -1429,7 +1471,7 @@ def collect_instrument_defaults(plans: list) -> dict:
             existing = result[plan.instrument_key]['groups'].get(plan.group_key)
             group_keep = plan.default_keep or (existing is not None and existing.get('keep', False))
             result[plan.instrument_key]['groups'][plan.group_key] = {
-                'label': plan.group_label,
+                'label': format_group_label_with_indices(plan.group_label, plan.source_channel_indices),
                 'mic': plan.mic_default,
                 'keep': group_keep,
                 'keep_var': plan.keep_var,
@@ -1940,6 +1982,8 @@ def process_kit_v2(kit_dir: Path, output_dir: Path, source_root: Path, args) -> 
         summary.warnings.append(f"Map file exists and was not overwritten: {map_path}")
 
     summary.written_files.extend(write_audit_files(kit_dir, output_dir, audit_dir, plans, channel_decisions, summary))
+    if args.write_review:
+        subprocess.run([sys.executable, str(convert_path), '--write-review'], check=True)
     print(
         f"{kit_dir.name}: instruments={summary.instruments} samples={summary.samples} "
         f"clean_outputs={summary.clean_outputs} quarantined={summary.quarantined_outputs}"
@@ -1956,6 +2000,7 @@ def main():
     parser.add_argument('--ffmpeg', default='ffmpeg', help='ffmpeg executable/path to place in generated settings')
     parser.add_argument('--audio-format', default='flac', choices=['flac'], help='Generated audio format')
     parser.add_argument('--overwrite-map', action='store_true', help='Overwrite existing map_<kit>.py files')
+    parser.add_argument('--write-review', action='store_true', help='After generating scripts, refresh review CSVs using existing map_<kit>.py files')
     args = parser.parse_args()
 
     todo = Path(args.todo_path)

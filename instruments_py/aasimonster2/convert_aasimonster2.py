@@ -78,7 +78,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-1',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.0133967,
@@ -92,13 +92,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-1',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.0133967,
@@ -109,10 +109,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\1-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -360,7 +360,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-2',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.0229291,
@@ -374,13 +374,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-2',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.0229291,
@@ -391,10 +391,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\2-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -642,7 +642,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-3',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.0320974,
@@ -656,13 +656,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-3',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.0320974,
@@ -673,10 +673,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\3-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -924,7 +924,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-4',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.102495,
@@ -938,13 +938,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-4',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.102495,
@@ -955,10 +955,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\4-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -1206,7 +1206,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-5',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.128792,
@@ -1220,13 +1220,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-5',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.128792,
@@ -1237,10 +1237,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\5-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -1488,7 +1488,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-6',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.155945,
@@ -1502,13 +1502,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-6',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.155945,
@@ -1519,10 +1519,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\6-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -1770,7 +1770,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-7',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.204777,
@@ -1784,13 +1784,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-7',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.204777,
@@ -1801,10 +1801,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\7-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -2052,7 +2052,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-8',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.243492,
@@ -2066,13 +2066,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-8',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.243492,
@@ -2083,10 +2083,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\8-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -2334,7 +2334,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-9',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.258977,
@@ -2348,13 +2348,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-9',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.258977,
@@ -2365,10 +2365,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\9-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -2616,7 +2616,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-10',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.297901,
@@ -2630,13 +2630,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-10',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.297901,
@@ -2647,10 +2647,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\10-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -2898,7 +2898,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-11',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.322402,
@@ -2912,13 +2912,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-11',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.322402,
@@ -2929,10 +2929,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\11-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -3180,7 +3180,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-12',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.358248,
@@ -3194,13 +3194,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-12',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.358248,
@@ -3211,10 +3211,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\12-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -3462,7 +3462,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-13',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.413296,
@@ -3476,13 +3476,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-13',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.413296,
@@ -3493,10 +3493,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\13-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -3744,7 +3744,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-14',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.464937,
@@ -3758,13 +3758,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-14',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.464937,
@@ -3775,10 +3775,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\14-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -4026,7 +4026,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-15',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.509623,
@@ -4040,13 +4040,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-15',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.509623,
@@ -4057,10 +4057,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\15-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -4308,7 +4308,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-16',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.525046,
@@ -4322,13 +4322,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-16',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.525046,
@@ -4339,10 +4339,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\16-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -4590,7 +4590,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-17',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.568538,
@@ -4604,13 +4604,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-17',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.568538,
@@ -4621,10 +4621,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\17-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -4872,7 +4872,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-18',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.65307,
@@ -4886,13 +4886,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-18',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.65307,
@@ -4903,10 +4903,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\18-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -5154,7 +5154,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-19',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.67204,
@@ -5168,13 +5168,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-19',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.67204,
@@ -5185,10 +5185,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\19-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -5436,7 +5436,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-20',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.704225,
@@ -5450,13 +5450,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-20',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.704225,
@@ -5467,10 +5467,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\20-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -5718,7 +5718,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_10_inch-21',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.807425,
@@ -5732,13 +5732,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_10_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_10_inch-21',
         source_xml='aasimonster2\\china_10_inch\\china_10_inch.xml',
         power=0.807425,
@@ -5749,10 +5749,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_10_inch\\samples\\21-china_10_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -6000,7 +6000,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-1',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0127685,
@@ -6014,13 +6014,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-1',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0127685,
@@ -6031,10 +6031,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\1-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -6282,7 +6282,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-2',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0272692,
@@ -6296,13 +6296,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-2',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0272692,
@@ -6313,10 +6313,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\2-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -6564,7 +6564,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-3',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0439963,
@@ -6578,13 +6578,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-3',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0439963,
@@ -6595,10 +6595,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\3-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -6846,7 +6846,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-4',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0766086,
@@ -6860,13 +6860,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-4',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.0766086,
@@ -6877,10 +6877,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\4-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -7128,7 +7128,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-5',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.1546,
@@ -7142,13 +7142,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-5',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.1546,
@@ -7159,10 +7159,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\5-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -7410,7 +7410,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-6',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.17803,
@@ -7424,13 +7424,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-6',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.17803,
@@ -7441,10 +7441,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\6-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -7692,7 +7692,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-7',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.190775,
@@ -7706,13 +7706,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-7',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.190775,
@@ -7723,10 +7723,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\7-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -7974,7 +7974,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-8',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.352189,
@@ -7988,13 +7988,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-8',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.352189,
@@ -8005,10 +8005,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\8-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -8256,7 +8256,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-9',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.446387,
@@ -8270,13 +8270,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-9',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.446387,
@@ -8287,10 +8287,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\9-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -8538,7 +8538,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-10',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.782506,
@@ -8552,13 +8552,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-10',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.782506,
@@ -8569,10 +8569,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\10-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -8820,7 +8820,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-11',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.859694,
@@ -8834,13 +8834,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-11',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.859694,
@@ -8851,10 +8851,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\11-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -9102,7 +9102,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-12',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.927986,
@@ -9116,13 +9116,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-12',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=0.927986,
@@ -9133,10 +9133,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\12-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -9384,7 +9384,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-13',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.03072,
@@ -9398,13 +9398,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-13',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.03072,
@@ -9415,10 +9415,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\13-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -9666,7 +9666,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-14',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.06351,
@@ -9680,13 +9680,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-14',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.06351,
@@ -9697,10 +9697,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\14-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -9948,7 +9948,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-15',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.18792,
@@ -9962,13 +9962,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-15',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.18792,
@@ -9979,10 +9979,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\15-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -10230,7 +10230,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-16',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.33295,
@@ -10244,13 +10244,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-16',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.33295,
@@ -10261,10 +10261,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\16-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -10512,7 +10512,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-17',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.33867,
@@ -10526,13 +10526,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-17',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.33867,
@@ -10543,10 +10543,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\17-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -10794,7 +10794,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-18',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.34568,
@@ -10808,13 +10808,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-18',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.34568,
@@ -10825,10 +10825,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\18-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -11076,7 +11076,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-19',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.46871,
@@ -11090,13 +11090,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-19',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.46871,
@@ -11107,10 +11107,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\19-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -11358,7 +11358,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_18_inch-20',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.48843,
@@ -11372,13 +11372,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_18_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_18_inch-20',
         source_xml='aasimonster2\\china_18_inch\\china_18_inch.xml',
         power=1.48843,
@@ -11389,10 +11389,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_18_inch\\samples\\20-china_18_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -11640,7 +11640,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-1',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.00126881,
@@ -11654,13 +11654,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-1',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.00126881,
@@ -11671,10 +11671,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\1-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -11922,7 +11922,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-2',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.00443147,
@@ -11936,13 +11936,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-2',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.00443147,
@@ -11953,10 +11953,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\2-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -12204,7 +12204,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-3',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.00547979,
@@ -12218,13 +12218,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-3',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.00547979,
@@ -12235,10 +12235,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\3-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -12486,7 +12486,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-4',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0127303,
@@ -12500,13 +12500,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-4',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0127303,
@@ -12517,10 +12517,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\4-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -12768,7 +12768,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-5',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0147454,
@@ -12782,13 +12782,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-5',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0147454,
@@ -12799,10 +12799,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\5-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -13050,7 +13050,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-6',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0221498,
@@ -13064,13 +13064,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-6',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0221498,
@@ -13081,10 +13081,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\6-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -13332,7 +13332,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-7',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0252839,
@@ -13346,13 +13346,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-7',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0252839,
@@ -13363,10 +13363,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\7-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -13614,7 +13614,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-8',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0460655,
@@ -13628,13 +13628,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-8',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0460655,
@@ -13645,10 +13645,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\8-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -13896,7 +13896,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-9',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0489565,
@@ -13910,13 +13910,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-9',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0489565,
@@ -13927,10 +13927,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\9-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -14178,7 +14178,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-10',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0688418,
@@ -14192,13 +14192,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-10',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.0688418,
@@ -14209,10 +14209,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\10-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -14460,7 +14460,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-11',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.134718,
@@ -14474,13 +14474,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-11',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.134718,
@@ -14491,10 +14491,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\11-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -14742,7 +14742,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-12',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.154384,
@@ -14756,13 +14756,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-12',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.154384,
@@ -14773,10 +14773,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\12-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -15024,7 +15024,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-13',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.198807,
@@ -15038,13 +15038,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-13',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.198807,
@@ -15055,10 +15055,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\13-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -15306,7 +15306,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-14',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.217135,
@@ -15320,13 +15320,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-14',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.217135,
@@ -15337,10 +15337,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\14-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -15588,7 +15588,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-15',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.246696,
@@ -15602,13 +15602,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-15',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.246696,
@@ -15619,10 +15619,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\15-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -15870,7 +15870,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-16',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.326061,
@@ -15884,13 +15884,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-16',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.326061,
@@ -15901,10 +15901,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\16-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -16152,7 +16152,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-17',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.336139,
@@ -16166,13 +16166,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-17',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.336139,
@@ -16183,10 +16183,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\17-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -16434,7 +16434,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-18',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.469126,
@@ -16448,13 +16448,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-18',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.469126,
@@ -16465,10 +16465,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\18-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -16716,7 +16716,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='china_8_inch-19',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.550131,
@@ -16730,13 +16730,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='china_8_inch',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='china_8_inch-19',
         source_xml='aasimonster2\\china_8_inch\\china_8_inch.xml',
         power=0.550131,
@@ -16747,10 +16747,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\china_8_inch\\samples\\19-china_8_inch.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -16998,7 +16998,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-1',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0148605,
@@ -17012,13 +17012,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-1',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0148605,
@@ -17029,10 +17029,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\1-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -17280,7 +17280,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-2',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0162067,
@@ -17294,13 +17294,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-2',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0162067,
@@ -17311,10 +17311,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\2-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -17562,7 +17562,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-3',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0506459,
@@ -17576,13 +17576,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-3',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0506459,
@@ -17593,10 +17593,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\3-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -17844,7 +17844,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-4',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0535879,
@@ -17858,13 +17858,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-4',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0535879,
@@ -17875,10 +17875,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\4-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -18126,7 +18126,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-5',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0737588,
@@ -18140,13 +18140,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-5',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0737588,
@@ -18157,10 +18157,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\5-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -18408,7 +18408,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-6',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0758121,
@@ -18422,13 +18422,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-6',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.0758121,
@@ -18439,10 +18439,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\6-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -18690,7 +18690,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-7',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.103358,
@@ -18704,13 +18704,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-7',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.103358,
@@ -18721,10 +18721,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\7-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -18972,7 +18972,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-8',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.109137,
@@ -18986,13 +18986,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-8',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.109137,
@@ -19003,10 +19003,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\8-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -19254,7 +19254,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-9',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.142378,
@@ -19268,13 +19268,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-9',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.142378,
@@ -19285,10 +19285,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\9-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -19536,7 +19536,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-10',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.177596,
@@ -19550,13 +19550,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-10',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.177596,
@@ -19567,10 +19567,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\10-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -19818,7 +19818,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-11',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.180323,
@@ -19832,13 +19832,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-11',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.180323,
@@ -19849,10 +19849,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\11-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -20100,7 +20100,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-12',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.247441,
@@ -20114,13 +20114,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-12',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.247441,
@@ -20131,10 +20131,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\12-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -20382,7 +20382,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-13',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.317959,
@@ -20396,13 +20396,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-13',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.317959,
@@ -20413,10 +20413,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\13-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -20664,7 +20664,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-14',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.457328,
@@ -20678,13 +20678,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-14',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.457328,
@@ -20695,10 +20695,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\14-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -20946,7 +20946,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-15',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.479738,
@@ -20960,13 +20960,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-15',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.479738,
@@ -20977,10 +20977,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\15-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -21228,7 +21228,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-16',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.658871,
@@ -21242,13 +21242,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-16',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.658871,
@@ -21259,10 +21259,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\16-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -21510,7 +21510,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-17',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.737394,
@@ -21524,13 +21524,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-17',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.737394,
@@ -21541,10 +21541,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\17-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -21792,7 +21792,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-18',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.809811,
@@ -21806,13 +21806,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-18',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=0.809811,
@@ -21823,10 +21823,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\18-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -22074,7 +22074,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1-19',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=1.18376,
@@ -22088,13 +22088,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1-19',
         source_xml='aasimonster2\\crash1\\crash1.xml',
         power=1.18376,
@@ -22105,10 +22105,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1\\samples\\19-crash1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -22356,7 +22356,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1_stop',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1_stop-1',
         source_xml='aasimonster2\\crash1_stop\\crash1_stop.xml',
         power=1412.34,
@@ -22370,13 +22370,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1_stop',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1_stop-1',
         source_xml='aasimonster2\\crash1_stop\\crash1_stop.xml',
         power=1412.34,
@@ -22387,10 +22387,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1_stop\\samples\\1-crash1_stop.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -22638,7 +22638,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1_stop',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1_stop-2',
         source_xml='aasimonster2\\crash1_stop\\crash1_stop.xml',
         power=1991.88,
@@ -22652,13 +22652,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1_stop',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1_stop-2',
         source_xml='aasimonster2\\crash1_stop\\crash1_stop.xml',
         power=1991.88,
@@ -22669,10 +22669,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1_stop\\samples\\2-crash1_stop.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -22920,7 +22920,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash1_stop',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash1_stop-3',
         source_xml='aasimonster2\\crash1_stop\\crash1_stop.xml',
         power=6846.24,
@@ -22934,13 +22934,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash1_stop',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash1_stop-3',
         source_xml='aasimonster2\\crash1_stop\\crash1_stop.xml',
         power=6846.24,
@@ -22951,10 +22951,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash1_stop\\samples\\3-crash1_stop.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -23202,7 +23202,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-1',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0119615,
@@ -23216,13 +23216,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-1',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0119615,
@@ -23233,10 +23233,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\1-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -23484,7 +23484,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-2',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0260686,
@@ -23498,13 +23498,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-2',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0260686,
@@ -23515,10 +23515,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\2-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -23766,7 +23766,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-3',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0334763,
@@ -23780,13 +23780,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-3',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0334763,
@@ -23797,10 +23797,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\3-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -24048,7 +24048,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-4',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0391847,
@@ -24062,13 +24062,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-4',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0391847,
@@ -24079,10 +24079,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\4-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -24330,7 +24330,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-5',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0495931,
@@ -24344,13 +24344,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-5',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0495931,
@@ -24361,10 +24361,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\5-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -24612,7 +24612,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-6',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0803078,
@@ -24626,13 +24626,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-6',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0803078,
@@ -24643,10 +24643,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\6-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -24894,7 +24894,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-7',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0893872,
@@ -24908,13 +24908,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-7',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.0893872,
@@ -24925,10 +24925,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\7-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -25176,7 +25176,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-8',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.129448,
@@ -25190,13 +25190,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-8',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.129448,
@@ -25207,10 +25207,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\8-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -25458,7 +25458,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-9',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.146979,
@@ -25472,13 +25472,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-9',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.146979,
@@ -25489,10 +25489,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\9-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -25740,7 +25740,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-10',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.155152,
@@ -25754,13 +25754,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-10',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.155152,
@@ -25771,10 +25771,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\10-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -26022,7 +26022,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-11',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.248209,
@@ -26036,13 +26036,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-11',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.248209,
@@ -26053,10 +26053,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\11-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -26304,7 +26304,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-12',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.259721,
@@ -26318,13 +26318,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-12',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.259721,
@@ -26335,10 +26335,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\12-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -26586,7 +26586,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-13',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.272795,
@@ -26600,13 +26600,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-13',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.272795,
@@ -26617,10 +26617,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\13-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -26868,7 +26868,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-14',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.468932,
@@ -26882,13 +26882,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-14',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.468932,
@@ -26899,10 +26899,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\14-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -27150,7 +27150,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-15',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.476413,
@@ -27164,13 +27164,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-15',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.476413,
@@ -27181,10 +27181,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\15-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -27432,7 +27432,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-16',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.605929,
@@ -27446,13 +27446,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-16',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.605929,
@@ -27463,10 +27463,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\16-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -27714,7 +27714,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-17',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.699414,
@@ -27728,13 +27728,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-17',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.699414,
@@ -27745,10 +27745,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\17-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -27996,7 +27996,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-18',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.893785,
@@ -28010,13 +28010,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-18',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=0.893785,
@@ -28027,10 +28027,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\18-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -28278,7 +28278,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2-19',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=1.13415,
@@ -28292,13 +28292,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2-19',
         source_xml='aasimonster2\\crash2\\crash2.xml',
         power=1.13415,
@@ -28309,10 +28309,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2\\samples\\19-crash2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -28560,7 +28560,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2_stop',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2_stop-1',
         source_xml='aasimonster2\\crash2_stop\\crash2_stop.xml',
         power=0.448895,
@@ -28574,13 +28574,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2_stop',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2_stop-1',
         source_xml='aasimonster2\\crash2_stop\\crash2_stop.xml',
         power=0.448895,
@@ -28591,10 +28591,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2_stop\\samples\\1-crash2_stop.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -28842,7 +28842,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2_stop',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2_stop-2',
         source_xml='aasimonster2\\crash2_stop\\crash2_stop.xml',
         power=1.48059,
@@ -28856,13 +28856,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2_stop',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2_stop-2',
         source_xml='aasimonster2\\crash2_stop\\crash2_stop.xml',
         power=1.48059,
@@ -28873,10 +28873,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2_stop\\samples\\2-crash2_stop.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -29124,7 +29124,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='crash2_stop',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='crash2_stop-3',
         source_xml='aasimonster2\\crash2_stop\\crash2_stop.xml',
         power=1.99924,
@@ -29138,13 +29138,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='crash2_stop',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='crash2_stop-3',
         source_xml='aasimonster2\\crash2_stop\\crash2_stop.xml',
         power=1.99924,
@@ -29155,10 +29155,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\crash2_stop\\samples\\3-crash2_stop.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -29406,7 +29406,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-1',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.00205371,
@@ -29426,7 +29426,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-1',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.00205371,
@@ -29437,7 +29437,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\1-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -29688,7 +29688,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-2',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.0152497,
@@ -29708,7 +29708,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-2',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.0152497,
@@ -29719,7 +29719,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\2-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -29970,7 +29970,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-3',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.0683848,
@@ -29990,7 +29990,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-3',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.0683848,
@@ -30001,7 +30001,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\3-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -30252,7 +30252,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-4',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.0991354,
@@ -30272,7 +30272,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-4',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.0991354,
@@ -30283,7 +30283,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\4-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -30534,7 +30534,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-5',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.137466,
@@ -30554,7 +30554,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-5',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.137466,
@@ -30565,7 +30565,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\5-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -30816,7 +30816,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-6',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.323056,
@@ -30836,7 +30836,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-6',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.323056,
@@ -30847,7 +30847,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\6-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -31098,7 +31098,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-7',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.593693,
@@ -31118,7 +31118,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-7',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.593693,
@@ -31129,7 +31129,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\7-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -31380,7 +31380,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-8',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.85512,
@@ -31400,7 +31400,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-8',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.85512,
@@ -31411,7 +31411,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\8-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -31662,7 +31662,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-9',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.951256,
@@ -31682,7 +31682,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-9',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=0.951256,
@@ -31693,7 +31693,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\9-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -31944,7 +31944,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-10',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=1.39351,
@@ -31964,7 +31964,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-10',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=1.39351,
@@ -31975,7 +31975,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\10-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -32226,7 +32226,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-11',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=1.83351,
@@ -32246,7 +32246,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-11',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=1.83351,
@@ -32257,7 +32257,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\11-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -32508,7 +32508,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-12',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=1.89527,
@@ -32528,7 +32528,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-12',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=1.89527,
@@ -32539,7 +32539,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\12-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -32790,7 +32790,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-13',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.15386,
@@ -32810,7 +32810,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-13',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.15386,
@@ -32821,7 +32821,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\13-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -33072,7 +33072,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-14',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.54813,
@@ -33092,7 +33092,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-14',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.54813,
@@ -33103,7 +33103,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\14-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -33354,7 +33354,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-15',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.75898,
@@ -33374,7 +33374,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-15',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.75898,
@@ -33385,7 +33385,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\15-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -33636,7 +33636,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-16',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.87911,
@@ -33656,7 +33656,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-16',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=2.87911,
@@ -33667,7 +33667,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\16-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -33918,7 +33918,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-17',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.03711,
@@ -33938,7 +33938,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-17',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.03711,
@@ -33949,7 +33949,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\17-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -34200,7 +34200,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-18',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.05678,
@@ -34220,7 +34220,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-18',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.05678,
@@ -34231,7 +34231,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\18-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -34482,7 +34482,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-19',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.10995,
@@ -34502,7 +34502,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-19',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.10995,
@@ -34513,7 +34513,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\19-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -34764,7 +34764,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed1-20',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.40647,
@@ -34784,7 +34784,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed1-20',
         source_xml='aasimonster2\\hihat_closed1\\hihat_closed1.xml',
         power=3.40647,
@@ -34795,7 +34795,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed1\\samples\\20-hihat_closed1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -35046,7 +35046,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-1',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.00808989,
@@ -35066,7 +35066,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-1',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.00808989,
@@ -35077,7 +35077,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\1-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -35328,7 +35328,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-2',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.0132862,
@@ -35348,7 +35348,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-2',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.0132862,
@@ -35359,7 +35359,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\2-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -35610,7 +35610,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-3',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.0292593,
@@ -35630,7 +35630,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-3',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.0292593,
@@ -35641,7 +35641,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\3-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -35892,7 +35892,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-4',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.0678291,
@@ -35912,7 +35912,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-4',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.0678291,
@@ -35923,7 +35923,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\4-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -36174,7 +36174,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-5',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.124813,
@@ -36194,7 +36194,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-5',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.124813,
@@ -36205,7 +36205,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\5-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -36456,7 +36456,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-6',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.137201,
@@ -36476,7 +36476,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-6',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.137201,
@@ -36487,7 +36487,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\6-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -36738,7 +36738,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-7',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.206037,
@@ -36758,7 +36758,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-7',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.206037,
@@ -36769,7 +36769,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\7-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -37020,7 +37020,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-8',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.337563,
@@ -37040,7 +37040,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-8',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.337563,
@@ -37051,7 +37051,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\8-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -37302,7 +37302,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-9',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.363752,
@@ -37322,7 +37322,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-9',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.363752,
@@ -37333,7 +37333,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\9-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -37584,7 +37584,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-10',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.379401,
@@ -37604,7 +37604,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-10',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.379401,
@@ -37615,7 +37615,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\10-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -37866,7 +37866,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-11',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.405277,
@@ -37886,7 +37886,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-11',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.405277,
@@ -37897,7 +37897,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\11-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -38148,7 +38148,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-12',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.443167,
@@ -38168,7 +38168,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-12',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.443167,
@@ -38179,7 +38179,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\12-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -38430,7 +38430,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-13',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.692618,
@@ -38450,7 +38450,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-13',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.692618,
@@ -38461,7 +38461,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\13-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -38712,7 +38712,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-14',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.704097,
@@ -38732,7 +38732,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-14',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.704097,
@@ -38743,7 +38743,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\14-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -38994,7 +38994,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-15',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.846516,
@@ -39014,7 +39014,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-15',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.846516,
@@ -39025,7 +39025,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\15-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -39276,7 +39276,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-16',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.893877,
@@ -39296,7 +39296,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-16',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=0.893877,
@@ -39307,7 +39307,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\16-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -39558,7 +39558,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-17',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.06218,
@@ -39578,7 +39578,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-17',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.06218,
@@ -39589,7 +39589,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\17-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -39840,7 +39840,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-18',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.11975,
@@ -39860,7 +39860,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-18',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.11975,
@@ -39871,7 +39871,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\18-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -40122,7 +40122,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-19',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.46953,
@@ -40142,7 +40142,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-19',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.46953,
@@ -40153,7 +40153,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\19-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -40404,7 +40404,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed2-20',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.8135,
@@ -40424,7 +40424,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed2-20',
         source_xml='aasimonster2\\hihat_closed2\\hihat_closed2.xml',
         power=1.8135,
@@ -40435,7 +40435,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed2\\samples\\20-hihat_closed2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -40686,7 +40686,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-1',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.0193646,
@@ -40706,7 +40706,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-1',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.0193646,
@@ -40717,7 +40717,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\1-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -40968,7 +40968,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-2',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.0213368,
@@ -40988,7 +40988,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-2',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.0213368,
@@ -40999,7 +40999,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\2-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -41250,7 +41250,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-3',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.056592,
@@ -41270,7 +41270,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-3',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.056592,
@@ -41281,7 +41281,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\3-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -41532,7 +41532,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-4',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.062998,
@@ -41552,7 +41552,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-4',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.062998,
@@ -41563,7 +41563,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\4-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -41814,7 +41814,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-5',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.116308,
@@ -41834,7 +41834,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-5',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.116308,
@@ -41845,7 +41845,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\5-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -42096,7 +42096,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-6',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.121082,
@@ -42116,7 +42116,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-6',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.121082,
@@ -42127,7 +42127,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\6-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -42378,7 +42378,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-7',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.132507,
@@ -42398,7 +42398,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-7',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.132507,
@@ -42409,7 +42409,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\7-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -42660,7 +42660,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-8',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.158207,
@@ -42680,7 +42680,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-8',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.158207,
@@ -42691,7 +42691,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\8-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -42942,7 +42942,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-9',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.240365,
@@ -42962,7 +42962,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-9',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.240365,
@@ -42973,7 +42973,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\9-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -43224,7 +43224,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-10',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.295298,
@@ -43244,7 +43244,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-10',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.295298,
@@ -43255,7 +43255,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\10-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -43506,7 +43506,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-11',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.312925,
@@ -43526,7 +43526,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-11',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.312925,
@@ -43537,7 +43537,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\11-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -43788,7 +43788,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-12',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.35122,
@@ -43808,7 +43808,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-12',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.35122,
@@ -43819,7 +43819,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\12-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -44070,7 +44070,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-13',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.3671,
@@ -44090,7 +44090,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-13',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.3671,
@@ -44101,7 +44101,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\13-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -44352,7 +44352,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-14',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.400977,
@@ -44372,7 +44372,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-14',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.400977,
@@ -44383,7 +44383,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\14-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -44634,7 +44634,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-15',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.508417,
@@ -44654,7 +44654,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-15',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.508417,
@@ -44665,7 +44665,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\15-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -44916,7 +44916,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-16',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.556207,
@@ -44936,7 +44936,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-16',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.556207,
@@ -44947,7 +44947,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\16-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -45198,7 +45198,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-17',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.598445,
@@ -45218,7 +45218,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-17',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.598445,
@@ -45229,7 +45229,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\17-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -45480,7 +45480,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-18',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.687565,
@@ -45500,7 +45500,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-18',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.687565,
@@ -45511,7 +45511,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\18-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -45762,7 +45762,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-19',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.721604,
@@ -45782,7 +45782,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-19',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.721604,
@@ -45793,7 +45793,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\19-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -46044,7 +46044,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-20',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.896729,
@@ -46064,7 +46064,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-20',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=0.896729,
@@ -46075,7 +46075,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\20-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -46326,7 +46326,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_closed3-21',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=1.23068,
@@ -46340,13 +46340,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_closed3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_closed3-21',
         source_xml='aasimonster2\\hihat_closed3\\hihat_closed3.xml',
         power=1.23068,
@@ -46357,10 +46357,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_closed3\\samples\\21-hihat_closed3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -46608,7 +46608,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-1',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0014384,
@@ -46622,13 +46622,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-1',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0014384,
@@ -46639,10 +46639,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\1-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -46890,7 +46890,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-2',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.00601569,
@@ -46904,13 +46904,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-2',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.00601569,
@@ -46921,10 +46921,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\2-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -47172,7 +47172,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-3',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0205198,
@@ -47186,13 +47186,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-3',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0205198,
@@ -47203,10 +47203,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\3-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -47454,7 +47454,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-4',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0579166,
@@ -47468,13 +47468,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-4',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0579166,
@@ -47485,10 +47485,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\4-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -47736,7 +47736,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-5',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0710208,
@@ -47750,13 +47750,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-5',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0710208,
@@ -47767,10 +47767,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\5-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -48018,7 +48018,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-6',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0963016,
@@ -48032,13 +48032,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-6',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.0963016,
@@ -48049,10 +48049,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\6-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -48300,7 +48300,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-7',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.159393,
@@ -48314,13 +48314,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-7',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.159393,
@@ -48331,10 +48331,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\7-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -48582,7 +48582,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-8',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.159741,
@@ -48596,13 +48596,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-8',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.159741,
@@ -48613,10 +48613,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\8-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -48864,7 +48864,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-9',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.286167,
@@ -48878,13 +48878,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-9',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.286167,
@@ -48895,10 +48895,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\9-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -49146,7 +49146,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-10',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.340373,
@@ -49160,13 +49160,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-10',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.340373,
@@ -49177,10 +49177,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\10-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -49428,7 +49428,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-11',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.79289,
@@ -49442,13 +49442,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-11',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.79289,
@@ -49459,10 +49459,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\11-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -49710,7 +49710,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-12',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.794261,
@@ -49724,13 +49724,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-12',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.794261,
@@ -49741,10 +49741,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\12-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -49992,7 +49992,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-13',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.935124,
@@ -50006,13 +50006,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-13',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=0.935124,
@@ -50023,10 +50023,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\13-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -50274,7 +50274,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-14',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=1.38859,
@@ -50288,13 +50288,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-14',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=1.38859,
@@ -50305,10 +50305,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\14-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -50556,7 +50556,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-15',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=1.54593,
@@ -50570,13 +50570,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-15',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=1.54593,
@@ -50587,10 +50587,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\15-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -50838,7 +50838,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-16',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=1.9024,
@@ -50852,13 +50852,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-16',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=1.9024,
@@ -50869,10 +50869,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\16-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -51120,7 +51120,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-17',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.14682,
@@ -51134,13 +51134,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-17',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.14682,
@@ -51151,10 +51151,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\17-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -51402,7 +51402,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-18',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.22389,
@@ -51416,13 +51416,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-18',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.22389,
@@ -51433,10 +51433,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\18-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -51684,7 +51684,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-19',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.69622,
@@ -51698,13 +51698,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-19',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.69622,
@@ -51715,10 +51715,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\19-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -51966,7 +51966,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-20',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.87446,
@@ -51980,13 +51980,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-20',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=2.87446,
@@ -51997,10 +51997,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\20-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -52248,7 +52248,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-21',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=3.10807,
@@ -52262,13 +52262,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-21',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=3.10807,
@@ -52279,10 +52279,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\21-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -52530,7 +52530,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-22',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=3.69195,
@@ -52544,13 +52544,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-22',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=3.69195,
@@ -52561,10 +52561,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\22-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -52812,7 +52812,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='hihat_open-23',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=3.73533,
@@ -52826,13 +52826,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='hihat_open',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='hihat_open-23',
         source_xml='aasimonster2\\hihat_open\\hihat_open.xml',
         power=3.73533,
@@ -52843,10 +52843,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\hihat_open\\samples\\23-hihat_open.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -53094,7 +53094,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-1',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.184206,
@@ -53107,14 +53107,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-1',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.184206,
@@ -53125,10 +53125,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\1-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -53376,7 +53376,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-2',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.358118,
@@ -53389,14 +53389,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-2',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.358118,
@@ -53407,10 +53407,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\2-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -53658,7 +53658,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-3',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.46194,
@@ -53671,14 +53671,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-3',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.46194,
@@ -53689,10 +53689,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\3-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -53940,7 +53940,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-4',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.656692,
@@ -53953,14 +53953,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-4',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.656692,
@@ -53971,10 +53971,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\4-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -54222,7 +54222,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-5',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.81601,
@@ -54235,14 +54235,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-5',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.81601,
@@ -54253,10 +54253,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\5-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -54504,7 +54504,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-6',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.996453,
@@ -54517,14 +54517,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-6',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=0.996453,
@@ -54535,10 +54535,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\6-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -54786,7 +54786,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-7',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=1.37896,
@@ -54799,14 +54799,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-7',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=1.37896,
@@ -54817,10 +54817,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\7-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -55068,7 +55068,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-8',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=1.60214,
@@ -55081,14 +55081,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-8',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=1.60214,
@@ -55099,10 +55099,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\8-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -55350,7 +55350,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-9',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=1.85803,
@@ -55363,14 +55363,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-9',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=1.85803,
@@ -55381,10 +55381,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\9-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -55632,7 +55632,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-10',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=2.21009,
@@ -55645,14 +55645,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-10',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=2.21009,
@@ -55663,10 +55663,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\10-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -55914,7 +55914,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-11',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=2.21188,
@@ -55927,14 +55927,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-11',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=2.21188,
@@ -55945,10 +55945,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\11-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -56196,7 +56196,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-12',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=2.27301,
@@ -56209,14 +56209,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-12',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=2.27301,
@@ -56227,10 +56227,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\12-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -56478,7 +56478,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-13',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.10511,
@@ -56491,14 +56491,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-13',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.10511,
@@ -56509,10 +56509,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\13-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -56760,7 +56760,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-14',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.45933,
@@ -56773,14 +56773,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-14',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.45933,
@@ -56791,10 +56791,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\14-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -57042,7 +57042,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-15',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.86602,
@@ -57055,14 +57055,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-15',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.86602,
@@ -57073,10 +57073,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\15-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -57324,7 +57324,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-16',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.89898,
@@ -57337,14 +57337,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-16',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=3.89898,
@@ -57355,10 +57355,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\16-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -57606,7 +57606,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-17',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=5.54603,
@@ -57619,14 +57619,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-17',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=5.54603,
@@ -57637,10 +57637,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\17-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -57888,7 +57888,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-18',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=7.68781,
@@ -57901,14 +57901,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-18',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=7.68781,
@@ -57919,10 +57919,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\18-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -58170,7 +58170,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-19',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=8.82962,
@@ -58183,14 +58183,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-19',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=8.82962,
@@ -58201,10 +58201,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\19-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -58452,7 +58452,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-20',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=10.1843,
@@ -58465,14 +58465,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-20',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=10.1843,
@@ -58483,10 +58483,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\20-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -58734,7 +58734,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-21',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=12.2864,
@@ -58747,14 +58747,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-21',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=12.2864,
@@ -58765,10 +58765,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\21-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -59016,7 +59016,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-22',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=14.5156,
@@ -59029,14 +59029,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-22',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=14.5156,
@@ -59047,10 +59047,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\22-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -59298,7 +59298,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-23',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=18.2605,
@@ -59311,14 +59311,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-23',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=18.2605,
@@ -59329,10 +59329,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\23-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -59580,7 +59580,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-24',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=20.2171,
@@ -59593,14 +59593,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-24',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=20.2171,
@@ -59611,10 +59611,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\24-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -59862,7 +59862,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-25',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=22.6167,
@@ -59875,14 +59875,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-25',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=22.6167,
@@ -59893,10 +59893,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\25-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -60144,7 +60144,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-26',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=28.2821,
@@ -60157,14 +60157,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-26',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=28.2821,
@@ -60175,10 +60175,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\26-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -60426,7 +60426,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-27',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=30.9832,
@@ -60439,14 +60439,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-27',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=30.9832,
@@ -60457,10 +60457,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\27-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -60708,7 +60708,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-28',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=35.4559,
@@ -60721,14 +60721,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-28',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=35.4559,
@@ -60739,10 +60739,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\28-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -60990,7 +60990,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-29',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=38.5456,
@@ -61003,14 +61003,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-29',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=38.5456,
@@ -61021,10 +61021,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\29-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -61272,7 +61272,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_l-30',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=46.6997,
@@ -61285,14 +61285,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_l',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_l-30',
         source_xml='aasimonster2\\kick_l\\kick_l.xml',
         power=46.6997,
@@ -61303,10 +61303,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_l\\samples\\30-kick_l.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -61554,7 +61554,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-1',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=0.43381,
@@ -61567,14 +61567,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-1',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=0.43381,
@@ -61585,10 +61585,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\1-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -61836,7 +61836,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-2',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=0.741278,
@@ -61849,14 +61849,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-2',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=0.741278,
@@ -61867,10 +61867,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\2-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -62118,7 +62118,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-3',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.01253,
@@ -62131,14 +62131,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-3',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.01253,
@@ -62149,10 +62149,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\3-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -62400,7 +62400,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-4',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.01699,
@@ -62413,14 +62413,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-4',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.01699,
@@ -62431,10 +62431,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\4-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -62682,7 +62682,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-5',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.11035,
@@ -62695,14 +62695,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-5',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.11035,
@@ -62713,10 +62713,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\5-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -62964,7 +62964,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-6',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.12779,
@@ -62977,14 +62977,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-6',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.12779,
@@ -62995,10 +62995,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\6-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -63246,7 +63246,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-7',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.22076,
@@ -63259,14 +63259,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-7',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.22076,
@@ -63277,10 +63277,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\7-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -63528,7 +63528,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-8',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.39003,
@@ -63541,14 +63541,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-8',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.39003,
@@ -63559,10 +63559,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\8-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -63810,7 +63810,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-9',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.94876,
@@ -63823,14 +63823,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-9',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=1.94876,
@@ -63841,10 +63841,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\9-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -64092,7 +64092,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-10',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=2.09447,
@@ -64105,14 +64105,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-10',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=2.09447,
@@ -64123,10 +64123,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\10-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -64374,7 +64374,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-11',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=2.2164,
@@ -64387,14 +64387,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-11',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=2.2164,
@@ -64405,10 +64405,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\11-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -64656,7 +64656,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-12',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=2.83421,
@@ -64669,14 +64669,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-12',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=2.83421,
@@ -64687,10 +64687,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\12-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -64938,7 +64938,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-13',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=3.74651,
@@ -64951,14 +64951,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-13',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=3.74651,
@@ -64969,10 +64969,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\13-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -65220,7 +65220,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-14',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=3.85843,
@@ -65233,14 +65233,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-14',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=3.85843,
@@ -65251,10 +65251,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\14-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -65502,7 +65502,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-15',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=5.23642,
@@ -65515,14 +65515,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-15',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=5.23642,
@@ -65533,10 +65533,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\15-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -65784,7 +65784,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-16',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=5.24893,
@@ -65797,14 +65797,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-16',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=5.24893,
@@ -65815,10 +65815,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\16-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -66066,7 +66066,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-17',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=5.85316,
@@ -66079,14 +66079,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-17',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=5.85316,
@@ -66097,10 +66097,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\17-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -66348,7 +66348,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-18',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=9.4277,
@@ -66361,14 +66361,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-18',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=9.4277,
@@ -66379,10 +66379,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\18-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -66630,7 +66630,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-19',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=9.4281,
@@ -66643,14 +66643,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-19',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=9.4281,
@@ -66661,10 +66661,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\19-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -66912,7 +66912,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-20',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=12.5163,
@@ -66925,14 +66925,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-20',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=12.5163,
@@ -66943,10 +66943,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\20-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -67194,7 +67194,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-21',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=12.526,
@@ -67207,14 +67207,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-21',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=12.526,
@@ -67225,10 +67225,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\21-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -67476,7 +67476,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-22',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=15.1872,
@@ -67489,14 +67489,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-22',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=15.1872,
@@ -67507,10 +67507,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\22-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -67758,7 +67758,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-23',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=16.1394,
@@ -67771,14 +67771,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-23',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=16.1394,
@@ -67789,10 +67789,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\23-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -68040,7 +68040,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='kick_r-24',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=19.118,
@@ -68053,14 +68053,14 @@ OPERATIONS = [
         output_channels='mono',
         default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='kick_r',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='kick_r-24',
         source_xml='aasimonster2\\kick_r\\kick_r.xml',
         power=19.118,
@@ -68071,10 +68071,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\kick_r\\samples\\24-kick_r.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=True,
-        quarantined=False,
-        quarantine_reasons=[],
+        quarantined=True,
+        quarantine_reasons=['duplicate target path'],
     ),
 
     Operation(
@@ -68322,7 +68322,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-1',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.000982183,
@@ -68336,13 +68336,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-1',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.000982183,
@@ -68353,10 +68353,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\1-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -68604,7 +68604,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-2',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.00523818,
@@ -68618,13 +68618,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-2',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.00523818,
@@ -68635,10 +68635,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\2-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -68886,7 +68886,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-3',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.0106579,
@@ -68900,13 +68900,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-3',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.0106579,
@@ -68917,10 +68917,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\3-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -69168,7 +69168,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-4',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.0769532,
@@ -69182,13 +69182,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-4',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.0769532,
@@ -69199,10 +69199,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\4-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -69450,7 +69450,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-5',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.105158,
@@ -69464,13 +69464,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-5',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.105158,
@@ -69481,10 +69481,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\5-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -69732,7 +69732,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-6',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.106495,
@@ -69746,13 +69746,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-6',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.106495,
@@ -69763,10 +69763,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\6-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -70014,7 +70014,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-7',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.118793,
@@ -70028,13 +70028,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-7',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.118793,
@@ -70045,10 +70045,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\7-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -70296,7 +70296,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-8',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.132273,
@@ -70310,13 +70310,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-8',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.132273,
@@ -70327,10 +70327,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\8-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -70578,7 +70578,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-9',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.148886,
@@ -70592,13 +70592,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-9',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.148886,
@@ -70609,10 +70609,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\9-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -70860,7 +70860,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-10',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.164783,
@@ -70874,13 +70874,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-10',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.164783,
@@ -70891,10 +70891,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\10-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -71142,7 +71142,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-11',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.165465,
@@ -71156,13 +71156,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-11',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.165465,
@@ -71173,10 +71173,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\11-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -71424,7 +71424,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-12',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.17571,
@@ -71438,13 +71438,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-12',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.17571,
@@ -71455,10 +71455,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\12-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -71706,7 +71706,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-13',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.26353,
@@ -71720,13 +71720,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-13',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.26353,
@@ -71737,10 +71737,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\13-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -71988,7 +71988,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-14',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.360729,
@@ -72002,13 +72002,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-14',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.360729,
@@ -72019,10 +72019,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\14-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -72270,7 +72270,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-15',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.391663,
@@ -72284,13 +72284,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-15',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.391663,
@@ -72301,10 +72301,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\15-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -72552,7 +72552,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-16',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.532841,
@@ -72566,13 +72566,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-16',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.532841,
@@ -72583,10 +72583,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\16-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -72834,7 +72834,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-17',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.572554,
@@ -72848,13 +72848,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-17',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.572554,
@@ -72865,10 +72865,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\17-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -73116,7 +73116,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-18',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.649633,
@@ -73130,13 +73130,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-18',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.649633,
@@ -73147,10 +73147,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\18-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -73398,7 +73398,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride-19',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.804412,
@@ -73412,13 +73412,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride-19',
         source_xml='aasimonster2\\ride\\ride.xml',
         power=0.804412,
@@ -73429,10 +73429,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride\\samples\\19-ride.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -73680,7 +73680,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-1',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.00106524,
@@ -73694,13 +73694,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-1',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.00106524,
@@ -73711,10 +73711,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\1-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -73753,9 +73753,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -73962,7 +73962,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-2',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.00790388,
@@ -73976,13 +73976,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-2',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.00790388,
@@ -73993,10 +73993,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\2-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -74035,9 +74035,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -74244,7 +74244,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-3',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.0201466,
@@ -74258,13 +74258,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-3',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.0201466,
@@ -74275,10 +74275,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\3-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -74317,9 +74317,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -74526,7 +74526,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-4',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.0542787,
@@ -74540,13 +74540,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-4',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.0542787,
@@ -74557,10 +74557,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\4-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -74599,9 +74599,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -74808,7 +74808,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-5',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.11905,
@@ -74822,13 +74822,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-5',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.11905,
@@ -74839,10 +74839,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\5-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -74881,9 +74881,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -75090,7 +75090,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-6',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.204472,
@@ -75104,13 +75104,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-6',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.204472,
@@ -75121,10 +75121,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\6-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -75163,9 +75163,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -75372,7 +75372,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-7',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.213766,
@@ -75386,13 +75386,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-7',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.213766,
@@ -75403,10 +75403,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\7-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -75445,9 +75445,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -75654,7 +75654,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-8',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.291646,
@@ -75668,13 +75668,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-8',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.291646,
@@ -75685,10 +75685,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\8-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -75727,9 +75727,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -75936,7 +75936,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-9',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.490571,
@@ -75950,13 +75950,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-9',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.490571,
@@ -75967,10 +75967,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\9-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -76009,9 +76009,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -76218,7 +76218,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-10',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.734005,
@@ -76232,13 +76232,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-10',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.734005,
@@ -76249,10 +76249,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\10-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -76291,9 +76291,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -76500,7 +76500,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-11',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.846886,
@@ -76514,13 +76514,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-11',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=0.846886,
@@ -76531,10 +76531,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\11-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -76573,9 +76573,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -76782,7 +76782,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-12',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.00174,
@@ -76796,13 +76796,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-12',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.00174,
@@ -76813,10 +76813,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\12-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -76855,9 +76855,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -77064,7 +77064,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-13',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.1491,
@@ -77078,13 +77078,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-13',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.1491,
@@ -77095,10 +77095,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\13-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -77137,9 +77137,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -77346,7 +77346,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-14',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.15498,
@@ -77360,13 +77360,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-14',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.15498,
@@ -77377,10 +77377,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\14-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -77419,9 +77419,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -77628,7 +77628,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell1-15',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.23226,
@@ -77648,7 +77648,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell1-15',
         source_xml='aasimonster2\\ride_bell1\\ride_bell1.xml',
         power=1.23226,
@@ -77659,7 +77659,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell1\\samples\\15-ride_bell1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -77701,9 +77701,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
-        quarantined=True,
-        quarantine_reasons=['duplicate target path'],
+        default_keep=False,
+        quarantined=False,
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -77910,7 +77910,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-1',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.0162485,
@@ -77924,13 +77924,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-1',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.0162485,
@@ -77941,10 +77941,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\1-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -77983,9 +77983,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -78192,7 +78192,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-2',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.0230862,
@@ -78206,13 +78206,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-2',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.0230862,
@@ -78223,10 +78223,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\2-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -78265,9 +78265,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -78474,7 +78474,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-3',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.128049,
@@ -78488,13 +78488,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-3',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.128049,
@@ -78505,10 +78505,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\3-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -78547,9 +78547,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -78756,7 +78756,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-4',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.292413,
@@ -78770,13 +78770,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-4',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.292413,
@@ -78787,10 +78787,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\4-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -78829,9 +78829,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79038,7 +79038,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-5',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.574507,
@@ -79052,13 +79052,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-5',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=0.574507,
@@ -79069,10 +79069,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\5-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79111,9 +79111,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79320,7 +79320,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-6',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=1.43756,
@@ -79334,13 +79334,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-6',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=1.43756,
@@ -79351,10 +79351,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\6-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79393,9 +79393,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79602,7 +79602,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-7',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=2.70188,
@@ -79616,13 +79616,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-7',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=2.70188,
@@ -79633,10 +79633,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\7-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79675,9 +79675,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79884,7 +79884,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-8',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=3.59405,
@@ -79898,13 +79898,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-8',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=3.59405,
@@ -79915,10 +79915,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\8-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -79957,9 +79957,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -80166,7 +80166,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-9',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=3.72412,
@@ -80180,13 +80180,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-9',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=3.72412,
@@ -80197,10 +80197,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\9-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -80239,9 +80239,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -80448,7 +80448,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-10',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=4.91177,
@@ -80462,13 +80462,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-10',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=4.91177,
@@ -80479,10 +80479,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\10-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -80521,9 +80521,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -80730,7 +80730,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-11',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=4.9638,
@@ -80744,13 +80744,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-11',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=4.9638,
@@ -80761,10 +80761,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\11-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -80803,9 +80803,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81012,7 +81012,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-12',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=6.18116,
@@ -81026,13 +81026,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-12',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=6.18116,
@@ -81043,10 +81043,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\12-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81085,9 +81085,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81294,7 +81294,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-13',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=6.88247,
@@ -81308,13 +81308,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-13',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=6.88247,
@@ -81325,10 +81325,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\13-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81367,9 +81367,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81576,7 +81576,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-14',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=7.03141,
@@ -81590,13 +81590,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-14',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=7.03141,
@@ -81607,10 +81607,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\14-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81649,9 +81649,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81858,7 +81858,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-15',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=9.35403,
@@ -81872,13 +81872,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-15',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=9.35403,
@@ -81889,10 +81889,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\15-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -81931,9 +81931,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
+        default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -82140,7 +82140,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='ride_bell2-16',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=9.82363,
@@ -82160,7 +82160,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='ride_bell2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='ride_bell2-16',
         source_xml='aasimonster2\\ride_bell2\\ride_bell2.xml',
         power=9.82363,
@@ -82171,7 +82171,7 @@ OPERATIONS = [
             {"path": 'aasimonster2\\ride_bell2\\samples\\16-ride_bell2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
         quarantine_reasons=['disabled duplicate target if enabled'],
@@ -82213,9 +82213,9 @@ OPERATIONS = [
         ],
         output_channels='mono',
         default_mic_code='dtm',
-        default_keep=True,
-        quarantined=True,
-        quarantine_reasons=['duplicate target path'],
+        default_keep=False,
+        quarantined=False,
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -82422,7 +82422,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-1',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.0736059,
@@ -82436,13 +82436,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-1',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.0736059,
@@ -82453,10 +82453,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\1-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -82704,7 +82704,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-2',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.130452,
@@ -82718,13 +82718,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-2',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.130452,
@@ -82735,10 +82735,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\2-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -82986,7 +82986,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-3',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.189138,
@@ -83000,13 +83000,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-3',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.189138,
@@ -83017,10 +83017,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\3-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -83268,7 +83268,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-4',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.202746,
@@ -83282,13 +83282,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-4',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.202746,
@@ -83299,10 +83299,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\4-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -83550,7 +83550,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-5',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.241193,
@@ -83564,13 +83564,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-5',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.241193,
@@ -83581,10 +83581,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\5-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -83832,7 +83832,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-6',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.331089,
@@ -83846,13 +83846,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-6',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.331089,
@@ -83863,10 +83863,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\6-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -84114,7 +84114,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-7',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.389296,
@@ -84128,13 +84128,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-7',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.389296,
@@ -84145,10 +84145,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\7-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -84396,7 +84396,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-8',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.458768,
@@ -84410,13 +84410,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-8',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.458768,
@@ -84427,10 +84427,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\8-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -84678,7 +84678,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-9',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.520691,
@@ -84692,13 +84692,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-9',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.520691,
@@ -84709,10 +84709,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\9-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -84960,7 +84960,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-10',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.599523,
@@ -84974,13 +84974,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-10',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.599523,
@@ -84991,10 +84991,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\10-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -85242,7 +85242,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-11',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.607313,
@@ -85256,13 +85256,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-11',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.607313,
@@ -85273,10 +85273,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\11-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -85524,7 +85524,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-12',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.972666,
@@ -85538,13 +85538,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-12',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=0.972666,
@@ -85555,10 +85555,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\12-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -85806,7 +85806,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-13',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.05203,
@@ -85820,13 +85820,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-13',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.05203,
@@ -85837,10 +85837,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\13-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -86088,7 +86088,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-14',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.20682,
@@ -86102,13 +86102,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-14',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.20682,
@@ -86119,10 +86119,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\14-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -86370,7 +86370,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-15',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.20893,
@@ -86384,13 +86384,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-15',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.20893,
@@ -86401,10 +86401,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\15-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -86652,7 +86652,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-16',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.46142,
@@ -86666,13 +86666,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-16',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.46142,
@@ -86683,10 +86683,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\16-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -86934,7 +86934,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-17',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.63445,
@@ -86948,13 +86948,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-17',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.63445,
@@ -86965,10 +86965,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\17-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -87216,7 +87216,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-18',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.64298,
@@ -87230,13 +87230,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-18',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.64298,
@@ -87247,10 +87247,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\18-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -87498,7 +87498,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-19',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.94941,
@@ -87512,13 +87512,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-19',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=1.94941,
@@ -87529,10 +87529,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\19-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -87780,7 +87780,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-20',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=2.26859,
@@ -87794,13 +87794,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-20',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=2.26859,
@@ -87811,10 +87811,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\20-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -88062,7 +88062,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-21',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=2.56694,
@@ -88076,13 +88076,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-21',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=2.56694,
@@ -88093,10 +88093,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\21-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -88344,7 +88344,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-22',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=2.76134,
@@ -88358,13 +88358,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-22',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=2.76134,
@@ -88375,10 +88375,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\22-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -88626,7 +88626,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_off_center-23',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=3.99643,
@@ -88640,13 +88640,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_off_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_off_center-23',
         source_xml='aasimonster2\\snare_off_center\\snare_off_center.xml',
         power=3.99643,
@@ -88657,10 +88657,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_off_center\\samples\\23-snare_off_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -88908,7 +88908,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-1',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0192909,
@@ -88922,13 +88922,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-1',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0192909,
@@ -88939,10 +88939,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\1-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -89190,7 +89190,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-2',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0211877,
@@ -89204,13 +89204,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-2',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0211877,
@@ -89221,10 +89221,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\2-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -89472,7 +89472,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-3',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0261415,
@@ -89486,13 +89486,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-3',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0261415,
@@ -89503,10 +89503,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\3-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -89754,7 +89754,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-4',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0731122,
@@ -89768,13 +89768,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-4',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0731122,
@@ -89785,10 +89785,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\4-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -90036,7 +90036,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-5',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0769148,
@@ -90050,13 +90050,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-5',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0769148,
@@ -90067,10 +90067,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\5-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -90318,7 +90318,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-6',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0807244,
@@ -90332,13 +90332,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-6',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0807244,
@@ -90349,10 +90349,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\6-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -90600,7 +90600,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-7',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0989477,
@@ -90614,13 +90614,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-7',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.0989477,
@@ -90631,10 +90631,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\7-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -90882,7 +90882,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-8',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.145852,
@@ -90896,13 +90896,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-8',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.145852,
@@ -90913,10 +90913,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\8-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -91164,7 +91164,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-9',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.163026,
@@ -91178,13 +91178,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-9',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.163026,
@@ -91195,10 +91195,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\9-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -91446,7 +91446,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-10',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.170882,
@@ -91460,13 +91460,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-10',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.170882,
@@ -91477,10 +91477,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\10-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -91728,7 +91728,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-11',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.181529,
@@ -91742,13 +91742,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-11',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.181529,
@@ -91759,10 +91759,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\11-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -92010,7 +92010,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-12',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.240368,
@@ -92024,13 +92024,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-12',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.240368,
@@ -92041,10 +92041,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\12-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -92292,7 +92292,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-13',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.240826,
@@ -92306,13 +92306,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-13',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.240826,
@@ -92323,10 +92323,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\13-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -92574,7 +92574,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-14',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.25256,
@@ -92588,13 +92588,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-14',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.25256,
@@ -92605,10 +92605,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\14-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -92856,7 +92856,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-15',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.257342,
@@ -92870,13 +92870,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-15',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.257342,
@@ -92887,10 +92887,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\15-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -93138,7 +93138,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-16',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.260862,
@@ -93152,13 +93152,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-16',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.260862,
@@ -93169,10 +93169,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\16-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -93420,7 +93420,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-17',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.281233,
@@ -93434,13 +93434,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-17',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.281233,
@@ -93451,10 +93451,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\17-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -93702,7 +93702,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-18',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.287177,
@@ -93716,13 +93716,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-18',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.287177,
@@ -93733,10 +93733,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\18-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -93984,7 +93984,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-19',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.306466,
@@ -93998,13 +93998,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-19',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.306466,
@@ -94015,10 +94015,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\19-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -94266,7 +94266,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-20',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.351168,
@@ -94280,13 +94280,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-20',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.351168,
@@ -94297,10 +94297,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\20-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -94548,7 +94548,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-21',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.420961,
@@ -94562,13 +94562,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-21',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.420961,
@@ -94579,10 +94579,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\21-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -94830,7 +94830,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-22',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.440136,
@@ -94844,13 +94844,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-22',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.440136,
@@ -94861,10 +94861,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\22-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -95112,7 +95112,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-23',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.470456,
@@ -95126,13 +95126,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-23',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.470456,
@@ -95143,10 +95143,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\23-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -95394,7 +95394,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-24',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.485723,
@@ -95408,13 +95408,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-24',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.485723,
@@ -95425,10 +95425,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\24-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -95676,7 +95676,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-25',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.579568,
@@ -95690,13 +95690,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-25',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.579568,
@@ -95707,10 +95707,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\25-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -95958,7 +95958,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-26',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.580191,
@@ -95972,13 +95972,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-26',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.580191,
@@ -95989,10 +95989,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\26-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -96240,7 +96240,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-27',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.605283,
@@ -96254,13 +96254,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-27',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.605283,
@@ -96271,10 +96271,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\27-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -96522,7 +96522,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-28',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.609167,
@@ -96536,13 +96536,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-28',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.609167,
@@ -96553,10 +96553,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\28-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -96804,7 +96804,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-29',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.649492,
@@ -96818,13 +96818,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-29',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.649492,
@@ -96835,10 +96835,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\29-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -97086,7 +97086,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-30',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.652724,
@@ -97100,13 +97100,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-30',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.652724,
@@ -97117,10 +97117,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\30-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -97368,7 +97368,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-31',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.696965,
@@ -97382,13 +97382,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-31',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.696965,
@@ -97399,10 +97399,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\31-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -97650,7 +97650,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-32',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.741764,
@@ -97664,13 +97664,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-32',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.741764,
@@ -97681,10 +97681,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\32-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -97932,7 +97932,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-33',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.787417,
@@ -97946,13 +97946,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-33',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.787417,
@@ -97963,10 +97963,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\33-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -98214,7 +98214,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-34',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.83325,
@@ -98228,13 +98228,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-34',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.83325,
@@ -98245,10 +98245,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\34-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -98496,7 +98496,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-35',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.866952,
@@ -98510,13 +98510,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-35',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.866952,
@@ -98527,10 +98527,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\35-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -98778,7 +98778,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-36',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.897748,
@@ -98792,13 +98792,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-36',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.897748,
@@ -98809,10 +98809,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\36-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -99060,7 +99060,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-37',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.931017,
@@ -99074,13 +99074,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-37',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.931017,
@@ -99091,10 +99091,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\37-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -99342,7 +99342,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-38',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.963078,
@@ -99356,13 +99356,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-38',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=0.963078,
@@ -99373,10 +99373,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\38-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -99624,7 +99624,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-39',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.05184,
@@ -99638,13 +99638,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-39',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.05184,
@@ -99655,10 +99655,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\39-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -99906,7 +99906,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-40',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.05624,
@@ -99920,13 +99920,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-40',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.05624,
@@ -99937,10 +99937,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\40-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -100188,7 +100188,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-41',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.10875,
@@ -100202,13 +100202,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-41',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.10875,
@@ -100219,10 +100219,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\41-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -100470,7 +100470,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-42',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.16358,
@@ -100484,13 +100484,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-42',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.16358,
@@ -100501,10 +100501,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\42-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -100752,7 +100752,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-43',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.28598,
@@ -100766,13 +100766,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-43',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.28598,
@@ -100783,10 +100783,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\43-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -101034,7 +101034,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-44',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.2904,
@@ -101048,13 +101048,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-44',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.2904,
@@ -101065,10 +101065,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\44-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -101316,7 +101316,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-45',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.30159,
@@ -101330,13 +101330,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-45',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.30159,
@@ -101347,10 +101347,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\45-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -101598,7 +101598,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-46',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.32934,
@@ -101612,13 +101612,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-46',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.32934,
@@ -101629,10 +101629,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\46-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -101880,7 +101880,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-47',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.4674,
@@ -101894,13 +101894,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-47',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.4674,
@@ -101911,10 +101911,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\47-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -102162,7 +102162,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-48',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.56211,
@@ -102176,13 +102176,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-48',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.56211,
@@ -102193,10 +102193,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\48-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -102444,7 +102444,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-49',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.64827,
@@ -102458,13 +102458,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-49',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.64827,
@@ -102475,10 +102475,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\49-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -102726,7 +102726,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-50',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.68607,
@@ -102740,13 +102740,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-50',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.68607,
@@ -102757,10 +102757,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\50-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -103008,7 +103008,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-51',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.70344,
@@ -103022,13 +103022,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-51',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.70344,
@@ -103039,10 +103039,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\51-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -103290,7 +103290,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-52',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.9226,
@@ -103304,13 +103304,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-52',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.9226,
@@ -103321,10 +103321,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\52-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -103572,7 +103572,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-53',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.97382,
@@ -103586,13 +103586,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-53',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=1.97382,
@@ -103603,10 +103603,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\53-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -103854,7 +103854,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-54',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.02713,
@@ -103868,13 +103868,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-54',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.02713,
@@ -103885,10 +103885,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\54-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -104136,7 +104136,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-55',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.29872,
@@ -104150,13 +104150,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-55',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.29872,
@@ -104167,10 +104167,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\55-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -104418,7 +104418,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-56',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.61731,
@@ -104432,13 +104432,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-56',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.61731,
@@ -104449,10 +104449,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\56-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -104700,7 +104700,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-57',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.63589,
@@ -104714,13 +104714,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-57',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.63589,
@@ -104731,10 +104731,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\57-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -104982,7 +104982,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-58',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.67223,
@@ -104996,13 +104996,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-58',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.67223,
@@ -105013,10 +105013,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\58-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -105264,7 +105264,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-59',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.67558,
@@ -105278,13 +105278,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-59',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.67558,
@@ -105295,10 +105295,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\59-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -105546,7 +105546,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-60',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.72748,
@@ -105560,13 +105560,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-60',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.72748,
@@ -105577,10 +105577,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\60-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -105828,7 +105828,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-61',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.86164,
@@ -105842,13 +105842,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-61',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.86164,
@@ -105859,10 +105859,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\61-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -106110,7 +106110,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-62',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.88611,
@@ -106124,13 +106124,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-62',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.88611,
@@ -106141,10 +106141,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\62-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -106392,7 +106392,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-63',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.88726,
@@ -106406,13 +106406,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-63',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.88726,
@@ -106423,10 +106423,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\63-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -106674,7 +106674,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-64',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.91031,
@@ -106688,13 +106688,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-64',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=2.91031,
@@ -106705,10 +106705,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\64-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -106956,7 +106956,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-65',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=3.25883,
@@ -106970,13 +106970,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-65',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=3.25883,
@@ -106987,10 +106987,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\65-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -107238,7 +107238,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-66',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=3.76542,
@@ -107252,13 +107252,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-66',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=3.76542,
@@ -107269,10 +107269,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\66-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -107520,7 +107520,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-67',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.34593,
@@ -107534,13 +107534,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-67',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.34593,
@@ -107551,10 +107551,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\67-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -107802,7 +107802,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-68',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.47708,
@@ -107816,13 +107816,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-68',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.47708,
@@ -107833,10 +107833,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\68-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -108084,7 +108084,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-69',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.54852,
@@ -108098,13 +108098,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-69',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.54852,
@@ -108115,10 +108115,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\69-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -108366,7 +108366,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-70',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.63937,
@@ -108380,13 +108380,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-70',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.63937,
@@ -108397,10 +108397,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\70-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -108648,7 +108648,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-71',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.79784,
@@ -108662,13 +108662,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-71',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=4.79784,
@@ -108679,10 +108679,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\71-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -108930,7 +108930,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-72',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.35995,
@@ -108944,13 +108944,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-72',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.35995,
@@ -108961,10 +108961,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\72-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -109212,7 +109212,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-73',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.52477,
@@ -109226,13 +109226,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-73',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.52477,
@@ -109243,10 +109243,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\73-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -109494,7 +109494,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-74',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.54312,
@@ -109508,13 +109508,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-74',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.54312,
@@ -109525,10 +109525,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\74-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -109776,7 +109776,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-75',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.82132,
@@ -109790,13 +109790,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-75',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.82132,
@@ -109807,10 +109807,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\75-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -110058,7 +110058,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-76',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.9621,
@@ -110072,13 +110072,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-76',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=5.9621,
@@ -110089,10 +110089,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\76-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -110340,7 +110340,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-77',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.0451,
@@ -110354,13 +110354,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-77',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.0451,
@@ -110371,10 +110371,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\77-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -110622,7 +110622,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-78',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.28041,
@@ -110636,13 +110636,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-78',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.28041,
@@ -110653,10 +110653,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\78-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -110904,7 +110904,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-79',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.34983,
@@ -110918,13 +110918,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-79',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.34983,
@@ -110935,10 +110935,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\79-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -111186,7 +111186,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-80',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.41439,
@@ -111200,13 +111200,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-80',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.41439,
@@ -111217,10 +111217,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\80-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -111468,7 +111468,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-81',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.8982,
@@ -111482,13 +111482,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-81',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=6.8982,
@@ -111499,10 +111499,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\81-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -111750,7 +111750,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-82',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.05085,
@@ -111764,13 +111764,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-82',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.05085,
@@ -111781,10 +111781,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\82-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -112032,7 +112032,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-83',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.42943,
@@ -112046,13 +112046,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-83',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.42943,
@@ -112063,10 +112063,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\83-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -112314,7 +112314,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-84',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.54259,
@@ -112328,13 +112328,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-84',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.54259,
@@ -112345,10 +112345,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\84-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -112596,7 +112596,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-85',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.9429,
@@ -112610,13 +112610,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-85',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=7.9429,
@@ -112627,10 +112627,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\85-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -112878,7 +112878,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-86',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.09319,
@@ -112892,13 +112892,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-86',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.09319,
@@ -112909,10 +112909,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\86-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -113160,7 +113160,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-87',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.71471,
@@ -113174,13 +113174,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-87',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.71471,
@@ -113191,10 +113191,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\87-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -113442,7 +113442,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-88',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.72749,
@@ -113456,13 +113456,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-88',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.72749,
@@ -113473,10 +113473,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\88-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -113724,7 +113724,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-89',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.88344,
@@ -113738,13 +113738,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-89',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=8.88344,
@@ -113755,10 +113755,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\89-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -114006,7 +114006,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-90',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=9.2181,
@@ -114020,13 +114020,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-90',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=9.2181,
@@ -114037,10 +114037,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\90-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -114288,7 +114288,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-91',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=9.61245,
@@ -114302,13 +114302,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-91',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=9.61245,
@@ -114319,10 +114319,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\91-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -114570,7 +114570,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-92',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=10.6263,
@@ -114584,13 +114584,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-92',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=10.6263,
@@ -114601,10 +114601,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\92-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -114852,7 +114852,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_on_center-93',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=12.6951,
@@ -114866,13 +114866,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_on_center',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_on_center-93',
         source_xml='aasimonster2\\snare_on_center\\snare_on_center.xml',
         power=12.6951,
@@ -114883,10 +114883,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_on_center\\samples\\93-snare_on_center.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -115134,7 +115134,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-1',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.00673867,
@@ -115148,13 +115148,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-1',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.00673867,
@@ -115165,10 +115165,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\1-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -115416,7 +115416,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-2',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.092255,
@@ -115430,13 +115430,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-2',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.092255,
@@ -115447,10 +115447,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\2-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -115698,7 +115698,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-3',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.107021,
@@ -115712,13 +115712,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-3',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.107021,
@@ -115729,10 +115729,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\3-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -115980,7 +115980,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-4',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.116033,
@@ -115994,13 +115994,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-4',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.116033,
@@ -116011,10 +116011,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\4-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -116262,7 +116262,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-5',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.230574,
@@ -116276,13 +116276,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-5',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.230574,
@@ -116293,10 +116293,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\5-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -116544,7 +116544,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-6',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.281545,
@@ -116558,13 +116558,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-6',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.281545,
@@ -116575,10 +116575,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\6-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -116826,7 +116826,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-7',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.367305,
@@ -116840,13 +116840,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-7',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.367305,
@@ -116857,10 +116857,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\7-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -117108,7 +117108,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-8',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.771878,
@@ -117122,13 +117122,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-8',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.771878,
@@ -117139,10 +117139,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\8-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -117390,7 +117390,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-9',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.815111,
@@ -117404,13 +117404,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-9',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.815111,
@@ -117421,10 +117421,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\9-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -117672,7 +117672,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-10',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.830236,
@@ -117686,13 +117686,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-10',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.830236,
@@ -117703,10 +117703,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\10-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -117954,7 +117954,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-11',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.8669,
@@ -117968,13 +117968,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-11',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.8669,
@@ -117985,10 +117985,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\11-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -118236,7 +118236,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-12',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.970409,
@@ -118250,13 +118250,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-12',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=0.970409,
@@ -118267,10 +118267,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\12-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -118518,7 +118518,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-13',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.05717,
@@ -118532,13 +118532,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-13',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.05717,
@@ -118549,10 +118549,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\13-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -118800,7 +118800,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-14',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.2061,
@@ -118814,13 +118814,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-14',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.2061,
@@ -118831,10 +118831,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\14-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -119082,7 +119082,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-15',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.35201,
@@ -119096,13 +119096,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-15',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.35201,
@@ -119113,10 +119113,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\15-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -119364,7 +119364,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-16',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.83288,
@@ -119378,13 +119378,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-16',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.83288,
@@ -119395,10 +119395,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\16-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -119646,7 +119646,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-17',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.83452,
@@ -119660,13 +119660,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-17',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.83452,
@@ -119677,10 +119677,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\17-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -119928,7 +119928,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-18',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.83889,
@@ -119942,13 +119942,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-18',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.83889,
@@ -119959,10 +119959,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\18-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -120210,7 +120210,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-19',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.91176,
@@ -120224,13 +120224,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-19',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=1.91176,
@@ -120241,10 +120241,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\19-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -120492,7 +120492,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-20',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=2.22814,
@@ -120506,13 +120506,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-20',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=2.22814,
@@ -120523,10 +120523,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\20-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -120774,7 +120774,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-21',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=2.37415,
@@ -120788,13 +120788,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-21',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=2.37415,
@@ -120805,10 +120805,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\21-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -121056,7 +121056,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-22',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=2.52072,
@@ -121070,13 +121070,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-22',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=2.52072,
@@ -121087,10 +121087,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\22-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -121338,7 +121338,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-23',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=3.05984,
@@ -121352,13 +121352,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-23',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=3.05984,
@@ -121369,10 +121369,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\23-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -121620,7 +121620,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-24',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=3.42041,
@@ -121634,13 +121634,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-24',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=3.42041,
@@ -121651,10 +121651,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\24-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -121902,7 +121902,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-25',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=3.96764,
@@ -121916,13 +121916,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-25',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=3.96764,
@@ -121933,10 +121933,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\25-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -122184,7 +122184,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-26',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=4.18367,
@@ -122198,13 +122198,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-26',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=4.18367,
@@ -122215,10 +122215,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\26-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -122466,7 +122466,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-27',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=5.2288,
@@ -122480,13 +122480,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-27',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=5.2288,
@@ -122497,10 +122497,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\27-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -122748,7 +122748,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-28',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=5.23478,
@@ -122762,13 +122762,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-28',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=5.23478,
@@ -122779,10 +122779,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\28-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -123030,7 +123030,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-29',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=5.62224,
@@ -123044,13 +123044,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-29',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=5.62224,
@@ -123061,10 +123061,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\29-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -123312,7 +123312,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-30',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=6.21157,
@@ -123326,13 +123326,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-30',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=6.21157,
@@ -123343,10 +123343,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\30-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -123594,7 +123594,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-31',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=6.64551,
@@ -123608,13 +123608,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-31',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=6.64551,
@@ -123625,10 +123625,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\31-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -123876,7 +123876,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-32',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=6.9287,
@@ -123890,13 +123890,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-32',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=6.9287,
@@ -123907,10 +123907,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\32-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -124158,7 +124158,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='snare_rim_shot-33',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=8.40803,
@@ -124172,13 +124172,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='snare_rim_shot',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='snare_rim_shot-33',
         source_xml='aasimonster2\\snare_rim_shot\\snare_rim_shot.xml',
         power=8.40803,
@@ -124189,10 +124189,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\snare_rim_shot\\samples\\33-snare_rim_shot.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -124440,7 +124440,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-1',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.0698057,
@@ -124454,13 +124454,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-1',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.0698057,
@@ -124471,10 +124471,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\1-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -124722,7 +124722,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-2',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.198144,
@@ -124736,13 +124736,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-2',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.198144,
@@ -124753,10 +124753,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\2-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -125004,7 +125004,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-3',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.367039,
@@ -125018,13 +125018,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-3',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.367039,
@@ -125035,10 +125035,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\3-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -125286,7 +125286,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-4',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.492945,
@@ -125300,13 +125300,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-4',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.492945,
@@ -125317,10 +125317,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\4-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -125568,7 +125568,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-5',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.586229,
@@ -125582,13 +125582,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-5',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.586229,
@@ -125599,10 +125599,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\5-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -125850,7 +125850,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-6',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.742905,
@@ -125864,13 +125864,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-6',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.742905,
@@ -125881,10 +125881,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\6-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -126132,7 +126132,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-7',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.75112,
@@ -126146,13 +126146,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-7',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.75112,
@@ -126163,10 +126163,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\7-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -126414,7 +126414,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-8',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.905211,
@@ -126428,13 +126428,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-8',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=0.905211,
@@ -126445,10 +126445,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\8-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -126696,7 +126696,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-9',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.09277,
@@ -126710,13 +126710,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-9',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.09277,
@@ -126727,10 +126727,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\9-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -126978,7 +126978,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-10',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.34086,
@@ -126992,13 +126992,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-10',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.34086,
@@ -127009,10 +127009,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\10-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -127260,7 +127260,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-11',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.64759,
@@ -127274,13 +127274,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-11',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.64759,
@@ -127291,10 +127291,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\11-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -127542,7 +127542,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-12',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.71884,
@@ -127556,13 +127556,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-12',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.71884,
@@ -127573,10 +127573,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\12-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -127824,7 +127824,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-13',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.75305,
@@ -127838,13 +127838,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-13',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=1.75305,
@@ -127855,10 +127855,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\13-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -128106,7 +128106,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-14',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.08373,
@@ -128120,13 +128120,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-14',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.08373,
@@ -128137,10 +128137,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\14-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -128388,7 +128388,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-15',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.31858,
@@ -128402,13 +128402,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-15',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.31858,
@@ -128419,10 +128419,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\15-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -128670,7 +128670,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-16',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.59191,
@@ -128684,13 +128684,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-16',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.59191,
@@ -128701,10 +128701,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\16-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -128952,7 +128952,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-17',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.65094,
@@ -128966,13 +128966,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-17',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.65094,
@@ -128983,10 +128983,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\17-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -129234,7 +129234,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-18',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.74437,
@@ -129248,13 +129248,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-18',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.74437,
@@ -129265,10 +129265,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\18-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -129516,7 +129516,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-19',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.75095,
@@ -129530,13 +129530,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-19',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.75095,
@@ -129547,10 +129547,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\19-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -129798,7 +129798,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-20',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.95158,
@@ -129812,13 +129812,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-20',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=2.95158,
@@ -129829,10 +129829,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\20-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -130080,7 +130080,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-21',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=3.11144,
@@ -130094,13 +130094,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-21',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=3.11144,
@@ -130111,10 +130111,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\21-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -130362,7 +130362,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_1-22',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=4.30112,
@@ -130376,13 +130376,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_1',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_1-22',
         source_xml='aasimonster2\\tom_1\\tom_1.xml',
         power=4.30112,
@@ -130393,10 +130393,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_1\\samples\\22-tom_1.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -130644,7 +130644,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-1',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.00786547,
@@ -130658,13 +130658,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-1',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.00786547,
@@ -130675,10 +130675,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\1-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -130926,7 +130926,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-2',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.0478951,
@@ -130940,13 +130940,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-2',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.0478951,
@@ -130957,10 +130957,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\2-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -131208,7 +131208,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-3',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.0547856,
@@ -131222,13 +131222,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-3',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.0547856,
@@ -131239,10 +131239,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\3-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -131490,7 +131490,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-4',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.118659,
@@ -131504,13 +131504,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-4',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.118659,
@@ -131521,10 +131521,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\4-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -131772,7 +131772,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-5',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.182774,
@@ -131786,13 +131786,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-5',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.182774,
@@ -131803,10 +131803,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\5-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -132054,7 +132054,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-6',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.293517,
@@ -132068,13 +132068,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-6',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.293517,
@@ -132085,10 +132085,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\6-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -132336,7 +132336,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-7',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.325793,
@@ -132350,13 +132350,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-7',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.325793,
@@ -132367,10 +132367,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\7-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -132618,7 +132618,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-8',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.41655,
@@ -132632,13 +132632,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-8',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.41655,
@@ -132649,10 +132649,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\8-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -132900,7 +132900,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-9',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.678211,
@@ -132914,13 +132914,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-9',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.678211,
@@ -132931,10 +132931,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\9-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -133182,7 +133182,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-10',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.865142,
@@ -133196,13 +133196,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-10',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=0.865142,
@@ -133213,10 +133213,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\10-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -133464,7 +133464,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-11',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.17118,
@@ -133478,13 +133478,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-11',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.17118,
@@ -133495,10 +133495,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\11-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -133746,7 +133746,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-12',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.69796,
@@ -133760,13 +133760,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-12',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.69796,
@@ -133777,10 +133777,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\12-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -134028,7 +134028,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-13',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.83497,
@@ -134042,13 +134042,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-13',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.83497,
@@ -134059,10 +134059,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\13-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -134310,7 +134310,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-14',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.83814,
@@ -134324,13 +134324,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-14',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=1.83814,
@@ -134341,10 +134341,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\14-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -134592,7 +134592,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-15',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=2.3051,
@@ -134606,13 +134606,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-15',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=2.3051,
@@ -134623,10 +134623,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\15-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -134874,7 +134874,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-16',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=2.57777,
@@ -134888,13 +134888,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-16',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=2.57777,
@@ -134905,10 +134905,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\16-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -135156,7 +135156,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-17',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=2.75709,
@@ -135170,13 +135170,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-17',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=2.75709,
@@ -135187,10 +135187,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\17-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -135438,7 +135438,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-18',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=3.15985,
@@ -135452,13 +135452,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-18',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=3.15985,
@@ -135469,10 +135469,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\18-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -135720,7 +135720,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-19',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=3.47038,
@@ -135734,13 +135734,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-19',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=3.47038,
@@ -135751,10 +135751,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\19-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -136002,7 +136002,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-20',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=4.57293,
@@ -136016,13 +136016,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-20',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=4.57293,
@@ -136033,10 +136033,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\20-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -136284,7 +136284,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-21',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=5.19272,
@@ -136298,13 +136298,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-21',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=5.19272,
@@ -136315,10 +136315,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\21-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -136566,7 +136566,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-22',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=5.26747,
@@ -136580,13 +136580,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-22',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=5.26747,
@@ -136597,10 +136597,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\22-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -136848,7 +136848,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_2-23',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=6.08678,
@@ -136862,13 +136862,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_2',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_2-23',
         source_xml='aasimonster2\\tom_2\\tom_2.xml',
         power=6.08678,
@@ -136879,10 +136879,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_2\\samples\\23-tom_2.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -137130,7 +137130,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-1',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.0187587,
@@ -137144,13 +137144,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-1',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.0187587,
@@ -137161,10 +137161,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\1-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -137412,7 +137412,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-2',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.118266,
@@ -137426,13 +137426,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-2',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.118266,
@@ -137443,10 +137443,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\2-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -137694,7 +137694,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-3',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.166157,
@@ -137708,13 +137708,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-3',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.166157,
@@ -137725,10 +137725,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\3-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -137976,7 +137976,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-4',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.309458,
@@ -137990,13 +137990,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-4',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.309458,
@@ -138007,10 +138007,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\4-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -138258,7 +138258,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-5',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.339132,
@@ -138272,13 +138272,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-5',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.339132,
@@ -138289,10 +138289,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\5-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -138540,7 +138540,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-6',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.514706,
@@ -138554,13 +138554,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-6',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.514706,
@@ -138571,10 +138571,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\6-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -138822,7 +138822,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-7',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.802807,
@@ -138836,13 +138836,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-7',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.802807,
@@ -138853,10 +138853,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\7-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -139104,7 +139104,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-8',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.883272,
@@ -139118,13 +139118,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-8',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=0.883272,
@@ -139135,10 +139135,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\8-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -139386,7 +139386,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-9',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=1.06534,
@@ -139400,13 +139400,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-9',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=1.06534,
@@ -139417,10 +139417,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\9-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -139668,7 +139668,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-10',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=2.60903,
@@ -139682,13 +139682,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-10',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=2.60903,
@@ -139699,10 +139699,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\10-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -139950,7 +139950,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-11',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=2.91848,
@@ -139964,13 +139964,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-11',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=2.91848,
@@ -139981,10 +139981,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\11-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -140232,7 +140232,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-12',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=3.19151,
@@ -140246,13 +140246,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-12',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=3.19151,
@@ -140263,10 +140263,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\12-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -140514,7 +140514,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-13',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=4.01432,
@@ -140528,13 +140528,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-13',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=4.01432,
@@ -140545,10 +140545,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\13-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -140796,7 +140796,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-14',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=4.42011,
@@ -140810,13 +140810,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-14',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=4.42011,
@@ -140827,10 +140827,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\14-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -141078,7 +141078,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-15',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=5.55321,
@@ -141092,13 +141092,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-15',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=5.55321,
@@ -141109,10 +141109,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\15-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -141360,7 +141360,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-16',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=5.70957,
@@ -141374,13 +141374,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-16',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=5.70957,
@@ -141391,10 +141391,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\16-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -141642,7 +141642,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-17',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=5.71507,
@@ -141656,13 +141656,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-17',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=5.71507,
@@ -141673,10 +141673,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\17-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -141924,7 +141924,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-18',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=6.10129,
@@ -141938,13 +141938,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-18',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=6.10129,
@@ -141955,10 +141955,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\18-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -142206,7 +142206,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-19',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=7.15183,
@@ -142220,13 +142220,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-19',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=7.15183,
@@ -142237,10 +142237,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\19-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -142488,7 +142488,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-20',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=7.5156,
@@ -142502,13 +142502,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-20',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=7.5156,
@@ -142519,10 +142519,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\20-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -142770,7 +142770,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-21',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=7.73312,
@@ -142784,13 +142784,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-21',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=7.73312,
@@ -142801,10 +142801,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\21-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -143052,7 +143052,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-22',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=8.25383,
@@ -143066,13 +143066,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-22',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=8.25383,
@@ -143083,10 +143083,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\22-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -143334,7 +143334,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-23',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=9.15786,
@@ -143348,13 +143348,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-23',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=9.15786,
@@ -143365,10 +143365,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\23-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -143616,7 +143616,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_3-24',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=10.0973,
@@ -143630,13 +143630,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_3',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_3-24',
         source_xml='aasimonster2\\tom_3\\tom_3.xml',
         power=10.0973,
@@ -143647,10 +143647,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_3\\samples\\24-tom_3.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -143898,7 +143898,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-1',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.0299393,
@@ -143912,13 +143912,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-1',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.0299393,
@@ -143929,10 +143929,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\1-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -144180,7 +144180,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-2',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.184247,
@@ -144194,13 +144194,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-2',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.184247,
@@ -144211,10 +144211,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\2-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -144462,7 +144462,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-3',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.294984,
@@ -144476,13 +144476,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-3',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.294984,
@@ -144493,10 +144493,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\3-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -144744,7 +144744,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-4',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.434601,
@@ -144758,13 +144758,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-4',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.434601,
@@ -144775,10 +144775,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\4-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -145026,7 +145026,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-5',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.518111,
@@ -145040,13 +145040,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-5',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.518111,
@@ -145057,10 +145057,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\5-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -145308,7 +145308,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-6',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.828844,
@@ -145322,13 +145322,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-6',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=0.828844,
@@ -145339,10 +145339,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\6-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -145590,7 +145590,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-7',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=1.34371,
@@ -145604,13 +145604,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-7',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=1.34371,
@@ -145621,10 +145621,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\7-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -145872,7 +145872,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-8',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=1.44711,
@@ -145886,13 +145886,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-8',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=1.44711,
@@ -145903,10 +145903,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\8-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -146154,7 +146154,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-9',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=1.86864,
@@ -146168,13 +146168,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-9',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=1.86864,
@@ -146185,10 +146185,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\9-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -146436,7 +146436,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-10',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=2.2289,
@@ -146450,13 +146450,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-10',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=2.2289,
@@ -146467,10 +146467,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\10-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -146718,7 +146718,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-11',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=2.56383,
@@ -146732,13 +146732,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-11',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=2.56383,
@@ -146749,10 +146749,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\11-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -147000,7 +147000,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-12',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=3.01748,
@@ -147014,13 +147014,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-12',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=3.01748,
@@ -147031,10 +147031,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\12-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -147282,7 +147282,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-13',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=4.17217,
@@ -147296,13 +147296,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-13',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=4.17217,
@@ -147313,10 +147313,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\13-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -147564,7 +147564,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-14',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=4.3646,
@@ -147578,13 +147578,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-14',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=4.3646,
@@ -147595,10 +147595,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\14-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -147846,7 +147846,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-15',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=5.84188,
@@ -147860,13 +147860,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-15',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=5.84188,
@@ -147877,10 +147877,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\15-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -148128,7 +148128,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-16',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=6.60571,
@@ -148142,13 +148142,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-16',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=6.60571,
@@ -148159,10 +148159,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\16-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -148410,7 +148410,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-17',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=7.23198,
@@ -148424,13 +148424,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-17',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=7.23198,
@@ -148441,10 +148441,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\17-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -148692,7 +148692,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-18',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=7.88075,
@@ -148706,13 +148706,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-18',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=7.88075,
@@ -148723,10 +148723,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\18-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -148974,7 +148974,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-19',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=7.9107,
@@ -148988,13 +148988,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-19',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=7.9107,
@@ -149005,10 +149005,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\19-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -149256,7 +149256,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-20',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=8.19802,
@@ -149270,13 +149270,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-20',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=8.19802,
@@ -149287,10 +149287,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\20-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -149538,7 +149538,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-21',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=9.48739,
@@ -149552,13 +149552,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-21',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=9.48739,
@@ -149569,10 +149569,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\21-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -149820,7 +149820,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-22',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=11.2917,
@@ -149834,13 +149834,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-22',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=11.2917,
@@ -149851,10 +149851,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\22-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -150102,7 +150102,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='tom_4-23',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=11.7963,
@@ -150116,13 +150116,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='tom_4',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='tom_4-23',
         source_xml='aasimonster2\\tom_4\\tom_4.xml',
         power=11.7963,
@@ -150133,10 +150133,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\tom_4\\samples\\23-tom_4.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -150384,7 +150384,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='zilbel',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='zilbel-1',
         source_xml='aasimonster2\\zilbel\\zilbel.xml',
         power=0.0705491,
@@ -150398,13 +150398,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='zilbel',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='zilbel-1',
         source_xml='aasimonster2\\zilbel\\zilbel.xml',
         power=0.0705491,
@@ -150415,10 +150415,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\zilbel\\samples\\1-zilbel.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -150666,7 +150666,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='zilbel',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='zilbel-2',
         source_xml='aasimonster2\\zilbel\\zilbel.xml',
         power=1.2981,
@@ -150680,13 +150680,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='zilbel',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='zilbel-2',
         source_xml='aasimonster2\\zilbel\\zilbel.xml',
         power=1.2981,
@@ -150697,10 +150697,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\zilbel\\samples\\2-zilbel.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
@@ -150948,7 +150948,7 @@ OPERATIONS = [
     Operation(
         kit='aasimonster2',
         source_instrument='zilbel',
-        mic_group='KICK_IN',
+        mic_group='KICK_L',
         sample_name='zilbel-3',
         source_xml='aasimonster2\\zilbel\\zilbel.xml',
         power=1.88205,
@@ -150962,13 +150962,13 @@ OPERATIONS = [
         default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
         kit='aasimonster2',
         source_instrument='zilbel',
-        mic_group='KICK_OUT',
+        mic_group='KICK_R',
         sample_name='zilbel-3',
         source_xml='aasimonster2\\zilbel\\zilbel.xml',
         power=1.88205,
@@ -150979,10 +150979,10 @@ OPERATIONS = [
             {"path": 'aasimonster2\\zilbel\\samples\\3-zilbel.wav', "channel": 5, "name": 'Kick R'},
         ],
         output_channels='mono',
-        default_mic_code='dom',
+        default_mic_code='dim',
         default_keep=False,
         quarantined=False,
-        quarantine_reasons=[],
+        quarantine_reasons=['disabled duplicate target if enabled'],
     ),
 
     Operation(
