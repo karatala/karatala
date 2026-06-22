@@ -799,7 +799,7 @@ def process_kit(kit_dir: Path, output_dir: Path, os_name: str):
         else:
             bat_lines.append(line)
 
-    emit(f"# Kit: {kit_name} ({kit_dir}) — channels: {len(channels)} instruments: {len(kit['instruments'])}")
+    emit(f"# Kit: {kit_name} ({kit_dir}) - channels: {len(channels)} instruments: {len(kit['instruments'])}")
 
     printed_dirs = set()
     summary = {
@@ -1150,6 +1150,9 @@ def map_channel_group_key(channel_name: str, mic_code: str) -> str:
         return 'HIHAT'
     if 'ride' in lowered:
         return 'RIDE'
+    ftom_match = re.search(r'ftom\s*([0-9]+)', lowered)
+    if ftom_match:
+        return 'FTOM' + ftom_match.group(1)
     if 'tom' in lowered:
         digit_match = re.search(r'tom\s*([0-9]+)', lowered)
         if digit_match:

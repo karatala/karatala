@@ -38,7 +38,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-1',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.000105857,
@@ -58,7 +58,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-1',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.000105857,
@@ -300,7 +300,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-2',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.000225871,
@@ -320,7 +320,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-2',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.000225871,
@@ -562,7 +562,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-3',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.000633613,
@@ -582,7 +582,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-3',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.000633613,
@@ -824,7 +824,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-4',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0015207,
@@ -844,7 +844,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-4',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0015207,
@@ -1086,7 +1086,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-5',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.00583062,
@@ -1106,7 +1106,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-5',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.00583062,
@@ -1348,7 +1348,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-6',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.00808687,
@@ -1368,7 +1368,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-6',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.00808687,
@@ -1610,7 +1610,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-7',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0121418,
@@ -1630,7 +1630,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-7',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0121418,
@@ -1872,7 +1872,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-8',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0147802,
@@ -1892,7 +1892,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-8',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0147802,
@@ -2134,7 +2134,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-9',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0200547,
@@ -2154,7 +2154,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-9',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0200547,
@@ -2396,7 +2396,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-10',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0288075,
@@ -2416,7 +2416,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-10',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0288075,
@@ -2658,7 +2658,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-11',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0349632,
@@ -2678,7 +2678,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-11',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0349632,
@@ -2920,7 +2920,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-12',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0359753,
@@ -2940,7 +2940,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-12',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0359753,
@@ -3182,7 +3182,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-13',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0496049,
@@ -3202,7 +3202,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-13',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0496049,
@@ -3444,7 +3444,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-14',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0567118,
@@ -3464,7 +3464,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-14',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0567118,
@@ -3706,7 +3706,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-15',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0739929,
@@ -3726,7 +3726,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-15',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.0739929,
@@ -3968,7 +3968,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaL-16',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.150743,
@@ -3988,7 +3988,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaL-16',
         source_xml='CrocellKit\\ChinaL\\ChinaL.xml',
         power=0.150743,
@@ -4230,7 +4230,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-1',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000154701,
@@ -4250,7 +4250,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-1',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000154701,
@@ -4492,7 +4492,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-2',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000224651,
@@ -4512,7 +4512,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-2',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000224651,
@@ -4754,7 +4754,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-3',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000360768,
@@ -4774,7 +4774,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-3',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000360768,
@@ -5016,7 +5016,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-4',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000406988,
@@ -5036,7 +5036,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-4',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000406988,
@@ -5278,7 +5278,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-5',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000547298,
@@ -5298,7 +5298,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-5',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000547298,
@@ -5540,7 +5540,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-6',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000717504,
@@ -5560,7 +5560,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-6',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000717504,
@@ -5802,7 +5802,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-7',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000814333,
@@ -5822,7 +5822,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-7',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.000814333,
@@ -6064,7 +6064,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-8',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00115883,
@@ -6084,7 +6084,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-8',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00115883,
@@ -6326,7 +6326,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-9',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00138484,
@@ -6346,7 +6346,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-9',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00138484,
@@ -6588,7 +6588,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-10',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0017448,
@@ -6608,7 +6608,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-10',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0017448,
@@ -6850,7 +6850,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-11',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00208689,
@@ -6870,7 +6870,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-11',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00208689,
@@ -7112,7 +7112,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-12',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00244521,
@@ -7132,7 +7132,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-12',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00244521,
@@ -7374,7 +7374,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-13',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00270286,
@@ -7394,7 +7394,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-13',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00270286,
@@ -7636,7 +7636,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-14',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00319484,
@@ -7656,7 +7656,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-14',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00319484,
@@ -7898,7 +7898,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-15',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00334375,
@@ -7918,7 +7918,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-15',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00334375,
@@ -8160,7 +8160,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-16',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00433019,
@@ -8180,7 +8180,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-16',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00433019,
@@ -8422,7 +8422,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-17',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00473636,
@@ -8442,7 +8442,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-17',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00473636,
@@ -8684,7 +8684,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-18',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.005467,
@@ -8704,7 +8704,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-18',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.005467,
@@ -8946,7 +8946,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-19',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00570119,
@@ -8966,7 +8966,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-19',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00570119,
@@ -9208,7 +9208,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-20',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00577128,
@@ -9228,7 +9228,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-20',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00577128,
@@ -9470,7 +9470,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-21',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0089969,
@@ -9490,7 +9490,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-21',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0089969,
@@ -9732,7 +9732,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-22',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00957612,
@@ -9752,7 +9752,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-22',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00957612,
@@ -9994,7 +9994,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-23',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00987934,
@@ -10014,7 +10014,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-23',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.00987934,
@@ -10256,7 +10256,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-24',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0102771,
@@ -10276,7 +10276,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-24',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0102771,
@@ -10518,7 +10518,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='ChinaR-25',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0116242,
@@ -10538,7 +10538,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='ChinaR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='ChinaR-25',
         source_xml='CrocellKit\\ChinaR\\ChinaR.xml',
         power=0.0116242,
@@ -10780,7 +10780,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-1',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.000298735,
@@ -10800,7 +10800,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-1',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.000298735,
@@ -11042,7 +11042,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-2',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.00138077,
@@ -11062,7 +11062,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-2',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.00138077,
@@ -11304,7 +11304,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-3',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.00404778,
@@ -11324,7 +11324,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-3',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.00404778,
@@ -11566,7 +11566,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-4',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.00567351,
@@ -11586,7 +11586,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-4',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.00567351,
@@ -11828,7 +11828,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-5',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0105716,
@@ -11848,7 +11848,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-5',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0105716,
@@ -12090,7 +12090,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-6',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0128883,
@@ -12110,7 +12110,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-6',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0128883,
@@ -12352,7 +12352,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-7',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.016019,
@@ -12372,7 +12372,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-7',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.016019,
@@ -12614,7 +12614,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-8',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0204118,
@@ -12634,7 +12634,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-8',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0204118,
@@ -12876,7 +12876,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-9',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0282476,
@@ -12896,7 +12896,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-9',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0282476,
@@ -13138,7 +13138,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-10',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.029562,
@@ -13158,7 +13158,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-10',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.029562,
@@ -13400,7 +13400,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-11',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.034659,
@@ -13420,7 +13420,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-11',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.034659,
@@ -13662,7 +13662,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-12',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0414128,
@@ -13682,7 +13682,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-12',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0414128,
@@ -13924,7 +13924,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-13',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0466924,
@@ -13944,7 +13944,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-13',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0466924,
@@ -14186,7 +14186,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-14',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0596746,
@@ -14206,7 +14206,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-14',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0596746,
@@ -14448,7 +14448,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-15',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0626806,
@@ -14468,7 +14468,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-15',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0626806,
@@ -14710,7 +14710,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-16',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0716487,
@@ -14730,7 +14730,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-16',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.0716487,
@@ -14972,7 +14972,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-17',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.102601,
@@ -14992,7 +14992,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-17',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.102601,
@@ -15234,7 +15234,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-18',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.124218,
@@ -15254,7 +15254,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-18',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.124218,
@@ -15496,7 +15496,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-19',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.131627,
@@ -15516,7 +15516,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-19',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.131627,
@@ -15758,7 +15758,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-20',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.162489,
@@ -15778,7 +15778,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-20',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.162489,
@@ -16020,7 +16020,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-21',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.173179,
@@ -16040,7 +16040,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-21',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.173179,
@@ -16282,7 +16282,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-22',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.261799,
@@ -16302,7 +16302,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-22',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.261799,
@@ -16544,7 +16544,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-23',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.325905,
@@ -16564,7 +16564,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-23',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.325905,
@@ -16806,7 +16806,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-24',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.330539,
@@ -16826,7 +16826,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-24',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.330539,
@@ -17068,7 +17068,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashL-25',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.44145,
@@ -17088,7 +17088,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashL-25',
         source_xml='CrocellKit\\CrashL\\CrashL.xml',
         power=0.44145,
@@ -17330,7 +17330,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-1',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.00932732,
@@ -17350,7 +17350,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-1',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.00932732,
@@ -17592,7 +17592,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-2',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.010686,
@@ -17612,7 +17612,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-2',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.010686,
@@ -17854,7 +17854,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-3',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0269968,
@@ -17874,7 +17874,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-3',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0269968,
@@ -18116,7 +18116,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-4',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0418208,
@@ -18136,7 +18136,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-4',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0418208,
@@ -18378,7 +18378,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-5',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0708147,
@@ -18398,7 +18398,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-5',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0708147,
@@ -18640,7 +18640,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-6',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0897089,
@@ -18660,7 +18660,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-6',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.0897089,
@@ -18902,7 +18902,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-7',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.128574,
@@ -18922,7 +18922,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-7',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.128574,
@@ -19164,7 +19164,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-8',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.140992,
@@ -19184,7 +19184,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-8',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.140992,
@@ -19426,7 +19426,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-9',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.156605,
@@ -19446,7 +19446,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-9',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.156605,
@@ -19688,7 +19688,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-10',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.167559,
@@ -19708,7 +19708,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-10',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.167559,
@@ -19950,7 +19950,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-11',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.217578,
@@ -19970,7 +19970,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-11',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.217578,
@@ -20212,7 +20212,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashLStopped-12',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.260844,
@@ -20232,7 +20232,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashLStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashLStopped-12',
         source_xml='CrocellKit\\CrashLStopped\\CrashLStopped.xml',
         power=0.260844,
@@ -20474,7 +20474,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-1',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.000196221,
@@ -20494,7 +20494,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-1',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.000196221,
@@ -20736,7 +20736,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-2',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00030069,
@@ -20756,7 +20756,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-2',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00030069,
@@ -20998,7 +20998,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-3',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.000585175,
@@ -21018,7 +21018,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-3',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.000585175,
@@ -21260,7 +21260,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-4',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.000861349,
@@ -21280,7 +21280,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-4',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.000861349,
@@ -21522,7 +21522,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-5',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00127693,
@@ -21542,7 +21542,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-5',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00127693,
@@ -21784,7 +21784,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-6',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00149472,
@@ -21804,7 +21804,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-6',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00149472,
@@ -22046,7 +22046,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-7',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00174476,
@@ -22066,7 +22066,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-7',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00174476,
@@ -22308,7 +22308,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-8',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00183986,
@@ -22328,7 +22328,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-8',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00183986,
@@ -22570,7 +22570,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-9',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00248302,
@@ -22590,7 +22590,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-9',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00248302,
@@ -22832,7 +22832,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-10',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.0027674,
@@ -22852,7 +22852,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-10',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.0027674,
@@ -23094,7 +23094,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-11',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00329797,
@@ -23114,7 +23114,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-11',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00329797,
@@ -23356,7 +23356,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-12',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00400972,
@@ -23376,7 +23376,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-12',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00400972,
@@ -23618,7 +23618,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-13',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00466496,
@@ -23638,7 +23638,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-13',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00466496,
@@ -23880,7 +23880,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-14',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00525299,
@@ -23900,7 +23900,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-14',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00525299,
@@ -24142,7 +24142,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-15',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00645996,
@@ -24162,7 +24162,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-15',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00645996,
@@ -24404,7 +24404,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-16',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00661231,
@@ -24424,7 +24424,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-16',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00661231,
@@ -24666,7 +24666,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-17',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00670317,
@@ -24686,7 +24686,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-17',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00670317,
@@ -24928,7 +24928,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-18',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00737665,
@@ -24948,7 +24948,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-18',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00737665,
@@ -25190,7 +25190,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-19',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00749217,
@@ -25210,7 +25210,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-19',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00749217,
@@ -25452,7 +25452,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-20',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00918145,
@@ -25472,7 +25472,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-20',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.00918145,
@@ -25714,7 +25714,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashR-21',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.0116969,
@@ -25734,7 +25734,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashR-21',
         source_xml='CrocellKit\\CrashR\\CrashR.xml',
         power=0.0116969,
@@ -25976,7 +25976,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-1',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0017769,
@@ -25996,7 +25996,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-1',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0017769,
@@ -26238,7 +26238,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-2',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.00663254,
@@ -26258,7 +26258,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-2',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.00663254,
@@ -26500,7 +26500,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-3',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.00905079,
@@ -26520,7 +26520,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-3',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.00905079,
@@ -26762,7 +26762,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-4',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0228572,
@@ -26782,7 +26782,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-4',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0228572,
@@ -27024,7 +27024,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-5',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0241265,
@@ -27044,7 +27044,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-5',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0241265,
@@ -27286,7 +27286,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-6',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0275825,
@@ -27306,7 +27306,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-6',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0275825,
@@ -27548,7 +27548,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-7',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0290683,
@@ -27568,7 +27568,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-7',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0290683,
@@ -27810,7 +27810,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-8',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.034803,
@@ -27830,7 +27830,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-8',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.034803,
@@ -28072,7 +28072,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRStopped-9',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0660612,
@@ -28092,7 +28092,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRStopped',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRStopped-9',
         source_xml='CrocellKit\\CrashRStopped\\CrashRStopped.xml',
         power=0.0660612,
@@ -28334,7 +28334,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-1',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.000366455,
@@ -28354,7 +28354,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-1',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.000366455,
@@ -28596,7 +28596,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-2',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.00106935,
@@ -28616,7 +28616,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-2',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.00106935,
@@ -28858,7 +28858,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-3',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.00449447,
@@ -28878,7 +28878,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-3',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.00449447,
@@ -29120,7 +29120,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-4',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.00628848,
@@ -29140,7 +29140,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-4',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.00628848,
@@ -29382,7 +29382,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-5',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.0133812,
@@ -29402,7 +29402,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-5',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.0133812,
@@ -29644,7 +29644,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-6',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.0268416,
@@ -29664,7 +29664,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-6',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.0268416,
@@ -29906,7 +29906,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-7',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.0305519,
@@ -29926,7 +29926,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-7',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.0305519,
@@ -30168,7 +30168,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='CrashRXtra-8',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.066566,
@@ -30188,7 +30188,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='CrashRXtra',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='CrashRXtra-8',
         source_xml='CrocellKit\\CrashRXtra\\CrashRXtra.xml',
         power=0.066566,
@@ -30430,7 +30430,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-1',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.00851433,
@@ -30450,7 +30450,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-1',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.00851433,
@@ -30692,7 +30692,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-2',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0110128,
@@ -30712,7 +30712,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-2',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0110128,
@@ -30954,7 +30954,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-3',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0178941,
@@ -30974,7 +30974,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-3',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0178941,
@@ -31216,7 +31216,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-4',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.034881,
@@ -31236,7 +31236,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-4',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.034881,
@@ -31478,7 +31478,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-5',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0397024,
@@ -31498,7 +31498,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-5',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0397024,
@@ -31740,7 +31740,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-6',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0657158,
@@ -31760,7 +31760,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-6',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0657158,
@@ -32002,7 +32002,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-7',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0772472,
@@ -32022,7 +32022,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-7',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0772472,
@@ -32264,7 +32264,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-8',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0862168,
@@ -32284,7 +32284,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-8',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0862168,
@@ -32526,7 +32526,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-9',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0995491,
@@ -32546,7 +32546,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-9',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.0995491,
@@ -32788,7 +32788,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-10',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.16129,
@@ -32808,7 +32808,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-10',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.16129,
@@ -33050,7 +33050,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-11',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.24826,
@@ -33070,7 +33070,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-11',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.24826,
@@ -33312,7 +33312,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-12',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.286188,
@@ -33332,7 +33332,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-12',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.286188,
@@ -33574,7 +33574,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-13',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.291009,
@@ -33594,7 +33594,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-13',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.291009,
@@ -33836,7 +33836,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-14',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.330963,
@@ -33856,7 +33856,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-14',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.330963,
@@ -34098,7 +34098,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-15',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.350208,
@@ -34118,7 +34118,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-15',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.350208,
@@ -34360,7 +34360,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-16',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.442347,
@@ -34380,7 +34380,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-16',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.442347,
@@ -34622,7 +34622,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-17',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.512053,
@@ -34642,7 +34642,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-17',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.512053,
@@ -34884,7 +34884,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-18',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.532274,
@@ -34904,7 +34904,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-18',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.532274,
@@ -35146,7 +35146,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-19',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.580147,
@@ -35166,7 +35166,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-19',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.580147,
@@ -35408,7 +35408,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-20',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.758676,
@@ -35428,7 +35428,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-20',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.758676,
@@ -35670,7 +35670,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-21',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.799002,
@@ -35690,7 +35690,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-21',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=0.799002,
@@ -35932,7 +35932,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-22',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.08801,
@@ -35952,7 +35952,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-22',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.08801,
@@ -36194,7 +36194,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-23',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.12856,
@@ -36214,7 +36214,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-23',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.12856,
@@ -36456,7 +36456,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-24',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.14736,
@@ -36476,7 +36476,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-24',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.14736,
@@ -36718,7 +36718,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-25',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.20615,
@@ -36738,7 +36738,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-25',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.20615,
@@ -36980,7 +36980,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-26',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.34086,
@@ -37000,7 +37000,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-26',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.34086,
@@ -37242,7 +37242,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-27',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.631,
@@ -37262,7 +37262,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-27',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.631,
@@ -37504,7 +37504,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-28',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.82642,
@@ -37524,7 +37524,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-28',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=1.82642,
@@ -37766,7 +37766,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom1-29',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=2.14108,
@@ -37786,7 +37786,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom1-29',
         source_xml='CrocellKit\\FTom1\\FTom1.xml',
         power=2.14108,
@@ -38028,7 +38028,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-1',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.01726,
@@ -38048,7 +38048,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-1',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.01726,
@@ -38290,7 +38290,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-2',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.02029,
@@ -38310,7 +38310,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-2',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.02029,
@@ -38552,7 +38552,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-3',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0250847,
@@ -38572,7 +38572,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-3',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0250847,
@@ -38814,7 +38814,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-4',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0428718,
@@ -38834,7 +38834,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-4',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0428718,
@@ -39076,7 +39076,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-5',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0599932,
@@ -39096,7 +39096,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-5',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0599932,
@@ -39338,7 +39338,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-6',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0776824,
@@ -39358,7 +39358,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-6',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0776824,
@@ -39600,7 +39600,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-7',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0994884,
@@ -39620,7 +39620,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-7',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.0994884,
@@ -39862,7 +39862,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-8',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.109533,
@@ -39882,7 +39882,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-8',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.109533,
@@ -40124,7 +40124,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-9',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.17054,
@@ -40144,7 +40144,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-9',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.17054,
@@ -40386,7 +40386,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-10',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.190048,
@@ -40406,7 +40406,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-10',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.190048,
@@ -40648,7 +40648,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-11',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.20557,
@@ -40668,7 +40668,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-11',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.20557,
@@ -40910,7 +40910,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-12',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.240766,
@@ -40930,7 +40930,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-12',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.240766,
@@ -41172,7 +41172,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-13',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.34016,
@@ -41192,7 +41192,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-13',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.34016,
@@ -41434,7 +41434,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-14',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.366261,
@@ -41454,7 +41454,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-14',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.366261,
@@ -41696,7 +41696,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-15',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.521306,
@@ -41716,7 +41716,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-15',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.521306,
@@ -41958,7 +41958,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-16',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.526058,
@@ -41978,7 +41978,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-16',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.526058,
@@ -42220,7 +42220,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-17',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.561007,
@@ -42240,7 +42240,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-17',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.561007,
@@ -42482,7 +42482,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-18',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.613199,
@@ -42502,7 +42502,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-18',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.613199,
@@ -42744,7 +42744,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-19',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.678275,
@@ -42764,7 +42764,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-19',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.678275,
@@ -43006,7 +43006,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-20',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.780568,
@@ -43026,7 +43026,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-20',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.780568,
@@ -43268,7 +43268,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-21',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.947051,
@@ -43288,7 +43288,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-21',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=0.947051,
@@ -43530,7 +43530,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-22',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.01247,
@@ -43550,7 +43550,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-22',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.01247,
@@ -43792,7 +43792,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-23',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.03871,
@@ -43812,7 +43812,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-23',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.03871,
@@ -44054,7 +44054,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-24',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.09014,
@@ -44074,7 +44074,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-24',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.09014,
@@ -44316,7 +44316,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-25',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.25701,
@@ -44336,7 +44336,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-25',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.25701,
@@ -44578,7 +44578,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-26',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.26133,
@@ -44598,7 +44598,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-26',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.26133,
@@ -44840,7 +44840,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-27',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.39826,
@@ -44860,7 +44860,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-27',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.39826,
@@ -45102,7 +45102,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-28',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.41203,
@@ -45122,7 +45122,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-28',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.41203,
@@ -45364,7 +45364,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-29',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.51116,
@@ -45384,7 +45384,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-29',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.51116,
@@ -45626,7 +45626,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-30',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.94101,
@@ -45646,7 +45646,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-30',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=1.94101,
@@ -45888,7 +45888,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-31',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.0634,
@@ -45908,7 +45908,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-31',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.0634,
@@ -46150,7 +46150,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-32',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.42739,
@@ -46170,7 +46170,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-32',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.42739,
@@ -46412,7 +46412,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-33',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.59035,
@@ -46432,7 +46432,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-33',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.59035,
@@ -46674,7 +46674,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='FTom2-34',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.78942,
@@ -46694,7 +46694,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='FTom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='FTom2-34',
         source_xml='CrocellKit\\FTom2\\FTom2.xml',
         power=2.78942,
@@ -46936,7 +46936,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-1',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.000121854,
@@ -46956,7 +46956,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-1',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.000121854,
@@ -47198,7 +47198,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-2',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.000934992,
@@ -47218,7 +47218,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-2',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.000934992,
@@ -47460,7 +47460,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-3',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.00163766,
@@ -47480,7 +47480,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-3',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.00163766,
@@ -47722,7 +47722,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-4',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.00393073,
@@ -47742,7 +47742,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-4',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.00393073,
@@ -47984,7 +47984,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-5',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.00711306,
@@ -48004,7 +48004,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-5',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.00711306,
@@ -48246,7 +48246,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-6',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0105367,
@@ -48266,7 +48266,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-6',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0105367,
@@ -48508,7 +48508,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-7',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0152086,
@@ -48528,7 +48528,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-7',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0152086,
@@ -48770,7 +48770,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-8',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0188049,
@@ -48790,7 +48790,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-8',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0188049,
@@ -49032,7 +49032,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-9',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0217279,
@@ -49052,7 +49052,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-9',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0217279,
@@ -49294,7 +49294,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-10',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0242907,
@@ -49314,7 +49314,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-10',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0242907,
@@ -49556,7 +49556,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-11',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0336852,
@@ -49576,7 +49576,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-11',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0336852,
@@ -49818,7 +49818,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-12',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.039281,
@@ -49838,7 +49838,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-12',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.039281,
@@ -50080,7 +50080,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-13',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0459883,
@@ -50100,7 +50100,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-13',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0459883,
@@ -50342,7 +50342,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-14',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0548271,
@@ -50362,7 +50362,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-14',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0548271,
@@ -50604,7 +50604,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-15',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0621507,
@@ -50624,7 +50624,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-15',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0621507,
@@ -50866,7 +50866,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-16',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0648565,
@@ -50886,7 +50886,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-16',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0648565,
@@ -51128,7 +51128,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-17',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0740537,
@@ -51148,7 +51148,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-17',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0740537,
@@ -51390,7 +51390,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-18',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0789313,
@@ -51410,7 +51410,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-18',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0789313,
@@ -51652,7 +51652,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-19',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0915195,
@@ -51672,7 +51672,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-19',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0915195,
@@ -51914,7 +51914,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-20',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0942432,
@@ -51934,7 +51934,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-20',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0942432,
@@ -52176,7 +52176,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-21',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0993774,
@@ -52196,7 +52196,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-21',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.0993774,
@@ -52438,7 +52438,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-22',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.103766,
@@ -52458,7 +52458,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-22',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.103766,
@@ -52700,7 +52700,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-23',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.107283,
@@ -52720,7 +52720,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-23',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.107283,
@@ -52962,7 +52962,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-24',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.10769,
@@ -52982,7 +52982,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-24',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.10769,
@@ -53224,7 +53224,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-25',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.11291,
@@ -53244,7 +53244,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-25',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.11291,
@@ -53486,7 +53486,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-26',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.122201,
@@ -53506,7 +53506,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-26',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.122201,
@@ -53748,7 +53748,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-27',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.127339,
@@ -53768,7 +53768,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-27',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.127339,
@@ -54010,7 +54010,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-28',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.135649,
@@ -54030,7 +54030,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-28',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.135649,
@@ -54272,7 +54272,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-29',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.137801,
@@ -54292,7 +54292,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-29',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.137801,
@@ -54534,7 +54534,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-30',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.142253,
@@ -54554,7 +54554,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-30',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.142253,
@@ -54796,7 +54796,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-31',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.165436,
@@ -54816,7 +54816,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-31',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.165436,
@@ -55058,7 +55058,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-32',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.165917,
@@ -55078,7 +55078,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-32',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.165917,
@@ -55320,7 +55320,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-33',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.173437,
@@ -55340,7 +55340,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-33',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.173437,
@@ -55582,7 +55582,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-34',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.176613,
@@ -55602,7 +55602,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-34',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.176613,
@@ -55844,7 +55844,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-35',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.190687,
@@ -55864,7 +55864,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-35',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.190687,
@@ -56106,7 +56106,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-36',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.196682,
@@ -56126,7 +56126,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-36',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.196682,
@@ -56368,7 +56368,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-37',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.199629,
@@ -56388,7 +56388,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-37',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.199629,
@@ -56630,7 +56630,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-38',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.20213,
@@ -56650,7 +56650,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-38',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.20213,
@@ -56892,7 +56892,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-39',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.210005,
@@ -56912,7 +56912,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-39',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.210005,
@@ -57154,7 +57154,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-40',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.255038,
@@ -57174,7 +57174,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-40',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.255038,
@@ -57416,7 +57416,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosed-41',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.263976,
@@ -57436,7 +57436,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosed',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosed-41',
         source_xml='CrocellKit\\HihatClosed\\HihatClosed.xml',
         power=0.263976,
@@ -57678,7 +57678,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-1',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.000342184,
@@ -57698,7 +57698,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-1',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.000342184,
@@ -57940,7 +57940,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-2',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00105024,
@@ -57960,7 +57960,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-2',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00105024,
@@ -58202,7 +58202,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-3',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00209398,
@@ -58222,7 +58222,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-3',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00209398,
@@ -58464,7 +58464,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-4',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00318972,
@@ -58484,7 +58484,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-4',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00318972,
@@ -58726,7 +58726,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-5',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00881755,
@@ -58746,7 +58746,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-5',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.00881755,
@@ -58988,7 +58988,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-6',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0157958,
@@ -59008,7 +59008,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-6',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0157958,
@@ -59250,7 +59250,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-7',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0199587,
@@ -59270,7 +59270,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-7',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0199587,
@@ -59512,7 +59512,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-8',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0224178,
@@ -59532,7 +59532,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-8',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0224178,
@@ -59774,7 +59774,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-9',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0276733,
@@ -59794,7 +59794,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-9',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0276733,
@@ -60036,7 +60036,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-10',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0337417,
@@ -60056,7 +60056,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-10',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0337417,
@@ -60298,7 +60298,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-11',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.044589,
@@ -60318,7 +60318,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-11',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.044589,
@@ -60560,7 +60560,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-12',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0496434,
@@ -60580,7 +60580,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-12',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0496434,
@@ -60822,7 +60822,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-13',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0529988,
@@ -60842,7 +60842,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-13',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0529988,
@@ -61084,7 +61084,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-14',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0847829,
@@ -61104,7 +61104,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-14',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0847829,
@@ -61346,7 +61346,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-15',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0939896,
@@ -61366,7 +61366,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-15',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0939896,
@@ -61608,7 +61608,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-16',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0957075,
@@ -61628,7 +61628,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-16',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.0957075,
@@ -61870,7 +61870,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-17',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.100937,
@@ -61890,7 +61890,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-17',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.100937,
@@ -62132,7 +62132,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-18',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.103341,
@@ -62152,7 +62152,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-18',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.103341,
@@ -62394,7 +62394,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-19',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.120243,
@@ -62414,7 +62414,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-19',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.120243,
@@ -62656,7 +62656,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-20',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.120987,
@@ -62676,7 +62676,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-20',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.120987,
@@ -62918,7 +62918,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-21',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.124458,
@@ -62938,7 +62938,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-21',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.124458,
@@ -63180,7 +63180,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-22',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.128826,
@@ -63200,7 +63200,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-22',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.128826,
@@ -63442,7 +63442,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-23',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.142295,
@@ -63462,7 +63462,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-23',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.142295,
@@ -63704,7 +63704,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-24',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.151335,
@@ -63724,7 +63724,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-24',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.151335,
@@ -63966,7 +63966,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-25',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.155536,
@@ -63986,7 +63986,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-25',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.155536,
@@ -64228,7 +64228,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-26',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.15834,
@@ -64248,7 +64248,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-26',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.15834,
@@ -64490,7 +64490,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-27',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.166536,
@@ -64510,7 +64510,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-27',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.166536,
@@ -64752,7 +64752,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-28',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.170309,
@@ -64772,7 +64772,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-28',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.170309,
@@ -65014,7 +65014,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-29',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.191665,
@@ -65034,7 +65034,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-29',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.191665,
@@ -65276,7 +65276,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-30',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.207523,
@@ -65296,7 +65296,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-30',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.207523,
@@ -65538,7 +65538,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-31',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.232829,
@@ -65558,7 +65558,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-31',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.232829,
@@ -65800,7 +65800,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-32',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.241351,
@@ -65820,7 +65820,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-32',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.241351,
@@ -66062,7 +66062,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-33',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.254108,
@@ -66082,7 +66082,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-33',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.254108,
@@ -66324,7 +66324,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-34',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.262575,
@@ -66344,7 +66344,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-34',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.262575,
@@ -66586,7 +66586,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-35',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.302718,
@@ -66606,7 +66606,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-35',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.302718,
@@ -66848,7 +66848,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-36',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.303112,
@@ -66868,7 +66868,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-36',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.303112,
@@ -67110,7 +67110,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-37',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.330384,
@@ -67130,7 +67130,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-37',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.330384,
@@ -67372,7 +67372,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-38',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.333259,
@@ -67392,7 +67392,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-38',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.333259,
@@ -67634,7 +67634,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-39',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.369785,
@@ -67654,7 +67654,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-39',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.369785,
@@ -67896,7 +67896,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-40',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.37475,
@@ -67916,7 +67916,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-40',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.37475,
@@ -68158,7 +68158,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-41',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.402899,
@@ -68178,7 +68178,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-41',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.402899,
@@ -68420,7 +68420,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatClosedNoPedal-42',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.419853,
@@ -68440,7 +68440,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatClosedNoPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatClosedNoPedal-42',
         source_xml='CrocellKit\\HihatClosedNoPedal\\HihatClosedNoPedal.xml',
         power=0.419853,
@@ -68682,7 +68682,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-1',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.000146308,
@@ -68702,7 +68702,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-1',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.000146308,
@@ -68944,7 +68944,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-2',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.000677304,
@@ -68964,7 +68964,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-2',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.000677304,
@@ -69206,7 +69206,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-3',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00142699,
@@ -69226,7 +69226,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-3',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00142699,
@@ -69468,7 +69468,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-4',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00246265,
@@ -69488,7 +69488,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-4',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00246265,
@@ -69730,7 +69730,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-5',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00384106,
@@ -69750,7 +69750,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-5',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00384106,
@@ -69992,7 +69992,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-6',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00947989,
@@ -70012,7 +70012,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-6',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.00947989,
@@ -70254,7 +70254,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-7',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0117228,
@@ -70274,7 +70274,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-7',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0117228,
@@ -70516,7 +70516,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-8',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0148891,
@@ -70536,7 +70536,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-8',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0148891,
@@ -70778,7 +70778,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-9',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.022082,
@@ -70798,7 +70798,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-9',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.022082,
@@ -71040,7 +71040,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-10',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0261592,
@@ -71060,7 +71060,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-10',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0261592,
@@ -71302,7 +71302,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-11',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0270819,
@@ -71322,7 +71322,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-11',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0270819,
@@ -71564,7 +71564,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-12',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0298887,
@@ -71584,7 +71584,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-12',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0298887,
@@ -71826,7 +71826,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-13',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0302332,
@@ -71846,7 +71846,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-13',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0302332,
@@ -72088,7 +72088,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-14',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0310149,
@@ -72108,7 +72108,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-14',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0310149,
@@ -72350,7 +72350,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-15',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0334429,
@@ -72370,7 +72370,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-15',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0334429,
@@ -72612,7 +72612,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-16',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0445076,
@@ -72632,7 +72632,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-16',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0445076,
@@ -72874,7 +72874,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-17',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0554078,
@@ -72894,7 +72894,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-17',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0554078,
@@ -73136,7 +73136,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-18',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0673946,
@@ -73156,7 +73156,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-18',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0673946,
@@ -73398,7 +73398,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-19',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0806448,
@@ -73418,7 +73418,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-19',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0806448,
@@ -73660,7 +73660,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-20',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.08067,
@@ -73680,7 +73680,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-20',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.08067,
@@ -73922,7 +73922,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-21',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0809567,
@@ -73942,7 +73942,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-21',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0809567,
@@ -74184,7 +74184,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-22',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0812491,
@@ -74204,7 +74204,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-22',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0812491,
@@ -74446,7 +74446,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-23',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0902896,
@@ -74466,7 +74466,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-23',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0902896,
@@ -74708,7 +74708,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-24',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0907567,
@@ -74728,7 +74728,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-24',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.0907567,
@@ -74970,7 +74970,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-25',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.103188,
@@ -74990,7 +74990,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-25',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.103188,
@@ -75232,7 +75232,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-26',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.109048,
@@ -75252,7 +75252,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-26',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.109048,
@@ -75494,7 +75494,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-27',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.109417,
@@ -75514,7 +75514,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-27',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.109417,
@@ -75756,7 +75756,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-28',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.109874,
@@ -75776,7 +75776,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-28',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.109874,
@@ -76018,7 +76018,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-29',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.1143,
@@ -76038,7 +76038,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-29',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.1143,
@@ -76280,7 +76280,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-30',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.11525,
@@ -76300,7 +76300,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-30',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.11525,
@@ -76542,7 +76542,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-31',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.117793,
@@ -76562,7 +76562,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-31',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.117793,
@@ -76804,7 +76804,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-32',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.120281,
@@ -76824,7 +76824,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-32',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.120281,
@@ -77066,7 +77066,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-33',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.122398,
@@ -77086,7 +77086,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-33',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.122398,
@@ -77328,7 +77328,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-34',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.133859,
@@ -77348,7 +77348,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-34',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.133859,
@@ -77590,7 +77590,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-35',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.134364,
@@ -77610,7 +77610,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-35',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.134364,
@@ -77852,7 +77852,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-36',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.141138,
@@ -77872,7 +77872,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-36',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.141138,
@@ -78114,7 +78114,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-37',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.14118,
@@ -78134,7 +78134,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-37',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.14118,
@@ -78376,7 +78376,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-38',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.149341,
@@ -78396,7 +78396,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-38',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.149341,
@@ -78638,7 +78638,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-39',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.150431,
@@ -78658,7 +78658,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-39',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.150431,
@@ -78900,7 +78900,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-40',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.151215,
@@ -78920,7 +78920,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-40',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.151215,
@@ -79162,7 +79162,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-41',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.171036,
@@ -79182,7 +79182,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-41',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.171036,
@@ -79424,7 +79424,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-42',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.183345,
@@ -79444,7 +79444,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-42',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.183345,
@@ -79686,7 +79686,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-43',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.183488,
@@ -79706,7 +79706,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-43',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.183488,
@@ -79948,7 +79948,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-44',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.186376,
@@ -79968,7 +79968,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-44',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.186376,
@@ -80210,7 +80210,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-45',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.202352,
@@ -80230,7 +80230,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-45',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.202352,
@@ -80472,7 +80472,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-46',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.204311,
@@ -80492,7 +80492,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-46',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.204311,
@@ -80734,7 +80734,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatOpen-47',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.21271,
@@ -80754,7 +80754,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatOpen-47',
         source_xml='CrocellKit\\HihatOpen\\HihatOpen.xml',
         power=0.21271,
@@ -80996,7 +80996,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-1',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=7.43172e-05,
@@ -81016,7 +81016,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-1',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=7.43172e-05,
@@ -81258,7 +81258,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-2',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00042112,
@@ -81278,7 +81278,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-2',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00042112,
@@ -81520,7 +81520,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-3',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00081805,
@@ -81540,7 +81540,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-3',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00081805,
@@ -81782,7 +81782,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-4',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00191475,
@@ -81802,7 +81802,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-4',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00191475,
@@ -82044,7 +82044,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-5',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00391885,
@@ -82064,7 +82064,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-5',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00391885,
@@ -82306,7 +82306,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-6',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00413788,
@@ -82326,7 +82326,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-6',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00413788,
@@ -82568,7 +82568,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-7',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00426045,
@@ -82588,7 +82588,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-7',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00426045,
@@ -82830,7 +82830,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-8',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00541494,
@@ -82850,7 +82850,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-8',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.00541494,
@@ -83092,7 +83092,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-9',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.01031,
@@ -83112,7 +83112,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-9',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.01031,
@@ -83354,7 +83354,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedal-10',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.0128564,
@@ -83374,7 +83374,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedal',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedal-10',
         source_xml='CrocellKit\\HihatPedal\\HihatPedal.xml',
         power=0.0128564,
@@ -83616,7 +83616,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedalHit-1',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.00913415,
@@ -83636,7 +83636,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedalHit-1',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.00913415,
@@ -83878,7 +83878,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedalHit-2',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0101879,
@@ -83898,7 +83898,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedalHit-2',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0101879,
@@ -84140,7 +84140,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedalHit-3',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0262608,
@@ -84160,7 +84160,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedalHit-3',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0262608,
@@ -84402,7 +84402,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedalHit-4',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0303677,
@@ -84422,7 +84422,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedalHit-4',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0303677,
@@ -84664,7 +84664,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatPedalHit-5',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0318246,
@@ -84684,7 +84684,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatPedalHit',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatPedalHit-5',
         source_xml='CrocellKit\\HihatPedalHit\\HihatPedalHit.xml',
         power=0.0318246,
@@ -84926,7 +84926,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-1',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.000692045,
@@ -84946,7 +84946,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-1',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.000692045,
@@ -85188,7 +85188,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-2',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.00166149,
@@ -85208,7 +85208,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-2',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.00166149,
@@ -85450,7 +85450,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-3',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.00168313,
@@ -85470,7 +85470,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-3',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.00168313,
@@ -85712,7 +85712,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-4',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.00543229,
@@ -85732,7 +85732,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-4',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.00543229,
@@ -85974,7 +85974,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-5',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0107456,
@@ -85994,7 +85994,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-5',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0107456,
@@ -86236,7 +86236,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-6',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0157666,
@@ -86256,7 +86256,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-6',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0157666,
@@ -86498,7 +86498,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-7',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0245518,
@@ -86518,7 +86518,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-7',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0245518,
@@ -86760,7 +86760,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-8',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0248958,
@@ -86780,7 +86780,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-8',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0248958,
@@ -87022,7 +87022,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-9',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0362353,
@@ -87042,7 +87042,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-9',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0362353,
@@ -87284,7 +87284,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-10',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0524563,
@@ -87304,7 +87304,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-10',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0524563,
@@ -87546,7 +87546,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-11',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0607928,
@@ -87566,7 +87566,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-11',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0607928,
@@ -87808,7 +87808,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-12',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0630798,
@@ -87828,7 +87828,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-12',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0630798,
@@ -88070,7 +88070,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-13',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0725639,
@@ -88090,7 +88090,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-13',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0725639,
@@ -88332,7 +88332,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-14',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0733053,
@@ -88352,7 +88352,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-14',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0733053,
@@ -88594,7 +88594,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-15',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0845501,
@@ -88614,7 +88614,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-15',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.0845501,
@@ -88856,7 +88856,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-16',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.103404,
@@ -88876,7 +88876,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-16',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.103404,
@@ -89118,7 +89118,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-17',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.113951,
@@ -89138,7 +89138,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-17',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.113951,
@@ -89380,7 +89380,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-18',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.115045,
@@ -89400,7 +89400,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-18',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.115045,
@@ -89642,7 +89642,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-19',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.124125,
@@ -89662,7 +89662,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-19',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.124125,
@@ -89904,7 +89904,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-20',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.136059,
@@ -89924,7 +89924,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-20',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.136059,
@@ -90166,7 +90166,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-21',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.165932,
@@ -90186,7 +90186,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-21',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.165932,
@@ -90428,7 +90428,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-22',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.170646,
@@ -90448,7 +90448,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-22',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.170646,
@@ -90690,7 +90690,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-23',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.174478,
@@ -90710,7 +90710,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-23',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.174478,
@@ -90952,7 +90952,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-24',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.181451,
@@ -90972,7 +90972,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-24',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.181451,
@@ -91214,7 +91214,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-25',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.203037,
@@ -91234,7 +91234,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-25',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.203037,
@@ -91476,7 +91476,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-26',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.208566,
@@ -91496,7 +91496,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-26',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.208566,
@@ -91738,7 +91738,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-27',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.214337,
@@ -91758,7 +91758,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-27',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.214337,
@@ -92000,7 +92000,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-28',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.247061,
@@ -92020,7 +92020,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-28',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.247061,
@@ -92262,7 +92262,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-29',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.248369,
@@ -92282,7 +92282,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-29',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.248369,
@@ -92524,7 +92524,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-30',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.259574,
@@ -92544,7 +92544,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-30',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.259574,
@@ -92786,7 +92786,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-31',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.267887,
@@ -92806,7 +92806,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-31',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.267887,
@@ -93048,7 +93048,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-32',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.281184,
@@ -93068,7 +93068,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-32',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.281184,
@@ -93310,7 +93310,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-33',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.298128,
@@ -93330,7 +93330,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-33',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.298128,
@@ -93572,7 +93572,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-34',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.306549,
@@ -93592,7 +93592,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-34',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.306549,
@@ -93834,7 +93834,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-35',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.322046,
@@ -93854,7 +93854,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-35',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.322046,
@@ -94096,7 +94096,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='HihatSemiOpen-36',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.328838,
@@ -94116,7 +94116,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='HihatSemiOpen',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='HihatSemiOpen-36',
         source_xml='CrocellKit\\HihatSemiOpen\\HihatSemiOpen.xml',
         power=0.328838,
@@ -94358,7 +94358,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-1',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.00891907,
@@ -94378,7 +94378,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-1',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.00891907,
@@ -94620,7 +94620,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-2',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0169609,
@@ -94640,7 +94640,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-2',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0169609,
@@ -94882,7 +94882,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-3',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0204402,
@@ -94902,7 +94902,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-3',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0204402,
@@ -95144,7 +95144,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-4',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0763539,
@@ -95164,7 +95164,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-4',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0763539,
@@ -95406,7 +95406,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-5',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0888921,
@@ -95426,7 +95426,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-5',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.0888921,
@@ -95668,7 +95668,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-6',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.10534,
@@ -95688,7 +95688,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-6',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.10534,
@@ -95930,7 +95930,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-7',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.154785,
@@ -95950,7 +95950,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-7',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.154785,
@@ -96192,7 +96192,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-8',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.296087,
@@ -96212,7 +96212,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-8',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.296087,
@@ -96454,7 +96454,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-9',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.312745,
@@ -96474,7 +96474,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-9',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.312745,
@@ -96716,7 +96716,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-10',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.417196,
@@ -96736,7 +96736,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-10',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.417196,
@@ -96978,7 +96978,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-11',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.650303,
@@ -96998,7 +96998,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-11',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.650303,
@@ -97240,7 +97240,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-12',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.703364,
@@ -97260,7 +97260,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-12',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.703364,
@@ -97502,7 +97502,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-13',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.721125,
@@ -97522,7 +97522,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-13',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.721125,
@@ -97764,7 +97764,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-14',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.820268,
@@ -97784,7 +97784,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-14',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.820268,
@@ -98026,7 +98026,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-15',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.843541,
@@ -98046,7 +98046,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-15',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.843541,
@@ -98288,7 +98288,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-16',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.946879,
@@ -98308,7 +98308,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-16',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=0.946879,
@@ -98550,7 +98550,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-17',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.03044,
@@ -98570,7 +98570,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-17',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.03044,
@@ -98812,7 +98812,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-18',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.09827,
@@ -98832,7 +98832,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-18',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.09827,
@@ -99074,7 +99074,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-19',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.16884,
@@ -99094,7 +99094,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-19',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.16884,
@@ -99336,7 +99336,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-20',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.32462,
@@ -99356,7 +99356,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-20',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.32462,
@@ -99598,7 +99598,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-21',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.35616,
@@ -99618,7 +99618,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-21',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.35616,
@@ -99860,7 +99860,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-22',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.45381,
@@ -99880,7 +99880,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-22',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.45381,
@@ -100122,7 +100122,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-23',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.58855,
@@ -100142,7 +100142,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-23',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.58855,
@@ -100384,7 +100384,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-24',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.64762,
@@ -100404,7 +100404,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-24',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.64762,
@@ -100646,7 +100646,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-25',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.65384,
@@ -100666,7 +100666,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-25',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=1.65384,
@@ -100908,7 +100908,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-26',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.05414,
@@ -100928,7 +100928,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-26',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.05414,
@@ -101170,7 +101170,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-27',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.21245,
@@ -101190,7 +101190,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-27',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.21245,
@@ -101432,7 +101432,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-28',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.41983,
@@ -101452,7 +101452,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-28',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.41983,
@@ -101694,7 +101694,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-29',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.51717,
@@ -101714,7 +101714,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-29',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.51717,
@@ -101956,7 +101956,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-30',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.55714,
@@ -101976,7 +101976,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-30',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.55714,
@@ -102218,7 +102218,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-31',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.64854,
@@ -102238,7 +102238,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-31',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.64854,
@@ -102480,7 +102480,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-32',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.7388,
@@ -102500,7 +102500,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-32',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=2.7388,
@@ -102742,7 +102742,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-33',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.10467,
@@ -102762,7 +102762,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-33',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.10467,
@@ -103004,7 +103004,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-34',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.144,
@@ -103024,7 +103024,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-34',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.144,
@@ -103266,7 +103266,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-35',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.17152,
@@ -103286,7 +103286,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-35',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.17152,
@@ -103528,7 +103528,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-36',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.19645,
@@ -103548,7 +103548,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-36',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.19645,
@@ -103790,7 +103790,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-37',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.26716,
@@ -103810,7 +103810,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-37',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.26716,
@@ -104052,7 +104052,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-38',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.34162,
@@ -104072,7 +104072,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-38',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.34162,
@@ -104314,7 +104314,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-39',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.40011,
@@ -104334,7 +104334,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-39',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.40011,
@@ -104576,7 +104576,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-40',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.40403,
@@ -104596,7 +104596,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-40',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.40403,
@@ -104838,7 +104838,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-41',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.7405,
@@ -104858,7 +104858,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-41',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.7405,
@@ -105100,7 +105100,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-42',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.89741,
@@ -105120,7 +105120,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-42',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=3.89741,
@@ -105362,7 +105362,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-43',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.17574,
@@ -105382,7 +105382,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-43',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.17574,
@@ -105624,7 +105624,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-44',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.30835,
@@ -105644,7 +105644,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-44',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.30835,
@@ -105886,7 +105886,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-45',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.45633,
@@ -105906,7 +105906,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-45',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.45633,
@@ -106148,7 +106148,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-46',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.51737,
@@ -106168,7 +106168,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-46',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.51737,
@@ -106410,7 +106410,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-47',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.80791,
@@ -106430,7 +106430,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-47',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.80791,
@@ -106672,7 +106672,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-48',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.9237,
@@ -106692,7 +106692,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-48',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=4.9237,
@@ -106934,7 +106934,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-49',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=5.19793,
@@ -106954,7 +106954,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-49',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=5.19793,
@@ -107196,7 +107196,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-50',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=6.24547,
@@ -107216,7 +107216,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-50',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=6.24547,
@@ -107458,7 +107458,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumL-51',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=6.26855,
@@ -107478,7 +107478,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumL-51',
         source_xml='CrocellKit\\KDrumL\\KDrumL.xml',
         power=6.26855,
@@ -107720,7 +107720,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-1',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.00833794,
@@ -107740,7 +107740,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-1',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.00833794,
@@ -107982,7 +107982,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-2',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.0413692,
@@ -108002,7 +108002,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-2',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.0413692,
@@ -108244,7 +108244,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-3',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.0522649,
@@ -108264,7 +108264,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-3',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.0522649,
@@ -108506,7 +108506,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-4',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.0751456,
@@ -108526,7 +108526,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-4',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.0751456,
@@ -108768,7 +108768,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-5',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.258615,
@@ -108788,7 +108788,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-5',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.258615,
@@ -109030,7 +109030,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-6',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.295371,
@@ -109050,7 +109050,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-6',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.295371,
@@ -109292,7 +109292,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-7',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.337554,
@@ -109312,7 +109312,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-7',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.337554,
@@ -109554,7 +109554,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-8',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.389022,
@@ -109574,7 +109574,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-8',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.389022,
@@ -109816,7 +109816,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-9',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.427582,
@@ -109836,7 +109836,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-9',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.427582,
@@ -110078,7 +110078,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-10',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.456263,
@@ -110098,7 +110098,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-10',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.456263,
@@ -110340,7 +110340,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-11',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.515758,
@@ -110360,7 +110360,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-11',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.515758,
@@ -110602,7 +110602,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-12',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.570584,
@@ -110622,7 +110622,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-12',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.570584,
@@ -110864,7 +110864,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-13',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.622671,
@@ -110884,7 +110884,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-13',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.622671,
@@ -111126,7 +111126,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-14',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.708138,
@@ -111146,7 +111146,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-14',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.708138,
@@ -111388,7 +111388,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-15',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.735845,
@@ -111408,7 +111408,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-15',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.735845,
@@ -111650,7 +111650,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-16',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.803002,
@@ -111670,7 +111670,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-16',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.803002,
@@ -111912,7 +111912,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-17',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.852756,
@@ -111932,7 +111932,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-17',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.852756,
@@ -112174,7 +112174,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-18',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.859598,
@@ -112194,7 +112194,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-18',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.859598,
@@ -112436,7 +112436,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-19',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.862983,
@@ -112456,7 +112456,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-19',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.862983,
@@ -112698,7 +112698,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-20',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.935607,
@@ -112718,7 +112718,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-20',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=0.935607,
@@ -112960,7 +112960,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-21',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.06387,
@@ -112980,7 +112980,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-21',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.06387,
@@ -113222,7 +113222,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-22',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.071,
@@ -113242,7 +113242,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-22',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.071,
@@ -113484,7 +113484,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-23',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.1901,
@@ -113504,7 +113504,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-23',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.1901,
@@ -113746,7 +113746,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-24',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.37812,
@@ -113766,7 +113766,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-24',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.37812,
@@ -114008,7 +114008,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-25',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.4933,
@@ -114028,7 +114028,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-25',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.4933,
@@ -114270,7 +114270,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-26',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.53886,
@@ -114290,7 +114290,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-26',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.53886,
@@ -114532,7 +114532,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-27',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.60238,
@@ -114552,7 +114552,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-27',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.60238,
@@ -114794,7 +114794,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-28',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.65855,
@@ -114814,7 +114814,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-28',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.65855,
@@ -115056,7 +115056,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-29',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.73131,
@@ -115076,7 +115076,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-29',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.73131,
@@ -115318,7 +115318,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-30',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.87012,
@@ -115338,7 +115338,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-30',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=1.87012,
@@ -115580,7 +115580,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-31',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.01945,
@@ -115600,7 +115600,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-31',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.01945,
@@ -115842,7 +115842,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-32',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.50779,
@@ -115862,7 +115862,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-32',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.50779,
@@ -116104,7 +116104,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-33',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.53626,
@@ -116124,7 +116124,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-33',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.53626,
@@ -116366,7 +116366,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-34',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.61231,
@@ -116386,7 +116386,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-34',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.61231,
@@ -116628,7 +116628,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-35',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.8324,
@@ -116648,7 +116648,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-35',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.8324,
@@ -116890,7 +116890,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-36',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.8753,
@@ -116910,7 +116910,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-36',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.8753,
@@ -117152,7 +117152,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-37',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.97883,
@@ -117172,7 +117172,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-37',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=2.97883,
@@ -117414,7 +117414,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-38',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.07043,
@@ -117434,7 +117434,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-38',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.07043,
@@ -117676,7 +117676,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-39',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.26754,
@@ -117696,7 +117696,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-39',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.26754,
@@ -117938,7 +117938,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-40',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.49278,
@@ -117958,7 +117958,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-40',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.49278,
@@ -118200,7 +118200,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-41',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.66706,
@@ -118220,7 +118220,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-41',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.66706,
@@ -118462,7 +118462,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-42',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.71191,
@@ -118482,7 +118482,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-42',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.71191,
@@ -118724,7 +118724,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-43',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.85663,
@@ -118744,7 +118744,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-43',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.85663,
@@ -118986,7 +118986,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-44',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.95221,
@@ -119006,7 +119006,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-44',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=3.95221,
@@ -119248,7 +119248,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-45',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.16909,
@@ -119268,7 +119268,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-45',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.16909,
@@ -119510,7 +119510,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-46',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.36538,
@@ -119530,7 +119530,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-46',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.36538,
@@ -119772,7 +119772,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-47',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.38277,
@@ -119792,7 +119792,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-47',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.38277,
@@ -120034,7 +120034,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-48',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.57431,
@@ -120054,7 +120054,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-48',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.57431,
@@ -120296,7 +120296,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='KDrumR-49',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.84377,
@@ -120316,7 +120316,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='KDrumR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='KDrumR-49',
         source_xml='CrocellKit\\KDrumR\\KDrumR.xml',
         power=4.84377,
@@ -120558,7 +120558,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-1',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00295455,
@@ -120578,7 +120578,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-1',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00295455,
@@ -120820,7 +120820,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-2',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00314002,
@@ -120840,7 +120840,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-2',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00314002,
@@ -121082,7 +121082,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-3',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00529176,
@@ -121102,7 +121102,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-3',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00529176,
@@ -121344,7 +121344,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-4',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0057471,
@@ -121364,7 +121364,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-4',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0057471,
@@ -121606,7 +121606,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-5',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00626529,
@@ -121626,7 +121626,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-5',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00626529,
@@ -121868,7 +121868,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-6',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00729045,
@@ -121888,7 +121888,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-6',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.00729045,
@@ -122130,7 +122130,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-7',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0142698,
@@ -122150,7 +122150,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-7',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0142698,
@@ -122392,7 +122392,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-8',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0163973,
@@ -122412,7 +122412,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-8',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0163973,
@@ -122654,7 +122654,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-9',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0193123,
@@ -122674,7 +122674,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-9',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0193123,
@@ -122916,7 +122916,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-10',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0201018,
@@ -122936,7 +122936,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-10',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0201018,
@@ -123178,7 +123178,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-11',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.026162,
@@ -123198,7 +123198,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-11',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.026162,
@@ -123440,7 +123440,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-12',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0450747,
@@ -123460,7 +123460,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-12',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0450747,
@@ -123702,7 +123702,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-13',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0538114,
@@ -123722,7 +123722,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-13',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0538114,
@@ -123964,7 +123964,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-14',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0543123,
@@ -123984,7 +123984,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-14',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0543123,
@@ -124226,7 +124226,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-15',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0570877,
@@ -124246,7 +124246,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-15',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0570877,
@@ -124488,7 +124488,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-16',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.062322,
@@ -124508,7 +124508,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-16',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.062322,
@@ -124750,7 +124750,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-17',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0633181,
@@ -124770,7 +124770,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-17',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0633181,
@@ -125012,7 +125012,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-18',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0645395,
@@ -125032,7 +125032,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-18',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0645395,
@@ -125274,7 +125274,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-19',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0899278,
@@ -125294,7 +125294,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-19',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0899278,
@@ -125536,7 +125536,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-20',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0948674,
@@ -125556,7 +125556,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-20',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.0948674,
@@ -125798,7 +125798,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-21',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.122362,
@@ -125818,7 +125818,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-21',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.122362,
@@ -126060,7 +126060,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-22',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.137506,
@@ -126080,7 +126080,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-22',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.137506,
@@ -126322,7 +126322,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-23',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.139644,
@@ -126342,7 +126342,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-23',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.139644,
@@ -126584,7 +126584,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-24',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.140316,
@@ -126604,7 +126604,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-24',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.140316,
@@ -126846,7 +126846,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-25',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.152203,
@@ -126866,7 +126866,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-25',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.152203,
@@ -127108,7 +127108,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-26',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.159953,
@@ -127128,7 +127128,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-26',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.159953,
@@ -127370,7 +127370,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-27',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.163742,
@@ -127390,7 +127390,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-27',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.163742,
@@ -127632,7 +127632,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-28',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.165327,
@@ -127652,7 +127652,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-28',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.165327,
@@ -127894,7 +127894,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-29',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.180291,
@@ -127914,7 +127914,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-29',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.180291,
@@ -128156,7 +128156,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-30',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.190182,
@@ -128176,7 +128176,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-30',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.190182,
@@ -128418,7 +128418,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-31',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.202844,
@@ -128438,7 +128438,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-31',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.202844,
@@ -128680,7 +128680,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-32',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.204482,
@@ -128700,7 +128700,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-32',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.204482,
@@ -128942,7 +128942,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-33',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.24332,
@@ -128962,7 +128962,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-33',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.24332,
@@ -129204,7 +129204,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-34',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.243892,
@@ -129224,7 +129224,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-34',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.243892,
@@ -129466,7 +129466,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-35',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.263999,
@@ -129486,7 +129486,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-35',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.263999,
@@ -129728,7 +129728,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-36',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.270579,
@@ -129748,7 +129748,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-36',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.270579,
@@ -129990,7 +129990,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideR-37',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.306652,
@@ -130010,7 +130010,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideR-37',
         source_xml='CrocellKit\\RideR\\RideR.xml',
         power=0.306652,
@@ -130252,7 +130252,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-1',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.00388118,
@@ -130272,7 +130272,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-1',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.00388118,
@@ -130514,7 +130514,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-2',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0147614,
@@ -130534,7 +130534,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-2',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0147614,
@@ -130776,7 +130776,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-3',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0192254,
@@ -130796,7 +130796,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-3',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0192254,
@@ -131038,7 +131038,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-4',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0286793,
@@ -131058,7 +131058,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-4',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0286793,
@@ -131300,7 +131300,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-5',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.039296,
@@ -131320,7 +131320,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-5',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.039296,
@@ -131562,7 +131562,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-6',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0437487,
@@ -131582,7 +131582,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-6',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.0437487,
@@ -131824,7 +131824,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-7',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.112361,
@@ -131844,7 +131844,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-7',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.112361,
@@ -132086,7 +132086,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-8',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.114028,
@@ -132106,7 +132106,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-8',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.114028,
@@ -132348,7 +132348,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-9',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.140782,
@@ -132368,7 +132368,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-9',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.140782,
@@ -132610,7 +132610,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-10',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.200069,
@@ -132630,7 +132630,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-10',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.200069,
@@ -132872,7 +132872,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-11',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.233708,
@@ -132892,7 +132892,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-11',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.233708,
@@ -133134,7 +133134,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-12',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.239489,
@@ -133154,7 +133154,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-12',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.239489,
@@ -133396,7 +133396,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-13',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.292983,
@@ -133416,7 +133416,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-13',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.292983,
@@ -133658,7 +133658,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-14',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.362197,
@@ -133678,7 +133678,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-14',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.362197,
@@ -133920,7 +133920,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-15',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.55383,
@@ -133940,7 +133940,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-15',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.55383,
@@ -134182,7 +134182,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-16',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.565791,
@@ -134202,7 +134202,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-16',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.565791,
@@ -134444,7 +134444,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-17',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.588279,
@@ -134464,7 +134464,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-17',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.588279,
@@ -134706,7 +134706,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='RideRBell-18',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.704931,
@@ -134726,7 +134726,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='RideRBell',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='RideRBell-18',
         source_xml='CrocellKit\\RideRBell\\RideRBell.xml',
         power=0.704931,
@@ -134968,7 +134968,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-1',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.00985718,
@@ -134988,7 +134988,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-1',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.00985718,
@@ -135230,7 +135230,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-2',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0124808,
@@ -135250,7 +135250,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-2',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0124808,
@@ -135492,7 +135492,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-3',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0157321,
@@ -135512,7 +135512,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-3',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0157321,
@@ -135754,7 +135754,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-4',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0164673,
@@ -135774,7 +135774,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-4',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0164673,
@@ -136016,7 +136016,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-5',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0186221,
@@ -136036,7 +136036,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-5',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0186221,
@@ -136278,7 +136278,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-6',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0206627,
@@ -136298,7 +136298,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-6',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0206627,
@@ -136540,7 +136540,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-7',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0314267,
@@ -136560,7 +136560,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-7',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0314267,
@@ -136802,7 +136802,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-8',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0482537,
@@ -136822,7 +136822,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-8',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0482537,
@@ -137064,7 +137064,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-9',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0803186,
@@ -137084,7 +137084,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-9',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0803186,
@@ -137326,7 +137326,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-10',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0834334,
@@ -137346,7 +137346,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-10',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0834334,
@@ -137588,7 +137588,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-11',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0899345,
@@ -137608,7 +137608,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-11',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.0899345,
@@ -137850,7 +137850,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-12',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.122976,
@@ -137870,7 +137870,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-12',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.122976,
@@ -138112,7 +138112,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-13',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.203364,
@@ -138132,7 +138132,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-13',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.203364,
@@ -138374,7 +138374,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-14',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.22282,
@@ -138394,7 +138394,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-14',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.22282,
@@ -138636,7 +138636,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-15',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.236576,
@@ -138656,7 +138656,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-15',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.236576,
@@ -138898,7 +138898,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-16',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.279692,
@@ -138918,7 +138918,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-16',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.279692,
@@ -139160,7 +139160,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-17',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.315727,
@@ -139180,7 +139180,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-17',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.315727,
@@ -139422,7 +139422,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-18',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.322313,
@@ -139442,7 +139442,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-18',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.322313,
@@ -139684,7 +139684,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-19',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.332614,
@@ -139704,7 +139704,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-19',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.332614,
@@ -139946,7 +139946,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-20',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.342139,
@@ -139966,7 +139966,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-20',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.342139,
@@ -140208,7 +140208,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-21',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.355954,
@@ -140228,7 +140228,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-21',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.355954,
@@ -140470,7 +140470,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-22',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.379897,
@@ -140490,7 +140490,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-22',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.379897,
@@ -140732,7 +140732,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-23',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.389399,
@@ -140752,7 +140752,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-23',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.389399,
@@ -140994,7 +140994,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-24',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.434295,
@@ -141014,7 +141014,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-24',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.434295,
@@ -141256,7 +141256,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-25',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.435408,
@@ -141276,7 +141276,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-25',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.435408,
@@ -141518,7 +141518,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-26',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.509356,
@@ -141538,7 +141538,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-26',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.509356,
@@ -141780,7 +141780,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-27',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.516196,
@@ -141800,7 +141800,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-27',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.516196,
@@ -142042,7 +142042,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-28',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.529965,
@@ -142062,7 +142062,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-28',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.529965,
@@ -142304,7 +142304,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-29',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.531982,
@@ -142324,7 +142324,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-29',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.531982,
@@ -142566,7 +142566,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-30',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.599802,
@@ -142586,7 +142586,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-30',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.599802,
@@ -142828,7 +142828,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-31',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.618736,
@@ -142848,7 +142848,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-31',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.618736,
@@ -143090,7 +143090,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-32',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.645616,
@@ -143110,7 +143110,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-32',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.645616,
@@ -143352,7 +143352,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-33',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.647419,
@@ -143372,7 +143372,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-33',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.647419,
@@ -143614,7 +143614,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-34',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.648811,
@@ -143634,7 +143634,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-34',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.648811,
@@ -143876,7 +143876,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-35',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.66006,
@@ -143896,7 +143896,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-35',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.66006,
@@ -144138,7 +144138,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-36',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.687897,
@@ -144158,7 +144158,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-36',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.687897,
@@ -144400,7 +144400,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-37',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.70297,
@@ -144420,7 +144420,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-37',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.70297,
@@ -144662,7 +144662,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-38',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.719662,
@@ -144682,7 +144682,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-38',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.719662,
@@ -144924,7 +144924,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-39',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.821344,
@@ -144944,7 +144944,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-39',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.821344,
@@ -145186,7 +145186,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-40',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.837138,
@@ -145206,7 +145206,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-40',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.837138,
@@ -145448,7 +145448,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-41',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.891673,
@@ -145468,7 +145468,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-41',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.891673,
@@ -145710,7 +145710,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-42',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.940148,
@@ -145730,7 +145730,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-42',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.940148,
@@ -145972,7 +145972,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-43',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.96253,
@@ -145992,7 +145992,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-43',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.96253,
@@ -146234,7 +146234,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-44',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.967574,
@@ -146254,7 +146254,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-44',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.967574,
@@ -146496,7 +146496,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-45',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.995048,
@@ -146516,7 +146516,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-45',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=0.995048,
@@ -146758,7 +146758,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-46',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.00559,
@@ -146778,7 +146778,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-46',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.00559,
@@ -147020,7 +147020,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-47',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.03336,
@@ -147040,7 +147040,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-47',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.03336,
@@ -147282,7 +147282,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-48',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.07069,
@@ -147302,7 +147302,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-48',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.07069,
@@ -147544,7 +147544,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-49',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.07782,
@@ -147564,7 +147564,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-49',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.07782,
@@ -147806,7 +147806,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-50',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.08073,
@@ -147826,7 +147826,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-50',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.08073,
@@ -148068,7 +148068,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-51',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.08607,
@@ -148088,7 +148088,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-51',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.08607,
@@ -148330,7 +148330,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-52',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.11941,
@@ -148350,7 +148350,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-52',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.11941,
@@ -148592,7 +148592,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-53',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.12584,
@@ -148612,7 +148612,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-53',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.12584,
@@ -148854,7 +148854,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-54',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.12853,
@@ -148874,7 +148874,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-54',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.12853,
@@ -149116,7 +149116,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-55',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.1363,
@@ -149136,7 +149136,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-55',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.1363,
@@ -149378,7 +149378,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-56',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.13778,
@@ -149398,7 +149398,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-56',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.13778,
@@ -149640,7 +149640,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-57',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.14384,
@@ -149660,7 +149660,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-57',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.14384,
@@ -149902,7 +149902,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-58',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.15901,
@@ -149922,7 +149922,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-58',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.15901,
@@ -150164,7 +150164,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-59',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.24029,
@@ -150184,7 +150184,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-59',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.24029,
@@ -150426,7 +150426,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-60',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.26058,
@@ -150446,7 +150446,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-60',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.26058,
@@ -150688,7 +150688,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-61',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.31165,
@@ -150708,7 +150708,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-61',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.31165,
@@ -150950,7 +150950,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-62',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.40778,
@@ -150970,7 +150970,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-62',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.40778,
@@ -151212,7 +151212,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-63',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.41931,
@@ -151232,7 +151232,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-63',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.41931,
@@ -151474,7 +151474,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-64',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.48559,
@@ -151494,7 +151494,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-64',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.48559,
@@ -151736,7 +151736,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-65',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.5078,
@@ -151756,7 +151756,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-65',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.5078,
@@ -151998,7 +151998,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-66',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.5295,
@@ -152018,7 +152018,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-66',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.5295,
@@ -152260,7 +152260,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-67',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.53489,
@@ -152280,7 +152280,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-67',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.53489,
@@ -152522,7 +152522,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-68',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.57273,
@@ -152542,7 +152542,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-68',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.57273,
@@ -152784,7 +152784,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-69',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.57376,
@@ -152804,7 +152804,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-69',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.57376,
@@ -153046,7 +153046,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-70',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.66366,
@@ -153066,7 +153066,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-70',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.66366,
@@ -153308,7 +153308,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-71',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.87674,
@@ -153328,7 +153328,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-71',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.87674,
@@ -153570,7 +153570,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-72',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.89395,
@@ -153590,7 +153590,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-72',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.89395,
@@ -153832,7 +153832,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-73',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.90179,
@@ -153852,7 +153852,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-73',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.90179,
@@ -154094,7 +154094,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-74',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.94146,
@@ -154114,7 +154114,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-74',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.94146,
@@ -154356,7 +154356,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-75',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.97564,
@@ -154376,7 +154376,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-75',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=1.97564,
@@ -154618,7 +154618,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-76',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.02044,
@@ -154638,7 +154638,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-76',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.02044,
@@ -154880,7 +154880,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-77',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.02492,
@@ -154900,7 +154900,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-77',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.02492,
@@ -155142,7 +155142,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-78',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.0548,
@@ -155162,7 +155162,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-78',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.0548,
@@ -155404,7 +155404,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-79',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.06189,
@@ -155424,7 +155424,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-79',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.06189,
@@ -155666,7 +155666,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-80',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.06474,
@@ -155686,7 +155686,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-80',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.06474,
@@ -155928,7 +155928,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-81',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.10502,
@@ -155948,7 +155948,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-81',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.10502,
@@ -156190,7 +156190,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-82',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.10815,
@@ -156210,7 +156210,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-82',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.10815,
@@ -156452,7 +156452,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-83',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.12824,
@@ -156472,7 +156472,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-83',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.12824,
@@ -156714,7 +156714,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-84',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.20962,
@@ -156734,7 +156734,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-84',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.20962,
@@ -156976,7 +156976,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-85',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.25177,
@@ -156996,7 +156996,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-85',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.25177,
@@ -157238,7 +157238,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-86',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.351,
@@ -157258,7 +157258,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-86',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.351,
@@ -157500,7 +157500,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-87',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.48718,
@@ -157520,7 +157520,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-87',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.48718,
@@ -157762,7 +157762,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-88',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.50744,
@@ -157782,7 +157782,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-88',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.50744,
@@ -158024,7 +158024,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-89',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.56676,
@@ -158044,7 +158044,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-89',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.56676,
@@ -158286,7 +158286,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-90',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.5932,
@@ -158306,7 +158306,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-90',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.5932,
@@ -158548,7 +158548,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-91',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.63316,
@@ -158568,7 +158568,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-91',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.63316,
@@ -158810,7 +158810,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-92',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.74751,
@@ -158830,7 +158830,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-92',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.74751,
@@ -159072,7 +159072,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-93',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.79034,
@@ -159092,7 +159092,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-93',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.79034,
@@ -159334,7 +159334,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-94',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.94348,
@@ -159354,7 +159354,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-94',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=2.94348,
@@ -159596,7 +159596,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-95',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.03418,
@@ -159616,7 +159616,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-95',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.03418,
@@ -159858,7 +159858,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-96',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.16128,
@@ -159878,7 +159878,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-96',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.16128,
@@ -160120,7 +160120,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-97',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.2465,
@@ -160140,7 +160140,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-97',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.2465,
@@ -160382,7 +160382,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Snare-98',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.29455,
@@ -160402,7 +160402,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Snare',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Snare-98',
         source_xml='CrocellKit\\Snare\\Snare.xml',
         power=3.29455,
@@ -160644,7 +160644,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-1',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.0261057,
@@ -160664,7 +160664,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-1',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.0261057,
@@ -160906,7 +160906,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-2',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.127986,
@@ -160926,7 +160926,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-2',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.127986,
@@ -161168,7 +161168,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-3',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.244293,
@@ -161188,7 +161188,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-3',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.244293,
@@ -161430,7 +161430,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-4',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.351992,
@@ -161450,7 +161450,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-4',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.351992,
@@ -161692,7 +161692,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-5',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.456278,
@@ -161712,7 +161712,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-5',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.456278,
@@ -161954,7 +161954,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-6',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.469822,
@@ -161974,7 +161974,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-6',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.469822,
@@ -162216,7 +162216,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-7',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.559039,
@@ -162236,7 +162236,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-7',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.559039,
@@ -162478,7 +162478,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-8',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.569611,
@@ -162498,7 +162498,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-8',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.569611,
@@ -162740,7 +162740,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-9',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.688431,
@@ -162760,7 +162760,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-9',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.688431,
@@ -163002,7 +163002,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-10',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.712932,
@@ -163022,7 +163022,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-10',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=0.712932,
@@ -163264,7 +163264,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRest-11',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=1.01509,
@@ -163284,7 +163284,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRest',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRest-11',
         source_xml='CrocellKit\\SnareRest\\SnareRest.xml',
         power=1.01509,
@@ -163526,7 +163526,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-1',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.00543281,
@@ -163546,7 +163546,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-1',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.00543281,
@@ -163788,7 +163788,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-2',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.00756072,
@@ -163808,7 +163808,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-2',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.00756072,
@@ -164050,7 +164050,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-3',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.013727,
@@ -164070,7 +164070,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-3',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.013727,
@@ -164312,7 +164312,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-4',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0269733,
@@ -164332,7 +164332,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-4',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0269733,
@@ -164574,7 +164574,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-5',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0293965,
@@ -164594,7 +164594,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-5',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0293965,
@@ -164836,7 +164836,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-6',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0432173,
@@ -164856,7 +164856,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-6',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0432173,
@@ -165098,7 +165098,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-7',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0524995,
@@ -165118,7 +165118,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-7',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0524995,
@@ -165360,7 +165360,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-8',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0600642,
@@ -165380,7 +165380,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-8',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0600642,
@@ -165622,7 +165622,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-9',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0701587,
@@ -165642,7 +165642,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-9',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0701587,
@@ -165884,7 +165884,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-10',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0722391,
@@ -165904,7 +165904,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-10',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0722391,
@@ -166146,7 +166146,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-11',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0845248,
@@ -166166,7 +166166,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-11',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0845248,
@@ -166408,7 +166408,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-12',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0893936,
@@ -166428,7 +166428,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-12',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0893936,
@@ -166670,7 +166670,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-13',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0990958,
@@ -166690,7 +166690,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-13',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.0990958,
@@ -166932,7 +166932,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-14',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.103276,
@@ -166952,7 +166952,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-14',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.103276,
@@ -167194,7 +167194,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-15',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.125404,
@@ -167214,7 +167214,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-15',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.125404,
@@ -167456,7 +167456,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-16',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.152136,
@@ -167476,7 +167476,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-16',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.152136,
@@ -167718,7 +167718,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-17',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.157658,
@@ -167738,7 +167738,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-17',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.157658,
@@ -167980,7 +167980,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRim-18',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.164104,
@@ -168000,7 +168000,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRim',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRim-18',
         source_xml='CrocellKit\\SnareRim\\SnareRim.xml',
         power=0.164104,
@@ -168242,7 +168242,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-1',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.00187115,
@@ -168262,7 +168262,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-1',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.00187115,
@@ -168504,7 +168504,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-2',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.110043,
@@ -168524,7 +168524,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-2',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.110043,
@@ -168766,7 +168766,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-3',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.427527,
@@ -168786,7 +168786,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-3',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.427527,
@@ -169028,7 +169028,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-4',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.888807,
@@ -169048,7 +169048,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-4',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.888807,
@@ -169290,7 +169290,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-5',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.962207,
@@ -169310,7 +169310,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-5',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.962207,
@@ -169552,7 +169552,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-6',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.976914,
@@ -169572,7 +169572,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-6',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=0.976914,
@@ -169814,7 +169814,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-7',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=1.44452,
@@ -169834,7 +169834,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-7',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=1.44452,
@@ -170076,7 +170076,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-8',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=2.40433,
@@ -170096,7 +170096,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-8',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=2.40433,
@@ -170338,7 +170338,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-9',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=2.50341,
@@ -170358,7 +170358,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-9',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=2.50341,
@@ -170600,7 +170600,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-10',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=2.70148,
@@ -170620,7 +170620,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-10',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=2.70148,
@@ -170862,7 +170862,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-11',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=3.30232,
@@ -170882,7 +170882,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-11',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=3.30232,
@@ -171124,7 +171124,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-12',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=3.85223,
@@ -171144,7 +171144,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-12',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=3.85223,
@@ -171386,7 +171386,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SnareRimShot-13',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=4.65084,
@@ -171406,7 +171406,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SnareRimShot',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SnareRimShot-13',
         source_xml='CrocellKit\\SnareRimShot\\SnareRimShot.xml',
         power=4.65084,
@@ -171648,7 +171648,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-1',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.000202023,
@@ -171668,7 +171668,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-1',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.000202023,
@@ -171910,7 +171910,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-2',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.000274182,
@@ -171930,7 +171930,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-2',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.000274182,
@@ -172172,7 +172172,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-3',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.00069919,
@@ -172192,7 +172192,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-3',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.00069919,
@@ -172434,7 +172434,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-4',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.00105171,
@@ -172454,7 +172454,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-4',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.00105171,
@@ -172696,7 +172696,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-5',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.00170203,
@@ -172716,7 +172716,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-5',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.00170203,
@@ -172958,7 +172958,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-6',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0040829,
@@ -172978,7 +172978,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-6',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0040829,
@@ -173220,7 +173220,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-7',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.012956,
@@ -173240,7 +173240,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-7',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.012956,
@@ -173482,7 +173482,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-8',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0156469,
@@ -173502,7 +173502,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-8',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0156469,
@@ -173744,7 +173744,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-9',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0192439,
@@ -173764,7 +173764,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-9',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0192439,
@@ -174006,7 +174006,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-10',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0217122,
@@ -174026,7 +174026,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-10',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0217122,
@@ -174268,7 +174268,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashL-11',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0292132,
@@ -174288,7 +174288,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashL',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashL-11',
         source_xml='CrocellKit\\SplashL\\SplashL.xml',
         power=0.0292132,
@@ -174530,7 +174530,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-1',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.000197667,
@@ -174550,7 +174550,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-1',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.000197667,
@@ -174792,7 +174792,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-2',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.00081888,
@@ -174812,7 +174812,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-2',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.00081888,
@@ -175054,7 +175054,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-3',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.00350163,
@@ -175074,7 +175074,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-3',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.00350163,
@@ -175316,7 +175316,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-4',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.00858952,
@@ -175336,7 +175336,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-4',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.00858952,
@@ -175578,7 +175578,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-5',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.0157247,
@@ -175598,7 +175598,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-5',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.0157247,
@@ -175840,7 +175840,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-6',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.0206619,
@@ -175860,7 +175860,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-6',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.0206619,
@@ -176102,7 +176102,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-7',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.021337,
@@ -176122,7 +176122,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-7',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.021337,
@@ -176364,7 +176364,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='SplashR-8',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.0372428,
@@ -176384,7 +176384,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='SplashR',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='SplashR-8',
         source_xml='CrocellKit\\SplashR\\SplashR.xml',
         power=0.0372428,
@@ -176626,7 +176626,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-1',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.0224954,
@@ -176646,7 +176646,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-1',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.0224954,
@@ -176888,7 +176888,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-2',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.0833245,
@@ -176908,7 +176908,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-2',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.0833245,
@@ -177150,7 +177150,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-3',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.117955,
@@ -177170,7 +177170,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-3',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.117955,
@@ -177412,7 +177412,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-4',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.148808,
@@ -177432,7 +177432,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-4',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.148808,
@@ -177674,7 +177674,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-5',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.201519,
@@ -177694,7 +177694,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-5',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.201519,
@@ -177936,7 +177936,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-6',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.255878,
@@ -177956,7 +177956,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-6',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.255878,
@@ -178198,7 +178198,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-7',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.438444,
@@ -178218,7 +178218,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-7',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.438444,
@@ -178460,7 +178460,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-8',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.474904,
@@ -178480,7 +178480,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-8',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.474904,
@@ -178722,7 +178722,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-9',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.639363,
@@ -178742,7 +178742,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-9',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.639363,
@@ -178984,7 +178984,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-10',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.692091,
@@ -179004,7 +179004,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-10',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.692091,
@@ -179246,7 +179246,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-11',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.80127,
@@ -179266,7 +179266,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-11',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.80127,
@@ -179508,7 +179508,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-12',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.875625,
@@ -179528,7 +179528,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-12',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.875625,
@@ -179770,7 +179770,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-13',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.903865,
@@ -179790,7 +179790,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-13',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.903865,
@@ -180032,7 +180032,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-14',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.948172,
@@ -180052,7 +180052,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-14',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=0.948172,
@@ -180294,7 +180294,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-15',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.24085,
@@ -180314,7 +180314,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-15',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.24085,
@@ -180556,7 +180556,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-16',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.28279,
@@ -180576,7 +180576,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-16',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.28279,
@@ -180818,7 +180818,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-17',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.3979,
@@ -180838,7 +180838,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-17',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.3979,
@@ -181080,7 +181080,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-18',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.56226,
@@ -181100,7 +181100,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-18',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.56226,
@@ -181342,7 +181342,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-19',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.71129,
@@ -181362,7 +181362,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-19',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.71129,
@@ -181604,7 +181604,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-20',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.88218,
@@ -181624,7 +181624,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-20',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.88218,
@@ -181866,7 +181866,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-21',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.92656,
@@ -181886,7 +181886,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-21',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.92656,
@@ -182128,7 +182128,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-22',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.95251,
@@ -182148,7 +182148,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-22',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=1.95251,
@@ -182390,7 +182390,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-23',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.32654,
@@ -182410,7 +182410,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-23',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.32654,
@@ -182652,7 +182652,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-24',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.32758,
@@ -182672,7 +182672,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-24',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.32758,
@@ -182914,7 +182914,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-25',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.46433,
@@ -182934,7 +182934,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-25',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.46433,
@@ -183176,7 +183176,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-26',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.47295,
@@ -183196,7 +183196,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-26',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.47295,
@@ -183438,7 +183438,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-27',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.66111,
@@ -183458,7 +183458,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-27',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.66111,
@@ -183700,7 +183700,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-28',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.79172,
@@ -183720,7 +183720,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-28',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.79172,
@@ -183962,7 +183962,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-29',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.80926,
@@ -183982,7 +183982,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-29',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=2.80926,
@@ -184224,7 +184224,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-30',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.27974,
@@ -184244,7 +184244,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-30',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.27974,
@@ -184486,7 +184486,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-31',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.36643,
@@ -184506,7 +184506,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-31',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.36643,
@@ -184748,7 +184748,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-32',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.37619,
@@ -184768,7 +184768,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-32',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.37619,
@@ -185010,7 +185010,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-33',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.40898,
@@ -185030,7 +185030,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-33',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.40898,
@@ -185272,7 +185272,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-34',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.45631,
@@ -185292,7 +185292,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-34',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.45631,
@@ -185534,7 +185534,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-35',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.5976,
@@ -185554,7 +185554,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-35',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.5976,
@@ -185796,7 +185796,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-36',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.63968,
@@ -185816,7 +185816,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-36',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.63968,
@@ -186058,7 +186058,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-37',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.72567,
@@ -186078,7 +186078,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-37',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.72567,
@@ -186320,7 +186320,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-38',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.99882,
@@ -186340,7 +186340,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-38',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=3.99882,
@@ -186582,7 +186582,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-39',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.14871,
@@ -186602,7 +186602,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-39',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.14871,
@@ -186844,7 +186844,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-40',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.1722,
@@ -186864,7 +186864,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-40',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.1722,
@@ -187106,7 +187106,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-41',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.20467,
@@ -187126,7 +187126,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-41',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.20467,
@@ -187368,7 +187368,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-42',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.73266,
@@ -187388,7 +187388,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-42',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.73266,
@@ -187630,7 +187630,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-43',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.82657,
@@ -187650,7 +187650,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-43',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=4.82657,
@@ -187892,7 +187892,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-44',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=5.37378,
@@ -187912,7 +187912,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-44',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=5.37378,
@@ -188154,7 +188154,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom1-45',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=5.54889,
@@ -188174,7 +188174,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom1',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom1-45',
         source_xml='CrocellKit\\Tom1\\Tom1.xml',
         power=5.54889,
@@ -188416,7 +188416,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-1',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0371475,
@@ -188436,7 +188436,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-1',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0371475,
@@ -188678,7 +188678,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-2',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0390113,
@@ -188698,7 +188698,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-2',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0390113,
@@ -188940,7 +188940,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-3',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0424079,
@@ -188960,7 +188960,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-3',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0424079,
@@ -189202,7 +189202,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-4',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0429449,
@@ -189222,7 +189222,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-4',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.0429449,
@@ -189464,7 +189464,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-5',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.177029,
@@ -189484,7 +189484,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-5',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.177029,
@@ -189726,7 +189726,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-6',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.192377,
@@ -189746,7 +189746,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-6',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.192377,
@@ -189988,7 +189988,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-7',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.198075,
@@ -190008,7 +190008,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-7',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.198075,
@@ -190250,7 +190250,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-8',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.204162,
@@ -190270,7 +190270,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-8',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.204162,
@@ -190512,7 +190512,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-9',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.3139,
@@ -190532,7 +190532,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-9',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.3139,
@@ -190774,7 +190774,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-10',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.405242,
@@ -190794,7 +190794,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-10',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.405242,
@@ -191036,7 +191036,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-11',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.455421,
@@ -191056,7 +191056,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-11',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.455421,
@@ -191298,7 +191298,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-12',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.638142,
@@ -191318,7 +191318,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-12',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.638142,
@@ -191560,7 +191560,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-13',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.670448,
@@ -191580,7 +191580,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-13',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.670448,
@@ -191822,7 +191822,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-14',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.769146,
@@ -191842,7 +191842,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-14',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.769146,
@@ -192084,7 +192084,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-15',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.915304,
@@ -192104,7 +192104,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-15',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=0.915304,
@@ -192346,7 +192346,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-16',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.01309,
@@ -192366,7 +192366,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-16',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.01309,
@@ -192608,7 +192608,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-17',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.04703,
@@ -192628,7 +192628,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-17',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.04703,
@@ -192870,7 +192870,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-18',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.09052,
@@ -192890,7 +192890,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-18',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.09052,
@@ -193132,7 +193132,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-19',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.51298,
@@ -193152,7 +193152,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-19',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.51298,
@@ -193394,7 +193394,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-20',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.51526,
@@ -193414,7 +193414,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-20',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.51526,
@@ -193656,7 +193656,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-21',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.61398,
@@ -193676,7 +193676,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-21',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.61398,
@@ -193918,7 +193918,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-22',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.6498,
@@ -193938,7 +193938,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-22',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.6498,
@@ -194180,7 +194180,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-23',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.82434,
@@ -194200,7 +194200,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-23',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.82434,
@@ -194442,7 +194442,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-24',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.84326,
@@ -194462,7 +194462,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-24',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.84326,
@@ -194704,7 +194704,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-25',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.85013,
@@ -194724,7 +194724,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-25',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.85013,
@@ -194966,7 +194966,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-26',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.97908,
@@ -194986,7 +194986,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-26',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=1.97908,
@@ -195228,7 +195228,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-27',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.14507,
@@ -195248,7 +195248,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-27',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.14507,
@@ -195490,7 +195490,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-28',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.25762,
@@ -195510,7 +195510,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-28',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.25762,
@@ -195752,7 +195752,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-29',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.27179,
@@ -195772,7 +195772,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-29',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.27179,
@@ -196014,7 +196014,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-30',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.28665,
@@ -196034,7 +196034,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-30',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.28665,
@@ -196276,7 +196276,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-31',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.33905,
@@ -196296,7 +196296,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-31',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.33905,
@@ -196538,7 +196538,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-32',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.44901,
@@ -196558,7 +196558,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-32',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.44901,
@@ -196800,7 +196800,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-33',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.5454,
@@ -196820,7 +196820,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-33',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.5454,
@@ -197062,7 +197062,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-34',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.65285,
@@ -197082,7 +197082,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-34',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.65285,
@@ -197324,7 +197324,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-35',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.95276,
@@ -197344,7 +197344,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-35',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=2.95276,
@@ -197586,7 +197586,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-36',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.23593,
@@ -197606,7 +197606,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-36',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.23593,
@@ -197848,7 +197848,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-37',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.62368,
@@ -197868,7 +197868,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-37',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.62368,
@@ -198110,7 +198110,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-38',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.70421,
@@ -198130,7 +198130,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-38',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.70421,
@@ -198372,7 +198372,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM1',
+        mic_group='FTOM1',
         sample_name='Tom2-39',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.85788,
@@ -198392,7 +198392,7 @@ OPERATIONS = [
     Operation(
         kit='CrocellKit',
         source_instrument='Tom2',
-        mic_group='TOM2',
+        mic_group='FTOM2',
         sample_name='Tom2-39',
         source_xml='CrocellKit\\Tom2\\Tom2.xml',
         power=3.85788,
