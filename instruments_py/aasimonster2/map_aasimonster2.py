@@ -73,7 +73,7 @@ INSTRUMENTS = {
         "parameter": '',
     },
     'ride_bell1': {
-        "instrument": 'ride-X1',
+        "instrument": 'ride-X2',
         "articulation": 'bell',
         "parameter": '',
     },

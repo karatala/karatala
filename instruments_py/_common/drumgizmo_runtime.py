@@ -1,6 +1,7 @@
 import argparse
 import csv
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -58,15 +59,20 @@ def operation_enabled(operation: Operation, microphones: dict) -> bool:
     return microphone_info is not None and microphone_info.get('keep', True)
 
 
-def enabled_duplicate_targets(operations: list, instruments: dict, microphones: dict, settings) -> set:
-    target_counts = {}
+def operation_source_summary(operation: Operation) -> str:
+    source_text = ' + '.join(f"{source.get('name', '?')}[srcch{source.get('channel', '?')}]" for source in operation.sources)
+    return f'{operation.source_instrument} sample={operation.sample_name} mic={operation.mic_group} source={source_text}'
+
+
+def enabled_duplicate_targets(operations: list, instruments: dict, microphones: dict, settings) -> dict:
+    target_operations = {}
     for operation in operations:
         if operation.quarantined or not operation_enabled(operation, microphones):
             continue
         target = operation_target_relative(operation, instruments, microphones, settings).lower()
         if target:
-            target_counts[target] = target_counts.get(target, 0) + 1
-    return {target for target, count in target_counts.items() if count > 1}
+            target_operations.setdefault(target, []).append(operation)
+    return {target: duplicates for target, duplicates in target_operations.items() if len(duplicates) > 1}
 
 
 def ffmpeg_command(operation: Operation, instruments: dict, microphones: dict, settings) -> list:
@@ -88,8 +94,26 @@ def ffmpeg_command(operation: Operation, instruments: dict, microphones: dict, s
     raise ValueError(f'Unsupported source grouping for {operation.source_instrument}/{operation.sample_name}/{operation.mic_group}')
 
 
+def _cmd_quote(part) -> str:
+    text = str(part)
+    if text == '':
+        return '""'
+    if any(char.isspace() or char in '&|<>()^' for char in text):
+        return '"' + text.replace('"', '\\"') + '"'
+    return text
+
+
 def _format_command(command: list) -> str:
-    return subprocess.list2cmdline([str(part) for part in command])
+    return ' '.join(_cmd_quote(part) for part in command)
+
+
+def _mkdir_command(path: Path) -> str:
+    quoted = _cmd_quote(path)
+    return f'if not exist {quoted} mkdir {quoted}'
+
+
+def _log(message: str) -> None:
+    print(message, file=sys.stderr)
 
 
 def review_status(operation: Operation, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
@@ -119,6 +143,7 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
         'status',
         'action',
         'reasons',
+        'duplicate_sources',
         'kit',
         'source_instrument',
         'sample_name',
@@ -150,6 +175,7 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
                 'status': review_status(operation, microphones, duplicate_targets, target_relative),
                 'action': review_action(operation, microphones, duplicate_targets, target_relative),
                 'reasons': '; '.join(reasons),
+                'duplicate_sources': ' | '.join(operation_source_summary(duplicate) for duplicate in duplicate_targets.get(target_relative.lower(), [])),
                 'kit': operation.kit,
                 'source_instrument': operation.source_instrument,
                 'sample_name': operation.sample_name,
@@ -172,6 +198,8 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
 def run_operations(operations: list, instruments: dict, microphones: dict, settings, kit_name: str, review_path: Path) -> int:
     parser = argparse.ArgumentParser(description=f'Run generated DrumGizmo -> Karatala conversion for {kit_name}')
     parser.add_argument('--execute', action='store_true', help='Actually run ffmpeg. Without this, commands are only printed.')
+    parser.add_argument('--bat', action='store_true', help='Print clean runnable .bat text to stdout: @echo off, mkdir commands, then ffmpeg commands. Messages go to stderr.')
+    parser.add_argument('--mkdirs', action='store_true', help='In dry run, print mkdir commands before ffmpeg commands.')
     parser.add_argument('--write-review', action='store_true', help='Rewrite review CSV using the current edited map_*.py values.')
     parser.add_argument('--only-instrument', default='', help='Run only one source instrument name from map_*.py.')
     parser.add_argument('--only-mic', default='', help='Run only one mic group key, for example AMB, OH, DIRECT.')
@@ -180,12 +208,15 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
 
     if args.write_review:
         write_review_csv(operations, instruments, microphones, settings, review_path)
-        print(f'wrote {review_path}')
+        _log(f'wrote {review_path}')
         return 0
 
     duplicate_targets = enabled_duplicate_targets(operations, instruments, microphones, settings)
     selected_count = 0
     skipped_count = 0
+    made_dirs = set()
+    if args.bat:
+        print('@echo off')
     for operation in operations:
         if args.only_instrument and operation.source_instrument != args.only_instrument:
             continue
@@ -200,11 +231,20 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
         output_path = operation_output_path(operation, instruments, microphones, settings)
         target_relative = operation_target_relative(operation, instruments, microphones, settings).lower()
         if target_relative in duplicate_targets:
-            print(f'skip duplicate target after map edits: {output_path}')
+            _log(f'skip duplicate output file: {output_path}')
+            _log('  More than one enabled row wants to create this same file:')
+            for duplicate in duplicate_targets[target_relative]:
+                _log(f'  - {operation_source_summary(duplicate)}')
+            _log('  Fix: disable one row, or give one row a different mic code in map_*.py.')
             skipped_count += 1
             continue
 
         command = ffmpeg_command(operation, instruments, microphones, settings)
+        if args.bat or args.mkdirs:
+            folder_key = str(output_path.parent).lower()
+            if folder_key not in made_dirs:
+                print(_mkdir_command(output_path.parent))
+                made_dirs.add(folder_key)
         print(_format_command(command))
         selected_count += 1
 
@@ -216,5 +256,5 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
             break
 
     mode = 'executed' if args.execute else 'planned'
-    print(f'{kit_name}: {mode} {selected_count} kept operation(s), skipped {skipped_count} disabled operation(s).')
+    _log(f'{kit_name}: {mode} {selected_count} command(s), skipped {skipped_count} row(s).')
     return 0

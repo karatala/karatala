@@ -62,51 +62,6 @@ INSTRUMENTS = {
         "articulation": 'center',
         "parameter": '',
     },
-    'HiHatClosed': {
-        "instrument": 'hihat-14',
-        "articulation": 'bow[tight]',
-        "parameter": '-pdl_opn_cls085',
-    },
-    'HiHatOpen': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[open]',
-        "parameter": '-pdl_opn_cls024',
-    },
-    'HiHatOpenSemi1': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[close]',
-        "parameter": '-pdl_opn_cls078',
-    },
-    'HiHatOpenSemi2': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[close]',
-        "parameter": '-pdl_opn_cls070',
-    },
-    'HiHatOpenSemi3': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[half]',
-        "parameter": '-pdl_opn_cls060',
-    },
-    'HiHatOpenSemi4': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[half]',
-        "parameter": '-pdl_opn_cls048',
-    },
-    'HiHatOpenSemi5': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[half]',
-        "parameter": '-pdl_opn_cls036',
-    },
-    'HiHatOpenSemi6': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[open]',
-        "parameter": '-pdl_opn_cls024',
-    },
-    'HiHatOpenSemi7': {
-        "instrument": 'hihat-14',
-        "articulation": 'edge[open]',
-        "parameter": '-pdl_opn_cls012',
-    },
     'HiHatPedalOpen': {
         "instrument": 'hihat-14',
         "articulation": 'pedal[splash]',
@@ -116,6 +71,51 @@ INSTRUMENTS = {
         "instrument": 'hihat-14',
         "articulation": 'pedal',
         "parameter": '-pdl_opn_cls085',
+    },
+    'HiHatClosed': {
+        "instrument": 'hihat-14',
+        "articulation": 'bow[tight]',
+        "parameter": '-pdl_opn_cls085',
+    },
+    'HiHatOpenSemi1': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[close]',
+        "parameter": '-pdl_opn_cls076',
+    },
+    'HiHatOpenSemi2': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[close]',
+        "parameter": '-pdl_opn_cls067',
+    },
+    'HiHatOpenSemi3': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[half]',
+        "parameter": '-pdl_opn_cls058',
+    },
+    'HiHatOpenSemi4': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[half]',
+        "parameter": '-pdl_opn_cls049',
+    },
+    'HiHatOpenSemi5': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[half]',
+        "parameter": '-pdl_opn_cls040',
+    },
+    'HiHatOpenSemi6': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[open]',
+        "parameter": '-pdl_opn_cls031',
+    },
+    'HiHatOpenSemi7': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[open]',
+        "parameter": '-pdl_opn_cls022',
+    },
+    'HiHatOpen': {
+        "instrument": 'hihat-14',
+        "articulation": 'edge[open]',
+        "parameter": '-pdl_opn_cls013',
     },
     'HiTom': {
         "instrument": 'tom-12',

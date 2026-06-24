@@ -14,7 +14,7 @@
 
 - `review-Salamander.csv`: main review file. Use `status=READY`, `SKIPPED`, or `QUARANTINED`.
 - `../map_Salamander.py`: edit instrument/articulation/mic keep/code values here.
-- `../convert_Salamander.py`: rewrite review CSV, dry-run, or execute rows after map review.
+- `../convert_Salamander.py`: rewrite review CSV, dry-run, print batch text, or execute rows after map review.
 
 ## Warnings
 
@@ -25,5 +25,5 @@
 1. Open the review CSV and inspect `status=QUARANTINED` and any `SKIPPED` rows you may want to promote.
 2. Fix mapping mistakes or flip skipped mic groups in the map Python file.
 3. Run the convert script with `--write-review` and inspect the refreshed CSV.
-4. Run the convert script without `--execute` to inspect commands.
+4. Run the convert script without `--execute` to inspect commands, or with `--bat` to write a clean batch file.
 5. Run the convert script with `--execute --limit 5` for a tiny real conversion check.

@@ -1,27 +1,42 @@
 #!/usr/bin/env python3
-"""Drumgizmo -> Karatala converter (initial implementation)
+"""DrumGizmo -> Karatala migration generator.
 
-Defaults to dry-run: prints platform-specific commands without executing.
+Top-level generator:
+    python scripts/convert-drumgizmo2karatala.py assets/drumgizmo --output-dir instruments_py --overwrite-map
 
-Usage: python converter.py todo/ --output-dir instruments
+Review/edit:
+    instruments_py/<kit>/map_<kit>.py
+    instruments_py/<kit>/_audit/review-<kit>.csv
 
+Refresh all review CSVs after map edits without overwriting maps:
+    python scripts/convert-drumgizmo2karatala.py assets/drumgizmo --output-dir instruments_py --write-review
 
-# HOWTO:
-python scripts\convert-drumgizmo2karatala.py assets\drumgizmo --output-dir instruments_py --overwrite-map
-# Review/edit:
-    instruments_py\<kit>\map_<kit>.py
-# After editing map_<kit>.py, refresh the CSV from the edited map:
+Generated converter modes:
+    python instruments_py/aasimonster/convert_aasimonster.py
+        Dry run: print ffmpeg commands only. Messages go to stderr.
 
-python scripts\convert-drumgizmo2karatala.py assets\drumgizmo --output-dir instruments_py --write-review
+    python instruments_py/aasimonster/convert_aasimonster.py --mkdirs
+        Dry run with mkdir commands printed before ffmpeg commands.
 
-python instruments_py\aasimonster\convert_aasimonster.py > instruments_py\aasimonster.bat
-python instruments_py\aasimonster2\convert_aasimonster2.py > instruments_py\aasimonster2.bat
-python instruments_py\artstar\convert_artstar.py > instruments_py\artstar.bat
-python instruments_py\CrocellKit\convert_CrocellKit.py > instruments_py\CrocellKit.bat
-python instruments_py\MuldjordKit3\convert_MuldjordKit3.py > instruments_py\MuldjordKit3.bat
-python instruments_py\Salamander\convert_Salamander.py > instruments_py\Salamander.bat
-python instruments_py\tchackpoum_drumgizmo_13\convert_tchackpoum_drumgizmo_13.py > instruments_py\tchackpoum_drumgizmo_13.bat
+    python instruments_py/aasimonster/convert_aasimonster.py --bat > instruments_py/aasimonster.bat
+        Print clean runnable .bat text to stdout. Includes @echo off and mkdir commands.
+        Warnings/summary go to stderr so they do not pollute the .bat file.
+        In Windows PowerShell 5.1, prefer cmd /c redirection or Set-Content -Encoding ASCII
+        if you need non-UTF16LE .bat files.
 
+    python instruments_py/aasimonster/convert_aasimonster.py --execute --limit 5
+        Actually convert first 5 enabled rows.
+
+    python instruments_py/aasimonster/convert_aasimonster.py --execute
+        Actually convert all enabled rows.
+
+    python instruments_py/aasimonster/convert_aasimonster.py --mkdirs --bat > instruments_py/aasimonster.bat
+    python instruments_py/aasimonster2/convert_aasimonster2.py --mkdirs --bat > instruments_py/aasimonster2.bat
+    python instruments_py/artstar/convert_artstar.py --mkdirs --bat > instruments_py/artstar.bat
+    python instruments_py/CrocellKit/convert_CrocellKit.py --mkdirs --bat > instruments_py/CrocellKit.bat
+    python instruments_py/MuldjordKit3/convert_MuldjordKit3.py --mkdirs --bat > instruments_py/MuldjordKit3.bat
+    python instruments_py/Salamander/convert_Salamander.py --mkdirs --bat > instruments_py/Salamander.bat
+    python instruments_py/tchackpoum_drumgizmo_13/convert_tchackpoum_drumgizmo_13.py --mkdirs --bat > instruments_py/tchackpoum_drumgizmo_13.bat
 """
 import argparse
 import csv
@@ -1533,6 +1548,7 @@ def generate_runtime_py() -> str:
     return r'''import argparse
 import csv
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -1590,15 +1606,20 @@ def operation_enabled(operation: Operation, microphones: dict) -> bool:
     return microphone_info is not None and microphone_info.get('keep', True)
 
 
-def enabled_duplicate_targets(operations: list, instruments: dict, microphones: dict, settings) -> set:
-    target_counts = {}
+def operation_source_summary(operation: Operation) -> str:
+    source_text = ' + '.join(f"{source.get('name', '?')}[srcch{source.get('channel', '?')}]" for source in operation.sources)
+    return f'{operation.source_instrument} sample={operation.sample_name} mic={operation.mic_group} source={source_text}'
+
+
+def enabled_duplicate_targets(operations: list, instruments: dict, microphones: dict, settings) -> dict:
+    target_operations = {}
     for operation in operations:
         if operation.quarantined or not operation_enabled(operation, microphones):
             continue
         target = operation_target_relative(operation, instruments, microphones, settings).lower()
         if target:
-            target_counts[target] = target_counts.get(target, 0) + 1
-    return {target for target, count in target_counts.items() if count > 1}
+            target_operations.setdefault(target, []).append(operation)
+    return {target: duplicates for target, duplicates in target_operations.items() if len(duplicates) > 1}
 
 
 def ffmpeg_command(operation: Operation, instruments: dict, microphones: dict, settings) -> list:
@@ -1633,6 +1654,15 @@ def _format_command(command: list) -> str:
     return ' '.join(_cmd_quote(part) for part in command)
 
 
+def _mkdir_command(path: Path) -> str:
+    quoted = _cmd_quote(path)
+    return f'if not exist {quoted} mkdir {quoted}'
+
+
+def _log(message: str) -> None:
+    print(message, file=sys.stderr)
+
+
 def review_status(operation: Operation, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
     if operation.quarantined:
         return 'QUARANTINED'
@@ -1660,6 +1690,7 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
         'status',
         'action',
         'reasons',
+        'duplicate_sources',
         'kit',
         'source_instrument',
         'sample_name',
@@ -1691,6 +1722,7 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
                 'status': review_status(operation, microphones, duplicate_targets, target_relative),
                 'action': review_action(operation, microphones, duplicate_targets, target_relative),
                 'reasons': '; '.join(reasons),
+                'duplicate_sources': ' | '.join(operation_source_summary(duplicate) for duplicate in duplicate_targets.get(target_relative.lower(), [])),
                 'kit': operation.kit,
                 'source_instrument': operation.source_instrument,
                 'sample_name': operation.sample_name,
@@ -1713,6 +1745,8 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
 def run_operations(operations: list, instruments: dict, microphones: dict, settings, kit_name: str, review_path: Path) -> int:
     parser = argparse.ArgumentParser(description=f'Run generated DrumGizmo -> Karatala conversion for {kit_name}')
     parser.add_argument('--execute', action='store_true', help='Actually run ffmpeg. Without this, commands are only printed.')
+    parser.add_argument('--bat', action='store_true', help='Print clean runnable .bat text to stdout: @echo off, mkdir commands, then ffmpeg commands. Messages go to stderr.')
+    parser.add_argument('--mkdirs', action='store_true', help='In dry run, print mkdir commands before ffmpeg commands.')
     parser.add_argument('--write-review', action='store_true', help='Rewrite review CSV using the current edited map_*.py values.')
     parser.add_argument('--only-instrument', default='', help='Run only one source instrument name from map_*.py.')
     parser.add_argument('--only-mic', default='', help='Run only one mic group key, for example AMB, OH, DIRECT.')
@@ -1721,12 +1755,15 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
 
     if args.write_review:
         write_review_csv(operations, instruments, microphones, settings, review_path)
-        print(f'wrote {review_path}')
+        _log(f'wrote {review_path}')
         return 0
 
     duplicate_targets = enabled_duplicate_targets(operations, instruments, microphones, settings)
     selected_count = 0
     skipped_count = 0
+    made_dirs = set()
+    if args.bat:
+        print('@echo off')
     for operation in operations:
         if args.only_instrument and operation.source_instrument != args.only_instrument:
             continue
@@ -1741,11 +1778,20 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
         output_path = operation_output_path(operation, instruments, microphones, settings)
         target_relative = operation_target_relative(operation, instruments, microphones, settings).lower()
         if target_relative in duplicate_targets:
-            print(f'skip duplicate target after map edits: {output_path}')
+            _log(f'skip duplicate output file: {output_path}')
+            _log('  More than one enabled row wants to create this same file:')
+            for duplicate in duplicate_targets[target_relative]:
+                _log(f'  - {operation_source_summary(duplicate)}')
+            _log('  Fix: disable one row, or give one row a different mic code in map_*.py.')
             skipped_count += 1
             continue
 
         command = ffmpeg_command(operation, instruments, microphones, settings)
+        if args.bat or args.mkdirs:
+            folder_key = str(output_path.parent).lower()
+            if folder_key not in made_dirs:
+                print(_mkdir_command(output_path.parent))
+                made_dirs.add(folder_key)
         print(_format_command(command))
         selected_count += 1
 
@@ -1757,7 +1803,7 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
             break
 
     mode = 'executed' if args.execute else 'planned'
-    print(f'{kit_name}: {mode} {selected_count} kept operation(s), skipped {skipped_count} disabled operation(s).')
+    _log(f'{kit_name}: {mode} {selected_count} command(s), skipped {skipped_count} row(s).')
     return 0
 '''
 
@@ -1962,7 +2008,7 @@ def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: l
         '',
         f'- `review-{safe_kit}.csv`: main review file. Use `status=READY`, `SKIPPED`, or `QUARANTINED`.',
         f'- `../map_{python_module_name(kit_dir.name)}.py`: edit instrument/articulation/mic keep/code values here.',
-        f'- `../convert_{python_module_name(kit_dir.name)}.py`: rewrite review CSV, dry-run, or execute rows after map review.',
+        f'- `../convert_{python_module_name(kit_dir.name)}.py`: rewrite review CSV, dry-run, print batch text, or execute rows after map review.',
         '',
         '## Warnings',
         '',
@@ -1978,7 +2024,7 @@ def write_audit_files(kit_dir: Path, output_dir: Path, audit_dir: Path, plans: l
         '1. Open the review CSV and inspect `status=QUARANTINED` and any `SKIPPED` rows you may want to promote.',
         '2. Fix mapping mistakes or flip skipped mic groups in the map Python file.',
         '3. Run the convert script with `--write-review` and inspect the refreshed CSV.',
-        '4. Run the convert script without `--execute` to inspect commands.',
+        '4. Run the convert script without `--execute` to inspect commands, or with `--bat` to write a clean batch file.',
         '5. Run the convert script with `--execute --limit 5` for a tiny real conversion check.',
         '',
     ])
