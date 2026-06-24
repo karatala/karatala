@@ -234,93 +234,85 @@ MICS = {
     ('Crash3', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for FloorTom.
-    ('FloorTom', 'TOM'): {"keep": True, "code": 'ons' },			# FloorTomR1[srcch1]
+    ('FloorTom', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatClosed.
-    ('HiHatClosed', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatClosed', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpen.
-    ('HiHatOpen', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpen', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpenSemi1.
-    ('HiHatOpenSemi1', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpenSemi1', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpenSemi2.
-    ('HiHatOpenSemi2', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpenSemi2', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpenSemi3.
-    ('HiHatOpenSemi3', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpenSemi3', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpenSemi4.
-    ('HiHatOpenSemi4', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpenSemi4', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpenSemi5.
-    ('HiHatOpenSemi5', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpenSemi5', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpenSemi6.
-    ('HiHatOpenSemi6', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpenSemi6', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatOpenSemi7.
-    ('HiHatOpenSemi7', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatOpenSemi7', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatPedalOpen.
-    ('HiHatPedalOpen', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatPedalOpen', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiHatPedalShut.
-    ('HiHatPedalShut', 'HIHAT'): {"keep": True, "code": 'ons' },			# HiHatR[srcch1]
+    ('HiHatPedalShut', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for HiTom.
-    ('HiTom', 'TOM'): {"keep": True, "code": 'ons' },			# TomR1[srcch1]
+    ('HiTom', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Kick.
-    ('Kick', 'KICK_L'): {"keep": True, "code": 'ons' },			# KickL[srcch0]
-    ('Kick', 'KICK_R'): {"keep": True, "code": 'ons' },			# KickR[srcch1]
+    ('Kick', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Kick2.
-    ('Kick2', 'KICK_L'): {"keep": True, "code": 'ons' },			# KickL[srcch0]
-    ('Kick2', 'KICK_R'): {"keep": True, "code": 'ons' },			# KickR[srcch1]
+    ('Kick2', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Ride1.
-    ('Ride1', 'RIDEL'): {"keep": True, "code": 'ons' },			# RideL[srcch0]
-    ('Ride1', 'RIDER'): {"keep": True, "code": 'ons' },			# RideR[srcch1]
+    ('Ride1', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Ride1Bell.
-    ('Ride1Bell', 'RIDEL'): {"keep": True, "code": 'ons' },			# RideL[srcch0]
-    ('Ride1Bell', 'RIDER'): {"keep": True, "code": 'ons' },			# RideR[srcch1]
+    ('Ride1Bell', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Ride2.
-    ('Ride2', 'RIDEL'): {"keep": True, "code": 'ons' },			# RideL[srcch0]
-    ('Ride2', 'RIDER'): {"keep": True, "code": 'ons' },			# RideR[srcch1]
+    ('Ride2', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Ride2Bell.
-    ('Ride2Bell', 'RIDEL'): {"keep": True, "code": 'ons' },			# RideL[srcch0]
-    ('Ride2Bell', 'RIDER'): {"keep": True, "code": 'ons' },			# RideR[srcch1]
+    ('Ride2Bell', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Ride2Crash.
-    ('Ride2Crash', 'RIDEL'): {"keep": True, "code": 'ons' },			# RideL[srcch0]
-    ('Ride2Crash', 'RIDER'): {"keep": True, "code": 'ons' },			# RideR[srcch1]
+    ('Ride2Crash', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Ride2CrashChoke.
-    ('Ride2CrashChoke', 'RIDEL'): {"keep": True, "code": 'ons' },			# RideL[srcch0]
-    ('Ride2CrashChoke', 'RIDER'): {"keep": True, "code": 'ons' },			# RideR[srcch1]
+    ('Ride2CrashChoke', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Snare.
-    ('Snare', 'SNARE_TOP'): {"keep": True, "code": 'ons' },			# SnareR[srcch1]
+    ('Snare', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Snare2.
-    ('Snare2', 'SNARE_TOP'): {"keep": True, "code": 'ons' },			# SnareR[srcch1]
+    ('Snare2', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Snare2Ghost.
-    ('Snare2Ghost', 'SNARE_TOP'): {"keep": True, "code": 'ons' },			# SnareR[srcch1]
+    ('Snare2Ghost', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Snare2Off.
-    ('Snare2Off', 'SNARE_TOP'): {"keep": True, "code": 'ons' },			# SnareR[srcch1]
+    ('Snare2Off', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for SnareGhost.
-    ('SnareGhost', 'SNARE_TOP'): {"keep": True, "code": 'ons' },			# SnareR[srcch1]
+    ('SnareGhost', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for SnareOff.
-    ('SnareOff', 'SNARE_TOP'): {"keep": True, "code": 'ons' },			# SnareR[srcch1]
+    ('SnareOff', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]
 
     # Microphone groups for Splash.
     ('Splash', 'OH'): {"keep": True, "code": 'ons' },			# OHL[srcch0] + OHR[srcch1]

@@ -4,11 +4,30 @@
 Defaults to dry-run: prints platform-specific commands without executing.
 
 Usage: python converter.py todo/ --output-dir instruments
+
+
+# HOWTO:
+python scripts\convert-drumgizmo2karatala.py assets\drumgizmo --output-dir instruments_py --overwrite-map
+# Review/edit:
+    instruments_py\<kit>\map_<kit>.py
+# After editing map_<kit>.py, refresh the CSV from the edited map:
+
+python scripts\convert-drumgizmo2karatala.py assets\drumgizmo --output-dir instruments_py --write-review
+
+python instruments_py\aasimonster\convert_aasimonster.py > instruments_py\aasimonster.bat
+python instruments_py\aasimonster2\convert_aasimonster2.py > instruments_py\aasimonster2.bat
+python instruments_py\artstar\convert_artstar.py > instruments_py\artstar.bat
+python instruments_py\CrocellKit\convert_CrocellKit.py > instruments_py\CrocellKit.bat
+python instruments_py\MuldjordKit3\convert_MuldjordKit3.py > instruments_py\MuldjordKit3.bat
+python instruments_py\Salamander\convert_Salamander.py > instruments_py\Salamander.bat
+python instruments_py\tchackpoum_drumgizmo_13\convert_tchackpoum_drumgizmo_13.py > instruments_py\tchackpoum_drumgizmo_13.bat
+
 """
 import argparse
 import csv
 import os
 import shutil
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -1601,8 +1620,17 @@ def ffmpeg_command(operation: Operation, instruments: dict, microphones: dict, s
     raise ValueError(f'Unsupported source grouping for {operation.source_instrument}/{operation.sample_name}/{operation.mic_group}')
 
 
+def _cmd_quote(part) -> str:
+    text = str(part)
+    if text == '':
+        return '""'
+    if any(char.isspace() or char in '&|<>()^' for char in text):
+        return '"' + text.replace('"', '\\"') + '"'
+    return text
+
+
 def _format_command(command: list) -> str:
-    return subprocess.list2cmdline([str(part) for part in command])
+    return ' '.join(_cmd_quote(part) for part in command)
 
 
 def review_status(operation: Operation, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
