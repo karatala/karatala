@@ -14977,7 +14977,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=1,
@@ -15059,7 +15059,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=1,
@@ -15141,7 +15141,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=2,
@@ -15223,7 +15223,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=2,
@@ -15305,7 +15305,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=3,
@@ -15387,7 +15387,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=3,
@@ -15469,7 +15469,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=4,
@@ -15551,7 +15551,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=4,
@@ -15633,7 +15633,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=5,
@@ -15715,7 +15715,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=5,
@@ -15797,7 +15797,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=6,
@@ -15879,7 +15879,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=6,
@@ -15961,7 +15961,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=7,
@@ -16043,7 +16043,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=7,
@@ -16125,7 +16125,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=8,
@@ -16207,7 +16207,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=8,
@@ -16289,7 +16289,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=9,
@@ -16371,7 +16371,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=9,
@@ -16453,7 +16453,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=10,
@@ -16535,7 +16535,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=10,
@@ -16617,7 +16617,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=11,
@@ -16699,7 +16699,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=11,
@@ -16781,7 +16781,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_12',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=12,
@@ -16863,7 +16863,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_12',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=12,
@@ -16945,7 +16945,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_a_13',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=13,
@@ -17027,7 +17027,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_b_13',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw.xml',
         power=13,
@@ -17109,7 +17109,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=1,
@@ -17191,7 +17191,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=1,
@@ -17273,7 +17273,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=2,
@@ -17355,7 +17355,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=2,
@@ -17437,7 +17437,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=3,
@@ -17519,7 +17519,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=3,
@@ -17601,7 +17601,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=4,
@@ -17683,7 +17683,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=4,
@@ -17765,7 +17765,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=5,
@@ -17847,7 +17847,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=5,
@@ -17929,7 +17929,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=6,
@@ -18011,7 +18011,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=6,
@@ -18093,7 +18093,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=7,
@@ -18175,7 +18175,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=7,
@@ -18257,7 +18257,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=8,
@@ -18339,7 +18339,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=8,
@@ -18421,7 +18421,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=9,
@@ -18503,7 +18503,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=9,
@@ -18585,7 +18585,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=10,
@@ -18667,7 +18667,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=10,
@@ -18749,7 +18749,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=11,
@@ -18831,7 +18831,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=11,
@@ -18913,7 +18913,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_12',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=12,
@@ -18995,7 +18995,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_12',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=12,
@@ -19077,7 +19077,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_13',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=13,
@@ -19159,7 +19159,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_13',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=13,
@@ -19241,7 +19241,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_14',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=14,
@@ -19323,7 +19323,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_14',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=14,
@@ -19405,7 +19405,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_a_15',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=15,
@@ -19487,7 +19487,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_damp_b_15',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_damp.xml',
         power=15,
@@ -19569,7 +19569,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=1,
@@ -19651,7 +19651,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=1,
@@ -19733,7 +19733,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=2,
@@ -19815,7 +19815,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=2,
@@ -19897,7 +19897,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=3,
@@ -19979,7 +19979,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=3,
@@ -20061,7 +20061,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=4,
@@ -20143,7 +20143,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=4,
@@ -20225,7 +20225,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=5,
@@ -20307,7 +20307,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=5,
@@ -20389,7 +20389,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=6,
@@ -20471,7 +20471,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=6,
@@ -20553,7 +20553,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=7,
@@ -20635,7 +20635,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=7,
@@ -20717,7 +20717,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=8,
@@ -20799,7 +20799,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=8,
@@ -20881,7 +20881,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=9,
@@ -20963,7 +20963,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=9,
@@ -21045,7 +21045,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_a_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=10,
@@ -21127,7 +21127,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_ludw_jazz',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_ludw_jazz_b_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_20_ludwig_superclassic64\\kick_ludw_jazz.xml',
         power=10,
@@ -21209,7 +21209,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=1,
@@ -21291,7 +21291,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=1,
@@ -21373,7 +21373,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=2,
@@ -21455,7 +21455,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=2,
@@ -21537,7 +21537,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=3,
@@ -21619,7 +21619,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=3,
@@ -21701,7 +21701,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=4,
@@ -21783,7 +21783,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=4,
@@ -21865,7 +21865,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=5,
@@ -21947,7 +21947,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=5,
@@ -22029,7 +22029,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=6,
@@ -22111,7 +22111,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=6,
@@ -22193,7 +22193,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=7,
@@ -22275,7 +22275,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=7,
@@ -22357,7 +22357,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=8,
@@ -22439,7 +22439,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=8,
@@ -22521,7 +22521,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=9,
@@ -22603,7 +22603,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=9,
@@ -22685,7 +22685,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_a_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=10,
@@ -22767,7 +22767,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_damp',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_damp_b_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_damp.xml',
         power=10,
@@ -22849,7 +22849,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=1,
@@ -22931,7 +22931,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=1,
@@ -23013,7 +23013,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=2,
@@ -23095,7 +23095,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=2,
@@ -23177,7 +23177,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=3,
@@ -23259,7 +23259,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=3,
@@ -23341,7 +23341,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=4,
@@ -23423,7 +23423,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=4,
@@ -23505,7 +23505,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=5,
@@ -23587,7 +23587,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=5,
@@ -23669,7 +23669,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=6,
@@ -23751,7 +23751,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=6,
@@ -23833,7 +23833,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=7,
@@ -23915,7 +23915,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=7,
@@ -23997,7 +23997,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=8,
@@ -24079,7 +24079,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=8,
@@ -24161,7 +24161,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=9,
@@ -24243,7 +24243,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=9,
@@ -24325,7 +24325,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=10,
@@ -24407,7 +24407,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=10,
@@ -24489,7 +24489,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=11,
@@ -24571,7 +24571,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=11,
@@ -24653,7 +24653,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_a_12',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=12,
@@ -24735,7 +24735,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_prem_free',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_prem_free_b_12',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_22_premier_signia\\kick_prem_free.xml',
         power=12,
@@ -24817,7 +24817,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=1,
@@ -24899,7 +24899,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_01',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=1,
@@ -24981,7 +24981,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=2,
@@ -25063,7 +25063,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_02',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=2,
@@ -25145,7 +25145,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=3,
@@ -25227,7 +25227,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_03',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=3,
@@ -25309,7 +25309,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=4,
@@ -25391,7 +25391,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_04',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=4,
@@ -25473,7 +25473,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=5,
@@ -25555,7 +25555,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_05',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=5,
@@ -25637,7 +25637,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=6,
@@ -25719,7 +25719,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_06',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=6,
@@ -25801,7 +25801,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=7,
@@ -25883,7 +25883,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_07',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=7,
@@ -25965,7 +25965,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=8,
@@ -26047,7 +26047,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_08',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=8,
@@ -26129,7 +26129,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=9,
@@ -26211,7 +26211,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_09',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=9,
@@ -26293,7 +26293,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=10,
@@ -26375,7 +26375,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_10',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=10,
@@ -26457,7 +26457,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_a_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=11,
@@ -26539,7 +26539,7 @@ OPERATIONS = [
     Operation(
         kit='tchackpoum_drumgizmo_13',
         source_instrument='kick_sono',
-        mic_group='KICK_IN',
+        mic_group='KICK_OUT',
         sample_name='kick_sono_b_11',
         source_xml='tchackpoum_drumgizmo_13\\kitpieces\\kick_27_sonor_antique20\\kick_sono.xml',
         power=11,

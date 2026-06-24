@@ -1195,9 +1195,13 @@ def map_channel_group_key(channel_name: str, mic_code: str) -> str:
         return 'KDRUMR'
     if ('kick' in lowered or 'kdrum' in lowered) and ('trg' in lowered or 'trigger' in lowered):
         return 'KICK_TRIGGER'
-    if 'kdrumoutside' in lowered:
+    if compact in ('kickout', 'kickoutside', 'kdrumout', 'kdrumoutside'):
         return 'KICK_OUT'
-    if 'kdruminside' in lowered:
+    if compact in ('kickin', 'kickinside', 'kdrumin', 'kdruminside'):
+        return 'KICK_IN'
+    if ('kick' in lowered or 'kdrum' in lowered) and ('out' in lowered or 'outside' in lowered):
+        return 'KICK_OUT'
+    if ('kick' in lowered or 'kdrum' in lowered) and ('in' in lowered or 'inside' in lowered):
         return 'KICK_IN'
     if 'kick' in lowered and is_left_channel(channel_name):
         return 'KICK_L'
