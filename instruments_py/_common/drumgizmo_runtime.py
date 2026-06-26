@@ -75,22 +75,27 @@ def enabled_duplicate_targets(operations: list, instruments: dict, microphones: 
     return {target: duplicates for target, duplicates in target_operations.items() if len(duplicates) > 1}
 
 
+def ffmpeg_base_command(settings) -> list:
+    return [settings.FFMPEG, '-hide_banner', '-loglevel', 'warning', '-nostats', '-y']
+
+
 def ffmpeg_command(operation: Operation, instruments: dict, microphones: dict, settings) -> list:
     output_path = operation_output_path(operation, instruments, microphones, settings)
     sources = operation.sources
+    command = ffmpeg_base_command(settings)
     if len(sources) == 1:
         source_path = _source_path(settings, sources[0]['path'])
         channel_index = int(sources[0].get('channel', 0))
-        return [settings.FFMPEG, '-y', '-i', str(source_path), '-map_channel', f'0.0.{channel_index}', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
+        return command + ['-i', str(source_path), '-filter_complex', f'[0:a]pan=mono|c0=c{channel_index}[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
     if len(sources) == 2 and sources[0]['path'].lower() == sources[1]['path'].lower():
         source_path = _source_path(settings, sources[0]['path'])
         left_index = int(sources[0].get('channel', 0))
         right_index = int(sources[1].get('channel', 1))
-        return [settings.FFMPEG, '-y', '-i', str(source_path), '-filter_complex', f'[0:a]pan=stereo|c0=c{left_index}|c1=c{right_index}[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
+        return command + ['-i', str(source_path), '-filter_complex', f'[0:a]pan=stereo|c0=c{left_index}|c1=c{right_index}[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
     if len(sources) == 2:
         left_path = _source_path(settings, sources[0]['path'])
         right_path = _source_path(settings, sources[1]['path'])
-        return [settings.FFMPEG, '-y', '-i', str(left_path), '-i', str(right_path), '-filter_complex', '[0:a][1:a]amerge=inputs=2[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
+        return command + ['-i', str(left_path), '-i', str(right_path), '-filter_complex', '[0:a][1:a]join=inputs=2:channel_layout=stereo[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
     raise ValueError(f'Unsupported source grouping for {operation.source_instrument}/{operation.sample_name}/{operation.mic_group}')
 
 
@@ -215,8 +220,8 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
     selected_count = 0
     skipped_count = 0
     made_dirs = set()
-    if args.bat:
-        print('@echo off')
+    # if args.bat:
+    #     print('@echo off')
     for operation in operations:
         if args.only_instrument and operation.source_instrument != args.only_instrument:
             continue
