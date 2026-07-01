@@ -44,5 +44,12 @@
       // "preLaunchTask": "Build VST3",
       "environment": [],
     },
+    {
+      "name": "(Windows) Attach to process",
+      "type": "cppvsdbg",
+      "request": "attach",
+      "processId": "${command:pickProcess}",
+      "internalConsoleOptions": "openOnSessionStart"
+    }
   ],
 }

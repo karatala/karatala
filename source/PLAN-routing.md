@@ -6,6 +6,58 @@ Add explicit kit-slot types, type-driven direct-mic routing, auxiliary mic alloc
 
 Existing kit layouts and instrument maps remain compatible through ID-derived type fallback and the existing `flipLR` map parameter.
 
+## Editable Entity Diagram
+
+```text
++------------------+        +-----------------------+
+| Kit Layout       |        | Library               |
+|------------------|        |-----------------------|
+| instr slots      |        | kits                  |
+| articulations    |        | library instruments   |
+| MIDI notes/CCs   |        | articulations         |
+| type/kind        |        | sample files          |
+| balance          |        | vel/rr/mic codes      |
++--------+---------+        +----------+------------+
+         |                             |
+         |                             |
+         v                             v
++---------------------------------------------------+
+| Instrument Map                                    |
+|---------------------------------------------------|
+| slot/articulation -> library source layer(s)      |
+| per-layer params: tuning, gain, flipLR, bleed     |
++--------------------------+------------------------+
+                           |
+                           |
+                           v
++------------------+   +--------------------------------+
+| Mic Layout       |   | Instrument Catalog / Config     |
+|------------------|   |--------------------------------|
+| host output order|   | kind -> family                  |
+| normal outputs   |   | kind -> default routing policy  |
+| aux pool outputs |   | user-extendable kind aliases    |
+| shared aux out   |   +----------------+---------------+
++--------+---------+                    |
+         |                              |
+         +---------------+--------------+
+                         |
+                         v
++---------------------------------------------------+
+| Routing Plan                                      |
+|---------------------------------------------------|
+| source mic code -> host output channels           |
+| common/dedicated/shared-aux/exclusive-aux claims  |
+| warnings for skipped or ambiguous source mics     |
++--------------------------+------------------------+
+                           |
+                           v
++---------------------------------------------------+
+| Instrument Synths                                 |
+|---------------------------------------------------|
+| primary slot synths + layered shadow synths       |
++---------------------------------------------------+
+```
+
 ## Goals
 
 - Give custom kit slots such as octobans a predictable way to use direct mics from layered source instruments.
@@ -19,7 +71,7 @@ Existing kit layouts and instrument maps remain compatible through ID-derived ty
 
 Extend `KitLayout::InstrumentSlot` with:
 
-- An explicit instrument `type`.
+- An explicit instrument kind/type.
 - An optional signed `balance` value.
 
 Supported YAML fields:
@@ -28,62 +80,72 @@ Supported YAML fields:
 instruments:
   - id: drum1
     display: Octoban 1
-    type: drum
+    type: octoban
     balance: L48
     articulations:
       - { notes: [50], code: center }
 ```
 
-Supported instrument types in main 3 groups (drum/cymbal/aux): 
+Treat instrument type as a hierarchical catalog:
 
-- `drum`
-  - `kick`
-  - `tom`
-  - `snare`
-  - `rototom`
-  - `octoban`
-  - `mridangam`
-  - `timpani`
-  - `conga`
-  - `bongo`
-  - `timbale`
-  - `djembe`
-  - `cajon`
-  - `talking_drum`
-  - `taiko`
-  - `surdo`
+- `type` stores the concrete kind, such as `tom`, `octoban`, `ride`, `cowbell`, or `shaker`.
+- The instrument catalog resolves each kind to a broader family, such as drum-like, cymbal-like, or accessory/effect-like.
+- The same catalog resolves each kind to a default routing policy.
+- A generic kind such as `drum`, `cymbal`, or a not-yet-named accessory/effect category remains valid when the slot is intentionally nonspecific.
 
-- `cymbal`
-  - `hihat`
-  - `ride`
-  - `crash`
-  - `splash`
-  - `china`
-  - `bell`
-  - `stack`
-  - `chopper`
-  - `gong`
-  - `karatala`
+Initial catalog examples:
 
-- `aux`
-  - `cowbel`
-  - `tambourine`
-  - `shaker`
-  - `maracas`
-  - `cabasa`
-  - `guiro`
-  - `claves`
-  - `agogo`
-  - `wood_block`
-  - `temple_block`
-  - `triangle`
-  - `vibraslap`
-  - `castanets`
-  - `sleigh_bells`
-  - `whip`
-  - `ratchet`
+```yaml
+instrumentCatalog:
+  kinds:
+    kick:       { family: drum, routing: dedicated }
+    tom:        { family: drum, routing: dedicated }
+    snare:      { family: drum, routing: dedicated }
+    octoban:    { family: drum, routing: shared_aux }
+    rototom:    { family: drum, routing: shared_aux }
+    timpani:      { family: drum, routing: shared_aux }
+    timbale:      { family: drum, routing: shared_aux }
+    mridangam:    { family: drum, routing: shared_aux }
+    conga:        { family: drum, routing: shared_aux }
+    bongo:        { family: drum, routing: shared_aux }
+    djembe:       { family: drum, routing: shared_aux }
+    cajon:        { family: drum, routing: shared_aux }
+    taiko:        { family: drum, routing: shared_aux }
+    surdo:        { family: drum, routing: shared_aux }
+    talking_drum: { family: drum, routing: shared_aux }
 
-etc... list can be extended with config
+    hihat:      { family: cymbal, routing: dedicated }
+    ride:       { family: cymbal, routing: dedicated }
+    crash:      { family: cymbal, routing: common }
+    splash:     { family: cymbal, routing: common }
+    china:      { family: cymbal, routing: common }
+    bell:       { family: cymbal, routing: common }
+    stack:      { family: cymbal, routing: common }
+    chopper:    { family: cymbal, routing: common }
+    gong:       { family: cymbal, routing: common }
+    karatala:   { family: cymbal, routing: common }
+
+
+    cowbell:    { family: accessory, routing: shared_aux }
+    tambourine: { family: accessory, routing: shared_aux }
+    shaker:     { family: accessory, routing: shared_aux }
+    maracas:      { family: accessory, routing: shared_aux }
+    cabasa:       { family: accessory, routing: shared_aux }
+    guiro:        { family: accessory, routing: shared_aux }
+    claves:       { family: accessory, routing: shared_aux }
+    agogo:        { family: accessory, routing: shared_aux }
+    wood_block:   { family: accessory, routing: shared_aux }
+    temple_block: { family: accessory, routing: shared_aux }
+    triangle:     { family: accessory, routing: shared_aux }
+    vibraslap:    { family: accessory, routing: shared_aux }
+    castanets:    { family: accessory, routing: shared_aux }
+    sleigh_bells: { family: accessory, routing: shared_aux }
+    whip:         { family: accessory, routing: shared_aux }
+    ratchet:      { family: accessory, routing: shared_aux }
+
+```
+
+The catalog should live in the global Karatala config YAML. Add or update a config-structure document before implementation so the root key and override behavior are clear.
 
 When `type` is absent, derive it from the slot ID after removing trailing digits. This preserves existing layouts.
 
@@ -93,11 +155,11 @@ Balance syntax:
 - `L1` through `L127`: left, with increasing distance from center
 - `R1` through `R127`: right, with increasing distance from center
 
-no need to preserve legacy `position: left` and `position: right`. Serialize new or edited layouts using `balance`.
+Do not preserve or parse the old draft-only `position: left` and `position: right` field. Serialize new or edited layouts using `balance`.
 
 ## Type-Driven Direct Routing
 
-Use the resolved kit-slot type to choose its default direct-mic behavior.
+Use the resolved kit-slot kind and catalog entry to choose its default routing behavior.
 
 ### Dedicated Direct Types
 
@@ -109,52 +171,70 @@ Configurable list of types continue using dedicated direct mic entries that targ
 - `hihat`
 - `ride`
 
--that is default list that can be extended via config
+That is the default list and can be extended through the instrument catalog in global config.
+
 Exact slot-ID routing remains higher priority than type fallback.
 
-### Auxiliary Direct Type
+### Shared Aux Stereo Routing
 
-mic layout should reserve 2 last stereo channels for not determined`drum` and `aux` mics.
+Some non-dedicated instruments should not claim separate close/direct outputs by default. Instead, they route their source mic signal into one shared stereo aux output.
 
-`drum`-kinda instrument slots can also use auxiliary outputs for source direct mics.
+Examples:
 
-This supports custom acoustic instruments such as octobans assembled from multiple tom layers while keeping their direct signals separate from normal tom channels and processing.
+- `octoban` can default to shared aux stereo unless the user opts into exclusive aux-pool routing.
+- `cowbell`, `tambourine`, `shaker`, and similar accessory/effect instruments default to shared aux stereo.
+- Mono sources are placed into the shared stereo output using the slot/layer balance.
+- Stereo sources are sent to the shared stereo output and may be L/R flipped by the existing `flipLR` behavior.
+
+The intended default mic-layout convention is to place two stereo aux outputs at the end of the 32-channel layout, usually channels 29-32. This should be represented explicitly by mic-layout entries rather than hardcoded by channel number.
+
+### Exclusive Aux Pool Routing
+
+A user can opt a slot or source layer into exclusive aux-pool routing when they want separate outputs per source mic code.
+
+This supports custom acoustic instruments such as octobans assembled from multiple tom layers while keeping their direct or close signals separate from normal tom channels and processing.
 
 ### Common-Only Types
 
 Other and unknown types use common overhead and room mics but do not automatically receive direct mics.
 
-This includes `aux` by default. Its sources may still be heard through common microphones.
+This remains useful for instruments that should only appear in normal common kit microphones.
 
 ## Mic Layout Changes
 
-Allow mic-layout entries to declare an auxiliary role:
+Allow mic-layout entries to declare auxiliary roles:
 
 ```yaml
 mics:
-  - name: Aux Direct 1
-    role: aux
+  - name: Aux Shared A
+    role: aux_shared
+    code: ons
+
+  - name: Aux Shared B
+    role: aux_shared
+    code: ons
+
+  - name: Aux Pool 1
+    role: aux_pool
     code: dtm
 
-  - name: Aux Direct 2
-    role: aux
+  - name: Aux Pool 2
+    role: aux_pool
     code: dbm
-
-  - name: Aux Overhead
-    role: aux
-    code: ons
 ```
 
 Existing entries without `role` keep their current dedicated or common behavior.
 
-An auxiliary entry provides one globally exclusive host output assignment. It may be claimed by one kit-slot/direct-code pair.
+An `aux_shared` stereo entry is a shared destination for many non-dedicated instruments. A mono source may be balanced into it; a stereo source may be routed through it.
+
+An `aux_pool` entry provides one globally exclusive host output assignment. It may be claimed by one kit-slot/source-mic-code pair.
 
 Auxiliary compatibility is based on:
 
-- Full direct mic code, including its variant.
+- Full source mic code, including its variant.
 - Channel count and format.
 
-The initial use case is mono direct mics, but routing must not assume that every future auxiliary entry is mono.
+Auxiliary routing must not assume mono. Percussive/accessory sources may be recorded as stereo.
 
 ## Routing Plan
 
@@ -177,18 +257,21 @@ Allocate auxiliary outputs deterministically in this order:
 1. Kit-layout slot order.
 2. Instrument-map entry order within the slot.
 3. Source articulation and mic discovery order.
-4. Mic-layout auxiliary entry order.
+4. Mic-layout `aux_pool` entry order.
 
 ### Allocation Rules
 
 - Common overhead and room mics continue routing to every applicable synth.
 - Dedicated direct mics continue routing by exact slot ID, then legacy type fallback.
-- A `drum`-kinda slot requests one auxiliary output for every distinct direct mic code used by its mapped sources.
-- Multiple layers in the same slot using the same direct mic code reuse the same auxiliary output.
-- Different direct mic codes receive different auxiliary outputs.
-- An auxiliary output cannot be claimed by another slot or direct code.
-- A source direct mic is skipped when no compatible free auxiliary output exists.
-- Skipping one direct mic does not reject the instrument map or silence common microphones.
+- A `shared_aux_stereo` slot sends eligible source mics to the shared aux stereo destination.
+- A mono source in shared aux stereo uses the slot/layer balance to place it in the stereo field.
+- A stereo source in shared aux stereo keeps its stereo channels, with optional `flipLR`.
+- An `aux_pool` slot requests one exclusive auxiliary output for every distinct source mic code used by its mapped sources.
+- Multiple layers in the same slot using the same source mic code reuse the same exclusive auxiliary output.
+- Different source mic codes receive different exclusive auxiliary outputs.
+- An exclusive auxiliary output cannot be claimed by another slot or source mic code.
+- A source mic is routed to shared aux when no compatible free exclusive auxiliary output exists.
+- Skipping one source mic does not reject the instrument map or silence common/shared microphones.
 
 ### Warnings and Status
 
@@ -197,7 +280,7 @@ Collect routing diagnostics while constructing the plan.
 Report:
 
 - Slot and source path.
-- Direct mic code that could not be routed.
+- Source mic code that could not be routed.
 - Required channel count or format.
 - Available auxiliary entries, where useful.
 
@@ -256,6 +339,13 @@ The selector:
 - Uses the existing kit-layout Save or Save As flow for persistence.
 - Does not silently overwrite factory layout files.
 
+Add routing controls for non-dedicated slots:
+
+- Default routing display from the instrument catalog.
+- Optional per-slot routing override, at least `shared_aux_stereo`, `aux_pool`, and `common`.
+- Balance control for mono sources routed to shared aux stereo.
+- For stereo shared-aux sources, keep `flipLR` as the first version's orientation control.
+
 For each source layer, display:
 
 - Source balance, such as `L36`, `C0`, or `R127`.
@@ -277,6 +367,7 @@ Kit-layout YAML owns:
 
 - Slot `type`.
 - Slot `balance`.
+- Optional slot routing override, if added in v1.
 
 Instrument-map text continues to own:
 
@@ -296,6 +387,7 @@ Add:
 ```cpp
 KitLib::InstrumentSpec::Type type;
 std::optional<int> balance;
+std::optional<RoutingPolicy> routingOverride;
 ```
 
 ### `KitLib::ArticulationSpec`
@@ -311,7 +403,8 @@ Expose the resolved balance needed by source pickers and automatic orientation.
 Add a role enum or equivalent parsed value with at least:
 
 - Normal
-- Auxiliary
+- AuxShared
+- AuxPool
 
 Unknown roles should produce a warning and behave as normal entries for compatibility.
 
@@ -323,13 +416,14 @@ It must represent:
 
 - Common assignments.
 - Dedicated assignments.
+- Shared auxiliary assignments.
 - Auxiliary claims.
 - Unmatched source mic diagnostics.
 
 ## Compatibility
 
 - Layouts without explicit `type` keep ID-derived behavior.
-- Legacy `position` to remove
+- The old draft-only `position` field is removed and not treated as compatibility surface.
 - Layouts without auxiliary mic entries retain current routing behavior.
 - Existing instrument-map syntax remains unchanged.
 - Existing explicit `flipLR` values continue to work.
@@ -343,8 +437,6 @@ It must represent:
 - Parse explicit slot types.
 - Fall back to ID-derived types.
 - Parse `C0`, left, and right balances.
-- Parse legacy `position`.
-- Prefer `balance` when both fields exist.
 - Warn on invalid types and balance values.
 - Round-trip type and balance through YAML serialization.
 
@@ -360,8 +452,11 @@ It must represent:
 
 - Preserve existing dedicated slot routing.
 - Preserve common overhead and room routing.
-- Route a `drum` slot's direct mic through a compatible auxiliary entry.
-- Allocate separate auxiliary outputs for `dtm`, `dbm`, `dim`, and other distinct codes.
+- Route a shared-aux slot into shared aux stereo by default.
+- Balance mono shared-aux sources inside the stereo output.
+- Route stereo shared-aux sources as stereo.
+- Route an aux-pool slot's source mic through a compatible exclusive auxiliary entry.
+- Allocate separate exclusive auxiliary outputs for `dtm`, `dbm`, `dim`, `ons`, and other distinct codes.
 - Preserve variants such as `dtm1` versus `dtm2`.
 - Reuse one auxiliary assignment for repeated layers using the same direct code.
 - Prevent two slots from claiming the same auxiliary entry.
@@ -394,15 +489,24 @@ It must represent:
 
 `tom1` remains type `tom`. A `tom1` mic-layout entry routes its direct mic to the existing Tom 1 host output. Common microphones remain unchanged.
 
+### Shared Aux Cowbell
+
+`cowbell1` defaults to shared aux stereo.
+
+If the selected cowbell source is mono, the slot balance places it in the shared stereo aux output. If the source is stereo, it routes to the shared stereo aux output and can be flipped with `flipLR`.
+
 ### Layered Octoban
 
-`drum1` is mapped to several tom sources containing `dtm`, `dbm`, and `dim`.
+`octoban1` is mapped to several tom sources containing `dtm`, `dbm`, and `dim`.
 
-The routing plan claims three compatible auxiliary entries. Every layer using `dtm` shares the first claim, while `dbm` and `dim` receive separate outputs. No source is sent through normal tom direct outputs.
+With default shared aux stereo routing, the selected source mics are mixed into the shared aux stereo output, using slot balance and `flipLR` as needed.
+
+With an explicit aux-pool routing override, the routing plan claims three compatible exclusive auxiliary entries. Every layer using `dtm` shares the first claim, while `dbm` and `dim` receive separate outputs. No source is sent through normal tom direct outputs.
+
 
 ### Exhausted Auxiliary Pool
 
-`drum2` requires `dtm` and `dbm`, but only one compatible free auxiliary output remains.
+`octoban2` uses aux-pool routing and requires `dtm` and `dbm`, but only one compatible free auxiliary output remains.
 
 The first deterministic claim is routed. The other direct mic is skipped and shown as a warning. Overheads and room mics continue playing.
 
@@ -415,7 +519,44 @@ Source selection enables `flipLR`. The user can turn it off manually, and that c
 ## Deferred Work
 
 - Deriving pan from balance magnitude.
-- Per-layer manual auxiliary-output selection.
+- Per-layer manual exclusive auxiliary-output selection.
 - Dynamically creating host output buses.
 - Sharing an auxiliary output when the pool is exhausted.
 - Rejecting complete instrument maps because of missing auxiliary capacity.
+
+## Open Questions
+
+### Naming The Third Family
+
+`percussion` is too broad because drums are also percussion. Avoid naming this family `aux`, because aux is also a routing/output concept.
+
+Possible names:
+
+- `accessory`: good for cowbell, tambourine, shaker, vibraslap; slightly hardware-like.
+- `effect`: good for vibraslap, ratchet, whip; less good for cowbell/tambourine.
+- `hand`: good for shaker, maracas, tambourine; wrong for mounted cowbell or blocks.
+- `other`: technically clear but not musically helpful.
+- `utility`: clear in code, less musical in UI.
+
+Current recommendation: use `accessory` as the catalog family name and keep UI labels customizable later.
+
+### Config Structure
+
+Need a small config-structure document before implementation.
+
+Suggested root placement:
+
+```yaml
+instrumentCatalog:
+  kinds:
+    octoban: { family: drum, routing: shared_aux_stereo }
+    cowbell: { family: accessory, routing: shared_aux_stereo }
+  aliases:
+    cowbel: cowbell
+```
+
+Still to decide:
+
+- Whether users can override only the catalog, or also the built-in default dedicated list.
+- Whether catalog changes require full library rescan, full kit remap, or only routing rebuild.
+- Whether slot-level routing override is stored as `routing:` in kit layout or as a separate `micRouting:` field.
