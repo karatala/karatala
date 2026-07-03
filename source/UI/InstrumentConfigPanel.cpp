@@ -229,7 +229,7 @@ void InstrumentConfigPanel::updateRemoveButtonVisibility() {
 void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     this->dismissPopup();
 
-    this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
+    this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
     this->activePopup->setFilterType(row->slotType);
 
     auto buttonBounds = row->sourceButton->getBoundsInParent();

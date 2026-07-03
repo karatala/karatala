@@ -833,7 +833,7 @@ void PadContextPopup::flushMapText() {
 void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->dismissSourcePicker();
 
-    auto pickerPopup = std::make_unique<SourcePickerPopup>(this->sourceItems);
+    auto pickerPopup = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
     pickerPopup->setFilterType(this->slotType);
     pickerPopup->setSize(juce::jlimit(240, 420, getWidth() - 16), 240);
 
