@@ -33,7 +33,7 @@ INSTRUMENTS = {
         "parameter": '-pdl_opn_cls078',
     },
     'hihat-foot': {
-        "instrument": 'hihat-X2',
+        "instrument": 'hihat-X1',
         "articulation": 'pedal',
         "parameter": '',
     },
