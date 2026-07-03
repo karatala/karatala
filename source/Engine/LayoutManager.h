@@ -3,9 +3,11 @@
 #include "../Config/Helpers.h"
 #include "../Config/YamlHelper.h"
 #include "KitLibModel.h"
+#include "RoutingTypes.h"
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <map>
+#include <optional>
 #include <algorithm>
 
 struct KitLayout {
@@ -40,6 +42,8 @@ struct KitLayout {
         juce::String id; // kick1, snare1, hihat1, ...
         juce::String display;
         KitLib::InstrumentSpec::Type type = KitLib::InstrumentSpec::Type::Unknown;
+        std::optional<int> balance;
+        std::optional<DirectMicOutPolicy> directMicOuts;
         std::vector<ArticulationTrigger> articulations;
         std::vector<ContinuousController> controllers;
         // juce::String chokeGroup;
@@ -157,7 +161,33 @@ struct LayoutTraits<KitLayout> {
 
                 inst.id = instItem["id"].asString();
                 inst.display = instItem["display"].asString();
-                inst.type = KitLib::InstrumentSpec::typeFromString(inst.id.removeCharacters("0123456789"));
+
+                const auto typeText = instItem["type"].asString().trim();
+                if (typeText.isNotEmpty()) {
+                    inst.type = KitLib::InstrumentSpec::typeFromString(typeText);
+                    if (inst.type == KitLib::InstrumentSpec::Type::Unknown)
+                        result.addWarning("instruments: unknown type '" + typeText + "' for instrument " + inst.id);
+                } else {
+                    inst.type = KitLib::InstrumentSpec::typeFromString(inst.id.removeCharacters("0123456789"));
+                }
+
+                const auto balanceText = instItem["balance"].asString().trim();
+                if (balanceText.isNotEmpty()) {
+                    auto parsedBalance = parseBalanceValue(balanceText);
+                    if (parsedBalance.has_value())
+                        inst.balance = *parsedBalance;
+                    else
+                        result.addWarning("instruments: invalid balance '" + balanceText + "' for instrument " + inst.id);
+                }
+
+                const auto directMicOutsText = instItem["directMicOuts"].asString().trim();
+                if (directMicOutsText.isNotEmpty()) {
+                    auto parsedPolicy = directMicOutPolicyFromString(directMicOutsText);
+                    if (parsedPolicy.has_value())
+                        inst.directMicOuts = *parsedPolicy;
+                    else
+                        result.addWarning("instruments: invalid directMicOuts '" + directMicOutsText + "' for instrument " + inst.id);
+                }
 
                 const auto& artsNode = instItem["articulations"];
                 if (artsNode.isSequence()) {
@@ -227,6 +257,12 @@ struct LayoutTraits<KitLayout> {
             yaml << "  - id: " << slot.id << "\n";
             if (slot.display.isNotEmpty())
                 yaml << "    display: " << slot.display << "\n";
+            if (slot.type != KitLib::InstrumentSpec::Type::Unknown)
+                yaml << "    type: " << KitLib::InstrumentSpec::typeToString(slot.type) << "\n";
+            if (slot.balance.has_value())
+                yaml << "    balance: " << balanceValueToString(*slot.balance) << "\n";
+            if (slot.directMicOuts.has_value())
+                yaml << "    directMicOuts: " << directMicOutPolicyToString(*slot.directMicOuts) << "\n";
             if (!slot.articulations.empty()) {
                 yaml << "    articulations:\n";
                 for (const auto& art : slot.articulations) {

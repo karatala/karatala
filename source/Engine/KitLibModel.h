@@ -5,8 +5,10 @@
 #include <vector>
 #include <map>
 #include <array>
+#include <optional>
 #include "../Config/Helpers.h"
 #include "KitLibConsts.h"
+#include "RoutingTypes.h"
 
 /**
  * Class Hierarchy:
@@ -238,6 +240,8 @@ public:
     
     juce::String codeRaw;
     InstrumentSpec* parent = nullptr;
+    std::optional<int> balance;
+    bool balanceConflict = false;
     StringsDictSingleton::Id nameId = 0;
     StringsDictSingleton::Id exprId = 0;
     std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
@@ -309,23 +313,108 @@ class InstrumentSpec {
 public:
 
     //TODO: add global config for custom names mapping (like "chopper">"cymbal" "rototom">"tom" "vibraslap">"percussion" etc or maybe better use StringsDictSingleton for new types?
-    enum class Type { Unknown, Percussion, Drum, Cymbal, Kick, Tom, Snare, Ride, HiHat, Crash, Splash, China }; 
+    enum class Type {
+        Unknown,
+        Percussion,
+        Other,
+        Drum,
+        Cymbal,
+        Kick,
+        Tom,
+        Octoban,
+        Rototom,
+        Timbale,
+        Timpani,
+        Conga,
+        Bongo,
+        Djembe,
+        Cajon,
+        Taiko,
+        Surdo,
+        Mridangam,
+        TalkingDrum,
+        Snare,
+        Ride,
+        HiHat,
+        Crash,
+        Splash,
+        China,
+        Bell,
+        Stack,
+        Chopper,
+        Gong,
+        Karatala,
+        Cowbell,
+        Tambourine,
+        Shaker,
+        Maracas,
+        Cabasa,
+        Guiro,
+        Claves,
+        Agogo,
+        WoodBlock,
+        TempleBlock,
+        Triangle,
+        Vibraslap,
+        Castanets,
+        SleighBells,
+        Whip,
+        Ratchet,
+    };
     struct TypeEntry {
         const char* name;
         Type type;
     };
     static constexpr TypeEntry typeTable[] = {
-        {"percussion", Type::Percussion},
-        {"drum",       Type::Drum},
-        {"cymbal",     Type::Cymbal},
-        {"kick",       Type::Kick},
-        {"tom",        Type::Tom},
-        {"snare",      Type::Snare},
-        {"ride",       Type::Ride},
-        {"hihat",      Type::HiHat},
-        {"crash",      Type::Crash},
-        {"splash",     Type::Splash},
-        {"china",      Type::China},
+        {"percussion",   Type::Percussion},
+        {"other",        Type::Other},
+        {"drum",         Type::Drum},
+        {"cymbal",       Type::Cymbal},
+        {"kick",         Type::Kick},
+        {"tom",          Type::Tom},
+        {"octoban",      Type::Octoban},
+        {"rototom",      Type::Rototom},
+        {"timbale",      Type::Timbale},
+        {"timpani",      Type::Timpani},
+        {"conga",        Type::Conga},
+        {"bongo",        Type::Bongo},
+        {"djembe",       Type::Djembe},
+        {"cajon",        Type::Cajon},
+        {"taiko",        Type::Taiko},
+        {"surdo",        Type::Surdo},
+        {"mridangam",    Type::Mridangam},
+        {"talking_drum", Type::TalkingDrum},
+        {"snare",        Type::Snare},
+        {"ride",         Type::Ride},
+        {"hihat",        Type::HiHat},
+        {"hi_hat",       Type::HiHat},
+        {"crash",        Type::Crash},
+        {"splash",       Type::Splash},
+        {"china",        Type::China},
+        {"bell",         Type::Bell},
+        {"stack",        Type::Stack},
+        {"stax",         Type::Stack},
+        {"chopper",      Type::Chopper},
+        {"gong",         Type::Gong},
+        {"karatala",     Type::Karatala},
+        {"cowbell",      Type::Cowbell},
+        {"cowbel",       Type::Cowbell},
+        {"tambourine",   Type::Tambourine},
+        {"shaker",       Type::Shaker},
+        {"maracas",      Type::Maracas},
+        {"cabasa",       Type::Cabasa},
+        {"guiro",        Type::Guiro},
+        {"claves",       Type::Claves},
+        {"agogo",        Type::Agogo},
+        {"wood_block",   Type::WoodBlock},
+        {"woodblock",    Type::WoodBlock},
+        {"temple_block", Type::TempleBlock},
+        {"triangle",     Type::Triangle},
+        {"vibraslap",    Type::Vibraslap},
+        {"castanets",    Type::Castanets},
+        {"sleigh_bells", Type::SleighBells},
+        {"whip",         Type::Whip},
+        {"ratchet",      Type::Ratchet},
     };
     static juce::String typeToString(Type type){
         for (const auto& e : typeTable)

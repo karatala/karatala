@@ -1,6 +1,8 @@
 #include "../source/Engine/KitLibModel.h"
+#include "../source/Engine/LayoutManager.h"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_floating_point.hpp"
+#include "catch2/matchers/catch_matchers_string.hpp"
 
 using namespace KitLib;
 
@@ -46,6 +48,87 @@ TEST_CASE("KitLib - InstrumentSpec::parseInfo handles optional description", "[I
         REQUIRE(r.value.size == "");
         REQUIRE(r.value.description == "");
     }
+}
+
+
+TEST_CASE("KitLayout - parser reads slot routing metadata", "[KitLayout][yaml][routing]") {
+    const juce::String yaml = R"yaml(
+id: routing
+name: Routing
+instruments:
+  - id: drum1
+    display: Octoban 1
+    type: octoban
+    balance: L48
+    directMicOuts: auto
+    articulations:
+      - { notes: [50], code: center }
+  - id: tom2
+    display: Tom 2
+    articulations:
+      - { notes: [47], code: center }
+)yaml";
+
+    auto parsed = LayoutTraits<KitLayout>::parseYaml(yaml);
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.errors.empty());
+    REQUIRE(parsed.value.instrumentSlots.size() == 2);
+
+    const auto& octoban = parsed.value.instrumentSlots[0];
+    REQUIRE(octoban.type == InstrumentSpec::Type::Octoban);
+    REQUIRE(octoban.balance.has_value());
+    REQUIRE(*octoban.balance == -48);
+    REQUIRE(octoban.directMicOuts.has_value());
+    REQUIRE(*octoban.directMicOuts == DirectMicOutPolicy::Auto);
+
+    const auto& derivedTom = parsed.value.instrumentSlots[1];
+    REQUIRE(derivedTom.type == InstrumentSpec::Type::Tom);
+    REQUIRE(!derivedTom.balance.has_value());
+    REQUIRE(!derivedTom.directMicOuts.has_value());
+
+    auto roundTrip = LayoutTraits<KitLayout>::parseYaml(LayoutTraits<KitLayout>::toYaml(parsed.value));
+    REQUIRE(roundTrip.ok());
+    REQUIRE(roundTrip.value.instrumentSlots[0].type == InstrumentSpec::Type::Octoban);
+    REQUIRE(roundTrip.value.instrumentSlots[0].balance == -48);
+    REQUIRE(roundTrip.value.instrumentSlots[0].directMicOuts == DirectMicOutPolicy::Auto);
+}
+
+TEST_CASE("KitLayout - parser warns on invalid routing metadata", "[KitLayout][yaml][routing]") {
+    const juce::String yaml = R"yaml(
+id: routing
+name: Routing
+instruments:
+  - id: aux1
+    type: nope
+    balance: L0
+    directMicOuts: aux
+    articulations:
+      - { notes: [50], code: center }
+)yaml";
+
+    auto parsed = LayoutTraits<KitLayout>::parseYaml(yaml);
+    REQUIRE(parsed.ok());
+    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("unknown type"));
+    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("invalid balance"));
+    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("invalid directMicOuts"));
+}
+
+TEST_CASE("MicLayout - parser skips entries without mic code", "[MicLayout][yaml][routing]") {
+    const juce::String yaml = R"yaml(
+id: mics
+name: Mics
+mics:
+  - name: Broken
+    instrument: tom1
+  - name: Overheads
+    code: ons
+)yaml";
+
+    auto parsed = LayoutTraits<MicLayout>::parseYaml(yaml);
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.mics.size() == 1);
+    REQUIRE(parsed.value.mics[0].code == "ons");
+    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("code is empty"));
 }
 
 TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain", "[InstrumentSpec]") {
@@ -204,4 +287,65 @@ TEST_CASE("KitLib - DecayEnvelope handles invalid and incomplete data", "[DecayE
     CHECK_THAT(incompleteEnvelope.getAbsoluteDbAtMs(15.0f), Catch::Matchers::WithinAbs(-21.0f, 0.001f));
     CHECK_THAT(incompleteEnvelope.getMsAtAbsoluteDb(-21.0f), Catch::Matchers::WithinAbs(15.0f, 0.001f));
     CHECK(incompleteEnvelope.getMsAtAbsoluteDb(-30.0f) < 0.0f);
+}
+
+TEST_CASE("KitLib - InstrumentSpec::parseInfo recognizes routing plan kinds", "[InstrumentSpec][routing]") {
+    auto octoban = InstrumentSpec::parseInfo("octoban-8-High");
+    REQUIRE(octoban.ok());
+    REQUIRE(octoban.value.type == InstrumentSpec::Type::Octoban);
+
+    auto cowbel = InstrumentSpec::parseInfo("cowbel-X1");
+    REQUIRE(cowbel.ok());
+    REQUIRE(cowbel.value.type == InstrumentSpec::Type::Cowbell);
+
+    auto stax = InstrumentSpec::parseInfo("stax-X1");
+    REQUIRE(stax.ok());
+    REQUIRE(stax.value.type == InstrumentSpec::Type::Stack);
+    REQUIRE(InstrumentSpec::typeToString(InstrumentSpec::Type::Stack) == "stack");
+}
+
+TEST_CASE("KitLib - articulation folder balance suffix is metadata", "[InstrumentSpec][routing]") {
+    auto root = juce::File::getSpecialLocation(juce::File::tempDirectory)
+                    .getNonexistentChildFile("karatala-routing-stage1", "", false);
+    REQUIRE(root.createDirectory());
+
+    struct TempDirCleanup {
+        juce::File file;
+        ~TempDirCleanup() { file.deleteRecursively(); }
+    } cleanup { root };
+
+    auto bowDir = root.getChildFile("bow[half]-pdl_opn_cls043-L64");
+    REQUIRE(bowDir.createDirectory());
+
+    auto centerLeft = root.getChildFile("center-L36");
+    auto centerRight = root.getChildFile("center-R36");
+    REQUIRE(centerLeft.createDirectory());
+    REQUIRE(centerRight.createDirectory());
+
+    DrumKitSpec::MetaInfo kitMeta;
+    DrumKitSpec kit(kitMeta);
+
+    InstrumentSpec::MetaInfo instMeta;
+    instMeta.rootDir = root;
+    instMeta.name = "hihat";
+    instMeta.codeRaw = "hihat-14";
+    instMeta.type = InstrumentSpec::Type::HiHat;
+    InstrumentSpec instrument(&kit, instMeta);
+
+    instrument.scanInstrumentSamples();
+
+    auto* bow = instrument.findArticulation("bow[half]");
+    REQUIRE(bow != nullptr);
+    REQUIRE(bow->balance.has_value());
+    REQUIRE(*bow->balance == -64);
+    REQUIRE(!bow->balanceConflict);
+    REQUIRE(bow->expressionDimensions.size() == 1);
+    REQUIRE(bow->expressionDimensions[0]->codeRaw == "pdl_opn_cls");
+    REQUIRE(bow->expressionDimensions[0]->values.size() == 1);
+    REQUIRE(bow->expressionDimensions[0]->values[0] == 43);
+
+    auto* center = instrument.findArticulation("center");
+    REQUIRE(center != nullptr);
+    REQUIRE(!center->balance.has_value());
+    REQUIRE(center->balanceConflict);
 }

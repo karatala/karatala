@@ -200,8 +200,25 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
 
         auto artName = artDir.getFileName();
         auto parts = juce::StringArray::fromTokens(artName, "-", "");
+        std::optional<int> folderBalance;
+        if (parts.size() > 1) {
+            folderBalance = parseBalanceValue(parts[parts.size() - 1]);
+            if (folderBalance.has_value())
+                parts.remove(parts.size() - 1);
+        }
 
         ArticulationSpec* artSpec = this->getOrAddArticulation(parts[0].trim());
+        if (folderBalance.has_value()) {
+            if (artSpec->balanceConflict) {
+                // Already known ambiguous; keep automatic orientation disabled.
+            } else if (!artSpec->balance.has_value()) {
+                artSpec->balance = *folderBalance;
+            } else if (*artSpec->balance != *folderBalance) {
+                LOG(Warning, "Conflicting balance suffixes for articulation '" + artSpec->codeRaw + "' in instrument '" + this->meta.name + "'; automatic orientation disabled");
+                artSpec->balance.reset();
+                artSpec->balanceConflict = true;
+            }
+        }
 
         for (int i = 1; i < parts.size(); ++i) {
             auto expDimPart = parts[i];
