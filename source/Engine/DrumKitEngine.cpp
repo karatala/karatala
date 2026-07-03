@@ -631,6 +631,11 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
     if (micLayout.isNotEmpty())
         config.micLayout = micLayout;
 
+    auto catalog = InstrumentCatalog::parseYaml(root["instrumentCatalog"]);
+    config.instrumentCatalog = catalog.value;
+    for (const auto& warning : catalog.errors)
+        result.addWarning(warning);
+
     // Parse engine settings
     const auto& engineNode = root["engine"];
     if (engineNode.isMap()) {

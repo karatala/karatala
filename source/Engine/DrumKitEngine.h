@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 #include "EngineSettings.h"
+#include "InstrumentCatalog.h"
 #include "InstrumentSynth.h"
 #include "LayoutManager.h"
 #include "MidiCrosstalkFilter.h"
@@ -54,6 +55,7 @@ public:
         uint64_t sampleLoaderCacheLimitMegabytes = 1024ull;
         juce::String kitLayout;
         juce::String micLayout;
+        InstrumentCatalog instrumentCatalog = InstrumentCatalog::makeDefault();
     };
 
     ParseResult<Config> parseConfigYaml(const juce::String yamlStr);
@@ -93,6 +95,7 @@ public:
     const juce::String& getSuggestedInstrumentMapText() const { return this->suggestedInstrumentMapText; }
     const juce::String& getGlobalKitLayoutId() const { return this->globalConfig.kitLayout; }
     const juce::String& getGlobalMicLayoutId() const { return this->globalConfig.micLayout; }
+    const InstrumentCatalog& getInstrumentCatalog() const { return this->globalConfig.instrumentCatalog; }
     bool setGlobalKitLayoutId(const juce::String& layoutId);
     bool setGlobalMicLayoutId(const juce::String& layoutId);
     void seedInstrumentMapFingerprints(const juce::String& mapText);

@@ -88,6 +88,28 @@ engine:
     REQUIRE(engine.engineSettings.hihatMissingDecayPolicy.load() == HiHatMissingDecayPolicy::KeepTail);
 }
 
+
+TEST_CASE("EngineSettings - global config parses instrument catalog", "[EngineSettings][yaml][routing]") {
+    DrumKitEngine engine;
+    const auto result = engine.parseConfigYaml(R"yaml(
+instrumentCatalog:
+  kinds:
+    octoban: { family: drum, directMicOuts: own }
+    cowbell: { family: other, directMicOuts: shared }
+  aliases:
+    cowbel: cowbell
+)yaml");
+
+    REQUIRE(result.ok());
+    REQUIRE(result.errors.empty());
+    const auto& catalog = result.value.instrumentCatalog;
+    REQUIRE(catalog.familyFor(KitLib::InstrumentSpec::Type::Octoban) == InstrumentFamily::Drum);
+    REQUIRE(catalog.defaultDirectMicOutsFor(KitLib::InstrumentSpec::Type::Octoban).has_value());
+    REQUIRE(*catalog.defaultDirectMicOutsFor(KitLib::InstrumentSpec::Type::Octoban) == DirectMicOutPolicy::Own);
+    REQUIRE(catalog.defaultDirectMicOutsFor(KitLib::InstrumentSpec::Type::Ride).has_value());
+    REQUIRE(*catalog.defaultDirectMicOutsFor(KitLib::InstrumentSpec::Type::Ride) == DirectMicOutPolicy::Own);
+    REQUIRE(catalog.resolveKind("cowbel") == KitLib::InstrumentSpec::Type::Cowbell);
+}
 TEST_CASE("EngineSettings - realtime settings remain copyable snapshots", "[EngineSettings]") {
     EngineSettings sourceSettings;
     sourceSettings.hihatOpenCrossfadeSec.store(0.125f);

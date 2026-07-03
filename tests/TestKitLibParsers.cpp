@@ -1,5 +1,6 @@
 #include "../source/Engine/KitLibModel.h"
 #include "../source/Engine/LayoutManager.h"
+#include "../source/Engine/InstrumentCatalog.h"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_floating_point.hpp"
 #include "catch2/matchers/catch_matchers_string.hpp"
@@ -129,6 +130,77 @@ mics:
     REQUIRE(parsed.value.mics.size() == 1);
     REQUIRE(parsed.value.mics[0].code == "ons");
     CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("code is empty"));
+}
+
+
+TEST_CASE("InstrumentCatalog - defaults and YAML overrides", "[InstrumentCatalog][routing]") {
+    auto catalog = InstrumentCatalog::makeDefault();
+    REQUIRE(catalog.familyFor(InstrumentSpec::Type::Octoban) == InstrumentFamily::Drum);
+    REQUIRE(catalog.defaultDirectMicOutsFor(InstrumentSpec::Type::Octoban).has_value());
+    REQUIRE(*catalog.defaultDirectMicOutsFor(InstrumentSpec::Type::Octoban) == DirectMicOutPolicy::Auto);
+    REQUIRE(catalog.resolveKind("cowbel") == InstrumentSpec::Type::Cowbell);
+
+    const auto root = YamlHelper::parse(R"yaml(
+instrumentCatalog:
+  kinds:
+    octoban: { family: drum, directMicOuts: own }
+    shaker: { family: other, directMicOuts: shared }
+  aliases:
+    shaker_box: shaker
+)yaml");
+
+    auto parsed = InstrumentCatalog::parseYaml(root["instrumentCatalog"]);
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.errors.empty());
+    REQUIRE(parsed.value.defaultDirectMicOutsFor(InstrumentSpec::Type::Octoban).has_value());
+    REQUIRE(*parsed.value.defaultDirectMicOutsFor(InstrumentSpec::Type::Octoban) == DirectMicOutPolicy::Own);
+    REQUIRE(parsed.value.defaultDirectMicOutsFor(InstrumentSpec::Type::Shaker).has_value());
+    REQUIRE(*parsed.value.defaultDirectMicOutsFor(InstrumentSpec::Type::Shaker) == DirectMicOutPolicy::Shared);
+    REQUIRE(parsed.value.resolveKind("shaker_box") == InstrumentSpec::Type::Shaker);
+}
+
+TEST_CASE("Mic instrument selectors parse and match by priority", "[InstrumentCatalog][routing]") {
+    const auto catalog = InstrumentCatalog::makeDefault();
+
+    const auto exact = parseMicInstrumentSelector("tom1", catalog);
+    REQUIRE(matchMicInstrumentSelector(exact, "tom1", InstrumentSpec::Type::Tom, catalog) == MicSelectorPriority::ExactSlotId);
+    REQUIRE(matchMicInstrumentSelector(exact, "tom2", InstrumentSpec::Type::Tom, catalog) == MicSelectorPriority::None);
+
+    const auto wildcard = parseMicInstrumentSelector("rototom*", catalog);
+    REQUIRE(matchMicInstrumentSelector(wildcard, "rototom1", InstrumentSpec::Type::Rototom, catalog) == MicSelectorPriority::WildcardPrefix);
+
+    const auto kind = parseMicInstrumentSelector("cowbell", catalog);
+    REQUIRE(matchMicInstrumentSelector(kind, "perc1", InstrumentSpec::Type::Cowbell, catalog) == MicSelectorPriority::Kind);
+
+    const auto list = parseMicInstrumentSelector("tambourine,cowbell,vibraslap", catalog);
+    REQUIRE(matchMicInstrumentSelector(list, "perc1", InstrumentSpec::Type::Cowbell, catalog) == MicSelectorPriority::CommaList);
+
+    const auto family = parseMicInstrumentSelector("other", catalog);
+    REQUIRE(matchMicInstrumentSelector(family, "perc1", InstrumentSpec::Type::Cowbell, catalog) == MicSelectorPriority::Family);
+
+    const auto common = parseMicInstrumentSelector("", catalog);
+    REQUIRE(matchMicInstrumentSelector(common, "kick1", InstrumentSpec::Type::Kick, catalog) == MicSelectorPriority::EmptyCommon);
+
+    REQUIRE(static_cast<int>(MicSelectorPriority::ExactSlotId) > static_cast<int>(MicSelectorPriority::WildcardPrefix));
+    REQUIRE(static_cast<int>(MicSelectorPriority::WildcardPrefix) > static_cast<int>(MicSelectorPriority::Kind));
+    REQUIRE(static_cast<int>(MicSelectorPriority::Kind) > static_cast<int>(MicSelectorPriority::CommaList));
+    REQUIRE(static_cast<int>(MicSelectorPriority::CommaList) > static_cast<int>(MicSelectorPriority::Family));
+    REQUIRE(static_cast<int>(MicSelectorPriority::Family) > static_cast<int>(MicSelectorPriority::EmptyCommon));
+}
+
+TEST_CASE("Direct mic compatibility helpers compare full codes and group outputs", "[InstrumentCatalog][routing]") {
+    const auto dtm1 = MicSpec::parseMicCode("dtm1").value;
+    const auto dtm1b = MicSpec::parseMicCode("dtm1").value;
+    const auto dtm2 = MicSpec::parseMicCode("dtm2").value;
+    const auto dsm = MicSpec::parseMicCode("dsm").value;
+    const auto dss = MicSpec::parseMicCode("dss").value;
+
+    REQUIRE(directMicSpecsMatchExactly(dtm1, dtm1b));
+    REQUIRE_FALSE(directMicSpecsMatchExactly(dtm1, dtm2));
+    REQUIRE_FALSE(directMicSpecsMatchExactly(dsm, dss));
+    REQUIRE(directMicSpecsCanUseGroupOutput(dsm, dss));
+    REQUIRE(directMicSpecsCanUseGroupOutput(dtm1, dtm1b));
+    REQUIRE_FALSE(directMicSpecsCanUseGroupOutput(dtm1, dtm2));
 }
 
 TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain", "[InstrumentSpec]") {
