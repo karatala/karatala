@@ -557,6 +557,8 @@ private:
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
+    std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
+    bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     void applyArticulationAliases(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {});
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec

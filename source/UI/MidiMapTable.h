@@ -25,6 +25,8 @@ public:
 
     /** Called when a MIDI note mapping changes. Owner should rebuild engine routing. */
     std::function<void()> onMappingChanged;
+    /** Called when expression curve points change. Owner should reapply the current layout/map. */
+    std::function<void()> onLayoutReapplyRequested;
 
     /** Called when user selects a preset from the dropdown. */
     std::function<void(const PresetEntry&)> onPresetSelected;
@@ -77,12 +79,14 @@ private:
 
         // Pointers into the active layout for direct editing
         KitLayout::MidiNotes* notesPtr = nullptr;
+        KitLayout::InstrumentSlot* slotPtr = nullptr;
         KitLayout::InstrumentSlot::ContinuousController* controllerPtr = nullptr;
 
         juce::Label instrumentLabel;
         juce::Label articulationLabel;
         std::unique_ptr<MidiNoteAssignmentControl> midiAssignmentControl;
         std::unique_ptr<juce::ComboBox> controllerCombo;
+        std::unique_ptr<juce::TextButton> curveButton;
         bool showInstrumentLabel = false;
     };
 
@@ -95,6 +99,8 @@ private:
     void syncNoteButtons(MapRow& row);
     void applyNoteToSlot(MapRow& row, int slotIdx, int note);
     void applyControllerNumber(MapRow& row, int controllerNumber);
+    void showExpressionCurvePopup(MapRow& row);
+    int getEffectiveExpressionPointValue(const KitLayout::InstrumentSlot& slot, const juce::String& codeRaw, const juce::String& label) const;
     void startMidiLearn(int rowIdx, int slotIdx);
     void stopMidiLearn();
     void showMoreMenu();

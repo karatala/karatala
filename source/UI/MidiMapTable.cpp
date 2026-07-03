@@ -143,6 +143,16 @@ void MidiMapTable::buildRows() {
             }
         };
         this->contentComponent.addAndMakeVisible(*row->controllerCombo);
+
+        if (row->controllerPtr != nullptr && KitLayout::isSupportedExpressionPointCode(row->controllerPtr->codeRaw)) {
+            row->curveButton = std::make_unique<juce::TextButton>("curve");
+            UIHelpers::configureControlButton(*row->curveButton);
+            row->curveButton->onClick = [this, rowIdx] {
+                if (rowIdx < static_cast<int>(this->rows.size()))
+                    this->showExpressionCurvePopup(*this->rows[static_cast<size_t>(rowIdx)]);
+            };
+            this->contentComponent.addAndMakeVisible(*row->curveButton);
+        }
     };
 
     for (auto& slot : this->layoutPtr->instrumentSlots) {
@@ -154,6 +164,7 @@ void MidiMapTable::buildRows() {
             row->instrumentId = slot.id;
             row->articulationCode = art.codeRaw;
             row->isController = false;
+            row->slotPtr = &slot;
             row->notesPtr = &art.notes;
             row->showInstrumentLabel = firstRow;
             firstRow = false;
@@ -176,6 +187,7 @@ void MidiMapTable::buildRows() {
             row->articulationCode = "CC: " + cc.codeRaw;
             row->isController = true;
             row->controllerNumber = cc.number;
+            row->slotPtr = &slot;
             row->controllerPtr = &cc;
             row->showInstrumentLabel = firstRow;
             firstRow = false;
@@ -216,6 +228,63 @@ void MidiMapTable::applyControllerNumber(MapRow& row, int controllerNumber) {
     if (this->onMappingChanged) this->onMappingChanged();
 }
 
+int MidiMapTable::getEffectiveExpressionPointValue(const KitLayout::InstrumentSlot& slot, const juce::String& codeRaw, const juce::String& label) const {
+    if (const auto value = KitLayout::getExpressionPoint(slot.expressionPoints, codeRaw, label); value.has_value())
+        return static_cast<int>(*value);
+
+    if (this->layoutPtr != nullptr) {
+        if (const auto value = KitLayout::getExpressionPoint(this->layoutPtr->expressionPoints, codeRaw, label); value.has_value())
+            return static_cast<int>(*value);
+    }
+
+    const auto defaults = KitLayout::getDefaultExpressionPoints();
+    if (const auto value = KitLayout::getExpressionPoint(defaults, codeRaw, label); value.has_value())
+        return static_cast<int>(*value);
+
+    return 0;
+}
+
+void MidiMapTable::showExpressionCurvePopup(MapRow& row) {
+    if (this->layoutPtr == nullptr || row.slotPtr == nullptr || row.controllerPtr == nullptr)
+        return;
+
+    const auto code = row.controllerPtr->codeRaw.trim().toLowerCase();
+    const auto labels = KitLayout::getExpressionPointLabels(code);
+    if (labels.empty())
+        return;
+
+    auto* dlg = new juce::AlertWindow("Expression curve points", row.instrumentId + " / " + code, juce::MessageBoxIconType::NoIcon);
+    for (const auto& label : labels)
+        dlg->addTextEditor(label, juce::String(this->getEffectiveExpressionPointValue(*row.slotPtr, code, label)), label + ":");
+    dlg->addButton("Apply", 1);
+    dlg->addButton("Cancel", 0);
+
+    const auto slotId = row.instrumentId;
+    dlg->enterModalState(true, juce::ModalCallbackFunction::create([this, dlg, slotId, code, labels](int result) {
+        if (result != 1 || this->layoutPtr == nullptr)
+            return;
+
+        KitLayout::InstrumentSlot* targetSlot = nullptr;
+        for (auto& slot : this->layoutPtr->instrumentSlots) {
+            if (slot.id == slotId) {
+                targetSlot = &slot;
+                break;
+            }
+        }
+        if (targetSlot == nullptr)
+            return;
+
+        for (const auto& label : labels) {
+            const int value = juce::jlimit(0, 127, dlg->getTextEditorContents(label).getIntValue());
+            targetSlot->expressionPoints[code][label] = static_cast<uint8_t>(value);
+        }
+
+        if (this->onLayoutReapplyRequested)
+            this->onLayoutReapplyRequested();
+        else if (this->onMappingChanged)
+            this->onMappingChanged();
+    }), true);
+}
 void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
     // Toggle off if already learning this slot
     if (this->activeLearningRow == rowIdx && this->activeLearningSlot == slotIdx) {
@@ -294,6 +363,7 @@ void MidiMapTable::resized() {
     this->viewport.setBounds(area);
 
     const int midiControlWidth = noteButtonWidth * 2 + learnButtonSize * 2 + midiControlGap * 3;
+    const int controllerCurveButtonWidth = 42;
     // Single column width for one instrument group
     const int singleColWidth = instColWidth + artColWidth + midiControlWidth + 8;
 
@@ -339,8 +409,14 @@ void MidiMapTable::resized() {
 
             if (row.midiAssignmentControl)
                 row.midiAssignmentControl->setBounds(xPos, yPos, midiControlWidth, rowHeight);
-            if (row.controllerCombo)
-                row.controllerCombo->setBounds(juce::Rectangle<int>(xPos, yPos, midiControlWidth, rowHeight).reduced(0, 2));
+            if (row.controllerCombo) {
+                auto controlArea = juce::Rectangle<int>(xPos, yPos, midiControlWidth, rowHeight).reduced(0, 2);
+                if (row.curveButton) {
+                    row.curveButton->setBounds(controlArea.removeFromRight(controllerCurveButtonWidth));
+                    controlArea.removeFromRight(midiControlGap);
+                }
+                row.controllerCombo->setBounds(controlArea);
+            }
 
             yPos += rowHeight;
         }

@@ -385,6 +385,7 @@ namespace YamlHelper {
         }
 
         String firstLine = lines[idx];
+        minIndent = std::max(minIndent, getIndent(firstLine));
         if (startsWithDash(firstLine.trim())) {
             return parseList(lines, idx, minIndent);
         } else {

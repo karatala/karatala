@@ -234,6 +234,16 @@ void PluginEditor::setupMapMode() {
         }
         this->statusBar.setStatusText("MIDI mapping updated");
     };
+    this->midiMapTable.onLayoutReapplyRequested = [this] {
+        auto* layout = this->processorRef.getEngine().getKitLayout();
+        if (layout) {
+            layout->rebuildIndices();
+            this->processorRef.getEngine().setKitLayoutDirect(*layout, true);
+        }
+        this->markDrumPadGridDirty();
+        this->markInstrumentConfigDirty();
+        this->statusBar.setStatusText("Expression curve updated");
+    };
     this->midiMapTable.onMidiLearnStateChanged = [this](bool learning) {
         if (learning) {
             this->processorRef.setMidiLearnCallback([this](int noteNumber) {

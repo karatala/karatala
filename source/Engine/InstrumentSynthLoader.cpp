@@ -129,6 +129,27 @@ float InstrumentSynth::getMicBleedLevel(const juce::String& micCode) const {
 }
 
 
+namespace {
+
+juce::String expressionPointCodeForType(KitLib::ArticulationSpec::ExpressionDimension::Type type) {
+    return KitLib::ArticulationSpec::ExpressionDimension::typeToString(type);
+}
+
+juce::String expressionPointLabelForArticulation(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type type) {
+    if (type == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose) {
+        if (artSpec.exprId != 0)
+            return StringsDictSingleton::nameOf(artSpec.exprId).trim().toLowerCase();
+        return StringsDictSingleton::nameOf(artSpec.nameId).trim().toLowerCase();
+    }
+
+    if (type == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim
+     || type == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge) {
+        return StringsDictSingleton::nameOf(artSpec.nameId).trim().toLowerCase();
+    }
+    return {};
+}
+
+} // namespace
 KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt) {
     if (instSpec == nullptr) return nullptr;
 
@@ -147,6 +168,40 @@ KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::Instr
         }
     }
     return nullptr;
+}
+std::vector<uint8_t> InstrumentSynth::getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
+    for (const auto& dim : artSpec.expressionDimensions) {
+        if (dim != nullptr && dim->type == dimensionType && !dim->values.empty())
+            return dim->values;
+    }
+
+    const auto code = expressionPointCodeForType(dimensionType);
+    if (!KitLayout::isSupportedExpressionPointCode(code))
+        return {};
+
+    const auto label = expressionPointLabelForArticulation(artSpec, dimensionType);
+    if (label.isEmpty())
+        return {};
+
+    if (const auto value = KitLayout::getExpressionPoint(this->instrumentSlot.expressionPoints, code, label); value.has_value())
+        return { *value };
+
+    if (this->parent != nullptr) {
+        if (const auto* layout = this->parent->getKitLayout()) {
+            if (const auto value = KitLayout::getExpressionPoint(layout->expressionPoints, code, label); value.has_value())
+                return { *value };
+        }
+    }
+
+    const auto defaults = KitLayout::getDefaultExpressionPoints();
+    if (const auto value = KitLayout::getExpressionPoint(defaults, code, label); value.has_value())
+        return { *value };
+
+    return {};
+}
+
+bool InstrumentSynth::hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
+    return !this->getEffectiveExpressionValues(artSpec, dimensionType).empty();
 }
 
 std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
@@ -183,20 +238,22 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
             continue;
         }
 
-        // Cross-art remap
+        // Controller-driven siblings: explicit source dimensions or layout/default expression points.
         for (const auto& artSpec : binding.sourceInstrument->articulationSpecs) {
-            if (artSpec->nameId != binding.resolvedLayoutArt.nameId) continue;
-            if (artSpec->exprId == binding.resolvedLayoutArt.exprId) continue;
+            if (artSpec == nullptr) continue;
+            if (artSpec->nameId == binding.resolvedLayoutArt.nameId && artSpec->exprId == binding.resolvedLayoutArt.exprId) continue;
 
             bool hasMatchingController = false;
-            for (const auto& dim : artSpec->expressionDimensions) {
-                for (const auto& controller : layoutSlot.controllers) {
-                    if (dim->type == controller.codeIdx && containsSameValue(controller.notes, layoutArt.notes)) {
-                        hasMatchingController = true;
-                        break;
-                    }
+            for (const auto& controller : layoutSlot.controllers) {
+                if (!containsSameValue(controller.notes, layoutArt.notes)) continue;
+                if (controller.codeIdx == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose && artSpec->nameId != binding.resolvedLayoutArt.nameId) {
+                    continue;
                 }
-                if (hasMatchingController) break;
+
+                if (this->hasEffectiveExpressionValues(*artSpec, controller.codeIdx)) {
+                    hasMatchingController = true;
+                    break;
+                }
             }
 
             if (hasMatchingController) binding.controllerSiblingSpecs.push_back(artSpec.get());
@@ -315,17 +372,12 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
     micRouting.mergeSkippedInto(skippedMicCodes);
     artRt.buildVelocityMapping();
 
-    // Populate pocValue from the PedalOpenClose expression dimension (if present).
-    // Each hi-hat articulation folder encodes its closedness rank in pdl_opn_cls<value>;
-    // higher value = more closed/tight. Use max of the values list (usually exactly one).
+    // Populate pocValue from explicit folder metadata or layout/default pdl_opn_cls points.
+    // Higher value = more closed/tight. Use max of the values list (usually exactly one).
     if (artRt.pocValue < 0) { // only set once; avoid overwriting if already populated by sibling pass
-        for (const auto& dim : artSpec->expressionDimensions) {
-            if (dim->type == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose
-                && !dim->values.empty()) {
-                artRt.pocValue = static_cast<int>(*std::max_element(dim->values.begin(), dim->values.end()));
-                break;
-            }
-        }
+        const auto values = this->getEffectiveExpressionValues(*artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose);
+        if (!values.empty())
+            artRt.pocValue = static_cast<int>(*std::max_element(values.begin(), values.end()));
     }
     this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
 }
@@ -453,22 +505,19 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
         // only controllers with notes that are linked to this articulation
         if (containsSameValue(cc.notes, layoutArt.notes)) {
             LOG(Debug, "buildCcMappings: controller " + juce::String((int)cc.number) + " {num=" + juce::String((int)cc.number) + ",codeIdx=" + juce::String((int)cc.codeIdx) + ", notes=" + midiVectorToString(cc.notes) + "} applies to articulation " + layoutArt.codeRaw + " (layoutArt.notes=" + midiVectorToString(layoutArt.notes) + ")");
-            // store refs for dimensions to process later
-            for (const auto& expDim : artSpec->expressionDimensions) {
-                if (expDim->type == cc.codeIdx) {
-                    for (const auto& val : expDim->values) {
-                        auto ccNum = static_cast<uint8_t>(cc.number);
-                        const auto artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
-                        const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
-                        auto& vec = foundCcDimensions[ccNum];
-                        // avoid inserting identical (value,artIdx) duplicates
-                        // if (std::find(vec.begin(), vec.end(), pair) == vec.end()) {
-                            vec.emplace_back(pair);
-                            LOG(Debug, "buildCcMappings: cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " (artIdx=" + juce::String(artIdx) + ") layoutArt=" + layoutArt.codeRaw);
-                        // } else {
-                        //     LOG(Warning, "buildCcMappings: skipping duplicate mapping cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " (artIdx=" + juce::String(artIdx) + ") layoutArt=" + layoutArt.codeRaw);
-                        // }
-                    }
+            const auto values = this->getEffectiveExpressionValues(*artSpec, cc.codeIdx);
+            for (const auto& val : values) {
+                auto ccNum = static_cast<uint8_t>(cc.number);
+                const auto artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
+                const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
+                auto& vec = foundCcDimensions[ccNum];
+                // avoid inserting identical (value,artIdx) duplicates
+                if (std::find(vec.begin(), vec.end(), pair) == vec.end()) {
+                    vec.emplace_back(pair);
+                    LOG(Debug, "buildCcMappings: cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " (artIdx=" + juce::String(artIdx) + ") layoutArt=" + layoutArt.codeRaw);
+                // } else {
+                //     LOG(Warning, "buildCcMappings: skipping duplicate mapping cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " (artIdx=" + juce::String(artIdx) + ") layoutArt=" + layoutArt.codeRaw);
+                // }
                 }
             }
         }

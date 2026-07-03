@@ -34,6 +34,10 @@ struct InstrumentSynthTestAccess {
     static int cachedArticulation(const InstrumentSynth& synth, int controllerNumber) {
         return synth.lastCcArticulation[static_cast<size_t>(controllerNumber)];
     }
+    static juce::String mappedArticulationName(const InstrumentSynth& synth, int controllerNumber, int controllerValue) {
+        const auto artIdx = synth.ccToArticulationTable[static_cast<size_t>(controllerNumber)][static_cast<size_t>(controllerValue)];
+        return synth.getArtName(artIdx);
+    }
 
     static void mapNote(InstrumentSynth& synth, int midiNoteNumber, InstrumentSynth::ArtRtIdx articulationIdx) {
         synth.noteToArticulation[static_cast<size_t>(midiNoteNumber)] = articulationIdx;
@@ -70,6 +74,35 @@ KitLayout::InstrumentSlot makeHiHatSlot() {
     return slot;
 }
 
+KitLayout::InstrumentSlot makeImplicitHiHatExpressionSlot() {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "hihat1";
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+
+    KitLayout::InstrumentSlot::ArticulationTrigger edgeOpen { "edge[open]" };
+    edgeOpen.notes.push_back(22);
+    slot.articulations.push_back(std::move(edgeOpen));
+
+    KitLayout::InstrumentSlot::ContinuousController pedalController { 4, "pdl_opn_cls" };
+    pedalController.notes.push_back(22);
+    slot.controllers.push_back(std::move(pedalController));
+    return slot;
+}
+
+KitLayout::InstrumentSlot makeImplicitBowEdgeExpressionSlot() {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "ride1";
+    slot.type = KitLib::InstrumentSpec::Type::Ride;
+
+    KitLayout::InstrumentSlot::ArticulationTrigger bow { "bow" };
+    bow.notes.push_back(51);
+    slot.articulations.push_back(std::move(bow));
+
+    KitLayout::InstrumentSlot::ContinuousController zoneController { 17, "zon_bow_edg" };
+    zoneController.notes.push_back(51);
+    slot.controllers.push_back(std::move(zoneController));
+    return slot;
+}
 KitLayout::InstrumentSlot makeSimpleStackSlot() {
     KitLayout::InstrumentSlot slot;
     slot.id = "stax1";
@@ -288,6 +321,84 @@ TEST_CASE("InstrumentSynth - simple articulation aliases survive routing rebuild
     REQUIRE(edgeArtIdx == bowArtIdx);
 }
 
+TEST_CASE("InstrumentSynth - implicit pdl_opn_cls points route simplified hi-hat articulations", "[InstrumentSynth][ExpressionPoints]") {
+    DrumKitEngine engine;
+    const auto slot = makeImplicitHiHatExpressionSlot();
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeInstrumentMeta() };
+    instrument.getOrAddArticulation("edge[open]");
+    instrument.getOrAddArticulation("edge[half]");
+    instrument.getOrAddArticulation("edge[close]");
+    instrument.getOrAddArticulation("edge[tight]");
+
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    synth.loadInstrumentWithSources(&instrument, {}, { edgeId });
+
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 10) == "edge[open]");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 40) == "edge[half]");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 70) == "edge[close]");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 90) == "edge[tight]");
+}
+
+TEST_CASE("InstrumentSynth - slot expression points override implicit pdl_opn_cls defaults", "[InstrumentSynth][ExpressionPoints]") {
+    DrumKitEngine engine;
+    auto slot = makeImplicitHiHatExpressionSlot();
+    slot.expressionPoints["pdl_opn_cls"]["open"] = 10;
+    slot.expressionPoints["pdl_opn_cls"]["half"] = 20;
+    slot.expressionPoints["pdl_opn_cls"]["close"] = 30;
+    slot.expressionPoints["pdl_opn_cls"]["tight"] = 40;
+
+    InstrumentSynth synth { &engine, slot };
+    KitLib::InstrumentSpec instrument { nullptr, makeInstrumentMeta() };
+    instrument.getOrAddArticulation("edge[open]");
+    instrument.getOrAddArticulation("edge[half]");
+    instrument.getOrAddArticulation("edge[close]");
+    instrument.getOrAddArticulation("edge[tight]");
+
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    synth.loadInstrumentWithSources(&instrument, {}, { edgeId });
+
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 15) == "edge[half]");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 35) == "edge[tight]");
+}
+
+TEST_CASE("InstrumentSynth - explicit expression folders override layout expression points", "[InstrumentSynth][ExpressionPoints]") {
+    DrumKitEngine engine;
+    auto slot = makeImplicitHiHatExpressionSlot();
+    slot.expressionPoints["pdl_opn_cls"]["open"] = 50;
+
+    InstrumentSynth synth { &engine, slot };
+    KitLib::InstrumentSpec instrument { nullptr, makeInstrumentMeta() };
+    auto* open = instrument.getOrAddArticulation("edge[open]");
+    open->addExpressionDimensionValue("pdl_opn_cls", 10);
+    instrument.getOrAddArticulation("edge[half]");
+
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    synth.loadInstrumentWithSources(&instrument, {}, { edgeId });
+
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 10) == "edge[open]");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 11) == "edge[half]");
+}
+
+TEST_CASE("InstrumentSynth - implicit zon_bow_edg points route bow and edge on one cymbal note", "[InstrumentSynth][ExpressionPoints]") {
+    DrumKitEngine engine;
+    const auto slot = makeImplicitBowEdgeExpressionSlot();
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = "ride-test";
+    meta.type = KitLib::InstrumentSpec::Type::Ride;
+    KitLib::InstrumentSpec instrument { nullptr, meta };
+    instrument.getOrAddArticulation("bow");
+    instrument.getOrAddArticulation("edge");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId });
+
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 17, 10) == "bow");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 17, 90) == "edge");
+}
 TEST_CASE("InstrumentSynth - controller uses accepted per-voice tail replacement", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
     ControllerTransitionFixture fixture;
 

@@ -3,6 +3,7 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "../source/Config/YamlHelper.h"
+#include "../source/Engine/LayoutManager.h"
 
 TEST_CASE("YamlHelper - default kit parse", "[yaml]") {
     const juce::String yaml = R"yaml(
@@ -107,3 +108,61 @@ instruments:
   }
 
 
+
+TEST_CASE("KitLayout - expression points parse serialize and validate", "[yaml][ExpressionPoints]") {
+    const juce::String yaml = R"yaml(
+id: expr-test
+name: Expression Test
+expressionPoints:
+  pdl_opn_cls: { open: 24, half: 52, close: 78, tight: 85, pedal: 85 }
+  zon_bow_edg: { bow: 20, edge: 90 }
+instruments:
+  - id: hihat1
+    display: Hi-Hat
+    expressionPoints:
+      pdl_opn_cls: { open: 20, half: 50, close: 76, tight: 90, pedal: 90 }
+    articulations:
+      - { notes: [22], code: edge[open] }
+    controllers:
+      - { notes: [22], code: pdl_opn_cls, number: 4 }
+)yaml";
+
+    auto parsed = LayoutTraits<KitLayout>::parseYaml(yaml);
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.expressionPoints["pdl_opn_cls"]["open"] == 24);
+    REQUIRE(parsed.value.expressionPoints["zon_bow_edg"]["edge"] == 90);
+    REQUIRE(parsed.value.instrumentSlots.size() == 1);
+    REQUIRE(parsed.value.instrumentSlots[0].expressionPoints["pdl_opn_cls"]["tight"] == 90);
+
+    const auto serialized = LayoutTraits<KitLayout>::toYaml(parsed.value);
+    CHECK(serialized.contains("expressionPoints:"));
+    CHECK(serialized.contains("pdl_opn_cls: { open: 24, half: 52, close: 78, tight: 85, pedal: 85 }"));
+    CHECK(serialized.contains("pdl_opn_cls: { open: 20, half: 50, close: 76, tight: 90, pedal: 90 }"));
+}
+
+TEST_CASE("KitLayout - expression point validation warns for invalid controller data", "[yaml][ExpressionPoints]") {
+    const juce::String yaml = R"yaml(
+id: expr-invalid
+name: Expression Invalid
+expressionPoints:
+  pdl_opn_cls: { open: 60, half: 52, close: 78, tight: 85, pedal: 90 }
+instruments:
+  - id: ride1
+    display: Ride
+    articulations:
+      - { notes: [51], code: bow }
+    controllers:
+      - { code: zon_bow_edg, number: 17 }
+      - { notes: [59], code: zon_bow_edg, number: 18 }
+)yaml";
+
+    auto parsed = LayoutTraits<KitLayout>::parseYaml(yaml);
+
+    REQUIRE(parsed.ok());
+    const auto warnings = parsed.error("\n");
+    CHECK(warnings.contains("open < half < close < tight"));
+    CHECK(warnings.contains("pedal should be <= tight"));
+    CHECK(warnings.contains("notes are required"));
+    CHECK(warnings.contains("is not assigned to any articulation"));
+}
