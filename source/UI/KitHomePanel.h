@@ -38,6 +38,9 @@ private:
     struct SlotRow {
         juce::String slotId;
         juce::Label slotLabel;
+        juce::ComboBox typeCombo;
+        juce::TextEditor balanceEditor;
+        juce::ComboBox directMicOutsCombo;
         juce::ComboBox sourceCombo;
         std::vector<SourceChoice> choices;
     };
@@ -72,6 +75,11 @@ private:
     juce::TextButton presetDeleteButton { "Delete" };
 
     juce::Label assignmentsLabel;
+    juce::Label headerSlotLabel;
+    juce::Label headerTypeLabel;
+    juce::Label headerBalanceLabel;
+    juce::Label headerDirectLabel;
+    juce::Label headerSourceLabel;
     juce::Label micLabel;
     juce::ComboBox micCombo;
     juce::Label micWarningLabel;
@@ -84,6 +92,7 @@ private:
     void rebuildSlotRows();
     void generateDraftFromSelectedKit();
     void replaceDraftSlot(const SlotRow& row);
+    void applySlotMetadata(SlotRow& row);
     void loadSelectedPreset();
     void savePreset(bool forceNewName);
     void deleteSelectedPreset();

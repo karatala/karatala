@@ -10,6 +10,94 @@ juce::String safePresetFileName(juce::String name) {
     return name.trim().replaceCharacters("\\/:|*?<>\"", "_________");
 }
 
+struct TypeChoice {
+    KitLib::InstrumentSpec::Type type;
+    const char* label;
+};
+
+const std::vector<TypeChoice>& editableTypeChoices() {
+    static const std::vector<TypeChoice> choices {
+        { KitLib::InstrumentSpec::Type::Unknown, "auto" },
+        { KitLib::InstrumentSpec::Type::Kick, "kick" },
+        { KitLib::InstrumentSpec::Type::Snare, "snare" },
+        { KitLib::InstrumentSpec::Type::Tom, "tom" },
+        { KitLib::InstrumentSpec::Type::Octoban, "octoban" },
+        { KitLib::InstrumentSpec::Type::Rototom, "rototom" },
+        { KitLib::InstrumentSpec::Type::Timbale, "timbale" },
+        { KitLib::InstrumentSpec::Type::Timpani, "timpani" },
+        { KitLib::InstrumentSpec::Type::Conga, "conga" },
+        { KitLib::InstrumentSpec::Type::Bongo, "bongo" },
+        { KitLib::InstrumentSpec::Type::Djembe, "djembe" },
+        { KitLib::InstrumentSpec::Type::Cajon, "cajon" },
+        { KitLib::InstrumentSpec::Type::Taiko, "taiko" },
+        { KitLib::InstrumentSpec::Type::Surdo, "surdo" },
+        { KitLib::InstrumentSpec::Type::Mridangam, "mridangam" },
+        { KitLib::InstrumentSpec::Type::TalkingDrum, "talking_drum" },
+        { KitLib::InstrumentSpec::Type::HiHat, "hihat" },
+        { KitLib::InstrumentSpec::Type::Ride, "ride" },
+        { KitLib::InstrumentSpec::Type::Crash, "crash" },
+        { KitLib::InstrumentSpec::Type::Splash, "splash" },
+        { KitLib::InstrumentSpec::Type::China, "china" },
+        { KitLib::InstrumentSpec::Type::Bell, "bell" },
+        { KitLib::InstrumentSpec::Type::Stack, "stack" },
+        { KitLib::InstrumentSpec::Type::Chopper, "chopper" },
+        { KitLib::InstrumentSpec::Type::Gong, "gong" },
+        { KitLib::InstrumentSpec::Type::Karatala, "karatala" },
+        { KitLib::InstrumentSpec::Type::Cowbell, "cowbell" },
+        { KitLib::InstrumentSpec::Type::Tambourine, "tambourine" },
+        { KitLib::InstrumentSpec::Type::Shaker, "shaker" },
+        { KitLib::InstrumentSpec::Type::Maracas, "maracas" },
+        { KitLib::InstrumentSpec::Type::Cabasa, "cabasa" },
+        { KitLib::InstrumentSpec::Type::Guiro, "guiro" },
+        { KitLib::InstrumentSpec::Type::Claves, "claves" },
+        { KitLib::InstrumentSpec::Type::Agogo, "agogo" },
+        { KitLib::InstrumentSpec::Type::WoodBlock, "wood_block" },
+        { KitLib::InstrumentSpec::Type::TempleBlock, "temple_block" },
+        { KitLib::InstrumentSpec::Type::Triangle, "triangle" },
+        { KitLib::InstrumentSpec::Type::Vibraslap, "vibraslap" },
+        { KitLib::InstrumentSpec::Type::Castanets, "castanets" },
+        { KitLib::InstrumentSpec::Type::SleighBells, "sleigh_bells" },
+        { KitLib::InstrumentSpec::Type::Whip, "whip" },
+        { KitLib::InstrumentSpec::Type::Ratchet, "ratchet" },
+    };
+    return choices;
+}
+
+int typeComboIdFor(KitLib::InstrumentSpec::Type type) {
+    const auto& choices = editableTypeChoices();
+    for (size_t idx = 0; idx < choices.size(); ++idx)
+        if (choices[idx].type == type)
+            return static_cast<int>(idx + 1);
+    return 1;
+}
+
+KitLib::InstrumentSpec::Type typeFromComboId(int selectedId) {
+    const auto& choices = editableTypeChoices();
+    const int idx = selectedId - 1;
+    if (idx < 0 || idx >= static_cast<int>(choices.size()))
+        return KitLib::InstrumentSpec::Type::Unknown;
+    return choices[static_cast<size_t>(idx)].type;
+}
+
+std::optional<DirectMicOutPolicy> policyFromComboId(int selectedId) {
+    switch (selectedId) {
+        case 2: return DirectMicOutPolicy::Own;
+        case 3: return DirectMicOutPolicy::Auto;
+        case 4: return DirectMicOutPolicy::Shared;
+        default: return std::nullopt;
+    }
+}
+
+int comboIdForPolicy(std::optional<DirectMicOutPolicy> policy) {
+    if (!policy.has_value()) return 1;
+    switch (*policy) {
+        case DirectMicOutPolicy::Own: return 2;
+        case DirectMicOutPolicy::Auto: return 3;
+        case DirectMicOutPolicy::Shared: return 4;
+    }
+    return 1;
+}
+
 template <typename Choice>
 juce::String sourcePath(const Choice& choice) {
     if (choice.kitCode.isEmpty() || choice.instrumentCode.isEmpty())
@@ -39,6 +127,11 @@ KitHomePanel::KitHomePanel(DrumKitEngine& engine)
     setupCaption(this->kitLabel, "Start from library kit");
     setupCaption(this->presetLabel, "Instrument-map preset");
     setupCaption(this->assignmentsLabel, "Slot assignments");
+    setupCaption(this->headerSlotLabel, "Slot");
+    setupCaption(this->headerTypeLabel, "Type");
+    setupCaption(this->headerBalanceLabel, "Balance");
+    setupCaption(this->headerDirectLabel, "Direct");
+    setupCaption(this->headerSourceLabel, "Source");
     setupCaption(this->micLabel, "Advanced: output / mic layout");
 
     this->assignmentsLabel.setFont(UITheme::Fonts::sectionTitle());
@@ -223,10 +316,13 @@ const KitHomePanel::LayoutEntry* KitHomePanel::getSelectedLayout() const {
 }
 
 void KitHomePanel::rebuildSlotRows() {
-    for (auto& row : this->slotRows)
+    for (auto& row : this->slotRows) {
         this->contentComponent.removeChildComponent(&row->slotLabel);
-    for (auto& row : this->slotRows)
+        this->contentComponent.removeChildComponent(&row->typeCombo);
+        this->contentComponent.removeChildComponent(&row->balanceEditor);
+        this->contentComponent.removeChildComponent(&row->directMicOutsCombo);
         this->contentComponent.removeChildComponent(&row->sourceCombo);
+    }
     this->slotRows.clear();
 
     const auto* selectedLayout = this->getSelectedLayout();
@@ -244,6 +340,29 @@ void KitHomePanel::rebuildSlotRows() {
         row->slotLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
         UIHelpers::configureTableRowLabel(row->slotLabel);
         this->contentComponent.addAndMakeVisible(row->slotLabel);
+
+        UIHelpers::configureComboBox(row->typeCombo);
+        const auto& typeChoices = editableTypeChoices();
+        for (size_t typeIdx = 0; typeIdx < typeChoices.size(); ++typeIdx)
+            row->typeCombo.addItem(typeChoices[typeIdx].label, static_cast<int>(typeIdx + 1));
+        row->typeCombo.setSelectedId(typeComboIdFor(slot.type), juce::dontSendNotification);
+        this->contentComponent.addAndMakeVisible(row->typeCombo);
+
+        UIHelpers::configureMonoTextEditor(row->balanceEditor, UITheme::Colours::textPrimary, false);
+        row->balanceEditor.setText(slot.balance.has_value() ? balanceValueToString(*slot.balance) : juce::String(), false);
+        row->balanceEditor.setTextToShowWhenEmpty("--", UITheme::Colours::textMuted);
+        row->balanceEditor.setTooltip("Use C0, L1..L127, or R1..R127. Leave empty for unknown.");
+        this->contentComponent.addAndMakeVisible(row->balanceEditor);
+
+        UIHelpers::configureComboBox(row->directMicOutsCombo);
+        row->directMicOutsCombo.addItem("catalog", 1);
+        row->directMicOutsCombo.addItem("own", 2);
+        row->directMicOutsCombo.addItem("auto", 3);
+        row->directMicOutsCombo.addItem("shared", 4);
+        row->directMicOutsCombo.setSelectedId(comboIdForPolicy(slot.directMicOuts), juce::dontSendNotification);
+        row->directMicOutsCombo.setTooltip("Direct mic output override; catalog uses the type default.");
+        this->contentComponent.addAndMakeVisible(row->directMicOutsCombo);
+
         UIHelpers::configureComboBox(row->sourceCombo);
         this->contentComponent.addAndMakeVisible(row->sourceCombo);
         row->sourceCombo.addItem("(empty)", 1);
@@ -286,6 +405,10 @@ void KitHomePanel::rebuildSlotRows() {
         }
         row->sourceCombo.setSelectedId(selectedId, juce::dontSendNotification);
         auto* rowPtr = row.get();
+        row->typeCombo.onChange = [this, rowPtr] { this->applySlotMetadata(*rowPtr); };
+        row->balanceEditor.onReturnKey = [this, rowPtr] { this->applySlotMetadata(*rowPtr); };
+        row->balanceEditor.onFocusLost = [this, rowPtr] { this->applySlotMetadata(*rowPtr); };
+        row->directMicOutsCombo.onChange = [this, rowPtr] { this->applySlotMetadata(*rowPtr); };
         row->sourceCombo.onChange = [this, rowPtr] { this->replaceDraftSlot(*rowPtr); };
         this->slotRows.push_back(std::move(row));
     }
@@ -324,6 +447,40 @@ void KitHomePanel::replaceDraftSlot(const SlotRow& row) {
     this->draftMapText = DrumKitEngine::serializeInstrumentMap(map);
 }
 
+
+void KitHomePanel::applySlotMetadata(SlotRow& row) {
+    const int layoutIdx = this->layoutCombo.getSelectedId() - 1;
+    if (layoutIdx < 0 || layoutIdx >= static_cast<int>(this->layouts.size()))
+        return;
+
+    auto& layout = this->layouts[static_cast<size_t>(layoutIdx)].layout;
+    auto slotIt = std::find_if(layout.instrumentSlots.begin(), layout.instrumentSlots.end(), [&row](const auto& slot) {
+        return slot.id == row.slotId;
+    });
+    if (slotIt == layout.instrumentSlots.end())
+        return;
+
+    const auto previousType = slotIt->type;
+    const auto newType = typeFromComboId(row.typeCombo.getSelectedId());
+    slotIt->type = newType;
+
+    const auto balanceText = row.balanceEditor.getText().trim();
+    if (balanceText.isEmpty()) {
+        slotIt->balance.reset();
+    } else if (auto parsedBalance = parseBalanceValue(balanceText)) {
+        slotIt->balance = *parsedBalance;
+        row.balanceEditor.setText(balanceValueToString(*parsedBalance), false);
+    } else {
+        row.balanceEditor.setText(slotIt->balance.has_value() ? balanceValueToString(*slotIt->balance) : juce::String(), false);
+        this->reportStatus("Invalid balance for " + row.slotId + ": use C0, L1..L127, or R1..R127");
+    }
+
+    slotIt->directMicOuts = policyFromComboId(row.directMicOutsCombo.getSelectedId());
+    layout.rebuildIndices();
+
+    if (newType != previousType)
+        this->rebuildSlotRows();
+}
 void KitHomePanel::loadSelectedPreset() {
     const int presetIdx = this->presetCombo.getSelectedId() - 1;
     const auto* selectedLayout = this->getSelectedLayout();
@@ -448,10 +605,10 @@ void KitHomePanel::reportStatus(const juce::String& message) {
 
 void KitHomePanel::resized() {
     this->layoutViewportToBounds();
-    const int width = juce::jmax(680, this->viewport.getWidth() - this->viewport.getScrollBarThickness());
+    const int width = juce::jmax(860, this->viewport.getWidth() - this->viewport.getScrollBarThickness());
     const int rowHeight = 26;
     const int leftLabelWidth = 150;
-    const int contentHeight = 238 + static_cast<int>(this->slotRows.size()) * rowHeight + 116;
+    const int contentHeight = 260 + static_cast<int>(this->slotRows.size()) * rowHeight + 116;
     this->contentComponent.setBounds(0, 0, width, contentHeight);
 
     auto area = this->contentComponent.getLocalBounds().reduced(16, 10);
@@ -483,9 +640,21 @@ void KitHomePanel::resized() {
     area.removeFromTop(8);
 
     this->assignmentsLabel.setBounds(area.removeFromTop(24));
+    auto headerArea = area.removeFromTop(18);
+    this->headerSlotLabel.setBounds(headerArea.removeFromLeft(leftLabelWidth));
+    this->headerTypeLabel.setBounds(headerArea.removeFromLeft(108));
+    this->headerBalanceLabel.setBounds(headerArea.removeFromLeft(72));
+    this->headerDirectLabel.setBounds(headerArea.removeFromLeft(90));
+    this->headerSourceLabel.setBounds(headerArea.removeFromLeft(420));
     for (auto& row : this->slotRows) {
         auto slotArea = area.removeFromTop(rowHeight);
         row->slotLabel.setBounds(slotArea.removeFromLeft(leftLabelWidth));
+        row->typeCombo.setBounds(slotArea.removeFromLeft(104).reduced(0, 2));
+        slotArea.removeFromLeft(4);
+        row->balanceEditor.setBounds(slotArea.removeFromLeft(64).reduced(0, 3));
+        slotArea.removeFromLeft(8);
+        row->directMicOutsCombo.setBounds(slotArea.removeFromLeft(82).reduced(0, 2));
+        slotArea.removeFromLeft(8);
         row->sourceCombo.setBounds(slotArea.removeFromLeft(420).reduced(0, 2));
     }
     area.removeFromTop(10);

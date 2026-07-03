@@ -341,6 +341,133 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
     return result;
 }
 
+
+std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForSourcePath(const juce::String& sourcePath) const {
+    std::vector<KitLib::MicSpec> result;
+    const auto normalizedPath = sourcePath.trim();
+    if (normalizedPath.isEmpty()) return result;
+
+    const auto* libraryManager = this->engine.getInstrumentManager();
+    if (libraryManager == nullptr)
+        return result;
+
+    const int matchingIndex = this->findSourceIndex(normalizedPath);
+    SourceItem sourceItem;
+    if (matchingIndex >= 0) {
+        sourceItem = this->sourceItems[static_cast<size_t>(matchingIndex)];
+    } else {
+        juce::StringArray pathParts;
+        pathParts.addTokens(normalizedPath, "/", "");
+        pathParts.removeEmptyStrings();
+        if (pathParts.isEmpty()) return result;
+
+        sourceItem.kitCodeRaw = pathParts[0];
+        sourceItem.instCode = pathParts.size() > 1 ? pathParts[1] : juce::String();
+        sourceItem.artCode = pathParts.size() > 2 ? pathParts[2] : juce::String();
+    }
+
+    const KitLib::InstrumentSpec* sourceInstrument = nullptr;
+    for (const auto& kitPtr : libraryManager->getKits()) {
+        if (kitPtr == nullptr) continue;
+        if (kitPtr->meta.codeRaw.compareIgnoreCase(sourceItem.kitCodeRaw) != 0) continue;
+
+        const auto& instruments = kitPtr->getInstrumentSpecsMap();
+        auto instIt = instruments.find(sourceItem.instCode);
+        if (instIt == instruments.end()) break;
+
+        sourceInstrument = instIt->second.get();
+        break;
+    }
+
+    if (sourceInstrument == nullptr) return result;
+
+    std::vector<const KitLib::ArticulationSpec*> sourceArts;
+    if (sourceItem.artCode.isNotEmpty()) {
+        for (const auto& artPtr : sourceInstrument->articulationSpecs) {
+            if (artPtr == nullptr) continue;
+            const auto resolvedArtName = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
+            if (resolvedArtName == sourceItem.artCode) {
+                sourceArts.push_back(artPtr.get());
+                break;
+            }
+        }
+    } else {
+        for (const auto& artPtr : sourceInstrument->articulationSpecs) {
+            if (artPtr != nullptr) sourceArts.push_back(artPtr.get());
+        }
+    }
+
+    std::unordered_set<juce::String> seenCodes;
+    for (const auto* artSpec : sourceArts) {
+        if (artSpec == nullptr) continue;
+        for (const auto& velLayer : artSpec->velocityLayerSpecs) {
+            if (velLayer == nullptr) continue;
+            for (const auto& varSpec : velLayer->sampleVariantSpecs) {
+                if (varSpec == nullptr || varSpec->micSpec.type != KitLib::MicSpec::Type::Direct) continue;
+                if (seenCodes.insert(varSpec->micSpec.raw).second)
+                    result.push_back(varSpec->micSpec);
+            }
+        }
+    }
+
+    return result;
+}
+
+juce::String PadContextPopup::buildDirectRoutingTextForSourcePath(const juce::String& sourcePath) const {
+    const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
+    if (directSpecs.empty())
+        return {};
+
+    const auto* kitLayout = this->engine.getKitLayout();
+    const auto* micLayout = this->engine.getMicLayout();
+    if (kitLayout == nullptr || micLayout == nullptr)
+        return "Direct: no active mic layout";
+
+    const KitLayout::InstrumentSlot* slot = nullptr;
+    for (const auto& candidate : kitLayout->instrumentSlots) {
+        if (candidate.id == this->slotId) {
+            slot = &candidate;
+            break;
+        }
+    }
+    if (slot == nullptr)
+        return "Direct: slot not found";
+
+    MicRoutingPlan::SlotRequest request;
+    request.slotId = slot->id;
+    request.slotType = slot->type;
+    request.directPolicy = slot->directMicOuts.value_or(
+        this->engine.getInstrumentCatalog().defaultDirectMicOutsFor(slot->type).value_or(DirectMicOutPolicy::Shared));
+    request.directMicSpecs = directSpecs;
+
+    const auto plan = MicRoutingPlan::build(*micLayout, { request }, this->engine.getInstrumentCatalog());
+    juce::StringArray parts;
+    for (const auto& micSpec : directSpecs) {
+        const auto assignment = plan.resolve(slot->id, slot->type, micSpec);
+        if (assignment.matched())
+            parts.add(micSpec.raw + " -> " + assignment.outputName);
+        else
+            parts.add(micSpec.raw + " ! " + (assignment.warning.isNotEmpty() ? assignment.warning : juce::String("no output")));
+    }
+
+    return parts.isEmpty() ? juce::String() : "Direct: " + parts.joinIntoString(", ");
+}
+
+void PadContextPopup::updateRoutingDisplay(LayerRow* layer) {
+    if (layer == nullptr || layer->routingLabel == nullptr)
+        return;
+
+    juce::String sourcePath;
+    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size()))
+        sourcePath = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].fullPath();
+    else
+        sourcePath = layer->sourcePathHint;
+
+    const auto text = this->buildDirectRoutingTextForSourcePath(sourcePath);
+    layer->routingLabel->setText(text, juce::dontSendNotification);
+    layer->routingLabel->setTooltip(text);
+    layer->routingLabel->setColour(juce::Label::textColourId, text.contains("!") ? UITheme::Colours::textAccent : UITheme::Colours::textMuted);
+}
 std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourceIndex(int sourceIndex) const {
     if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return {};
     return this->getRelevantMicsForSourcePath(this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath());
@@ -418,7 +545,16 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
     layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
     this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
+
+    layer->routingLabel = std::make_unique<juce::Label>();
+    layer->routingLabel->setFont(UITheme::Fonts::small());
+    layer->routingLabel->setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
+    layer->routingLabel->setJustificationType(juce::Justification::centredLeft);
+    layer->routingLabel->setInterceptsMouseClicks(false, false);
+    this->layerContent.addAndMakeVisible(*layer->routingLabel);
+
     this->updateSourceDisplay(layer);
+    this->updateRoutingDisplay(layer);
 
     // Tuning pot
     layer->tuningPot = std::make_unique<ParameterPot>("Tuning", -2400.0, 2400.0, 1.0, static_cast<double>(tuningCents));
@@ -713,6 +849,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
             ? this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath()
             : juce::String();
         this->updateSourceDisplay(layer);
+        this->updateRoutingDisplay(layer);
         this->rebuildBleedControls(layer);
         this->resized();
         juce::MessageManager::callAsync([this] {
@@ -802,7 +939,11 @@ void PadContextPopup::resized() {
         // Source card
         auto srcArea = rowArea.removeFromLeft(sourceW);
         layer->sourceButton->setBounds(srcArea);
-        layer->sourceDetailLabel->setBounds(srcArea.reduced(6, 4));
+        auto sourceInner = srcArea.reduced(6, 4);
+        auto routingArea = sourceInner.removeFromBottom(14);
+        layer->sourceDetailLabel->setBounds(sourceInner);
+        if (layer->routingLabel != nullptr)
+            layer->routingLabel->setBounds(routingArea);
 
         rowArea.removeFromLeft(groupGap);
 

@@ -64,6 +64,7 @@ private:
         int selectedSourceIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst/art multiline
+        std::unique_ptr<juce::Label> routingLabel;
         std::unique_ptr<ParameterPot> tuningPot;
         std::unique_ptr<ParameterPot> attackPot;
         std::unique_ptr<ParameterPot> decayPot;
@@ -100,6 +101,9 @@ private:
     void populateLayers();
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourceIndex(int sourceIndex) const;
+    std::vector<KitLib::MicSpec> getDirectMicSpecsForSourcePath(const juce::String& sourcePath) const;
+    juce::String buildDirectRoutingTextForSourcePath(const juce::String& sourcePath) const;
+    void updateRoutingDisplay(LayerRow* layer);
     bool mapTextDirty = false;
     int layerIndexOffset = 0;
 
