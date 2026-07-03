@@ -47,6 +47,16 @@ struct InstrumentSynthTestAccess {
     static void setPedalNote(InstrumentSynth& synth, int midiNoteNumber) {
         synth.hihatPedalNote = midiNoteNumber;
     }
+
+    static void startVoiceForRender(InstrumentSynthVoice& voice, InstrumentSynth& owner, SampledSound& sound) {
+        voice.setOwner(&owner);
+        voice.setCurrentPlaybackSampleRate(44100.0);
+        voice.setAttackTimeSec(0.0f);
+        voice.currentlyPlayingNote = 60;
+        voice.currentPlayingMidiChannel = 1;
+        voice.currentlyPlayingSound = &sound;
+        voice.startNote(60, 1.0f, &sound);
+    }
 };
 
 namespace {
@@ -351,4 +361,67 @@ TEST_CASE("InstrumentSynth - tight-only playback does not create an implicit ped
 
     REQUIRE(fixture.tightVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
     REQUIRE_FALSE(fixture.pedalVoice->isVoiceActive());
+}
+
+TEST_CASE("InstrumentSynthVoice - pans mono direct mic into stereo output", "[InstrumentSynth][routing]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "cow1";
+    slot.type = KitLib::InstrumentSpec::Type::Cowbell;
+    InstrumentSynth synth { &engine, slot };
+
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(1, 2);
+    buffer->setSample(0, 0, 1.0f);
+    buffer->setSample(0, 1, 1.0f);
+
+    SampledSound sound;
+    sound.buffer = buffer;
+    sound.sampleRate = 44100.0;
+    sound.micBufferChannelStart = 0;
+    sound.micBufferChannelCount = 2;
+    sound.useDirectBalance = true;
+    sound.balance = 0;
+
+    InstrumentSynthVoice voice;
+    InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
+
+    juce::AudioBuffer<float> output(2, 2);
+    output.clear();
+    voice.renderNextBlock(output, 0, 2);
+
+    REQUIRE(output.getSample(0, 0) == Catch::Approx(0.7071067f).margin(0.0001f));
+    REQUIRE(output.getSample(1, 0) == Catch::Approx(0.7071067f).margin(0.0001f));
+}
+
+TEST_CASE("InstrumentSynthVoice - flips stereo direct mic before balance", "[InstrumentSynth][routing]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "perc1";
+    slot.type = KitLib::InstrumentSpec::Type::Cowbell;
+    InstrumentSynth synth { &engine, slot };
+    synth.setFlipLR(true);
+
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(2, 2);
+    buffer->setSample(0, 0, 0.25f);
+    buffer->setSample(0, 1, 0.25f);
+    buffer->setSample(1, 0, 1.0f);
+    buffer->setSample(1, 1, 1.0f);
+
+    SampledSound sound;
+    sound.buffer = buffer;
+    sound.sampleRate = 44100.0;
+    sound.micBufferChannelStart = 0;
+    sound.micBufferChannelCount = 2;
+    sound.useDirectBalance = true;
+    sound.balance = -127;
+
+    InstrumentSynthVoice voice;
+    InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
+
+    juce::AudioBuffer<float> output(2, 2);
+    output.clear();
+    voice.renderNextBlock(output, 0, 2);
+
+    REQUIRE(output.getSample(0, 0) == Catch::Approx(1.0f).margin(0.0001f));
+    REQUIRE(output.getSample(1, 0) == Catch::Approx(0.0f).margin(0.0001f));
 }

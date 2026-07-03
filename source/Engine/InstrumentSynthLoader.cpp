@@ -329,6 +329,9 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                 continue;
 
             auto sound = std::make_shared<SampledSound>(instSpec, varSpec.get(), varSpec->sampleFile, notes);
+            const std::optional<int> effectiveBalance = this->instrumentSlot.balance.has_value()
+                ? this->instrumentSlot.balance
+                : (artSpec->balanceConflict ? std::optional<int> {} : artSpec->balance);
             sound->decayEnvelope = KitLib::DecayEnvelope::decode(varSpec->decayCode, varSpec->peakDb, varSpec->peakMs);
             if (!sound->decayEnvelope.isValid()) {
                 LOG(Warning, "Missing or invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
@@ -336,6 +339,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             sound->micBufferChannelStart = assignment.globalStart;
             sound->micBufferChannelCount = assignment.channels;
             sound->routedMicCode = assignment.micCode;
+            sound->balance = effectiveBalance.value_or(0);
+            sound->useDirectBalance = assignment.applyBalance && effectiveBalance.has_value() && assignment.channels == 2 && varSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
 
             this->addSound(sound);
             SampleEntry se;

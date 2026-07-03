@@ -34,6 +34,8 @@ public:
     int micBufferChannelStart = 0;
     int micBufferChannelCount = 0;
     juce::String routedMicCode;
+    bool useDirectBalance = false;
+    int balance = 0;
     KitLib::DecayEnvelope decayEnvelope;
 
     SampledSound(KitLib::InstrumentSpec* instrumentSpec = nullptr, KitLib::SampleVariantSpec* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})

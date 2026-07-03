@@ -245,18 +245,21 @@ mics:
     REQUIRE(tomDirect.globalStart == 0);
     REQUIRE(tomDirect.channels == 1);
     REQUIRE(tomDirect.outputName == "Tom 1");
+    REQUIRE_FALSE(tomDirect.applyBalance);
 
     const auto octoDirect = plan.resolve("octo1", InstrumentSpec::Type::Octoban, dtm);
     REQUIRE(octoDirect.matched());
     REQUIRE(octoDirect.globalStart == 1);
     REQUIRE(octoDirect.channels == 2);
     REQUIRE(octoDirect.outputName == "Drum Shared");
+    REQUIRE(octoDirect.applyBalance);
 
     const auto cowDirect = plan.resolve("cow1", InstrumentSpec::Type::Cowbell, dsm);
     REQUIRE(cowDirect.matched());
     REQUIRE(cowDirect.globalStart == 3);
     REQUIRE(cowDirect.channels == 2);
     REQUIRE(cowDirect.outputName == "Other Shared");
+    REQUIRE(cowDirect.applyBalance);
 
     const auto rideDirect = plan.resolve("ride1", InstrumentSpec::Type::Ride, dom);
     REQUIRE_FALSE(rideDirect.matched());
@@ -268,6 +271,7 @@ mics:
     REQUIRE(overhead.globalStart == 5);
     REQUIRE(overhead.channels == 2);
     REQUIRE(overhead.outputName == "Overheads");
+    REQUIRE_FALSE(overhead.applyBalance);
     REQUIRE(plan.getAssignedHostChannelCount() == 7);
 }
 

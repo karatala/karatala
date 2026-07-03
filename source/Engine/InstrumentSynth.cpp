@@ -2,6 +2,7 @@
 #include "DrumKitEngine.h"
 #include "HiHatTransitionPolicy.h"
 #include <limits>
+#include <cmath>
 
 
 
@@ -376,18 +377,36 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         this->updateEstimatedDb();
         return;
     }
-    // Clamp srcCount to fit within output buffer
-    const int effectiveSrcCount = juce::jmin(srcCount, destChCount - destChBase);
-
     // P1-C: Cache raw read/write pointers outside the sample loop to avoid
     // repeated getReadPointer/getSample function call overhead.
     static constexpr int MAX_RENDER_CHANNELS = 32;
+    const int requestedDestCount = s->micBufferChannelCount > 0 ? s->micBufferChannelCount : srcCount;
+    const int effectiveSrcCount = juce::jlimit(0, MAX_RENDER_CHANNELS, juce::jmin(srcCount, srcChannels - srcStart));
+    const int effectiveDestCount = juce::jlimit(0, MAX_RENDER_CHANNELS, juce::jmin(requestedDestCount, destChCount - destChBase));
+    if (effectiveSrcCount <= 0 || effectiveDestCount <= 0) {
+        for (int i = 0; i < numSamples; ++i)
+            (void) this->adsr.getNextSample();
+        this->sourceSamplePosition += this->pitchRatio * numSamples;
+        if (!this->adsr.isActive() || this->sourceSamplePosition >= srcLen)
+            this->stopNote(false);
+        this->updateEstimatedDb();
+        return;
+    }
+
     const float* srcPtrs[MAX_RENDER_CHANNELS];
     float* destPtrs[MAX_RENDER_CHANNELS];
-    for (int sc = 0; sc < effectiveSrcCount && sc < MAX_RENDER_CHANNELS; ++sc) {
+    for (int sc = 0; sc < effectiveSrcCount; ++sc)
         srcPtrs[sc] = buf.getReadPointer(juce::jlimit(0, srcChannels - 1, srcStart + sc));
-        destPtrs[sc] = outputBuffer.getWritePointer(destChBase + sc);
-    }
+    for (int dc = 0; dc < effectiveDestCount; ++dc)
+        destPtrs[dc] = outputBuffer.getWritePointer(destChBase + dc);
+
+    const bool useBalancedDirectStereo = s->useDirectBalance && effectiveDestCount >= 2;
+    const float pan = juce::jlimit(-1.0f, 1.0f, static_cast<float>(s->balance) / 127.0f);
+    const float monoPanAngle = (pan + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
+    const float monoLeftGain = std::cos(monoPanAngle);
+    const float monoRightGain = std::sin(monoPanAngle);
+    const float stereoLeftGain = pan > 0.0f ? 1.0f - pan : 1.0f;
+    const float stereoRightGain = pan < 0.0f ? 1.0f + pan : 1.0f;
 
     for (int i = 0; i < numSamples; ++i) {
         //TODO: use peak offset for mics (found minimal (for example di) and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) first makke script to smart-parse from samples and save to filename
@@ -407,12 +426,30 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             this->lastEnvelopeValue = env;
             const float gain = env * this->velocityGain * chokeGain * voiceGain * phaseMultiplier;
 
-            for (int sc = 0; sc < effectiveSrcCount; ++sc) {
-                const int destIndex = (flipLR && effectiveSrcCount == 2) ? (effectiveSrcCount - 1 - sc) : sc;
-                float v0 = srcPtrs[sc][idx];
-                float v1 = (idx + 1 < srcLen) ? srcPtrs[sc][idx + 1] : 0.0f;
-                float sample = static_cast<float>(v0 + (v1 - v0) * frac) * gain;
-                destPtrs[destIndex][startSample + i] += sample;
+            if (useBalancedDirectStereo && effectiveSrcCount == 1) {
+                float v0 = srcPtrs[0][idx];
+                float v1 = (idx + 1 < srcLen) ? srcPtrs[0][idx + 1] : 0.0f;
+                const float sample = static_cast<float>(v0 + (v1 - v0) * frac) * gain;
+                destPtrs[0][startSample + i] += sample * monoLeftGain;
+                destPtrs[1][startSample + i] += sample * monoRightGain;
+            } else if (useBalancedDirectStereo && effectiveSrcCount >= 2) {
+                const int leftSrc = flipLR ? 1 : 0;
+                const int rightSrc = flipLR ? 0 : 1;
+                float left0 = srcPtrs[leftSrc][idx];
+                float left1 = (idx + 1 < srcLen) ? srcPtrs[leftSrc][idx + 1] : 0.0f;
+                float right0 = srcPtrs[rightSrc][idx];
+                float right1 = (idx + 1 < srcLen) ? srcPtrs[rightSrc][idx + 1] : 0.0f;
+                destPtrs[0][startSample + i] += static_cast<float>(left0 + (left1 - left0) * frac) * gain * stereoLeftGain;
+                destPtrs[1][startSample + i] += static_cast<float>(right0 + (right1 - right0) * frac) * gain * stereoRightGain;
+            } else {
+                const int renderCount = juce::jmin(effectiveSrcCount, effectiveDestCount);
+                for (int sc = 0; sc < renderCount; ++sc) {
+                    const int destIndex = (flipLR && renderCount == 2) ? (renderCount - 1 - sc) : sc;
+                    float v0 = srcPtrs[sc][idx];
+                    float v1 = (idx + 1 < srcLen) ? srcPtrs[sc][idx + 1] : 0.0f;
+                    float sample = static_cast<float>(v0 + (v1 - v0) * frac) * gain;
+                    destPtrs[destIndex][startSample + i] += sample;
+                }
             }
         } else {
             // still advance envelope even if out of source range

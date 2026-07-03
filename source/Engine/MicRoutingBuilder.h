@@ -20,6 +20,7 @@ public:
         int globalStart = -1; // -1 means unmatched — voice renders silently (destCh guard in render loop)
         int channels    = 0;
         juce::String micCode;
+        bool applyBalance = false;
     };
 
     explicit MicRoutingBuilder(InstrumentSynth* synth) : synth(synth) {
@@ -34,7 +35,7 @@ public:
         if (const auto* plan = this->synth != nullptr ? this->synth->getMicRoutingPlan() : nullptr) {
             const auto planned = plan->resolve(this->synth->getId(), this->synth->getType(), micSpec);
             if (planned.matched())
-                return { planned.globalStart, planned.channels, planned.micCode };
+                return { planned.globalStart, planned.channels, planned.micCode, planned.applyBalance };
 
             // Source direct-code collection is wired into the pure Stage 3 plan builder,
             // but legacy synth loading still needs direct mics until useInstrumentMap

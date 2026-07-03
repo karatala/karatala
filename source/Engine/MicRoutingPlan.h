@@ -21,6 +21,7 @@ public:
         juce::String outputName;
         juce::String micCode;
         juce::String warning;
+        bool applyBalance = false;
 
         bool matched() const noexcept { return globalStart >= 0 && channels > 0; }
     };
@@ -224,17 +225,18 @@ private:
                 continue;
             if (matchMicInstrumentSelector(output.selector, request.slotId, request.slotType, this->catalog) == MicSelectorPriority::None)
                 continue;
-            return makeAssignment(output, micSpec.raw);
+            return makeAssignment(output, micSpec.raw, true);
         }
         return {};
     }
 
-    static Assignment makeAssignment(const OutputEntry& output, const juce::String& sampleMicCode) {
+    static Assignment makeAssignment(const OutputEntry& output, const juce::String& sampleMicCode, bool applyBalance = false) {
         Assignment assignment;
         assignment.globalStart = output.hostStart;
         assignment.channels = output.channels;
         assignment.outputName = output.name;
         assignment.micCode = sampleMicCode;
+        assignment.applyBalance = applyBalance;
         return assignment;
     }
 };
