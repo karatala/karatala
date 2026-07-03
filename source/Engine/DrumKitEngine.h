@@ -7,6 +7,7 @@
 #include "InstrumentSynth.h"
 #include "LayoutManager.h"
 #include "MidiCrosstalkFilter.h"
+#include "MicRoutingPlan.h"
 #include "SampleLoader.h"
 #include <array>
 #include <optional>
@@ -89,6 +90,7 @@ public:
     const KitLib::LibraryManager* getInstrumentManager() const { return this->libraryManagerPtr.get(); }
     const KitLayoutManager* getKitLayoutManager() const { return this->kitLayoutManagerPtr.get(); }
     const MicLayoutManager* getMicLayoutManager() const { return this->micLayoutManagerPtr.get(); }
+    const MicRoutingPlan* getMicRoutingPlan() const { return this->activeMicRoutingPlanPtr.get(); }
     SampleLoader* getSampleLoader() { return this->sampleLoaderPtr.get(); }
     const SampleLoader* getSampleLoader() const { return this->sampleLoaderPtr.get(); }
     const juce::String& getLastInstrumentMapStatus() const { return this->lastInstrumentMapStatus; }
@@ -184,6 +186,7 @@ private:
 
     std::unique_ptr<KitLayout> activeKitLayoutPtr;
     std::unique_ptr<MicLayout> activeMicLayoutPtr;
+    std::unique_ptr<MicRoutingPlan> activeMicRoutingPlanPtr;
 
     std::array<juce::String, 128> noteNameCache;
 

@@ -1189,6 +1189,24 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
     //     slotPtr->setMicChannelCount(totalChannels);
     // }
 
+    // Build an immutable routing-plan snapshot for this kit/mic layout. Stage 3 direct
+    // allocations are populated by the pure builder when source direct mic requests are
+    // provided; this layout-level snapshot is still the shared source for normal mic order.
+    std::vector<MicRoutingPlan::SlotRequest> planSlotRequests;
+    if (this->activeKitLayoutPtr != nullptr) {
+        planSlotRequests.reserve(this->activeKitLayoutPtr->instrumentSlots.size());
+        for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
+            MicRoutingPlan::SlotRequest request;
+            request.slotId = slot.id;
+            request.slotType = slot.type;
+            request.directPolicy = slot.directMicOuts.value_or(
+                this->globalConfig.instrumentCatalog.defaultDirectMicOutsFor(slot.type).value_or(DirectMicOutPolicy::Shared));
+            planSlotRequests.push_back(std::move(request));
+        }
+    }
+    this->activeMicRoutingPlanPtr = std::make_unique<MicRoutingPlan>(
+        MicRoutingPlan::build(*this->activeMicLayoutPtr, planSlotRequests, this->globalConfig.instrumentCatalog));
+
     // Build per-instrument mapping using expected host channel count (defined by plugin outputs)
     // All output buses are mono; stereo mics occupy 2 consecutive mono channels
     const int expectedHostChannels = TOTAL_HOST_OUTPUT_CHANNELS;

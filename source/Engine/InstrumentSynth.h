@@ -176,6 +176,7 @@ public:
 };
 
 class MicRoutingBuilder;
+class MicRoutingPlan;
 
 class InstrumentSynth {
 public:
@@ -387,6 +388,7 @@ public:
 
     const DrumKitEngine* getEngine() const { return this->parent; }
     const MicLayout* getMicLayout() const;
+    const MicRoutingPlan* getMicRoutingPlan() const;
     SampleLoader* getSampleLoader();
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);

@@ -1,6 +1,7 @@
 #include "../source/Engine/KitLibModel.h"
 #include "../source/Engine/LayoutManager.h"
 #include "../source/Engine/InstrumentCatalog.h"
+#include "../source/Engine/MicRoutingPlan.h"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_floating_point.hpp"
 #include "catch2/matchers/catch_matchers_string.hpp"
@@ -201,6 +202,73 @@ TEST_CASE("Direct mic compatibility helpers compare full codes and group outputs
     REQUIRE(directMicSpecsCanUseGroupOutput(dsm, dss));
     REQUIRE(directMicSpecsCanUseGroupOutput(dtm1, dtm1b));
     REQUIRE_FALSE(directMicSpecsCanUseGroupOutput(dtm1, dtm2));
+}
+
+
+TEST_CASE("MicRoutingPlan - allocates direct claims and group fallbacks", "[MicRoutingPlan][routing]") {
+    const juce::String yaml = R"yaml(
+id: routing
+name: Routing
+mics:
+  - name: Tom 1
+    instrument: tom1
+    code: dtm
+  - name: Drum Shared
+    instrument: drum
+    code: dts
+  - name: Other Shared
+    instrument: other
+    code: dss
+  - name: Overheads
+    code: ons
+)yaml";
+
+    auto parsedLayout = LayoutTraits<MicLayout>::parseYaml(yaml);
+    REQUIRE(parsedLayout.ok());
+
+    auto dtm = MicSpec::parseMicCode("dtm").value;
+    auto dsm = MicSpec::parseMicCode("dsm").value;
+    auto dom = MicSpec::parseMicCode("dom").value;
+    auto ons = MicSpec::parseMicCode("ons").value;
+
+    std::vector<MicRoutingPlan::SlotRequest> requests;
+    requests.push_back({ "tom1", InstrumentSpec::Type::Tom, DirectMicOutPolicy::Own, { dtm } });
+    requests.push_back({ "octo1", InstrumentSpec::Type::Octoban, DirectMicOutPolicy::Auto, { dtm } });
+    requests.push_back({ "cow1", InstrumentSpec::Type::Cowbell, DirectMicOutPolicy::Shared, { dsm } });
+    requests.push_back({ "ride1", InstrumentSpec::Type::Ride, DirectMicOutPolicy::Shared, { dom } });
+
+    const auto catalog = InstrumentCatalog::makeDefault();
+    const auto plan = MicRoutingPlan::build(parsedLayout.value, requests, catalog);
+
+    const auto tomDirect = plan.resolve("tom1", InstrumentSpec::Type::Tom, dtm);
+    REQUIRE(tomDirect.matched());
+    REQUIRE(tomDirect.globalStart == 0);
+    REQUIRE(tomDirect.channels == 1);
+    REQUIRE(tomDirect.outputName == "Tom 1");
+
+    const auto octoDirect = plan.resolve("octo1", InstrumentSpec::Type::Octoban, dtm);
+    REQUIRE(octoDirect.matched());
+    REQUIRE(octoDirect.globalStart == 1);
+    REQUIRE(octoDirect.channels == 2);
+    REQUIRE(octoDirect.outputName == "Drum Shared");
+
+    const auto cowDirect = plan.resolve("cow1", InstrumentSpec::Type::Cowbell, dsm);
+    REQUIRE(cowDirect.matched());
+    REQUIRE(cowDirect.globalStart == 3);
+    REQUIRE(cowDirect.channels == 2);
+    REQUIRE(cowDirect.outputName == "Other Shared");
+
+    const auto rideDirect = plan.resolve("ride1", InstrumentSpec::Type::Ride, dom);
+    REQUIRE_FALSE(rideDirect.matched());
+    REQUIRE(plan.getWarnings().size() == 1);
+    CHECK_THAT(plan.getWarnings()[0].toStdString(), Catch::Matchers::ContainsSubstring("ride1"));
+
+    const auto overhead = plan.resolve("cow1", InstrumentSpec::Type::Cowbell, ons);
+    REQUIRE(overhead.matched());
+    REQUIRE(overhead.globalStart == 5);
+    REQUIRE(overhead.channels == 2);
+    REQUIRE(overhead.outputName == "Overheads");
+    REQUIRE(plan.getAssignedHostChannelCount() == 7);
 }
 
 TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain", "[InstrumentSpec]") {

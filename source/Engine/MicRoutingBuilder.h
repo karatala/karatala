@@ -4,6 +4,7 @@
 #include <set>
 #include "InstrumentSynth.h"
 #include "DrumKitEngine.h"
+#include "MicRoutingPlan.h"
 
 // Resolves the global host output channel assignment for each sample variant of an instrument.
 //
@@ -30,6 +31,20 @@ public:
     // Unmatched specs return {-1, fileChannelCount}; the caller must skip those samples.
     // All unmatched raw codes are accumulated in skippedRawCodes for a single summary log.
     Assignment resolve(const KitLib::MicSpec& micSpec, int fileChannelCount) {
+        if (const auto* plan = this->synth != nullptr ? this->synth->getMicRoutingPlan() : nullptr) {
+            const auto planned = plan->resolve(this->synth->getId(), this->synth->getType(), micSpec);
+            if (planned.matched())
+                return { planned.globalStart, planned.channels, planned.micCode };
+
+            // Source direct-code collection is wired into the pure Stage 3 plan builder,
+            // but legacy synth loading still needs direct mics until useInstrumentMap
+            // publishes source-aware requests for every slot.
+            if (micSpec.type != KitLib::MicSpec::Type::Direct) {
+                skippedRawCodes.insert(micSpec.raw);
+                return { -1, fileChannelCount };
+            }
+        }
+
         for (const auto& e : micEntries)
             if (micKeyEq(micSpec, e.mic->specs)) {
                 auto assignment = e.assignment;
@@ -40,7 +55,6 @@ public:
         skippedRawCodes.insert(micSpec.raw);
         return { -1, fileChannelCount };
     }
-
     // Merge skipped raw codes accumulated so far into an external set.
     void mergeSkippedInto(std::set<juce::String>& out) const {
         out.insert(skippedRawCodes.begin(), skippedRawCodes.end());
