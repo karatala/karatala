@@ -186,6 +186,7 @@ public:
     using VelLayerIdx = int8_t;
     using ArticulationSourceMap = std::unordered_map<uint32_t, KitLib::InstrumentSpec*>;
     using ArticulationNameRemap = std::unordered_map<uint32_t, uint32_t>; // slotArtNameId -> sourceArtNameId
+    using ArticulationAliasMap = std::unordered_map<uint32_t, uint32_t>; // fallbackArtNameId -> sourceArtNameId
 
     // Runtime data structures built at loadInstrument() (non-realtime)
     struct SampleEntry {
@@ -251,6 +252,7 @@ public:
         ArticulationSourceMap artSources;
         std::vector<uint32_t> allowedArticulationNameIds;
         ArticulationNameRemap artNameRemap;
+        ArticulationAliasMap artAliases;
 
         bool isValid() const { return defaultInstrument != nullptr; }
     };
@@ -274,7 +276,7 @@ public:
     void unloadInstrument();
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources);
-    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap = {});
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {});
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
@@ -548,14 +550,15 @@ private:
     bool flipPhase = false;
     std::unordered_map<juce::String, float> micBleedLevels;
 
-    void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap);
+    void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases);
     void resetRoutingTables();
     void rebuildArtLookupCache();
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
-    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const ArticulationNameRemap& artNameRemap = {});
+    void applyArticulationAliases(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
+    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {});
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec

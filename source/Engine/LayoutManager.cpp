@@ -51,7 +51,30 @@ mics:
     code: oni
   - name: Overheads wide # 19-20
     code: ows
-  # TODO utilize remaining 12 channels
+  - name: Hi-Hat Stax
+    instrument: hihat2 # 21
+    code: dtm
+  - name: Ride 2
+    instrument: ride2 # 22
+    code: dtm
+  - name: Octoban 1 # 23
+    instrument: octoban1
+    code: dtm
+  - name: Octoban 2 # 24
+    instrument: octoban2
+    code: dtm
+  - name: Aux 1 # 25
+    code: dtm
+  - name: Aux 2 # 26
+    code: dtm
+  - name: Aux 3 # 27
+    code: dtm
+  - name: Aux 4 # 28
+    code: dtm
+  - name: Stereo Aux 1 # 29-30
+    code: dts
+  - name: Stereo Aux 2 # 31-32
+    code: dts
 )yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
     if (!result.ok()) {

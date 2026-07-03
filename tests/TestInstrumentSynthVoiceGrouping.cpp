@@ -70,6 +70,28 @@ KitLayout::InstrumentSlot makeHiHatSlot() {
     return slot;
 }
 
+KitLayout::InstrumentSlot makeSimpleStackSlot() {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "stax1";
+    slot.type = KitLib::InstrumentSpec::Type::Stack;
+
+    KitLayout::InstrumentSlot::ArticulationTrigger bowTrigger { "bow" };
+    bowTrigger.notes.push_back(39);
+    slot.articulations.push_back(std::move(bowTrigger));
+
+    KitLayout::InstrumentSlot::ArticulationTrigger edgeTrigger { "edge" };
+    edgeTrigger.notes.push_back(15);
+    slot.articulations.push_back(std::move(edgeTrigger));
+    return slot;
+}
+
+KitLib::InstrumentSpec::MetaInfo makeStackInstrumentMeta(const juce::String& codeRaw) {
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = codeRaw;
+    meta.type = KitLib::InstrumentSpec::Type::Stack;
+    return meta;
+}
+
 KitLib::InstrumentSpec::MetaInfo makeInstrumentMeta() {
     KitLib::InstrumentSpec::MetaInfo meta;
     meta.codeRaw = "hihat-test";
@@ -197,6 +219,73 @@ TEST_CASE("InstrumentSynth - voice starts receive independent event ids", "[Inst
     REQUIRE(firstVoice->getEventId() != 0);
     REQUIRE(secondVoice->getEventId() != 0);
     REQUIRE(firstVoice->getEventId() != secondVoice->getEventId());
+}
+
+TEST_CASE("InstrumentSynth - simple empty articulation aliases to first mapped layer", "[InstrumentSynth][InstrumentMap]") {
+    DrumKitEngine engine;
+    const auto slot = makeSimpleStackSlot();
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeStackInstrumentMeta("stack-source") };
+    instrument.getOrAddArticulation("edge");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    InstrumentSynth::ArticulationNameRemap remap;
+    remap[bowId] = edgeId;
+    InstrumentSynth::ArticulationAliasMap aliases;
+    aliases[edgeId] = edgeId;
+
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap, aliases);
+
+    const int bowArtIdx = synth.resolveArticulation(39);
+    const int edgeArtIdx = synth.resolveArticulation(15);
+    REQUIRE(bowArtIdx >= 0);
+    REQUIRE(edgeArtIdx == bowArtIdx);
+    CHECK(synth.getArtName(edgeArtIdx) == "edge");
+}
+
+TEST_CASE("InstrumentSynth - explicit articulation does not inherit simple fallback alias", "[InstrumentSynth][InstrumentMap]") {
+    DrumKitEngine engine;
+    const auto slot = makeSimpleStackSlot();
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeStackInstrumentMeta("stack-source") };
+    instrument.getOrAddArticulation("edge");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    InstrumentSynth::ArticulationNameRemap remap;
+    remap[bowId] = edgeId;
+
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap, {});
+
+    REQUIRE(synth.resolveArticulation(39) >= 0);
+    CHECK(synth.resolveArticulation(15) < 0);
+}
+
+TEST_CASE("InstrumentSynth - simple articulation aliases survive routing rebuild", "[InstrumentSynth][InstrumentMap]") {
+    DrumKitEngine engine;
+    const auto slot = makeSimpleStackSlot();
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeStackInstrumentMeta("stack-source") };
+    instrument.getOrAddArticulation("edge");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    InstrumentSynth::ArticulationNameRemap remap;
+    remap[bowId] = edgeId;
+    InstrumentSynth::ArticulationAliasMap aliases;
+    aliases[edgeId] = edgeId;
+
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap, aliases);
+    synth.rebuildRoutingFromLayout(slot);
+
+    const int bowArtIdx = synth.resolveArticulation(39);
+    const int edgeArtIdx = synth.resolveArticulation(15);
+    REQUIRE(bowArtIdx >= 0);
+    REQUIRE(edgeArtIdx == bowArtIdx);
 }
 
 TEST_CASE("InstrumentSynth - controller uses accepted per-voice tail replacement", "[InstrumentSynth][HiHatTransition][ControllerPath]") {

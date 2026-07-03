@@ -44,6 +44,29 @@ static juce::String normalizeArticulationName(const juce::String& rawName) {
     return rawName.upToFirstOccurrenceOf("[", false, false).trim().toLowerCase();
 }
 
+static uint32_t resolveEntrySourceArtId(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& slotArtName) {
+    if (slotArtName.isEmpty())
+        return 0;
+
+    const auto normalizedSlotArt = normalizeArticulationName(slotArtName);
+    for (size_t idx = 0; idx < entry.slotArticulationFilter.size(); ++idx) {
+        if (normalizeArticulationName(entry.slotArticulationFilter[idx]) != normalizedSlotArt)
+            continue;
+        if (idx < entry.articulationFilter.size() && entry.articulationFilter[idx].isNotEmpty())
+            return StringsDictSingleton::getId(entry.articulationFilter[idx]);
+        return StringsDictSingleton::getId(slotArtName);
+    }
+
+    if (!entry.articulationFilter.empty()) {
+        for (const auto& sourceArtName : entry.articulationFilter) {
+            if (sourceArtName.isNotEmpty())
+                return StringsDictSingleton::getId(sourceArtName);
+        }
+    }
+
+    return StringsDictSingleton::getId(slotArtName);
+}
+
 static bool stringArrayContainsIgnoreCase(const juce::StringArray& values, const juce::String& needle) {
     for (const auto& value : values) {
         if (value.compareIgnoreCase(needle) == 0)
@@ -339,7 +362,7 @@ static std::unique_ptr<InstrumentSynth> createReplacementSynth(DrumKitEngine* ow
 
     const auto& routingContext = source.getLastRoutingContext();
     if (routingContext.isValid()) {
-        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.artNameRemap);
+        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.artNameRemap, routingContext.artAliases);
     } else if (auto* loadedInstrument = source.getLoadedInstrumentSpec()) {
         replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument));
     }
@@ -1331,26 +1354,10 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
 
         // Determine target instrument synths //FIXME: move to loadInstrument?
         std::vector<InstrumentSynth*> targets;
-        if (mic.instrument.isEmpty()) {
-            // assign to all instruments
-            for (const auto& isp : this->instrumentSynthPtrs) targets.push_back(isp.get());
-        } else {
-            auto it = this->instrumentSynthById.find(mic.instrument);
-            if (it != this->instrumentSynthById.end()) {
-                targets.push_back(it->second);
-            } else {
-                // fallback: try by instrument type (strip trailing digits)
-                juce::String typeStr = mic.instrument;
-                // remove trailing digits
-                while (typeStr.length() > 0 && juce::CharacterFunctions::isDigit(typeStr.getLastCharacter()))
-                    typeStr = typeStr.dropLastCharacters(1);
-                auto type = KitLib::InstrumentSpec::typeFromString(typeStr);
-                if (type != KitLib::InstrumentSpec::Type::Unknown) {
-                    for (const auto& isp : this->instrumentSynthPtrs) {
-                        if (isp->getType() == type) targets.push_back(isp.get());
-                    }
-                }
-            }
+        const auto selector = parseMicInstrumentSelector(mic.instrument, this->globalConfig.instrumentCatalog);
+        for (const auto& isp : this->instrumentSynthPtrs) {
+            if (matchMicInstrumentSelector(selector, isp->getId(), isp->getType(), this->globalConfig.instrumentCatalog) != MicSelectorPriority::None)
+                targets.push_back(isp.get());
         }
 
         if (targets.empty()) {
@@ -2028,6 +2035,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         std::vector<ShadowPlan> shadowPlans;
         std::vector<uint32_t> claimedArticulations;
         std::vector<uint32_t> primaryAllowedArticulationIds;
+        InstrumentSynth::ArticulationAliasMap artAliases;
 
         if (primary.effectiveFilter.empty()) {
             for (const auto& layoutArt : slotLayout.articulations)
@@ -2071,11 +2079,14 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                     continue;
 
                 const auto artId = StringsDictSingleton::getId(artName);
+                const bool alreadyClaimed = containsId(claimedArticulations, artId);
                 if (hasParameterOverrides) {
                     layeredArts.push_back(artName);
-                    addUniqueId(claimedArticulations, artId);
-                    eraseId(primaryAllowedArticulationIds, artId);
-                } else if (!containsId(claimedArticulations, artId)) {
+                    if (!alreadyClaimed) {
+                        addUniqueId(claimedArticulations, artId);
+                        eraseId(primaryAllowedArticulationIds, artId);
+                    }
+                } else if (!alreadyClaimed) {
                     addUniqueId(claimedArticulations, artId);
                     artSources[artId] = resolved.instSpec;
                     addUniqueId(primaryAllowedArticulationIds, artId);
@@ -2093,11 +2104,26 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts, buildArtNameRemap(*resolved.entry) });
         }
 
-        // Any layout articulations not explicitly claimed by any entry fall through
-        // to the primary instrument. This ensures arts like "bow" on hihat are loaded
-        // even when the map only mentions "edge" and "pedal".
+        uint32_t fallbackLayoutArtId = 0;
+        uint32_t fallbackSourceArtId = 0;
+        if (slotLayout.controllers.empty()) {
+            for (const auto& primaryArtName : primary.effectiveFilter) {
+                if (primaryArtName.isEmpty())
+                    continue;
+                fallbackLayoutArtId = StringsDictSingleton::getId(primaryArtName);
+                fallbackSourceArtId = resolveEntrySourceArtId(*primary.entry, primaryArtName);
+                break;
+            }
+        }
+
+        // Simple non-controller slots inherit empty articulations from the first mapped art.
+        // Controller-driven slots keep their existing primary fallback so CC tables remain intact.
         for (const auto& layoutArt : slotLayout.articulations) {
-            if (!containsId(claimedArticulations, layoutArt.nameId))
+            if (containsId(claimedArticulations, layoutArt.nameId))
+                continue;
+            if (fallbackSourceArtId != 0)
+                artAliases[layoutArt.nameId] = fallbackSourceArtId;
+            else
                 addUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
         }
 
@@ -2130,7 +2156,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             auto replacement = std::make_unique<InstrumentSynth>(this, slotLayout);
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
-            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap);
+            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap, artAliases);
             applyOverrides(*replacement, *primary.entry);
             LOG(Notice, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
@@ -2149,9 +2175,10 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             for (const auto& shadowPlan : shadowPlans) {
                 auto shadow = std::make_unique<InstrumentSynth>(this, slotLayout);
                 auto* shadowRaw = shadow.get();
+                const auto shadowArtIds = toArticulationIdList(shadowPlan.articulations);
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
-                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, toArticulationIdList(shadowPlan.articulations), shadowPlan.artNameRemap);
+                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.artNameRemap, artAliases);
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
                 if (LOG_ENABLED(Notice)) {
                     juce::String shadowArtsStr;
@@ -2171,9 +2198,11 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
                 PreparedShadow ps;
                 for (const auto& art : slotLayout.articulations) {
-                    if (!shadowPlan.articulations.empty()) {
-                        const auto artName = StringsDictSingleton::nameOf(art.nameId);
-                        if (std::find(shadowPlan.articulations.begin(), shadowPlan.articulations.end(), artName) == shadowPlan.articulations.end())
+                    if (!shadowArtIds.empty()) {
+                        const auto aliasIt = artAliases.find(art.nameId);
+                        const bool routesExplicitArt = containsId(shadowArtIds, art.nameId);
+                        const bool routesAliasedArt = aliasIt != artAliases.end() && fallbackLayoutArtId != 0 && containsId(shadowArtIds, fallbackLayoutArtId);
+                        if (!routesExplicitArt && !routesAliasedArt)
                             continue;
                     }
                     for (const int note : art.notes)

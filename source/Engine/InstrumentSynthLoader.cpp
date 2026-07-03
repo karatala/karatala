@@ -9,11 +9,12 @@ const MicLayout* InstrumentSynth::getMicLayout() const { return this->parent ? t
 const MicRoutingPlan* InstrumentSynth::getMicRoutingPlan() const { return this->parent ? this->parent->getMicRoutingPlan() : nullptr; }
 SampleLoader* InstrumentSynth::getSampleLoader() { return this->parent ? this->parent->getSampleLoader() : nullptr; }
 
-void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
+void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases) {
     this->lastRoutingContext.defaultInstrument = defaultInstSpec;
     this->lastRoutingContext.artSources = artSources;
     this->lastRoutingContext.allowedArticulationNameIds = allowedArticulationNameIds;
     this->lastRoutingContext.artNameRemap = artNameRemap;
+    this->lastRoutingContext.artAliases = artAliases;
 }
 
 void InstrumentSynth::resetRoutingTables() {
@@ -90,14 +91,14 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->loadInstrumentWithSources(defaultInstrument, artSources, {});
 }
 
-void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases) {
     if (defaultInstrument == nullptr) return;
     this->unloadInstrument();
 
     this->instrumentSpecstPtr = defaultInstrument;
     this->type = defaultInstrument->meta.type;
 
-    this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds, artNameRemap);
+    this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds, artNameRemap, artAliases);
 }
 
 void InstrumentSynth::clearParameterOverrides() {
@@ -256,10 +257,32 @@ void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulatio
     this->processCcDimensions(foundCcDimensions);
 }
 
-void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap) {
+void InstrumentSynth::applyArticulationAliases(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
+    if (routingContext.artAliases.empty())
+        return;
+
+    for (const auto& layoutArt : layoutSlot.articulations) {
+        const auto aliasIt = routingContext.artAliases.find(layoutArt.nameId);
+        if (aliasIt == routingContext.artAliases.end())
+            continue;
+
+        ArtRtIdx sourceArtIdx = this->findArticulationIndex(aliasIt->second, layoutArt.exprId);
+        if (sourceArtIdx < 0 && layoutArt.exprId != 0)
+            sourceArtIdx = this->findArticulationIndex(aliasIt->second, 0);
+        if (sourceArtIdx < 0)
+            continue;
+
+        for (const auto note : layoutArt.notes) {
+            if (note < 128)
+                this->noteToArticulation[static_cast<size_t>(note)] = sourceArtIdx;
+        }
+    }
+}
+
+void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases) {
     if (defaultInstSpec == nullptr) return;
 
-    this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, artNameRemap);
+    this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, artNameRemap, artAliases);
 
     LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + defaultInstSpec->meta.codeRaw + ":");
     for (const auto& artSpec : defaultInstSpec->articulationSpecs) {
@@ -274,6 +297,7 @@ void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* default
     }
     const auto bindings = this->collectResolvedLayoutArticulations(this->instrumentSlot, this->lastRoutingContext);
     this->applyResolvedRouting(bindings, true, true);
+    this->applyArticulationAliases(this->instrumentSlot, this->lastRoutingContext);
     this->rebuildArtLookupCache();
 }
 
@@ -497,4 +521,5 @@ void InstrumentSynth::rebuildRoutingFromLayout(const KitLayout::InstrumentSlot& 
 
     const auto bindings = this->collectResolvedLayoutArticulations(layoutSlot, routingContext);
     this->applyResolvedRouting(bindings, false, false);
+    this->applyArticulationAliases(layoutSlot, routingContext);
 }
