@@ -69,6 +69,7 @@ private:
         std::unique_ptr<ParameterPot> decayPot;
         std::unique_ptr<ParameterPot> gainPot;
         std::unique_ptr<juce::TextButton> flipLRButton;
+        bool flipLRExplicit = false;
         std::unique_ptr<juce::TextButton> flipPhaseButton;
         // Per-mic bleed pots
         struct MicBleedControl {
@@ -85,7 +86,7 @@ private:
     juce::OwnedArray<LayerRow> layerRows;
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                     float volumeDb, bool flipLR, bool flipPhase,
+                     float volumeDb, bool flipLR, bool flipLRExplicit, bool flipPhase,
                      const std::unordered_map<juce::String, float>& micBleedLevels);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;

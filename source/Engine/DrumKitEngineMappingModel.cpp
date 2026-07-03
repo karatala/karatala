@@ -173,6 +173,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                         entry.volumeDb = trimmed.getFloatValue();
                 } else if (key == "flipLR") {
                     entry.flipLR = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
+                    entry.flipLRExplicit = true;
                 } else if (key == "flipPhase") {
                     entry.flipPhase = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
                 } else if (key == "bleed") {

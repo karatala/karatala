@@ -157,3 +157,86 @@ TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[I
     CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("unknown param 'unknown'"));
     CHECK(parsed.error().toStdString().find("malformed param 'broken'") == std::string::npos);
 }
+
+TEST_CASE("InstrumentMap parser preserves explicit false flipLR", "[InstrumentMap][orientation]") {
+    const juce::String text = "ride1:MyKit/ride-20:flipLR=0";
+    const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 1);
+    CHECK_FALSE(parsed.value.entries.front().flipLR);
+    CHECK(parsed.value.entries.front().flipLRExplicit);
+    CHECK(DrumKitEngine::serializeInstrumentMap(parsed.value) == text);
+}
+
+TEST_CASE("InstrumentMap builder infers flipLR from opposite slot and source balance", "[InstrumentMap][orientation]") {
+    KitLayout layout;
+
+    KitLayout::InstrumentSlot leftSlot;
+    leftSlot.id = "ride1";
+    leftSlot.type = KitLib::InstrumentSpec::Type::Ride;
+    leftSlot.balance = -64;
+    layout.instrumentSlots.push_back(leftSlot);
+
+    KitLayout::InstrumentSlot rightSlot;
+    rightSlot.id = "ride2";
+    rightSlot.type = KitLib::InstrumentSpec::Type::Ride;
+    rightSlot.balance = 64;
+    layout.instrumentSlots.push_back(rightSlot);
+
+    KitLayout::InstrumentSlot mixedSlot;
+    mixedSlot.id = "ride3";
+    mixedSlot.type = KitLib::InstrumentSpec::Type::Ride;
+    mixedSlot.balance = -64;
+    layout.instrumentSlots.push_back(mixedSlot);
+
+    KitLib::DrumKitSpec kit { { {}, "KitA", "Kit A", {}, {} } };
+
+    KitLib::InstrumentSpec::MetaInfo firstMeta;
+    firstMeta.codeRaw = "ride-a";
+    firstMeta.type = KitLib::InstrumentSpec::Type::Ride;
+    kit.addInstrument(firstMeta);
+    auto* first = kit.findInstrument("ride-a");
+    REQUIRE(first != nullptr);
+    auto* firstArt = first->getOrAddArticulation("bow");
+    firstArt->balance = 64;
+
+    KitLib::InstrumentSpec::MetaInfo secondMeta;
+    secondMeta.codeRaw = "ride-b";
+    secondMeta.type = KitLib::InstrumentSpec::Type::Ride;
+    kit.addInstrument(secondMeta);
+    auto* second = kit.findInstrument("ride-b");
+    REQUIRE(second != nullptr);
+    auto* secondArt = second->getOrAddArticulation("bow");
+    secondArt->balance = 64;
+
+    KitLib::InstrumentSpec::MetaInfo thirdMeta;
+    thirdMeta.codeRaw = "ride-c";
+    thirdMeta.type = KitLib::InstrumentSpec::Type::Ride;
+    kit.addInstrument(thirdMeta);
+    auto* third = kit.findInstrument("ride-c");
+    REQUIRE(third != nullptr);
+    auto* thirdBow = third->getOrAddArticulation("bow");
+    thirdBow->balance = 64;
+    auto* thirdEdge = third->getOrAddArticulation("edge");
+    thirdEdge->balance = -64;
+
+    DrumKitEngine engine;
+    const auto mapText = engine.buildInstrumentMapForKit(layout, kit);
+    const auto parsed = DrumKitEngine::parseInstrumentMapText(mapText);
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 3);
+    CHECK(parsed.value.entries[0].slotId == "ride1");
+    CHECK(parsed.value.entries[0].instCode == "ride-a");
+    CHECK(parsed.value.entries[0].flipLR);
+    CHECK(parsed.value.entries[0].flipLRExplicit);
+    CHECK(parsed.value.entries[1].slotId == "ride2");
+    CHECK(parsed.value.entries[1].instCode == "ride-b");
+    CHECK_FALSE(parsed.value.entries[1].flipLR);
+    CHECK_FALSE(parsed.value.entries[1].flipLRExplicit);
+    CHECK(parsed.value.entries[2].slotId == "ride3");
+    CHECK(parsed.value.entries[2].instCode == "ride-c");
+    CHECK_FALSE(parsed.value.entries[2].flipLR);
+    CHECK_FALSE(parsed.value.entries[2].flipLRExplicit);
+}

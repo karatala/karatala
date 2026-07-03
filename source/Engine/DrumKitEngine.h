@@ -30,6 +30,7 @@ public:
         std::optional<int> decayTimeMs;
         std::optional<float> volumeDb;    // -60 to +12 dB
         bool flipLR = false;
+        bool flipLRExplicit = false;
         bool flipPhase = false;
         // Per-mic bleed levels: mic code -> gain (0.0 to 1.0)
         std::unordered_map<juce::String, float> micBleedLevels;

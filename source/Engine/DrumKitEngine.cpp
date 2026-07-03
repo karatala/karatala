@@ -104,6 +104,106 @@ static juce::StringArray collectInstrumentArticulationNames(const KitLib::Instru
     return availableNames;
 }
 
+static int balanceSide(const std::optional<int>& balance) {
+    if (!balance.has_value() || *balance == 0)
+        return 0;
+    return *balance < 0 ? -1 : 1;
+}
+
+static const KitLayout::InstrumentSlot* findLayoutSlot(const KitLayout& layout, const juce::String& slotId) {
+    for (const auto& slot : layout.instrumentSlots)
+        if (slot.id == slotId)
+            return &slot;
+    return nullptr;
+}
+
+static std::vector<const KitLib::ArticulationSpec*> collectOrientationArticulations(const KitLib::InstrumentSpec& instrumentSpec, const DrumKitEngine::InstrumentMapEntry& entry) {
+    std::vector<const KitLib::ArticulationSpec*> result;
+
+    if (entry.articulationFilter.empty()) {
+        result.reserve(instrumentSpec.articulationSpecs.size());
+        for (const auto& artSpec : instrumentSpec.articulationSpecs)
+            if (artSpec != nullptr)
+                result.push_back(artSpec.get());
+        return result;
+    }
+
+    for (const auto& artName : entry.articulationFilter) {
+        const auto normalizedArtName = normalizeArticulationName(artName);
+        if (normalizedArtName.isEmpty())
+            continue;
+
+        const KitLib::ArticulationSpec* matched = nullptr;
+        for (const auto& artSpec : instrumentSpec.articulationSpecs) {
+            if (artSpec == nullptr)
+                continue;
+            if (normalizeArticulationName(artSpec->codeRaw) == normalizedArtName) {
+                matched = artSpec.get();
+                break;
+            }
+        }
+
+        if (matched == nullptr)
+            return {};
+
+        result.push_back(matched);
+    }
+
+    return result;
+}
+
+static std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& instrumentSpec, const DrumKitEngine::InstrumentMapEntry& entry) {
+    const int slotSide = balanceSide(slot.balance);
+    if (slotSide == 0)
+        return std::nullopt;
+
+    const auto articulations = collectOrientationArticulations(instrumentSpec, entry);
+    if (articulations.empty())
+        return std::nullopt;
+
+    std::optional<int> sourceSide;
+    for (const auto* artSpec : articulations) {
+        if (artSpec == nullptr || artSpec->balanceConflict)
+            return std::nullopt;
+
+        const int artSide = balanceSide(artSpec->balance);
+        if (artSide == 0)
+            return std::nullopt;
+
+        if (!sourceSide.has_value())
+            sourceSide = artSide;
+        else if (*sourceSide != artSide)
+            return std::nullopt;
+    }
+
+    if (!sourceSide.has_value())
+        return std::nullopt;
+
+    return *sourceSide != slotSide;
+}
+
+static void applyAutomaticOrientation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout& layout, KitLib::LibraryManager& libraryManager) {
+    for (auto& entry : instrumentMap.entries) {
+        if (entry.flipLRExplicit || entry.slotId == "*")
+            continue;
+
+        const auto* slot = findLayoutSlot(layout, entry.slotId);
+        if (slot == nullptr)
+            continue;
+
+        auto* kitSpec = libraryManager.findKit(entry.kitRef);
+        if (kitSpec == nullptr || entry.instCode.isEmpty())
+            continue;
+
+        auto* instSpec = kitSpec->findInstrument(entry.instCode);
+        if (instSpec == nullptr)
+            continue;
+
+        const auto inferredFlip = inferAutomaticFlipLR(*slot, *instSpec, entry);
+        if (inferredFlip.has_value())
+            entry.flipLR = *inferredFlip;
+    }
+}
 static juce::String findClosestArticulationName(const juce::String& unknownName, const juce::StringArray& availableNames) {
     const auto normalizedUnknownName = normalizeArticulationName(unknownName);
     if (normalizedUnknownName.isEmpty() || availableNames.isEmpty())
@@ -175,6 +275,7 @@ static juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::Instr
     fp += entry.volumeDb.has_value() ? juce::String(*entry.volumeDb, 4) : "_";
     fp += "|";
     fp += entry.flipLR ? "1" : "0";
+    fp += entry.flipLRExplicit ? "e" : "a";
     fp += "|";
     fp += entry.flipPhase ? "1" : "0";
     fp += "|";
@@ -458,6 +559,8 @@ juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, co
         entry.slotId = slot.id;
         entry.kitRef = kit.meta.codeRaw;
         entry.instCode = matched->meta.codeRaw;
+        if (const auto inferredFlip = inferAutomaticFlipLR(slot, *matched, entry))
+            entry.flipLR = *inferredFlip;
         result.entries.push_back(std::move(entry));
     }
 
@@ -494,7 +597,7 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
         if (entry.attackTimeMs.has_value()) params.add("attack=" + juce::String(*entry.attackTimeMs));
         if (entry.decayTimeMs.has_value()) params.add("decay=" + juce::String(*entry.decayTimeMs));
         if (entry.volumeDb.has_value()) params.add("vol=" + juce::String(*entry.volumeDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
-        if (entry.flipLR) params.add("flipLR=1");
+        if (entry.flipLR || entry.flipLRExplicit) params.add("flipLR=" + juce::String(entry.flipLR ? "1" : "0"));
         if (entry.flipPhase) params.add("flipPhase=1");
         if (!entry.micBleedLevels.empty()) {
             std::vector<juce::String> keys;
@@ -1705,6 +1808,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         this->lastInstrumentMapStatus = parsed.error();
         return false;
     }
+
+    applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
 
     LOG(Notice, "=== useInstrumentMap: " + juce::String(parsed.value.entries.size()) + " entries ===");
     for (size_t idx = 0; idx < parsed.value.entries.size(); ++idx) {
