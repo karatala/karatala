@@ -41,10 +41,10 @@
 - In replace mode, generate explicit map entries such as `tom1/center` and `tom1/rim`.
 - If the source instrument has only one usable articulation, assign that articulation to all empty slot articulations.
 - In assign mode, keep articulation-level picker rows.
-- For hi-hat source rows, collapse expression variants to base choices such as `edge`, `bow`, and `pedal`; expression variants remain resolved by routing/CC metadata.
-- Recommended UI label: `Replace whole instrument`.
-- Secondary/help text: `Map all matching articulations`.
-- Keep full layout articulation identity internally, for example `bow[tight]`; use base names only for display/grouping.
+- For hi-hat source rows, show all available articulations with their full bracketed expression labels, for example `edge[open]`, `edge[half]`, `edge[close]`, `edge[tight]`, and `pedal[splash]`.
+- Recommended UI checkbox label: `REPLACE`.
+- Secondary/help text: `Replace whole instrument with all matching articulations`.
+- Keep full layout articulation identity internally, for example `bow[tight]`; use base names only for display/grouping when in replace mode.
 - Replace fast layer parameter targeting by slot-only layer index with a stable target key:
   - slot id
   - slot articulation filter

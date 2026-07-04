@@ -152,6 +152,11 @@ private:
         }
         if (thread != nullptr) {
             this->queueEvent.signal();
+            if (juce::Thread::getCurrentThreadId() == thread->getThreadId()) {
+                thread->signalThreadShouldExit();
+                thread.release();
+                return;
+            }
             thread->stopThread(1000);
         }
     }

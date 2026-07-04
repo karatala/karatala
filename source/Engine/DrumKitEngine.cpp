@@ -29,7 +29,7 @@ static std::vector<uint32_t> toArticulationIdList(const std::vector<juce::String
     result.reserve(names.size());
     for (const auto& name : names) {
         if (name.isNotEmpty())
-            addUniqueId(result, StringsDictSingleton::getId(name));
+            addUniqueId(result, StringsDictSingleton::getId(name.upToFirstOccurrenceOf("[", false, false).trim().toLowerCase()));
     }
     return result;
 }
@@ -53,18 +53,18 @@ static uint32_t resolveEntrySourceArtId(const DrumKitEngine::InstrumentMapEntry&
         if (normalizeArticulationName(entry.slotArticulationFilter[idx]) != normalizedSlotArt)
             continue;
         if (idx < entry.articulationFilter.size() && entry.articulationFilter[idx].isNotEmpty())
-            return StringsDictSingleton::getId(entry.articulationFilter[idx]);
-        return StringsDictSingleton::getId(slotArtName);
+            return StringsDictSingleton::getId(normalizeArticulationName(entry.articulationFilter[idx]));
+        return StringsDictSingleton::getId(normalizeArticulationName(slotArtName));
     }
 
     if (!entry.articulationFilter.empty()) {
         for (const auto& sourceArtName : entry.articulationFilter) {
             if (sourceArtName.isNotEmpty())
-                return StringsDictSingleton::getId(sourceArtName);
+                return StringsDictSingleton::getId(normalizeArticulationName(sourceArtName));
         }
     }
 
-    return StringsDictSingleton::getId(slotArtName);
+    return StringsDictSingleton::getId(normalizeArticulationName(slotArtName));
 }
 
 static bool stringArrayContainsIgnoreCase(const juce::StringArray& values, const juce::String& needle) {
@@ -1236,9 +1236,11 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
 
         for (const auto& art : instrumentSlot.articulations) {
             for (const int note : art.notes) {
-                if (note >= 0 && note < 128)
-                    this->trackedPAMask[note] = true;
-                this->instrumentSynthsByNote[note].push_back(synth);
+                if (note < 0 || note >= 128)
+                    continue;
+                this->trackedPAMask[note] = true;
+                if (synth->hasRouteForMidiNote(note))
+                    this->instrumentSynthsByNote[note].push_back(synth);
             }
         }
     }
@@ -1383,7 +1385,7 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
             LOG(Debug, "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "'");
         }
 
-        // Host channel indices for this mic — directly maps to mono bus indices
+        // Host channel indices for this mic - directly maps to mono bus indices
         std::vector<int> hostIdx;
         for (int i = 0; i < channelCount; ++i) hostIdx.push_back(outCursor + i);
 
@@ -1765,10 +1767,125 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
     this->updateSlotParameters(slotId, artName, layerIndex, update);
 }
 
+bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId,
+                                               const juce::String& artName,
+                                               const juce::String& sourcePath,
+                                               int sourceOccurrenceIndex,
+                                               const LayerParameterUpdate& update) {
+    if (sourceOccurrenceIndex < 0)
+        return false;
+
+    juce::StringArray sourceParts;
+    sourceParts.addTokens(sourcePath.trim(), "/", "");
+    sourceParts.removeEmptyStrings();
+    if (sourceParts.size() < 2)
+        return false;
+
+    const auto targetKit = sourceParts[0].trim();
+    const auto targetInst = sourceParts[1].trim();
+    const auto targetArt = sourceParts.size() >= 3 ? sourceParts[2].trim() : juce::String();
+
+    std::vector<int> targetNotes;
+    const bool hasArtFilter = artName.trim().isNotEmpty() && artName.trim() != "(default)";
+    if (hasArtFilter && this->activeKitLayoutPtr != nullptr) {
+        const auto normalizedArtName = normalizeArticulationName(artName);
+        for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
+            if (slot.id != slotId)
+                continue;
+            for (const auto& art : slot.articulations) {
+                if (normalizeArticulationName(art.codeRaw) != normalizedArtName)
+                    continue;
+                for (const auto note : art.notes) {
+                    if (note >= 0 && note < 128)
+                        targetNotes.push_back(note);
+                }
+                break;
+            }
+            break;
+        }
+    }
+
+    auto synthMatchesArt = [&targetNotes](const InstrumentSynth& synth) {
+        if (targetNotes.empty())
+            return true;
+        for (const auto note : targetNotes) {
+            if (synth.hasRouteForMidiNote(note))
+                return true;
+        }
+        return false;
+    };
+
+    auto synthMatchesSource = [&targetKit, &targetInst, &targetArt](const InstrumentSynth& synth) {
+        const auto* inst = synth.getLoadedInstrumentSpec();
+        if (inst == nullptr || inst->parent == nullptr)
+            return false;
+        if (inst->parent->meta.codeRaw.compareIgnoreCase(targetKit) != 0)
+            return false;
+        if (inst->meta.codeRaw.compareIgnoreCase(targetInst) != 0)
+            return false;
+        return targetArt.isEmpty() || synth.supportsArticulation(targetArt);
+    };
+
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+
+    int currentOccurrence = 0;
+    for (auto& synthPtr : this->instrumentSynthPtrs) {
+        if (synthPtr == nullptr)
+            continue;
+        if (synthPtr->getId() != slotId)
+            continue;
+        if (!synthMatchesArt(*synthPtr) || !synthMatchesSource(*synthPtr))
+            continue;
+
+        if (currentOccurrence == sourceOccurrenceIndex) {
+            if (update.tuningCents.has_value()) synthPtr->setTuningOffsetCents(*update.tuningCents);
+            if (update.attackMs.has_value()) synthPtr->setAttackOverrideMs(*update.attackMs);
+            if (update.decayMs.has_value()) synthPtr->setDecayOverrideMs(*update.decayMs);
+            if (update.volumeDb.has_value()) synthPtr->setVolumeDb(*update.volumeDb);
+            if (update.flipLR.has_value()) synthPtr->setFlipLR(*update.flipLR);
+            if (update.flipPhase.has_value()) synthPtr->setFlipPhase(*update.flipPhase);
+            if (update.micBleedLevels.has_value()) synthPtr->setMicBleedLevels(*update.micBleedLevels);
+            return true;
+        }
+
+        ++currentOccurrence;
+    }
+
+    return false;
+}
 void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, const LayerParameterUpdate& update) {
-    juce::ignoreUnused(artName);
     if (layerIndex < 0)
         return;
+
+    std::vector<int> targetNotes;
+    const bool hasArtFilter = artName.trim().isNotEmpty() && artName.trim() != "(default)";
+    if (hasArtFilter && this->activeKitLayoutPtr != nullptr) {
+        const auto normalizedArtName = normalizeArticulationName(artName);
+        for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
+            if (slot.id != slotId)
+                continue;
+            for (const auto& art : slot.articulations) {
+                if (normalizeArticulationName(art.codeRaw) != normalizedArtName)
+                    continue;
+                for (const auto note : art.notes) {
+                    if (note >= 0 && note < 128)
+                        targetNotes.push_back(note);
+                }
+                break;
+            }
+            break;
+        }
+    }
+
+    auto synthMatchesArt = [&targetNotes](const InstrumentSynth& synth) {
+        if (targetNotes.empty())
+            return true;
+        for (const auto note : targetNotes) {
+            if (synth.hasRouteForMidiNote(note))
+                return true;
+        }
+        return false;
+    };
 
     const juce::ScopedLock graphLock(this->engineGraphLock);
 
@@ -1777,6 +1894,8 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
         if (synthPtr == nullptr)
             continue;
         if (synthPtr->getId() != slotId)
+            continue;
+        if (!synthMatchesArt(*synthPtr))
             continue;
 
         if (currentLayerIndex == layerIndex) {
@@ -1796,7 +1915,7 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
 
 bool DrumKitEngine::useInstrumentMap(juce::String text) {
     // ======================== PHASE 1: VALIDATION (no lock) ========================
-    // Safe to read libraryManagerPtr/activeKitLayoutPtr without lock — only mutated on
+    // Safe to read libraryManagerPtr/activeKitLayoutPtr without lock - only mutated on
     // the message thread, which is our current thread.
     this->lastInstrumentMapStatus.clear();
 
@@ -1863,9 +1982,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         if (slotArts.empty() || srcArts.empty())
             return remap;
         for (size_t idx = 0; idx < slotArts.size() && idx < srcArts.size(); ++idx) {
-            auto slotId = StringsDictSingleton::getId(slotArts[idx]);
-            auto srcId = StringsDictSingleton::getId(srcArts[idx]);
-            if (slotId != srcId)
+            auto slotId = StringsDictSingleton::getId(normalizeArticulationName(slotArts[idx]));
+            auto srcId = StringsDictSingleton::getId(normalizeArticulationName(srcArts[idx]));
+            if (slotId != srcId) 
                 remap[slotId] = srcId;
         }
         return remap;
@@ -2058,7 +2177,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         } else {
             for (const auto& artName : primary.effectiveFilter) {
                 if (artName.isNotEmpty())
-                    addUniqueId(primaryAllowedArticulationIds, StringsDictSingleton::getId(artName));
+                    addUniqueId(primaryAllowedArticulationIds, StringsDictSingleton::getId(normalizeArticulationName(artName)));
             }
         }
 
@@ -2071,7 +2190,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
         for (const auto& artName : primary.effectiveFilter) {
             if (artName.isNotEmpty())
-                addUniqueId(claimedArticulations, StringsDictSingleton::getId(artName));
+                addUniqueId(claimedArticulations, StringsDictSingleton::getId(normalizeArticulationName(artName)));
         }
 
         for (size_t idx = 1; idx < resolvedEntries.size(); ++idx) {
@@ -2093,7 +2212,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 if (artName.isEmpty())
                     continue;
 
-                const auto artId = StringsDictSingleton::getId(artName);
+                const auto artId = StringsDictSingleton::getId(normalizeArticulationName(artName));
                 const bool alreadyClaimed = containsId(claimedArticulations, artId);
                 if (hasParameterOverrides) {
                     layeredArts.push_back(artName);
@@ -2125,7 +2244,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             for (const auto& primaryArtName : primary.effectiveFilter) {
                 if (primaryArtName.isEmpty())
                     continue;
-                fallbackLayoutArtId = StringsDictSingleton::getId(primaryArtName);
+                fallbackLayoutArtId = StringsDictSingleton::getId(normalizeArticulationName(primaryArtName));
                 fallbackSourceArtId = resolveEntrySourceArtId(*primary.entry, primaryArtName);
                 break;
             }
@@ -2282,7 +2401,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
         this->lastAppliedInstrumentMapText = text;
     }
-    // Old synths destroyed here outside the lock — audio thread cannot access them
+    // Old synths destroyed here outside the lock - audio thread cannot access them
 
     if (this->sampleLoaderPtr != nullptr)
         this->sampleLoaderPtr->getQueue().startProcessing();

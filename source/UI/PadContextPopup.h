@@ -44,6 +44,7 @@ private:
     // ─── MIDI map (inline in header) ───
     juce::Label     midiHeaderLabel;
     std::unique_ptr<MidiNoteAssignmentControl> midiAssignmentControl;
+    juce::TextButton replaceModeButton { "REPLACE" };
     juce::TextButton addLayerButton { "+ Layer" };
     KitLayout::MidiNotes* midiNotesPtr = nullptr;
     KitLayout::MidiNotes midiNotesOwned;
@@ -55,6 +56,7 @@ private:
     void syncMidiNotesToActiveLayout();
 
     std::vector<SourceItem> sourceItems;
+    std::vector<SourceItem> instrumentSourceItems;
     void rebuildSourceItems();
     int findSourceIndex(const juce::String& searchPath) const;
 
@@ -91,6 +93,7 @@ private:
                      const std::unordered_map<juce::String, float>& micBleedLevels);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
+    int getSourceOccurrenceIndex(const LayerRow* layer) const;
     void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
@@ -98,6 +101,9 @@ private:
     void applyToEngine();
     void recalculateLayerIndexOffset();
     juce::String generateFullMapText() const;
+    juce::String generateReplaceMapText(const SourceItem& sourceInstrument) const;
+    void applyReplaceInstrument(const SourceItem& sourceInstrument);
+    bool isReplaceModeEnabled() const;
     void populateLayers();
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourceIndex(int sourceIndex) const;

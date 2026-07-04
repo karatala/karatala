@@ -142,7 +142,7 @@ std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryMa
                     item.kitCodeRaw = kitPtr->meta.codeRaw;
                     item.kitDisplayName = kitShort;
                     item.instCode = inst->meta.codeRaw;
-                    item.artCode = artPtr->codeRaw.upToFirstOccurrenceOf("[", false, false);
+                    item.artCode = artPtr->codeRaw;
                     item.instType = inst->meta.type;
                     addUniqueSourceItem(std::move(item));
                 }
@@ -160,6 +160,19 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
         auto haystack = sourceItems[static_cast<size_t>(idx)].fullPath().toLowerCase();
         if (haystack == needle)
             return idx;
+    }
+
+    juce::StringArray needleParts;
+    needleParts.addTokens(needle, "/", "");
+    needleParts.removeEmptyStrings();
+    if (needleParts.size() >= 3) {
+        const auto needleBaseArt = needleParts[2].upToFirstOccurrenceOf("[", false, false);
+        for (int idx = 0; idx < static_cast<int>(sourceItems.size()); ++idx) {
+            const auto& item = sourceItems[static_cast<size_t>(idx)];
+            if (item.kitCodeRaw.toLowerCase() != needleParts[0]) continue;
+            if (item.instCode.toLowerCase() != needleParts[1]) continue;
+            if (item.artCode.toLowerCase().upToFirstOccurrenceOf("[", false, false) == needleBaseArt) return idx;
+        }
     }
     return -1;
 }

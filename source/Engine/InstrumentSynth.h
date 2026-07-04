@@ -453,6 +453,10 @@ public:
 
         return false;
     }
+    bool hasRouteForMidiNote(int note) const {
+        return note >= 0 && note < static_cast<int>(this->noteToArticulation.size())
+            && this->noteToArticulation[static_cast<size_t>(note)] >= 0;
+    }
     ArtRtIdx getOrAddRuntimeArticulationIdx(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) {
         for (size_t i = 0; i < this->runtimeArticulations.size(); ++i)
             if (this->runtimeArticulations[i].nameId == nameId && this->runtimeArticulations[i].exprId == exprId)
