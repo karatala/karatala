@@ -57,6 +57,7 @@ public:
         uint64_t sampleLoaderCacheLimitMegabytes = 1024ull;
         juce::String kitLayout;
         juce::String micLayout;
+        DebugLevel logLevel = DebugLevel::Off;
         InstrumentCatalog instrumentCatalog = InstrumentCatalog::makeDefault();
     };
 
@@ -99,6 +100,8 @@ public:
     const juce::String& getGlobalKitLayoutId() const { return this->globalConfig.kitLayout; }
     const juce::String& getGlobalMicLayoutId() const { return this->globalConfig.micLayout; }
     const InstrumentCatalog& getInstrumentCatalog() const { return this->globalConfig.instrumentCatalog; }
+    DebugLevel getGlobalLogLevel() const { return this->globalConfig.logLevel; }
+    void setGlobalLogLevel(DebugLevel level);
     bool setGlobalKitLayoutId(const juce::String& layoutId);
     bool setGlobalMicLayoutId(const juce::String& layoutId);
     void seedInstrumentMapFingerprints(const juce::String& mapText);

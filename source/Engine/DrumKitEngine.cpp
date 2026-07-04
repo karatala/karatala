@@ -542,6 +542,11 @@ bool DrumKitEngine::setGlobalMicLayoutId(const juce::String& layoutId) {
     return true;
 }
 
+void DrumKitEngine::setGlobalLogLevel(DebugLevel level) {
+    this->globalConfig.logLevel = level;
+    GlobalLogger::instance().setLogLevel(level);
+}
+
 bool DrumKitEngine::setMicLayout(MicLayout layout) {
     this->activeMicLayoutPtr = std::make_unique<MicLayout>(layout);
     return this->applyMicLayout();
@@ -757,6 +762,14 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
     if (micLayout.isNotEmpty())
         config.micLayout = micLayout;
 
+    const auto logLevel = root["logLevel"].asString();
+    if (logLevel.isNotEmpty()) {
+        if (isValidDebugLevelString(logLevel))
+            config.logLevel = parseDebugLevelOrDefault(logLevel);
+        else
+            result.addWarning("Unknown logLevel '" + logLevel + "'; using off.");
+    }
+
     auto catalog = InstrumentCatalog::parseYaml(root["instrumentCatalog"]);
     config.instrumentCatalog = catalog.value;
     for (const auto& warning : catalog.errors)
@@ -924,6 +937,7 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "kitLayout: default\n";
     result += "micLayout: default\n";
     result += "sampleLoaderCacheLimitMegabytes: 1024\n";
+    result += "logLevel: off\n";
     const juce::File libDir = this->dataPath.getChildFile("sample_library");
     if (libDir.exists())
         result += "libraryPath: " + libDir.getFullPathName() + "\n";
@@ -981,6 +995,7 @@ juce::String DrumKitEngine::serializeSettingsYaml() const {
     yaml += "kitLayout: " + this->globalConfig.kitLayout + "\n";
     yaml += "micLayout: " + this->globalConfig.micLayout + "\n";
     yaml += "sampleLoaderCacheLimitMegabytes: " + juce::String(this->globalConfig.sampleLoaderCacheLimitMegabytes) + "\n";
+    yaml += "logLevel: " + DebugLevelToYaml(this->globalConfig.logLevel) + "\n";
     if (this->globalConfig.libraryPath.exists())
         yaml += "libraryPath: " + this->globalConfig.libraryPath.getFullPathName() + "\n";
 

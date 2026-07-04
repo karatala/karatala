@@ -29,6 +29,14 @@ double percentageValue(const juce::String& text) {
     return text.getDoubleValue() / 100.0;
 }
 
+int debugLevelToChoiceId(DebugLevel level) {
+    return static_cast<int>(level) + 2;
+}
+
+DebugLevel choiceIdToDebugLevel(int selectedId) {
+    return static_cast<DebugLevel>(juce::jlimit(-1, 5, selectedId - 2));
+}
+
 } // namespace
 
 EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
@@ -132,11 +140,19 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
                     [&settings](int selectedId) {
                         settings.hihatMissingDecayPolicy.store(static_cast<HiHatMissingDecayPolicy>(selectedId - 1));
                     });
+    this->hihatChoiceCount = static_cast<int>(this->choices.size());
 
     // ── UI / Grid ──
     this->addPot("Columns", "Grid columns. 0 - auto detect from the active kit layout.", &settings.padGridColumns, 0, 12);
     this->addPot("Rows", "Grid rows. 0 - auto detect from the active kit layout.", &settings.padGridRows, 0, 8);
     this->addPot("Gap", "", &settings.padGap, 0, 8);
+    this->uiChoiceStart = static_cast<int>(this->choices.size());
+    this->addChoice("Log Level", "Writes Karatala diagnostics to karatala.log. Off keeps logging overhead to the level check.",
+                    { "Off", "Error", "Warning", "Notice", "Info", "Debug", "Verbose" }, 1,
+                    [this] { return debugLevelToChoiceId(this->engine.getGlobalLogLevel()); },
+                    [this](int selectedId) {
+                        this->engine.setGlobalLogLevel(choiceIdToDebugLevel(selectedId));
+                    });
 
     this->rebuildMicLayouts();
     this->loadFromEngine();
@@ -319,13 +335,14 @@ void EngineSettingsPanel::resized() {
 
     // Calculate group row counts
     auto groupRows = [&](int count) { return (count + potsPerRow - 1) / potsPerRow; };
+    auto choiceRowsFor = [&](int count) { return count <= 0 ? 0 : (count + choicesPerRow - 1) / choicesPerRow; };
+    const int uiChoiceCount = static_cast<int>(this->choices.size()) - this->uiChoiceStart;
 
     int totalHeight = 8; // top padding
     totalHeight += groupLabelHeight + gap + groupRows(7) * potCellH + gap; // choke (7 pots)
     totalHeight += groupLabelHeight + gap + groupRows(6) * potCellH + gap; // tail (6 pots)
-    const int choiceRows = (static_cast<int>(this->choices.size()) + choicesPerRow - 1) / choicesPerRow;
-    totalHeight += groupLabelHeight + gap + groupRows(11) * potCellH + choiceRows * choiceCellH + gap; // hihat
-    totalHeight += groupLabelHeight + gap + groupRows(3) * potCellH + gap; // grid (3 pots)
+    totalHeight += groupLabelHeight + gap + groupRows(11) * potCellH + choiceRowsFor(this->hihatChoiceCount) * choiceCellH + gap; // hihat
+    totalHeight += groupLabelHeight + gap + groupRows(3) * potCellH + choiceRowsFor(uiChoiceCount) * choiceCellH + gap; // grid (3 pots)
     totalHeight += groupLabelHeight + 64 + gap; // output layout
     totalHeight += 8; // bottom padding
 
@@ -361,10 +378,11 @@ void EngineSettingsPanel::resized() {
         area.removeFromTop(rowsUsed * potCellH + gap);
     };
 
-    auto placeChoiceGrid = [&] {
+    auto placeChoiceGrid = [&](int startIdx, int count) {
         int column = 0;
         int rowStartY = area.getY();
-        for (auto& entry : this->choices) {
+        for (int idx = startIdx; idx < startIdx + count && idx < static_cast<int>(this->choices.size()); ++idx) {
+            auto& entry = this->choices[static_cast<size_t>(idx)];
             const int cellX = area.getX() + column * choiceCellW;
             entry->label.setBounds(cellX, rowStartY, choiceCellW - 4, 14);
             entry->comboBox.setBounds(cellX, rowStartY + 16, choiceCellW - 24, 28);
@@ -376,7 +394,7 @@ void EngineSettingsPanel::resized() {
                 rowStartY += choiceCellH;
             }
         }
-        area.removeFromTop(choiceRows * choiceCellH + gap);
+        area.removeFromTop(choiceRowsFor(count) * choiceCellH + gap);
     };
 
     placeGroupLabel(this->chokeGroupLabel);
@@ -387,10 +405,11 @@ void EngineSettingsPanel::resized() {
 
     placeGroupLabel(this->hihatGroupLabel);
     placePotGrid(13, 11);
-    placeChoiceGrid();
+    placeChoiceGrid(0, this->hihatChoiceCount);
 
     placeGroupLabel(this->uiGridGroupLabel);
     placePotGrid(24, 3);
+    placeChoiceGrid(this->uiChoiceStart, uiChoiceCount);
 
     placeGroupLabel(this->outputGroupLabel);
     auto outputRow = area.removeFromTop(26);

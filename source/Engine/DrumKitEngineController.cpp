@@ -46,10 +46,13 @@ void DrumKitEngine::initGlobalSettings() {
         }
     }
 
+    GlobalLogger::instance().setLogFile(this->dataPath.getChildFile("karatala.log"));
+
     auto yamlStr = configFile.loadFileAsString();
     auto conf = this->parseConfigYaml(yamlStr);
     if (conf.ok()) {
         this->globalConfig = conf.value;
+        GlobalLogger::instance().setLogLevel(this->globalConfig.logLevel);
     } else {
         LOG(Error, "engine config parse error: " + conf.error());
         jassertfalse;

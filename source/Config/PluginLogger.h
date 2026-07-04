@@ -1,7 +1,203 @@
 #pragma once
-#include <array>
 #include <atomic>
+#include <deque>
 #include <juce_core/juce_core.h>
+#include <memory>
+#include <mutex>
+
+#ifndef JUCE_DEBUG
+#define JUCE_DEBUG 0
+#endif
+
+enum DebugLevel {
+    Off     = -1,
+    Error   = 0,
+    Warning = 1,
+    Notice  = 2,
+    Info    = 3,
+    Debug   = 4,
+    Verbose = 5
+};
+
+// Fast global log-level variable: checked by LOG before evaluating messages.
+inline std::atomic<int> gAppLogLevel { static_cast<int>(DebugLevel::Off) };
+
+static inline juce::String DebugLevelToString(DebugLevel level) {
+    switch (level) {
+        case DebugLevel::Off:     return "OFF";
+        case DebugLevel::Error:   return "ERROR";
+        case DebugLevel::Warning: return "WARNING";
+        case DebugLevel::Notice:  return "NOTICE";
+        case DebugLevel::Info:    return "INFO";
+        case DebugLevel::Debug:   return "DEBUG";
+        case DebugLevel::Verbose: return "VERBOSE";
+        default:                  return "UNKNOWN";
+    }
+}
+
+static inline juce::String DebugLevelToYaml(DebugLevel level) {
+    switch (level) {
+        case DebugLevel::Off:     return "off";
+        case DebugLevel::Error:   return "error";
+        case DebugLevel::Warning: return "warning";
+        case DebugLevel::Notice:  return "notice";
+        case DebugLevel::Info:    return "info";
+        case DebugLevel::Debug:   return "debug";
+        case DebugLevel::Verbose: return "verbose";
+        default:                  return "off";
+    }
+}
+
+static inline DebugLevel parseDebugLevelOrDefault(const juce::String& value, DebugLevel defaultLevel = DebugLevel::Off) {
+    const auto normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty()) return defaultLevel;
+    if (normalized == "off") return DebugLevel::Off;
+    if (normalized == "error") return DebugLevel::Error;
+    if (normalized == "warning" || normalized == "warn") return DebugLevel::Warning;
+    if (normalized == "notice") return DebugLevel::Notice;
+    if (normalized == "info") return DebugLevel::Info;
+    if (normalized == "debug") return DebugLevel::Debug;
+    if (normalized == "verbose") return DebugLevel::Verbose;
+    return defaultLevel;
+}
+
+static inline bool isValidDebugLevelString(const juce::String& value) {
+    const auto normalized = value.trim().toLowerCase();
+    return normalized == "off"
+        || normalized == "error"
+        || normalized == "warning"
+        || normalized == "warn"
+        || normalized == "notice"
+        || normalized == "info"
+        || normalized == "debug"
+        || normalized == "verbose";
+}
+
+class GlobalLogger {
+public:
+    static GlobalLogger& instance() {
+        static GlobalLogger inst;
+        return inst;
+    }
+
+    ~GlobalLogger() {
+        this->stopWriterThread();
+        this->flushQueuedLines();
+    }
+
+    void setLogLevel(DebugLevel level) {
+        this->logLevel.store(static_cast<int>(level), std::memory_order_relaxed);
+        gAppLogLevel.store(static_cast<int>(level), std::memory_order_relaxed);
+        if (level == DebugLevel::Off) this->stopWriterThread();
+        else this->startWriterThread();
+    }
+
+    DebugLevel getLogLevel() const {
+        return static_cast<DebugLevel>(this->logLevel.load(std::memory_order_relaxed));
+    }
+
+    void setLogFile(const juce::File& f) {
+        {
+            const std::lock_guard<std::mutex> lock(this->fileMutex);
+            this->logFile = f;
+            if (!this->logFile.getParentDirectory().exists())
+                this->logFile.getParentDirectory().createDirectory();
+        }
+        if (this->getLogLevel() != DebugLevel::Off) this->startWriterThread();
+    }
+
+    void log(DebugLevel level, const juce::String& msg) {
+        if (this->logLevel.load(std::memory_order_relaxed) < static_cast<int>(level)) return;
+
+        const juce::String line = DebugLevelToString(level) + ": " + msg;
+
+      #if JUCE_DEBUG
+        DBG(line);
+      #endif
+
+        this->enqueueLine(line);
+    }
+
+private:
+    class WriterThread : public juce::Thread {
+    public:
+        explicit WriterThread(GlobalLogger& owner): juce::Thread("Karatala Log Writer"), owner(owner) {}
+
+        void run() override {
+            while (!this->threadShouldExit()) {
+                this->owner.queueEvent.wait(250);
+                this->owner.flushQueuedLines();
+            }
+            this->owner.flushQueuedLines();
+        }
+
+    private:
+        GlobalLogger& owner;
+    };
+
+    GlobalLogger() = default;
+
+    void startWriterThread() {
+        const std::lock_guard<std::mutex> lock(this->threadMutex);
+        if (this->writerThread != nullptr) return;
+        this->writerThread = std::make_unique<WriterThread>(*this);
+        this->writerThread->startThread();
+    }
+
+    void stopWriterThread() {
+        std::unique_ptr<WriterThread> thread;
+        {
+            const std::lock_guard<std::mutex> lock(this->threadMutex);
+            thread = std::move(this->writerThread);
+        }
+        if (thread != nullptr) {
+            this->queueEvent.signal();
+            thread->stopThread(1000);
+        }
+    }
+
+    void enqueueLine(const juce::String& line) {
+        std::unique_lock<std::mutex> lock(this->queueMutex, std::try_to_lock);
+        if (!lock.owns_lock()) return;
+        if (this->pendingLines.size() >= maxQueuedLines) return;
+
+        this->pendingLines.push_back(line);
+        lock.unlock();
+        this->queueEvent.signal();
+    }
+
+    void flushQueuedLines() {
+        std::deque<juce::String> lines;
+        {
+            const std::lock_guard<std::mutex> lock(this->queueMutex);
+            lines.swap(this->pendingLines);
+        }
+        if (lines.empty()) return;
+
+        juce::File target;
+        {
+            const std::lock_guard<std::mutex> lock(this->fileMutex);
+            target = this->logFile;
+        }
+        if (target.getFullPathName().isEmpty()) return;
+
+        juce::String out;
+        for (const auto& line : lines)
+            out += juce::Time::getCurrentTime().toISO8601(true) + " " + line + "\n";
+        target.appendText(out);
+    }
+
+    static constexpr size_t maxQueuedLines = 4096;
+
+    std::atomic<int> logLevel { static_cast<int>(DebugLevel::Off) };
+    juce::File logFile;
+    std::deque<juce::String> pendingLines;
+    std::mutex queueMutex;
+    std::mutex fileMutex;
+    std::mutex threadMutex;
+    juce::WaitableEvent queueEvent;
+    std::unique_ptr<WriterThread> writerThread;
+};
 
 class PluginLogger {
 public:
@@ -24,3 +220,13 @@ private:
     juce::StringArray messages;
     mutable juce::CriticalSection mutex;
 };
+
+#ifndef LOG
+// The if-guard ensures msg is never evaluated when its level is disabled.
+#define LOG(level, msg) \
+    do { if (gAppLogLevel.load(std::memory_order_relaxed) >= static_cast<int>(level)) \
+        GlobalLogger::instance().log((level), (msg)); } while (0)
+
+// Use LOG_ENABLED(level) to gate expensive prep work before a LOG call.
+#define LOG_ENABLED(level) (gAppLogLevel.load(std::memory_order_relaxed) >= static_cast<int>(DebugLevel::level))
+#endif

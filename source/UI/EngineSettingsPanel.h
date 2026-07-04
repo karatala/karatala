@@ -51,6 +51,8 @@ private:
 
     std::vector<std::unique_ptr<PotEntry>> pots;
     std::vector<std::unique_ptr<ChoiceEntry>> choices;
+    int hihatChoiceCount = 0;
+    int uiChoiceStart = 0;
 
     void addPot(const juce::String& name,
                 const juce::String& tooltip,

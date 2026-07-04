@@ -188,3 +188,52 @@ TEST_CASE("EngineSettings - aftertouch noise threshold and crosstalk profile rou
     REQUIRE(restoredEngine.buildCrosstalkProfileText().contains("-> 48 "));
     REQUIRE(restoredEngine.buildCrosstalkProfileText().contains("suppress <= 24%"));
 }
+
+TEST_CASE("EngineSettings - global log level YAML defaults and validation", "[EngineSettings][yaml][logging]") {
+    DrumKitEngine defaultEngine;
+    REQUIRE(defaultEngine.getDefaultYaml().contains("logLevel: off"));
+    REQUIRE(defaultEngine.serializeSettingsYaml().contains("logLevel: off"));
+
+    DrumKitEngine missingEngine;
+    const auto missingResult = missingEngine.parseConfigYaml("kitLayout: default\n");
+    REQUIRE(missingResult.ok());
+    REQUIRE(missingResult.value.logLevel == DebugLevel::Off);
+
+    DrumKitEngine warningEngine;
+    const auto warningResult = warningEngine.parseConfigYaml("logLevel: warning\n");
+    REQUIRE(warningResult.ok());
+    REQUIRE(warningResult.value.logLevel == DebugLevel::Warning);
+    warningEngine.setGlobalLogLevel(warningResult.value.logLevel);
+    REQUIRE(warningEngine.getGlobalLogLevel() == DebugLevel::Warning);
+    REQUIRE(GlobalLogger::instance().getLogLevel() == DebugLevel::Warning);
+
+    DrumKitEngine invalidEngine;
+    const auto invalidResult = invalidEngine.parseConfigYaml("logLevel: loud\n");
+    REQUIRE(invalidResult.ok());
+    REQUIRE(invalidResult.value.logLevel == DebugLevel::Off);
+    REQUIRE_FALSE(invalidResult.errors.empty());
+}
+
+TEST_CASE("EngineSettings - global log level YAML round trip", "[EngineSettings][yaml][logging]") {
+    const DebugLevel levels[] = {
+        DebugLevel::Off,
+        DebugLevel::Error,
+        DebugLevel::Warning,
+        DebugLevel::Notice,
+        DebugLevel::Info,
+        DebugLevel::Debug,
+        DebugLevel::Verbose,
+    };
+
+    for (const auto level : levels) {
+        DrumKitEngine sourceEngine;
+        sourceEngine.setGlobalLogLevel(level);
+
+        DrumKitEngine restoredEngine;
+        const auto parseResult = restoredEngine.parseConfigYaml(sourceEngine.serializeSettingsYaml());
+
+        REQUIRE(parseResult.ok());
+        REQUIRE(parseResult.value.logLevel == level);
+        REQUIRE(sourceEngine.serializeSettingsYaml().contains("logLevel: " + DebugLevelToYaml(level)));
+    }
+}

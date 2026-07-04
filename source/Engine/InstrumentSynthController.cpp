@@ -568,7 +568,8 @@ bool InstrumentSynth::triggerHiHatPedalSample(int midiChannel, float sourceAudib
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
     int artIdx = this->resolveArticulation(midiNoteNumber);
     if (artIdx >= 0 && artIdx < static_cast<int>(this->runtimeArticulations.size())) {
-        LOG(Verbose, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
+        if (LOG_ENABLED(Verbose))
+            LOG(Verbose, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
     } else {
         // LOG(Warning, "InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
@@ -738,7 +739,8 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
         if (!se.sound || se.variantIdx != chosenVariant) continue;
 
         if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) {
-            LOG(Debug, "Sample buffer not loaded for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " file=" + se.sound->sampleVariantSpec->sampleFile.getFullPathName());
+            if (LOG_ENABLED(Debug))
+                LOG(Debug, "Sample buffer not loaded for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " file=" + se.sound->sampleVariantSpec->sampleFile.getFullPathName());
             continue;
         }
         auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
@@ -917,9 +919,10 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSe
         // A strictly more-closed new hit (higher poc) chokes softer-ringing voices.
         // Equal-poc same-articulation retriggers are handled by existing cullMaskedVoices.
         if (newArtPocValue > voicePocValue) {
-            LOG(Verbose, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePocValue)
-                + " newPoc=" + juce::String(newArtPocValue)
-                + " note=" + juce::String(voice->getCurrentlyPlayingNote()));
+            if (LOG_ENABLED(Verbose))
+                LOG(Verbose, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePocValue)
+                    + " newPoc=" + juce::String(newArtPocValue)
+                    + " note=" + juce::String(voice->getCurrentlyPlayingNote()));
             voice->requestFadeOut(fadeTimeSec);
         }
     }
