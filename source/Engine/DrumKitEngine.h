@@ -199,6 +199,9 @@ private:
 
     struct PreviewTarget {
         juce::File sampleFile;
+        juce::String micCode;
+        int fileChannelStart = 0;
+        int fileChannelCount = 0;
         float volumeTrimDb = 0.0f;
     };
 

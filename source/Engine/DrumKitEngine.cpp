@@ -1588,6 +1588,63 @@ juce::uint8 getPreviewVelocityForBucket(juce::uint8 velocity) {
     return static_cast<juce::uint8>(juce::jlimit(1, 127, bucketVelocity));
 }
 
+int getPreviewMicRank(const KitLib::SampleVariantSpec& variant) {
+    if (!variant.isValid() || !variant.micSpec.isValid())
+        return std::numeric_limits<int>::max();
+
+    const auto& mic = variant.micSpec;
+    const bool stereoCapable = mic.channels >= 2
+        || mic.format == KitLib::MicSpec::Format::Stereo
+        || mic.format == KitLib::MicSpec::Format::MidSide
+    ;
+    if (mic.type == KitLib::MicSpec::Type::Overhead) {
+        if (mic.raw.equalsIgnoreCase("ons")) return 0;
+
+        int rank = stereoCapable ? 10 : 30;
+        if (mic.position == KitLib::MicSpec::Position::Normal)
+            rank -= 2;
+        else if (mic.position == KitLib::MicSpec::Position::Wide)
+            rank += 2;
+        return rank;
+    }
+
+    if (mic.type == KitLib::MicSpec::Type::Direct) {
+        int rank = stereoCapable ? 90 : 100;
+        if (mic.position == KitLib::MicSpec::Position::Top || mic.position == KitLib::MicSpec::Position::In)
+            rank -= 4;
+        else if (mic.position == KitLib::MicSpec::Position::Out)
+            rank -= 2;
+        else if (mic.position == KitLib::MicSpec::Position::Bottom)
+            rank += 2;
+        return rank;
+    }
+    if (mic.type == KitLib::MicSpec::Type::Room) {
+        int rank = stereoCapable ? 200 : 220;
+        if (mic.position == KitLib::MicSpec::Position::Close)
+            rank -= 2;
+        else if (mic.position == KitLib::MicSpec::Position::Far)
+            rank += 2;
+        return rank;
+    }
+    return 300;
+}
+
+bool isBetterPreviewSampleVariant(const KitLib::SampleVariantSpec& candidate, const KitLib::SampleVariantSpec& current) {
+    const int candidateRank = getPreviewMicRank(candidate);
+    const int currentRank = getPreviewMicRank(current);
+    if (candidateRank != currentRank) 
+        return candidateRank < currentRank;
+
+    const int rawCompare = candidate.micSpec.raw.compareIgnoreCase(current.micSpec.raw);
+    if (rawCompare != 0)
+        return rawCompare < 0;
+
+    if (candidate.fileChannelStart != current.fileChannelStart)
+        return candidate.fileChannelStart < current.fileChannelStart;
+
+    return candidate.sampleFileName.compareIgnoreCase(current.sampleFileName) < 0;
+}
+
 } // namespace
 
 juce::ThreadPoolJob::JobStatus DrumKitEngine::PreviewResolveJob::runJob() {
@@ -1634,6 +1691,18 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     if (artCode.isNotEmpty())
         artSpec = inst->findArticulation(artCode);
 
+    if (artSpec == nullptr && artCode.isNotEmpty()) {
+        const auto requestedBase = artCode.upToFirstOccurrenceOf("[", false, false);
+        if (requestedBase.isNotEmpty()) {
+            for (const auto& candidate : inst->articulationSpecs) {
+                if (candidate != nullptr && candidate->codeRaw.upToFirstOccurrenceOf("[", false, false) == requestedBase) {
+                    artSpec = candidate.get();
+                    break;
+                }
+            }
+        }
+    }
+
     if (artSpec == nullptr && !inst->articulationSpecs.empty())
         artSpec = inst->articulationSpecs[0].get();
 
@@ -1653,13 +1722,22 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     if (bestLayer == nullptr || bestLayer->sampleVariantSpecs.empty())
         return std::nullopt;
 
-    auto& sampleVariant = bestLayer->sampleVariantSpecs[0];
-    if (!sampleVariant->isValid())
-        return std::nullopt;
+    KitLib::SampleVariantSpec* bestVariant = nullptr;
+    for (auto& sampleVariant : bestLayer->sampleVariantSpecs) {
+        if (sampleVariant == nullptr || !sampleVariant->isValid()) continue;
+
+        if (bestVariant == nullptr || isBetterPreviewSampleVariant(*sampleVariant, *bestVariant))
+            bestVariant = sampleVariant.get();
+    }
+
+    if (bestVariant == nullptr) return std::nullopt;
 
     PreviewTarget target;
-    target.sampleFile = sampleVariant->sampleFile;
-    target.volumeTrimDb = sampleVariant->volumeTrimDb;
+    target.sampleFile = bestVariant->sampleFile;
+    target.micCode = bestVariant->micSpec.raw;
+    target.fileChannelStart = juce::jmax(0, bestVariant->fileChannelStart);
+    target.fileChannelCount = bestVariant->fileChannelCount > 0 ? bestVariant->fileChannelCount : bestVariant->micSpec.channels;
+    target.volumeTrimDb = bestVariant->volumeTrimDb;
     return target;
 }
 
@@ -1677,11 +1755,26 @@ void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::ui
     loadSpec.volumeTrimDb = 0.0f;
     loadSpec.preprocessTag = "preview";
 
-    loader->requestAsyncLoad(loadSpec, [this, gain](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
-        if (buffer == nullptr)
-            return;
+    const int fileChannelStart = juce::jmax(0, target.fileChannelStart);
+    const int fileChannelCount = target.fileChannelCount;
+
+    loader->requestAsyncLoad(loadSpec, [this, gain, fileChannelStart, fileChannelCount](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+        if (buffer == nullptr || buffer->getNumChannels() <= 0 || buffer->getNumSamples() <= 0) return;
+
+        const int sourceChannels = buffer->getNumChannels();
+        const int sourceStart = juce::jlimit(0, sourceChannels - 1, fileChannelStart);
+        const int availableChannels = sourceChannels - sourceStart;
+        const int selectedChannels = juce::jlimit(1, availableChannels, fileChannelCount > 0 ? fileChannelCount : availableChannels);
+
+        auto selectedBuffer = std::make_shared<juce::AudioBuffer<float>>(2, buffer->getNumSamples());
+        selectedBuffer->copyFrom(0, 0, *buffer, sourceStart, 0, buffer->getNumSamples());
+        if (selectedChannels >= 2)
+            selectedBuffer->copyFrom(1, 0, *buffer, sourceStart + 1, 0, buffer->getNumSamples());
+        else
+            selectedBuffer->copyFrom(1, 0, *buffer, sourceStart, 0, buffer->getNumSamples());
+
         const juce::SpinLock::ScopedLockType scopedLock(this->previewLock);
-        this->previewBuffer = buffer;
+        this->previewBuffer = std::move(selectedBuffer);
         this->previewSampleRate = sampleRate;
         this->previewGain = gain;
         this->previewReadPos.store(0);
