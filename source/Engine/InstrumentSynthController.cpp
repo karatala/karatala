@@ -14,8 +14,7 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
         if (!this->ccToArticulationMask[ccNum]) return;
         this->handleController(midiMessage.getChannel(), ccNum, midiMessage.getControllerValue());
     }
-    else if (midiMessage.isAftertouch())
-        this->handleAftertouch(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
+    else if (midiMessage.isAftertouch()) this->handleAftertouch(midiMessage.getChannel(), midiMessage.getNoteNumber(), midiMessage.getAfterTouchValue());
  
     else if (midiMessage.isAllNotesOff() || midiMessage.isAllSoundOff()) this->allNotesOff(midiMessage.getChannel(), true);
 
@@ -35,12 +34,76 @@ void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
     if (paVal > 0) this->handleAftertouch(midiChannel, midiNoteNumber, paVal);
 }
 
+int InstrumentSynth::getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
+    switch (dimensionType) {
+        case KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose: return art.pocValue;
+        case KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim: return art.zoneCenterRimValue;
+        case KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge: return art.zoneBowEdgeValue;
+        default: return -1;
+    }
+}
+
+InstrumentSynth::ArtRtIdx InstrumentSynth::selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const {
+    if (baseArtIdx < 0 || static_cast<int>(baseArtIdx) >= static_cast<int>(this->runtimeArticulations.size()))
+        return baseArtIdx;
+
+    const auto& baseArt = this->runtimeArticulations[static_cast<size_t>(baseArtIdx)];
+    const int clampedValue = juce::jlimit(0, 127, controllerValue);
+
+    for (int pass = 0; pass < 2; ++pass) {
+        const bool relaxExpressionMatch = pass > 0;
+        ArtRtIdx bestAboveIdx = -1;
+        int bestAboveValue = 128;
+        ArtRtIdx bestBelowIdx = -1;
+        int bestBelowValue = -1;
+
+        for (size_t idx = 0; idx < this->runtimeArticulations.size(); ++idx) {
+            const auto& candidate = this->runtimeArticulations[idx];
+            const int candidateValue = this->getRuntimeExpressionValue(candidate, dimensionType);
+            if (candidateValue < 0) continue;
+
+            if (dimensionType == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose) {
+                if (candidate.nameId != baseArt.nameId) continue;
+            } else if (dimensionType == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim
+                    || dimensionType == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge) {
+                if (!relaxExpressionMatch && candidate.exprId != baseArt.exprId) continue;
+            } else {
+                continue;
+            }
+
+            const auto candidateIdx = static_cast<ArtRtIdx>(idx);
+            if (candidateValue >= clampedValue && candidateValue < bestAboveValue) {
+                bestAboveValue = candidateValue;
+                bestAboveIdx = candidateIdx;
+            }
+            if (candidateValue < clampedValue && candidateValue > bestBelowValue) {
+                bestBelowValue = candidateValue;
+                bestBelowIdx = candidateIdx;
+            }
+        }
+
+        if (bestAboveIdx >= 0) return bestAboveIdx;
+        if (bestBelowIdx >= 0) return bestBelowIdx;
+    }
+
+    return baseArtIdx;
+}
+
+bool InstrumentSynth::controllerCanTransitionExistingVoices(int controllerNumber) const {
+    for (const auto& controller : this->instrumentSlot.controllers) {
+        if (controller.number == controllerNumber)
+            return controller.codeIdx == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose;
+    }
+    return false;
+}
+
 void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
     if (this->parent == nullptr
         || this->getType() != KitLib::InstrumentSpec::Type::HiHat
         || controllerNumber < 0
         || controllerNumber >= static_cast<int>(this->ccToArticulationMask.size())
-        || !this->ccToArticulationMask[static_cast<size_t>(controllerNumber)]) {
+        || !this->ccToArticulationMask[static_cast<size_t>(controllerNumber)]
+        || !this->controllerCanTransitionExistingVoices(controllerNumber)) {
         return;
     }
 
@@ -76,23 +139,15 @@ void InstrumentSynth::processPendingHiHatControllers() {
         return;
 
     const float smoothingSec = this->parent->getEngineSettings().hihatControllerSmoothingSec.load();
-    const uint64_t smoothingSamples = static_cast<uint64_t>(
-        juce::jmax(0.0, std::round(smoothingSec * juce::jmax(1.0, this->sampleRate))));
+    const uint64_t smoothingSamples = static_cast<uint64_t>(juce::jmax(0.0, std::round(smoothingSec * juce::jmax(1.0, this->sampleRate))));
     for (size_t controllerIdx = 0; controllerIdx < this->pendingCcTransition.size(); ++controllerIdx) {
-        if (!this->pendingCcTransition[controllerIdx])
-            continue;
-        if (smoothingSamples > 0
-            && this->renderedSampleCount - this->lastCcProcessedSample[controllerIdx] < smoothingSamples) {
-            continue;
-        }
+        if (!this->pendingCcTransition[controllerIdx]) continue;
+        if (smoothingSamples > 0 && this->renderedSampleCount - this->lastCcProcessedSample[controllerIdx] < smoothingSamples) continue;
 
         this->pendingCcTransition[controllerIdx] = false;
         this->hasProcessedCcTransition[controllerIdx] = true;
         this->lastCcProcessedSample[controllerIdx] = this->renderedSampleCount;
-        this->processHiHatControllerTransition(
-            this->pendingCcMidiChannel[controllerIdx],
-            static_cast<int>(controllerIdx),
-            this->pendingCcValue[controllerIdx]);
+        this->processHiHatControllerTransition(this->pendingCcMidiChannel[controllerIdx], static_cast<int>(controllerIdx), this->pendingCcValue[controllerIdx]);
     }
 }
 
@@ -608,9 +663,13 @@ int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
             for (auto ccNum : pair->second) {
                 if (!this->ccToArticulationMask[ccNum]) continue;
                 const auto ccVal = this->parent->getLatestContinuousControllerValue(ccNum);
-                const auto& mapArr = this->ccToArticulationTable[ccNum];
-                artIdx = (int)mapArr[ccVal];
-                // LOG(Debug, "CC " + juce::String(ccNum) + " value " + juce::String(ccVal) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ") for note " + juce::String(midiNoteNumber) );
+
+                for (const auto& controller : this->instrumentSlot.controllers) {
+                    if (controller.number != static_cast<int>(ccNum)) continue;
+                    if (std::find(controller.notes.begin(), controller.notes.end(), static_cast<uint8_t>(midiNoteNumber)) == controller.notes.end()) continue;
+                    artIdx = this->selectArticulationForController(static_cast<ArtRtIdx>(artIdx), controller.codeIdx, ccVal);
+                    break;
+                }
             }
         }
     }
@@ -775,8 +834,7 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
         if (!voice->isPlayingChannel(midiChannel)) continue;
 
         if (voice->artNameId == art.nameId && voice->artExprId == art.exprId) {
-            if (newVelocity >= voice->getVelocityGain() - 0.05f)
-                voice->requestFadeOut(polyphonyCrossfadeSec);
+            if (newVelocity >= voice->getVelocityGain() - 0.05f) voice->requestFadeOut(polyphonyCrossfadeSec);
             continue;
         }
 
@@ -806,12 +864,10 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     const float newVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, newVelocity), -100.0f);
 
     for (const auto& se : layer.samples) {
-        if (!se.sound || se.variantIdx != chosenVariant)
-            continue;
+        if (!se.sound || se.variantIdx != chosenVariant) continue;
 
         const auto& env = se.sound->decayEnvelope;
-        if (!env.isValid())
-            continue;
+        if (!env.isValid()) continue;
 
         const bool isDirect = se.sound->sampleVariantSpec
             && se.sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
@@ -824,8 +880,7 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
         }
     }
 
-    if (!hasPeak)
-        return;
+    if (!hasPeak) return;
 
     // Stack-allocated flat arrays instead of std::unordered_map/set — avoids
     // heap allocation on every note-on. 128 entries covers the maximum voice
@@ -836,20 +891,15 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     int groupCount = 0;
 
     for (auto* voice : this->voices) {
-        if (!voice || !voice->isVoiceActive())
-            continue;
-        if (voice->getCurrentlyPlayingNote() != midiNoteNumber)
-            continue;
-        if (!(midiChannel <= 0 || voice->isPlayingChannel(midiChannel)))
-            continue;
+        if (!voice || !voice->isVoiceActive()) continue;
+        if (voice->getCurrentlyPlayingNote() != midiNoteNumber) continue;
+        if (!(midiChannel <= 0 || voice->isPlayingChannel(midiChannel))) continue;
 
         auto* oldSound = voice->getCurrentlyPlayingSound();
-        if (oldSound == nullptr)
-            continue;
+        if (oldSound == nullptr) continue;
 
         const auto& oldEnv = oldSound->decayEnvelope;
-        if (!oldEnv.isValid())
-            continue;
+        if (!oldEnv.isValid()) continue;
 
         const double oldSrcRate = oldSound->sampleRate > 0.0 ? oldSound->sampleRate : 44100.0;
         const float elapsedMs = static_cast<float>((voice->sourceSamplePosition / oldSrcRate) * 1000.0);
@@ -876,12 +926,10 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
             cullTimes[cullCount++] = groups[idx].noteOnTime;
     }
 
-    if (cullCount == 0)
-        return;
+    if (cullCount == 0) return;
 
     for (auto* voice : this->voices) {
-        if (!voice || !voice->isVoiceActive())
-            continue;
+        if (!voice || !voice->isVoiceActive()) continue;
 
         for (int idx = 0; idx < cullCount; ++idx) {
             if (voice->noteOnTime == cullTimes[idx]) {

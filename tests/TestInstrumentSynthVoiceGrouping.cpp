@@ -71,6 +71,10 @@ KitLayout::InstrumentSlot makeHiHatSlot() {
     KitLayout::InstrumentSlot::ArticulationTrigger pedalTrigger { "pedal" };
     pedalTrigger.notes.push_back(44);
     slot.articulations.push_back(std::move(pedalTrigger));
+
+    KitLayout::InstrumentSlot::ContinuousController pedalController { 4, "pdl_opn_cls" };
+    pedalController.notes.push_back(42);
+    slot.controllers.push_back(std::move(pedalController));
     return slot;
 }
 
@@ -86,6 +90,26 @@ KitLayout::InstrumentSlot makeImplicitHiHatExpressionSlot() {
     KitLayout::InstrumentSlot::ContinuousController pedalController { 4, "pdl_opn_cls" };
     pedalController.notes.push_back(22);
     slot.controllers.push_back(std::move(pedalController));
+    return slot;
+}
+
+KitLayout::InstrumentSlot makeHiHatZoneRemapSlot() {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "hihat1";
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+
+    KitLayout::InstrumentSlot::ArticulationTrigger bowOpen { "bow[open]" };
+    bowOpen.notes.push_back(46);
+    slot.articulations.push_back(std::move(bowOpen));
+
+    KitLayout::InstrumentSlot::ArticulationTrigger bowTight { "bow[tight]" };
+    bowTight.notes.push_back(42);
+    slot.articulations.push_back(std::move(bowTight));
+
+    KitLayout::InstrumentSlot::ContinuousController zoneController { 19, "zon_bow_edg" };
+    zoneController.notes.push_back(42);
+    zoneController.notes.push_back(46);
+    slot.controllers.push_back(std::move(zoneController));
     return slot;
 }
 
@@ -398,6 +422,40 @@ TEST_CASE("InstrumentSynth - implicit zon_bow_edg points route bow and edge on o
 
     CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 17, 10) == "bow");
     CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 17, 90) == "edge");
+}
+
+TEST_CASE("InstrumentSynth - zone controller siblings preserve hihat note expression", "[InstrumentSynth][ExpressionPoints][InstrumentMap]") {
+    DrumKitEngine engine;
+    const auto slot = makeHiHatZoneRemapSlot();
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeInstrumentMeta() };
+    instrument.getOrAddArticulation("edge[open]");
+    instrument.getOrAddArticulation("edge[tight]");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    InstrumentSynth::ArticulationNameRemap remap;
+    remap[bowId] = edgeId;
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap);
+
+    const int openIdx = synth.resolveArticulation(46);
+    const int tightIdx = synth.resolveArticulation(42);
+    REQUIRE(openIdx >= 0);
+    REQUIRE(tightIdx >= 0);
+    CHECK(synth.getArtName(openIdx) == "edge[open]");
+    CHECK(synth.getArtName(tightIdx) == "edge[tight]");
+}
+
+TEST_CASE("InstrumentSynth - non-pedal hihat controller does not trigger live transition", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
+    ControllerTransitionFixture fixture;
+    InstrumentSynthTestAccess::configureController(fixture.synth, 19, 1, 0);
+
+    fixture.synth.handleController(1, 19, 10);
+
+    const auto counters = fixture.synth.getHiHatTransitionCounters();
+    CHECK(counters.processed == 0);
+    CHECK(fixture.tightVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
 }
 TEST_CASE("InstrumentSynth - controller uses accepted per-voice tail replacement", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
     ControllerTransitionFixture fixture;

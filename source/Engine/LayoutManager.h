@@ -30,9 +30,9 @@ struct KitLayout {
 
     static ExpressionPointMap getDefaultExpressionPoints() {
         return {
-            { "pdl_opn_cls", { { "open", 24 }, { "half", 52 }, { "close", 78 }, { "tight", 85 }, { "pedal", 85 } } },
-            { "zon_ctr_rim", { { "center", 24 }, { "rim", 85 } } },
-            { "zon_bow_edg", { { "bow", 24 }, { "edge", 85 } } },
+            { "pdl_opn_cls", { { "open", uint8_t{24} }, { "half", uint8_t{52} }, { "close", uint8_t{78} }, { "tight", uint8_t{85} }, { "pedal", uint8_t{85} } } },
+            { "zon_ctr_rim", { { "center", uint8_t{24} }, { "rim", uint8_t{85} } } },
+            { "zon_bow_edg", { { "bow", uint8_t{24} }, { "edge", uint8_t{85} } } },
         };
     }
 

@@ -263,7 +263,7 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
     return bindings;
 }
 
-void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
+void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, bool updateNoteRoutes, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
     if (artSpec == nullptr || sourceInstrument == nullptr) return;
 
     ArtRtIdx artIdx = -1;
@@ -278,7 +278,9 @@ void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation&
     } else {
         this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
     }
-    for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artIdx;
+    if (updateNoteRoutes) {
+        for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artIdx;
+    }
 }
 
 void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing) {
@@ -297,10 +299,10 @@ void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulatio
             LOG(Info, "    resolved: layout='" + binding.layoutArt.codeRaw + "' -> artSpec='" + binding.resolvedSpec->codeRaw
                 + "' (nameId=" + juce::String((int)binding.resolvedSpec->nameId) + " exprId=" + juce::String((int)binding.resolvedSpec->exprId) + ")");
         }
-        this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, binding.resolvedSpec, loadSamples, createIfMissing, foundCcDimensions, skippedMicCodes);
+        this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, binding.resolvedSpec, loadSamples, createIfMissing, true, foundCcDimensions, skippedMicCodes);
 
         for (auto* siblingSpec : binding.controllerSiblingSpecs)
-            this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, siblingSpec, loadSamples, createIfMissing, foundCcDimensions, skippedMicCodes);
+            this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, siblingSpec, loadSamples, createIfMissing, false, foundCcDimensions, skippedMicCodes);
     }
 
     if (loadSamples && !skippedMicCodes.empty() && LOG_ENABLED(Notice)) {
@@ -378,6 +380,16 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
         const auto values = this->getEffectiveExpressionValues(*artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose);
         if (!values.empty())
             artRt.pocValue = static_cast<int>(*std::max_element(values.begin(), values.end()));
+    }
+    if (artRt.zoneCenterRimValue < 0) {
+        const auto values = this->getEffectiveExpressionValues(*artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim);
+        if (!values.empty())
+            artRt.zoneCenterRimValue = static_cast<int>(*std::max_element(values.begin(), values.end()));
+    }
+    if (artRt.zoneBowEdgeValue < 0) {
+        const auto values = this->getEffectiveExpressionValues(*artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge);
+        if (!values.empty())
+            artRt.zoneBowEdgeValue = static_cast<int>(*std::max_element(values.begin(), values.end()));
     }
     this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
 }

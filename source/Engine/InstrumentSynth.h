@@ -215,6 +215,8 @@ public:
         // Higher value = more closed/tight = stronger (mutes articulations with lower pocValue).
         // -1 = not a PedalOpenClose articulation.
         int pocValue = -1;
+        int zoneCenterRimValue = -1;
+        int zoneBowEdgeValue = -1;
         // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
         std::array<VelLayerIdx, 128> velocityToLayer; // -1 means no layer
         std::vector<VelocityLayerRuntime> layers;
@@ -555,7 +557,7 @@ private:
     void rebuildArtLookupCache();
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
-    void applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
+    void applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, bool updateNoteRoutes, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
     std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
@@ -576,6 +578,9 @@ private:
     );
     void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
+    int getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
+    ArtRtIdx selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const;
+    bool controllerCanTransitionExistingVoices(int controllerNumber) const;
 
     uint8_t chooseVariantGroup(VelocityLayerRuntime& layer);
     bool hasAnyLoadedVariant(const VelocityLayerRuntime& layer) const;
