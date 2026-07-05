@@ -36,7 +36,7 @@ void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
 
 int InstrumentSynth::getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
     switch (dimensionType) {
-        case KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose: return art.pocValue;
+        case KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose: return art.pedalOpenCloseValue;
         case KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim: return art.zoneCenterRimValue;
         case KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge: return art.zoneBowEdgeValue;
         default: return -1;
@@ -189,7 +189,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     std::array<int, 256> pocByArticulation {};
     const size_t articulationCount = juce::jmin(this->runtimeArticulations.size(), pocByArticulation.size());
     for (size_t articulationIdx = 0; articulationIdx < articulationCount; ++articulationIdx)
-        pocByArticulation[articulationIdx] = this->runtimeArticulations[articulationIdx].pocValue;
+        pocByArticulation[articulationIdx] = this->runtimeArticulations[articulationIdx].pedalOpenCloseValue;
 
     const int pendingArtIdx = this->pendingCcArticulation[controllerNumber];
     const int selectedArtIdx = pendingArtIdx >= 0
@@ -203,16 +203,16 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             boundaryHysteresisCc);
     int maximumMappedPoc = -1;
     int secondHighestMappedPoc = -1;
-    std::array<bool, 128> mappedPocValues {};
-    int mappedPocValueCount = 0;
+    std::array<bool, 128> mappedPedalOpenCloseValues {};
+    int mappedPedalOpenCloseValueCount = 0;
     for (int mappedControllerValue = 0; mappedControllerValue <= 127; ++mappedControllerValue) {
         const auto articulationIdx = mapArr[static_cast<size_t>(mappedControllerValue)];
         if (articulationIdx >= this->runtimeArticulations.size())
             continue;
-        const int mappedPoc = this->runtimeArticulations[articulationIdx].pocValue;
-        if (mappedPoc >= 0 && mappedPoc < static_cast<int>(mappedPocValues.size()) && !mappedPocValues[static_cast<size_t>(mappedPoc)]) {
-            mappedPocValues[static_cast<size_t>(mappedPoc)] = true;
-            ++mappedPocValueCount;
+        const int mappedPoc = this->runtimeArticulations[articulationIdx].pedalOpenCloseValue;
+        if (mappedPoc >= 0 && mappedPoc < static_cast<int>(mappedPedalOpenCloseValues.size()) && !mappedPedalOpenCloseValues[static_cast<size_t>(mappedPoc)]) {
+            mappedPedalOpenCloseValues[static_cast<size_t>(mappedPoc)] = true;
+            ++mappedPedalOpenCloseValueCount;
         }
         if (mappedPoc > maximumMappedPoc) {
             secondHighestMappedPoc = maximumMappedPoc;
@@ -223,10 +223,10 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     }
     const bool isMostClosedState = selectedArtIdx >= 0 && maximumMappedPoc >= 0
         && selectedArtIdx < static_cast<int>(this->runtimeArticulations.size())
-        && this->runtimeArticulations[static_cast<size_t>(selectedArtIdx)].pocValue >= maximumMappedPoc;
+        && this->runtimeArticulations[static_cast<size_t>(selectedArtIdx)].pedalOpenCloseValue >= maximumMappedPoc;
     const bool enteredMostClosedState = isMostClosedState && !this->hihatPedalClosedState[controllerNumber];
     this->hihatPedalClosedState[controllerNumber] = isMostClosedState;
-    const int openHalfPocLimit = mappedPocValueCount <= 2 || secondHighestMappedPoc < 0 ? maximumMappedPoc : secondHighestMappedPoc;
+    const int openHalfPocLimit = mappedPedalOpenCloseValueCount <= 2 || secondHighestMappedPoc < 0 ? maximumMappedPoc : secondHighestMappedPoc;
     float loudestLowerPocDb = -100.0f;
     bool hasAudibleLowerPocVoice = false;
     bool hasAudibleOpenHalfVoice = false;
@@ -236,14 +236,14 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         if (midiChannel > 0 && !voice->isPlayingChannel(midiChannel))
             continue;
 
-        int voicePocValue = -1;
+        int voicePedalOpenCloseValue = -1;
         for (const auto& articulation : this->runtimeArticulations) {
             if (articulation.nameId == voice->artNameId && articulation.exprId == voice->artExprId) {
-                voicePocValue = articulation.pocValue;
+                voicePedalOpenCloseValue = articulation.pedalOpenCloseValue;
                 break;
             }
         }
-        if (voicePocValue < 0 || voicePocValue >= maximumMappedPoc)
+        if (voicePedalOpenCloseValue < 0 || voicePedalOpenCloseValue >= maximumMappedPoc)
             continue;
 
         const float voiceAudibleDb = voice->getEstimatedCurrentDb();
@@ -251,7 +251,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             continue;
         hasAudibleLowerPocVoice = true;
         loudestLowerPocDb = juce::jmax(loudestLowerPocDb, voiceAudibleDb);
-        if (voicePocValue < openHalfPocLimit)
+        if (voicePedalOpenCloseValue < openHalfPocLimit)
             hasAudibleOpenHalfVoice = true;
     }
     if (hasAudibleOpenHalfVoice)
@@ -485,7 +485,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         }
 
         const auto& currentArt = this->runtimeArticulations[static_cast<size_t>(currentArtIdx)];
-        const auto transitionDirection = HiHatTransitionPolicy::getDirection(currentArt.pocValue, newArt.pocValue);
+        const auto transitionDirection = HiHatTransitionPolicy::getDirection(currentArt.pedalOpenCloseValue, newArt.pedalOpenCloseValue);
         const float transitionCrossfadeSec = transitionDirection == HiHatTransitionPolicy::Direction::Closing
             ? closeCrossfadeSec
             : openCrossfadeSec;
@@ -544,8 +544,8 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     const auto footSampleMode = settings.hihatFootSampleMode.load();
     const auto controllerDirection = cachedArtIdx >= 0 && cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())
         ? HiHatTransitionPolicy::getDirection(
-            this->runtimeArticulations[static_cast<size_t>(cachedArtIdx)].pocValue,
-            this->runtimeArticulations[static_cast<size_t>(newArtIdx)].pocValue)
+            this->runtimeArticulations[static_cast<size_t>(cachedArtIdx)].pedalOpenCloseValue,
+            this->runtimeArticulations[static_cast<size_t>(newArtIdx)].pedalOpenCloseValue)
         : HiHatTransitionPolicy::Direction::Unknown;
     const bool isClosingTransition = controllerDirection == HiHatTransitionPolicy::Direction::Closing;
     const bool shouldTriggerPedal = footSampleMode != HiHatFootSampleMode::Off
@@ -775,7 +775,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRu
     // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
     // fades out ringing voices from more-open articulations.
     if (this->type == KitLib::InstrumentSpec::Type::HiHat)
-        this->chokeHiHatVoicesByPoc(art.pocValue, closeCrossfadeSec);
+        this->chokeHiHatVoicesByPoc(art.pedalOpenCloseValue, closeCrossfadeSec);
 
     bool anyStarted = false;
     for (const auto& se : layer.samples) {
@@ -925,10 +925,10 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     }
 }
 
-void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec) {
-    // newArtPocValue < 0 means the triggering articulation carries no poc rank
+void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float fadeTimeSec) {
+    // newArtPedalOpenCloseValue < 0 means the triggering articulation carries no poc rank
     // (e.g. a non-hi-hat-openness hit) — nothing to do.
-    if (newArtPocValue < 0) return;
+    if (newArtPedalOpenCloseValue < 0) return;
 
     for (auto* voice : this->voices) {
         if (!voice || !voice->isVoiceActive()) continue;
@@ -938,22 +938,22 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSe
 
         // Look up the poc rank stored in the matching ArticulationRuntime.
         // artNameId / artExprId are stamped onto the voice when it starts.
-        int voicePocValue = -1;
+        int voicePedalOpenCloseValue = -1;
         for (const auto& art : this->runtimeArticulations) {
             if (art.nameId == voice->artNameId && art.exprId == voice->artExprId) {
-                voicePocValue = art.pocValue;
+                voicePedalOpenCloseValue = art.pedalOpenCloseValue;
                 break;
             }
         }
 
-        if (voicePocValue < 0) continue; // voice's articulation has no poc rank — skip
+        if (voicePedalOpenCloseValue < 0) continue; // voice's articulation has no poc rank — skip
 
         // A strictly more-closed new hit (higher poc) chokes softer-ringing voices.
         // Equal-poc same-articulation retriggers are handled by existing cullMaskedVoices.
-        if (newArtPocValue > voicePocValue) {
+        if (newArtPedalOpenCloseValue > voicePedalOpenCloseValue) {
             if (LOG_ENABLED(Verbose))
-                LOG(Verbose, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePocValue)
-                    + " newPoc=" + juce::String(newArtPocValue)
+                LOG(Verbose, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePedalOpenCloseValue)
+                    + " newPoc=" + juce::String(newArtPedalOpenCloseValue)
                     + " note=" + juce::String(voice->getCurrentlyPlayingNote()));
             voice->requestFadeOut(fadeTimeSec);
         }

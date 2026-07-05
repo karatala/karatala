@@ -239,7 +239,7 @@ void PluginEditor::setupMapMode() {
         auto* layout = this->processorRef.getEngine().getKitLayout();
         if (layout) {
             layout->rebuildIndices();
-            this->processorRef.getEngine().setKitLayoutDirect(*layout, true);
+            this->processorRef.getEngine().rebuildMidiNoteRoutingFromLayout();
         }
         this->markDrumPadGridDirty();
         this->markInstrumentConfigDirty();

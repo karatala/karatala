@@ -38,12 +38,12 @@ int selectOpennessArticulation(std::span<const uint8_t, 128> articulationByCc,
         : currentArticulation;
 }
 
-Direction getDirection(int sourcePocValue, int targetPocValue) noexcept {
-    if (sourcePocValue < 0 || targetPocValue < 0)
+Direction getDirection(int sourcePedalOpenCloseValue, int targetPedalOpenCloseValue) noexcept {
+    if (sourcePedalOpenCloseValue < 0 || targetPedalOpenCloseValue < 0)
         return Direction::Unknown;
-    if (targetPocValue < sourcePocValue)
+    if (targetPedalOpenCloseValue < sourcePedalOpenCloseValue)
         return Direction::Opening;
-    if (targetPocValue > sourcePocValue)
+    if (targetPedalOpenCloseValue > sourcePedalOpenCloseValue)
         return Direction::Closing;
     return Direction::Unchanged;
 }

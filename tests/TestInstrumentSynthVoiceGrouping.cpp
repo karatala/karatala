@@ -39,6 +39,20 @@ struct InstrumentSynthTestAccess {
         return synth.getArtName(artIdx);
     }
 
+    static int runtimePedalOpenCloseValue(const InstrumentSynth& synth, const juce::String& articulationName) {
+        return runtimeExpressionValue(synth, articulationName, [](const auto& art) { return art.pedalOpenCloseValue; });
+    }
+
+    static int runtimeZoneBowEdgeValue(const InstrumentSynth& synth, const juce::String& articulationName) {
+        return runtimeExpressionValue(synth, articulationName, [](const auto& art) { return art.zoneBowEdgeValue; });
+    }
+
+    static size_t runtimeLayerCount(const InstrumentSynth& synth, const juce::String& articulationName) {
+        for (const auto& art : synth.runtimeArticulations)
+            if (art.getCodeRaw() == articulationName) return art.layers.size();
+        return 0;
+    }
+
     static void mapNote(InstrumentSynth& synth, int midiNoteNumber, InstrumentSynth::ArtRtIdx articulationIdx) {
         synth.noteToArticulation[static_cast<size_t>(midiNoteNumber)] = articulationIdx;
     }
@@ -60,6 +74,15 @@ struct InstrumentSynthTestAccess {
         voice.currentPlayingMidiChannel = 1;
         voice.currentlyPlayingSound = &sound;
         voice.startNote(60, 1.0f, &sound);
+    }
+
+private:
+    template <typename Getter>
+    static int runtimeExpressionValue(const InstrumentSynth& synth, const juce::String& articulationName, Getter getter) {
+        for (const auto& art : synth.runtimeArticulations)
+            if (art.getCodeRaw() == articulationName)
+                return getter(art);
+        return -1;
     }
 };
 
@@ -207,15 +230,15 @@ struct ControllerTransitionFixture {
 
         auto& articulations = InstrumentSynthTestAccess::articulations(this->synth);
         articulations.emplace_back(this->tightSpec.nameId, this->tightSpec.exprId);
-        articulations.back().pocValue = 90;
+        articulations.back().pedalOpenCloseValue = 90;
         articulations.back().layers.emplace_back();
         articulations.back().velocityToLayer.fill(0);
         articulations.emplace_back(this->openSpec.nameId, this->openSpec.exprId);
-        articulations.back().pocValue = 10;
+        articulations.back().pedalOpenCloseValue = 10;
         articulations.back().layers.emplace_back();
         articulations.back().velocityToLayer.fill(0);
         articulations.emplace_back(this->pedalSpec.nameId, this->pedalSpec.exprId);
-        articulations.back().pocValue = 90;
+        articulations.back().pedalOpenCloseValue = 90;
         articulations.back().layers.emplace_back();
         articulations.back().velocityToLayer.fill(0);
 
@@ -387,6 +410,38 @@ TEST_CASE("InstrumentSynth - slot expression points override implicit pdl_opn_cl
     CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 35) == "edge[tight]");
 }
 
+TEST_CASE("InstrumentSynth - routing rebuild refreshes implicit pdl_opn_cls runtime values", "[InstrumentSynth][ExpressionPoints]") {
+    DrumKitEngine engine;
+    auto slot = makeImplicitHiHatExpressionSlot();
+    InstrumentSynth synth { &engine, slot };
+    KitLib::InstrumentSpec instrument { nullptr, makeInstrumentMeta() };
+    auto* open = instrument.getOrAddArticulation("edge[open]");
+    instrument.getOrAddArticulation("edge[half]");
+    instrument.getOrAddArticulation("edge[close]");
+    auto* tight = instrument.getOrAddArticulation("edge[tight]");
+    open->getOrAddVelocityLayer(127);
+    tight->getOrAddVelocityLayer(127);
+
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    synth.loadInstrumentWithSources(&instrument, {}, { edgeId });
+    REQUIRE(InstrumentSynthTestAccess::runtimeLayerCount(synth, "edge[open]") == 1);
+    REQUIRE(InstrumentSynthTestAccess::runtimeLayerCount(synth, "edge[tight]") == 1);
+
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 90) == "edge[tight]");
+    CHECK(InstrumentSynthTestAccess::runtimePedalOpenCloseValue(synth, "edge[tight]") == 85);
+
+    slot.expressionPoints["pdl_opn_cls"]["open"] = 10;
+    slot.expressionPoints["pdl_opn_cls"]["half"] = 20;
+    slot.expressionPoints["pdl_opn_cls"]["close"] = 30;
+    slot.expressionPoints["pdl_opn_cls"]["tight"] = 40;
+    synth.rebuildRoutingFromLayout(slot);
+
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 35) == "edge[tight]");
+    CHECK(InstrumentSynthTestAccess::runtimePedalOpenCloseValue(synth, "edge[open]") == 10);
+    CHECK(InstrumentSynthTestAccess::runtimePedalOpenCloseValue(synth, "edge[tight]") == 40);
+    CHECK(InstrumentSynthTestAccess::runtimeLayerCount(synth, "edge[open]") == 1);
+    CHECK(InstrumentSynthTestAccess::runtimeLayerCount(synth, "edge[tight]") == 1);
+}
 TEST_CASE("InstrumentSynth - explicit expression folders override layout expression points", "[InstrumentSynth][ExpressionPoints]") {
     DrumKitEngine engine;
     auto slot = makeImplicitHiHatExpressionSlot();
@@ -405,6 +460,26 @@ TEST_CASE("InstrumentSynth - explicit expression folders override layout express
     CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 11) == "edge[half]");
 }
 
+TEST_CASE("InstrumentSynth - explicit expression folders override layout expression points after rebuild", "[InstrumentSynth][ExpressionPoints]") {
+    DrumKitEngine engine;
+    auto slot = makeImplicitHiHatExpressionSlot();
+
+    InstrumentSynth synth { &engine, slot };
+    KitLib::InstrumentSpec instrument { nullptr, makeInstrumentMeta() };
+    auto* open = instrument.getOrAddArticulation("edge[open]");
+    open->addExpressionDimensionValue("pdl_opn_cls", 10);
+    instrument.getOrAddArticulation("edge[half]");
+
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    synth.loadInstrumentWithSources(&instrument, {}, { edgeId });
+
+    slot.expressionPoints["pdl_opn_cls"]["open"] = 80;
+    synth.rebuildRoutingFromLayout(slot);
+
+    CHECK(InstrumentSynthTestAccess::runtimePedalOpenCloseValue(synth, "edge[open]") == 10);
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 10) == "edge[open]");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 4, 11) == "edge[half]");
+}
 TEST_CASE("InstrumentSynth - implicit zon_bow_edg points route bow and edge on one cymbal note", "[InstrumentSynth][ExpressionPoints]") {
     DrumKitEngine engine;
     const auto slot = makeImplicitBowEdgeExpressionSlot();
@@ -424,6 +499,33 @@ TEST_CASE("InstrumentSynth - implicit zon_bow_edg points route bow and edge on o
     CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 17, 90) == "edge");
 }
 
+TEST_CASE("InstrumentSynth - routing rebuild refreshes implicit zon_bow_edg runtime values", "[InstrumentSynth][ExpressionPoints]") {
+    DrumKitEngine engine;
+    auto slot = makeImplicitBowEdgeExpressionSlot();
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = "ride-test";
+    meta.type = KitLib::InstrumentSpec::Type::Ride;
+    KitLib::InstrumentSpec instrument { nullptr, meta };
+    instrument.getOrAddArticulation("bow");
+    instrument.getOrAddArticulation("edge");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId });
+
+    CHECK(InstrumentSynthTestAccess::runtimeZoneBowEdgeValue(synth, "bow") == 24);
+    CHECK(InstrumentSynthTestAccess::runtimeZoneBowEdgeValue(synth, "edge") == 85);
+
+    slot.expressionPoints["zon_bow_edg"]["bow"] = 5;
+    slot.expressionPoints["zon_bow_edg"]["edge"] = 100;
+    synth.rebuildRoutingFromLayout(slot);
+
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 17, 4) == "bow");
+    CHECK(InstrumentSynthTestAccess::mappedArticulationName(synth, 17, 90) == "edge");
+    CHECK(InstrumentSynthTestAccess::runtimeZoneBowEdgeValue(synth, "bow") == 5);
+    CHECK(InstrumentSynthTestAccess::runtimeZoneBowEdgeValue(synth, "edge") == 100);
+}
 TEST_CASE("InstrumentSynth - zone controller siblings preserve hihat note expression", "[InstrumentSynth][ExpressionPoints][InstrumentMap]") {
     DrumKitEngine engine;
     const auto slot = makeHiHatZoneRemapSlot();
@@ -494,9 +596,9 @@ TEST_CASE("InstrumentSynth - controller smoothing retains the latest value", "[I
     synth.setCurrentPlaybackSampleRate(1000.0);
     auto& articulations = InstrumentSynthTestAccess::articulations(synth);
     articulations.emplace_back(1, 1);
-    articulations.back().pocValue = 10;
+    articulations.back().pedalOpenCloseValue = 10;
     articulations.emplace_back(1, 2);
-    articulations.back().pocValue = 90;
+    articulations.back().pedalOpenCloseValue = 90;
     InstrumentSynthTestAccess::configureController(synth, 4, 0, 1);
 
     synth.handleController(1, 4, 10);
@@ -573,8 +675,8 @@ TEST_CASE("InstrumentSynth - audible open tail creates a level-matched pedal eve
     fixture.engine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::CloseOnly);
     fixture.engine.engineSettings.hihatTransitionAttackGuardSec.store(0.0f);
     auto& articulations = InstrumentSynthTestAccess::articulations(fixture.synth);
-    articulations[0].pocValue = 85;
-    articulations[2].pocValue = 85;
+    articulations[0].pedalOpenCloseValue = 85;
+    articulations[2].pedalOpenCloseValue = 85;
     articulations[0].layers[0].samples.clear();
     fixture.synth.startVoice(fixture.openVoice, &fixture.openSound, 1, 42, 0.8f);
     InstrumentSynthTestAccess::setVoiceArticulation(*fixture.openVoice, fixture.openSpec);
@@ -611,8 +713,8 @@ TEST_CASE("InstrumentSynth - tight-only playback does not create an implicit ped
     ControllerTransitionFixture fixture;
     fixture.engine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::CloseOnly);
     auto& articulations = InstrumentSynthTestAccess::articulations(fixture.synth);
-    articulations[0].pocValue = 85;
-    articulations[2].pocValue = 85;
+    articulations[0].pedalOpenCloseValue = 85;
+    articulations[2].pedalOpenCloseValue = 85;
     InstrumentSynthTestAccess::configureCachedController(fixture.synth, 4, 10, 1);
 
     fixture.synth.handleController(1, 4, 100);

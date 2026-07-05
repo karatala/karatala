@@ -141,6 +141,38 @@ instruments:
     CHECK(serialized.contains("pdl_opn_cls: { open: 20, half: 50, close: 76, tight: 90, pedal: 90 }"));
 }
 
+TEST_CASE("KitLayout - invalid expression point scalar values warn and are skipped", "[yaml][ExpressionPoints]") {
+    const juce::String yaml = R"yaml(
+id: expr-bad-values
+name: Expression Bad Values
+expressionPoints:
+  pdl_opn_cls:
+    open: nope
+    half: -1
+    close: 200
+    tight: 85
+instruments:
+  - id: ride1
+    display: Ride
+    articulations:
+      - { notes: [51], code: bow }
+)yaml";
+
+    auto parsed = LayoutTraits<KitLayout>::parseYaml(yaml);
+
+    REQUIRE(parsed.ok());
+    const auto warnings = parsed.error("\n");
+    CHECK(warnings.contains("expressionPoints.pdl_opn_cls.open"));
+    CHECK(warnings.contains("expressionPoints.pdl_opn_cls.half"));
+    CHECK(warnings.contains("expressionPoints.pdl_opn_cls.close"));
+
+    const auto& points = parsed.value.expressionPoints.at("pdl_opn_cls");
+    CHECK(points.find("open") == points.end());
+    CHECK(points.find("half") == points.end());
+    CHECK(points.find("close") == points.end());
+    REQUIRE(points.find("tight") != points.end());
+    CHECK(points.at("tight") == 85);
+}
 TEST_CASE("KitLayout - expression point validation warns for invalid controller data", "[yaml][ExpressionPoints]") {
     const juce::String yaml = R"yaml(
 id: expr-invalid

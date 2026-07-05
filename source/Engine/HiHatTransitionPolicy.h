@@ -55,7 +55,7 @@ int selectOpennessArticulation(std::span<const uint8_t, 128> articulationByCc,
                                int currentArticulation,
                                int boundaryHysteresisCc) noexcept;
 
-Direction getDirection(int sourcePocValue, int targetPocValue) noexcept;
+Direction getDirection(int sourcePedalOpenCloseValue, int targetPedalOpenCloseValue) noexcept;
 
 OffsetResult calculateDecayMatchedOffset(const OffsetInput& input) noexcept;
 

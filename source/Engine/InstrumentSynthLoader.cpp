@@ -183,6 +183,18 @@ bool InstrumentSynth::hasEffectiveExpressionValues(const KitLib::ArticulationSpe
     return !this->getEffectiveExpressionValues(artSpec, dimensionType).empty();
 }
 
+void InstrumentSynth::refreshRuntimeExpressionValues(const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt) {
+    auto maxExpressionValue = [this, &artSpec](KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) {
+        const auto values = this->getEffectiveExpressionValues(artSpec, dimensionType);
+        if (values.empty()) return -1;
+        return static_cast<int>(*std::max_element(values.begin(), values.end()));
+    };
+
+    artRt.pedalOpenCloseValue = maxExpressionValue(KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose);
+    artRt.zoneCenterRimValue = maxExpressionValue(KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim);
+    artRt.zoneBowEdgeValue = maxExpressionValue(KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge);
+}
+
 std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
     std::vector<ResolvedArticulationBinding> bindings;
 
@@ -247,11 +259,12 @@ void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation&
         LOG(Warning, "Skipping routing rebuild for '" + layoutArt.codeRaw + "' because runtime articulation '" + artSpec->codeRaw + "' is not loaded");
         return;
     }
+    auto& artRt = this->runtimeArticulations[artIdx];
     if (loadSamples) {
-        auto& artRt = this->runtimeArticulations[artIdx];
         artSpec->sortVelocityLayers();
         this->processArticulationSpec(sourceInstrument, layoutArt, artSpec, artRt, foundCcDimensions, skippedMicCodes);
     } else {
+        this->refreshRuntimeExpressionValues(*artSpec, artRt);
         this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
     }
     if (updateNoteRoutes) {
@@ -350,23 +363,7 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
     micRouting.mergeSkippedInto(skippedMicCodes);
     artRt.buildVelocityMapping();
 
-    // Populate pocValue from explicit folder metadata or layout/default pdl_opn_cls points.
-    // Higher value = more closed/tight. Use max of the values list (usually exactly one).
-    if (artRt.pocValue < 0) { // only set once; avoid overwriting if already populated by sibling pass
-        const auto values = this->getEffectiveExpressionValues(*artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose);
-        if (!values.empty())
-            artRt.pocValue = static_cast<int>(*std::max_element(values.begin(), values.end()));
-    }
-    if (artRt.zoneCenterRimValue < 0) {
-        const auto values = this->getEffectiveExpressionValues(*artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim);
-        if (!values.empty())
-            artRt.zoneCenterRimValue = static_cast<int>(*std::max_element(values.begin(), values.end()));
-    }
-    if (artRt.zoneBowEdgeValue < 0) {
-        const auto values = this->getEffectiveExpressionValues(*artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge);
-        if (!values.empty())
-            artRt.zoneBowEdgeValue = static_cast<int>(*std::max_element(values.begin(), values.end()));
-    }
+    this->refreshRuntimeExpressionValues(*artSpec, artRt);
     this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
 }
 

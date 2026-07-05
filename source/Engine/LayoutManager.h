@@ -186,6 +186,27 @@ struct LayoutTraits<MicLayout> {
 
 template <>
 struct LayoutTraits<KitLayout> {
+    static std::optional<uint8_t> parseExpressionPointValue(const YamlHelper::YamlNode& node, ParseResult<KitLayout>& result, const juce::String& context, const juce::String& code, const juce::String& label) {
+        if (!node.isScalar()) {
+            result.addWarning(context + ": expressionPoints." + code + "." + label + " must be a scalar integer from 0 to 127");
+            return std::nullopt;
+        }
+
+        const auto valueText = node.asString().trim();
+        if (valueText.isEmpty() || !valueText.containsOnly("0123456789")) {
+            result.addWarning(context + ": expressionPoints." + code + "." + label + " must be an integer from 0 to 127; got '" + node.asString() + "'");
+            return std::nullopt;
+        }
+
+        const auto value = valueText.getLargeIntValue();
+        if (value < 0 || value > 127) {
+            result.addWarning(context + ": expressionPoints." + code + "." + label + " must be between 0 and 127; got " + valueText);
+            return std::nullopt;
+        }
+
+        return static_cast<uint8_t>(value);
+    }
+
     static KitLayout::ExpressionPointMap parseExpressionPointsNode(const YamlHelper::YamlNode& node, ParseResult<KitLayout>& result, const juce::String& context) {
         KitLayout::ExpressionPointMap points;
         if (node.isNull())
@@ -217,12 +238,8 @@ struct LayoutTraits<KitLayout> {
                 }
 
                 const auto& valueNode = codeNode[labelKey];
-                if (!valueNode.isScalar()) {
-                    result.addWarning(context + ": expressionPoints." + code + "." + label + " must be a scalar integer");
-                    continue;
-                }
-
-                points[code][label] = static_cast<uint8_t>(juce::jlimit(0, 127, valueNode.asInt()));
+                if (const auto value = parseExpressionPointValue(valueNode, result, context, code, label); value.has_value())
+                    points[code][label] = *value;
             }
         }
         return points;

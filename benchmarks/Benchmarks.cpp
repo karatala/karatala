@@ -62,9 +62,9 @@ TEST_CASE("Hi-hat controller transition performance", "[benchmark][HiHatTransiti
 
     auto& articulations = InstrumentSynthTestAccess::articulations(synth);
     articulations.emplace_back(1, 1);
-    articulations.back().pocValue = 10;
+    articulations.back().pedalOpenCloseValue = 10;
     articulations.emplace_back(1, 2);
-    articulations.back().pocValue = 90;
+    articulations.back().pedalOpenCloseValue = 90;
     InstrumentSynthTestAccess::configureController(synth, 4);
 
     BENCHMARK("Process a 128-value hi-hat CC sweep") {
@@ -85,9 +85,9 @@ TEST_CASE("Hi-hat controller coalescing performance", "[benchmark][HiHatTransiti
 
     auto& articulations = InstrumentSynthTestAccess::articulations(synth);
     articulations.emplace_back(1, 1);
-    articulations.back().pocValue = 10;
+    articulations.back().pedalOpenCloseValue = 10;
     articulations.emplace_back(1, 2);
-    articulations.back().pocValue = 90;
+    articulations.back().pedalOpenCloseValue = 90;
     InstrumentSynthTestAccess::configureController(synth, 4);
 
     BENCHMARK("Coalesce a 128-message burst and process its latest value") {

@@ -212,9 +212,9 @@ public:
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
         // pdl_opn_cls value extracted from ArticulationSpec expression dimensions.
-        // Higher value = more closed/tight = stronger (mutes articulations with lower pocValue).
+        // Higher value = more closed/tight = stronger (mutes articulations with lower pedalOpenCloseValue).
         // -1 = not a PedalOpenClose articulation.
-        int pocValue = -1;
+        int pedalOpenCloseValue = -1;
         int zoneCenterRimValue = -1;
         int zoneBowEdgeValue = -1;
         // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
@@ -565,6 +565,7 @@ private:
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
     std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
+    void refreshRuntimeExpressionValues(const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt);
     void applyArticulationAliases(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {});
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
@@ -593,9 +594,9 @@ private:
     void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
     void processPendingHiHatControllers();
     bool triggerHiHatPedalSample(int midiChannel, float sourceAudibleDb);
-    // Hi-hat only: fade out active voices whose pocValue is strictly less than newArtPocValue,
+    // Hi-hat only: fade out active voices whose pedalOpenCloseValue is strictly less than newArtPedalOpenCloseValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
-    void chokeHiHatVoicesByPoc(int newArtPocValue, float fadeTimeSec);
+    void chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float fadeTimeSec);
 
     KitLib::ArticulationSpec* resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt);
 };

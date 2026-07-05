@@ -739,15 +739,12 @@ bool DrumKitEngine::applyKitLayout() {
                 }
 
                 auto* shadowSynth = this->instrumentSynthPtrs.back().get();
+                
                 shadowSynth->rebuildRoutingFromLayout(prepared.layoutSlot);
-
                 for (const auto& art : prepared.layoutSlot.articulations) {
-                    if (!shadowSynth->supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art)))
-                        continue;
-
+                    if (!shadowSynth->supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art))) continue;
                     for (const int note : art.notes) {
-                        if (note >= 0 && note < 128)
-                            this->instrumentSynthsByNote[note].push_back(shadowSynth);
+                        if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(shadowSynth);
                     }
                 }
             }
@@ -829,6 +826,31 @@ void DrumKitEngine::clearShadowSynths() {
 void DrumKitEngine::rebuildMidiNoteRoutingFromLayout() {
     const juce::ScopedLock graphLock(this->engineGraphLock);
     this->rebuildPrimaryInstrumentNoteRouting();
+
+    if (this->activeKitLayoutPtr != nullptr) {
+        for (int idx = this->primaryInstrumentSynthCount; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
+            auto* shadowSynth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
+            if (shadowSynth == nullptr) continue;
+
+            const KitLayout::InstrumentSlot* layoutSlot = nullptr;
+            for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
+                if (slot.id == shadowSynth->getId()) {
+                    layoutSlot = &slot;
+                    break;
+                }
+            }
+            if (layoutSlot == nullptr) continue;
+
+            shadowSynth->rebuildRoutingFromLayout(*layoutSlot);
+            for (const auto& art : layoutSlot->articulations) {
+                if (!shadowSynth->supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art))) continue;
+                for (const int note : art.notes) {
+                    if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(shadowSynth);
+                }
+            }
+        }
+    }
+
     this->buildNoteNameCache();
 }
 
@@ -1420,14 +1442,11 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     if (hasArtFilter && this->activeKitLayoutPtr != nullptr) {
         const auto normalizedArtName = ArticulationNameHelpers::normalizeArticulationName(artName);
         for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
-            if (slot.id != slotId)
-                continue;
+            if (slot.id != slotId) continue;
             for (const auto& art : slot.articulations) {
-                if (ArticulationNameHelpers::normalizeArticulationName(art.codeRaw) != normalizedArtName)
-                    continue;
+                if (ArticulationNameHelpers::normalizeArticulationName(art.codeRaw) != normalizedArtName) continue;
                 for (const auto note : art.notes) {
-                    if (note >= 0 && note < 128)
-                        targetNotes.push_back(note);
+                    if (note >= 0 && note < 128) targetNotes.push_back(note);
                 }
                 break;
             }

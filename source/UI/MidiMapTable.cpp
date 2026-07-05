@@ -2,6 +2,24 @@
 #include "UITheme.h"
 #include "UIHelpers.h"
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <map>
+#include <optional>
+
+namespace {
+
+std::optional<int> parseExpressionPointEditorValue(const juce::String& text) {
+    const auto trimmed = text.trim();
+    if (trimmed.isEmpty() || !trimmed.containsOnly("0123456789"))
+        return std::nullopt;
+
+    const auto value = trimmed.getLargeIntValue();
+    if (value < 0 || value > 127)
+        return std::nullopt;
+
+    return static_cast<int>(value);
+}
+
+} // namespace
 
 MidiMapTable::MidiMapTable() {
     this->layoutLabel.setText("Layout", juce::dontSendNotification);
@@ -265,9 +283,29 @@ void MidiMapTable::showExpressionCurvePopup(MapRow& row) {
         if (targetSlot == nullptr)
             return;
 
+        std::map<juce::String, int> parsedValues;
+        std::map<juce::String, int> previousEffectiveValues;
+        std::map<juce::String, bool> hadSlotOverrides;
         for (const auto& label : labels) {
-            const int value = juce::jlimit(0, 127, dlg->getTextEditorContents(label).getIntValue());
-            targetSlot->expressionPoints[code][label] = static_cast<uint8_t>(value);
+            const auto editorText = dlg->getTextEditorContents(label);
+            const auto parsed = parseExpressionPointEditorValue(editorText);
+            if (!parsed.has_value()) {
+                juce::AlertWindow::showMessageBoxAsync(
+                    juce::MessageBoxIconType::WarningIcon,
+                    "Invalid expression curve point",
+                    "'" + label + "' must be an integer from 0 to 127.");
+                return;
+            }
+
+            parsedValues[label] = *parsed;
+            previousEffectiveValues[label] = this->getEffectiveExpressionPointValue(*targetSlot, code, label);
+            hadSlotOverrides[label] = KitLayout::getExpressionPoint(targetSlot->expressionPoints, code, label).has_value();
+        }
+
+        for (const auto& label : labels) {
+            const int value = parsedValues[label];
+            if (hadSlotOverrides[label] || value != previousEffectiveValues[label])
+                targetSlot->expressionPoints[code][label] = static_cast<uint8_t>(value);
         }
 
         if (this->onLayoutReapplyRequested)

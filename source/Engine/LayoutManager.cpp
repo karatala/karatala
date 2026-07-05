@@ -8,24 +8,24 @@ MicLayout MicLayout::getDefault() {
 id: default
 name: default
 mics:
-  - name: Overheads # 1-2
+  - name: OH # 1-2
     code: ons
-  - name: Hi-Hat
+  - name: Hat1
     instrument: hihat1 # 3
     code: dtm
-  - name: Ride
+  - name: Rid1
     instrument: ride1 # 4
     code: dtm
-  - name: Kick In
+  - name: Kik In
     instrument: kick1 # 5
     code: dim
-  - name: Kick Out
+  - name: Kik Out
     instrument: kick1 # 6
     code: dom
-  - name: Snare Top # 7
+  - name: Snr1 Top # 7
     instrument: snare1
     code: dtm
-  - name: Snare Bottom # 8
+  - name: Snr1 Btm # 8
     instrument: snare1
     code: dbm
   - name: Tom1 # 9
@@ -43,37 +43,37 @@ mics:
   - name: Tom5 # 13
     instrument: tom5
     code: dtm
-  - name: Room Close # 14
+  - name: Amb Cls # 14
     code: rcm
-  - name: Room Far # 15-16
+  - name: Amb Far # 15-16
     code: rfs
-  - name: Overheads Mid-Side # 17-18
+  - name: OH MS # 17-18
     code: oni
-  - name: Overheads wide # 19-20
+  - name: OH wide # 19-20
     code: ows
-  - name: Hi-Hat Stax
+  - name: Hat2
     instrument: hihat2 # 21
     code: dtm
-  - name: Ride 2
+  - name: Rid2
     instrument: ride2 # 22
     code: dtm
-  - name: Octoban 1 # 23
+  - name: Oct1 # 23
     instrument: octoban1
     code: dtm
-  - name: Octoban 2 # 24
+  - name: Oct2 # 24
     instrument: octoban2
     code: dtm
-  - name: Aux 1 # 25
+  - name: Aux1 # 25
     code: dtm
-  - name: Aux 2 # 26
+  - name: Aux2 # 26
     code: dtm
-  - name: Aux 3 # 27
+  - name: Aux3 # 27
     code: dtm
-  - name: Aux 4 # 28
+  - name: Aux4 # 28
     code: dtm
-  - name: Stereo Aux 1 # 29-30
+  - name: LR Aux1 # 29-30
     code: dts
-  - name: Stereo Aux 2 # 31-32
+  - name: LR Aux2 # 31-32
     code: dts
 )yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
@@ -181,10 +181,10 @@ instruments:
     display: Hi-Hat Stax
     position: right
     articulations:
-      - { notes: [ 6], code: bow[tight] }
       - { notes: [10], code: bow[open] }
-      - { notes: [ 3], code: edge[tight] }
+      - { notes: [ 6], code: bow[tight] }
       - { notes: [ 7], code: edge[open] }
+      - { notes: [ 3], code: edge[tight] }
       - { notes: [ 8], code: pedal }
     controllers:
       - { notes: [ 6,10], code: pdl_opn_cls, number: 4 }
@@ -197,7 +197,7 @@ instruments:
       - { notes: [51], code: bow }
       - { notes: [59], code: edge }
     controllers:
-      - { code: zon_bow_edg, number: 17 }
+      - { notes: [51], code: zon_bow_edg, number: 17 }
 
   - id: ride2
     display: Ride 2
