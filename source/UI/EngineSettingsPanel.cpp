@@ -183,12 +183,6 @@ void EngineSettingsPanel::addPotCommon(const juce::String& name,
     entry->parameterPot->onDragEnd = [this] { this->flushPendingSettingsSave(); };
     this->contentComponent.addAndMakeVisible(*entry->parameterPot);
 
-    UIHelpers::configureControlButton(entry->resetButton, juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
-    entry->resetButton.onClick = [entry = entry.get()] {
-        entry->parameterPot->setValue(entry->defaultValue, juce::sendNotificationSync);
-    };
-    this->contentComponent.addAndMakeVisible(entry->resetButton);
-
     this->pots.push_back(std::move(entry));
 }
 
@@ -289,7 +283,7 @@ void EngineSettingsPanel::resized() {
 
     // Pot grid layout: each pot cell is potCellW x potCellH
     const int potCellW = 80;
-    const int potCellH = 90; // pot (50) + label (14) + textbox (14) + reset (12)
+    const int potCellH = 90;
     const int choiceCellW = 150;
     const int choiceCellH = 54;
     const int groupLabelHeight = 22;
@@ -331,8 +325,6 @@ void EngineSettingsPanel::resized() {
             auto& entry = this->pots[static_cast<size_t>(idx)];
 
             entry->parameterPot->setBounds(cellX, cellY, potCellW, potCellH - 2);
-            // Reset button at bottom-right corner
-            entry->resetButton.setBounds(cellX + potCellW - 18, cellY + potCellH - 16, 16, 14);
 
             ++col;
             if (col >= potsPerRow) {

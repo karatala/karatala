@@ -11,6 +11,7 @@ public:
     double getWheelStep() const { return this->wheelStep; }
     double getFineWheelStep() const { return this->fineWheelStep; }
 
+    void mouseDown(const juce::MouseEvent& event) override;
     void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
 
 private:

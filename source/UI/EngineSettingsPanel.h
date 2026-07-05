@@ -24,7 +24,6 @@ private:
 
     struct PotEntry {
         std::unique_ptr<ParameterPot> parameterPot;
-        juce::TextButton resetButton { "x" };
         RealtimeSetting<float>* target = nullptr;
         RealtimeSetting<int>* intTarget = nullptr;
         double defaultValue = 0.0;

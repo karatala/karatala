@@ -3,7 +3,20 @@
 void ParameterSlider::setInteraction(double defaultValue, double newWheelStep, double newFineWheelStep) {
     this->wheelStep = std::abs(newWheelStep);
     this->fineWheelStep = std::abs(newFineWheelStep);
-    this->setDoubleClickReturnValue(true, defaultValue, juce::ModifierKeys::noModifiers);
+    this->setDoubleClickReturnValue(false, defaultValue, juce::ModifierKeys::noModifiers);
+}
+
+void ParameterSlider::mouseDown(const juce::MouseEvent& event) {
+    if (event.mods.isRightButtonDown()) {
+        if (this->onDragStart)
+            this->onDragStart();
+        this->setValue(this->getDoubleClickReturnValue(), juce::sendNotificationSync);
+        if (this->onDragEnd)
+            this->onDragEnd();
+        return;
+    }
+
+    juce::Slider::mouseDown(event);
 }
 
 void ParameterSlider::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
