@@ -1781,12 +1781,7 @@ void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::ui
     });
 }
 
-void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey,
-                                                const juce::String& kitCodeRaw,
-                                                const juce::String& instCode,
-                                                const juce::String& artCode,
-                                                juce::uint8 resolveVelocity,
-                                                juce::uint8 playbackVelocity) {
+void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey, const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 resolveVelocity, juce::uint8 playbackVelocity) {
     auto target = this->resolvePreviewTarget(kitCodeRaw, instCode, artCode, resolveVelocity);
 
     {
@@ -1801,8 +1796,7 @@ void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey,
 }
 
 
-void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode,
-                                      const juce::String& artCode, juce::uint8 velocity) {
+void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity) {
     const auto cacheKey = this->makePreviewTargetCacheKey(kitCodeRaw, instCode, artCode, velocity);
     std::optional<PreviewTarget> cachedTarget;
 
@@ -1821,14 +1815,7 @@ void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce
     }
 
     const auto resolveVelocity = getPreviewVelocityForBucket(velocity);
-    this->previewResolveThreadPool.addJob(new PreviewResolveJob(*this,
-                                                                cacheKey,
-                                                                kitCodeRaw,
-                                                                instCode,
-                                                                artCode,
-                                                                resolveVelocity,
-                                                                velocity),
-                                          true);
+    this->previewResolveThreadPool.addJob(new PreviewResolveJob(*this, cacheKey, kitCodeRaw, instCode, artCode, resolveVelocity, velocity), true);
 }
 
 
@@ -1847,12 +1834,7 @@ void DrumKitEngine::saveLatestControllerValues(const juce::MidiBuffer& midiMessa
     }
 }
 
-void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
-                                         const juce::String& artName,
-                                         int layerIndex,
-                                         std::optional<int> tuningCents,
-                                         std::optional<int> attackMs,
-                                         std::optional<int> decayMs) {
+void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, std::optional<int> tuningCents, std::optional<int> attackMs, std::optional<int> decayMs) {
     LayerParameterUpdate update;
     update.tuningCents = tuningCents;
     update.attackMs = attackMs;
@@ -1860,19 +1842,13 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId,
     this->updateSlotParameters(slotId, artName, layerIndex, update);
 }
 
-bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId,
-                                               const juce::String& artName,
-                                               const juce::String& sourcePath,
-                                               int sourceOccurrenceIndex,
-                                               const LayerParameterUpdate& update) {
-    if (sourceOccurrenceIndex < 0)
-        return false;
+bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update) {
+    if (sourceOccurrenceIndex < 0) return false;
 
     juce::StringArray sourceParts;
     sourceParts.addTokens(sourcePath.trim(), "/", "");
     sourceParts.removeEmptyStrings();
-    if (sourceParts.size() < 2)
-        return false;
+    if (sourceParts.size() < 2) return false;
 
     const auto targetKit = sourceParts[0].trim();
     const auto targetInst = sourceParts[1].trim();
@@ -1883,14 +1859,11 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId,
     if (hasArtFilter && this->activeKitLayoutPtr != nullptr) {
         const auto normalizedArtName = normalizeArticulationName(artName);
         for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
-            if (slot.id != slotId)
-                continue;
+            if (slot.id != slotId) continue;
             for (const auto& art : slot.articulations) {
-                if (normalizeArticulationName(art.codeRaw) != normalizedArtName)
-                    continue;
+                if (normalizeArticulationName(art.codeRaw) != normalizedArtName) continue;
                 for (const auto note : art.notes) {
-                    if (note >= 0 && note < 128)
-                        targetNotes.push_back(note);
+                    if (note >= 0 && note < 128) targetNotes.push_back(note);
                 }
                 break;
             }
@@ -1899,23 +1872,18 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId,
     }
 
     auto synthMatchesArt = [&targetNotes](const InstrumentSynth& synth) {
-        if (targetNotes.empty())
-            return true;
+        if (targetNotes.empty()) return true;
         for (const auto note : targetNotes) {
-            if (synth.hasRouteForMidiNote(note))
-                return true;
+            if (synth.hasRouteForMidiNote(note)) return true;
         }
         return false;
     };
 
     auto synthMatchesSource = [&targetKit, &targetInst, &targetArt](const InstrumentSynth& synth) {
         const auto* inst = synth.getLoadedInstrumentSpec();
-        if (inst == nullptr || inst->parent == nullptr)
-            return false;
-        if (inst->parent->meta.codeRaw.compareIgnoreCase(targetKit) != 0)
-            return false;
-        if (inst->meta.codeRaw.compareIgnoreCase(targetInst) != 0)
-            return false;
+        if (inst == nullptr || inst->parent == nullptr) return false;
+        if (inst->parent->meta.codeRaw.compareIgnoreCase(targetKit) != 0) return false;
+        if (inst->meta.codeRaw.compareIgnoreCase(targetInst) != 0) return false;
         return targetArt.isEmpty() || synth.supportsArticulation(targetArt);
     };
 
@@ -1923,12 +1891,9 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId,
 
     int currentOccurrence = 0;
     for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr == nullptr)
-            continue;
-        if (synthPtr->getId() != slotId)
-            continue;
-        if (!synthMatchesArt(*synthPtr) || !synthMatchesSource(*synthPtr))
-            continue;
+        if (synthPtr == nullptr) continue;
+        if (synthPtr->getId() != slotId) continue;
+        if (!synthMatchesArt(*synthPtr) || !synthMatchesSource(*synthPtr)) continue;
 
         if (currentOccurrence == sourceOccurrenceIndex) {
             if (update.tuningCents.has_value()) synthPtr->setTuningOffsetCents(*update.tuningCents);
@@ -1971,11 +1936,9 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     }
 
     auto synthMatchesArt = [&targetNotes](const InstrumentSynth& synth) {
-        if (targetNotes.empty())
-            return true;
+        if (targetNotes.empty()) return true;
         for (const auto note : targetNotes) {
-            if (synth.hasRouteForMidiNote(note))
-                return true;
+            if (synth.hasRouteForMidiNote(note)) return true;
         }
         return false;
     };
@@ -1984,12 +1947,9 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
 
     int currentLayerIndex = 0;
     for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr == nullptr)
-            continue;
-        if (synthPtr->getId() != slotId)
-            continue;
-        if (!synthMatchesArt(*synthPtr))
-            continue;
+        if (synthPtr == nullptr) continue;
+        if (synthPtr->getId() != slotId) continue;
+        if (!synthMatchesArt(*synthPtr)) continue;
 
         if (currentLayerIndex == layerIndex) {
             if (update.tuningCents.has_value()) synthPtr->setTuningOffsetCents(*update.tuningCents);
@@ -2152,8 +2112,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
     for (const auto& slotId : slotOrder) {
         const auto& group = entriesBySlotId[slotId];
-        if (group.empty())
-            continue;
+        if (group.empty()) continue;
 
         if (slotId == "*") {
             const auto& wildcardEntry = *group.front();
@@ -2162,8 +2121,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 statusLines.add("Kit not found for wildcard entry: " + wildcardEntry.kitRef);
                 continue;
             }
-            wildcardChanged = hasUnloadedPrimarySynth
-                           || this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
+            wildcardChanged = hasUnloadedPrimarySynth || this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
             if (wildcardChanged) {
                 forceApplyAllSlots = true;
                 ++applied;
@@ -2177,9 +2135,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             continue;
         }
         auto* primarySlot = slotIt->second;
-        const bool slotChanged = forceApplyAllSlots
-                              || !primarySlot->isLoaded()
-                              || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
+        const bool slotChanged = forceApplyAllSlots || !primarySlot->isLoaded() || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
 
         struct ResolvedEntry {
             const InstrumentMapEntry* entry = nullptr;
@@ -2214,19 +2170,12 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
                 for (const auto& sourceArtName : entry->articulationFilter) {
                     const auto normalizedSourceArtName = normalizeArticulationName(sourceArtName);
-                    if (normalizedSourceArtName.isEmpty())
-                        continue;
-
-                    if (stringArrayContainsIgnoreCase(availableSourceArts, normalizedSourceArtName))
-                        continue;
-
-                    if (stringArrayContainsIgnoreCase(unknownSourceArtKeys, normalizedSourceArtName))
-                        continue;
-
+                    if (normalizedSourceArtName.isEmpty()) continue;
+                    if (stringArrayContainsIgnoreCase(availableSourceArts, normalizedSourceArtName)) continue;
+                    if (stringArrayContainsIgnoreCase(unknownSourceArtKeys, normalizedSourceArtName)) continue;
                     auto sourceArtToken = normalizedSourceArtName;
                     const auto suggestedSourceArt = findClosestArticulationName(normalizedSourceArtName, availableSourceArts);
-                    if (suggestedSourceArt.isNotEmpty())
-                        sourceArtToken += " (did you mean '" + suggestedSourceArt + "'?)";
+                    if (suggestedSourceArt.isNotEmpty()) sourceArtToken += " (did you mean '" + suggestedSourceArt + "'?)";
                     unknownSourceArtKeys.add(normalizedSourceArtName);
                     unknownSourceArts.add(sourceArtToken);
                 }
@@ -2237,10 +2186,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                         ? juce::String("none")
                         : availableSourceArts.joinIntoString(", ");
 
-                    statusLines.add("Unknown source articulation(s) [" + unknownSourceArtsText
-                        + "] for target '" + kitSpec->meta.codeRaw + "/" + instSpec->meta.codeRaw
-                        + "' in slot '" + entry->slotId + "'. Available source articulations: "
-                        + availableSourceArtsText);
+                    statusLines.add("Unknown source articulation(s) [" + unknownSourceArtsText + "] for target '" + kitSpec->meta.codeRaw + "/" + instSpec->meta.codeRaw
+                        + "' in slot '" + entry->slotId + "'. Available source articulations: " + availableSourceArtsText);
                 }
             }
 
@@ -2252,8 +2199,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             resolvedEntries.push_back({ entry, kitSpec, instSpec, std::move(filter) });
         }
 
-        if (resolvedEntries.empty())
-            continue;
+        if (resolvedEntries.empty()) continue;
 
         const auto& slotLayout = primarySlot->getInstrumentSlot();
         const auto& primary = resolvedEntries.front();
@@ -2346,12 +2292,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         // Simple non-controller slots inherit empty articulations from the first mapped art.
         // Controller-driven slots keep their existing primary fallback so CC tables remain intact.
         for (const auto& layoutArt : slotLayout.articulations) {
-            if (containsId(claimedArticulations, layoutArt.nameId))
-                continue;
-            if (fallbackSourceArtId != 0)
-                artAliases[layoutArt.nameId] = fallbackSourceArtId;
-            else
-                addUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
+            if (containsId(claimedArticulations, layoutArt.nameId)) continue;
+            if (fallbackSourceArtId != 0) artAliases[layoutArt.nameId] = fallbackSourceArtId;
+            else addUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
         }
 
         if (LOG_ENABLED(Notice)) {
