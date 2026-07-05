@@ -740,13 +740,7 @@ bool DrumKitEngine::applyKitLayout() {
 
                 auto* shadowSynth = this->instrumentSynthPtrs.back().get();
                 
-                shadowSynth->rebuildRoutingFromLayout(prepared.layoutSlot);
-                for (const auto& art : prepared.layoutSlot.articulations) {
-                    if (!shadowSynth->supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art))) continue;
-                    for (const int note : art.notes) {
-                        if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(shadowSynth);
-                    }
-                }
+                this->addShadowSynthNoteRoutes(*shadowSynth, prepared.layoutSlot);
             }
         }
 
@@ -841,17 +835,21 @@ void DrumKitEngine::rebuildMidiNoteRoutingFromLayout() {
             }
             if (layoutSlot == nullptr) continue;
 
-            shadowSynth->rebuildRoutingFromLayout(*layoutSlot);
-            for (const auto& art : layoutSlot->articulations) {
-                if (!shadowSynth->supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art))) continue;
-                for (const int note : art.notes) {
-                    if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(shadowSynth);
-                }
-            }
+            this->addShadowSynthNoteRoutes(*shadowSynth, *layoutSlot);
         }
     }
 
     this->buildNoteNameCache();
+}
+
+void DrumKitEngine::addShadowSynthNoteRoutes(InstrumentSynth& shadowSynth, const KitLayout::InstrumentSlot& layoutSlot) {
+    shadowSynth.rebuildRoutingFromLayout(layoutSlot);
+    for (const auto& art : layoutSlot.articulations) {
+        if (!shadowSynth.supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art))) continue;
+        for (const int note : art.notes) {
+            if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(&shadowSynth);
+        }
+    }
 }
 
 void DrumKitEngine::buildNoteNameCache() {
@@ -1376,30 +1374,7 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const
     const auto targetInst = sourceParts[1].trim();
     const auto targetArt = sourceParts.size() >= 3 ? sourceParts[2].trim() : juce::String();
 
-    std::vector<int> targetNotes;
-    const bool hasArtFilter = artName.trim().isNotEmpty() && artName.trim() != "(default)";
-    if (hasArtFilter && this->activeKitLayoutPtr != nullptr) {
-        const auto normalizedArtName = ArticulationNameHelpers::normalizeArticulationName(artName);
-        for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
-            if (slot.id != slotId) continue;
-            for (const auto& art : slot.articulations) {
-                if (ArticulationNameHelpers::normalizeArticulationName(art.codeRaw) != normalizedArtName) continue;
-                for (const auto note : art.notes) {
-                    if (note >= 0 && note < 128) targetNotes.push_back(note);
-                }
-                break;
-            }
-            break;
-        }
-    }
-
-    auto synthMatchesArt = [&targetNotes](const InstrumentSynth& synth) {
-        if (targetNotes.empty()) return true;
-        for (const auto note : targetNotes) {
-            if (synth.hasRouteForMidiNote(note)) return true;
-        }
-        return false;
-    };
+    const auto targetNotes = this->getTargetNotesForArticulationFilter(slotId, artName);
 
     auto synthMatchesSource = [&targetKit, &targetInst, &targetArt](const InstrumentSynth& synth) {
         const auto* inst = synth.getLoadedInstrumentSpec();
@@ -1415,16 +1390,10 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const
     for (auto& synthPtr : this->instrumentSynthPtrs) {
         if (synthPtr == nullptr) continue;
         if (synthPtr->getId() != slotId) continue;
-        if (!synthMatchesArt(*synthPtr) || !synthMatchesSource(*synthPtr)) continue;
+        if (!DrumKitEngine::synthMatchesTargetNotes(*synthPtr, targetNotes) || !synthMatchesSource(*synthPtr)) continue;
 
         if (currentOccurrence == sourceOccurrenceIndex) {
-            if (update.tuningCents.has_value()) synthPtr->setTuningOffsetCents(*update.tuningCents);
-            if (update.attackMs.has_value()) synthPtr->setAttackOverrideMs(*update.attackMs);
-            if (update.decayMs.has_value()) synthPtr->setDecayOverrideMs(*update.decayMs);
-            if (update.volumeDb.has_value()) synthPtr->setVolumeDb(*update.volumeDb);
-            if (update.flipLR.has_value()) synthPtr->setFlipLR(*update.flipLR);
-            if (update.flipPhase.has_value()) synthPtr->setFlipPhase(*update.flipPhase);
-            if (update.micBleedLevels.has_value()) synthPtr->setMicBleedLevels(*update.micBleedLevels);
+            DrumKitEngine::applyLayerParameterUpdate(*synthPtr, update);
             return true;
         }
 
@@ -1437,30 +1406,7 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     if (layerIndex < 0)
         return;
 
-    std::vector<int> targetNotes;
-    const bool hasArtFilter = artName.trim().isNotEmpty() && artName.trim() != "(default)";
-    if (hasArtFilter && this->activeKitLayoutPtr != nullptr) {
-        const auto normalizedArtName = ArticulationNameHelpers::normalizeArticulationName(artName);
-        for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
-            if (slot.id != slotId) continue;
-            for (const auto& art : slot.articulations) {
-                if (ArticulationNameHelpers::normalizeArticulationName(art.codeRaw) != normalizedArtName) continue;
-                for (const auto note : art.notes) {
-                    if (note >= 0 && note < 128) targetNotes.push_back(note);
-                }
-                break;
-            }
-            break;
-        }
-    }
-
-    auto synthMatchesArt = [&targetNotes](const InstrumentSynth& synth) {
-        if (targetNotes.empty()) return true;
-        for (const auto note : targetNotes) {
-            if (synth.hasRouteForMidiNote(note)) return true;
-        }
-        return false;
-    };
+    const auto targetNotes = this->getTargetNotesForArticulationFilter(slotId, artName);
 
     const juce::ScopedLock graphLock(this->engineGraphLock);
 
@@ -1468,21 +1414,53 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     for (auto& synthPtr : this->instrumentSynthPtrs) {
         if (synthPtr == nullptr) continue;
         if (synthPtr->getId() != slotId) continue;
-        if (!synthMatchesArt(*synthPtr)) continue;
+        if (!DrumKitEngine::synthMatchesTargetNotes(*synthPtr, targetNotes)) continue;
 
         if (currentLayerIndex == layerIndex) {
-            if (update.tuningCents.has_value()) synthPtr->setTuningOffsetCents(*update.tuningCents);
-            if (update.attackMs.has_value()) synthPtr->setAttackOverrideMs(*update.attackMs);
-            if (update.decayMs.has_value()) synthPtr->setDecayOverrideMs(*update.decayMs);
-            if (update.volumeDb.has_value()) synthPtr->setVolumeDb(*update.volumeDb);
-            if (update.flipLR.has_value()) synthPtr->setFlipLR(*update.flipLR);
-            if (update.flipPhase.has_value()) synthPtr->setFlipPhase(*update.flipPhase);
-            if (update.micBleedLevels.has_value()) synthPtr->setMicBleedLevels(*update.micBleedLevels);
+            DrumKitEngine::applyLayerParameterUpdate(*synthPtr, update);
             return;
         }
 
         ++currentLayerIndex;
     }
+}
+
+std::vector<int> DrumKitEngine::getTargetNotesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const {
+    std::vector<int> targetNotes;
+    const bool hasArtFilter = artName.trim().isNotEmpty() && artName.trim() != "(default)";
+    if (!hasArtFilter || this->activeKitLayoutPtr == nullptr) return targetNotes;
+
+    const auto normalizedArtName = ArticulationNameHelpers::normalizeArticulationName(artName);
+    for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
+        if (slot.id != slotId) continue;
+        for (const auto& art : slot.articulations) {
+            if (ArticulationNameHelpers::normalizeArticulationName(art.codeRaw) != normalizedArtName) continue;
+            for (const auto note : art.notes) {
+                if (note >= 0 && note < 128) targetNotes.push_back(note);
+            }
+            break;
+        }
+        break;
+    }
+    return targetNotes;
+}
+
+bool DrumKitEngine::synthMatchesTargetNotes(const InstrumentSynth& synth, const std::vector<int>& targetNotes) {
+    if (targetNotes.empty()) return true;
+    for (const auto note : targetNotes) {
+        if (synth.hasRouteForMidiNote(note)) return true;
+    }
+    return false;
+}
+
+void DrumKitEngine::applyLayerParameterUpdate(InstrumentSynth& synth, const LayerParameterUpdate& update) {
+    if (update.tuningCents.has_value()) synth.setTuningOffsetCents(*update.tuningCents);
+    if (update.attackMs.has_value()) synth.setAttackOverrideMs(*update.attackMs);
+    if (update.decayMs.has_value()) synth.setDecayOverrideMs(*update.decayMs);
+    if (update.volumeDb.has_value()) synth.setVolumeDb(*update.volumeDb);
+    if (update.flipLR.has_value()) synth.setFlipLR(*update.flipLR);
+    if (update.flipPhase.has_value()) synth.setFlipPhase(*update.flipPhase);
+    if (update.micBleedLevels.has_value()) synth.setMicBleedLevels(*update.micBleedLevels);
 }
 
 bool DrumKitEngine::useInstrumentMap(juce::String text) {

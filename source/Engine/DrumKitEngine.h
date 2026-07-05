@@ -262,6 +262,10 @@ private:
     void regenerateSuggestedInstrumentMapText();
     void clearShadowSynths();
     void rebuildPrimaryInstrumentNoteRouting();
+    void addShadowSynthNoteRoutes(InstrumentSynth& shadowSynth, const KitLayout::InstrumentSlot& layoutSlot);
+    std::vector<int> getTargetNotesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const;
+    static bool synthMatchesTargetNotes(const InstrumentSynth& synth, const std::vector<int>& targetNotes);
+    static void applyLayerParameterUpdate(InstrumentSynth& synth, const LayerParameterUpdate& update);
     std::string makePreviewTargetCacheKey(const juce::String& kitCodeRaw,
                                           const juce::String& instCode,
                                           const juce::String& artCode,
