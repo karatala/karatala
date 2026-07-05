@@ -1,24 +1,23 @@
 #include "DrumKitEngineMappingModel.h"
 
-namespace {
+namespace DrumKitEngineMappingModel {
+
 struct ParsedSlotRef {
     juce::String slotId;
     std::vector<juce::String> articulations;
 };
-
-static std::vector<juce::String> parseDelimitedNames(const juce::String& text) {
+std::vector<juce::String> parseDelimitedNames(const juce::String& text) {
     std::vector<juce::String> result;
     juce::StringArray parts;
     parts.addTokens(text, ",", "");
     parts.removeEmptyStrings(true);
-    for (const auto& part : parts)
-        result.push_back(part.trim());
+    for (const auto& part : parts) result.push_back(part.trim());
     return result;
 }
 
-static ParsedSlotRef parseSlotRef(const juce::String& text) {
+ParsedSlotRef parseSlotRef(const juce::String& text) {
     ParsedSlotRef result;
-    auto trimmed = text.trim();
+    const auto trimmed = text.trim();
     const int slashIdx = trimmed.indexOfChar('/');
     if (slashIdx < 0) {
         result.slotId = trimmed;
@@ -30,15 +29,16 @@ static ParsedSlotRef parseSlotRef(const juce::String& text) {
     return result;
 }
 
+
 struct ParsedTargetRef {
     juce::String kitRef;
     juce::String instCode;
     std::vector<juce::String> articulations;
 };
 
-static ParsedTargetRef parseTargetRef(const juce::String& text) {
+ParsedTargetRef parseTargetRef(const juce::String& text) {
     ParsedTargetRef result;
-    auto trimmed = text.trim();
+    const auto trimmed = text.trim();
     const int firstSlashIdx = trimmed.indexOfChar('/');
     if (firstSlashIdx < 0) {
         result.kitRef = trimmed;
@@ -58,27 +58,20 @@ static ParsedTargetRef parseTargetRef(const juce::String& text) {
     return result;
 }
 
-static int findNextParamBoundary(const juce::String& text, int startIndex, const std::vector<juce::String>& knownKeys) {
+int findNextParamBoundary(const juce::String& text, int startIndex, const std::vector<juce::String>& knownKeys) {
     for (int idx = startIndex; idx < text.length(); ++idx) {
         const auto ch = text[idx];
-        if (ch != ',' && ch != ';')
-            continue;
+        if (ch != ',' && ch != ';') continue;
 
         int probe = idx + 1;
         while (probe < text.length() && juce::CharacterFunctions::isWhitespace(text[probe]))
             ++probe;
 
-        for (const auto& key : knownKeys) {
-            if (text.substring(probe).startsWith(key + "="))
-                return idx;
-        }
+        for (const auto& key : knownKeys)
+            if (text.substring(probe).startsWith(key + "=")) return idx;
     }
-
     return -1;
 }
-}
-
-namespace DrumKitEngineMappingModel {
 
 ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::String& text) {
     ParseResult<DrumKitEngine::InstrumentMap> result;

@@ -1,76 +1,8 @@
 #include "DrumPad.h"
+#include "DrumPadHelpers.h"
 #include "UITheme.h"
 #include <algorithm>
 #include <numeric>
-
-namespace { //FIXME: do we really need namespace?
-
-juce::String getPadDisplayName(const KitLayout::InstrumentSlot& slot) { return slot.display.isNotEmpty() ? slot.display : slot.id; }
-
-void drawPadLabel(juce::Graphics& gfx,
-                  const juce::Rectangle<int>& bounds,
-                  const juce::String& text,
-                  const juce::Colour& colour,
-                  juce::Font font,
-                  int maxLines
-) {
-    gfx.setColour(colour);
-    gfx.setFont(std::move(font));
-    gfx.drawFittedText(text, bounds, juce::Justification::centred, maxLines, 0.9f);
-}
-
-// int articulationSortKey(const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
-//     auto name = art.codeRaw.toLowerCase();
-//     auto baseName = name.upToFirstOccurrenceOf("[", false, false).trim();
-//     auto expr = name.fromFirstOccurrenceOf("[", false, false).upToFirstOccurrenceOf("]", false, false).trim();
-
-//     if (baseName == "bell") return 0;
-//     if (baseName == "center") return 0;
-//     if (baseName == "bow") {
-//         if (expr == "tight") return 10;
-//         if (expr == "open") return 12;
-//         if (expr.isEmpty()) return 14;
-//         return 16;
-//     }
-//     if (baseName == "edge") {
-//         if (expr == "tight") return 20;
-//         if (expr == "open") return 22;
-//         if (expr.isEmpty()) return 24;
-//         return 23;
-//     }
-//     if (baseName == "rim") return 30;
-//     if (baseName == "sidestick") return 40;
-//     if (baseName == "pedal") {
-//         if (expr.isEmpty()) return 50;
-//         return 52;
-//     }
-//     return 100;
-// }
-
-// Build a display-order permutation: result[displayIdx] = originalIdx
-std::vector<int> buildDisplayOrder(const std::vector<KitLayout::InstrumentSlot::ArticulationTrigger>& articulations) {
-    std::vector<int> order(articulations.size());
-    std::iota(order.begin(), order.end(), 0);
-    // std::sort(order.begin(), order.end(), [&](int lhs, int rhs) {
-    //     return articulationSortKey(articulations[static_cast<size_t>(lhs)])
-    //          < articulationSortKey(articulations[static_cast<size_t>(rhs)]);
-    // });
-    return order;
-}
-
-int findMainArticulationDisplayIdx(const std::vector<KitLayout::InstrumentSlot::ArticulationTrigger>& articulations, const std::vector<int>& displayOrder) {
-    static const juce::StringArray priority = { "bow", "center", "edge", "bell" };
-    for (const auto& target : priority) {
-        for (int displayIdx = 0; displayIdx < static_cast<int>(displayOrder.size()); ++displayIdx) {
-            auto baseName = articulations[static_cast<size_t>(displayOrder[static_cast<size_t>(displayIdx)])].codeRaw
-                .toLowerCase().upToFirstOccurrenceOf("[", false, false).trim();
-            if (baseName == target) return displayIdx;
-        }
-    }
-    return 0;
-}
-
-} // namespace
 
 void DrumPad::setSlot(const KitLayout::InstrumentSlot* slot) {
     this->slotPtr = slot;
@@ -88,7 +20,7 @@ void DrumPad::refreshDisplayOrder() { //FIXME: get rid of display order, we will
     if (!this->slotPtr || this->slotPtr->articulations.empty())
         return;
 
-    this->displayOrder = buildDisplayOrder(this->slotPtr->articulations);
+    this->displayOrder = DrumPadHelpers::buildDisplayOrder(this->slotPtr->articulations);
 }
 
 void DrumPad::flash(float velocity) {
@@ -143,12 +75,12 @@ void DrumPad::paintZen(juce::Graphics& g) {
 
     const auto labelBounds = bounds.reduced(6);
     if (this->slotPtr == nullptr) {
-        drawPadLabel(g, labelBounds, "Empty", UITheme::Colours::textMuted, UITheme::Fonts::small().withHeight(11.0f), 1);
+        DrumPadHelpers::drawPadLabel(g, labelBounds, "Empty", UITheme::Colours::textMuted, UITheme::Fonts::small().withHeight(11.0f), 1);
         return;
     }
 
     const float labelHeight = static_cast<float>(juce::jlimit(10, 15, juce::jmin(bounds.getWidth() / 5, bounds.getHeight() / 3)));
-    drawPadLabel(g, labelBounds, getPadDisplayName(*this->slotPtr), UITheme::Colours::textPrimary.withAlpha(0.9f), UITheme::Fonts::labelBold().withHeight(labelHeight), 2);
+    DrumPadHelpers::drawPadLabel(g, labelBounds, DrumPadHelpers::getPadDisplayName(*this->slotPtr), UITheme::Colours::textPrimary.withAlpha(0.9f), UITheme::Fonts::labelBold().withHeight(labelHeight), 2);
 }
 
 void DrumPad::paintZoned(juce::Graphics& g) {
@@ -166,7 +98,7 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         this->paintZen(g);
         return;
     }
-    int mainDisplayIdx = findMainArticulationDisplayIdx(arts, this->displayOrder);
+    int mainDisplayIdx = DrumPadHelpers::findMainArticulationDisplayIdx(arts, this->displayOrder);
 
     const float fontSize = static_cast<float>(juce::jlimit(9, 13, juce::jmin(bounds.getWidth() / 6, bounds.getHeight() / (artCount * 2))));
 
@@ -186,10 +118,10 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         auto labelText = arts[static_cast<size_t>(originalIdx)].codeRaw;
         int maxLines = 1;
         if (displayIdx == mainDisplayIdx) {
-            labelText = getPadDisplayName(*this->slotPtr) + "\n" + labelText;
+            labelText = DrumPadHelpers::getPadDisplayName(*this->slotPtr) + "\n" + labelText;
             maxLines = 2;
         }
-        drawPadLabel(g, zoneRect.reduced(4, 1), labelText, UITheme::Colours::textPrimary.withAlpha(0.85f), UITheme::Fonts::labelBold().withHeight(fontSize), maxLines);
+        DrumPadHelpers::drawPadLabel(g, zoneRect.reduced(4, 1), labelText, UITheme::Colours::textPrimary.withAlpha(0.85f), UITheme::Fonts::labelBold().withHeight(fontSize), maxLines);
     }
 
     // Flash overlay

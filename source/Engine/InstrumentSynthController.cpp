@@ -666,7 +666,7 @@ int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
 
                 for (const auto& controller : this->instrumentSlot.controllers) {
                     if (controller.number != static_cast<int>(ccNum)) continue;
-                    if (std::find(controller.notes.begin(), controller.notes.end(), static_cast<uint8_t>(midiNoteNumber)) == controller.notes.end()) continue;
+                    if (!vectorContains(controller.notes, static_cast<uint8_t>(midiNoteNumber))) continue;
                     artIdx = this->selectArticulationForController(static_cast<ArtRtIdx>(artIdx), controller.codeIdx, ccVal);
                     break;
                 }
@@ -720,22 +720,6 @@ bool InstrumentSynth::isVariantReady(const VelocityLayerRuntime& layer, uint8_t 
     return seen;
 }
 
-// Portable bit helpers for bitmask-based variant selection (no heap allocation).
-namespace {
-    inline uint8_t lowestSetBit(uint32_t mask) {
-        for (uint8_t idx = 0; idx < 32; ++idx)
-            if (mask & (1u << idx)) return idx;
-        return 0;
-    }
-    inline int popCount(uint32_t mask) {
-        int count = 0;
-        while (mask) { mask &= (mask - 1); ++count; }
-        return count;
-    }
-    inline uint32_t clearLowestSetBit(uint32_t mask) {
-        return mask & (mask - 1);
-    }
-}
 
 uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
     // Collect unique variant indices using a bitmask — no heap allocation.
@@ -753,32 +737,32 @@ uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
     if (roundRobinLock > 0) {
         const int lockIdx = roundRobinLock - 1;
         int count = 0;
-        for (uint32_t mask = allMask; mask != 0; mask = clearLowestSetBit(mask)) {
+        for (uint32_t mask = allMask; mask != 0; mask &= (mask - 1)) {
             if (count == lockIdx)
-                return lowestSetBit(mask);
+                return static_cast<uint8_t>(std::countr_zero(mask));
             ++count;
         }
-        return lowestSetBit(allMask);
+        return static_cast<uint8_t>(std::countr_zero(allMask));
     }
 
     uint32_t readyMask = 0;
     for (uint32_t remaining = allMask; remaining != 0; ) {
-        uint8_t variantIdx = lowestSetBit(remaining);
+        uint8_t variantIdx = static_cast<uint8_t>(std::countr_zero(remaining));
         remaining &= ~(1u << variantIdx);
         if (this->isVariantReady(layer, variantIdx))
             readyMask |= (1u << variantIdx);
     }
 
     const uint32_t choiceMask = readyMask != 0 ? readyMask : allMask;
-    const int choiceCount = popCount(choiceMask);
-    if (choiceCount == 1) return lowestSetBit(choiceMask);
+    const int choiceCount = std::popcount(choiceMask);
+    if (choiceCount == 1) return static_cast<uint8_t>(std::countr_zero(choiceMask));
 
     uint32_t rr = layer.roundRobinCounter->fetch_add(1u);
     int target = static_cast<int>(rr % static_cast<uint32_t>(choiceCount));
     uint32_t remaining = choiceMask;
     for (int idx = 0; idx < target; ++idx)
-        remaining = clearLowestSetBit(remaining);
-    return lowestSetBit(remaining);
+        remaining &= (remaining - 1);
+    return static_cast<uint8_t>(std::countr_zero(remaining));
 }
 
 bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {

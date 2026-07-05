@@ -297,9 +297,9 @@ inline MicSelectorPriority matchMicInstrumentSelector(const MicInstrumentSelecto
         case MicInstrumentSelector::Kind::CatalogKind:
             return selector.instrumentType == slotType ? MicSelectorPriority::Kind : MicSelectorPriority::None;
         case MicInstrumentSelector::Kind::CommaList:
-            if (std::find(selector.listTypes.begin(), selector.listTypes.end(), slotType) != selector.listTypes.end())
+            if (vectorContains(selector.listTypes, slotType))
                 return MicSelectorPriority::CommaList;
-            if (std::find(selector.listFamilies.begin(), selector.listFamilies.end(), catalog.familyFor(slotType)) != selector.listFamilies.end())
+            if (vectorContains(selector.listFamilies, catalog.familyFor(slotType)))
                 return MicSelectorPriority::CommaList;
             return MicSelectorPriority::None;
         case MicInstrumentSelector::Kind::CatalogFamily:

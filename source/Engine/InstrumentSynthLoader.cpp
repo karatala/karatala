@@ -128,28 +128,6 @@ float InstrumentSynth::getMicBleedLevel(const juce::String& micCode) const {
     return juce::jlimit(0.0f, 1.0f, it->second);
 }
 
-
-namespace {
-
-juce::String expressionPointCodeForType(KitLib::ArticulationSpec::ExpressionDimension::Type type) {
-    return KitLib::ArticulationSpec::ExpressionDimension::typeToString(type);
-}
-
-juce::String expressionPointLabelForArticulation(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type type) {
-    if (type == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose) {
-        if (artSpec.exprId != 0)
-            return StringsDictSingleton::nameOf(artSpec.exprId).trim().toLowerCase();
-        return StringsDictSingleton::nameOf(artSpec.nameId).trim().toLowerCase();
-    }
-
-    if (type == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim
-     || type == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge) {
-        return StringsDictSingleton::nameOf(artSpec.nameId).trim().toLowerCase();
-    }
-    return {};
-}
-
-} // namespace
 KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt) {
     if (instSpec == nullptr) return nullptr;
 
@@ -169,17 +147,18 @@ KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::Instr
     }
     return nullptr;
 }
+
 std::vector<uint8_t> InstrumentSynth::getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
     for (const auto& dim : artSpec.expressionDimensions) {
         if (dim != nullptr && dim->type == dimensionType && !dim->values.empty())
             return dim->values;
     }
 
-    const auto code = expressionPointCodeForType(dimensionType);
+    const auto code = KitLib::ArticulationSpec::ExpressionDimension::typeToString(dimensionType);
     if (!KitLayout::isSupportedExpressionPointCode(code))
         return {};
-
-    const auto label = expressionPointLabelForArticulation(artSpec, dimensionType);
+        
+    const auto label = KitLayout::expressionPointLabelForArticulation(artSpec, dimensionType);
     if (label.isEmpty())
         return {};
 
@@ -212,10 +191,7 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
     bindings.reserve(layoutSlot.articulations.size());
 
     for (const auto& layoutArt : layoutSlot.articulations) {
-        if (!routingContext.allowedArticulationNameIds.empty()
-            && std::find(routingContext.allowedArticulationNameIds.begin(), routingContext.allowedArticulationNameIds.end(), layoutArt.nameId) == routingContext.allowedArticulationNameIds.end()) {
-            continue;
-        }
+        if (!routingContext.allowedArticulationNameIds.empty() && !vectorContains(routingContext.allowedArticulationNameIds, layoutArt.nameId)) continue;
 
         ResolvedArticulationBinding binding(layoutArt);
         binding.sourceInstrument = routingContext.defaultInstrument;
@@ -510,7 +486,7 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
         for (uint8_t note : cc.notes) {
             auto ccNum = static_cast<uint8_t>(cc.number);
             auto& vec = this->noteToControllers[note];
-            if (std::find(vec.begin(), vec.end(), ccNum) == vec.end())
+            if (!vectorContains(vec, ccNum))
                 vec.emplace_back(ccNum);
         }
 
@@ -524,7 +500,7 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
                 const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
                 auto& vec = foundCcDimensions[ccNum];
                 // avoid inserting identical (value,artIdx) duplicates
-                if (std::find(vec.begin(), vec.end(), pair) == vec.end()) {
+                if (!vectorContains(vec, pair)) {
                     vec.emplace_back(pair);
                     LOG(Debug, "buildCcMappings: cc=" + juce::String((int)ccNum) + " val=" + juce::String((int)val) + " (artIdx=" + juce::String(artIdx) + ") layoutArt=" + layoutArt.codeRaw);
                 // } else {

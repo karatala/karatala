@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 #include "UI/UIHelpers.h"
 #include "UI/UITheme.h"
+#include "Config/Helpers.h"
 #include <set>
 #include "Engine/LayoutManager.h"
 
@@ -793,7 +794,7 @@ void PluginEditor::flashPadForMidiNote(int midiNote, float velocity) {
 
     for (const auto& slot : layout->instrumentSlots) {
         for (const auto& articulation : slot.articulations) {
-            if (std::find(articulation.notes.begin(), articulation.notes.end(), static_cast<uint8_t>(midiNote)) != articulation.notes.end()) {
+            if (vectorContains(articulation.notes, static_cast<uint8_t>(midiNote))) {
                 this->flashPadForSlot(slot.id, velocity);
                 return;
             }

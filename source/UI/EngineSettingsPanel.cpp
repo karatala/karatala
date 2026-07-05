@@ -1,43 +1,9 @@
 #include "EngineSettingsPanel.h"
 #include "../Engine/DrumKitEngine.h"
+#include "ParameterPotHelpers.h"
 #include "UIHelpers.h"
 #include <cmath>
 
-namespace {
-
-ParameterPot::LayoutOptions makeSettingsPotLayout(bool isInteger) {
-    ParameterPot::LayoutOptions options;
-    options.valueDisplay = ParameterPot::ValueDisplay::TextBoxBelow;
-    options.textBoxWidth = isInteger ? UITheme::Sizes::settingsIntTextBoxW : UITheme::Sizes::settingsTextBoxW;
-    options.textBoxHeight = UITheme::Sizes::settingsTextBoxH;
-    return options;
-}
-
-juce::String millisecondsText(double seconds) {
-    return juce::String(seconds * 1000.0, 0) + " ms";
-}
-
-double millisecondsValue(const juce::String& text) {
-    return text.getDoubleValue() / 1000.0;
-}
-
-juce::String percentageText(double value) {
-    return juce::String(value * 100.0, 0) + "%";
-}
-
-double percentageValue(const juce::String& text) {
-    return text.getDoubleValue() / 100.0;
-}
-
-int debugLevelToChoiceId(DebugLevel level) {
-    return static_cast<int>(level) + 2;
-}
-
-DebugLevel choiceIdToDebugLevel(int selectedId) {
-    return static_cast<DebugLevel>(juce::jlimit(-1, 5, selectedId - 2));
-}
-
-} // namespace
 
 EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     : engine(engine) {
@@ -112,15 +78,15 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
 
     // ── Hi-Hat / Polyphony ──
     this->addPot("Open Xfade", "Transition time when opening a ringing hi-hat. Higher values are smoother; lower values react faster.",
-                 &settings.hihatOpenCrossfadeSec, 0.005f, 0.250f, 0.001f, millisecondsText, millisecondsValue, 0.060);
+                 &settings.hihatOpenCrossfadeSec, 0.005f, 0.250f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.060);
     this->addPot("Close Xfade", "Transition time when closing a ringing hi-hat. Lower values produce a tighter choke.",
-                 &settings.hihatCloseCrossfadeSec, 0.002f, 0.150f, 0.001f, millisecondsText, millisecondsValue, 0.020);
+                 &settings.hihatCloseCrossfadeSec, 0.002f, 0.150f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.020);
     this->addPot("CC Smooth", "Combines rapid pedal messages before changing the ringing tail. Higher values reduce transition activity but add pedal latency.",
-                 &settings.hihatControllerSmoothingSec, 0.0f, 0.100f, 0.001f, millisecondsText, millisecondsValue, 0.015);
+                 &settings.hihatControllerSmoothingSec, 0.0f, 0.100f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.015);
     this->addPot("Hysteresis", "Prevents openness from flickering near articulation boundaries. Increase this if the pedal jitters between adjacent sounds.",
                  &settings.hihatBoundaryHysteresisCc, 0, 8, 2);
     this->addPot("Tail Match", "How strongly the replacement follows the current tail loudness. Zero uses a simple fallback; 100% uses decay-envelope matching.",
-                 &settings.hihatTailMatchAmount, 0.0f, 1.0f, 0.01f, percentageText, percentageValue, 0.75);
+                 &settings.hihatTailMatchAmount, 0.0f, 1.0f, 0.01f, ParameterPotHelpers::percentageText, ParameterPotHelpers::percentageValue, 0.75);
     this->addPot("Match Bias", "Loudness offset applied to matched replacement tails. Negative values make transitions more restrained.",
                  &settings.hihatTailMatchBiasDb, -12.0f, 6.0f, 0.5f, nullptr, nullptr, -3.0);
     this->addPot("Poly Xfade", "Crossfade time when same zone re-triggers. Lower = harder choke, higher = smoother overlap.",
@@ -128,9 +94,9 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->addPot("Hit Choke dB", "dB margin for struck-hit cross-articulation choke. Higher values make quiet hits more likely to choke a ringing hat.",
                  &settings.hihatHitChokeDbMargin, 0.0f, 20.0f, 0.5f, nullptr, nullptr, 3.0);
     this->addPot("Attack Guard", "Protects the initial stick attack from being replaced by pedal movement.",
-                 &settings.hihatTransitionAttackGuardSec, 0.0f, 0.100f, 0.001f, millisecondsText, millisecondsValue, 0.025);
+                 &settings.hihatTransitionAttackGuardSec, 0.0f, 0.100f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.025);
     this->addPot("Min Remaining", "Skips replacement samples that do not have enough audio left after matching the current decay level.",
-                 &settings.hihatTransitionMinRemainingSec, 0.010f, 0.500f, 0.001f, millisecondsText, millisecondsValue, 0.050);
+                 &settings.hihatTransitionMinRemainingSec, 0.010f, 0.500f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.050);
     this->addPot("Silence Floor", "Very quiet historical tails below this level do not create replacement voices.",
                  &settings.hihatTransitionSilenceFloorDb, -90.0f, -36.0f, 1.0f, nullptr, nullptr, -60.0);
 
@@ -149,9 +115,9 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->uiChoiceStart = static_cast<int>(this->choices.size());
     this->addChoice("Log Level", "Writes Karatala diagnostics to karatala.log. Off keeps logging overhead to the level check.",
                     { "Off", "Error", "Warning", "Notice", "Info", "Debug", "Verbose" }, 1,
-                    [this] { return debugLevelToChoiceId(this->engine.getGlobalLogLevel()); },
+                    [this] { return ParameterPotHelpers::debugLevelToChoiceId(this->engine.getGlobalLogLevel()); },
                     [this](int selectedId) {
-                        this->engine.setGlobalLogLevel(choiceIdToDebugLevel(selectedId));
+                        this->engine.setGlobalLogLevel(ParameterPotHelpers::choiceIdToDebugLevel(selectedId));
                     });
 
     this->rebuildMicLayouts();
@@ -210,7 +176,7 @@ void EngineSettingsPanel::addPotCommon(const juce::String& name,
     entry->defaultValue = std::isnan(defaultValue) ? currentValue : defaultValue;
     entry->parameterPot = std::make_unique<ParameterPot>(
         name, minVal, maxVal, interval, currentValue,
-        std::move(textFromValueFn), makeSettingsPotLayout(isInteger), std::move(valueFromTextFn));
+        std::move(textFromValueFn), ParameterPotHelpers::makeSettingsPotLayout(isInteger), std::move(valueFromTextFn));
     entry->parameterPot->setInteraction(entry->defaultValue, interval);
     entry->parameterPot->setTooltipText(tooltip);
     entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };

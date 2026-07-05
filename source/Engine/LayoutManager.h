@@ -36,6 +36,20 @@ struct KitLayout {
         };
     }
 
+    static juce::String expressionPointLabelForArticulation(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type type) {
+        if (type == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose) {
+            if (artSpec.exprId != 0)
+                return StringsDictSingleton::nameOf(artSpec.exprId).trim().toLowerCase();
+            return StringsDictSingleton::nameOf(artSpec.nameId).trim().toLowerCase();
+        }
+        if (type == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim
+         || type == KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneBowEdge
+        ) {
+            return StringsDictSingleton::nameOf(artSpec.nameId).trim().toLowerCase();
+        }
+        return {};
+    }
+
     static std::optional<uint8_t> getExpressionPoint(const ExpressionPointMap& points, const juce::String& codeRaw, const juce::String& label) {
         const auto codeIt = points.find(codeRaw.trim().toLowerCase());
         if (codeIt == points.end())
@@ -197,7 +211,7 @@ struct LayoutTraits<KitLayout> {
             const auto labels = KitLayout::getExpressionPointLabels(code);
             for (const auto& labelKey : codeNode.keys()) {
                 const auto label = labelKey.trim().toLowerCase();
-                if (std::find(labels.begin(), labels.end(), label) == labels.end()) {
+                if (!vectorContains(labels, label)) {
                     result.addWarning(context + ": unsupported expressionPoints label '" + labelKey + "' for " + code);
                     continue;
                 }
@@ -273,8 +287,7 @@ struct LayoutTraits<KitLayout> {
             bool first = true;
             std::vector<juce::String> orderedLabels = KitLayout::getExpressionPointLabels(code);
             for (const auto& [label, value] : labelValues) {
-                if (std::find(orderedLabels.begin(), orderedLabels.end(), label) == orderedLabels.end())
-                    orderedLabels.push_back(label);
+                if (!vectorContains(orderedLabels, label)) orderedLabels.push_back(label);
             }
             for (const auto& label : orderedLabels) {
                 auto it = labelValues.find(label);

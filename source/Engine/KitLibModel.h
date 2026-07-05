@@ -266,14 +266,12 @@ public:
 
     void addExpressionDimensionValue(const juce::String& code, uint8_t value) {
         auto* expSpec = this->getOrAddExpressionDimension(code);
-        if (std::find(expSpec->values.begin(), expSpec->values.end(), value) == expSpec->values.end())
-            expSpec->values.push_back(value);
+        if (!vectorContains(expSpec->values, value)) expSpec->values.push_back(value);
     }
 
     ExpressionDimension* findExpressionDimension(const juce::String& code) {
         for (auto& existing : this->expressionDimensions)
-            if (existing->codeRaw == code)
-                return existing.get();
+            if (existing->codeRaw == code) return existing.get();
         return nullptr;
     }
 

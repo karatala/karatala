@@ -65,8 +65,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
         } else {
             for (const auto& art : slot.articulations) {
                 auto artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
-                if (!artName.isEmpty() && std::find(artNames.begin(), artNames.end(), artName) == artNames.end())
-                    artNames.push_back(artName);
+                if (!artName.isEmpty() && !vectorContains(artNames, artName)) artNames.push_back(artName);
             }
         }
 

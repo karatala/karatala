@@ -1,16 +1,9 @@
 #include "SourcePickerPopup.h"
+#include "UIHelpers.h"
 #include "UITheme.h"
 
 #include <algorithm>
 #include <set>
-
-namespace {
-void configureCategoryButton(juce::TextButton& button) {
-    button.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    button.setColour(juce::TextButton::textColourOffId, UITheme::Colours::textSecondary);
-    button.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-}
-}
 
 SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& catalog)
     : allItems(items)
@@ -20,7 +13,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     addAndMakeVisible(this->filterField);
 
     for (auto* button : { &this->allCategoryButton, &this->drumsCategoryButton, &this->cymbalsCategoryButton, &this->otherCategoryButton }) {
-        configureCategoryButton(*button);
+        UIHelpers::configureCategoryButton(*button);
         addAndMakeVisible(*button);
     }
     this->allCategoryButton.onClick = [this] { this->setCategory(Category::All); };
@@ -141,8 +134,7 @@ void SourcePickerPopup::rebuildKindEntries() {
         return kindLabel(left).compareIgnoreCase(kindLabel(right)) < 0;
     });
 
-    if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown
-        && std::find(this->kindEntries.begin(), this->kindEntries.end(), this->selectedKind) == this->kindEntries.end())
+    if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && !vectorContains(this->kindEntries, this->selectedKind))
         this->selectedKind = KitLib::InstrumentSpec::Type::Unknown;
 
     this->kindListBox.updateContent();

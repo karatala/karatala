@@ -3,15 +3,6 @@
 #include "UIHelpers.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 
-namespace {
-juce::String getControllerItemText(int controllerNumber) {
-    const auto* controllerName = juce::MidiMessage::getControllerName(controllerNumber);
-    return controllerName != nullptr
-        ? juce::String(controllerNumber) + " / " + juce::String(controllerName)
-        : juce::String(controllerNumber);
-}
-}
-
 MidiMapTable::MidiMapTable() {
     this->layoutLabel.setText("Layout", juce::dontSendNotification);
     UIHelpers::configureCaptionLabel(this->layoutLabel, juce::Justification::centredRight, UITheme::Colours::textSecondary);
@@ -133,7 +124,7 @@ void MidiMapTable::buildRows() {
         row->controllerCombo = std::make_unique<juce::ComboBox>();
         UIHelpers::configureComboBox(*row->controllerCombo, UIHelpers::ComboBoxStyle::MidiControllerList);
         for (int controllerNumber = 0; controllerNumber <= 127; ++controllerNumber)
-            row->controllerCombo->addItem(getControllerItemText(controllerNumber), controllerNumber + 1);
+            row->controllerCombo->addItem(UIHelpers::getMidiControllerItemText(controllerNumber), controllerNumber + 1);
 
         row->controllerCombo->setSelectedId(row->controllerNumber + 1, juce::dontSendNotification);
         row->controllerCombo->onChange = [this, rowIdx] {

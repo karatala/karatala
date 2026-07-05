@@ -1,4 +1,5 @@
 #include "PadContextPopup.h"
+#include "../Engine/ArticulationNameHelpers.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 
@@ -6,33 +7,6 @@
 #include <cmath>
 #include <optional>
 #include <unordered_set>
-
-namespace {
-juce::String baseArtName(const juce::String& codeRaw) {
-    return codeRaw.upToFirstOccurrenceOf("[", false, false).trim();
-}
-
-bool artCodeMatches(const juce::String& left, const juce::String& right) {
-    return left.trim().compareIgnoreCase(right.trim()) == 0;
-}
-
-bool baseArtMatches(const juce::String& left, const juce::String& right) {
-    return baseArtName(left).compareIgnoreCase(baseArtName(right)) == 0;
-}
-
-bool isLegacyBaseArtFilter(const juce::String& artName) {
-    return !artName.containsChar('[');
-}
-
-bool mapFilterMatchesPopupArt(const juce::String& filter, const juce::String& artName) {
-    if (artCodeMatches(filter, artName)) return true;
-    return isLegacyBaseArtFilter(filter) && baseArtMatches(filter, artName);
-}
-
-bool micSpecMatches(const KitLib::MicSpec& left, const KitLib::MicSpec& right) {
-    return left.type == right.type && left.position == right.position && left.format == right.format;
-}
-}
 
 // MIDI utility
 
@@ -68,13 +42,13 @@ void PadContextPopup::syncMidiNotesToActiveLayout() {
             return;
         }
         for (auto& art : slot.articulations) {
-            if (artCodeMatches(art.codeRaw, this->artName)) {
+            if (ArticulationNameHelpers::articulationCodeMatches(art.codeRaw, this->artName)) {
                 art.notes = *this->midiNotesPtr;
                 return;
             }
         }
         for (auto& art : slot.articulations) {
-            if (baseArtMatches(art.codeRaw, this->artName)) {
+            if (ArticulationNameHelpers::baseArticulationMatches(art.codeRaw, this->artName)) {
                 art.notes = *this->midiNotesPtr;
                 return;
             }
@@ -274,7 +248,7 @@ void PadContextPopup::populateLayers() {
         bool matchesArt = entry.slotArticulationFilter.empty();
         if (!matchesArt) {
             for (const auto& filter : entry.slotArticulationFilter)
-                if (mapFilterMatchesPopupArt(filter, this->artName)) matchesArt = true;
+                if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, this->artName)) matchesArt = true;
         }
         if (matchesArt) {
             matchingEntries.push_back(&entry);
@@ -357,7 +331,7 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
     if (sourceItem.artCode.isNotEmpty()) {
         for (const auto& artPtr : sourceInstrument->articulationSpecs) {
             if (artPtr == nullptr) continue;
-            if (artCodeMatches(artPtr->codeRaw, sourceItem.artCode) || baseArtMatches(artPtr->codeRaw, sourceItem.artCode)) {
+            if (ArticulationNameHelpers::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNameHelpers::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
                 sourceArts.push_back(artPtr.get());
                 break;
             }
@@ -385,7 +359,9 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
                 for (const auto& varSpec : velLayer->sampleVariantSpecs) {
                     if (varSpec == nullptr) continue;
 
-                    if (micSpecMatches(varSpec->micSpec, mic.specs)) {
+                    if (varSpec->micSpec.type == mic.specs.type
+                        && varSpec->micSpec.position == mic.specs.position
+                        && varSpec->micSpec.format == mic.specs.format) {
                         routable = true;
                         break;
                     }
@@ -450,7 +426,7 @@ std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForSourcePath(con
     if (sourceItem.artCode.isNotEmpty()) {
         for (const auto& artPtr : sourceInstrument->articulationSpecs) {
             if (artPtr == nullptr) continue;
-            if (artCodeMatches(artPtr->codeRaw, sourceItem.artCode) || baseArtMatches(artPtr->codeRaw, sourceItem.artCode)) {
+            if (ArticulationNameHelpers::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNameHelpers::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
                 sourceArts.push_back(artPtr.get());
                 break;
             }
@@ -823,7 +799,7 @@ juce::String PadContextPopup::generateFullMapText() const {
             if (slashPos > 0) {
                 auto lineSlotId = slotPart.substring(0, slashPos);
                 auto lineArt = slotPart.substring(slashPos + 1);
-                if (lineSlotId == this->slotId && mapFilterMatchesPopupArt(lineArt, this->artName)) continue;
+                if (lineSlotId == this->slotId && ArticulationNameHelpers::mapFilterMatchesArticulation(lineArt, this->artName)) continue;
             }
         }
         result.add(trimmed);
@@ -931,10 +907,10 @@ juce::String PadContextPopup::generateReplaceMapText(const SourceItem& sourceIns
         if (sourceArts.size() == 1) return sourceArts.front();
 
         for (const auto* sourceArt : sourceArts) {
-            if (sourceArt != nullptr && artCodeMatches(sourceArt->codeRaw, slotArt)) return sourceArt;
+            if (sourceArt != nullptr && ArticulationNameHelpers::articulationCodeMatches(sourceArt->codeRaw, slotArt)) return sourceArt;
         }
         for (const auto* sourceArt : sourceArts) {
-            if (sourceArt != nullptr && baseArtMatches(sourceArt->codeRaw, slotArt)) return sourceArt;
+            if (sourceArt != nullptr && ArticulationNameHelpers::baseArticulationMatches(sourceArt->codeRaw, slotArt)) return sourceArt;
         }
         return nullptr;
     };
@@ -993,7 +969,7 @@ void PadContextPopup::recalculateLayerIndexOffset() {
         bool matchesArt = entry.slotArticulationFilter.empty();
         if (!matchesArt) {
             for (const auto& filter : entry.slotArticulationFilter)
-                if (mapFilterMatchesPopupArt(filter, this->artName)) matchesArt = true;
+                if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, this->artName)) matchesArt = true;
         }
         if (matchesArt) foundFirstMatch = true;
         else if (!foundFirstMatch) ++this->layerIndexOffset;
@@ -1035,7 +1011,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
         for (const auto& sourceItem : this->sourceItems) {
             if (sourceItem.kitCodeRaw.compareIgnoreCase(item.kitCodeRaw) != 0) continue;
             if (sourceItem.instCode.compareIgnoreCase(item.instCode) != 0) continue;
-            if (baseArtMatches(sourceItem.artCode, this->artName)) {
+            if (ArticulationNameHelpers::baseArticulationMatches(sourceItem.artCode, this->artName)) {
                 item.artCode = sourceItem.artCode;
                 return item;
             }

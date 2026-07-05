@@ -1,5 +1,8 @@
 #include "UIHelpers.h"
 
+#include "../Engine/ArticulationNameHelpers.h"
+
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <unordered_set>
 
 namespace UIHelpers {
@@ -56,6 +59,12 @@ void configureControlButton(juce::TextButton& button, int connectedEdges) {
     button.setConnectedEdges(connectedEdges);
 }
 
+void configureCategoryButton(juce::TextButton& button) {
+    button.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    button.setColour(juce::TextButton::textColourOffId, UITheme::Colours::textSecondary);
+    button.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+}
+
 void configureToggleButton(juce::TextButton& button, int connectedEdges) {
     button.setClickingTogglesState(true);
     button.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
@@ -85,6 +94,13 @@ void configureMonoTextEditor(juce::TextEditor& editor,
 
 juce::String sentinelValueText(double value) {
     return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
+}
+
+juce::String getMidiControllerItemText(int controllerNumber) {
+    const auto* controllerName = juce::MidiMessage::getControllerName(controllerNumber);
+    return controllerName != nullptr
+        ? juce::String(controllerNumber) + " / " + juce::String(controllerName)
+        : juce::String(controllerNumber);
 }
 
 void applyMidiNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note) {
@@ -166,12 +182,12 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
     needleParts.addTokens(needle, "/", "");
     needleParts.removeEmptyStrings();
     if (needleParts.size() >= 3) {
-        const auto needleBaseArt = needleParts[2].upToFirstOccurrenceOf("[", false, false);
+        const auto needleBaseArt = ArticulationNameHelpers::normalizeArticulationName(needleParts[2]);
         for (int idx = 0; idx < static_cast<int>(sourceItems.size()); ++idx) {
             const auto& item = sourceItems[static_cast<size_t>(idx)];
             if (item.kitCodeRaw.toLowerCase() != needleParts[0]) continue;
             if (item.instCode.toLowerCase() != needleParts[1]) continue;
-            if (item.artCode.toLowerCase().upToFirstOccurrenceOf("[", false, false) == needleBaseArt) return idx;
+            if (ArticulationNameHelpers::normalizeArticulationName(item.artCode) == needleBaseArt) return idx;
         }
     }
     return -1;

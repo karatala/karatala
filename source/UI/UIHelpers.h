@@ -33,6 +33,8 @@ void configureRotarySlider(juce::Slider& slider,
 
 void configureControlButton(juce::TextButton& button, int connectedEdges = 0);
 
+void configureCategoryButton(juce::TextButton& button);
+
 void configureToggleButton(juce::TextButton& button, int connectedEdges = 0);
 
 void configureTableRowLabel(juce::Label& label,
@@ -44,6 +46,8 @@ void configureMonoTextEditor(juce::TextEditor& editor,
                              bool multiline = true);
 
 juce::String sentinelValueText(double value);
+
+juce::String getMidiControllerItemText(int controllerNumber);
 
 void applyMidiNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note);
 

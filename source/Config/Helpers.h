@@ -11,10 +11,7 @@ static inline bool isValidMidiValue(int value) {
 }
 
 template <typename T>
-static inline bool vectorContains(const std::vector<T>& vec, T value) {
-    for (T x : vec) if (x == value) return true;
-    return false;
-}
+static inline bool vectorContains(const std::vector<T>& vec, T value) { return std::find(vec.begin(), vec.end(), value) != vec.end(); }
 
 static inline bool containsSameValue(const std::vector<uint8_t>& a, const std::vector<uint8_t>& b) {
     std::array<bool, 256> existing{};
