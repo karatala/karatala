@@ -82,6 +82,10 @@ public:
 
     ~GlobalLogger() {
         this->stopWriterThread();
+    }
+
+    void shutdown() {
+        this->stopWriterThread();
         this->flushQueuedLines();
     }
 
@@ -96,12 +100,23 @@ public:
         return static_cast<DebugLevel>(this->logLevel.load(std::memory_order_relaxed));
     }
 
-    void setLogFile(const juce::File& f) {
+    juce::File createInstanceLogFile(const juce::File& dataPath) {
+        auto logsDir = dataPath.getChildFile("logs");
+        if (!logsDir.exists()) logsDir.createDirectory();
+
+        const auto timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S");
+        const auto baseName = "karatala-" + timestamp;
+        auto candidate = logsDir.getChildFile(baseName + ".log");
+        for (int duplicateIndex = 1; candidate.existsAsFile(); ++duplicateIndex) candidate = logsDir.getChildFile(baseName + "-" + juce::String(duplicateIndex) + ".log");
+        candidate.create();
+        return candidate;
+    }
+
+    void setLogFile(const juce::File& file) {
         {
             const std::lock_guard<std::mutex> lock(this->fileMutex);
-            this->logFile = f;
-            if (!this->logFile.getParentDirectory().exists())
-                this->logFile.getParentDirectory().createDirectory();
+            this->logFile = file;
+            if (!this->logFile.getParentDirectory().exists()) this->logFile.getParentDirectory().createDirectory();
         }
         if (this->getLogLevel() != DebugLevel::Off) this->startWriterThread();
     }
@@ -126,9 +141,9 @@ private:
         void run() override {
             while (!this->threadShouldExit()) {
                 this->owner.queueEvent.wait(250);
+                if (this->threadShouldExit()) break;
                 this->owner.flushQueuedLines();
             }
-            this->owner.flushQueuedLines();
         }
 
     private:
@@ -150,15 +165,13 @@ private:
             const std::lock_guard<std::mutex> lock(this->threadMutex);
             thread = std::move(this->writerThread);
         }
-        if (thread != nullptr) {
-            this->queueEvent.signal();
-            if (juce::Thread::getCurrentThreadId() == thread->getThreadId()) {
-                thread->signalThreadShouldExit();
-                thread.release();
-                return;
-            }
-            thread->stopThread(1000);
-        }
+
+        if (thread == nullptr) return;
+
+        thread->signalThreadShouldExit();
+        thread->notify();
+        this->queueEvent.signal();
+        thread->waitForThreadToExit(1000);
     }
 
     void enqueueLine(const juce::String& line) {

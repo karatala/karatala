@@ -45,8 +45,8 @@ void DrumKitEngine::initGlobalSettings() {
             }
         }
     }
-
-    GlobalLogger::instance().setLogFile(this->dataPath.getChildFile("karatala.log"));
+    const auto logFile = GlobalLogger::instance().createInstanceLogFile(this->dataPath);
+    GlobalLogger::instance().setLogFile(logFile);
 
     auto yamlStr = configFile.loadFileAsString();
     auto conf = this->parseConfigYaml(yamlStr);

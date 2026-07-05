@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Config/PluginLogger.h"
 #include <algorithm>
 
 PluginProcessor::PluginProcessor()
@@ -65,6 +66,8 @@ PluginProcessor::PluginProcessor()
 }
 
 PluginProcessor::~PluginProcessor() {
+    this->drumKitEnginePtr.reset();
+    GlobalLogger::instance().shutdown();
 }
 
 std::optional<juce::String> PluginProcessor::getNameForMidiNoteNumber(int note, int midiChannel) {
