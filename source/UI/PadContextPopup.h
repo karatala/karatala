@@ -5,7 +5,7 @@
 #include "SourceItem.h"
 #include "SourcePickerPopup.h"
 #include "MidiNoteAssignmentControl.h"
-#include "ParameterPot.h"
+#include "CompactParameterControl.h"
 
 class PadContextPopup : public juce::Component {
 public:
@@ -67,10 +67,10 @@ private:
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst/art multiline
         std::unique_ptr<juce::Label> routingLabel;
-        std::unique_ptr<ParameterPot> tuningPot;
-        std::unique_ptr<ParameterPot> attackPot;
-        std::unique_ptr<ParameterPot> decayPot;
-        std::unique_ptr<ParameterPot> gainPot;
+        std::unique_ptr<CompactParameterControl> tuningPot;
+        std::unique_ptr<CompactParameterControl> attackPot;
+        std::unique_ptr<CompactParameterControl> decayPot;
+        std::unique_ptr<CompactParameterControl> gainPot;
         std::unique_ptr<juce::TextButton> flipLRButton;
         bool flipLRExplicit = false;
         std::unique_ptr<juce::TextButton> flipPhaseButton;
@@ -78,7 +78,7 @@ private:
         struct MicBleedControl {
             juce::String micCode;
             juce::String micName;
-            std::unique_ptr<ParameterPot> bleedPot;
+            std::unique_ptr<CompactParameterControl> bleedPot;
         };
         std::vector<std::unique_ptr<MicBleedControl>> micBleeds;
         std::unique_ptr<juce::TextButton> removeButton;

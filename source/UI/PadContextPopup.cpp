@@ -207,15 +207,15 @@ juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<i
     constexpr int popupPadding = UITheme::Sizes::popupPadding;
     constexpr int headerHeight = 24;
     constexpr int headerGap = 6;
-    constexpr int potWidth = UITheme::Sizes::potWidth;
+    constexpr int potWidth = 44;
     constexpr int flipColumnWidth = 26;
     constexpr int removeWidth = 16;
     constexpr int sourceWidth = UITheme::Sizes::sourceCardWidth;
-    constexpr int bleedPotWidth = 50;
+    constexpr int bleedPotWidth = 44;
     constexpr int groupGap = 6;
     constexpr int groupPad = 4;
 
-    const int layerRowHeight = UITheme::Sizes::layerRowHeight;
+    constexpr int layerRowHeight = 52;
     const int mainGroupWidth = potWidth * 4 + flipColumnWidth + groupPad * 2;
 
     int maxBleedCount = 0;
@@ -553,7 +553,7 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         const auto it = existingLevels.find(micCode);
         if (it != existingLevels.end())
             level = juce::jlimit(0.0f, 1.0f, it->second);
-        bleedCtrl->bleedPot = std::make_unique<ParameterPot>(micName, 0.0, 100.0, 1.0, static_cast<double>(level * 100.0f));
+        bleedCtrl->bleedPot = std::make_unique<CompactParameterControl>(micName, 0.0, 100.0, 1.0, static_cast<double>(level * 100.0f));
         bleedCtrl->bleedPot->setInteraction(100.0, 1.0);
         this->layerContent.addAndMakeVisible(*bleedCtrl->bleedPot);
         bleedCtrl->bleedPot->onValueChange = [this, layer] {
@@ -597,7 +597,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     this->updateRoutingDisplay(layer);
 
     // Tuning pot
-    layer->tuningPot = std::make_unique<ParameterPot>("Tuning", -2400.0, 2400.0, 1.0, static_cast<double>(tuningCents));
+    layer->tuningPot = std::make_unique<CompactParameterControl>("Tuning", -2400.0, 2400.0, 1.0, static_cast<double>(tuningCents));
     layer->tuningPot->setInteraction(0.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->tuningPot);
     layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
@@ -606,7 +606,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     };
 
     // Attack pot
-    layer->attackPot = std::make_unique<ParameterPot>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
+    layer->attackPot = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
     layer->attackPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
@@ -615,7 +615,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     };
 
     // Decay pot
-    layer->decayPot = std::make_unique<ParameterPot>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
+    layer->decayPot = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
     layer->decayPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
@@ -624,7 +624,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     };
 
     // Gain pot (-60 to +12 dB)
-    layer->gainPot = std::make_unique<ParameterPot>("Gain", -60.0, 12.0, 0.1, static_cast<double>(volumeDb),
+    layer->gainPot = std::make_unique<CompactParameterControl>("Gain", -60.0, 12.0, 0.1, static_cast<double>(volumeDb),
         [](double value) -> juce::String {
             if (value <= -60.0) return "-inf";
             return juce::String(value, 1);
@@ -657,7 +657,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
         this->applyLayerParametersFast(layer);
     };
 
-    // Per-mic bleed as ParameterPots
+    // Per-mic bleed controls
     this->rebuildBleedControls(layer, micBleedLevels);
 
     // Remove button
@@ -1114,15 +1114,15 @@ void PadContextPopup::resized() {
     // Viewport occupies remaining space
     this->layerViewport.setBounds(area);
 
-    // Layer rows - single row per layer (vertical pot layout):
+    // Layer rows - single row per layer (compact parameter controls):
     // [Remove] [Source Card] | [Tuning|Attack|Decay|Gain|L/R+Phase] | [Bleed1|Bleed2|...]
-    const int potW = 50;
-    const int potH = 56; // 12(title) + 28(knob) + 14(value) + 2(gap)
+    const int potW = 44;
+    const int potH = 44;
     const int flipColW = 26;
     const int removeW = 16;
     const int sourceW = 170;
-    const int layerRowH = potH + 8; // pot height + padding
-    const int bleedPotW = 50;
+    const int layerRowH = potH + 8;
+    const int bleedPotW = 44;
     const int groupGap = 6;
     const int groupPad = 4;
 
