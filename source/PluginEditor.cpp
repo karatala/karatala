@@ -20,7 +20,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->setupInstrumentConfigMode();
 
     const auto instrumentMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
-    this->activeMode = instrumentMap.trim().isEmpty() ? ViewMode::Kit : ViewMode::Zen;
+    this->activeMode = instrumentMap.trim().isEmpty() ? ViewMode::Kit : ViewMode::Zone;
     this->sidebar.setActiveMode(this->activeMode);
     this->showComponentsForMode(this->activeMode);
 
@@ -60,7 +60,6 @@ void PluginEditor::setupKitMode() {
         state.setProperty("kit_layout", commit.layout.id, nullptr);
         state.setProperty("instrument_map", commit.instrumentMapText, nullptr);
         this->instrumentMapEditor.setText(commit.instrumentMapText, false);
-        this->referencePanel.setText(engine.buildReferenceText(), false);
 
         juce::StringArray status;
         status.add(engine.getLastInstrumentMapStatus());
@@ -158,20 +157,9 @@ void PluginEditor::setupSidebarKnobs() {
 
 void PluginEditor::setupRawMode() {
     // Raw mode components
-    this->addChildComponent(this->referencePanel);
-    this->addChildComponent(this->referencePanelLabel);
     this->addChildComponent(this->instrumentMapEditor);
     this->addChildComponent(this->instrumentMapLabel);
     this->addChildComponent(this->applyButton);
-
-    this->referencePanelLabel.setText("Reference", juce::dontSendNotification);
-    this->referencePanelLabel.setFont(UITheme::Fonts::labelBoldMedium());
-    this->referencePanelLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
-    this->referencePanelLabel.setJustificationType(juce::Justification::centredLeft);
-
-    UIHelpers::configureMonoTextEditor(this->referencePanel, UITheme::Colours::textInfo, true);
-    this->referencePanel.setReadOnly(true);
-    this->referencePanel.setText(this->processorRef.getEngine().buildReferenceText(), false);
 
     this->instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
     this->instrumentMapLabel.setFont(UITheme::Fonts::labelBoldMedium());
@@ -617,8 +605,6 @@ void PluginEditor::showComponentsForMode(ViewMode mode) {
 
     // Raw mode components
     bool showRaw = (mode == ViewMode::Raw);
-    this->referencePanel.setVisible(showRaw);
-    this->referencePanelLabel.setVisible(showRaw);
     this->instrumentMapEditor.setVisible(showRaw);
     this->instrumentMapLabel.setVisible(showRaw);
     this->applyButton.setVisible(showRaw);
@@ -661,18 +647,13 @@ void PluginEditor::resized() {
 
         case ViewMode::Raw: {
             auto rawArea = mainArea.reduced(UITheme::Spacing::md);
-            auto buttonArea = rawArea.removeFromBottom(32);
-            this->applyButton.setBounds(buttonArea.removeFromLeft(180));
-
             const int gap = UITheme::Spacing::md;
-            const int refWidth = (rawArea.getWidth() - gap) / 3;
-            auto refArea = rawArea.removeFromLeft(refWidth);
-            rawArea.removeFromLeft(gap);
-
             const int labelHeight = UITheme::Spacing::rowCompact;
-            this->referencePanelLabel.setBounds(refArea.removeFromTop(labelHeight));
-            this->referencePanel.setBounds(refArea);
-            this->instrumentMapLabel.setBounds(rawArea.removeFromTop(labelHeight));
+            const int buttonHeight = 32;
+            auto headerArea = rawArea.removeFromTop(buttonHeight);
+            this->applyButton.setBounds(headerArea.removeFromRight(180));
+            headerArea.removeFromRight(gap);
+            this->instrumentMapLabel.setBounds(headerArea.removeFromTop(labelHeight));
             this->instrumentMapEditor.setBounds(rawArea);
             break;
         }

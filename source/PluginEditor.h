@@ -48,9 +48,7 @@ private:
     void showCrosstalkPopup();
     void dismissCrosstalkPopup();
 
-    // Mode: Raw — existing instrument map editor
-    juce::TextEditor referencePanel;
-    juce::Label referencePanelLabel;
+    // Mode: Raw - existing instrument map editor
     juce::TextEditor instrumentMapEditor;
     juce::Label instrumentMapLabel;
     juce::TextButton applyButton { "Apply instrument map" };

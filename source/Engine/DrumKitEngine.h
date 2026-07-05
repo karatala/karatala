@@ -105,7 +105,6 @@ public:
     bool setGlobalKitLayoutId(const juce::String& layoutId);
     bool setGlobalMicLayoutId(const juce::String& layoutId);
     void seedInstrumentMapFingerprints(const juce::String& mapText);
-    juce::String buildReferenceText() const;
 
     // Returns true if `id` corresponds to a registered instrument slot.
     // Used by MicRoutingBuilder to mirror applyMicLayout's slot-resolution logic:

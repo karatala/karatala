@@ -235,10 +235,6 @@ void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
     }
 }
 
-juce::String DrumKitEngine::buildReferenceText() const {
-    return DrumKitEngineTextView::buildReferenceText(this->activeKitLayoutPtr.get(), this->getInstrumentManager());
-}
-
 void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, probably rewrite, simplify
     if (this->activeKitLayoutPtr == nullptr) {
         LOG(Warning, "no active kit layout to map to");
