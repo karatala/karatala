@@ -185,7 +185,7 @@ INSTRUMENTS = {
     'snare_pear_edg': {
         "instrument": 'snare-14x6.5',
         "articulation": 'center',
-        "parameter": 'zon_ctr_rim064',
+        "parameter": '-zon_ctr_rim064',
     },
     'snare_pear_rim': {
         "instrument": 'snare-14x6.5',

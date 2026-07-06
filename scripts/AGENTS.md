@@ -7,6 +7,7 @@
 - `analyze_drum_samples*.py` derives loudness/decay metadata consumed by `KitLibModel`.
 - `convert-drumgizmo2karatala.py` and conversion helpers generate Karatala library structures.
 - HTML/TypeScript utilities support manual sample organization.
+- `rename_samples_from_parent_folders.py` generates review-only batch rename plans from library folder names.
 
 # Local Contracts
 

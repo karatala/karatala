@@ -1,6 +1,6 @@
 # TODO Instrument Library Identity And Tools Plan
 
-Status: phase 1 implemented; phases 2-4 still open.
+Status: phases 1-3 implemented; phase 4 still open.
 
 ## Goal
 
@@ -292,13 +292,18 @@ Verification status:
 
 ### Phase 3 - Rename Script
 
-- Add the Python script.
-- Generate reviewable `.bat` output only.
-- Add clear comments for skipped or conflicting files.
+Status: implemented in `../scripts/rename_samples_from_parent_folders.py`.
 
-Verify later:
+Implemented:
 
-- Run on a copied small fixture and inspect output.
+- Added the Python script.
+- Generates reviewable `.bat` output only.
+- Uses parent instrument and articulation folders to build expected sample file prefixes.
+- Adds comments for skipped files, existing targets, duplicate planned targets, case-only renames, and invalid folder/file shapes.
+
+Verification status:
+
+- Not run yet, per user request not to build or run tests unless asked.
 
 ### Phase 4 - Troubleshooting UI
 
