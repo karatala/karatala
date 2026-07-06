@@ -134,31 +134,38 @@ std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryMa
     };
 
     for (const auto& kitPtr : libraryManager->getKits()) {
+        if (kitPtr == nullptr) continue;
+        const auto kitId = libraryManager->getPreferredKitId(*kitPtr);
         juce::String kitShort = kitPtr->meta.name;
         if (kitShort.isEmpty()) kitShort = kitPtr->meta.codeRaw;
 
         std::vector<const KitLib::InstrumentSpec*> instruments;
         for (const auto& [code, instPtr] : kitPtr->getInstrumentSpecsMap())
             instruments.push_back(instPtr.get());
-        std::sort(instruments.begin(), instruments.end(), [](const auto* a, const auto* b) {
-            return a->meta.codeRaw < b->meta.codeRaw;
+        std::sort(instruments.begin(), instruments.end(), [](const auto* leftInstrument, const auto* rightInstrument) {
+            return leftInstrument->meta.codeRaw < rightInstrument->meta.codeRaw;
         });
 
         for (const auto* inst : instruments) {
             if (inst->articulationSpecs.empty()) {
                 SourceItem item;
-                item.kitCodeRaw = kitPtr->meta.codeRaw;
+                item.kitCodeRaw = kitId;
                 item.kitDisplayName = kitShort;
-                item.instCode = inst->meta.codeRaw;
+                item.instCode = kitPtr->getPreferredInstrumentId(*inst);
+                item.rawKitCode = kitPtr->meta.codeRaw;
+                item.rawInstCode = inst->meta.codeRaw;
                 item.instType = inst->meta.type;
                 addUniqueSourceItem(std::move(item));
             } else {
                 for (const auto& artPtr : inst->articulationSpecs) {
                     SourceItem item;
-                    item.kitCodeRaw = kitPtr->meta.codeRaw;
+                    item.kitCodeRaw = kitId;
                     item.kitDisplayName = kitShort;
-                    item.instCode = inst->meta.codeRaw;
-                    item.artCode = artPtr->codeRaw;
+                    item.instCode = kitPtr->getPreferredInstrumentId(*inst);
+                    item.artCode = inst->getPreferredArticulationId(*artPtr);
+                    item.rawKitCode = kitPtr->meta.codeRaw;
+                    item.rawInstCode = inst->meta.codeRaw;
+                    item.rawArtCode = artPtr->codeRaw;
                     item.instType = inst->meta.type;
                     addUniqueSourceItem(std::move(item));
                 }
@@ -173,8 +180,10 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
     if (needle.isEmpty())
         return -1;
     for (int idx = 0; idx < static_cast<int>(sourceItems.size()); ++idx) {
-        auto haystack = sourceItems[static_cast<size_t>(idx)].fullPath().toLowerCase();
-        if (haystack == needle)
+        const auto& item = sourceItems[static_cast<size_t>(idx)];
+        auto haystack = item.fullPath().toLowerCase();
+        auto rawHaystack = item.rawFullPath().toLowerCase();
+        if (haystack == needle || rawHaystack == needle)
             return idx;
     }
 
@@ -185,9 +194,9 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
         const auto needleBaseArt = ArticulationNameHelpers::normalizeArticulationName(needleParts[2]);
         for (int idx = 0; idx < static_cast<int>(sourceItems.size()); ++idx) {
             const auto& item = sourceItems[static_cast<size_t>(idx)];
-            if (item.kitCodeRaw.toLowerCase() != needleParts[0]) continue;
-            if (item.instCode.toLowerCase() != needleParts[1]) continue;
-            if (ArticulationNameHelpers::normalizeArticulationName(item.artCode) == needleBaseArt) return idx;
+            if (item.kitCodeRaw.toLowerCase() != needleParts[0] && item.rawKitCode.toLowerCase() != needleParts[0]) continue;
+            if (item.instCode.toLowerCase() != needleParts[1] && item.rawInstCode.toLowerCase() != needleParts[1]) continue;
+            if (ArticulationNameHelpers::normalizeArticulationName(item.artCode) == needleBaseArt || ArticulationNameHelpers::normalizeArticulationName(item.rawArtCode) == needleBaseArt) return idx;
         }
     }
     return -1;

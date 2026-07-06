@@ -93,9 +93,11 @@ void PadContextPopup::rebuildSourceItems() {
 
         for (const auto* inst : instruments) {
             SourceItem item;
-            item.kitCodeRaw = kitPtr->meta.codeRaw;
+            item.kitCodeRaw = libraryManager->getPreferredKitId(*kitPtr);
             item.kitDisplayName = kitShort;
-            item.instCode = inst->meta.codeRaw;
+            item.instCode = kitPtr->getPreferredInstrumentId(*inst);
+            item.rawKitCode = kitPtr->meta.codeRaw;
+            item.rawInstCode = inst->meta.codeRaw;
             item.instType = inst->meta.type;
             const auto key = item.fullPath().trim().toLowerCase().toStdString();
             if (seen.insert(key).second)
@@ -312,18 +314,8 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
         sourceItem.artCode = pathParts.size() > 2 ? pathParts[2] : juce::String();
     }
 
-    const KitLib::InstrumentSpec* sourceInstrument = nullptr;
-    for (const auto& kitPtr : libraryManager->getKits()) {
-        if (kitPtr == nullptr) continue;
-        if (kitPtr->meta.codeRaw.compareIgnoreCase(sourceItem.kitCodeRaw) != 0) continue;
-
-        const auto& instruments = kitPtr->getInstrumentSpecsMap();
-        auto instIt = instruments.find(sourceItem.instCode);
-        if (instIt == instruments.end()) break;
-
-        sourceInstrument = instIt->second.get();
-        break;
-    }
+    const auto* sourceKit = libraryManager->findKitById(sourceItem.kitCodeRaw);
+    const KitLib::InstrumentSpec* sourceInstrument = sourceKit != nullptr ? sourceKit->findInstrumentById(sourceItem.instCode) : nullptr;
 
     if (sourceInstrument == nullptr) return result;
 
@@ -407,18 +399,8 @@ std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForSourcePath(con
         sourceItem.artCode = pathParts.size() > 2 ? pathParts[2] : juce::String();
     }
 
-    const KitLib::InstrumentSpec* sourceInstrument = nullptr;
-    for (const auto& kitPtr : libraryManager->getKits()) {
-        if (kitPtr == nullptr) continue;
-        if (kitPtr->meta.codeRaw.compareIgnoreCase(sourceItem.kitCodeRaw) != 0) continue;
-
-        const auto& instruments = kitPtr->getInstrumentSpecsMap();
-        auto instIt = instruments.find(sourceItem.instCode);
-        if (instIt == instruments.end()) break;
-
-        sourceInstrument = instIt->second.get();
-        break;
-    }
+    const auto* sourceKit = libraryManager->findKitById(sourceItem.kitCodeRaw);
+    const KitLib::InstrumentSpec* sourceInstrument = sourceKit != nullptr ? sourceKit->findInstrumentById(sourceItem.instCode) : nullptr;
 
     if (sourceInstrument == nullptr) return result;
 
@@ -1045,7 +1027,7 @@ juce::String PadContextPopup::generateFullMapText() const {
         result.add(line);
     }
 
-    return result.joinIntoString("\n");
+    return this->engine.normalizeInstrumentMapText(result.joinIntoString("\n"));
 }
 
 bool PadContextPopup::isReplaceModeEnabled() const {
@@ -1076,7 +1058,7 @@ juce::String PadContextPopup::generateReplaceMapText(const SourceItem& sourceIns
     const auto* kitLayout = this->engine.getKitLayout();
     const auto* libraryManager = this->engine.getInstrumentManager();
     if (kitLayout == nullptr || libraryManager == nullptr)
-        return result.joinIntoString("\n");
+        return this->engine.normalizeInstrumentMapText(result.joinIntoString("\n"));
 
     const KitLayout::InstrumentSlot* targetSlot = nullptr;
     for (const auto& candidate : kitLayout->instrumentSlots) {
@@ -1085,25 +1067,17 @@ juce::String PadContextPopup::generateReplaceMapText(const SourceItem& sourceIns
             break;
         }
     }
-    if (targetSlot == nullptr) return result.joinIntoString("\n");
+    if (targetSlot == nullptr) return this->engine.normalizeInstrumentMapText(result.joinIntoString("\n"));
 
-    const KitLib::InstrumentSpec* sourceSpec = nullptr;
-    for (const auto& kitPtr : libraryManager->getKits()) {
-        if (kitPtr == nullptr) continue;
-        if (kitPtr->meta.codeRaw.compareIgnoreCase(sourceInstrument.kitCodeRaw) != 0) continue;
-
-        const auto& instruments = kitPtr->getInstrumentSpecsMap();
-        auto instIt = instruments.find(sourceInstrument.instCode);
-        if (instIt != instruments.end()) sourceSpec = instIt->second.get();
-        break;
-    }
-    if (sourceSpec == nullptr) return result.joinIntoString("\n");
+    const auto* sourceKit = libraryManager->findKitById(sourceInstrument.kitCodeRaw);
+    const KitLib::InstrumentSpec* sourceSpec = sourceKit != nullptr ? sourceKit->findInstrumentById(sourceInstrument.instCode) : nullptr;
+    if (sourceSpec == nullptr) return this->engine.normalizeInstrumentMapText(result.joinIntoString("\n"));
 
     std::vector<const KitLib::ArticulationSpec*> sourceArts;
     for (const auto& artPtr : sourceSpec->articulationSpecs) {
         if (artPtr != nullptr) sourceArts.push_back(artPtr.get());
     }
-    if (sourceArts.empty()) return result.joinIntoString("\n");
+    if (sourceArts.empty()) return this->engine.normalizeInstrumentMapText(result.joinIntoString("\n"));
 
     auto chooseSourceArt = [&sourceArts](const juce::String& slotArt) -> const KitLib::ArticulationSpec* {
         if (sourceArts.size() == 1) return sourceArts.front();
@@ -1127,7 +1101,7 @@ juce::String PadContextPopup::generateReplaceMapText(const SourceItem& sourceIns
         result.add(line);
     }
 
-    return result.joinIntoString("\n");
+    return this->engine.normalizeInstrumentMapText(result.joinIntoString("\n"));
 }
 
 void PadContextPopup::applyReplaceInstrument(const SourceItem& sourceInstrument) {

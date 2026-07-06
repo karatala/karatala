@@ -507,7 +507,8 @@ public:
         return this->articulationSpecs.back().get();
     }
 
-    ArticulationSpec* findArticulationById(const juce::String& id) const;
+    const ArticulationSpec* findArticulationById(const juce::String& id) const;
+    ArticulationSpec* findArticulationById(const juce::String& id) { return const_cast<ArticulationSpec*>(static_cast<const InstrumentSpec*>(this)->findArticulationById(id)); }
     juce::String getPreferredArticulationId(const ArticulationSpec& articulation) const;
 };
 
@@ -533,7 +534,8 @@ public:
 
     void addInstrument(InstrumentSpec::MetaInfo instMeta) { this->instrumentSpecsMap[instMeta.codeRaw] = std::make_unique<InstrumentSpec>(this, instMeta); }
     InstrumentSpec* findInstrument(const juce::String& id);
-    InstrumentSpec* findInstrumentById(const juce::String& id);
+    const InstrumentSpec* findInstrumentById(const juce::String& id) const;
+    InstrumentSpec* findInstrumentById(const juce::String& id) { return const_cast<InstrumentSpec*>(static_cast<const DrumKitSpec*>(this)->findInstrumentById(id)); }
     juce::String getPreferredInstrumentId(const InstrumentSpec& instrument) const;
     std::vector<InstrumentSpec*> getInstrumentsByType(InstrumentSpec::Type type) const;
 
@@ -553,7 +555,8 @@ public:
     int scanAll();
     DrumKitSpec* getKit(int index);
     DrumKitSpec* findKit(const juce::String& name);
-    DrumKitSpec* findKitById(const juce::String& id);
+    const DrumKitSpec* findKitById(const juce::String& id) const;
+    DrumKitSpec* findKitById(const juce::String& id) { return const_cast<DrumKitSpec*>(static_cast<const LibraryManager*>(this)->findKitById(id)); }
     juce::String getPreferredKitId(const DrumKitSpec& kit) const;
     static std::vector<juce::String> getIdentityCandidates(const DrumKitSpec::MetaInfo& meta);
     const std::vector<std::unique_ptr<DrumKitSpec>>& getKits() const { return this->kitSpecs; }

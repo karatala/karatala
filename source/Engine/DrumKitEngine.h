@@ -84,6 +84,7 @@ public:
 
     static ParseResult<InstrumentMap> parseInstrumentMapText(const juce::String& text);
     static juce::String serializeInstrumentMap(const InstrumentMap& instrumentMap);
+    juce::String normalizeInstrumentMapText(const juce::String& text) const;
     juce::String buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& kit) const;
 
     void mapDefaultKit();

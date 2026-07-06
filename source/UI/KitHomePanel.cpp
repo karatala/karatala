@@ -86,7 +86,7 @@ KitHomePanel::KitHomePanel(DrumKitEngine& engine)
         parsed.value.entries.erase(std::remove_if(parsed.value.entries.begin(), parsed.value.entries.end(), [&validSlots](const auto& entry) {
             return entry.slotId != "*" && validSlots.find(entry.slotId.toStdString()) == validSlots.end();
         }), parsed.value.entries.end());
-        const auto compatibleMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
+        const auto compatibleMapText = this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(parsed.value));
         if (compatibleMapText.trim().isEmpty()) {
             this->reportStatus("The current map has no assignments compatible with this kit layout");
             return;
@@ -280,8 +280,10 @@ void KitHomePanel::rebuildSlotRows() {
                 });
                 for (const auto* instrument : instruments) {
                     SourceChoice choice;
-                    choice.kitCode = kit->meta.codeRaw;
-                    choice.instrumentCode = instrument->meta.codeRaw;
+                    choice.kitCode = library->getPreferredKitId(*kit);
+                    choice.instrumentCode = kit->getPreferredInstrumentId(*instrument);
+                    choice.rawKitCode = kit->meta.codeRaw;
+                    choice.rawInstrumentCode = instrument->meta.codeRaw;
                     choice.display = (kit->meta.name.isNotEmpty() ? kit->meta.name : kit->meta.codeRaw) + "/" + instrument->meta.codeRaw;
                     choice.type = instrument->meta.type;
                     row->choices.push_back(std::move(choice));
@@ -296,7 +298,10 @@ void KitHomePanel::rebuildSlotRows() {
                 continue;
             const auto wanted = entry.kitRef + "/" + entry.instCode;
             for (size_t idx = 0; idx < row->choices.size(); ++idx) {
-                if (KitHomePanelHelpers::sourcePath(row->choices[idx]).compareIgnoreCase(wanted) == 0) {
+                const auto& choice = row->choices[idx];
+                const auto choicePath = KitHomePanelHelpers::sourcePath(choice);
+                const auto rawChoicePath = choice.rawKitCode + "/" + choice.rawInstrumentCode;
+                if (choicePath.compareIgnoreCase(wanted) == 0 || rawChoicePath.compareIgnoreCase(wanted) == 0) {
                     selectedId = static_cast<int>(idx + 2);
                     break;
                 }
@@ -344,7 +349,7 @@ void KitHomePanel::replaceDraftSlot(const SlotRow& row) {
         entry.instCode = choice.instrumentCode;
         map.entries.push_back(std::move(entry));
     }
-    this->draftMapText = DrumKitEngine::serializeInstrumentMap(map);
+    this->draftMapText = this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(map));
 }
 
 
@@ -420,7 +425,7 @@ void KitHomePanel::loadSelectedPreset() {
         if (validSlots.find(entry.slotId.toStdString()) != validSlots.end())
             merged.entries.push_back(entry);
 
-    this->draftMapText = DrumKitEngine::serializeInstrumentMap(merged);
+    this->draftMapText = this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(merged));
     this->rebuildSlotRows();
     juce::String status = "Preset loaded into draft";
     if (!skippedSlots.isEmpty())
@@ -438,6 +443,7 @@ void KitHomePanel::savePreset(bool forceNewName) {
     const bool canOverwrite = !forceNewName && presetIdx >= 0 && presetIdx < static_cast<int>(this->presets.size())
                            && this->presets[static_cast<size_t>(presetIdx)].isUser;
     if (canOverwrite) {
+        this->draftMapText = this->engine.normalizeInstrumentMapText(this->draftMapText);
         if (this->presets[static_cast<size_t>(presetIdx)].file.replaceWithText(this->draftMapText))
             this->reportStatus("Instrument-map preset saved");
         else
@@ -457,6 +463,7 @@ void KitHomePanel::savePreset(bool forceNewName) {
             return;
         auto directory = this->getUserPresetDirectory();
         directory.createDirectory();
+        this->draftMapText = this->engine.normalizeInstrumentMapText(this->draftMapText);
         if (directory.getChildFile(name + ".map").replaceWithText(this->draftMapText)) {
             this->rebuildPresetEntries();
             this->reportStatus("Saved preset: " + name);

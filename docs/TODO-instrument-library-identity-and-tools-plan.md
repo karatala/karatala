@@ -274,14 +274,21 @@ Verification status:
 
 ### Phase 2 - Instrument Map Resolver
 
-- Use identity resolver in map apply and preview source resolving.
-- Keep full old folder names working.
-- Serialize maps with shortest unique identities.
-- Improve missing and ambiguous error text.
+Status: implemented in `../source/Engine/DrumKitEngine.*`, `../source/Engine/DrumKitEngineMapHelpers.cpp`, `../source/Engine/KitLibModel.*`, `../source/UI/*`, and `../tests/TestInstrumentMap.cpp`.
 
-Verify later:
+Implemented:
 
-- Add focused `InstrumentMap` tests for old full paths, short IDs, ambiguous IDs, and serialized preferred IDs.
+- Map apply, automatic orientation, and preview source resolving use identity lookup.
+- Old full folder names stay valid when they resolve uniquely.
+- Generated and changed map text is normalized to preferred IDs and sorted by destination slot/art group.
+- Stable sorting keeps layer order inside the same slot/art group.
+- Missing and ambiguous kit, instrument, and articulation IDs report clearer status text.
+- Source pickers keep raw path aliases so old maps still select the right source row.
+
+Verification status:
+
+- Added focused `InstrumentMap` tests for preferred generated IDs and stable slot grouping.
+- Not run yet, per user request not to build or run tests unless asked.
 
 ### Phase 3 - Rename Script
 

@@ -191,7 +191,8 @@ void PluginEditor::applyInstrumentMapFromEditor() {
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
 
-    auto text = this->instrumentMapEditor.getText();
+    auto text = this->processorRef.getEngine().normalizeInstrumentMapText(this->instrumentMapEditor.getText());
+    this->instrumentMapEditor.setText(text, false);
     this->processorRef.getValueTreeState().state.setProperty("instrument_map", text, nullptr);
 
     const bool applied = this->processorRef.getEngine().useInstrumentMap(text);
@@ -211,7 +212,7 @@ void PluginEditor::applyInstrumentMapFromEditor() {
 }
 
 void PluginEditor::setupMapMode() {
-    // Map mode — MIDI note assignment table
+    // Map mode - MIDI note assignment table
     this->addChildComponent(this->midiMapTable);
     this->refreshMidiMapTableIfNeeded(true);
     this->midiMapTable.onMappingChanged = [this] {

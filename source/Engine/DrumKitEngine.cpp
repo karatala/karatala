@@ -13,6 +13,105 @@
 #include <algorithm>
 #include <unordered_set>
 
+namespace DrumKitEngineIdentityMapHelpers {
+
+juce::String identityKey(const juce::String& value) { return value.trim().toLowerCase(); }
+
+bool candidateMatches(const std::vector<juce::String>& candidates, const juce::String& id) {
+    const auto key = identityKey(id);
+    if (key.isEmpty()) return false;
+    for (const auto& candidate : candidates)
+        if (identityKey(candidate) == key) return true;
+    return false;
+}
+
+juce::String firstCandidateOrRaw(const std::vector<juce::String>& candidates, const juce::String& raw) {
+    for (const auto& candidate : candidates)
+        if (candidate.trim().isNotEmpty()) return candidate.trim();
+    return raw.trim();
+}
+
+juce::String joinNames(const std::vector<juce::String>& names) {
+    juce::StringArray values;
+    for (const auto& name : names)
+        if (name.trim().isNotEmpty()) values.add(name.trim());
+    return values.joinIntoString(",");
+}
+
+juce::String makeEntrySortKey(const DrumKitEngine::InstrumentMapEntry& entry) {
+    return entry.slotId.trim().toLowerCase() + "/" + joinNames(entry.slotArticulationFilter).toLowerCase();
+}
+
+int countKitIdMatches(const KitLib::LibraryManager& libraryManager, const juce::String& id) {
+    int matchCount = 0;
+    for (const auto& kitPtr : libraryManager.getKits()) {
+        if (kitPtr == nullptr) continue;
+        if (candidateMatches(KitLib::LibraryManager::getIdentityCandidates(kitPtr->meta), id)) ++matchCount;
+    }
+    return matchCount;
+}
+
+int countInstrumentIdMatches(const KitLib::DrumKitSpec& kitSpec, const juce::String& id) {
+    int matchCount = 0;
+    for (const auto& [instrumentKey, instrumentPtr] : kitSpec.getInstrumentSpecsMap()) {
+        juce::ignoreUnused(instrumentKey);
+        if (instrumentPtr == nullptr) continue;
+        if (candidateMatches(KitLib::InstrumentSpec::getIdentityCandidates(instrumentPtr->meta), id)) ++matchCount;
+    }
+    return matchCount;
+}
+
+int countArticulationIdMatches(const KitLib::InstrumentSpec& instrumentSpec, const juce::String& id) {
+    int matchCount = 0;
+    for (const auto& articulationPtr : instrumentSpec.articulationSpecs) {
+        if (articulationPtr == nullptr) continue;
+        if (candidateMatches(articulationPtr->getIdentityCandidates(), id)) ++matchCount;
+    }
+    return matchCount;
+}
+
+juce::String describeKitResolveFailure(const KitLib::LibraryManager& libraryManager, const juce::String& kitRef, const juce::String& slotId) {
+    const auto matchCount = countKitIdMatches(libraryManager, kitRef);
+    const auto reason = matchCount > 1 ? "Kit id is ambiguous" : "Kit not found";
+    return juce::String(reason) + ": " + kitRef + " for slot '" + slotId + "'";
+}
+
+juce::String describeInstrumentResolveFailure(const KitLib::DrumKitSpec& kitSpec, const juce::String& instCode, const juce::String& slotId) {
+    const auto matchCount = countInstrumentIdMatches(kitSpec, instCode);
+    const auto reason = matchCount > 1 ? "Instrument id is ambiguous" : "Instrument not found";
+    return juce::String(reason) + ": " + kitSpec.meta.codeRaw + "/" + instCode + " for slot '" + slotId + "'";
+}
+
+juce::String describeArticulationResolveFailure(const KitLib::InstrumentSpec& instrumentSpec, const juce::String& artCode, const juce::String& targetPath, const juce::String& slotId) {
+    const auto matchCount = countArticulationIdMatches(instrumentSpec, artCode);
+    const auto reason = matchCount > 1 ? "Source articulation id is ambiguous" : "Unknown source articulation";
+    return juce::String(reason) + ": " + artCode + " for target '" + targetPath + "' in slot '" + slotId + "'";
+}
+
+void normalizeArticulationFilters(DrumKitEngine::InstrumentMapEntry& entry, const KitLib::InstrumentSpec& instrumentSpec) {
+    for (auto& artName : entry.articulationFilter) {
+        auto* artSpec = instrumentSpec.findArticulationById(artName);
+        if (artSpec != nullptr) artName = instrumentSpec.getPreferredArticulationId(*artSpec);
+    }
+}
+
+void normalizeInstrumentMapEntries(DrumKitEngine::InstrumentMap& instrumentMap, KitLib::LibraryManager& libraryManager) {
+    for (auto& entry : instrumentMap.entries) {
+        auto* kitSpec = libraryManager.findKitById(entry.kitRef);
+        if (kitSpec == nullptr) continue;
+
+        entry.kitRef = libraryManager.getPreferredKitId(*kitSpec);
+        if (entry.instCode.isEmpty()) continue;
+
+        auto* instSpec = kitSpec->findInstrumentById(entry.instCode);
+        if (instSpec == nullptr) continue;
+
+        entry.instCode = kitSpec->getPreferredInstrumentId(*instSpec);
+        normalizeArticulationFilters(entry, *instSpec);
+    }
+}
+
+} // namespace DrumKitEngineIdentityMapHelpers
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
@@ -158,8 +257,10 @@ juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, co
         if (matched == nullptr) continue;
         InstrumentMapEntry entry;
         entry.slotId = slot.id;
-        entry.kitRef = kit.meta.codeRaw;
-        entry.instCode = matched->meta.codeRaw;
+        entry.kitRef = this->libraryManagerPtr != nullptr
+            ? this->libraryManagerPtr->getPreferredKitId(kit)
+            : DrumKitEngineIdentityMapHelpers::firstCandidateOrRaw(KitLib::DrumKitSpec::getIdentityCandidates(kit.meta), kit.meta.codeRaw);
+        entry.instCode = kit.getPreferredInstrumentId(*matched);
         if (const auto inferredFlip = DrumKitEngineMapHelpers::inferAutomaticFlipLR(slot, *matched, entry))
             entry.flipLR = *inferredFlip;
         result.entries.push_back(std::move(entry));
@@ -178,7 +279,17 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
         return values.joinIntoString(",");
     };
 
-    for (const auto& entry : instrumentMap.entries) {
+    std::vector<const InstrumentMapEntry*> sortedEntries;
+    sortedEntries.reserve(instrumentMap.entries.size());
+    for (const auto& entry : instrumentMap.entries)
+        sortedEntries.push_back(&entry);
+
+    std::stable_sort(sortedEntries.begin(), sortedEntries.end(), [](const auto* leftEntry, const auto* rightEntry) {
+        return DrumKitEngineIdentityMapHelpers::makeEntrySortKey(*leftEntry) < DrumKitEngineIdentityMapHelpers::makeEntrySortKey(*rightEntry);
+    });
+
+    for (const auto* entryPtr : sortedEntries) {
+        const auto& entry = *entryPtr;
         if (entry.slotId.trim().isEmpty() || entry.kitRef.trim().isEmpty()) continue;
 
         juce::String slotRef = entry.slotId.trim();
@@ -224,14 +335,23 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
 }
 
 void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, move to ui related helper, or generate on demand in UI instead of storing in engine
-    this->suggestedInstrumentMapText = DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentSynthById);
+    this->suggestedInstrumentMapText = this->normalizeInstrumentMapText(DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentSynthById));
+}
+
+juce::String DrumKitEngine::normalizeInstrumentMapText(const juce::String& text) const {
+    auto parsed = DrumKitEngine::parseInstrumentMapText(text);
+    if (!parsed.ok()) return text;
+    if (this->libraryManagerPtr != nullptr)
+        DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapEntries(parsed.value, *this->libraryManagerPtr);
+    return DrumKitEngine::serializeInstrumentMap(parsed.value);
 }
 
 void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
-    auto parsed = DrumKitEngine::parseInstrumentMapText(mapText);
+    const auto normalizedMapText = this->normalizeInstrumentMapText(mapText);
+    auto parsed = DrumKitEngine::parseInstrumentMapText(normalizedMapText);
     if (parsed.ok()) {
         this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
-        this->lastAppliedInstrumentMapText = mapText;
+        this->lastAppliedInstrumentMapText = normalizedMapText;
     }
 }
 
@@ -1192,11 +1312,11 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     if (libMgr == nullptr)
         return std::nullopt;
 
-    auto* kit = libMgr->findKit(kitCodeRaw);
+    auto* kit = libMgr->findKitById(kitCodeRaw);
     if (kit == nullptr)
         return std::nullopt;
 
-    auto* inst = kit->findInstrument(instCode);
+    auto* inst = kit->findInstrumentById(instCode);
     if (inst == nullptr)
         return std::nullopt;
 
@@ -1205,7 +1325,7 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
 
     KitLib::ArticulationSpec* artSpec = nullptr;
     if (artCode.isNotEmpty())
-        artSpec = inst->findArticulation(artCode);
+        artSpec = inst->findArticulationById(artCode);
 
     if (artSpec == nullptr && artCode.isNotEmpty()) {
         const auto requestedBase = artCode.upToFirstOccurrenceOf("[", false, false);
@@ -1496,7 +1616,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         return false;
     }
 
+    DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapEntries(parsed.value, *this->libraryManagerPtr);
     DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
+    const auto normalizedMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
 
     LOG(Notice, "=== useInstrumentMap: " + juce::String(parsed.value.entries.size()) + " entries ===");
     for (size_t idx = 0; idx < parsed.value.entries.size(); ++idx) {
@@ -1609,9 +1731,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
         if (slotId == "*") {
             const auto& wildcardEntry = *group.front();
-            wildcardKitSpec = this->libraryManagerPtr->findKit(wildcardEntry.kitRef);
+            wildcardKitSpec = this->libraryManagerPtr->findKitById(wildcardEntry.kitRef);
             if (wildcardKitSpec == nullptr) {
-                statusLines.add("Kit not found for wildcard entry: " + wildcardEntry.kitRef);
+                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*this->libraryManagerPtr, wildcardEntry.kitRef, wildcardEntry.slotId));
                 continue;
             }
             wildcardChanged = hasUnloadedPrimarySynth || this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
@@ -1639,9 +1761,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
         std::vector<ResolvedEntry> resolvedEntries;
         for (const auto* entry : group) {
-            auto* kitSpec = this->libraryManagerPtr->findKit(entry->kitRef);
+            auto* kitSpec = this->libraryManagerPtr->findKitById(entry->kitRef);
             if (kitSpec == nullptr) {
-                statusLines.add("Kit not found: " + entry->kitRef + " for slot '" + entry->slotId + "'");
+                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*this->libraryManagerPtr, entry->kitRef, entry->slotId));
                 continue;
             }
 
@@ -1650,9 +1772,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 continue;
             }
 
-            auto* instSpec = kitSpec->findInstrument(entry->instCode);
+            auto* instSpec = kitSpec->findInstrumentById(entry->instCode);
             if (instSpec == nullptr) {
-                statusLines.add("Instrument not found: " + kitSpec->meta.name + "/" + entry->instCode + " for slot '" + entry->slotId + "'");
+                statusLines.add(DrumKitEngineIdentityMapHelpers::describeInstrumentResolveFailure(*kitSpec, entry->instCode, entry->slotId));
                 continue;
             }
 
@@ -1664,9 +1786,11 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 for (const auto& sourceArtName : entry->articulationFilter) {
                     const auto normalizedSourceArtName = ArticulationNameHelpers::normalizeArticulationName(sourceArtName);
                     if (normalizedSourceArtName.isEmpty()) continue;
-                    if (ArticulationNameHelpers::stringArrayContainsIgnoreCase(availableSourceArts, normalizedSourceArtName)) continue;
+                    const auto sourceArtMatchCount = DrumKitEngineIdentityMapHelpers::countArticulationIdMatches(*instSpec, sourceArtName);
+                    if (sourceArtMatchCount == 1) continue;
+                    if (sourceArtMatchCount == 0 && ArticulationNameHelpers::stringArrayContainsIgnoreCase(availableSourceArts, normalizedSourceArtName)) continue;
                     if (ArticulationNameHelpers::stringArrayContainsIgnoreCase(unknownSourceArtKeys, normalizedSourceArtName)) continue;
-                    auto sourceArtToken = normalizedSourceArtName;
+                    auto sourceArtToken = DrumKitEngineIdentityMapHelpers::describeArticulationResolveFailure(*instSpec, sourceArtName, kitSpec->meta.codeRaw + "/" + instSpec->meta.codeRaw, entry->slotId);
                     const auto suggestedSourceArt = ArticulationNameHelpers::findClosestArticulationName(normalizedSourceArtName, availableSourceArts);
                     if (suggestedSourceArt.isNotEmpty()) sourceArtToken += " (did you mean '" + suggestedSourceArt + "'?)";
                     unknownSourceArtKeys.add(normalizedSourceArtName);
@@ -1679,8 +1803,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                         ? juce::String("none")
                         : availableSourceArts.joinIntoString(", ");
 
-                    statusLines.add("Unknown source articulation(s) [" + unknownSourceArtsText + "] for target '" + kitSpec->meta.codeRaw + "/" + instSpec->meta.codeRaw
-                        + "' in slot '" + entry->slotId + "'. Available source articulations: " + availableSourceArtsText);
+                    statusLines.add("Source articulation problem(s): " + unknownSourceArtsText + ". Available source articulations: " + availableSourceArtsText);
                 }
             }
 
@@ -1928,7 +2051,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
 
         this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
-        this->lastAppliedInstrumentMapText = text;
+        this->lastAppliedInstrumentMapText = normalizedMapText;
     }
     // Old synths destroyed here outside the lock - audio thread cannot access them
 

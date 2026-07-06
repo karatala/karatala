@@ -38,7 +38,7 @@ std::vector<const KitLib::ArticulationSpec*> collectOrientationArticulations(
         for (const auto& artSpec : instrumentSpec.articulationSpecs) {
             if (artSpec == nullptr) continue;
 
-            if (ArticulationNameHelpers::normalizeArticulationName(artSpec->codeRaw) == normalizedArtName) {
+            if (instrumentSpec.findArticulationById(artName) == artSpec.get() || ArticulationNameHelpers::normalizeArticulationName(artSpec->codeRaw) == normalizedArtName) {
                 matched = artSpec.get();
                 break;
             }
@@ -186,10 +186,10 @@ void applyAutomaticOrientation(DrumKitEngine::InstrumentMap& instrumentMap, cons
         const auto* slot = Detail::findLayoutSlot(layout, entry.slotId);
         if (slot == nullptr) continue;
 
-        auto* kitSpec = libraryManager.findKit(entry.kitRef);
+        auto* kitSpec = libraryManager.findKitById(entry.kitRef);
         if (kitSpec == nullptr || entry.instCode.isEmpty()) continue;
 
-        auto* instSpec = kitSpec->findInstrument(entry.instCode);
+        auto* instSpec = kitSpec->findInstrumentById(entry.instCode);
         if (instSpec == nullptr) continue;
 
         const auto inferredFlip = Detail::inferAutomaticFlipLR(*slot, *instSpec, entry);

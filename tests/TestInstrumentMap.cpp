@@ -240,3 +240,64 @@ TEST_CASE("InstrumentMap builder infers flipLR from opposite slot and source bal
     CHECK_FALSE(parsed.value.entries[2].flipLR);
     CHECK_FALSE(parsed.value.entries[2].flipLRExplicit);
 }
+
+TEST_CASE("InstrumentMap serializer groups by slot without changing layer order", "[InstrumentMap]") {
+    DrumKitEngine::InstrumentMap map;
+
+    DrumKitEngine::InstrumentMapEntry snareRimFirst;
+    snareRimFirst.slotId = "snare1";
+    snareRimFirst.slotArticulationFilter = { "rim" };
+    snareRimFirst.kitRef = "KitA";
+    snareRimFirst.instCode = "snare-14";
+    snareRimFirst.tuningCents = -10;
+    map.entries.push_back(snareRimFirst);
+
+    DrumKitEngine::InstrumentMapEntry kick;
+    kick.slotId = "kick1";
+    kick.kitRef = "KitA";
+    kick.instCode = "kick-22";
+    map.entries.push_back(kick);
+
+    DrumKitEngine::InstrumentMapEntry snareCenter;
+    snareCenter.slotId = "snare1";
+    snareCenter.slotArticulationFilter = { "center" };
+    snareCenter.kitRef = "KitA";
+    snareCenter.instCode = "snare-14";
+    map.entries.push_back(snareCenter);
+
+    DrumKitEngine::InstrumentMapEntry snareRimSecond;
+    snareRimSecond.slotId = "snare1";
+    snareRimSecond.slotArticulationFilter = { "rim" };
+    snareRimSecond.kitRef = "KitB";
+    snareRimSecond.instCode = "snare-14";
+    snareRimSecond.tuningCents = 15;
+    map.entries.push_back(snareRimSecond);
+
+    const auto serialized = DrumKitEngine::serializeInstrumentMap(map);
+    const juce::String expected = "kick1:KitA/kick-22\nsnare1/center:KitA/snare-14\nsnare1/rim:KitA/snare-14:tuning=-10\nsnare1/rim:KitB/snare-14:tuning=15";
+    CHECK(serialized == expected);
+}
+
+TEST_CASE("InstrumentMap builder writes preferred kit and instrument ids", "[InstrumentMap]") {
+    KitLayout layout;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "kick1";
+    slot.type = KitLib::InstrumentSpec::Type::Kick;
+    layout.instrumentSlots.push_back(slot);
+
+    KitLib::DrumKitSpec kit { { {}, "StudioKit by Sam [CC-BY-4.0]", "StudioKit", "Sam", "CC-BY-4.0" } };
+
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = "kick-22-R64-Yamaha";
+    meta.name = "kick";
+    meta.type = KitLib::InstrumentSpec::Type::Kick;
+    meta.size = "22";
+    meta.balance = 64;
+    meta.description = "Yamaha";
+    kit.addInstrument(meta);
+
+    DrumKitEngine engine;
+    const auto mapText = engine.buildInstrumentMapForKit(layout, kit);
+
+    CHECK(mapText == "kick1:StudioKit/kick-22");
+}

@@ -31,6 +31,8 @@ private:
     struct SourceChoice {
         juce::String kitCode;
         juce::String instrumentCode;
+        juce::String rawKitCode;
+        juce::String rawInstrumentCode;
         juce::String display;
         KitLib::InstrumentSpec::Type type = KitLib::InstrumentSpec::Type::Unknown;
     };

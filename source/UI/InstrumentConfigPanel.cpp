@@ -1,7 +1,7 @@
 #include "InstrumentConfigPanel.h"
 #include "UIHelpers.h"
 
-// ─── InstrumentConfigPanel ────────────────────────────────────────────────────
+// InstrumentConfigPanel
 
 InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& engine)
     : engine(engine) {
@@ -424,7 +424,7 @@ juce::String InstrumentConfigPanel::generateMapText() const {
 
         lines.add(line);
     }
-    return lines.joinIntoString("\n");
+    return this->engine.normalizeInstrumentMapText(lines.joinIntoString("\n"));
 }
 
 int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const {

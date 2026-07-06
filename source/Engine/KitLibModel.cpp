@@ -478,8 +478,8 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
 }
 
 
-ArticulationSpec* InstrumentSpec::findArticulationById(const juce::String& id) const {
-    ArticulationSpec* matched = nullptr;
+const ArticulationSpec* InstrumentSpec::findArticulationById(const juce::String& id) const {
+    const ArticulationSpec* matched = nullptr;
     int matchCount = 0;
     for (const auto& existing : this->articulationSpecs) {
         if (existing == nullptr) continue;
@@ -564,8 +564,8 @@ InstrumentSpec* DrumKitSpec::findInstrument(const juce::String& id) {
 }
 
 
-InstrumentSpec* DrumKitSpec::findInstrumentById(const juce::String& id) {
-    InstrumentSpec* matched = nullptr;
+const InstrumentSpec* DrumKitSpec::findInstrumentById(const juce::String& id) const {
+    const InstrumentSpec* matched = nullptr;
     int matchCount = 0;
     for (auto& existing : this->instrumentSpecsMap) {
         auto* instrument = existing.second.get();
@@ -693,8 +693,8 @@ DrumKitSpec* LibraryManager::getKit(int index) {
 }
 
 
-DrumKitSpec* LibraryManager::findKitById(const juce::String& id) {
-    DrumKitSpec* matched = nullptr;
+const DrumKitSpec* LibraryManager::findKitById(const juce::String& id) const {
+    const DrumKitSpec* matched = nullptr;
     int matchCount = 0;
     for (auto& kit : this->kitSpecs) {
         if (kit == nullptr) continue;
