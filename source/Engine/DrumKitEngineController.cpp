@@ -16,7 +16,7 @@ void DrumKitEngine::reloadAll() {
 }
 
 void DrumKitEngine::initGlobalSettings() {
-    auto envInfo = getEnvPath(DATA_PATH_ENV);
+    auto envInfo = getEnvPath(DATA_PATH_ENV); //FIXME: reusable, see resolveMicLayoutFromConfig in DrumKitEngine
     if (envInfo.ok()) {
         this->dataPath = envInfo.value;
     } else {

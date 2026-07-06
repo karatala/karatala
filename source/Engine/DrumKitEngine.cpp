@@ -1620,13 +1620,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
     DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
     const auto normalizedMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
 
-    LOG(Notice, "=== useInstrumentMap: " + juce::String(parsed.value.entries.size()) + " entries ===");
+    LOG(Info, "=== useInstrumentMap: " + juce::String(parsed.value.entries.size()) + " entries ===");
     for (size_t idx = 0; idx < parsed.value.entries.size(); ++idx) {
         const auto& entry = parsed.value.entries[idx];
         juce::String slotArtStr, srcArtStr;
         for (const auto& sa : entry.slotArticulationFilter) slotArtStr += (slotArtStr.isEmpty() ? "" : ",") + sa;
         for (const auto& sa : entry.articulationFilter) srcArtStr += (srcArtStr.isEmpty() ? "" : ",") + sa;
-        LOG(Notice, "  entry[" + juce::String(idx) + "]: slot=" + entry.slotId
+        LOG(Info, "  entry[" + juce::String(idx) + "]: slot=" + entry.slotId
             + (slotArtStr.isNotEmpty() ? "/" + slotArtStr : "")
             + " -> kit=" + entry.kitRef + " inst=" + entry.instCode
             + (srcArtStr.isNotEmpty() ? " art=" + srcArtStr : "")
@@ -1810,7 +1810,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             auto filter = DrumKitEngineMapHelpers::effectiveArticulationFilter(*entry);
             juce::String filterStr;
             for (const auto& fa : filter) filterStr += (filterStr.isEmpty() ? "" : ",") + fa;
-            LOG(Notice, "  resolved: slot=" + entry->slotId + " -> " + kitSpec->meta.name + "/" + entry->instCode
+            LOG(Info, "  resolved: slot=" + entry->slotId + " -> " + kitSpec->meta.name + "/" + entry->instCode
                 + (filterStr.isNotEmpty() ? " effectiveFilter=[" + filterStr + "]" : " effectiveFilter=[ALL]"));
             resolvedEntries.push_back({ entry, kitSpec, instSpec, std::move(filter) });
         }
@@ -1836,11 +1836,11 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             }
         }
 
-        if (LOG_ENABLED(Notice)) {
+        if (LOG_ENABLED(Info)) {
             juce::String allowedStr;
             for (const auto& artId : primaryAllowedArticulationIds)
                 allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(artId);
-            LOG(Notice, "  slot=" + slotId + " primaryAllowed(initial)=[" + allowedStr + "] slotChanged=" + juce::String(slotChanged ? "yes" : "no"));
+            LOG(Info, "  slot=" + slotId + " primaryAllowed(initial)=[" + allowedStr + "] slotChanged=" + juce::String(slotChanged ? "yes" : "no"));
         }
 
         for (const auto& artName : primary.effectiveFilter) {
@@ -1913,22 +1913,22 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             else DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
         }
 
-        if (LOG_ENABLED(Notice)) {
+        if (LOG_ENABLED(Info)) {
             juce::String allowedStr;
             for (const auto& artId : primaryAllowedArticulationIds)
                 allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(artId);
-            LOG(Notice, "  slot=" + slotId + " primaryAllowed(final)=[" + allowedStr + "]");
+            LOG(Info, "  slot=" + slotId + " primaryAllowed(final)=[" + allowedStr + "]");
             if (!primaryRemap.empty()) {
                 juce::String remapStr;
                 for (const auto& [fromId, toId] : primaryRemap)
                     remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
-                LOG(Notice, "  primaryRemap: [" + remapStr + "]");
+                LOG(Info, "  primaryRemap: [" + remapStr + "]");
             }
             if (!artSources.empty()) {
                 juce::String srcStr;
                 for (const auto& [artId, instPtr] : artSources)
                     srcStr += (srcStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(artId) + "->" + instPtr->meta.codeRaw;
-                LOG(Notice, "  artSources: [" + srcStr + "]");
+                LOG(Info, "  artSources: [" + srcStr + "]");
             }
         }
 
@@ -1944,7 +1944,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
             replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap, artAliases);
             applyOverrides(*replacement, *primary.entry);
-            LOG(Notice, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
+            LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
                 + (primary.entry->attackTimeMs.has_value() ? " attack=" + juce::String(*primary.entry->attackTimeMs) : "")
                 + (primary.entry->decayTimeMs.has_value() ? " decay=" + juce::String(*primary.entry->decayTimeMs) : ""));
@@ -1966,12 +1966,12 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
                 shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.artNameRemap, artAliases);
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
-                if (LOG_ENABLED(Notice)) {
+                if (LOG_ENABLED(Info)) {
                     juce::String shadowArtsStr;
                     for (const auto& sa : shadowPlan.articulations) shadowArtsStr += (shadowArtsStr.isEmpty() ? "" : ",") + sa;
                     juce::String remapStr;
                     for (const auto& [fromId, toId] : shadowPlan.artNameRemap) remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
-                    LOG(Notice, "  SHADOW loaded: slot=" + slotId + " inst=" + shadowPlan.instSpec->meta.codeRaw
+                    LOG(Info, "  SHADOW loaded: slot=" + slotId + " inst=" + shadowPlan.instSpec->meta.codeRaw
                         + " arts=[" + shadowArtsStr + "]"
                         + (remapStr.isNotEmpty() ? " remap=[" + remapStr + "]" : "")
                         + " tuning=" + juce::String(shadowPlan.entry->tuningCents.value_or(0)));

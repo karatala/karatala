@@ -153,12 +153,12 @@ instruments:
     controllers:
       - { notes: [41], code: zon_ctr_rim, number: 18 }
 
-  - id: drum1
+  - id: octoban1
     display: Octoban 1
     articulations:
       - { notes: [50], code: center }
 
-  - id: drum2
+  - id: octoban2
     display: Octoban 2
     articulations:
       - { notes: [26], code: center }
