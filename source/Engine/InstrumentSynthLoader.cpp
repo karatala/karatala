@@ -394,8 +394,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                 ? this->instrumentSlot.balance
                 : (artSpec->balanceConflict ? std::optional<int> {} : artSpec->balance);
             sound->decayEnvelope = KitLib::DecayEnvelope::decode(varSpec->decayCode, varSpec->peakDb, varSpec->peakMs);
-            if (!sound->decayEnvelope.isValid()) {
-                LOG(Warning, "Missing or invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
+            if (!varSpec->decayCode.isEmpty() && !sound->decayEnvelope.isValid()) {
+                LOG(Warning, "Invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
             }
             sound->micBufferChannelStart = assignment.globalStart;
             sound->micBufferChannelCount = assignment.channels;

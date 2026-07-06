@@ -46,7 +46,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
             this->engine.setGlobalMicLayoutId(this->micLayouts[static_cast<size_t>(idx)].id);
     };
 
-    // ── Aftertouch Choke ──
+    // -- Aftertouch Choke --
     this->addPot("Max Duck", "How much to duck the volume on aftertouch press. Higher = more muting, lower = subtler effect.",
                  &settings.chokeMaxDuckDepth, 0.0f, 1.0f, 0.01f);
     this->addPot("Duck Time", "How fast the volume ducks when you press. Lower = instant choke, higher = gradual fade.",
@@ -62,7 +62,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->addPot("Min Pressure", "Poly-aftertouch values below this are treated as release, filtering low-level sensor noise.",
                  &settings.polyAftertouchMinPressure, 1, 20, 10);
 
-    // ── Tail Shortening ──
+    // -- Tail Shortening --
     this->addPot("Load Thresh", "Voice load percentage before tail shortening kicks in. Lower = starts cutting sooner when busy.",
                  &settings.tailShortenLoadThreshold, 0.0f, 1.0f, 0.01f);
     this->addPot("Age Mult", "How much voice age affects shortening priority. Higher = older voices get cut faster.",
@@ -76,7 +76,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
     this->addPot("Cull dB", "Cull voices quieter than this vs the new hit (dB). Lower = keep more old voices, higher = cull more.",
                  &settings.voiceCullThresholdDb, 0.0f, 30.0f, 0.5f);
 
-    // ── Hi-Hat / Polyphony ──
+    // -- Hi-Hat / Polyphony --
     this->addPot("Open Xfade", "Transition time when opening a ringing hi-hat. Higher values are smoother; lower values react faster.",
                  &settings.hihatOpenCrossfadeSec, 0.005f, 0.250f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.060);
     this->addPot("Close Xfade", "Transition time when closing a ringing hi-hat. Lower values produce a tighter choke.",
@@ -108,17 +108,11 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
                     });
     this->hihatChoiceCount = static_cast<int>(this->choices.size());
 
-    // ── UI / Grid ──
+    // -- UI / Grid --
     this->addPot("Columns", "Grid columns. 0 - auto detect from the active kit layout.", &settings.padGridColumns, 0, 12);
     this->addPot("Rows", "Grid rows. 0 - auto detect from the active kit layout.", &settings.padGridRows, 0, 8);
     this->addPot("Gap", "", &settings.padGap, 0, 8);
     this->uiChoiceStart = static_cast<int>(this->choices.size());
-    this->addChoice("Log Level", "Writes Karatala diagnostics to karatala.log. Off keeps logging overhead to the level check.",
-                    { "Off", "Error", "Warning", "Notice", "Info", "Debug", "Verbose" }, 1,
-                    [this] { return ParameterPotHelpers::debugLevelToChoiceId(this->engine.getGlobalLogLevel()); },
-                    [this](int selectedId) {
-                        this->engine.setGlobalLogLevel(ParameterPotHelpers::choiceIdToDebugLevel(selectedId));
-                    });
 
     this->rebuildMicLayouts();
     this->loadFromEngine();

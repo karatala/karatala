@@ -92,19 +92,49 @@ public:
     void setLogLevel(DebugLevel level) {
         this->logLevel.store(static_cast<int>(level), std::memory_order_relaxed);
         gAppLogLevel.store(static_cast<int>(level), std::memory_order_relaxed);
-        if (level == DebugLevel::Off) this->stopWriterThread();
-        else this->startWriterThread();
+        this->updateWriterThreadState();
     }
 
     DebugLevel getLogLevel() const {
         return static_cast<DebugLevel>(this->logLevel.load(std::memory_order_relaxed));
     }
 
+    void setWriteLogFilesEnabled(bool enabled) {
+        this->writeLogFilesEnabled.store(enabled, std::memory_order_relaxed);
+        this->updateWriterThreadState();
+    }
+
+    bool getWriteLogFilesEnabled() const {
+        return this->writeLogFilesEnabled.load(std::memory_order_relaxed);
+    }
+
+    juce::File getCurrentLogFile() const {
+        const std::lock_guard<std::mutex> lock(this->fileMutex);
+        return this->logFile;
+    }
+
+    juce::File getLogsDirectory() const {
+        const auto file = this->getCurrentLogFile();
+        return file.getFullPathName().isNotEmpty() ? file.getParentDirectory() : juce::File();
+    }
+
+    juce::String getRecentImportantLines() const {
+        const std::lock_guard<std::mutex> lock(this->recentLinesMutex);
+        juce::String result;
+        for (const auto& line : this->recentImportantLines)
+            result += line + "\n";
+        return result.trimEnd();
+    }
+
+    void flush() {
+        this->flushQueuedLines();
+    }
+
     juce::File createInstanceLogFile(const juce::File& dataPath) {
         auto logsDir = dataPath.getChildFile("logs");
         if (!logsDir.exists()) logsDir.createDirectory();
 
-        const auto timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S");
+        const auto timestamp = juce::Time::getCurrentTime().formatted("%H%M%S");
         const auto baseName = "karatala-" + timestamp;
         auto candidate = logsDir.getChildFile(baseName + ".log");
         for (int duplicateIndex = 1; candidate.existsAsFile(); ++duplicateIndex) candidate = logsDir.getChildFile(baseName + "-" + juce::String(duplicateIndex) + ".log");
@@ -118,7 +148,7 @@ public:
             this->logFile = file;
             if (!this->logFile.getParentDirectory().exists()) this->logFile.getParentDirectory().createDirectory();
         }
-        if (this->getLogLevel() != DebugLevel::Off) this->startWriterThread();
+        this->updateWriterThreadState();
     }
 
     void log(DebugLevel level, const juce::String& msg) {
@@ -130,6 +160,7 @@ public:
         DBG(line);
       #endif
 
+        this->rememberImportantLine(line);
         this->enqueueLine(line);
     }
 
@@ -151,6 +182,11 @@ private:
     };
 
     GlobalLogger() = default;
+
+    void updateWriterThreadState() {
+        if (this->getLogLevel() == DebugLevel::Off || !this->getWriteLogFilesEnabled()) this->stopWriterThread();
+        else this->startWriterThread();
+    }
 
     void startWriterThread() {
         const std::lock_guard<std::mutex> lock(this->threadMutex);
@@ -174,7 +210,16 @@ private:
         thread->waitForThreadToExit(1000);
     }
 
+    void rememberImportantLine(const juce::String& line) {
+        if (!line.startsWith("ERROR:") && !line.startsWith("WARNING:") && !line.startsWith("NOTICE:")) return;
+        const std::lock_guard<std::mutex> lock(this->recentLinesMutex);
+        if (this->recentImportantLines.size() >= maxRecentImportantLines)
+            this->recentImportantLines.pop_front();
+        this->recentImportantLines.push_back(juce::Time::getCurrentTime().toISO8601(true) + " " + line);
+    }
+
     void enqueueLine(const juce::String& line) {
+        if (!this->getWriteLogFilesEnabled()) return;
         std::unique_lock<std::mutex> lock(this->queueMutex, std::try_to_lock);
         if (!lock.owns_lock()) return;
         if (this->pendingLines.size() >= maxQueuedLines) return;
@@ -197,7 +242,7 @@ private:
             const std::lock_guard<std::mutex> lock(this->fileMutex);
             target = this->logFile;
         }
-        if (target.getFullPathName().isEmpty()) return;
+        if (target.getFullPathName().isEmpty() || !this->getWriteLogFilesEnabled()) return;
 
         juce::String out;
         for (const auto& line : lines)
@@ -206,12 +251,16 @@ private:
     }
 
     static constexpr size_t maxQueuedLines = 4096;
+    static constexpr size_t maxRecentImportantLines = 500;
 
     std::atomic<int> logLevel { static_cast<int>(DebugLevel::Off) };
+    std::atomic<bool> writeLogFilesEnabled { true };
     juce::File logFile;
     std::deque<juce::String> pendingLines;
+    std::deque<juce::String> recentImportantLines;
     std::mutex queueMutex;
-    std::mutex fileMutex;
+    mutable std::mutex recentLinesMutex;
+    mutable std::mutex fileMutex;
     std::mutex threadMutex;
     juce::WaitableEvent queueEvent;
     std::unique_ptr<WriterThread> writerThread;

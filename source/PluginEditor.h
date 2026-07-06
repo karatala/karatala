@@ -13,6 +13,7 @@
 #include "UI/InstrumentConfigPanel.h"
 #include "UI/KitHomePanel.h"
 #include "UI/PadContextPopup.h"
+#include "UI/TroubleshootingPanel.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
 //==============================================================================
@@ -38,10 +39,10 @@ private:
     // Mode: Kit - first-run setup and instrument-map presets
     std::unique_ptr<KitHomePanel> kitHomePanel;
 
-    // Mode: Zen / Zone — drum pad grid
+    // Mode: Zen / Zone - drum pad grid
     DrumPadGrid drumPadGrid;
 
-    // Mode: Map — MIDI note assignment table
+    // Mode: Map - MIDI note assignment table
     MidiMapTable midiMapTable;
     std::unique_ptr<CrosstalkCalibrationPopup> crosstalkPopup;
     std::unique_ptr<DismissOverlay> crosstalkPopupOverlay;
@@ -55,6 +56,9 @@ private:
 
     // Mode: Settings
     std::unique_ptr<EngineSettingsPanel> settingsPanel;
+
+    // Mode: Fix
+    std::unique_ptr<TroubleshootingPanel> troubleshootingPanel;
 
     // Mode: Instrument Config
     std::unique_ptr<InstrumentConfigPanel> instrumentConfigPanel;
@@ -78,7 +82,10 @@ private:
     void setupRawMode();
     void setupMapMode();
     void setupSettingsMode();
+    void setupTroubleshootingMode();
     void setupInstrumentConfigMode();
+    void reloadLibraryFromTroubleshooting();
+    void fixMissingInstrumentsFromTroubleshooting();
     void setupSidebarKnobs();
     void applyInstrumentMapFromEditor();
 

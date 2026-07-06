@@ -17,6 +17,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->setupRawMode();
     this->setupMapMode();
     this->setupSettingsMode();
+    this->setupTroubleshootingMode();
     this->setupInstrumentConfigMode();
 
     const auto instrumentMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
@@ -291,6 +292,81 @@ void PluginEditor::setupSettingsMode() {
     };
 }
 
+void PluginEditor::setupTroubleshootingMode() {
+    this->troubleshootingPanel = std::make_unique<TroubleshootingPanel>(this->processorRef.getEngine());
+    this->addChildComponent(*this->troubleshootingPanel);
+    this->troubleshootingPanel->onStatusMessage = [this](const juce::String& message) {
+        this->statusBar.setStatusText(message);
+    };
+    this->troubleshootingPanel->onReloadLibraryRequested = [this] { this->reloadLibraryFromTroubleshooting(); };
+    this->troubleshootingPanel->onFixMissingInstrumentsRequested = [this] { this->fixMissingInstrumentsFromTroubleshooting(); };
+}
+
+void PluginEditor::reloadLibraryFromTroubleshooting() {
+    struct ProcessingSuspendGuard {
+        PluginProcessor& processor;
+        explicit ProcessingSuspendGuard(PluginProcessor& processor)
+            : processor(processor) {
+            this->processor.suspendProcessing(true);
+        }
+        ~ProcessingSuspendGuard() {
+            this->processor.suspendProcessing(false);
+        }
+    } processingGuard(this->processorRef);
+
+    const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
+    auto& engine = this->processorRef.getEngine();
+    engine.reloadAll();
+    engine.useState(this->processorRef.getValueTreeState());
+
+    this->markDrumPadGridDirty();
+    this->markMidiMapTableDirty();
+    this->markInstrumentConfigDirty();
+    this->refreshDrumPadGridIfNeeded(true);
+    this->refreshMidiMapTableIfNeeded(true);
+    this->refreshInstrumentConfigIfNeeded(true);
+    if (this->kitHomePanel)
+        this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+    if (this->troubleshootingPanel)
+        this->troubleshootingPanel->refresh();
+    this->statusBar.setStatusText("Library reloaded. " + engine.getLastInstrumentMapStatus());
+}
+
+void PluginEditor::fixMissingInstrumentsFromTroubleshooting() {
+    struct ProcessingSuspendGuard {
+        PluginProcessor& processor;
+        explicit ProcessingSuspendGuard(PluginProcessor& processor)
+            : processor(processor) {
+            this->processor.suspendProcessing(true);
+        }
+        ~ProcessingSuspendGuard() {
+            this->processor.suspendProcessing(false);
+        }
+    } processingGuard(this->processorRef);
+
+    const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
+    auto& engine = this->processorRef.getEngine();
+    auto mapText = this->instrumentMapEditor.getText();
+    if (mapText.trim().isEmpty())
+        mapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
+    mapText = engine.normalizeInstrumentMapText(mapText);
+    this->instrumentMapEditor.setText(mapText, false);
+    this->processorRef.getValueTreeState().state.setProperty("instrument_map", mapText, nullptr);
+    engine.useInstrumentMap(mapText);
+
+    this->markDrumPadGridDirty();
+    this->markMidiMapTableDirty();
+    this->markInstrumentConfigDirty();
+    this->refreshDrumPadGridIfNeeded(true);
+    this->refreshMidiMapTableIfNeeded(true);
+    this->refreshInstrumentConfigIfNeeded(true);
+    if (this->troubleshootingPanel)
+        this->troubleshootingPanel->refresh();
+
+    const auto status = engine.getLastInstrumentMapStatus().isNotEmpty() ? engine.getLastInstrumentMapStatus() : juce::String("No missing instruments found.");
+    this->statusBar.setStatusText(status);
+    juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon, "Missing Instruments", status);
+}
 void PluginEditor::setupInstrumentConfigMode() {
     // Instrument config mode
     this->instrumentConfigPanel = std::make_unique<InstrumentConfigPanel>(this->processorRef.getEngine());
@@ -528,6 +604,9 @@ void PluginEditor::setViewMode(ViewMode mode) {
     if (mode == ViewMode::Settings)
         this->settingsPanel->loadFromEngine();
 
+    if (mode == ViewMode::Fix)
+        this->troubleshootingPanel->refresh();
+
     if (mode == ViewMode::Kit)
         this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 
@@ -618,6 +697,9 @@ void PluginEditor::showComponentsForMode(ViewMode mode) {
 
     // Settings
     this->settingsPanel->setVisible(mode == ViewMode::Settings);
+
+    // Fix
+    this->troubleshootingPanel->setVisible(mode == ViewMode::Fix);
 }
 
 void PluginEditor::paint(juce::Graphics& g) {
@@ -661,6 +743,10 @@ void PluginEditor::resized() {
 
         case ViewMode::Settings:
             this->settingsPanel->setBounds(mainArea);
+            break;
+
+        case ViewMode::Fix:
+            this->troubleshootingPanel->setBounds(mainArea);
             break;
 
         case ViewMode::Instrument:
