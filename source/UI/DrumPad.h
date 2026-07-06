@@ -28,7 +28,7 @@ public:
 
 private:
     const KitLayout::InstrumentSlot* slotPtr = nullptr;
-    PadMode padMode = PadMode::Zen;
+    PadMode padMode = PadMode::Zone;
     std::vector<int> displayOrder;
     float clickVelocity = 100.0f;
     float flashAlpha = 0.0f;

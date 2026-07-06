@@ -63,7 +63,7 @@ INSTRUMENTS = {
         "parameter": '',
     },
     'hihat_zild_op1_edg': {
-        "instrument": 'hihat-X2',
+        "instrument": 'hihat-14',
         "articulation": 'edge[close]',
         "parameter": '',
     },

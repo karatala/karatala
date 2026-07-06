@@ -24,7 +24,7 @@ public:
 private:
     std::vector<std::unique_ptr<DrumPad>> pads;
     std::vector<juce::String> padSlotIds;
-    PadMode padMode = PadMode::Zen;
+    PadMode padMode = PadMode::Zone;
     int gridColumns = 0;
     int gridRows = 0;
     int effectiveGridColumns = 1;
