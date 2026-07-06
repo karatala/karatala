@@ -5,7 +5,7 @@
 # Ownership
 
 - `UITheme.h` and `LookAndFeel*` own shared visual tokens and JUCE drawing behavior.
-- Reusable controls live in `Parameter*`, `HorizontalKnobBrick`, MIDI assignment, popup, and helper classes.
+- Reusable controls live in `Parameter*`, `CompactParameterControl`, `HorizontalKnobBrick`, MIDI assignment, popup, and helper classes.
 - Page/panel classes compose controls and translate user actions into engine operations.
 
 # Local Contracts

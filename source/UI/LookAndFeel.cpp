@@ -147,6 +147,15 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*
     g.setColour(cb.findColour(juce::ComboBox::backgroundColourId));
     g.fillRect(bounds);
 
+    const bool compactRoute = cb.getProperties().getWithDefault("compactRoute", false);
+    if (compactRoute) {
+        g.setColour(cb.findColour(juce::ComboBox::outlineColourId));
+        g.drawRect(bounds);
+    }
+
+    const bool hideArrow = cb.getProperties().getWithDefault("hideArrow", false);
+    if (hideArrow) return;
+
     g.setColour(cb.findColour(juce::ComboBox::arrowColourId).withAlpha(enabled ? 0.8f : 0.2f));
     constexpr int triHeight = 6;
     constexpr int triWidth = 12;
@@ -162,7 +171,8 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*
 void LookAndFeel::positionComboBoxText(juce::ComboBox& cb, juce::Label& labelToPosition) {
     labelToPosition.setFont(this->getComboBoxFont(cb));
     labelToPosition.setJustificationType(juce::Justification::centredLeft);
-    labelToPosition.setBounds(cb.getLocalBounds().reduced(8, 2).withTrimmedRight(18));
+    const bool compactRoute = cb.getProperties().getWithDefault("compactRoute", false);
+    labelToPosition.setBounds(compactRoute ? cb.getLocalBounds().reduced(3, 1) : cb.getLocalBounds().reduced(8, 2).withTrimmedRight(18));
 }
 
 void LookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar& /*scrollbar*/, int x, int y, int width, int height, bool isScrollbarVertical, int thumbStartPosition, int thumbSize, bool isMouseOver, bool isMouseDown) {
@@ -220,7 +230,8 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
     }
 }
 
-juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& /*comboBox*/) {
+juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& comboBox) {
+    if (comboBox.getProperties().getWithDefault("compactRoute", false)) return UITheme::Fonts::small().withHeight(8.0f);
     return UITheme::Fonts::comboBox();
 }
 
@@ -242,6 +253,9 @@ juce::PopupMenu::Options LookAndFeel::getOptionsForComboBoxPopupMenu(juce::Combo
             .withStandardItemHeight(juce::jmax(22, label.getHeight()))
             .withPreferredPopupDirection(juce::PopupMenu::Options::PopupDirection::downwards);
     }
+
+    const bool compactRoute = cb.getProperties().getWithDefault("compactRoute", false);
+    if (compactRoute) return options.withMinimumWidth(juce::jmax(120, cb.getWidth())).withStandardItemHeight(18).withMaximumNumColumns(1);
 
     const bool isMidiControllerList = cb.getProperties().getWithDefault("midiControllerList", false);
     if (isMidiControllerList) return options.withStandardItemHeight(18).withMinimumNumColumns(4).withMaximumNumColumns(4);

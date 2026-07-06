@@ -61,11 +61,18 @@ private:
     int findSourceIndex(const juce::String& searchPath) const;
 
     // ─── Instrument map layers ───
+    struct MicRoutingChoice {
+        juce::String label;
+        juce::String tooltip;
+        int rank = 0;
+        bool hasProblem = false;
+        bool isCurrent = false;
+    };
     struct LayerRow {
         juce::String sourcePathHint;
         int selectedSourceIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
-        std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst/art multiline
+        std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst multiline
         std::unique_ptr<juce::Label> routingLabel;
         std::unique_ptr<CompactParameterControl> tuningPot;
         std::unique_ptr<CompactParameterControl> attackPot;
@@ -74,11 +81,13 @@ private:
         std::unique_ptr<juce::TextButton> flipLRButton;
         bool flipLRExplicit = false;
         std::unique_ptr<juce::TextButton> flipPhaseButton;
-        // Per-mic bleed pots
+        // Per-mic bleed controls
         struct MicBleedControl {
             juce::String micCode;
             juce::String micName;
             std::unique_ptr<CompactParameterControl> bleedPot;
+            std::unique_ptr<juce::ComboBox> routingCombo;
+            std::vector<MicRoutingChoice> routingChoices;
         };
         std::vector<std::unique_ptr<MicBleedControl>> micBleeds;
         std::unique_ptr<juce::TextButton> removeButton;
@@ -108,7 +117,14 @@ private:
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourceIndex(int sourceIndex) const;
     std::vector<KitLib::MicSpec> getDirectMicSpecsForSourcePath(const juce::String& sourcePath) const;
-    juce::String buildDirectRoutingTextForSourcePath(const juce::String& sourcePath) const;
+    struct MicRoutingDisplay {
+        juce::String routeText;
+        juce::String tooltip;
+        bool hasProblem = false;
+    };
+    MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode) const;
+    std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode) const;
+    void updateRoutingComboDisplay(LayerRow::MicBleedControl& bleedCtrl) const;
     void updateRoutingDisplay(LayerRow* layer);
     bool mapTextDirty = false;
     int layerIndexOffset = 0;
