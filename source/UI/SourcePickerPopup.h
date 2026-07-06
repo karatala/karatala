@@ -29,7 +29,7 @@ public:
 private:
     static constexpr int selectButtonWidth = 26;
     static constexpr int previewButtonWidth = 60;
-    static constexpr int kindListWidth = 98;
+    static constexpr int kindListWidth = 80;
 
     enum class Category {
         All,

@@ -1,6 +1,6 @@
 # TODO Instrument Library Identity And Tools Plan
 
-Status: phases 1-3 implemented; phase 4 first UI pass implemented, replacement wizard still open.
+Status: phases 1-4 implemented; replacement scoring can still be refined after real-library testing.
 
 ## Goal
 
@@ -22,7 +22,7 @@ This plan also covers helper tools for renaming sample files after parent folder
 - `../source/Engine/KitLibModel.cpp` currently resolves kits by kit display name or full kit folder name.
 - `../source/Engine/KitLibModel.cpp` currently resolves instruments by exact full instrument folder name.
 - `../source/Engine/DrumKitEngine.cpp` currently reports missing kits, missing instruments, and unknown source articulations while applying a map.
-- `../source/UI/TroubleshootingPanel.*` owns the `Log Level` dropdown, log file buttons, important-log text area, library reload button, and first missing-map recheck action.
+- `../source/UI/TroubleshootingPanel.*` owns the `Log Level` dropdown, log file buttons, important-log text area, library reload button, and missing-map fixer entry point.
 - `../source/Config/PluginLogger.h` writes instance logs under the data path `logs` folder and keeps recent `Error`, `Warning`, and `Notice` lines for the troubleshooting UI.
 
 ## Proposed Identity Rules
@@ -212,11 +212,12 @@ Simple first version:
 - Large read-only text area below the buttons for recent `Error`, `Warning`, and `Notice` log lines.
 - Parse current instrument map text.
 - Try to resolve each entry.
-- Show 10 missing paths at a time.
+- Show one missing path at a time.
 - Show the old path, for example `aasimonster2/tom-X1/center`.
 - Preselect the best replacement in a dropdown.
 - Allow manual replacement selection.
 - Confirm updates current map text and moves to the next missing path.
+- Allow skipping a missing path.
 - When finished, apply the updated map.
 - `Reload Library` rescans the sample library so folder renames and file changes can be checked again without restarting.
 
@@ -228,13 +229,13 @@ Replacement suggestion rules:
 4. Prefer close text match for kit, instrument, and articulation names.
 5. Prefer loaded library items with samples.
 
-Needed engine/UI support:
+Implemented engine/UI support:
 
-- A reusable resolver result type, for example `Resolved`, `Missing`, or `Ambiguous`.
-- A replacement candidate list with display text and target map path.
-- A function to rewrite only the selected map entries paths (with same missing path) while preserving params.
-- A function to expose recent `Error`, `Warning`, and `Notice` log lines for the Fix page text area.
-- A reload action that rescans the library and rechecks the current map.
+- Existing identity resolver is reused to detect failing kit, instrument, and articulation paths.
+- Replacement candidates use library `SourceItem` paths and are scored by slot type, parsed instrument type/size, articulation name, and text match.
+- Confirmed replacements rewrite only selected failing source paths and preserve params.
+- Recent `Error`, `Warning`, and `Notice` log lines are exposed for the Fix page text area.
+- Reload action rescans the library and rechecks the current map.
 
 ## Logs UI
 
@@ -307,7 +308,7 @@ Verification status:
 
 ### Phase 4 - Troubleshooting UI
 
-Status: first pass implemented in `../source/UI/TroubleshootingPanel.*`, `../source/UI/Sidebar.*`, `../source/PluginEditor.*`, `../source/UI/EngineSettingsPanel.cpp`, and `../source/Config/PluginLogger.h`.
+Status: implemented in `../source/UI/TroubleshootingPanel.*`, `../source/UI/Sidebar.*`, `../source/PluginEditor.*`, `../source/UI/EngineSettingsPanel.cpp`, and `../source/Config/PluginLogger.h`.
 
 Implemented:
 
@@ -317,11 +318,11 @@ Implemented:
 - Added the recent `Error`, `Warning`, and `Notice` log text area.
 - Added logger accessors for current log file, logs folder, recent important lines, and session file-writing toggle.
 - Added reload library action that rescans library data and reapplies current state.
-- Added first missing-map action that normalizes and reapplies the current map, then shows the engine status.
+- Added missing-map fixer wizard that detects failing kit/instrument/articulation paths, shows one missing path at a time, preselects scored replacement candidates, supports skip/cancel, rewrites confirmed source paths, preserves params, and reapplies the map.
 
 Still open:
 
-- Full missing-map replacement wizard with per-missing-path dropdown suggestions.
+- Tune replacement scoring after testing with larger real libraries.
 
 Verify later:
 
