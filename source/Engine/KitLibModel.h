@@ -58,7 +58,7 @@
  * Fields:
  *     kitInfo         = KitName by AuthorName [License]
  *     instrumentType  = kick snare tom hihat ride crash splash china stax cowbell tambourine shaker timbale octoban woodblock clap ...
- *     balance         = L1-L127 R1-R127 C0, used as instrument fallback when articulation has no balance
+ *     balance         = optional L1-L127 R1-R127 C0, used as instrument fallback when articulation has no balance; bare L/R/C is ignored with warning
  *     articulation    = center rim rimshot edge bell bow pedal
  *     dimensionCode   = pdl_opn_cls zon_bel_edg zon_ctr_edg zon_lft_rgt // or shorter codes poc zbe zce zlr?
  *     velocity        = 001-127

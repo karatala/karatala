@@ -26,6 +26,21 @@ bool candidateMatches(const std::vector<juce::String>& candidates, const juce::S
 
 juce::String descriptionIdentityText(const juce::String& description) { return description.trim().replace(" ", "-"); }
 
+bool looksLikeBalanceToken(const juce::String& raw) {
+    const auto value = raw.trim().toUpperCase();
+    if (value.isEmpty()) return false;
+    const auto side = value[0];
+    if (side != 'L' && side != 'R' && side != 'C') return false;
+    if (value.length() == 1) return true;
+    for (int idx = 1; idx < value.length(); ++idx)
+        if (!juce::CharacterFunctions::isDigit(value[idx])) return false;
+    return true;
+}
+
+juce::String invalidBalanceWarning(const juce::String& dirName, const juce::String& token) {
+    return "Invalid or missing instrument balance value '" + token + "' in folder '" + dirName + "'; expected L1-L127, R1-R127, or C0; ignoring balance";
+}
+
 } // namespace KitLibIdentityHelpers
 
 int DecayEnvelope::base62ToInt(const juce::String& s) {
@@ -200,9 +215,13 @@ ParseResult<InstrumentSpec::MetaInfo> InstrumentSpec::parseInfo(const juce::Stri
 
     int descriptionStartIdx = 2;
     if (parts.size() > 2) {
-        auto parsedBalance = parseBalanceValue(parts[2]);
+        const auto balanceToken = parts[2].trim();
+        auto parsedBalance = parseBalanceValue(balanceToken);
         if (parsedBalance.has_value()) {
             result.value.balance = *parsedBalance;
+            descriptionStartIdx = 3;
+        } else if (KitLibIdentityHelpers::looksLikeBalanceToken(balanceToken)) {
+            result.addWarning(KitLibIdentityHelpers::invalidBalanceWarning(processed, balanceToken));
             descriptionStartIdx = 3;
         }
     }

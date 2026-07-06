@@ -70,6 +70,32 @@ TEST_CASE("KitLib - InstrumentSpec::parseInfo parses balance identity metadata",
     CHECK(candidates[2] == "tom-10-L64-Sonor");
 }
 
+TEST_CASE("KitLib - InstrumentSpec::parseInfo warns and ignores incomplete balance tokens", "[InstrumentSpec][identity]") {
+    auto left = InstrumentSpec::parseInfo("tom-10-L-Sonor");
+    REQUIRE(left.ok());
+    REQUIRE(!left.value.balance.has_value());
+    REQUIRE(left.value.description == "Sonor");
+    CHECK_THAT(left.error().toStdString(), Catch::Matchers::ContainsSubstring("Invalid or missing instrument balance value 'L'"));
+
+    auto right = InstrumentSpec::parseInfo("tom-10-R-Sonor");
+    REQUIRE(right.ok());
+    REQUIRE(!right.value.balance.has_value());
+    REQUIRE(right.value.description == "Sonor");
+    CHECK_THAT(right.error().toStdString(), Catch::Matchers::ContainsSubstring("Invalid or missing instrument balance value 'R'"));
+
+    auto center = InstrumentSpec::parseInfo("tom-10-C-Sonor");
+    REQUIRE(center.ok());
+    REQUIRE(!center.value.balance.has_value());
+    REQUIRE(center.value.description == "Sonor");
+    CHECK_THAT(center.error().toStdString(), Catch::Matchers::ContainsSubstring("Invalid or missing instrument balance value 'C'"));
+
+    auto ludwig = InstrumentSpec::parseInfo("kick-22-Ludwig");
+    REQUIRE(ludwig.ok());
+    REQUIRE(!ludwig.value.balance.has_value());
+    REQUIRE(ludwig.value.description == "Ludwig");
+    REQUIRE(ludwig.errors.empty());
+}
+
 TEST_CASE("KitLib - DrumKitSpec resolves shortest unique instrument identity", "[DrumKitSpec][identity]") {
     DrumKitSpec kit { { {}, "KitA", "Kit A", {}, {} } };
 

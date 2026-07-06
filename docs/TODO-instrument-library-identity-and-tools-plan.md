@@ -13,7 +13,7 @@ This plan also covers helper tools for renaming sample files after parent folder
 ## Current Facts
 
 - `../source/Engine/KitLibModel.h` documents this folder shape:
-  - `<kitInfo>/<instrumentType>-<size>-<balance>[-<description>]/<articulation>[expression info]/sample file`
+  - `<kitInfo>/<instrumentType>-<size>[-<balance>][-<description>]/<articulation>[expression info]/sample file`
 - `../source/Engine/KitLibModel.cpp` currently parses kit folder info into `codeRaw`, `name`, `author`, and `license`.
 - `../source/Engine/KitLibModel.cpp` currently parses instrument folder info into `codeRaw`, `name`, `size`, optional `balance`, and `description`.
 - Balance is currently parsed from articulation folder suffixes, such as `center-L64` or `bow-R64`, and stored on `ArticulationSpec`.
@@ -52,7 +52,7 @@ Example:
 
 Folder format:
 
-`<instrumentType>-<size>-<balance>[-<description>]`
+`<instrumentType>-<size>[-<balance>][-<description>]`
 
 Identity order:
 
@@ -116,12 +116,15 @@ When reading an instrument map:
 - If a short identity is ambiguous, report a clear error with available choices.
 - If a path is missing, collect enough data for the UI fixer to suggest replacements.
 
-When writing or generating an instrument map:
+When writing, generating, changing, or saving an instrument map:
 
 - Use the shortest unique kit identity.
 - Use the shortest unique instrument identity inside that kit.
 - Use the shortest unique articulation identity inside that instrument.
 - Preserve explicit params like `tuning`, `attack`, `decay`, `vol`, `flipLR`, `flipPhase`, and `bleed`.
+- Revalidate and normalize resolved old names when the map changed.
+- Sort map lines by destination slot so lines for the same instrument/articulation stay together.
+- Do not sort or reorder layer order inside the same destination instrument/articulation slot.
 
 Example before rename:
 
@@ -141,10 +144,12 @@ Keep articulation-level balance. It is useful when different articulations from 
 
 Add instrument-level balance as a fallback:
 
-- Parse `<balance>` from instrument folder names, such as `tom-10-L64-Sonor`.
-- Store it on `InstrumentSpec::MetaInfo`.
+- Parse optional `<balance>` from instrument folder names, such as `tom-10-L64-Sonor`.
+- Store valid balance on `InstrumentSpec::MetaInfo`.
 - Use articulation balance first.
 - If articulation balance is missing, use instrument balance.
+- If a balance slot is only `L`, `R`, or `C`, ignore it and warn that the balance value is missing.
+- If a balance-like token is invalid, ignore it and warn. Do not warn for normal descriptions like `Ludwig`.
 - If multiple articulation balances conflict, keep current conflict behavior.
 
 This avoids losing detail and supports the new documented folder format.
@@ -203,7 +208,8 @@ Add a troubleshooting area as a new sidebar 'FIX' page.
 
 Simple first version:
 
-- Button: `Fix Missing Instruments`
+- Top button row: `Reload Library` and `Fix Missing Instruments`.
+- Large read-only text area below the buttons for recent `Error`, `Warning`, and `Notice` log lines.
 - Parse current instrument map text.
 - Try to resolve each entry.
 - Show 10 missing paths at a time.
@@ -212,6 +218,7 @@ Simple first version:
 - Allow manual replacement selection.
 - Confirm updates current map text and moves to the next missing path.
 - When finished, apply the updated map.
+- `Reload Library` rescans the sample library so folder renames and file changes can be checked again without restarting.
 
 Replacement suggestion rules:
 
@@ -226,6 +233,8 @@ Needed engine/UI support:
 - A reusable resolver result type, for example `Resolved`, `Missing`, or `Ambiguous`.
 - A replacement candidate list with display text and target map path.
 - A function to rewrite only the selected map entries paths (with same missing path) while preserving params.
+- A function to expose recent `Error`, `Warning`, and `Notice` log lines for the Fix page text area.
+- A reload action that rescans the library and rechecks the current map.
 
 ## Logs UI
 
@@ -253,7 +262,7 @@ Status: implemented in `../source/Engine/KitLibModel.*`, `../source/Engine/DrumK
 Implemented:
 
 - Updated `../source/Engine/KitLibModel.h` doc comment with identity rules.
-- Added parsed instrument balance to metadata.
+- Added parsed instrument balance to metadata, including warnings for bare `L`, `R`, or `C` balance tokens.
 - Added identity candidate helpers for kits, instruments, and articulations.
 - Added unique-ID lookup and preferred-ID helpers.
 - Added instrument balance fallback through `ArticulationSpec::getEffectiveBalance()`.
@@ -290,6 +299,8 @@ Verify later:
 - Add missing-map fixer flow.
 - Move log level there.
 - Add open log and logs folder buttons.
+- Add the recent `Error`, `Warning`, and `Notice` log text area.
+- Add reload library/recheck action.
 
 Verify later:
 
@@ -306,9 +317,11 @@ Verify later:
 - Do not run generated rename batch files from the app.
 - Do not move all balance logic to instrument level.
 
-## Open Questions
+## Resolved Decisions
 
-- Should map serialization always rewrite to preferred short IDs, or only when generating new maps?
-- Should old full names be preserved in user-authored maps until the user chooses a cleanup action?
-- Should the missing-map fixer operate on all map entries, or only entries that currently fail to resolve?
-- Should kit identity include license only as plain `[License]`, or preserve any exact license suffix text from the folder?
+- Map serialization rewrites to preferred short IDs when a map is generated or changed.
+- When a changed map preset is saved, revalidation and sorting should apply.
+- Sorting is only for grouping lines by destination slot. It must not reorder layer order inside the same destination instrument/articulation slot.
+- Old full names that still resolve can be silently normalized on any map change.
+- The missing-map fixer works only on failing entries.
+- Kit identity keeps the exact license text from the folder, for example `[CC-BY-SA-whatever]`.
