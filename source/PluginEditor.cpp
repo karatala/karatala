@@ -77,7 +77,7 @@ void PluginEditor::setupKitMode() {
         this->markMidiMapTableDirty();
         this->markInstrumentConfigDirty();
         this->statusBar.setStatusText(status.joinIntoString(" | "));
-        this->setViewMode(ViewMode::Zen);
+        this->setViewMode(ViewMode::Zone);
     };
     this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 }

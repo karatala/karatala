@@ -6,6 +6,7 @@
 #include <map>
 #include <array>
 #include <optional>
+#include <unordered_map>
 #include "../Config/Helpers.h"
 #include "KitLibConsts.h"
 #include "RoutingTypes.h"
@@ -22,7 +23,7 @@
  * Sample Filename Convention:
  *    <InstrumentsRoot>/
  *       └─ <kitInfo>/
- *          └─ <instrumentType>-<size>[-<description>]/
+ *          └─ <instrumentType>-<size>[-<balance>][-<description>]/
  *              └─ <articulation>[optionalExpressionShortName]-<optionalExpressionCode><value>-<anotherExpressionCode><value>/
  *                  └─ <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
  * otherOptionalSampleParams: includes RMS values for v{n or p}{volume_trim_db, vn - negative, vp - positive}-p{peak_db*-10}_{peak_ms}-d{decay_ms}-c{decay_code}), 
@@ -57,6 +58,7 @@
  * Fields:
  *     kitInfo         = KitName by AuthorName [License]
  *     instrumentType  = kick snare tom hihat ride crash splash china stax cowbell tambourine shaker timbale octoban woodblock clap ...
+ *     balance         = L1-L127 R1-R127 C0, used as instrument fallback when articulation has no balance
  *     articulation    = center rim rimshot edge bell bow pedal
  *     dimensionCode   = pdl_opn_cls zon_bel_edg zon_ctr_edg zon_lft_rgt // or shorter codes poc zbe zce zlr?
  *     velocity        = 001-127
@@ -69,6 +71,12 @@
  *                                  (for room) c (close) | f (far)
  *                       format   = m (mono) | s (stereo) | i (mid-side)
  *                       variant  = optional number for any additional variant specification (ex. snare with 2 top mics: dtm1, dtm2)
+ *
+ * Identity resolution for instrument maps:
+ *     Kit IDs use the shortest unique value from: KitName, KitName by AuthorName, KitName by AuthorName [License], full folder name.
+ *     Instrument IDs use the shortest unique value from: <instrumentType>-<size>, +<balance>, +<description>, full folder name.
+ *     Articulation IDs use the shortest unique value from: <articulation>[optionalExpressionShortName], full articulation folder name.
+ *     Full folder names stay valid so old maps can still resolve when possible.
  * ===========================================
  * 
 
@@ -244,6 +252,7 @@ public:
     bool balanceConflict = false;
     StringsDictSingleton::Id nameId = 0;
     StringsDictSingleton::Id exprId = 0;
+    std::vector<juce::String> folderCodeRaws;
     std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
     std::vector<std::unique_ptr<VelocityLayerSpec>> velocityLayerSpecs;
 
@@ -257,6 +266,9 @@ public:
     }
 
     const std::vector<std::unique_ptr<VelocityLayerSpec>>& getVelocityLayers() const { return this->velocityLayerSpecs; }
+    void addFolderIdentity(const juce::String& folderCodeRaw);
+    std::vector<juce::String> getIdentityCandidates() const;
+    std::optional<int> getEffectiveBalance() const;
 
     bool isEmpty() const {
         return this->velocityLayerSpecs.empty() || std::all_of(this->velocityLayerSpecs.begin(), this->velocityLayerSpecs.end(), [](const auto& v) {
@@ -431,6 +443,7 @@ public:
         juce::String name;
         InstrumentSpec::Type type = InstrumentSpec::Type::Unknown;
         juce::String size = "";
+        std::optional<int> balance;
         juce::String description = "";
     };
     struct SampleFileInfo {
@@ -459,6 +472,7 @@ public:
     }
 
     static ParseResult<MetaInfo> parseInfo(const juce::String& dirName);
+    static std::vector<juce::String> getIdentityCandidates(const MetaInfo& meta);
 
     bool isAudioFile(const juce::File& file);
 
@@ -492,6 +506,9 @@ public:
         this->articulationSpecs.push_back(std::make_unique<ArticulationSpec>(this, codeRaw));
         return this->articulationSpecs.back().get();
     }
+
+    ArticulationSpec* findArticulationById(const juce::String& id) const;
+    juce::String getPreferredArticulationId(const ArticulationSpec& articulation) const;
 };
 
 /**
@@ -510,11 +527,14 @@ public:
     explicit DrumKitSpec(const MetaInfo& meta) : meta(meta) {}
 
     static ParseResult<MetaInfo> parseInfo(const juce::String& dirName);
+    static std::vector<juce::String> getIdentityCandidates(const MetaInfo& meta);
 
     int scanInstruments();
 
     void addInstrument(InstrumentSpec::MetaInfo instMeta) { this->instrumentSpecsMap[instMeta.codeRaw] = std::make_unique<InstrumentSpec>(this, instMeta); }
     InstrumentSpec* findInstrument(const juce::String& id);
+    InstrumentSpec* findInstrumentById(const juce::String& id);
+    juce::String getPreferredInstrumentId(const InstrumentSpec& instrument) const;
     std::vector<InstrumentSpec*> getInstrumentsByType(InstrumentSpec::Type type) const;
 
     MetaInfo meta;
@@ -533,6 +553,9 @@ public:
     int scanAll();
     DrumKitSpec* getKit(int index);
     DrumKitSpec* findKit(const juce::String& name);
+    DrumKitSpec* findKitById(const juce::String& id);
+    juce::String getPreferredKitId(const DrumKitSpec& kit) const;
+    static std::vector<juce::String> getIdentityCandidates(const DrumKitSpec::MetaInfo& meta);
     const std::vector<std::unique_ptr<DrumKitSpec>>& getKits() const { return this->kitSpecs; }
 
 private:

@@ -3,6 +3,31 @@
 
 using namespace KitLib;
 
+namespace KitLibIdentityHelpers {
+
+juce::String identityKey(const juce::String& value) { return value.trim().toLowerCase(); }
+
+void addCandidate(std::vector<juce::String>& candidates, const juce::String& value) {
+    const auto trimmed = value.trim();
+    if (trimmed.isEmpty()) return;
+    const auto key = identityKey(trimmed);
+    for (const auto& existing : candidates)
+        if (identityKey(existing) == key) return;
+    candidates.push_back(trimmed);
+}
+
+bool candidateMatches(const std::vector<juce::String>& candidates, const juce::String& id) {
+    const auto key = identityKey(id);
+    if (key.isEmpty()) return false;
+    for (const auto& candidate : candidates)
+        if (identityKey(candidate) == key) return true;
+    return false;
+}
+
+juce::String descriptionIdentityText(const juce::String& description) { return description.trim().replace(" ", "-"); }
+
+} // namespace KitLibIdentityHelpers
+
 int DecayEnvelope::base62ToInt(const juce::String& s) {
     if (s.isEmpty())
         return -1;
@@ -172,14 +197,62 @@ ParseResult<InstrumentSpec::MetaInfo> InstrumentSpec::parseInfo(const juce::Stri
     result.value.name = parts[0].trim();
     if (parts.size() > 1)
         result.value.size = parts[1].trim();
+
+    int descriptionStartIdx = 2;
     if (parts.size() > 2) {
-        parts.removeRange(0, 2);
+        auto parsedBalance = parseBalanceValue(parts[2]);
+        if (parsedBalance.has_value()) {
+            result.value.balance = *parsedBalance;
+            descriptionStartIdx = 3;
+        }
+    }
+    if (parts.size() > descriptionStartIdx) {
+        parts.removeRange(0, descriptionStartIdx);
         result.value.description = parts.size() > 0 ? parts.joinIntoString(" ").trim() : "";
     }
     result.value.type = InstrumentSpec::typeFromString(result.value.name);
     result.value.codeRaw = processed;
 
     return result;
+}
+
+std::vector<juce::String> InstrumentSpec::getIdentityCandidates(const InstrumentSpec::MetaInfo& meta) {
+    std::vector<juce::String> candidates;
+    juce::String base = meta.name.trim();
+    if (meta.size.trim().isNotEmpty()) base += "-" + meta.size.trim();
+    KitLibIdentityHelpers::addCandidate(candidates, base);
+
+    juce::String balanceBase = base;
+    if (meta.balance.has_value()) {
+        balanceBase += "-" + balanceValueToString(*meta.balance);
+        KitLibIdentityHelpers::addCandidate(candidates, balanceBase);
+    }
+    if (meta.description.trim().isNotEmpty())
+        KitLibIdentityHelpers::addCandidate(candidates, balanceBase + "-" + KitLibIdentityHelpers::descriptionIdentityText(meta.description));
+    KitLibIdentityHelpers::addCandidate(candidates, meta.codeRaw);
+    return candidates;
+}
+
+void ArticulationSpec::addFolderIdentity(const juce::String& folderCodeRaw) {
+    const auto trimmed = folderCodeRaw.trim();
+    if (trimmed.isEmpty()) return;
+    for (const auto& existing : this->folderCodeRaws)
+        if (existing.trim().equalsIgnoreCase(trimmed)) return;
+    this->folderCodeRaws.push_back(trimmed);
+}
+
+std::vector<juce::String> ArticulationSpec::getIdentityCandidates() const {
+    std::vector<juce::String> candidates;
+    KitLibIdentityHelpers::addCandidate(candidates, this->codeRaw);
+    for (const auto& folderCodeRaw : this->folderCodeRaws)
+        KitLibIdentityHelpers::addCandidate(candidates, folderCodeRaw);
+    return candidates;
+}
+
+std::optional<int> ArticulationSpec::getEffectiveBalance() const {
+    if (this->balance.has_value()) return this->balance;
+    if (this->parent != nullptr) return this->parent->meta.balance;
+    return std::nullopt;
 }
 
 bool InstrumentSpec::isAudioFile(const juce::File& file) {
@@ -207,7 +280,9 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 parts.remove(parts.size() - 1);
         }
 
+        const auto folderCodeRaw = parts.joinIntoString("-").trim();
         ArticulationSpec* artSpec = this->getOrAddArticulation(parts[0].trim());
+        artSpec->addFolderIdentity(folderCodeRaw);
         if (folderBalance.has_value()) {
             if (artSpec->balanceConflict) {
                 // Already known ambiguous; keep automatic orientation disabled.
@@ -383,6 +458,29 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     return result;
 }
 
+
+ArticulationSpec* InstrumentSpec::findArticulationById(const juce::String& id) const {
+    ArticulationSpec* matched = nullptr;
+    int matchCount = 0;
+    for (const auto& existing : this->articulationSpecs) {
+        if (existing == nullptr) continue;
+        if (!KitLibIdentityHelpers::candidateMatches(existing->getIdentityCandidates(), id)) continue;
+        matched = existing.get();
+        ++matchCount;
+    }
+    return matchCount == 1 ? matched : nullptr;
+}
+
+juce::String InstrumentSpec::getPreferredArticulationId(const ArticulationSpec& articulation) const {
+    for (const auto& candidate : articulation.getIdentityCandidates()) {
+        int matchCount = 0;
+        for (const auto& existing : this->articulationSpecs) {
+            if (existing != nullptr && KitLibIdentityHelpers::candidateMatches(existing->getIdentityCandidates(), candidate)) ++matchCount;
+        }
+        if (matchCount == 1) return candidate;
+    }
+    return articulation.codeRaw;
+}
 ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
 
@@ -401,6 +499,21 @@ ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& di
     result.value.author = parts.size() > 1 ? parts[1].trim() : "";
 
     return result;
+}
+
+std::vector<juce::String> DrumKitSpec::getIdentityCandidates(const DrumKitSpec::MetaInfo& meta) {
+    std::vector<juce::String> candidates;
+    const auto name = meta.name.trim();
+    const auto author = meta.author.trim();
+    const auto license = meta.license.trim();
+    KitLibIdentityHelpers::addCandidate(candidates, name);
+    if (author.isNotEmpty()) KitLibIdentityHelpers::addCandidate(candidates, name + " by " + author);
+    if (license.isNotEmpty()) {
+        const auto base = author.isNotEmpty() ? name + " by " + author : name;
+        KitLibIdentityHelpers::addCandidate(candidates, base + " [" + license + "]");
+    }
+    KitLibIdentityHelpers::addCandidate(candidates, meta.codeRaw);
+    return candidates;
 }
 
 int DrumKitSpec::scanInstruments() {
@@ -431,6 +544,31 @@ InstrumentSpec* DrumKitSpec::findInstrument(const juce::String& id) {
     return nullptr;
 }
 
+
+InstrumentSpec* DrumKitSpec::findInstrumentById(const juce::String& id) {
+    InstrumentSpec* matched = nullptr;
+    int matchCount = 0;
+    for (auto& existing : this->instrumentSpecsMap) {
+        auto* instrument = existing.second.get();
+        if (instrument == nullptr) continue;
+        if (!KitLibIdentityHelpers::candidateMatches(InstrumentSpec::getIdentityCandidates(instrument->meta), id)) continue;
+        matched = instrument;
+        ++matchCount;
+    }
+    return matchCount == 1 ? matched : nullptr;
+}
+
+juce::String DrumKitSpec::getPreferredInstrumentId(const InstrumentSpec& instrument) const {
+    for (const auto& candidate : InstrumentSpec::getIdentityCandidates(instrument.meta)) {
+        int matchCount = 0;
+        for (const auto& existing : this->instrumentSpecsMap) {
+            const auto* otherInstrument = existing.second.get();
+            if (otherInstrument != nullptr && KitLibIdentityHelpers::candidateMatches(InstrumentSpec::getIdentityCandidates(otherInstrument->meta), candidate)) ++matchCount;
+        }
+        if (matchCount == 1) return candidate;
+    }
+    return instrument.meta.codeRaw;
+}
 std::vector<InstrumentSpec*> DrumKitSpec::getInstrumentsByType(InstrumentSpec::Type type) const {
     std::vector<InstrumentSpec*> result;
     for (const auto&[id, instPtr] : this->instrumentSpecsMap) {
@@ -535,6 +673,33 @@ DrumKitSpec* LibraryManager::getKit(int index) {
     return this->kitSpecs[index].get();
 }
 
+
+DrumKitSpec* LibraryManager::findKitById(const juce::String& id) {
+    DrumKitSpec* matched = nullptr;
+    int matchCount = 0;
+    for (auto& kit : this->kitSpecs) {
+        if (kit == nullptr) continue;
+        if (!KitLibIdentityHelpers::candidateMatches(LibraryManager::getIdentityCandidates(kit->meta), id)) continue;
+        matched = kit.get();
+        ++matchCount;
+    }
+    return matchCount == 1 ? matched : nullptr;
+}
+
+juce::String LibraryManager::getPreferredKitId(const DrumKitSpec& kit) const {
+    for (const auto& candidate : LibraryManager::getIdentityCandidates(kit.meta)) {
+        int matchCount = 0;
+        for (const auto& existing : this->kitSpecs) {
+            if (existing != nullptr && KitLibIdentityHelpers::candidateMatches(LibraryManager::getIdentityCandidates(existing->meta), candidate)) ++matchCount;
+        }
+        if (matchCount == 1) return candidate;
+    }
+    return kit.meta.codeRaw;
+}
+
+std::vector<juce::String> LibraryManager::getIdentityCandidates(const DrumKitSpec::MetaInfo& meta) {
+    return DrumKitSpec::getIdentityCandidates(meta);
+}
 DrumKitSpec* LibraryManager::findKit(const juce::String& name) {
     const auto needle = name.trim().toLowerCase();
     for (auto& kit : this->kitSpecs)

@@ -53,6 +53,74 @@ TEST_CASE("KitLib - InstrumentSpec::parseInfo handles optional description", "[I
 }
 
 
+TEST_CASE("KitLib - InstrumentSpec::parseInfo parses balance identity metadata", "[InstrumentSpec][identity]") {
+    auto parsed = InstrumentSpec::parseInfo("tom-10-L64-Sonor");
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.type == InstrumentSpec::Type::Tom);
+    REQUIRE(parsed.value.name == "tom");
+    REQUIRE(parsed.value.size == "10");
+    REQUIRE(parsed.value.balance.has_value());
+    REQUIRE(*parsed.value.balance == -64);
+    REQUIRE(parsed.value.description == "Sonor");
+
+    const auto candidates = InstrumentSpec::getIdentityCandidates(parsed.value);
+    REQUIRE(candidates.size() == 3);
+    CHECK(candidates[0] == "tom-10");
+    CHECK(candidates[1] == "tom-10-L64");
+    CHECK(candidates[2] == "tom-10-L64-Sonor");
+}
+
+TEST_CASE("KitLib - DrumKitSpec resolves shortest unique instrument identity", "[DrumKitSpec][identity]") {
+    DrumKitSpec kit { { {}, "KitA", "Kit A", {}, {} } };
+
+    auto firstMeta = InstrumentSpec::parseInfo("tom-10-Sonor").value;
+    kit.addInstrument(firstMeta);
+    auto* first = kit.findInstrument("tom-10-Sonor");
+    REQUIRE(first != nullptr);
+
+    auto secondMeta = InstrumentSpec::parseInfo("tom-10-L64-Yamaha").value;
+    kit.addInstrument(secondMeta);
+    auto* second = kit.findInstrument("tom-10-L64-Yamaha");
+    REQUIRE(second != nullptr);
+
+    CHECK(kit.findInstrumentById("tom-10") == nullptr);
+    CHECK(kit.findInstrumentById("tom-10-Sonor") == first);
+    CHECK(kit.findInstrumentById("tom-10-L64") == second);
+    CHECK(kit.findInstrumentById("TOM-10-l64") == second);
+    CHECK(kit.getPreferredInstrumentId(*first) == "tom-10-Sonor");
+    CHECK(kit.getPreferredInstrumentId(*second) == "tom-10-L64");
+}
+
+TEST_CASE("KitLib - LibraryManager resolves shortest unique kit identity", "[DrumKitSpec][identity]") {
+    auto root = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-kit-identity", "", false);
+    REQUIRE(root.createDirectory());
+
+    struct TempDirCleanup {
+        juce::File file;
+        ~TempDirCleanup() { file.deleteRecursively(); }
+    } cleanup { root };
+
+    REQUIRE(root.getChildFile("AasiMonster by DIE [CC-BY-4.0]").createDirectory());
+    REQUIRE(root.getChildFile("AasiMonster by Other [CC-BY-4.0]").createDirectory());
+    REQUIRE(root.getChildFile("SameName by SameAuthor [MIT]").createDirectory());
+    REQUIRE(root.getChildFile("SameName by SameAuthor [GPL]").createDirectory());
+
+    LibraryManager manager(root);
+    REQUIRE(manager.scanAll() == 4);
+
+    auto* die = manager.findKitById("AasiMonster by DIE");
+    REQUIRE(die != nullptr);
+    CHECK(die->meta.author == "DIE");
+    CHECK(manager.findKitById("AasiMonster") == nullptr);
+    CHECK(manager.getPreferredKitId(*die) == "AasiMonster by DIE");
+
+    auto* mit = manager.findKitById("SameName by SameAuthor [MIT]");
+    REQUIRE(mit != nullptr);
+    CHECK(mit->meta.license == "MIT");
+    CHECK(manager.findKitById("SameName by SameAuthor") == nullptr);
+    CHECK(manager.getPreferredKitId(*mit) == "SameName by SameAuthor [MIT]");
+}
+
 TEST_CASE("KitLayout - parser reads slot routing metadata", "[KitLayout][yaml][routing]") {
     const juce::String yaml = R"yaml(
 id: routing
@@ -463,8 +531,10 @@ TEST_CASE("KitLib - articulation folder balance suffix is metadata", "[Instrumen
 
     auto centerLeft = root.getChildFile("center-L36");
     auto centerRight = root.getChildFile("center-R36");
+    auto rimDir = root.getChildFile("rim");
     REQUIRE(centerLeft.createDirectory());
     REQUIRE(centerRight.createDirectory());
+    REQUIRE(rimDir.createDirectory());
 
     DrumKitSpec::MetaInfo kitMeta;
     DrumKitSpec kit(kitMeta);
@@ -474,6 +544,7 @@ TEST_CASE("KitLib - articulation folder balance suffix is metadata", "[Instrumen
     instMeta.name = "hihat";
     instMeta.codeRaw = "hihat-14";
     instMeta.type = InstrumentSpec::Type::HiHat;
+    instMeta.balance = -12;
     InstrumentSpec instrument(&kit, instMeta);
 
     instrument.scanInstrumentSamples();
@@ -487,6 +558,16 @@ TEST_CASE("KitLib - articulation folder balance suffix is metadata", "[Instrumen
     REQUIRE(bow->expressionDimensions[0]->codeRaw == "pdl_opn_cls");
     REQUIRE(bow->expressionDimensions[0]->values.size() == 1);
     REQUIRE(bow->expressionDimensions[0]->values[0] == 43);
+    REQUIRE(bow->getEffectiveBalance().has_value());
+    REQUIRE(*bow->getEffectiveBalance() == -64);
+    REQUIRE(instrument.findArticulationById("bow[half]-pdl_opn_cls043") == bow);
+    REQUIRE(instrument.getPreferredArticulationId(*bow) == "bow[half]");
+
+    auto* rim = instrument.findArticulation("rim");
+    REQUIRE(rim != nullptr);
+    REQUIRE(!rim->balance.has_value());
+    REQUIRE(rim->getEffectiveBalance().has_value());
+    REQUIRE(*rim->getEffectiveBalance() == -12);
 
     auto* center = instrument.findArticulation("center");
     REQUIRE(center != nullptr);

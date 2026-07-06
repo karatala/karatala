@@ -1,0 +1,314 @@
+# TODO Instrument Library Identity And Tools Plan
+
+Status: phase 1 implemented; phases 2-4 still open.
+
+## Goal
+
+Make library paths safer to rename and easier to fix.
+
+The instrument map should not depend on full folder names when the extra folder text is only secondary information. It should use the shortest unique identity for kits, instruments, and articulations. Older full paths should still resolve when possible.
+
+This plan also covers helper tools for renaming sample files after parent folders are renamed, balance support, and a small troubleshooting UI for broken instrument-map paths and logs.
+
+## Current Facts
+
+- `../source/Engine/KitLibModel.h` documents this folder shape:
+  - `<kitInfo>/<instrumentType>-<size>-<balance>[-<description>]/<articulation>[expression info]/sample file`
+- `../source/Engine/KitLibModel.cpp` currently parses kit folder info into `codeRaw`, `name`, `author`, and `license`.
+- `../source/Engine/KitLibModel.cpp` currently parses instrument folder info into `codeRaw`, `name`, `size`, optional `balance`, and `description`.
+- Balance is currently parsed from articulation folder suffixes, such as `center-L64` or `bow-R64`, and stored on `ArticulationSpec`.
+- `../source/Engine/DrumKitEngineMappingModel.cpp` parses instrument-map text lines like `slot:kit/instrument/articulation:params`.
+- `../source/Engine/DrumKitEngine.cpp` applies the parsed map and resolves kit, instrument, and articulation references.
+- `../source/Engine/KitLibModel.cpp` currently resolves kits by kit display name or full kit folder name.
+- `../source/Engine/KitLibModel.cpp` currently resolves instruments by exact full instrument folder name.
+- `../source/Engine/DrumKitEngine.cpp` currently reports missing kits, missing instruments, and unknown source articulations while applying a map.
+- `../source/UI/EngineSettingsPanel.cpp` currently owns the `Log Level` dropdown.
+- `../source/Config/PluginLogger.h` writes instance logs under the data path `logs` folder.
+
+## Proposed Identity Rules
+
+Use the shortest unique identity. If a shorter identity has duplicates, use the next longer identity.
+
+### Kit Identity
+
+Folder format:
+
+`KitName by AuthorName [License]`
+
+Identity order:
+
+1. `KitName`
+2. `KitName by AuthorName`
+3. `KitName by AuthorName [License]`
+4. Full folder name, if different from the generated text
+
+Example:
+
+- `AasiMonster by DIE [CC-BY-4.0]` can be written as `AasiMonster` if no other kit uses that name.
+- If another `AasiMonster` exists, write `AasiMonster by DIE`.
+- If the name and author still collide, write `AasiMonster by DIE [CC-BY-4.0]`.
+
+### Instrument Identity
+
+Folder format:
+
+`<instrumentType>-<size>-<balance>[-<description>]`
+
+Identity order:
+
+1. `<instrumentType>-<size>`
+2. `<instrumentType>-<size>-<balance>`
+3. `<instrumentType>-<size>-<balance>-<description>`
+4. Full folder name, if different from the generated text
+
+Examples:
+
+- `tom-10-Sonor` can be written as `tom-10` if unique in the kit.
+- `tom-10-L64-Sonor` can be written as `tom-10-L64` if `tom-10` is not unique but `tom-10-L64` is unique.
+- Keep the full folder name only when needed.
+
+### Articulation Identity
+
+Folder format:
+
+`<articulation>[optionalExpressionShortName]-<optionalExpressionCode><value>-...`
+
+Identity order:
+
+1. `<articulation>[optionalExpressionShortName]`
+2. Full articulation folder name
+
+Examples:
+
+- `center-zon_ctr_rim043` can be written as `center` if only one center articulation exists.
+- If both `center-zon_ctr_rim043` and `center-zon_ctr_rim085` exist, use the full articulation folder name.
+
+## Proposed Resolver Behavior
+
+Add reusable identity resolver logic in the library model.
+
+Suggested model additions:
+
+- Store candidate identity strings for each kit, instrument, and articulation.
+- Build alias maps after scanning children.
+- An alias resolves only when it points to exactly one item.
+- Ambiguous aliases do not resolve silently.
+- Exact full folder names should always be accepted.
+- Matching should be case-insensitive after trimming.
+
+Suggested APIs:
+
+- `DrumKitSpec::getPreferredInstrumentId(const InstrumentSpec&)`
+- `DrumKitSpec::findInstrumentById(const juce::String&)`
+- `InstrumentSpec::getPreferredArticulationId(const ArticulationSpec&)`
+- `InstrumentSpec::findArticulationById(const juce::String&)`
+- `LibraryManager::getPreferredKitId(const DrumKitSpec&)`
+- `LibraryManager::findKitById(const juce::String&)`
+
+The exact API names can change during implementation if existing style suggests better names.
+
+## Instrument Map Changes
+
+When reading an instrument map:
+
+- Resolve kit, instrument, and articulation references through the new identity resolver.
+- Keep support for old full folder names.
+- If a short identity is ambiguous, report a clear error with available choices.
+- If a path is missing, collect enough data for the UI fixer to suggest replacements.
+
+When writing or generating an instrument map:
+
+- Use the shortest unique kit identity.
+- Use the shortest unique instrument identity inside that kit.
+- Use the shortest unique articulation identity inside that instrument.
+- Preserve explicit params like `tuning`, `attack`, `decay`, `vol`, `flipLR`, `flipPhase`, and `bleed`.
+
+Example before rename:
+
+`tom2/rim:aasimonster2/tom-X1/center:tuning=78,attack=3`
+
+Example after identity resolver and folder rename:
+
+`tom2/rim:AasiMonster2/tom-10/center:tuning=78,attack=3`
+
+If `tom-10` is not unique, write the next longer ID, for example:
+
+`tom2/rim:AasiMonster2/tom-10-Sonor/center:tuning=78,attack=3`
+
+## Balance Support
+
+Keep articulation-level balance. It is useful when different articulations from one instrument were recorded from different sides or conditions.
+
+Add instrument-level balance as a fallback:
+
+- Parse `<balance>` from instrument folder names, such as `tom-10-L64-Sonor`.
+- Store it on `InstrumentSpec::MetaInfo`.
+- Use articulation balance first.
+- If articulation balance is missing, use instrument balance.
+- If multiple articulation balances conflict, keep current conflict behavior.
+
+This avoids losing detail and supports the new documented folder format.
+
+## Rename Helper Script
+
+Add a Python script under `../scripts/`.
+
+Suggested file:
+
+`../scripts/rename_samples_from_parent_folders.py`
+
+Purpose:
+
+- Help after kit, instrument, or articulation folders were renamed.
+- Rename sample files so their prefix follows the parent folder identity.
+- Generate a `.bat` file for review instead of renaming directly.
+
+Inputs:
+
+- Root folder to scan.
+- Optional output path for the generated `.bat`.
+- Optional dry-run output summary.
+
+Behavior:
+
+- Walk kit, instrument, and articulation folders.
+- Parse instrument folder into type, size, optional balance, and description.
+- Parse articulation folder into base articulation plus optional expression suffixes.
+- For each audio file, detect current sample prefix:
+  - `<instrumentType>-<size>-<articulation>[optionalExpressionShortName]-...`
+- Write a `ren` command only when the expected filename differs.
+- Quote paths safely for Windows batch files.
+- Do not overwrite existing files.
+- Put conflicts, possible invalid name format after rename and skipped files into comments in the `.bat`.
+
+Example output:
+
+```bat
+rem Review before running.
+rem SKIP "whatever-name.flac" "tom-10-center-whatever-name.flac"
+ren "tom-X1-center-127a-dtm.flac" "tom-10-center-127a-dtm.flac"
+ren "127b-dtm.flac" "tom-10-center-127b-dtm.flac"
+rem SKIP exists: tom-10-center-127c-dtm.flac
+```
+
+Verification later:
+
+- Run the script on a small copied fixture.
+- Review generated `.bat` output.
+- Do not run the generated `.bat` during normal tests.
+
+## Missing Instrument Map Fixer UI
+
+Add a troubleshooting area as a new sidebar 'FIX' page.
+
+Simple first version:
+
+- Button: `Fix Missing Instruments`
+- Parse current instrument map text.
+- Try to resolve each entry.
+- Show 10 missing paths at a time.
+- Show the old path, for example `aasimonster2/tom-X1/center`.
+- Preselect the best replacement in a dropdown.
+- Allow manual replacement selection.
+- Confirm updates current map text and moves to the next missing path.
+- When finished, apply the updated map.
+
+Replacement suggestion rules:
+
+1. Prefer same slot type from the active kit layout.
+2. Prefer same parsed instrument type and size.
+3. Prefer same articulation base name.
+4. Prefer close text match for kit, instrument, and articulation names.
+5. Prefer loaded library items with samples.
+
+Needed engine/UI support:
+
+- A reusable resolver result type, for example `Resolved`, `Missing`, or `Ambiguous`.
+- A replacement candidate list with display text and target map path.
+- A function to rewrite only the selected map entries paths (with same missing path) while preserving params.
+
+## Logs UI
+
+Move log controls from the config page to the troubleshooting page.
+
+Controls:
+
+- `Log Level` dropdown.
+- `Open Log` button.
+- `Logs Folder` button.
+
+Needed support:
+
+- Expose current log file path from `GlobalLogger` or `DrumKitEngine`.
+- Expose logs folder path from the data path.
+- Buttons should use normal JUCE file/folder launching.
+- If log level is `Off` and no log file exists, show a simple status message instead of failing silently.
+
+## Implementation Phases
+
+### Phase 1 - Document And Parser Model
+
+Status: implemented in `../source/Engine/KitLibModel.*`, `../source/Engine/DrumKitEngineMapHelpers.cpp`, and `../tests/TestKitLibParsers.cpp`.
+
+Implemented:
+
+- Updated `../source/Engine/KitLibModel.h` doc comment with identity rules.
+- Added parsed instrument balance to metadata.
+- Added identity candidate helpers for kits, instruments, and articulations.
+- Added unique-ID lookup and preferred-ID helpers.
+- Added instrument balance fallback through `ArticulationSpec::getEffectiveBalance()`.
+- Added focused parser/model tests for kit, instrument, articulation identity, duplicate IDs, and balance fallback.
+
+Verification status:
+
+- Not run yet, per user request not to build or run tests unless asked.
+
+### Phase 2 - Instrument Map Resolver
+
+- Use identity resolver in map apply and preview source resolving.
+- Keep full old folder names working.
+- Serialize maps with shortest unique identities.
+- Improve missing and ambiguous error text.
+
+Verify later:
+
+- Add focused `InstrumentMap` tests for old full paths, short IDs, ambiguous IDs, and serialized preferred IDs.
+
+### Phase 3 - Rename Script
+
+- Add the Python script.
+- Generate reviewable `.bat` output only.
+- Add clear comments for skipped or conflicting files.
+
+Verify later:
+
+- Run on a copied small fixture and inspect output.
+
+### Phase 4 - Troubleshooting UI
+
+- Add UI page or section.
+- Add missing-map fixer flow.
+- Move log level there.
+- Add open log and logs folder buttons.
+
+Verify later:
+
+- Open UI manually.
+- Test missing instrument path replacement.
+- Test log level save/load.
+- Test open log and logs folder buttons.
+
+## Non-Goals
+
+- Do not change audio-thread behavior.
+- Do not remove support for full folder names.
+- Do not auto-edit user maps without confirmation in the UI fixer.
+- Do not run generated rename batch files from the app.
+- Do not move all balance logic to instrument level.
+
+## Open Questions
+
+- Should map serialization always rewrite to preferred short IDs, or only when generating new maps?
+- Should old full names be preserved in user-authored maps until the user chooses a cleanup action?
+- Should the missing-map fixer operate on all map entries, or only entries that currently fail to resolve?
+- Should kit identity include license only as plain `[License]`, or preserve any exact license suffix text from the folder?
