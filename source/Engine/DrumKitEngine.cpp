@@ -946,11 +946,12 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
         }
 
         for (const auto& art : instrumentSlot.articulations) {
+            const bool routesArt = DrumKitEngine::synthRoutesLayoutArticulation(*synth, art);
             for (const int note : art.notes) {
                 if (note < 0 || note >= 128)
                     continue;
                 this->trackedPAMask[note] = true;
-                if (synth->hasRouteForMidiNote(note))
+                if (routesArt && (synth->hasDestinationRoutes() || synth->hasRouteForMidiNote(note)))
                     this->instrumentSynthsByNote[note].push_back(synth);
             }
         }
@@ -994,11 +995,7 @@ void DrumKitEngine::rebuildMidiNoteRoutingFromLayout() {
 void DrumKitEngine::addShadowSynthNoteRoutes(InstrumentSynth& shadowSynth, const KitLayout::InstrumentSlot& layoutSlot) {
     shadowSynth.rebuildRoutingFromLayout(layoutSlot);
     for (const auto& art : layoutSlot.articulations) {
-        const bool hasRouteOwnership = shadowSynth.hasDestinationRoutes();
-        const bool routesArt = hasRouteOwnership
-            ? shadowSynth.routesDestinationArticulation(art.nameId, art.exprId)
-            : shadowSynth.supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art));
-        if (!routesArt) continue;
+        if (!DrumKitEngine::synthRoutesLayoutArticulation(shadowSynth, art)) continue;
         for (const int note : art.notes) {
             if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(&shadowSynth);
         }
@@ -1604,6 +1601,11 @@ bool DrumKitEngine::synthMatchesTargetNotes(const InstrumentSynth& synth, const 
         if (synth.hasRouteForMidiNote(note)) return true;
     }
     return false;
+}
+
+bool DrumKitEngine::synthRoutesLayoutArticulation(const InstrumentSynth& synth, const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
+    if (synth.hasDestinationRoutes()) return synth.routesDestinationArticulation(art.nameId, art.exprId);
+    return synth.supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art));
 }
 
 void DrumKitEngine::applyLayerParameterUpdate(InstrumentSynth& synth, const LayerParameterUpdate& update) {

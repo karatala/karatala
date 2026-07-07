@@ -248,7 +248,7 @@ Implementation status:
 
 - Started. `InstrumentSynth` now stores explicit destination-route ownership as `(destinationArtNameId, destinationExprId)` pairs.
 - Engine-created primary and shadow synths now receive destination ownership from the resolved map apply path.
-- Shadow note routing now uses destination ownership when available, with old `supportsArticulation()` behavior only as fallback for synths without ownership.
+- Primary and shadow engine note routing now use destination ownership when available, with old `supportsArticulation()` / `noteToArticulation` behavior only as fallback for synths without ownership.
 - Layout-change replacement synths copy destination ownership from the old synth.
 - This reduces shadow conflicts where a base-name match such as `bow` could catch `bow[open]` and `bow[tight]` together.
 - Still open: primary `noteToArticulation` is still built inside `InstrumentSynth` from layout plus routing context. The full resolved-route object is not implemented yet.
@@ -286,17 +286,17 @@ Verify:
 
 ## Stage 7 - Reduce Note Routing Conflicts
 
-Current fragile points:
+Remaining fragile points:
 
-- `supportsArticulation()` checks runtime articulation names, not actual route ownership.
-- `hasRouteForMidiNote()` only checks `noteToArticulation[note] >= 0`.
-- Shadow routes are added from slot layout notes and `supportsArticulation()`.
+- Older shadow routing used `supportsArticulation()` and could match by runtime/source articulation name instead of destination ownership.
+- Some parameter-update matching still uses note routes or `supportsArticulation()` as a proxy for ownership.
 - Aliases can route destination notes to another source runtime art after bindings were already created.
+- A full route-plan object is still needed before `noteToArticulation` becomes only a final lookup table.
 
 Plan:
 
-1. Add explicit destination route ownership to `InstrumentSynth`.
-2. Replace `supportsArticulation()` use in shadow route setup with a query like:
+1. Add explicit destination route ownership to `InstrumentSynth`. Implemented for engine-created primary and shadow synths.
+2. Replace `supportsArticulation()` use in shadow route setup with a route-ownership query. Implemented when destination ownership exists:
 
 ```cpp
 bool InstrumentSynth::routesDestinationArticulation(uint32_t destinationArtNameId, uint32_t destinationExprId) const;
@@ -310,6 +310,12 @@ Verify:
 
 - Two synths can layer the same destination note only when the map has multiple entries for that destination.
 - A synth does not get a shadow note route just because it has a source articulation with the same name.
+
+Implementation status:
+
+- Started through Stage 5. Destination-route ownership exists and is used by primary/shadow engine note routing when available.
+- Still open: parameter-update layer matching still has older note/source-art matching logic.
+- Still open: full route-plan ownership is needed before `noteToArticulation` is only a final lookup table.
 
 ## Stage 8 - Tests To Add
 
