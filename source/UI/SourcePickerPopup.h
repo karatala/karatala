@@ -27,8 +27,8 @@ public:
     std::function<void(int, juce::uint8)> onPreview;
 
 private:
-    static constexpr int selectButtonWidth = 26;
-    static constexpr int previewButtonWidth = 60;
+    static constexpr int selectButtonWidth = 22;
+    static constexpr int previewButtonWidth = 80;
     static constexpr int kindListWidth = 80;
 
     enum class Category {
@@ -56,6 +56,7 @@ private:
         int originalIndex; 
     };
     std::vector<FilteredEntry> filteredEntries;
+    int actionRow = -1;
     std::vector<KitLib::InstrumentSpec::Type> kindEntries;
     std::vector<juce::String> cachedLowerDisplayText;
 

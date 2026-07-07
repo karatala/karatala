@@ -84,6 +84,7 @@ void copySynthOverrides(InstrumentSynth& target, const InstrumentSynth& source) 
     if (decayOverride.has_value()) target.setDecayOverrideMs(*decayOverride);
 
     target.setVolumeDb(source.getVolumeDb());
+    target.setPan(source.getPan());
     target.setFlipLR(source.getFlipLR());
     target.setFlipPhase(source.getFlipPhase());
     target.setMicBleedLevels(source.getMicBleedLevels());
@@ -211,6 +212,8 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
     fingerprint += entry.decayTimeMs.has_value() ? juce::String(*entry.decayTimeMs) : "_";
     fingerprint += "|";
     fingerprint += entry.volumeDb.has_value() ? juce::String(*entry.volumeDb, 4) : "_";
+    fingerprint += "|";
+    fingerprint += entry.pan.has_value() ? juce::String(*entry.pan) : "_";
     fingerprint += "|";
     fingerprint += entry.flipLR ? "1" : "0";
     fingerprint += entry.flipLRExplicit ? "e" : "a";

@@ -400,8 +400,10 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     for (int dc = 0; dc < effectiveDestCount; ++dc)
         destPtrs[dc] = outputBuffer.getWritePointer(destChBase + dc);
 
-    const bool useBalancedDirectStereo = s->useDirectBalance && effectiveDestCount >= 2;
-    const float pan = juce::jlimit(-1.0f, 1.0f, static_cast<float>(s->balance) / 127.0f);
+    const int layerPan = this->owner != nullptr ? this->owner->getPan() : 0;
+    const bool useBalancedDirectStereo = (s->useDirectBalance || layerPan != 0) && effectiveDestCount >= 2;
+    const int effectiveBalance = (s->useDirectBalance ? s->balance : 0) + layerPan;
+    const float pan = juce::jlimit(-1.0f, 1.0f, static_cast<float>(juce::jlimit(-127, 127, effectiveBalance)) / 127.0f);
     const float monoPanAngle = (pan + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
     const float monoLeftGain = std::cos(monoPanAngle);
     const float monoRightGain = std::sin(monoPanAngle);

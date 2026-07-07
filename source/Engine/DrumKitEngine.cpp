@@ -309,6 +309,7 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
         if (entry.attackTimeMs.has_value()) params.add("attack=" + juce::String(*entry.attackTimeMs));
         if (entry.decayTimeMs.has_value()) params.add("decay=" + juce::String(*entry.decayTimeMs));
         if (entry.volumeDb.has_value()) params.add("vol=" + juce::String(*entry.volumeDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
+        if (entry.pan.has_value()) params.add("pan=" + juce::String(*entry.pan));
         if (entry.flipLR || entry.flipLRExplicit) params.add("flipLR=" + juce::String(entry.flipLR ? "1" : "0"));
         if (entry.flipPhase) params.add("flipPhase=1");
         if (!entry.micBleedLevels.empty()) {
@@ -1574,6 +1575,7 @@ void DrumKitEngine::applyLayerParameterUpdate(InstrumentSynth& synth, const Laye
     if (update.attackMs.has_value()) synth.setAttackOverrideMs(*update.attackMs);
     if (update.decayMs.has_value()) synth.setDecayOverrideMs(*update.decayMs);
     if (update.volumeDb.has_value()) synth.setVolumeDb(*update.volumeDb);
+    if (update.pan.has_value()) synth.setPan(*update.pan);
     if (update.flipLR.has_value()) synth.setFlipLR(*update.flipLR);
     if (update.flipPhase.has_value()) synth.setFlipPhase(*update.flipPhase);
     if (update.micBleedLevels.has_value()) synth.setMicBleedLevels(*update.micBleedLevels);
@@ -1665,6 +1667,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         if (entry.decayTimeMs.has_value())
             synth.setDecayOverrideMs(*entry.decayTimeMs);
         synth.setVolumeDb(entry.volumeDb.value_or(0.0f));
+        synth.setPan(entry.pan.value_or(0));
         synth.setFlipLR(entry.flipLR);
         synth.setFlipPhase(entry.flipPhase);
         synth.setMicBleedLevels(entry.micBleedLevels);
@@ -1860,6 +1863,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                                             || resolved.entry->attackTimeMs.has_value()
                                             || resolved.entry->decayTimeMs.has_value()
                                             || resolved.entry->volumeDb.has_value()
+                                            || resolved.entry->pan.has_value()
                                             || resolved.entry->flipLR
                                             || resolved.entry->flipPhase
                                             || !resolved.entry->micBleedLevels.empty();

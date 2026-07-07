@@ -106,6 +106,7 @@ void InstrumentSynth::clearParameterOverrides() {
     this->attackOverrideMs.reset();
     this->decayOverrideMs.reset();
     this->volumeDb = 0.0f;
+    this->setPan(0);
     this->flipLR = false;
     this->flipPhase = false;
     this->micBleedLevels.clear();

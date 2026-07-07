@@ -186,7 +186,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->addLayerButton.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(this->addLayerButton);
     this->addLayerButton.onClick = [this] {
-        this->addLayerRow("", 0, -1, -1, 0.0f, false, false, false, {});
+        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {});
         this->updateRemoveButtonVisibility();
         this->resized();
     };
@@ -269,7 +269,7 @@ void PadContextPopup::populateLayers() {
     }
 
     if (matchingEntries.empty()) {
-        this->addLayerRow("", 0, -1, -1, 0.0f, false, false, false, {});
+        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {});
     } else {
         for (const auto* entry : matchingEntries) {
             juce::String sourceFullPath = entry->kitRef;
@@ -282,7 +282,7 @@ void PadContextPopup::populateLayers() {
             int attack = entry->attackTimeMs.value_or(-1);
             int decay = entry->decayTimeMs.value_or(-1);
             float volume = entry->volumeDb.value_or(0.0f);
-            this->addLayerRow(sourceFullPath, tuning, attack, decay, volume, entry->flipLR, entry->flipLRExplicit, entry->flipPhase, entry->micBleedLevels);
+            this->addLayerRow(sourceFullPath, tuning, attack, decay, volume, entry->pan.value_or(0), entry->flipLR, entry->flipLRExplicit, entry->flipPhase, entry->micBleedLevels);
         }
     }
 
@@ -751,9 +751,10 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
     }
 }
 
-void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels) {
+void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels) {
     auto* layer = this->layerRows.add(new LayerRow());
     layer->sourcePathHint = sourceFullPath;
+    layer->pan = pan;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
 
     // Source button (opens picker)
@@ -1010,6 +1011,7 @@ juce::String PadContextPopup::generateFullMapText() const {
         if (decayVal >= 0.0) params.add("decay=" + juce::String(static_cast<int>(decayVal)));
         double volVal = layer->gainPot->getValue();
         if (std::abs(volVal) > 0.01) params.add("vol=" + juce::String(volVal, 1));
+        if (layer->pan != 0) params.add("pan=" + juce::String(layer->pan));
         if (layer->flipLRButton->getToggleState() || layer->flipLRExplicit)
             params.add("flipLR=" + juce::String(layer->flipLRButton->getToggleState() ? "1" : "0"));
         if (layer->flipPhaseButton->getToggleState()) params.add("flipPhase=1");

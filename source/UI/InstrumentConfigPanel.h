@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/DrumKitEngine.h"
+#include "CompactParameterControl.h"
 #include "DismissOverlay.h"
 #include "ScrollablePanel.h"
 #include "SourceItem.h"
@@ -39,16 +40,21 @@ private:
         std::unique_ptr<juce::Label> slotLabel;
         std::unique_ptr<juce::Label> artLabel;
         std::unique_ptr<juce::TextButton> sourceButton;
-        std::unique_ptr<juce::Slider> tuningSlider;
-        std::unique_ptr<juce::Slider> attackSlider;
-        std::unique_ptr<juce::Slider> decaySlider;
+        std::unique_ptr<CompactParameterControl> tuningControl;
+        std::unique_ptr<CompactParameterControl> attackControl;
+        std::unique_ptr<CompactParameterControl> decayControl;
+        std::unique_ptr<CompactParameterControl> gainControl;
+        std::unique_ptr<CompactParameterControl> panControl;
+        std::unique_ptr<juce::TextButton> flipLRButton;
+        bool flipLRExplicit = false;
+        std::unique_ptr<juce::TextButton> flipPhaseButton;
         std::unique_ptr<juce::TextButton> addButton;
         std::unique_ptr<juce::TextButton> removeButton;
     };
 
     juce::OwnedArray<TableRow> tableRows;
 
-    juce::Label headerSlot, headerInstrument, headerTuning, headerAttack, headerDecay;
+    juce::Label headerSlot, headerInstrument, headerTuning, headerAttack, headerDecay, headerGain, headerPan, headerLR, headerPhase;
 
     // Popup management
     std::unique_ptr<DismissOverlay> popupOverlay;
@@ -65,7 +71,7 @@ private:
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,
                 const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                int insertionIndex = -1);
+                float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex = -1);
     int findSourceIndex(const juce::String& fullPath) const;
     void updateRemoveButtonVisibility();
     void queueMapTextFlush();

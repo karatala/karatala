@@ -78,6 +78,7 @@ private:
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
         std::unique_ptr<CompactParameterControl> gainPot;
+        int pan = 0;
         std::unique_ptr<juce::TextButton> flipLRButton;
         bool flipLRExplicit = false;
         std::unique_ptr<juce::TextButton> flipPhaseButton;
@@ -98,7 +99,7 @@ private:
     juce::OwnedArray<LayerRow> layerRows;
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                     float volumeDb, bool flipLR, bool flipLRExplicit, bool flipPhase,
+                     float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
                      const std::unordered_map<juce::String, float>& micBleedLevels);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;

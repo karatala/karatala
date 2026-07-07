@@ -17,6 +17,10 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& engine)
     setupHeader(this->headerTuning, "Tuning");
     setupHeader(this->headerAttack, "Attack");
     setupHeader(this->headerDecay, "Decay");
+    setupHeader(this->headerGain, "Gain");
+    setupHeader(this->headerPan, "Pan");
+    setupHeader(this->headerLR, "L/R");
+    setupHeader(this->headerPhase, "Phase");
 }
 
 void InstrumentConfigPanel::resized() {
@@ -45,6 +49,10 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->contentComponent.addAndMakeVisible(this->headerTuning);
     this->contentComponent.addAndMakeVisible(this->headerAttack);
     this->contentComponent.addAndMakeVisible(this->headerDecay);
+    this->contentComponent.addAndMakeVisible(this->headerGain);
+    this->contentComponent.addAndMakeVisible(this->headerPan);
+    this->contentComponent.addAndMakeVisible(this->headerLR);
+    this->contentComponent.addAndMakeVisible(this->headerPhase);
     this->populated = true;
 
     auto* layout = this->engine.getKitLayout();
@@ -91,7 +99,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
             }
 
             if (matchingEntries.empty()) {
-                this->addRow(slot.id, artName, slot.type, "", 0, -1, -1);
+                this->addRow(slot.id, artName, slot.type, "", 0, -1, -1, 0.0f, 0, false, false, false);
             } else {
                 for (const auto* entry : matchingEntries) {
                     juce::String sourceFullPath = entry->kitRef;
@@ -103,7 +111,9 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                     int tuning = entry->tuningCents.value_or(0);
                     int attack = entry->attackTimeMs.value_or(-1);
                     int decay = entry->decayTimeMs.value_or(-1);
-                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay);
+                    float volume = entry->volumeDb.value_or(0.0f);
+                    int pan = entry->pan.value_or(0);
+                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay, volume, pan, entry->flipLR, entry->flipLRExplicit, entry->flipPhase);
                 }
             }
         }
@@ -117,7 +127,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
 void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::String& artName,
                                     KitLib::InstrumentSpec::Type slotType,
                                     const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                                    int insertionIndex) {
+                                    float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex) {
     auto* row = new TableRow();
     if (insertionIndex >= 0 && insertionIndex < this->tableRows.size())
         this->tableRows.insert(insertionIndex, row);
@@ -147,37 +157,63 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->sourceButton = std::make_unique<juce::TextButton>();
     row->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
     row->sourceButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    row->sourceButton->getProperties().set("leftAlignedText", true);
     this->contentComponent.addAndMakeVisible(*row->sourceButton);
     row->sourceButton->onClick = [this, row] { this->showPickerPopup(row); };
     this->updateSourceButtonDisplay(row);
 
-    // Tuning slider
-    row->tuningSlider = UIHelpers::createParamSlider(-2400.0, 2400.0, 1.0, static_cast<double>(tuningCents), 0.0, 10.0, 1.0);
-    this->contentComponent.addAndMakeVisible(*row->tuningSlider);
-    row->tuningSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
-    row->tuningSlider->onDragEnd = [this, row] {
-        this->flushMapText();
-        this->engine.playPreviewNote(row->slotId, row->artName, 100);
+    auto configureCompactControl = [this, row](CompactParameterControl& control) {
+        control.setLabelVisible(false);
+        this->contentComponent.addAndMakeVisible(control);
+        control.onValueChange = [this, row] { this->applyRowParametersFast(row); };
+        control.onDragEnd = [this, row] {
+            this->flushMapText();
+            this->engine.playPreviewNote(row->slotId, row->artName, 100);
+        };
     };
 
-    // Attack slider
-    row->attackSlider = UIHelpers::createParamSlider(-1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, -1.0, 10.0, 1.0, UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, UIHelpers::sentinelValueText);
-    this->contentComponent.addAndMakeVisible(*row->attackSlider);
-    row->attackSlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
-    row->attackSlider->onDragEnd = [this, row] {
-        this->flushMapText();
-        this->engine.playPreviewNote(row->slotId, row->artName, 100);
+    row->tuningControl = std::make_unique<CompactParameterControl>("Tuning", -2400.0, 2400.0, 1.0, static_cast<double>(tuningCents));
+    row->tuningControl->setInteraction(0.0, 10.0, 1.0);
+    configureCompactControl(*row->tuningControl);
+
+    row->attackControl = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
+    row->attackControl->setInteraction(-1.0, 10.0, 1.0);
+    configureCompactControl(*row->attackControl);
+
+    row->decayControl = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
+    row->decayControl->setInteraction(-1.0, 10.0, 1.0);
+    configureCompactControl(*row->decayControl);
+
+    row->gainControl = std::make_unique<CompactParameterControl>("Gain", -60.0, 12.0, 0.1, static_cast<double>(volumeDb), [](double value) -> juce::String {
+        if (value <= -60.0) return "-inf";
+        return juce::String(value, 1);
+    });
+    row->gainControl->setInteraction(0.0, 0.5, 0.1);
+    configureCompactControl(*row->gainControl);
+
+    row->panControl = std::make_unique<CompactParameterControl>("Pan", -127.0, 127.0, 1.0, static_cast<double>(pan), [](double value) -> juce::String {
+        const int panValue = static_cast<int>(value);
+        if (panValue == 0) return "C";
+        return panValue < 0 ? "L" + juce::String(-panValue) : "R" + juce::String(panValue);
+    });
+    row->panControl->setInteraction(0.0, 4.0, 1.0);
+    configureCompactControl(*row->panControl);
+
+    row->flipLRButton = std::make_unique<juce::TextButton>("L/R");
+    UIHelpers::configureToggleButton(*row->flipLRButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    row->flipLRButton->setToggleState(flipLR, juce::dontSendNotification);
+    row->flipLRExplicit = flipLRExplicit;
+    this->contentComponent.addAndMakeVisible(*row->flipLRButton);
+    row->flipLRButton->onClick = [this, row] {
+        row->flipLRExplicit = true;
+        this->applyRowParametersFast(row);
     };
 
-    // Decay slider
-    row->decaySlider = UIHelpers::createParamSlider(-1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, -1.0, 10.0, 1.0, UITheme::Sizes::sliderTextBoxW, UITheme::Sizes::sliderTextBoxH, UIHelpers::sentinelValueText);
-    this->contentComponent.addAndMakeVisible(*row->decaySlider);
-    row->decaySlider->onValueChange = [this, row] { this->applyRowParametersFast(row); };
-    row->decaySlider->onDragEnd = [this, row] {
-        this->flushMapText();
-        this->engine.playPreviewNote(row->slotId, row->artName, 100);
-    };
-
+    row->flipPhaseButton = std::make_unique<juce::TextButton>(juce::String::charToString(0x00D8));
+    UIHelpers::configureToggleButton(*row->flipPhaseButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    row->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
+    this->contentComponent.addAndMakeVisible(*row->flipPhaseButton);
+    row->flipPhaseButton->onClick = [this, row] { this->applyRowParametersFast(row); };
     // Add layer button
     row->addButton = std::make_unique<juce::TextButton>("+");
     row->addButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
@@ -191,7 +227,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
                 insertAfter = idx;
         }
         if (insertAfter >= 0) {
-            this->addRow(row->slotId, row->artName, row->slotType, "", 0, -1, -1, insertAfter + 1);
+            this->addRow(row->slotId, row->artName, row->slotType, "", 0, -1, -1, 0.0f, 0, false, false, false, insertAfter + 1);
             this->updateRemoveButtonVisibility();
             this->layoutContent();
         }
@@ -236,7 +272,8 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     auto posInViewport = posInContent - juce::Point<int>(0, this->viewport.getViewPositionY());
     auto posInPanel = posInViewport + this->viewport.getPosition();
 
-    int popupWidth = juce::jmax(300, buttonBounds.getWidth());
+    const int maxPopupWidth = juce::jmax(300, getWidth() - 8);
+    int popupWidth = juce::jmin(maxPopupWidth, juce::jmax(460, buttonBounds.getWidth() + 160));
     int popupHeight = 280;
     int popupX = posInPanel.getX();
     int popupY = posInPanel.getY() + buttonBounds.getHeight();
@@ -319,30 +356,35 @@ void InstrumentConfigPanel::layoutContent() {
     const int headerH = UITheme::Spacing::rowCompact;
     const int totalHeight = headerH + totalRows * rowHeight + 4;
 
-    this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 600), totalHeight);
+    this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 820), totalHeight);
 
-    // Column layout: | slotCol | artCol | sourceCol | tuningCol | attackCol | decayCol | btnsCol |
     const int width = this->contentComponent.getWidth();
     const int slotCol = 70;
     const int artCol = 58;
     const int btnsCol = 44;
-    const int sliderCols = width - slotCol - artCol - btnsCol;
-    const int sourceCol = juce::jmax(140, sliderCols * 40 / 100);
-    const int remaining = sliderCols - sourceCol;
-    const int tuningCol = remaining * 40 / 100;
-    const int attackCol = remaining * 30 / 100;
-    const int decayCol = remaining - tuningCol - attackCol;
+    const int flipCol = 40;
+    const int availableCol = width - slotCol - artCol - btnsCol;
+    const int sourceCol = juce::jmax(150, availableCol * 34 / 100);
+    const int parameterArea = juce::jmax(260, availableCol - sourceCol - flipCol * 2);
+    const int parameterCol = parameterArea / 5;
+    const int tuningCol = parameterCol;
+    const int attackCol = parameterCol;
+    const int decayCol = parameterCol;
+    const int gainCol = parameterCol;
+    const int panCol = parameterArea - tuningCol - attackCol - decayCol - gainCol;
 
-    // Header row
     int xPos = 0;
     this->headerSlot.setBounds(xPos, 0, slotCol, headerH); xPos += slotCol;
-    xPos += artCol; // no header for art column
+    xPos += artCol;
     this->headerInstrument.setBounds(xPos, 0, sourceCol, headerH); xPos += sourceCol;
     this->headerTuning.setBounds(xPos, 0, tuningCol, headerH); xPos += tuningCol;
     this->headerAttack.setBounds(xPos, 0, attackCol, headerH); xPos += attackCol;
-    this->headerDecay.setBounds(xPos, 0, decayCol, headerH);
+    this->headerDecay.setBounds(xPos, 0, decayCol, headerH); xPos += decayCol;
+    this->headerGain.setBounds(xPos, 0, gainCol, headerH); xPos += gainCol;
+    this->headerPan.setBounds(xPos, 0, panCol, headerH); xPos += panCol;
+    this->headerLR.setBounds(xPos, 0, flipCol, headerH); xPos += flipCol;
+    this->headerPhase.setBounds(xPos, 0, flipCol, headerH);
 
-    // Track which slot/art was last shown to suppress duplicate labels
     juce::String lastSlotId, lastArtName;
     int yPos = headerH;
 
@@ -350,14 +392,12 @@ void InstrumentConfigPanel::layoutContent() {
         auto* row = this->tableRows[idx];
         xPos = 0;
 
-        // Slot label: show only on first row of each slot group
-        bool showSlot = (row->slotId != lastSlotId);
+        const bool showSlot = row->slotId != lastSlotId;
         row->slotLabel->setText(showSlot ? row->slotId : "", juce::dontSendNotification);
         row->slotLabel->setBounds(xPos, yPos, slotCol, rowHeight);
         xPos += slotCol;
 
-        // Art label: show only on first row of each slot/art group
-        bool showArt = showSlot || (row->artName != lastArtName);
+        const bool showArt = showSlot || row->artName != lastArtName;
         row->artLabel->setText(showArt ? row->artName : "", juce::dontSendNotification);
         row->artLabel->setBounds(xPos, yPos, artCol, rowHeight);
         xPos += artCol;
@@ -365,27 +405,36 @@ void InstrumentConfigPanel::layoutContent() {
         row->sourceButton->setBounds(xPos, yPos + 1, sourceCol - 2, rowHeight - 2);
         xPos += sourceCol;
 
-        row->tuningSlider->setBounds(xPos, yPos + 1, tuningCol - 2, rowHeight - 2);
+        row->tuningControl->setBounds(xPos, yPos + 1, tuningCol - 2, rowHeight - 2);
         xPos += tuningCol;
 
-        row->attackSlider->setBounds(xPos, yPos + 1, attackCol - 2, rowHeight - 2);
+        row->attackControl->setBounds(xPos, yPos + 1, attackCol - 2, rowHeight - 2);
         xPos += attackCol;
 
-        row->decaySlider->setBounds(xPos, yPos + 1, decayCol - 2, rowHeight - 2);
+        row->decayControl->setBounds(xPos, yPos + 1, decayCol - 2, rowHeight - 2);
         xPos += decayCol;
 
-        // Buttons: [+] always, [x] conditional
-        const int btnSize = juce::jmax(20, rowHeight - 2); // minimum square
+        row->gainControl->setBounds(xPos, yPos + 1, gainCol - 2, rowHeight - 2);
+        xPos += gainCol;
+
+        row->panControl->setBounds(xPos, yPos + 1, panCol - 2, rowHeight - 2);
+        xPos += panCol;
+
+        row->flipLRButton->setBounds(xPos, yPos + 1, flipCol - 2, rowHeight - 2);
+        xPos += flipCol;
+
+        row->flipPhaseButton->setBounds(xPos, yPos + 1, flipCol - 2, rowHeight - 2);
+        xPos += flipCol;
+
+        const int btnSize = juce::jmax(20, rowHeight - 2);
         row->addButton->setBounds(xPos, yPos + 1, btnSize, rowHeight - 2);
-        if (row->removeButton->isVisible())
-            row->removeButton->setBounds(xPos + btnSize + 1, yPos + 1, btnSize, rowHeight - 2);
+        if (row->removeButton->isVisible()) row->removeButton->setBounds(xPos + btnSize + 1, yPos + 1, btnSize, rowHeight - 2);
 
         lastSlotId = row->slotId;
         lastArtName = row->artName;
         yPos += rowHeight;
     }
 }
-
 juce::String InstrumentConfigPanel::generateMapText() const {
     juce::StringArray lines;
 
@@ -406,17 +455,30 @@ juce::String InstrumentConfigPanel::generateMapText() const {
             targetRef += "/" + srcItem.artCode;
 
         juce::StringArray params;
-        int tuning = static_cast<int>(row->tuningSlider->getValue());
+        int tuning = static_cast<int>(row->tuningControl->getValue());
         if (tuning != 0)
             params.add("tuning=" + juce::String(tuning));
 
-        double attackVal = row->attackSlider->getValue();
+        double attackVal = row->attackControl->getValue();
         if (attackVal >= 0.0)
             params.add("attack=" + juce::String(static_cast<int>(attackVal)));
 
-        double decayVal = row->decaySlider->getValue();
+        double decayVal = row->decayControl->getValue();
         if (decayVal >= 0.0)
             params.add("decay=" + juce::String(static_cast<int>(decayVal)));
+
+        double volVal = row->gainControl->getValue();
+        if (volVal <= -0.01 || volVal >= 0.01)
+            params.add("vol=" + juce::String(volVal, 1));
+
+        int panValue = static_cast<int>(row->panControl->getValue());
+        if (panValue != 0)
+            params.add("pan=" + juce::String(panValue));
+
+        if (row->flipLRButton->getToggleState() || row->flipLRExplicit)
+            params.add("flipLR=" + juce::String(row->flipLRButton->getToggleState() ? "1" : "0"));
+        if (row->flipPhaseButton->getToggleState())
+            params.add("flipPhase=1");
 
         juce::String line = slotRef + ":" + targetRef;
         if (!params.isEmpty())
@@ -448,11 +510,16 @@ void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
     const int layerIndex = this->getMappedLayerIndexForRow(row);
     if (layerIndex < 0) return;
 
-    const int tuning = static_cast<int>(row->tuningSlider->getValue());
-    const int attack = static_cast<int>(row->attackSlider->getValue());
-    const int decay = static_cast<int>(row->decaySlider->getValue());
+    DrumKitEngine::LayerParameterUpdate update;
+    update.tuningCents = static_cast<int>(row->tuningControl->getValue());
+    update.attackMs = static_cast<int>(row->attackControl->getValue());
+    update.decayMs = static_cast<int>(row->decayControl->getValue());
+    update.volumeDb = static_cast<float>(row->gainControl->getValue());
+    update.pan = static_cast<int>(row->panControl->getValue());
+    update.flipLR = row->flipLRButton->getToggleState();
+    update.flipPhase = row->flipPhaseButton->getToggleState();
 
-    this->engine.updateSlotParameters(row->slotId, row->artName, layerIndex, tuning, attack, decay);
+    this->engine.updateSlotParameters(row->slotId, row->artName, layerIndex, update);
     this->mapTextDirty = true;
     this->queueMapTextFlush();
 }

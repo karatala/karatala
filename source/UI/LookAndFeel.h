@@ -33,6 +33,7 @@ public:
     void drawButtonBackground(juce::Graphics& g, juce::Button& button,
                               const juce::Colour& backgroundColour,
                               bool isMouseOverButton, bool isButtonDown) override;
+    void drawButtonText(juce::Graphics& g, juce::TextButton& button, bool isMouseOverButton, bool isButtonDown) override;
 
     int getDefaultScrollbarWidth() override;
     bool areScrollbarButtonsVisible() override { return false; }

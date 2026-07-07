@@ -76,7 +76,7 @@ int findNextParamBoundary(const juce::String& text, int startIndex, const std::v
 ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::String& text) {
     ParseResult<DrumKitEngine::InstrumentMap> result;
     const juce::StringArray lines = juce::StringArray::fromLines(text);
-    const std::vector<juce::String> knownKeys { "tuning", "attack", "decay", "art", "vol", "flipLR", "flipPhase", "bleed" };
+    const std::vector<juce::String> knownKeys { "tuning", "attack", "decay", "art", "vol", "pan", "flipLR", "flipPhase", "bleed" };
 
     auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<DrumKitEngine::InstrumentMap>& parseResult, int lineNumber, std::optional<int>& target) {
         auto trimmed = valueText.trim();
@@ -164,6 +164,8 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                         result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'vol': " + value);
                     else
                         entry.volumeDb = trimmed.getFloatValue();
+                } else if (key == "pan") {
+                    parseInt(value, key, result, idx + 1, entry.pan);
                 } else if (key == "flipLR") {
                     entry.flipLR = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
                     entry.flipLRExplicit = true;

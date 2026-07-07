@@ -122,6 +122,21 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, 
     }
 }
 
+void LookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button, bool isMouseOverButton, bool isButtonDown) {
+    const bool leftAlignedText = button.getProperties().getWithDefault("leftAlignedText", false);
+    if (!leftAlignedText) {
+        juce::LookAndFeel_V4::drawButtonText(g, button, isMouseOverButton, isButtonDown);
+        return;
+    }
+
+    auto font = this->getTextButtonFont(button, button.getHeight());
+    g.setFont(font);
+    g.setColour(button.findColour(button.getToggleState() ? juce::TextButton::textColourOnId : juce::TextButton::textColourOffId).withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f));
+
+    auto textBounds = button.getLocalBounds().reduced(6, 1);
+    g.drawFittedText(button.getButtonText(), textBounds, juce::Justification::centredLeft, 1);
+}
+
 int LookAndFeel::getDefaultScrollbarWidth() {
     return 8;
 }

@@ -288,6 +288,8 @@ public:
     std::optional<int> getDecayOverrideMs() const { return this->decayOverrideMs; }
     void setVolumeDb(float db) { this->volumeDb = db; }
     float getVolumeDb() const { return this->volumeDb; }
+    void setPan(int newPan) { this->pan.store(juce::jlimit(-127, 127, newPan), std::memory_order_relaxed); }
+    int getPan() const { return this->pan.load(std::memory_order_relaxed); }
     void setFlipLR(bool shouldFlip) { this->flipLR = shouldFlip; }
     bool getFlipLR() const { return this->flipLR; }
     void setFlipPhase(bool shouldFlip) { this->flipPhase = shouldFlip; }
@@ -552,6 +554,7 @@ private:
     std::optional<int> attackOverrideMs;
     std::optional<int> decayOverrideMs;
     float volumeDb = 0.0f;
+    std::atomic<int> pan { 0 };
     bool flipLR = false;
     bool flipPhase = false;
     std::unordered_map<juce::String, float> micBleedLevels;
