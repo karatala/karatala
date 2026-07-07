@@ -4,12 +4,12 @@
 
 Instrument map changes are too broad today. A small UI change can make the engine parse the full map, rebuild more synths than needed, and sometimes change routing in a way that fights explicit articulation choices.
 
-Observed facts:
+Original observed facts:
 
 - `InstrumentConfigPanel::applyToEngine()` generates full map text and calls `DrumKitEngine::useInstrumentMap()` for source changes.
 - Knob changes already have a faster path through `DrumKitEngine::updateSlotParameters()`, but the saved map text is still rebuilt later.
 - `DrumKitEngine::seedInstrumentMapFingerprints()` stores map-entry fingerprints only, while `useInstrumentMap()` later compares fingerprints that also include source instrument content fingerprints.
-- `useInstrumentMap()` uses one `rebuildAllShadows` flag. If any shadow synth exists, or any slot has multiple entries, all old shadow synths are removed and all prepared shadows are rebuilt.
+- Older `useInstrumentMap()` code used one `rebuildAllShadows` flag. If any shadow synth existed, or any slot had multiple entries, all old shadow synths were removed and all prepared shadows were rebuilt.
 - Explicit instrument map articulation filters are converted into `allowedArticulationNameIds`, `ArticulationNameRemap`, `ArticulationAliasMap`, and shadow synth note routes. `InstrumentSynth` then writes `noteToArticulation` from layout notes during `applyResolvedArticulationBinding()`. These two layers can disagree.
 - Hihat is partly explicit and partly controller-driven. The destination note/articulation is explicit, for example `hihat1/bow[tight]` or `hihat1/bow[open]`, but `pdl_opn_cls` can still choose `open`, `half`, `close`, or `tight` source variants at runtime from CC value.
 
@@ -147,6 +147,14 @@ Verify:
 
 - A map with layered `snare1` and layered `tom1`, then changing `tom1`, keeps `snare1` shadows alive.
 - `instrumentSynthsByNote` still includes both primary and shadow synth routes after a partial shadow apply.
+
+Implementation status:
+
+- Started. `useInstrumentMap()` now tracks which slots already have shadow synths.
+- Changed slots remove and rebuild only their own old shadows.
+- Unchanged shadow slots stay in `instrumentSynthPtrs` and keep their routes.
+- If a primary synth is replaced, primary routing is rebuilt and kept shadow routes are restored.
+- Still open: this is per-slot, not per-layer. A parameter-only change on a layered entry can still rebuild that slot shadow, but it no longer rebuilds unrelated slot shadows.
 
 ## Stage 4 - Make `applyToEngine()` Surgical
 

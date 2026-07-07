@@ -183,7 +183,7 @@ class MicRoutingPlan;
 class InstrumentSynth {
 public:
     using ArtRtIdx = int8_t;
-    using VelLayerIdx = int8_t;
+    using VelLayerIdx = int16_t;
     using ArticulationSourceMap = std::unordered_map<uint32_t, KitLib::InstrumentSpec*>;
     using ArticulationNameRemap = std::unordered_map<uint32_t, uint32_t>; // slotArtNameId -> sourceArtNameId
     using ArticulationAliasMap = std::unordered_map<uint32_t, uint32_t>; // fallbackArtNameId -> sourceArtNameId

@@ -1703,20 +1703,15 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
     std::unordered_map<juce::String, juce::String> nextSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *librarySnapshot);
     std::unordered_map<juce::String, juce::String> nextSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsed.value, *librarySnapshot);
-    bool anyGroupHasMultipleEntries = false;
-    for (const auto& slotId : slotOrder) {
-        const auto& group = entriesBySlotId[slotId];
-        if (group.size() > 1)
-            anyGroupHasMultipleEntries = true;
-    }
-
-    const bool currentlyHasShadowSynths = static_cast<int>(this->instrumentSynthPtrs.size()) > this->primaryInstrumentSynthCount;
-    const bool rebuildAllShadows = currentlyHasShadowSynths || anyGroupHasMultipleEntries;
-
-    // Build index map for fast primary slot lookup (safe to read on message thread)
+    // Build index maps for fast slot lookup (safe to read on message thread)
     std::unordered_map<juce::String, int> primarySlotIndex;
-    for (int idx = 0; idx < this->primaryInstrumentSynthCount; ++idx)
-        primarySlotIndex[this->instrumentSynthPtrs[idx]->getId()] = idx;
+    std::unordered_set<juce::String> existingShadowSlotIds;
+    for (int idx = 0; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
+        auto* synth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
+        if (synth == nullptr) continue;
+        if (idx < this->primaryInstrumentSynthCount) primarySlotIndex[synth->getId()] = idx;
+        else existingShadowSlotIds.insert(synth->getId());
+    }
 
     juce::StringArray statusLines;
     for (const auto& warning : parsed.errors)
@@ -1734,6 +1729,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         int primaryIndex = -1;
         std::unique_ptr<InstrumentSynth> primaryReplacement;
         const InstrumentMapEntry* primaryParameterEntry = nullptr;
+        bool removeOldShadows = false;
+        bool rebuildShadows = false;
         std::vector<PreparedShadow> shadows;
     };
     std::vector<PreparedSlot> preparedSlots;
@@ -1952,6 +1949,11 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         prep.primaryIndex = (pIdxIt != primarySlotIndex.end()) ? pIdxIt->second : -1;
         if (!slotChanged && slotStateChanged && prep.primaryIndex >= 0) prep.primaryParameterEntry = primary.entry;
 
+        const bool slotHasExistingShadows = existingShadowSlotIds.find(slotId) != existingShadowSlotIds.end();
+        const bool slotHasShadowPlans = !shadowPlans.empty();
+        prep.rebuildShadows = slotHasShadowPlans && (!slotHasExistingShadows || slotChanged || slotStateChanged);
+        prep.removeOldShadows = slotHasExistingShadows && (prep.rebuildShadows || (!slotHasShadowPlans && (slotChanged || slotStateChanged)));
+
         // Create a replacement synth for the primary slot (expensive work done outside lock)
         if (slotChanged && prep.primaryIndex >= 0) {
             auto replacement = std::make_unique<InstrumentSynth>(this, slotLayout);
@@ -1972,7 +1974,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
 
         // Create shadow synths (expensive work done outside lock)
-        if (rebuildAllShadows) {
+        if (prep.rebuildShadows) {
             for (const auto& shadowPlan : shadowPlans) {
                 auto shadow = std::make_unique<InstrumentSynth>(this, slotLayout);
                 auto* shadowRaw = shadow.get();
@@ -2025,15 +2027,20 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
     {
         const juce::ScopedLock graphLock(this->engineGraphLock);
 
-        // Remove old shadow synths
-        if (rebuildAllShadows) {
-            for (int idx = static_cast<int>(this->instrumentSynthPtrs.size()) - 1;
-                 idx >= this->primaryInstrumentSynthCount; --idx) {
-                oldSynths.push_back(std::move(this->instrumentSynthPtrs[idx]));
+        std::unordered_set<juce::String> shadowSlotIdsToRemove;
+        for (const auto& prep : preparedSlots) {
+            if (prep.removeOldShadows) shadowSlotIdsToRemove.insert(prep.slotId);
+        }
+
+        std::unordered_set<InstrumentSynth*> removedShadowSynths;
+        if (!shadowSlotIdsToRemove.empty()) {
+            for (int idx = static_cast<int>(this->instrumentSynthPtrs.size()) - 1; idx >= this->primaryInstrumentSynthCount; --idx) {
+                auto* shadowSynth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
+                if (shadowSynth == nullptr || shadowSlotIdsToRemove.find(shadowSynth->getId()) == shadowSlotIdsToRemove.end()) continue;
+                removedShadowSynths.insert(shadowSynth);
+                oldSynths.push_back(std::move(this->instrumentSynthPtrs[static_cast<size_t>(idx)]));
+                this->instrumentSynthPtrs.erase(this->instrumentSynthPtrs.begin() + idx);
             }
-            this->instrumentSynthPtrs.erase(
-                this->instrumentSynthPtrs.begin() + this->primaryInstrumentSynthCount,
-                this->instrumentSynthPtrs.end());
         }
 
         // Swap in prepared primary replacements (pointer swap only)
@@ -2051,9 +2058,22 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             }
         }
 
-        // Rebuild primary note routing if any primary was replaced or shadows were removed
-        if (rebuildAllShadows || anyPrimarySwapped)
+        if (anyPrimarySwapped) {
             this->rebuildPrimaryInstrumentNoteRouting();
+            if (this->activeKitLayoutPtr != nullptr) {
+                for (int idx = this->primaryInstrumentSynthCount; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
+                    auto* shadowSynth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
+                    if (shadowSynth == nullptr) continue;
+                    const auto layoutIt = std::find_if(this->activeKitLayoutPtr->instrumentSlots.begin(), this->activeKitLayoutPtr->instrumentSlots.end(), [&shadowSynth](const KitLayout::InstrumentSlot& slot) { return slot.id == shadowSynth->getId(); });
+                    if (layoutIt != this->activeKitLayoutPtr->instrumentSlots.end()) this->addShadowSynthNoteRoutes(*shadowSynth, *layoutIt);
+                }
+            }
+        } else if (!removedShadowSynths.empty()) {
+            for (auto& [note, synths] : this->instrumentSynthsByNote) {
+                juce::ignoreUnused(note);
+                std::erase_if(synths, [&removedShadowSynths](InstrumentSynth* synth) { return removedShadowSynths.find(synth) != removedShadowSynths.end(); });
+            }
+        }
 
         // Add prepared shadow synths and their note routes
         for (auto& prep : preparedSlots) {
