@@ -2069,7 +2069,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         statusLines.add("Instrument map applied successfully");
 
     this->lastInstrumentMapStatus = statusLines.joinIntoString("\n");
-    LOG(Notice, "=== useInstrumentMap done: applied=" + juce::String(applied) + " oldSynths=" + juce::String(oldSynths.size())
+    LOG(Info, "=== useInstrumentMap done: applied=" + juce::String(applied) + " oldSynths=" + juce::String(oldSynths.size())
         + " totalSynths=" + juce::String(this->instrumentSynthPtrs.size()) + " ===");
     return applied > 0;
 }
