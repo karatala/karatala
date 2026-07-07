@@ -247,6 +247,8 @@ private:
     juce::String lastAppliedInstrumentMapText;
     std::unordered_map<juce::String, juce::String> lastAppliedSlotFingerprints;
     std::unordered_map<juce::String, juce::String> lastAppliedSlotReloadFingerprints;
+    std::unordered_map<InstrumentSynth*, juce::String> lastAppliedShadowFingerprints;
+    std::unordered_map<InstrumentSynth*, juce::String> lastAppliedShadowReloadFingerprints;
 
     void initGlobalSettings();
     void initDefaultLayouts();

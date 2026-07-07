@@ -237,10 +237,14 @@ void DrumKitEngine::mapDefaultKit() {
             const auto normalizedSuggestedMapText = DrumKitEngine::serializeInstrumentMap(parsedSuggestedMap.value);
             this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
             this->lastAppliedSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
+            this->lastAppliedShadowFingerprints.clear();
+            this->lastAppliedShadowReloadFingerprints.clear();
             this->lastAppliedInstrumentMapText = normalizedSuggestedMapText;
         } else {
             this->lastAppliedSlotFingerprints.clear();
             this->lastAppliedSlotReloadFingerprints.clear();
+            this->lastAppliedShadowFingerprints.clear();
+            this->lastAppliedShadowReloadFingerprints.clear();
             this->lastAppliedInstrumentMapText.clear();
         }
         this->lastInstrumentMapStatus = "Mapped default kit and generated starter instrument map";//FIXME: refactor, ui relates shit out
@@ -248,6 +252,8 @@ void DrumKitEngine::mapDefaultKit() {
         this->suggestedInstrumentMapText.clear();
         this->lastAppliedSlotFingerprints.clear();
         this->lastAppliedSlotReloadFingerprints.clear();
+        this->lastAppliedShadowFingerprints.clear();
+        this->lastAppliedShadowReloadFingerprints.clear();
         this->lastAppliedInstrumentMapText.clear();
     }
 }
@@ -356,6 +362,8 @@ void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
     const auto normalizedMapText = this->normalizeInstrumentMapText(mapText);
     auto parsed = DrumKitEngine::parseInstrumentMapText(normalizedMapText);
     if (parsed.ok()) {
+        this->lastAppliedShadowFingerprints.clear();
+        this->lastAppliedShadowReloadFingerprints.clear();
         if (this->libraryManagerPtr != nullptr && this->activeKitLayoutPtr != nullptr) {
             DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
             this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *this->libraryManagerPtr);
@@ -952,6 +960,8 @@ void DrumKitEngine::clearShadowSynths() {
     if (static_cast<int>(this->instrumentSynthPtrs.size()) > this->primaryInstrumentSynthCount)
         this->instrumentSynthPtrs.erase(this->instrumentSynthPtrs.begin() + this->primaryInstrumentSynthCount, this->instrumentSynthPtrs.end());
 
+    this->lastAppliedShadowFingerprints.clear();
+    this->lastAppliedShadowReloadFingerprints.clear();
     this->rebuildPrimaryInstrumentNoteRouting();
 }
 
@@ -1693,6 +1703,14 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         synth.setMicBleedLevels(entry.micBleedLevels);
     };
 
+    auto makeResolvedEntryFingerprint = [](const InstrumentMapEntry& entry, const KitLib::InstrumentSpec& instSpec) {
+        return DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(entry) + "\nsource\n" + instSpec.getContentFingerprint();
+    };
+
+    auto makeResolvedEntryReloadFingerprint = [](const InstrumentMapEntry& entry, const KitLib::InstrumentSpec& instSpec) {
+        return DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(entry) + "\nsource\n" + instSpec.getContentFingerprint();
+    };
+
     std::vector<juce::String> slotOrder;
     std::unordered_map<juce::String, std::vector<const InstrumentMapEntry*>> entriesBySlotId;
     for (const auto& entry : parsed.value.entries) {
@@ -1703,14 +1721,30 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
     std::unordered_map<juce::String, juce::String> nextSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *librarySnapshot);
     std::unordered_map<juce::String, juce::String> nextSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsed.value, *librarySnapshot);
+    struct ExistingShadow {
+        InstrumentSynth* synth = nullptr;
+        juce::String stateFingerprint;
+        juce::String reloadFingerprint;
+    };
+
     // Build index maps for fast slot lookup (safe to read on message thread)
     std::unordered_map<juce::String, int> primarySlotIndex;
-    std::unordered_set<juce::String> existingShadowSlotIds;
+    std::unordered_map<juce::String, std::vector<ExistingShadow>> existingShadowsBySlotId;
     for (int idx = 0; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
         auto* synth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
         if (synth == nullptr) continue;
-        if (idx < this->primaryInstrumentSynthCount) primarySlotIndex[synth->getId()] = idx;
-        else existingShadowSlotIds.insert(synth->getId());
+        if (idx < this->primaryInstrumentSynthCount) {
+            primarySlotIndex[synth->getId()] = idx;
+            continue;
+        }
+
+        ExistingShadow existingShadow;
+        existingShadow.synth = synth;
+        auto stateIt = this->lastAppliedShadowFingerprints.find(synth);
+        if (stateIt != this->lastAppliedShadowFingerprints.end()) existingShadow.stateFingerprint = stateIt->second;
+        auto reloadIt = this->lastAppliedShadowReloadFingerprints.find(synth);
+        if (reloadIt != this->lastAppliedShadowReloadFingerprints.end()) existingShadow.reloadFingerprint = reloadIt->second;
+        existingShadowsBySlotId[synth->getId()].push_back(std::move(existingShadow));
     }
 
     juce::StringArray statusLines;
@@ -1722,7 +1756,14 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
     // Per-slot preparation: replacement synths and shadow synths built outside the lock
     struct PreparedShadow {
         std::unique_ptr<InstrumentSynth> synth;
+        juce::String stateFingerprint;
+        juce::String reloadFingerprint;
         std::vector<std::pair<int, InstrumentSynth*>> noteRoutes;
+    };
+    struct PreparedShadowParameterUpdate {
+        InstrumentSynth* synth = nullptr;
+        const InstrumentMapEntry* entry = nullptr;
+        juce::String stateFingerprint;
     };
     struct PreparedSlot {
         juce::String slotId;
@@ -1732,6 +1773,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         bool removeOldShadows = false;
         bool rebuildShadows = false;
         std::vector<PreparedShadow> shadows;
+        std::vector<PreparedShadowParameterUpdate> shadowParameterUpdates;
     };
     std::vector<PreparedSlot> preparedSlots;
 
@@ -1949,10 +1991,39 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         prep.primaryIndex = (pIdxIt != primarySlotIndex.end()) ? pIdxIt->second : -1;
         if (!slotChanged && slotStateChanged && prep.primaryIndex >= 0) prep.primaryParameterEntry = primary.entry;
 
-        const bool slotHasExistingShadows = existingShadowSlotIds.find(slotId) != existingShadowSlotIds.end();
+        const auto existingShadowIt = existingShadowsBySlotId.find(slotId);
+        const bool slotHasExistingShadows = existingShadowIt != existingShadowsBySlotId.end() && !existingShadowIt->second.empty();
         const bool slotHasShadowPlans = !shadowPlans.empty();
-        prep.rebuildShadows = slotHasShadowPlans && (!slotHasExistingShadows || slotChanged || slotStateChanged);
+        bool canReuseExistingShadows = slotHasExistingShadows && slotHasShadowPlans && !slotChanged && existingShadowIt->second.size() == shadowPlans.size();
+        std::vector<bool> matchedExistingShadows(slotHasExistingShadows ? existingShadowIt->second.size() : 0, false);
+        std::vector<PreparedShadowParameterUpdate> shadowParameterUpdates;
+
+        if (canReuseExistingShadows) {
+            for (const auto& shadowPlan : shadowPlans) {
+                const auto reloadFingerprint = makeResolvedEntryReloadFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
+                int matchedShadowIndex = -1;
+                for (int idx = 0; idx < static_cast<int>(existingShadowIt->second.size()); ++idx) {
+                    if (matchedExistingShadows[static_cast<size_t>(idx)] || existingShadowIt->second[static_cast<size_t>(idx)].reloadFingerprint != reloadFingerprint) continue;
+                    matchedShadowIndex = idx;
+                    break;
+                }
+
+                if (matchedShadowIndex < 0) {
+                    canReuseExistingShadows = false;
+                    break;
+                }
+
+                matchedExistingShadows[static_cast<size_t>(matchedShadowIndex)] = true;
+                const auto stateFingerprint = makeResolvedEntryFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
+                const auto& existingShadow = existingShadowIt->second[static_cast<size_t>(matchedShadowIndex)];
+                if (existingShadow.stateFingerprint != stateFingerprint)
+                    shadowParameterUpdates.push_back({ existingShadow.synth, shadowPlan.entry, stateFingerprint });
+            }
+        }
+
+        prep.rebuildShadows = slotHasShadowPlans && (!canReuseExistingShadows || slotChanged);
         prep.removeOldShadows = slotHasExistingShadows && (prep.rebuildShadows || (!slotHasShadowPlans && (slotChanged || slotStateChanged)));
+        if (canReuseExistingShadows) prep.shadowParameterUpdates = std::move(shadowParameterUpdates);
 
         // Create a replacement synth for the primary slot (expensive work done outside lock)
         if (slotChanged && prep.primaryIndex >= 0) {
@@ -2000,6 +2071,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 }
 
                 PreparedShadow ps;
+                ps.stateFingerprint = makeResolvedEntryFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
+                ps.reloadFingerprint = makeResolvedEntryReloadFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
                 for (const auto& art : slotLayout.articulations) {
                     if (!shadowArtIds.empty()) {
                         const auto aliasIt = artAliases.find(art.nameId);
@@ -2038,6 +2111,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 auto* shadowSynth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
                 if (shadowSynth == nullptr || shadowSlotIdsToRemove.find(shadowSynth->getId()) == shadowSlotIdsToRemove.end()) continue;
                 removedShadowSynths.insert(shadowSynth);
+                this->lastAppliedShadowFingerprints.erase(shadowSynth);
+                this->lastAppliedShadowReloadFingerprints.erase(shadowSynth);
                 oldSynths.push_back(std::move(this->instrumentSynthPtrs[static_cast<size_t>(idx)]));
                 this->instrumentSynthPtrs.erase(this->instrumentSynthPtrs.begin() + idx);
             }
@@ -2054,6 +2129,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 anyPrimarySwapped = true;
             } else if (prep.primaryParameterEntry != nullptr && prep.primaryIndex >= 0 && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
                 applyOverrides(*this->instrumentSynthPtrs[prep.primaryIndex], *prep.primaryParameterEntry);
+                ++applied;
+            }
+
+            for (const auto& shadowUpdate : prep.shadowParameterUpdates) {
+                if (shadowUpdate.synth == nullptr || shadowUpdate.entry == nullptr) continue;
+                applyOverrides(*shadowUpdate.synth, *shadowUpdate.entry);
+                this->lastAppliedShadowFingerprints[shadowUpdate.synth] = shadowUpdate.stateFingerprint;
                 ++applied;
             }
         }
@@ -2080,6 +2162,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             for (auto& ps : prep.shadows) {
                 for (const auto& [note, synthPtr] : ps.noteRoutes)
                     this->instrumentSynthsByNote[note].push_back(synthPtr);
+                auto* shadowSynth = ps.synth.get();
+                this->lastAppliedShadowFingerprints[shadowSynth] = ps.stateFingerprint;
+                this->lastAppliedShadowReloadFingerprints[shadowSynth] = ps.reloadFingerprint;
                 this->instrumentSynthPtrs.push_back(std::move(ps.synth));
             }
         }

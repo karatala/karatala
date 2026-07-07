@@ -150,11 +150,13 @@ Verify:
 
 Implementation status:
 
-- Started. `useInstrumentMap()` now tracks which slots already have shadow synths.
+- `useInstrumentMap()` now tracks which slots already have shadow synths.
 - Changed slots remove and rebuild only their own old shadows.
 - Unchanged shadow slots stay in `instrumentSynthPtrs` and keep their routes.
 - If a primary synth is replaced, primary routing is rebuilt and kept shadow routes are restored.
-- Still open: this is per-slot, not per-layer. A parameter-only change on a layered entry can still rebuild that slot shadow, but it no longer rebuilds unrelated slot shadows.
+- Shadow layers now keep per-synth state and reload fingerprints.
+- Parameter-only changes on a matching shadow layer update the existing shadow synth instead of reloading samples.
+- Still open: source or articulation changes still rebuild the affected slot shadow as a whole. This is intentional until stronger per-layer route ownership exists.
 
 ## Stage 4 - Make `applyToEngine()` Surgical
 
