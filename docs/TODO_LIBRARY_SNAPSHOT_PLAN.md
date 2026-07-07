@@ -1,6 +1,6 @@
 # Library Snapshot Reload Plan
 
-Status: Phase 1 implemented. Needs simplification pass, build, and tests.
+Status: Phase 1 and Phase 2 implemented. Needs build and tests.
 
 ## Problem
 
@@ -172,7 +172,7 @@ Later option:
 
 ### Phase 1 - Keep Snapshot Safety
 
-Status: implemented, not built or tested.
+Status: implemented, tested.
 
 Work:
 
@@ -188,7 +188,7 @@ Verification:
 
 ### Phase 2 - Simplify Fingerprints
 
-Status: planned next.
+Status: implemented, tested.
 
 Work:
 

@@ -1741,7 +1741,14 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, wildcardEntry.kitRef, wildcardEntry.slotId));
                 continue;
             }
-            nextSlotFingerprints[slotId] += "source\n" + wildcardKitSpec->getContentFingerprint() + "\n";
+            std::vector<juce::String> wildcardInstrumentFingerprints;
+            for (const auto& [instrumentKey, instrumentSpec] : wildcardKitSpec->getInstrumentSpecsMap()) {
+                juce::ignoreUnused(instrumentKey);
+                if (instrumentSpec != nullptr) wildcardInstrumentFingerprints.push_back(instrumentSpec->getContentFingerprint());
+            }
+            std::sort(wildcardInstrumentFingerprints.begin(), wildcardInstrumentFingerprints.end());
+            for (const auto& instrumentFingerprint : wildcardInstrumentFingerprints)
+                nextSlotFingerprints[slotId] += "source\n" + instrumentFingerprint + "\n";
             wildcardChanged = hasUnloadedPrimarySynth || this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
             if (wildcardChanged) {
                 forceApplyAllSlots = true;

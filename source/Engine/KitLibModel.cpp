@@ -1,5 +1,6 @@
 #include "KitLibModel.h"
 #include <cmath>
+#include <cstdint>
 
 using namespace KitLib;
 
@@ -41,14 +42,22 @@ juce::String invalidBalanceWarning(const juce::String& dirName, const juce::Stri
     return "Invalid or missing instrument balance value '" + token + "' in folder '" + dirName + "'; expected L1-L127, R1-R127, or C0; ignoring balance";
 }
 
-juce::String fileContentFingerprint(const juce::File& file) {
-    return file.getFullPathName() + "|size=" + juce::String(file.getSize()) + "|mtime=" + juce::String(file.getLastModificationTime().toMilliseconds());
+juce::String stableContentHash(const juce::String& sourceText) {
+    std::uint64_t hash = 1469598103934665603ull;
+    for (const char* textPtr = sourceText.toRawUTF8(); *textPtr != '\0'; ++textPtr) {
+        hash ^= static_cast<std::uint8_t>(*textPtr);
+        hash *= 1099511628211ull;
+    }
+    return juce::String::toHexString(static_cast<juce::int64>(hash)).toUpperCase();
 }
 
-juce::String optionalIntFingerprint(const std::optional<int>& value) {
-    return value.has_value() ? juce::String(*value) : juce::String("_");
+juce::String relativePathForFingerprint(const juce::File& rootDir, const juce::File& file) {
+    return file.getRelativePathFrom(rootDir).replaceCharacter('\\', '/');
 }
 
+juce::String fileMetadataFingerprint(const juce::File& rootDir, const juce::File& file) {
+    return "file|" + relativePathForFingerprint(rootDir, file) + "|size=" + juce::String(file.getSize()) + "|mtime=" + juce::String(file.getLastModificationTime().toMilliseconds());
+}
 } // namespace KitLibIdentityHelpers
 
 int DecayEnvelope::base62ToInt(const juce::String& s) {
@@ -282,114 +291,29 @@ std::optional<int> ArticulationSpec::getEffectiveBalance() const {
     return std::nullopt;
 }
 
-juce::String SampleVariantSpec::getContentFingerprint() const {
-    juce::String fingerprint;
-    fingerprint += "sample|" + KitLibIdentityHelpers::fileContentFingerprint(this->sampleFile);
-    fingerprint += "|letter=" + juce::String::charToString(this->letter);
-    fingerprint += "|fileName=" + this->sampleFileName;
-    fingerprint += "|channels=" + juce::String(this->fileChannelStart) + ":" + juce::String(this->fileChannelCount);
-    fingerprint += "|trim=" + juce::String(this->volumeTrimDb, 4);
-    fingerprint += "|peak=" + juce::String(this->peakDb, 4) + ":" + juce::String(this->peakMs, 4);
-    fingerprint += "|decay=" + juce::String(this->decayMs, 4) + ":" + this->decayCode;
-    fingerprint += "|mic=" + this->micSpec.raw + ":" + juce::String(static_cast<int>(this->micSpec.type)) + ":" + juce::String(static_cast<int>(this->micSpec.position)) + ":" + juce::String(static_cast<int>(this->micSpec.format)) + ":" + this->micSpec.variant + ":" + juce::String(this->micSpec.channels);
-    return fingerprint;
-}
-
-juce::String VelocityLayerSpec::getContentFingerprint() const {
-    std::vector<juce::String> sampleFingerprints;
-    sampleFingerprints.reserve(this->sampleVariantSpecs.size());
-    for (const auto& sampleVariantSpec : this->sampleVariantSpecs)
-        if (sampleVariantSpec != nullptr) sampleFingerprints.push_back(sampleVariantSpec->getContentFingerprint());
-    std::sort(sampleFingerprints.begin(), sampleFingerprints.end());
-
-    juce::String fingerprint = "velocity|" + juce::String(static_cast<int>(this->velocity));
-    for (const auto& sampleFingerprint : sampleFingerprints)
-        fingerprint += "\n  " + sampleFingerprint;
-    LOG(Verbose, "VelocityLayerSpec::getContentFingerprint: " + fingerprint);
-    return fingerprint;
-}
-
-juce::String ArticulationSpec::getContentFingerprint() const {
-    std::vector<juce::String> dimensionFingerprints;
-    dimensionFingerprints.reserve(this->expressionDimensions.size());
-    for (const auto& expressionDimension : this->expressionDimensions) {
-        if (expressionDimension == nullptr) continue;
-        std::vector<uint8_t> values = expressionDimension->values;
-        std::sort(values.begin(), values.end());
-        juce::String valueFingerprint;
-        for (const auto value : values) {
-            if (valueFingerprint.isNotEmpty()) valueFingerprint += ",";
-            valueFingerprint += juce::String(static_cast<int>(value));
-        }
-        dimensionFingerprints.push_back(expressionDimension->codeRaw + ":" + juce::String(static_cast<int>(expressionDimension->type)) + ":" + valueFingerprint);
-    }
-    std::sort(dimensionFingerprints.begin(), dimensionFingerprints.end());
-
-    std::vector<juce::String> velocityFingerprints;
-    velocityFingerprints.reserve(this->velocityLayerSpecs.size());
-    for (const auto& velocityLayerSpec : this->velocityLayerSpecs)
-        if (velocityLayerSpec != nullptr) velocityFingerprints.push_back(velocityLayerSpec->getContentFingerprint());
-    std::sort(velocityFingerprints.begin(), velocityFingerprints.end());
-
-    juce::String fingerprint = "art|" + this->codeRaw + "|name=" + juce::String(static_cast<int>(this->nameId)) + "|expr=" + juce::String(static_cast<int>(this->exprId));
-    fingerprint += "|balance=" + KitLibIdentityHelpers::optionalIntFingerprint(this->balance) + "|balanceConflict=" + juce::String(this->balanceConflict ? "1" : "0");
-    std::vector<juce::String> folderCodeRaws = this->folderCodeRaws;
-    std::sort(folderCodeRaws.begin(), folderCodeRaws.end());
-    for (const auto& folderCodeRaw : folderCodeRaws)
-        fingerprint += "\n folder=" + folderCodeRaw;
-    for (const auto& dimensionFingerprint : dimensionFingerprints)
-        fingerprint += "\n dim=" + dimensionFingerprint;
-    for (const auto& velocityFingerprint : velocityFingerprints)
-        fingerprint += "\n " + velocityFingerprint;
-    LOG(Verbose, "ArticulationSpec::getContentFingerprint: " + fingerprint);
-    return fingerprint;
-}
-
 juce::String InstrumentSpec::getContentFingerprint() const {
-    std::vector<juce::String> articulationFingerprints;
-    articulationFingerprints.reserve(this->articulationSpecs.size());
-    for (const auto& articulationSpec : this->articulationSpecs)
-        if (articulationSpec != nullptr) articulationFingerprints.push_back(articulationSpec->getContentFingerprint());
-    std::sort(articulationFingerprints.begin(), articulationFingerprints.end());
+    std::vector<juce::String> records;
+    records.push_back("instrument|" + this->meta.codeRaw + "|" + this->meta.rootDir.getFullPathName());
 
-    juce::String fingerprint = "instrument|";
-    if (this->parent != nullptr) fingerprint += "kit=" + this->parent->meta.codeRaw + "|";
-    fingerprint += "code=" + this->meta.codeRaw + "|name=" + this->meta.name + "|type=" + juce::String(static_cast<int>(this->meta.type));
-    fingerprint += "|size=" + this->meta.size + "|balance=" + KitLibIdentityHelpers::optionalIntFingerprint(this->meta.balance) + "|desc=" + this->meta.description;
-    for (const auto& articulationFingerprint : articulationFingerprints)
-        fingerprint += "\n" + articulationFingerprint;
-    LOG(Verbose, "InstrumentSpec::getContentFingerprint: " + fingerprint);
-    return fingerprint;
-}
+    if (this->meta.rootDir.isDirectory()) {
+        const auto childDirs = this->meta.rootDir.findChildFiles(juce::File::findDirectories, true, "*");
+        for (const auto& childDir : childDirs)
+            records.push_back("dir|" + KitLibIdentityHelpers::relativePathForFingerprint(this->meta.rootDir, childDir));
 
-juce::String DrumKitSpec::getContentFingerprint() const {
-    std::vector<juce::String> instrumentFingerprints;
-    instrumentFingerprints.reserve(this->instrumentSpecsMap.size());
-    for (const auto& [instrumentKey, instrumentSpec] : this->instrumentSpecsMap) {
-        juce::ignoreUnused(instrumentKey);
-        if (instrumentSpec != nullptr) instrumentFingerprints.push_back(instrumentSpec->getContentFingerprint());
+        const auto childFiles = this->meta.rootDir.findChildFiles(juce::File::findFiles, true, "*");
+        for (const auto& childFile : childFiles)
+            if (InstrumentSpec::isAudioFile(childFile)) records.push_back(KitLibIdentityHelpers::fileMetadataFingerprint(this->meta.rootDir, childFile));
+    } else {
+        records.push_back("missing");
     }
-    std::sort(instrumentFingerprints.begin(), instrumentFingerprints.end());
 
-    juce::String fingerprint = "kit|code=" + this->meta.codeRaw + "|name=" + this->meta.name + "|author=" + this->meta.author + "|license=" + this->meta.license;
-    for (const auto& instrumentFingerprint : instrumentFingerprints)
-        fingerprint += "\n" + instrumentFingerprint;
-    LOG(Verbose, "DrumKitSpec::getContentFingerprint: " + fingerprint);
-    return fingerprint;
-}
+    std::sort(records.begin(), records.end());
 
-juce::String LibraryManager::getContentFingerprint() const {
-    std::vector<juce::String> kitFingerprints;
-    kitFingerprints.reserve(this->kitSpecs.size());
-    for (const auto& kitSpec : this->kitSpecs)
-        if (kitSpec != nullptr) kitFingerprints.push_back(kitSpec->getContentFingerprint());
-    std::sort(kitFingerprints.begin(), kitFingerprints.end());
+    juce::String sourceText;
+    for (const auto& record : records)
+        sourceText += record + "\n";
 
-    juce::String fingerprint = "library";
-    for (const auto& kitFingerprint : kitFingerprints)
-        fingerprint += "\n" + kitFingerprint;
-    LOG(Verbose, "LibraryManager::getContentFingerprint: " + fingerprint);
-    return fingerprint;
+    return KitLibIdentityHelpers::stableContentHash(sourceText);
 }
 
 bool InstrumentSpec::isAudioFile(const juce::File& file) {
@@ -455,7 +379,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
             }
 
             const auto fileName = sampleFile.getFileName();
-            if (!isAudioFile(sampleFile)) {
+            if (!InstrumentSpec::isAudioFile(sampleFile)) {
                 LOG(Info, "Skipping non-audio file: " + fileName);
                 continue;
             }
