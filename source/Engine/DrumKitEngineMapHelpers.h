@@ -16,6 +16,7 @@ std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, 
 void applyAutomaticOrientation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout& layout, KitLib::LibraryManager& libraryManager);
 juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMapEntry& entry);
 std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap);
+std::unordered_map<juce::String, juce::String> buildResolvedSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLib::LibraryManager& libraryManager);
 bool canReuseSlotWithoutReload(const KitLayout::InstrumentSlot& oldSlot, const KitLayout::InstrumentSlot& newSlot);
 void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int samplesPerBlock);
 std::unique_ptr<InstrumentSynth> createReplacementSynth(DrumKitEngine* owner, const KitLayout::InstrumentSlot& layoutSlot, const InstrumentSynth& source, double sampleRate, int samplesPerBlock);

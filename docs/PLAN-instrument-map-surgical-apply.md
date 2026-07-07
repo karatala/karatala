@@ -315,10 +315,10 @@ Helpful test hook:
 - `../tests/TestInstrumentMap.cpp`
 - `../tests/TestInstrumentSynthVoiceGrouping.cpp`
 
-## Open Questions
+## Decisions
 
-- Should parameter-only updates always be live, or should some params wait until drag end?
-- Should slot changes stop existing voices for that slot, or let old voices decay after synth swap?
-- Should raw map apply always allow full rebuild for safety, or should it also use the diff plan by default?
-- Should missing source-art errors fail the whole slot, or keep the old slot alive until the map is fixed?
+- Raw map apply uses the diff plan by default. A full rebuild parameter and Raw page button can be added later.
+- Simple parameter-only updates should be live when they are already safe: tuning, gain, pan, attack, decay, flip, phase, and bleed. Anything that needs sample reload or expensive rebuild should wait until drag end or explicit apply.
+- Slot changes should let old voices decay after synth swap. A later full rebuild or reset action may stop voices immediately.
+- Missing source-art errors should keep the old slot alive. The failed new route should not replace the old route, and status text should clearly say which slot/art was not applied.
 

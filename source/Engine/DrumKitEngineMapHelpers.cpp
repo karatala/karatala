@@ -232,6 +232,20 @@ std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(const Dru
     return result;
 }
 
+std::unordered_map<juce::String, juce::String> buildResolvedSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLib::LibraryManager& libraryManager) {
+    auto result = buildSlotFingerprintMap(instrumentMap);
+    for (const auto& entry : instrumentMap.entries) {
+        const auto* kitSpec = libraryManager.findKitById(entry.kitRef);
+        if (kitSpec == nullptr || entry.instCode.isEmpty()) continue;
+
+        const auto* instSpec = kitSpec->findInstrumentById(entry.instCode);
+        if (instSpec == nullptr) continue;
+
+        result[entry.slotId] += "source\n" + instSpec->getContentFingerprint() + "\n";
+    }
+    return result;
+}
+
 bool canReuseSlotWithoutReload(const KitLayout::InstrumentSlot& oldSlot, const KitLayout::InstrumentSlot& newSlot) {
     if (oldSlot.type != newSlot.type) return false;
 

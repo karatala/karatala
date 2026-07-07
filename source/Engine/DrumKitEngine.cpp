@@ -232,9 +232,11 @@ void DrumKitEngine::mapDefaultKit() {
         this->mapKit(*kit);
         this->regenerateSuggestedInstrumentMapText();
         auto parsedSuggestedMap = DrumKitEngine::parseInstrumentMapText(this->suggestedInstrumentMapText);
-        if (parsedSuggestedMap.ok()) {
-            this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsedSuggestedMap.value);
-            this->lastAppliedInstrumentMapText = this->suggestedInstrumentMapText;
+        if (parsedSuggestedMap.ok() && this->libraryManagerPtr != nullptr && this->activeKitLayoutPtr != nullptr) {
+            DrumKitEngineMapHelpers::applyAutomaticOrientation(parsedSuggestedMap.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
+            const auto normalizedSuggestedMapText = DrumKitEngine::serializeInstrumentMap(parsedSuggestedMap.value);
+            this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
+            this->lastAppliedInstrumentMapText = normalizedSuggestedMapText;
         } else {
             this->lastAppliedSlotFingerprints.clear();
             this->lastAppliedInstrumentMapText.clear();
@@ -351,8 +353,14 @@ void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
     const auto normalizedMapText = this->normalizeInstrumentMapText(mapText);
     auto parsed = DrumKitEngine::parseInstrumentMapText(normalizedMapText);
     if (parsed.ok()) {
-        this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
-        this->lastAppliedInstrumentMapText = normalizedMapText;
+        if (this->libraryManagerPtr != nullptr && this->activeKitLayoutPtr != nullptr) {
+            DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
+            this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *this->libraryManagerPtr);
+            this->lastAppliedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
+        } else {
+            this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
+            this->lastAppliedInstrumentMapText = normalizedMapText;
+        }
     }
 }
 
@@ -1683,7 +1691,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         entriesBySlotId[entry.slotId].push_back(&entry);
     }
 
-    std::unordered_map<juce::String, juce::String> nextSlotFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
+    std::unordered_map<juce::String, juce::String> nextSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *librarySnapshot);
     bool anyGroupHasMultipleEntries = false;
     for (const auto& slotId : slotOrder) {
         const auto& group = entriesBySlotId[slotId];
@@ -1795,8 +1803,6 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
         if (resolvedEntries.empty()) continue;
 
-        for (const auto& resolvedEntry : resolvedEntries)
-            if (resolvedEntry.instSpec != nullptr) nextSlotFingerprints[slotId] += "source\n" + resolvedEntry.instSpec->getContentFingerprint() + "\n";
         slotChanged = slotChanged || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
 
         const auto& slotLayout = primarySlot->getInstrumentSlot();
