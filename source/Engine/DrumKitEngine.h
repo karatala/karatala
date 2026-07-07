@@ -186,7 +186,7 @@ private:
     std::optional<MidiCrosstalkProfile> crosstalkProfileBeforeCalibration;
     MidiCrosstalkFilter crosstalkFilter;
 
-    std::unique_ptr<KitLib::LibraryManager> libraryManagerPtr;
+    std::shared_ptr<KitLib::LibraryManager> libraryManagerPtr;
     std::unique_ptr<SampleLoader> sampleLoaderPtr;
     std::unique_ptr<KitLayoutManager> kitLayoutManagerPtr;
     std::unique_ptr<MicLayoutManager> micLayoutManagerPtr;

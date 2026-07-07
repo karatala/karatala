@@ -134,7 +134,7 @@ public:
         auto logsDir = dataPath.getChildFile("logs");
         if (!logsDir.exists()) logsDir.createDirectory();
 
-        const auto timestamp = juce::Time::getCurrentTime().formatted("%H%M%S");
+        const auto timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S");
         const auto baseName = "karatala-" + timestamp;
         auto candidate = logsDir.getChildFile(baseName + ".log");
         for (int duplicateIndex = 1; candidate.existsAsFile(); ++duplicateIndex) candidate = logsDir.getChildFile(baseName + "-" + juce::String(duplicateIndex) + ".log");

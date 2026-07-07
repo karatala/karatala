@@ -163,6 +163,7 @@ public:
     }
 
     bool isValid() const { return sampleFile.existsAsFile(); }
+    juce::String getContentFingerprint() const;
 
     /**
      * Converts a single letter a-z (case-insensitive) to 1-26.
@@ -207,6 +208,7 @@ public:
     bool isEmpty() const {
         return this->sampleVariantSpecs.empty();
     }
+    juce::String getContentFingerprint() const;
 };
 
 /**
@@ -252,7 +254,7 @@ public:
     bool balanceConflict = false;
     StringsDictSingleton::Id nameId = 0;
     StringsDictSingleton::Id exprId = 0;
-    std::vector<juce::String> folderCodeRaws;
+    std::vector<juce::String> folderCodeRaws; //FIXME: wtf is this naming
     std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
     std::vector<std::unique_ptr<VelocityLayerSpec>> velocityLayerSpecs;
 
@@ -313,6 +315,7 @@ public:
             return a->velocity < b->velocity;
         });
     }
+    juce::String getContentFingerprint() const;
 };
 
 /**
@@ -510,6 +513,7 @@ public:
     const ArticulationSpec* findArticulationById(const juce::String& id) const;
     ArticulationSpec* findArticulationById(const juce::String& id) { return const_cast<ArticulationSpec*>(static_cast<const InstrumentSpec*>(this)->findArticulationById(id)); }
     juce::String getPreferredArticulationId(const ArticulationSpec& articulation) const;
+    juce::String getContentFingerprint() const;
 };
 
 /**
@@ -538,6 +542,7 @@ public:
     InstrumentSpec* findInstrumentById(const juce::String& id) { return const_cast<InstrumentSpec*>(static_cast<const DrumKitSpec*>(this)->findInstrumentById(id)); }
     juce::String getPreferredInstrumentId(const InstrumentSpec& instrument) const;
     std::vector<InstrumentSpec*> getInstrumentsByType(InstrumentSpec::Type type) const;
+    juce::String getContentFingerprint() const;
 
     MetaInfo meta;
     std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>> instrumentSpecsMap;
@@ -560,6 +565,7 @@ public:
     juce::String getPreferredKitId(const DrumKitSpec& kit) const;
     static std::vector<juce::String> getIdentityCandidates(const DrumKitSpec::MetaInfo& meta);
     const std::vector<std::unique_ptr<DrumKitSpec>>& getKits() const { return this->kitSpecs; }
+    juce::String getContentFingerprint() const;
 
 private:
     juce::File rootDir;

@@ -124,6 +124,8 @@ public:
         // const int maxReadUs = juce::roundToInt(static_cast<float>(resolvedMaxReadLengthMs * 1000.0));
         // const int fadeOutUs = juce::roundToInt(static_cast<float>(resolvedFadeOutMs * 1000.0));
         return loadSpec.file.getFullPathName()
+            + "|size=" + juce::String(loadSpec.file.getSize())
+            + "|mtime=" + juce::String(loadSpec.file.getLastModificationTime().toMilliseconds())
             // + "|v=" + juce::String(volumeMilliDb)
             // + "|len=" + juce::String(maxReadUs)
             // + "|fade=" + juce::String(fadeOutUs)

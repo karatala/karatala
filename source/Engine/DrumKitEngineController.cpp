@@ -112,10 +112,12 @@ void DrumKitEngine::initSampleLibrary() {
         this->pendingPreviewTargetKeys.clear();
     }
 
-    this->libraryManagerPtr = std::make_unique<KitLib::LibraryManager>(this->globalConfig.libraryPath);
-    this->libraryManagerPtr->scanAll();
+    auto libraryManager = std::make_shared<KitLib::LibraryManager>(this->globalConfig.libraryPath);
+    libraryManager->scanAll();
+    this->libraryManagerPtr = std::move(libraryManager);
 
-    this->sampleLoaderPtr = std::make_unique<SampleLoader>();
+    if (this->sampleLoaderPtr == nullptr)
+        this->sampleLoaderPtr = std::make_unique<SampleLoader>();
     this->sampleLoaderPtr->setCacheLimitBytes(this->globalConfig.sampleLoaderCacheLimitMegabytes * 1024ull * 1024ull);
 }
 

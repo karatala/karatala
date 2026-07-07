@@ -221,6 +221,7 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
     fingerprint += entry.flipPhase ? "1" : "0";
     fingerprint += "|";
     fingerprint += Detail::joinBleedValues(entry.micBleedLevels);
+    
     return fingerprint;
 }
 
@@ -254,11 +255,12 @@ std::unique_ptr<InstrumentSynth> createReplacementSynth(
     replacement->setMicOutputMapping(source.getMicOutputMapping());
     replacement->setMicChannelCount(source.getMicChannelCount());
 
+    const auto librarySnapshot = source.getLibrarySnapshot();
     const auto& routingContext = source.getLastRoutingContext();
     if (routingContext.isValid()) {
-        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.artNameRemap, routingContext.artAliases);
+        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.artNameRemap, routingContext.artAliases, librarySnapshot);
     } else if (auto* loadedInstrument = source.getLoadedInstrumentSpec()) {
-        replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument));
+        replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument), librarySnapshot);
     }
 
     Detail::copySynthOverrides(*replacement, source);

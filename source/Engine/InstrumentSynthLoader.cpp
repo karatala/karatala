@@ -73,14 +73,20 @@ void InstrumentSynth::unloadInstrument() {
     this->clearVoices();
     this->clearSounds();
     this->instrumentSpecstPtr = nullptr;
+    this->librarySnapshotPtr.reset();
     this->lastRoutingContext = {};
     this->clearParameterOverrides();
 }
 
 void InstrumentSynth::loadInstrument(KitLib::InstrumentSpec* instSpec) {
+    this->loadInstrument(instSpec, nullptr);
+}
+
+void InstrumentSynth::loadInstrument(KitLib::InstrumentSpec* instSpec, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot) {
     if (instSpec == nullptr) return;
     this->unloadInstrument();
 
+    this->librarySnapshotPtr = std::move(librarySnapshot);
     this->instrumentSpecstPtr = instSpec;
     this->type = instSpec->meta.type;
 
@@ -92,9 +98,14 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
 }
 
 void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases) {
+    this->loadInstrumentWithSources(defaultInstrument, artSources, allowedArticulationNameIds, artNameRemap, artAliases, nullptr);
+}
+
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot) {
     if (defaultInstrument == nullptr) return;
     this->unloadInstrument();
 
+    this->librarySnapshotPtr = std::move(librarySnapshot);
     this->instrumentSpecstPtr = defaultInstrument;
     this->type = defaultInstrument->meta.type;
 

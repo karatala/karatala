@@ -277,8 +277,10 @@ public:
 
     void unloadInstrument();
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
+    void loadInstrument(KitLib::InstrumentSpec* kitInstrument, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {});
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot);
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
@@ -420,6 +422,7 @@ public:
     const juce::String& getId() const { return id; }
     const KitLib::InstrumentSpec* getLoadedInstrumentSpec() const { return this->instrumentSpecstPtr; }
     KitLib::InstrumentSpec* getLoadedInstrumentSpec() { return this->instrumentSpecstPtr; }
+    std::shared_ptr<const KitLib::LibraryManager> getLibrarySnapshot() const { return this->librarySnapshotPtr; }
     const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
     const RoutingContext& getLastRoutingContext() const { return this->lastRoutingContext; }
 
@@ -474,6 +477,7 @@ private:
 
     DrumKitEngine* parent = nullptr;
     KitLib::InstrumentSpec* instrumentSpecstPtr = nullptr;
+    std::shared_ptr<const KitLib::LibraryManager> librarySnapshotPtr;
     juce::String id;
     KitLib::InstrumentSpec::Type type;
     juce::AudioBuffer<float> micBuffer;

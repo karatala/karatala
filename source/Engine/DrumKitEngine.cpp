@@ -362,6 +362,7 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
         return;
     }
 
+    auto librarySnapshot = this->libraryManagerPtr;
     std::unordered_set<KitLib::InstrumentSpec*> usedInstSpecSet;
     std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType;
     
@@ -384,7 +385,7 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
 
         LOG(Info, "Loading instrument '" + matched->meta.codeRaw + "' from kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
 
-        slot->loadInstrument(matched); //TODO: wrap in performance measuring block
+        slot->loadInstrument(matched, librarySnapshot); //TODO: wrap in performance measuring block
     }
 
     if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
@@ -1593,7 +1594,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         return false;
     }
 
-    if (this->libraryManagerPtr == nullptr) {
+    auto librarySnapshot = this->libraryManagerPtr;
+    if (librarySnapshot == nullptr) {
         this->lastInstrumentMapStatus = "LibraryManager is not initialized";
         LOG(Error, this->lastInstrumentMapStatus);
         return false;
@@ -1618,8 +1620,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         return false;
     }
 
-    DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapEntries(parsed.value, *this->libraryManagerPtr);
-    DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
+    DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapEntries(parsed.value, *librarySnapshot);
+    DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *librarySnapshot);
     const auto normalizedMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
 
     LOG(Info, "=== useInstrumentMap: " + juce::String(parsed.value.entries.size()) + " entries ===");
@@ -1732,13 +1734,14 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         const auto& group = entriesBySlotId[slotId];
         if (group.empty()) continue;
 
-        if (slotId == "*") {
+        if (slotId == "*") {//FIXME: remove obsolete, we using now only explicit mapping, no wildcards or assuming
             const auto& wildcardEntry = *group.front();
-            wildcardKitSpec = this->libraryManagerPtr->findKitById(wildcardEntry.kitRef);
+            wildcardKitSpec = librarySnapshot->findKitById(wildcardEntry.kitRef);
             if (wildcardKitSpec == nullptr) {
-                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*this->libraryManagerPtr, wildcardEntry.kitRef, wildcardEntry.slotId));
+                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, wildcardEntry.kitRef, wildcardEntry.slotId));
                 continue;
             }
+            nextSlotFingerprints[slotId] += "source\n" + wildcardKitSpec->getContentFingerprint() + "\n";
             wildcardChanged = hasUnloadedPrimarySynth || this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
             if (wildcardChanged) {
                 forceApplyAllSlots = true;
@@ -1753,7 +1756,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             continue;
         }
         auto* primarySlot = slotIt->second;
-        const bool slotChanged = forceApplyAllSlots || !primarySlot->isLoaded() || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
+        bool slotChanged = forceApplyAllSlots || !primarySlot->isLoaded();
 
         struct ResolvedEntry {
             const InstrumentMapEntry* entry = nullptr;
@@ -1764,9 +1767,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
         std::vector<ResolvedEntry> resolvedEntries;
         for (const auto* entry : group) {
-            auto* kitSpec = this->libraryManagerPtr->findKitById(entry->kitRef);
+            auto* kitSpec = librarySnapshot->findKitById(entry->kitRef);
             if (kitSpec == nullptr) {
-                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*this->libraryManagerPtr, entry->kitRef, entry->slotId));
+                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, entry->kitRef, entry->slotId));
                 continue;
             }
 
@@ -1819,6 +1822,10 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
 
         if (resolvedEntries.empty()) continue;
+
+        for (const auto& resolvedEntry : resolvedEntries)
+            if (resolvedEntry.instSpec != nullptr) nextSlotFingerprints[slotId] += "source\n" + resolvedEntry.instSpec->getContentFingerprint() + "\n";
+        slotChanged = slotChanged || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
 
         const auto& slotLayout = primarySlot->getInstrumentSlot();
         const auto& primary = resolvedEntries.front();
@@ -1946,7 +1953,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             auto replacement = std::make_unique<InstrumentSynth>(this, slotLayout);
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
-            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap, artAliases);
+            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap, artAliases, librarySnapshot);
             applyOverrides(*replacement, *primary.entry);
             LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
@@ -1968,7 +1975,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 const auto shadowArtIds = ArticulationNameHelpers::toArticulationIdList(shadowPlan.articulations);
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
-                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.artNameRemap, artAliases);
+                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.artNameRemap, artAliases, librarySnapshot);
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
                 if (LOG_ENABLED(Info)) {
                     juce::String shadowArtsStr;
