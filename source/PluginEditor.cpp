@@ -807,7 +807,7 @@ void PluginEditor::refreshMidiMapTableIfNeeded(bool force) {
     this->refreshPresetList();
 }
 
-void PluginEditor::refreshInstrumentConfigIfNeeded(bool force) {
+void PluginEditor::refreshInstrumentConfigIfNeeded(bool force) {//FIXME: is it really needed?
     auto savedMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
     if (!force && !this->instrumentConfigDirty && savedMap == this->instrumentConfigSnapshot)
         return;

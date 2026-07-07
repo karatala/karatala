@@ -1704,18 +1704,6 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         statusLines.add(warning);
 
     int applied = 0;
-    bool forceApplyAllSlots = false;
-
-    // Wildcard handling: detect if a full kit reload is needed
-    KitLib::DrumKitSpec* wildcardKitSpec = nullptr;
-    bool wildcardChanged = false;
-    bool hasUnloadedPrimarySynth = false;
-    for (int idx = 0; idx < this->primaryInstrumentSynthCount; ++idx) {
-        if (!this->instrumentSynthPtrs[static_cast<size_t>(idx)]->isLoaded()) {
-            hasUnloadedPrimarySynth = true;
-            break;
-        }
-    }
 
     // Per-slot preparation: replacement synths and shadow synths built outside the lock
     struct PreparedShadow {
@@ -1734,36 +1722,13 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         const auto& group = entriesBySlotId[slotId];
         if (group.empty()) continue;
 
-        if (slotId == "*") {//FIXME: remove obsolete, we using now only explicit mapping, no wildcards or assuming
-            const auto& wildcardEntry = *group.front();
-            wildcardKitSpec = librarySnapshot->findKitById(wildcardEntry.kitRef);
-            if (wildcardKitSpec == nullptr) {
-                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, wildcardEntry.kitRef, wildcardEntry.slotId));
-                continue;
-            }
-            std::vector<juce::String> wildcardInstrumentFingerprints;
-            for (const auto& [instrumentKey, instrumentSpec] : wildcardKitSpec->getInstrumentSpecsMap()) {
-                juce::ignoreUnused(instrumentKey);
-                if (instrumentSpec != nullptr) wildcardInstrumentFingerprints.push_back(instrumentSpec->getContentFingerprint());
-            }
-            std::sort(wildcardInstrumentFingerprints.begin(), wildcardInstrumentFingerprints.end());
-            for (const auto& instrumentFingerprint : wildcardInstrumentFingerprints)
-                nextSlotFingerprints[slotId] += "source\n" + instrumentFingerprint + "\n";
-            wildcardChanged = hasUnloadedPrimarySynth || this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
-            if (wildcardChanged) {
-                forceApplyAllSlots = true;
-                ++applied;
-            }
-            continue;
-        }
-
         auto slotIt = this->instrumentSynthById.find(slotId);
         if (slotIt == this->instrumentSynthById.end()) {
             statusLines.add("Instrument slot not found: " + slotId);
             continue;
         }
         auto* primarySlot = slotIt->second;
-        bool slotChanged = forceApplyAllSlots || !primarySlot->isLoaded();
+        bool slotChanged = !primarySlot->isLoaded();
 
         struct ResolvedEntry {
             const InstrumentMapEntry* entry = nullptr;
@@ -2027,10 +1992,6 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
     std::vector<std::unique_ptr<InstrumentSynth>> oldSynths;
     {
         const juce::ScopedLock graphLock(this->engineGraphLock);
-
-        // Handle wildcard: full kit reload (rare, lock hold acceptable)
-        if (wildcardChanged && wildcardKitSpec != nullptr)
-            this->mapKit(*wildcardKitSpec);
 
         // Remove old shadow synths
         if (rebuildAllShadows) {

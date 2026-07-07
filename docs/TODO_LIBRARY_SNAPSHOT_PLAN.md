@@ -1,6 +1,6 @@
 # Library Snapshot Reload Plan
 
-Status: Phase 1 and Phase 2 implemented. Needs build and tests.
+Status: Phase 1, Phase 2, and Phase 3 implemented. Needs build and tests.
 
 ## Problem
 
@@ -151,7 +151,7 @@ Remove from `../source/Engine/DrumKitEngine.cpp`:
 - `forceApplyAllSlots`
 - wildcard-triggered `mapKit(*wildcardKitSpec)` inside `useInstrumentMap()`
 
-If parsing still accepts `*`, let normal explicit-slot validation fail or remove parser support too during the wildcard cleanup phase.
+If parsing sees `*`, it now follows normal explicit-slot validation and fails because no slot with id `*` exists.
 
 ## Articulation-Level Reload Decision
 
@@ -172,7 +172,7 @@ Later option:
 
 ### Phase 1 - Keep Snapshot Safety
 
-Status: implemented, tested.
+Status: implemented, not built or tested.
 
 Work:
 
@@ -188,7 +188,7 @@ Verification:
 
 ### Phase 2 - Simplify Fingerprints
 
-Status: implemented, tested.
+Status: implemented, not built or tested.
 
 Work:
 
@@ -206,7 +206,7 @@ Verification:
 
 ### Phase 3 - Remove Wildcard Mapping
 
-Status: planned next.
+Status: implemented, not built or tested.
 
 Work:
 

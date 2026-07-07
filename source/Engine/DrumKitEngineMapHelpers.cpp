@@ -182,7 +182,7 @@ juce::StringArray collectInstrumentArticulationNames(const KitLib::InstrumentSpe
 
 void applyAutomaticOrientation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout& layout, KitLib::LibraryManager& libraryManager) {
     for (auto& entry : instrumentMap.entries) {
-        if (entry.flipLRExplicit || entry.slotId == "*") continue;
+        if (entry.flipLRExplicit) continue;
 
         const auto* slot = Detail::findLayoutSlot(layout, entry.slotId);
         if (slot == nullptr) continue;
