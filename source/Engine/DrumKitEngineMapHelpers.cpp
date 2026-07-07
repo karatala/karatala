@@ -225,6 +225,16 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
     return fingerprint;
 }
 
+juce::String makeInstrumentMapEntryReloadFingerprint(const DrumKitEngine::InstrumentMapEntry& entry) {
+    juce::String fingerprint;
+    fingerprint += entry.slotId.trim().toLowerCase() + "|";
+    fingerprint += entry.kitRef.trim().toLowerCase() + "|";
+    fingerprint += entry.instCode.trim().toLowerCase() + "|";
+    fingerprint += Detail::joinValues(entry.slotArticulationFilter) + "|";
+    fingerprint += Detail::joinValues(entry.articulationFilter);
+    return fingerprint;
+}
+
 std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap) {
     std::unordered_map<juce::String, juce::String> result;
     for (const auto& entry : instrumentMap.entries)
@@ -235,6 +245,22 @@ std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(const Dru
 std::unordered_map<juce::String, juce::String> buildResolvedSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLib::LibraryManager& libraryManager) {
     auto result = buildSlotFingerprintMap(instrumentMap);
     for (const auto& entry : instrumentMap.entries) {
+        const auto* kitSpec = libraryManager.findKitById(entry.kitRef);
+        if (kitSpec == nullptr || entry.instCode.isEmpty()) continue;
+
+        const auto* instSpec = kitSpec->findInstrumentById(entry.instCode);
+        if (instSpec == nullptr) continue;
+
+        result[entry.slotId] += "source\n" + instSpec->getContentFingerprint() + "\n";
+    }
+    return result;
+}
+
+std::unordered_map<juce::String, juce::String> buildResolvedSlotReloadFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLib::LibraryManager& libraryManager) {
+    std::unordered_map<juce::String, juce::String> result;
+    for (const auto& entry : instrumentMap.entries) {
+        result[entry.slotId] += makeInstrumentMapEntryReloadFingerprint(entry) + "\n";
+
         const auto* kitSpec = libraryManager.findKitById(entry.kitRef);
         if (kitSpec == nullptr || entry.instCode.isEmpty()) continue;
 

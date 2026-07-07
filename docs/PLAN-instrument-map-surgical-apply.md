@@ -62,6 +62,11 @@ Verify:
 - Add or update a focused test where seeding a normalized map and applying the same map returns unchanged.
 - Check that changing one source instrument changes only that slot fingerprint.
 
+Implementation status:
+
+- Implemented shared resolved slot fingerprints in `../source/Engine/DrumKitEngineMapHelpers.*`.
+- `mapDefaultKit()`, `seedInstrumentMapFingerprints()`, and `useInstrumentMap()` now use matching full fingerprints.
+
 ## Stage 2 - Split Full Apply Into a Diff Plan
 
 Current flow:
@@ -95,6 +100,13 @@ Verify:
 - A one-slot source change reports one changed slot.
 - A one-slot layer add reports one changed slot.
 - A parameter-only change reports no sample reload.
+
+Implementation status:
+
+- Started. The engine now keeps separate full-state and reload-only fingerprints.
+- Simple primary-slot parameter-only raw-map changes update the existing synth instead of loading samples.
+- Failed slot/source-art resolution now keeps the old slot route alive and preserves that slot fingerprint.
+- Multi-layer/shadow parameter-only changes are still limited by the current global shadow rebuild and remain Stage 3 work.
 
 ## Stage 3 - Replace Global `rebuildAllShadows`
 

@@ -236,15 +236,18 @@ void DrumKitEngine::mapDefaultKit() {
             DrumKitEngineMapHelpers::applyAutomaticOrientation(parsedSuggestedMap.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
             const auto normalizedSuggestedMapText = DrumKitEngine::serializeInstrumentMap(parsedSuggestedMap.value);
             this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
+            this->lastAppliedSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
             this->lastAppliedInstrumentMapText = normalizedSuggestedMapText;
         } else {
             this->lastAppliedSlotFingerprints.clear();
+            this->lastAppliedSlotReloadFingerprints.clear();
             this->lastAppliedInstrumentMapText.clear();
         }
         this->lastInstrumentMapStatus = "Mapped default kit and generated starter instrument map";//FIXME: refactor, ui relates shit out
     } else {
         this->suggestedInstrumentMapText.clear();
         this->lastAppliedSlotFingerprints.clear();
+        this->lastAppliedSlotReloadFingerprints.clear();
         this->lastAppliedInstrumentMapText.clear();
     }
 }
@@ -356,9 +359,11 @@ void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
         if (this->libraryManagerPtr != nullptr && this->activeKitLayoutPtr != nullptr) {
             DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
             this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *this->libraryManagerPtr);
+            this->lastAppliedSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsed.value, *this->libraryManagerPtr);
             this->lastAppliedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
         } else {
             this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
+            this->lastAppliedSlotReloadFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
             this->lastAppliedInstrumentMapText = normalizedMapText;
         }
     }
@@ -880,6 +885,13 @@ bool DrumKitEngine::applyKitLayout() {
                 it = this->lastAppliedSlotFingerprints.erase(it);
             else
                 ++it;
+        }
+
+        for (auto reloadIt = this->lastAppliedSlotReloadFingerprints.begin(); reloadIt != this->lastAppliedSlotReloadFingerprints.end();) {
+            if (reloadIt->first != "*" && activeSlotIds.find(reloadIt->first) == activeSlotIds.end())
+                reloadIt = this->lastAppliedSlotReloadFingerprints.erase(reloadIt);
+            else
+                ++reloadIt;
         }
 
         if (this->activeMicLayoutPtr != nullptr)
@@ -1672,10 +1684,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
 
     auto applyOverrides = [](InstrumentSynth& synth, const InstrumentMapEntry& entry) {
         synth.setTuningOffsetCents(entry.tuningCents.value_or(0));
-        if (entry.attackTimeMs.has_value())
-            synth.setAttackOverrideMs(*entry.attackTimeMs);
-        if (entry.decayTimeMs.has_value())
-            synth.setDecayOverrideMs(*entry.decayTimeMs);
+        synth.setAttackOverrideMs(entry.attackTimeMs.value_or(-1));
+        synth.setDecayOverrideMs(entry.decayTimeMs.value_or(-1));
         synth.setVolumeDb(entry.volumeDb.value_or(0.0f));
         synth.setPan(entry.pan.value_or(0));
         synth.setFlipLR(entry.flipLR);
@@ -1692,6 +1702,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
     }
 
     std::unordered_map<juce::String, juce::String> nextSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *librarySnapshot);
+    std::unordered_map<juce::String, juce::String> nextSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsed.value, *librarySnapshot);
     bool anyGroupHasMultipleEntries = false;
     for (const auto& slotId : slotOrder) {
         const auto& group = entriesBySlotId[slotId];
@@ -1722,6 +1733,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         juce::String slotId;
         int primaryIndex = -1;
         std::unique_ptr<InstrumentSynth> primaryReplacement;
+        const InstrumentMapEntry* primaryParameterEntry = nullptr;
         std::vector<PreparedShadow> shadows;
     };
     std::vector<PreparedSlot> preparedSlots;
@@ -1746,21 +1758,25 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         };
 
         std::vector<ResolvedEntry> resolvedEntries;
+        bool slotResolveFailed = false;
         for (const auto* entry : group) {
             auto* kitSpec = librarySnapshot->findKitById(entry->kitRef);
             if (kitSpec == nullptr) {
                 statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, entry->kitRef, entry->slotId));
+                slotResolveFailed = true;
                 continue;
             }
 
             if (entry->instCode.isEmpty()) {
                 statusLines.add("Instrument code is required for slot '" + entry->slotId + "'");
+                slotResolveFailed = true;
                 continue;
             }
 
             auto* instSpec = kitSpec->findInstrumentById(entry->instCode);
             if (instSpec == nullptr) {
                 statusLines.add(DrumKitEngineIdentityMapHelpers::describeInstrumentResolveFailure(*kitSpec, entry->instCode, entry->slotId));
+                slotResolveFailed = true;
                 continue;
             }
 
@@ -1790,6 +1806,8 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                         : availableSourceArts.joinIntoString(", ");
 
                     statusLines.add("Source articulation problem(s): " + unknownSourceArtsText + ". Available source articulations: " + availableSourceArtsText);
+                    slotResolveFailed = true;
+                    continue;
                 }
             }
 
@@ -1801,9 +1819,16 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             resolvedEntries.push_back({ entry, kitSpec, instSpec, std::move(filter) });
         }
 
-        if (resolvedEntries.empty()) continue;
+        if (slotResolveFailed || resolvedEntries.empty()) {
+            statusLines.add("Slot '" + slotId + "' was not applied; old route kept");
+            nextSlotFingerprints[slotId] = this->lastAppliedSlotFingerprints[slotId];
+            nextSlotReloadFingerprints[slotId] = this->lastAppliedSlotReloadFingerprints[slotId];
+            continue;
+        }
 
-        slotChanged = slotChanged || (this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId]);
+        const bool slotStateChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
+        const bool slotReloadChanged = this->lastAppliedSlotReloadFingerprints[slotId] != nextSlotReloadFingerprints[slotId];
+        slotChanged = slotChanged || slotReloadChanged;
 
         const auto& slotLayout = primarySlot->getInstrumentSlot();
         const auto& primary = resolvedEntries.front();
@@ -1925,6 +1950,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         prep.slotId = slotId;
         auto pIdxIt = primarySlotIndex.find(slotId);
         prep.primaryIndex = (pIdxIt != primarySlotIndex.end()) ? pIdxIt->second : -1;
+        if (!slotChanged && slotStateChanged && prep.primaryIndex >= 0) prep.primaryParameterEntry = primary.entry;
 
         // Create a replacement synth for the primary slot (expensive work done outside lock)
         if (slotChanged && prep.primaryIndex >= 0) {
@@ -2019,6 +2045,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
                 this->instrumentSynthPtrs[prep.primaryIndex] = std::move(prep.primaryReplacement);
                 this->instrumentSynthById[prep.slotId] = this->instrumentSynthPtrs[prep.primaryIndex].get();
                 anyPrimarySwapped = true;
+            } else if (prep.primaryParameterEntry != nullptr && prep.primaryIndex >= 0 && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
+                applyOverrides(*this->instrumentSynthPtrs[prep.primaryIndex], *prep.primaryParameterEntry);
+                ++applied;
             }
         }
 
@@ -2036,6 +2065,7 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
 
         this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
+        this->lastAppliedSlotReloadFingerprints = std::move(nextSlotReloadFingerprints);
         this->lastAppliedInstrumentMapText = normalizedMapText;
     }
     // Old synths destroyed here outside the lock - audio thread cannot access them
