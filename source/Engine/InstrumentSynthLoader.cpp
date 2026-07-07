@@ -75,6 +75,7 @@ void InstrumentSynth::unloadInstrument() {
     this->instrumentSpecstPtr = nullptr;
     this->librarySnapshotPtr.reset();
     this->lastRoutingContext = {};
+    this->clearDestinationRoutes();
     this->clearParameterOverrides();
 }
 

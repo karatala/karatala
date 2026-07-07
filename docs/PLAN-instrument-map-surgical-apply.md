@@ -244,6 +244,16 @@ Verify:
 - If `tom1/rim` is explicitly assigned, empty-art fallback does not override it.
 - Hihat `edge[open]`, `edge[close]`, and similar routes still use controller selection.
 
+Implementation status:
+
+- Started. `InstrumentSynth` now stores explicit destination-route ownership as `(destinationArtNameId, destinationExprId)` pairs.
+- Engine-created primary and shadow synths now receive destination ownership from the resolved map apply path.
+- Shadow note routing now uses destination ownership when available, with old `supportsArticulation()` behavior only as fallback for synths without ownership.
+- Layout-change replacement synths copy destination ownership from the old synth.
+- This reduces shadow conflicts where a base-name match such as `bow` could catch `bow[open]` and `bow[tight]` together.
+- Still open: primary `noteToArticulation` is still built inside `InstrumentSynth` from layout plus routing context. The full resolved-route object is not implemented yet.
+- Still open: source-art fallback and hihat controller sibling loading still need the stricter route-plan path from this stage plus Stage 6.
+
 ## Stage 6 - Document And Preserve Hihat Expression Routing
 
 Current hihat model:

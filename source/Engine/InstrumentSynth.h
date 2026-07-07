@@ -7,6 +7,8 @@
 #include <limits>
 #include <set>
 #include <optional>
+#include <unordered_set>
+#include <utility>
 #include "AftertouchChokeProcessor.h"
 #include "EngineSettings.h"
 #include "HiHatTransitionPolicy.h"
@@ -458,6 +460,17 @@ public:
 
         return false;
     }
+    bool hasDestinationRoutes() const { return !this->destinationRouteKeys.empty(); }
+    void clearDestinationRoutes() { this->destinationRouteKeys.clear(); }
+    void setDestinationRoutes(const std::vector<std::pair<uint32_t, uint32_t>>& routes) {
+        this->destinationRouteKeys.clear();
+        for (const auto& route : routes)
+            this->destinationRouteKeys.insert(makeDestinationRouteKey(route.first, route.second));
+    }
+    void copyDestinationRoutesFrom(const InstrumentSynth& source) { this->destinationRouteKeys = source.destinationRouteKeys; }
+    bool routesDestinationArticulation(uint32_t destinationArtNameId, uint32_t destinationExprId) const {
+        return this->destinationRouteKeys.find(makeDestinationRouteKey(destinationArtNameId, destinationExprId)) != this->destinationRouteKeys.end();
+    }
     bool hasRouteForMidiNote(int note) const {
         return note >= 0 && note < static_cast<int>(this->noteToArticulation.size())
             && this->noteToArticulation[static_cast<size_t>(note)] >= 0;
@@ -517,9 +530,10 @@ private:
     // Runtime optimized tables for fast selection (populated by loadInstrument)
     // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
     std::array<ArtRtIdx, 128> noteToArticulation;
+    std::unordered_set<uint64_t> destinationRouteKeys;
     // Runtime articulations vector, index-stable after load
     std::vector<ArticulationRuntime> runtimeArticulations;
-    // Flat map for O(1) articulation-index lookup by (nameId<<32|exprId) key — rebuilt after every load
+    // Flat map for O(1) articulation-index lookup by (nameId<<32|exprId) key - rebuilt after every load
     std::unordered_map<uint64_t, int> artIdByNameExprId;
     
     std::unordered_map<int8_t, std::vector<uint8_t>> noteToControllers;
@@ -563,6 +577,9 @@ private:
     bool flipPhase = false;
     std::unordered_map<juce::String, float> micBleedLevels;
 
+    static uint64_t makeDestinationRouteKey(uint32_t destinationArtNameId, uint32_t destinationExprId) {
+        return (static_cast<uint64_t>(destinationArtNameId) << 32) | static_cast<uint64_t>(destinationExprId);
+    }
     void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases);
     void resetRoutingTables();
     void rebuildArtLookupCache();

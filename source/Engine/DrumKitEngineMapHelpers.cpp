@@ -303,6 +303,7 @@ std::unique_ptr<InstrumentSynth> createReplacementSynth(
         replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument), librarySnapshot);
     }
 
+    replacement->copyDestinationRoutesFrom(source);
     Detail::copySynthOverrides(*replacement, source);
     Detail::prepareSynthIfNeeded(*replacement, sampleRate, samplesPerBlock);
     return replacement;

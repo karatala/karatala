@@ -12,6 +12,7 @@
 #include <cmath>
 #include <algorithm>
 #include <unordered_set>
+#include <utility>
 
 namespace DrumKitEngineIdentityMapHelpers {
 
@@ -993,7 +994,11 @@ void DrumKitEngine::rebuildMidiNoteRoutingFromLayout() {
 void DrumKitEngine::addShadowSynthNoteRoutes(InstrumentSynth& shadowSynth, const KitLayout::InstrumentSlot& layoutSlot) {
     shadowSynth.rebuildRoutingFromLayout(layoutSlot);
     for (const auto& art : layoutSlot.articulations) {
-        if (!shadowSynth.supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art))) continue;
+        const bool hasRouteOwnership = shadowSynth.hasDestinationRoutes();
+        const bool routesArt = hasRouteOwnership
+            ? shadowSynth.routesDestinationArticulation(art.nameId, art.exprId)
+            : shadowSynth.supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art));
+        if (!routesArt) continue;
         for (const int note : art.notes) {
             if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(&shadowSynth);
         }
@@ -1722,6 +1727,35 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         return DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(entry) + "\nsource\n" + instSpec.getContentFingerprint();
     };
 
+    auto addDestinationRoute = [](std::vector<std::pair<uint32_t, uint32_t>>& routes, uint32_t nameId, uint32_t exprId) {
+        const auto route = std::make_pair(nameId, exprId);
+        if (std::find(routes.begin(), routes.end(), route) == routes.end()) routes.push_back(route);
+    };
+
+    auto collectPrimaryDestinationRoutes = [&addDestinationRoute](const KitLayout::InstrumentSlot& slotLayout, const std::vector<uint32_t>& allowedArticulationIds, const InstrumentSynth::ArticulationAliasMap& artAliases) {
+        std::vector<std::pair<uint32_t, uint32_t>> routes;
+        for (const auto& layoutArt : slotLayout.articulations) {
+            if (vectorContains(allowedArticulationIds, layoutArt.nameId) || artAliases.find(layoutArt.nameId) != artAliases.end())
+                addDestinationRoute(routes, layoutArt.nameId, layoutArt.exprId);
+        }
+        return routes;
+    };
+
+    auto collectShadowDestinationRoutes = [&addDestinationRoute](const KitLayout::InstrumentSlot& slotLayout, const std::vector<juce::String>& artFilters, const InstrumentSynth::ArticulationAliasMap& artAliases, uint32_t fallbackLayoutArtId) {
+        std::vector<std::pair<uint32_t, uint32_t>> routes;
+        const auto shadowArtIds = ArticulationNameHelpers::toArticulationIdList(artFilters);
+        for (const auto& layoutArt : slotLayout.articulations) {
+            bool routesArt = artFilters.empty();
+            for (const auto& artFilter : artFilters) {
+                if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, layoutArt.codeRaw)) routesArt = true;
+            }
+            const auto aliasIt = artAliases.find(layoutArt.nameId);
+            if (!routesArt && aliasIt != artAliases.end() && fallbackLayoutArtId != 0 && vectorContains(shadowArtIds, fallbackLayoutArtId)) routesArt = true;
+            if (routesArt) addDestinationRoute(routes, layoutArt.nameId, layoutArt.exprId);
+        }
+        return routes;
+    };
+
     std::vector<juce::String> slotOrder;
     std::unordered_map<juce::String, std::vector<const InstrumentMapEntry*>> entriesBySlotId;
     for (const auto& entry : parsed.value.entries) {
@@ -2044,6 +2078,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
             replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap, artAliases, librarySnapshot);
+            replacement->setDestinationRoutes(collectPrimaryDestinationRoutes(slotLayout, primaryAllowedArticulationIds, artAliases));
             applyOverrides(*replacement, *primary.entry);
             LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
@@ -2066,6 +2101,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
                 shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.artNameRemap, artAliases, librarySnapshot);
+                shadowRaw->setDestinationRoutes(collectShadowDestinationRoutes(slotLayout, shadowPlan.articulations, artAliases, fallbackLayoutArtId));
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
                 if (LOG_ENABLED(Info)) {
                     juce::String shadowArtsStr;
@@ -2087,13 +2123,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 ps.stateFingerprint = makeResolvedEntryFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
                 ps.reloadFingerprint = makeResolvedEntryReloadFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
                 for (const auto& art : slotLayout.articulations) {
-                    if (!shadowArtIds.empty()) {
-                        const auto aliasIt = artAliases.find(art.nameId);
-                        const bool routesExplicitArt = vectorContains(shadowArtIds, art.nameId);
-                        const bool routesAliasedArt = aliasIt != artAliases.end() && fallbackLayoutArtId != 0 && vectorContains(shadowArtIds, fallbackLayoutArtId);
-                        if (!routesExplicitArt && !routesAliasedArt)
-                            continue;
-                    }
+                    if (!shadowRaw->routesDestinationArticulation(art.nameId, art.exprId)) continue;
                     for (const int note : art.notes)
                         ps.noteRoutes.push_back({note, shadowRaw});
                 }
