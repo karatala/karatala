@@ -1,0 +1,141 @@
+kitLayout: default
+micLayout: default
+sampleLoaderCacheLimitMegabytes: 1024
+libraryPath: C:\Users\Public\Documents\Karatala\sample_library
+
+engine:
+  aftertouch_choke:
+    maxDuckDepth: 0.7
+    duckTimeSec: 0.15
+    releaseTimeSec: 0.05
+    muteTailSec: 0.04
+    releaseBoost: 0.1
+    muteThresholdRatio: 0.5
+    minPressure: 10
+  midi_crosstalk:
+    windowMs: 40
+    profile:
+      - { primary: 3, secondary: 21, ratio: 23 }
+      - { primary: 3, secondary: 23, ratio: 23 }
+      - { primary: 3, secondary: 33, ratio: 12 }
+      - { primary: 6, secondary: 10, ratio: 105 }
+      - { primary: 6, secondary: 21, ratio: 15 }
+      - { primary: 6, secondary: 47, ratio: 13 }
+      - { primary: 7, secondary: 21, ratio: 18 }
+      - { primary: 7, secondary: 23, ratio: 21 }
+      - { primary: 7, secondary: 33, ratio: 14 }
+      - { primary: 8, secondary: 10, ratio: 12 }
+      - { primary: 10, secondary: 6, ratio: 12 }
+      - { primary: 10, secondary: 21, ratio: 30 }
+      - { primary: 10, secondary: 23, ratio: 31 }
+      - { primary: 10, secondary: 33, ratio: 13 }
+      - { primary: 10, secondary: 47, ratio: 13 }
+      - { primary: 15, secondary: 51, ratio: 8 }
+      - { primary: 17, secondary: 9, ratio: 23 }
+      - { primary: 21, secondary: 10, ratio: 31 }
+      - { primary: 23, secondary: 10, ratio: 32 }
+      - { primary: 24, secondary: 25, ratio: 15 }
+      - { primary: 24, secondary: 30, ratio: 18 }
+      - { primary: 26, secondary: 30, ratio: 10 }
+      - { primary: 31, secondary: 54, ratio: 14 }
+      - { primary: 32, secondary: 4, ratio: 10 }
+      - { primary: 32, secondary: 41, ratio: 15 }
+      - { primary: 32, secondary: 43, ratio: 11 }
+      - { primary: 32, secondary: 51, ratio: 9 }
+      - { primary: 33, secondary: 10, ratio: 12 }
+      - { primary: 37, secondary: 38, ratio: 16 }
+      - { primary: 41, secondary: 9, ratio: 16 }
+      - { primary: 43, secondary: 39, ratio: 10 }
+      - { primary: 44, secondary: 18, ratio: 79 }
+      - { primary: 44, secondary: 46, ratio: 19 }
+      - { primary: 45, secondary: 10, ratio: 10 }
+      - { primary: 47, secondary: 10, ratio: 15 }
+      - { primary: 48, secondary: 25, ratio: 9 }
+      - { primary: 48, secondary: 30, ratio: 9 }
+      - { primary: 49, secondary: 54, ratio: 9 }
+      - { primary: 50, secondary: 28, ratio: 27 }
+      - { primary: 55, secondary: 30, ratio: 10 }
+      - { primary: 56, secondary: 4, ratio: 12 }
+      - { primary: 56, secondary: 33, ratio: 9 }
+      - { primary: 56, secondary: 41, ratio: 11 }
+      - { primary: 56, secondary: 51, ratio: 15 }
+      - { primary: 57, secondary: 10, ratio: 15 }
+      - { primary: 58, secondary: 4, ratio: 11 }
+      - { primary: 58, secondary: 51, ratio: 10 }
+  tail_shortening:
+    loadThreshold: 0.79
+    ageMultiplier: 0.042
+    ampProtect: 0.91
+    minFactor: 0.51
+    voiceMinClamp: 1
+    cullThresholdDb: 30
+  hihat:
+    polyphonyCrossfadeTimeoutSec: 1.22
+    hitChokeDbMargin: 3
+    transition:
+      openCrossfadeSec: 0.06
+      closeCrossfadeSec: 0.02
+      controllerSmoothingSec: 0.015
+      boundaryHysteresisCc: 2
+      tailMatchAmount: 0.75
+      tailMatchBiasDb: -3
+      attackGuardSec: 0.025
+      maxActiveGroups: 1
+      curve: equal_power
+      footSampleMode: close_only
+      minRemainingSec: 0.05
+      silenceFloorDb: -60
+      missingDecayPolicy: keep_tail
+  ui_grid:
+    padGridColumns: 6
+    padGridRows: 4
+    padGap: 1
+
+
+3 D#-2 -> 21 A-1: suppress <= 18% of primary velocity
+3 D#-2 -> 23 B-1: suppress <= 18% of primary velocity
+3 D#-2 -> 33 A0: suppress <= 9% of primary velocity
+6 F#-2 -> 10 A#-2: suppress <= 83% of primary velocity
+6 F#-2 -> 21 A-1: suppress <= 12% of primary velocity
+6 F#-2 -> 47 B1: suppress <= 10% of primary velocity
+7 G-2 -> 21 A-1: suppress <= 14% of primary velocity
+7 G-2 -> 23 B-1: suppress <= 17% of primary velocity
+7 G-2 -> 33 A0: suppress <= 11% of primary velocity
+8 G#-2 -> 10 A#-2: suppress <= 9% of primary velocity
+10 A#-2 -> 6 F#-2: suppress <= 9% of primary velocity
+10 A#-2 -> 21 A-1: suppress <= 24% of primary velocity
+10 A#-2 -> 23 B-1: suppress <= 24% of primary velocity
+10 A#-2 -> 33 A0: suppress <= 10% of primary velocity
+10 A#-2 -> 47 B1: suppress <= 10% of primary velocity
+15 D#-1 -> 51 D#2: suppress <= 6% of primary velocity
+17 F-1 -> 9 A-2: suppress <= 18% of primary velocity
+21 A-1 -> 10 A#-2: suppress <= 24% of primary velocity
+23 B-1 -> 10 A#-2: suppress <= 25% of primary velocity
+24 C0 -> 25 C#0: suppress <= 12% of primary velocity
+24 C0 -> 30 F#0: suppress <= 14% of primary velocity
+26 D0 -> 30 F#0: suppress <= 8% of primary velocity
+31 G0 -> 54 F#2: suppress <= 11% of primary velocity
+32 G#0 -> 4 E-2: suppress <= 8% of primary velocity
+32 G#0 -> 41 F1: suppress <= 12% of primary velocity
+32 G#0 -> 43 G1: suppress <= 9% of primary velocity
+32 G#0 -> 51 D#2: suppress <= 7% of primary velocity
+33 A0 -> 10 A#-2: suppress <= 9% of primary velocity
+37 C#1 -> 38 D1: suppress <= 13% of primary velocity
+41 F1 -> 9 A-2: suppress <= 13% of primary velocity
+43 G1 -> 39 D#1: suppress <= 8% of primary velocity
+44 G#1 -> 18 F#-1: suppress <= 62% of primary velocity
+44 G#1 -> 46 A#1: suppress <= 15% of primary velocity
+45 A1 -> 10 A#-2: suppress <= 8% of primary velocity
+47 B1 -> 10 A#-2: suppress <= 12% of primary velocity
+48 C2 -> 25 C#0: suppress <= 7% of primary velocity
+48 C2 -> 30 F#0: suppress <= 7% of primary velocity
+49 C#2 -> 54 F#2: suppress <= 7% of primary velocity
+50 D2 -> 28 E0: suppress <= 21% of primary velocity
+55 G2 -> 30 F#0: suppress <= 8% of primary velocity
+56 G#2 -> 4 E-2: suppress <= 9% of primary velocity
+56 G#2 -> 33 A0: suppress <= 7% of primary velocity
+56 G#2 -> 41 F1: suppress <= 9% of primary velocity
+56 G#2 -> 51 D#2: suppress <= 12% of primary velocity
+57 A2 -> 10 A#-2: suppress <= 12% of primary velocity
+58 A#2 -> 4 E-2: suppress <= 9% of primary velocity
+58 A#2 -> 51 D#2: suppress <= 8% of primary velocity

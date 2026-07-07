@@ -3,7 +3,7 @@
 from pathlib import Path
 from converter import find_kit_xml, parse_kit_xml
 
-kit_dir = Path('T:/install/music/eDamaru/instruments/todo/CrocellKit')
+kit_dir = Path('T:/source/repos/karatala/assets/drumgizmo/CrocellKit')
 kit_xml = find_kit_xml(kit_dir)
 print(f'Selected XML: {kit_xml.name}')
 

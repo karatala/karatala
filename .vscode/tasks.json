@@ -38,6 +38,14 @@
       "group": { "kind": "build" },
       "problemMatcher": "$gcc",
     },
+    {
+      "label": "Run tests",
+      "type": "shell",
+      "command": "${workspaceFolder}/build/Debug/Tests.exe",
+      // "dependsOn": "Build tests",
+      "group": { "kind": "build" },
+      "problemMatcher": "$gcc",
+    },
     // {
     //   "label": "Run Standalone",
     //   "type": "shell",

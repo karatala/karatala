@@ -6,7 +6,7 @@
 
 CompactParameterControl::CompactParameterControl(const juce::String& name, double minVal, double maxVal, double interval, double initialValue, std::function<juce::String(double)> textFromValueFn) {
     this->setName(name);
-    this->setSliderStyle(juce::Slider::LinearHorizontal);
+    this->setSliderStyle(juce::Slider::RotaryHorizontalDrag);
     this->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     this->setRange(minVal, maxVal, interval);
     if (textFromValueFn)
