@@ -63,7 +63,7 @@ private:
     void showPickerPopup(TableRow* row);
     void dismissPopup();
     void layoutContent();
-    void applyToEngine();
+    void applyToEngine(const juce::String& changedSlotId = {});
     void applyRowParametersFast(TableRow* row);
     void timerCallback() override;
     void updateSourceButtonDisplay(TableRow* row);

@@ -1613,6 +1613,14 @@ void DrumKitEngine::applyLayerParameterUpdate(InstrumentSynth& synth, const Laye
 }
 
 bool DrumKitEngine::useInstrumentMap(juce::String text) {
+    return this->useInstrumentMapInternal(std::move(text), {});
+}
+
+bool DrumKitEngine::applyInstrumentMapSlotChange(const juce::String& fullMapText, const juce::String& changedSlotId) {
+    return this->useInstrumentMapInternal(fullMapText, changedSlotId);
+}
+
+bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::String& changedSlotIdHint) {
     // ======================== PHASE 1: VALIDATION (no lock) ========================
     // Safe to read libraryManagerPtr/activeKitLayoutPtr without lock - only mutated on
     // the message thread, which is our current thread.
@@ -1636,6 +1644,9 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         LOG(Error, this->lastInstrumentMapStatus);
         return false;
     }
+
+    const auto changedSlotKey = changedSlotIdHint.trim().toLowerCase();
+    const bool hasChangedSlotHint = changedSlotKey.isNotEmpty();
 
     // ======================== PHASE 2: PARSE & RESOLVE (no lock) ========================
     // All parsing, kit/instrument resolution, and synth creation happens here.
@@ -1788,6 +1799,10 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
         }
         auto* primarySlot = slotIt->second;
         bool slotChanged = !primarySlot->isLoaded();
+        const bool slotStateChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
+        const bool slotReloadChanged = this->lastAppliedSlotReloadFingerprints[slotId] != nextSlotReloadFingerprints[slotId];
+        const bool slotMatchesHint = !hasChangedSlotHint || slotId.trim().toLowerCase() == changedSlotKey;
+        if (hasChangedSlotHint && !slotMatchesHint && !slotChanged && !slotStateChanged && !slotReloadChanged) continue;
 
         struct ResolvedEntry {
             const InstrumentMapEntry* entry = nullptr;
@@ -1865,8 +1880,6 @@ bool DrumKitEngine::useInstrumentMap(juce::String text) {
             continue;
         }
 
-        const bool slotStateChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
-        const bool slotReloadChanged = this->lastAppliedSlotReloadFingerprints[slotId] != nextSlotReloadFingerprints[slotId];
         slotChanged = slotChanged || slotReloadChanged;
 
         const auto& slotLayout = primarySlot->getInstrumentSlot();

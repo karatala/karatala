@@ -240,10 +240,11 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     this->contentComponent.addAndMakeVisible(*row->removeButton);
     row->removeButton->onClick = [this, row] {
         juce::MessageManager::callAsync([this, row] {
+            const auto changedSlotId = row->slotId;
             this->tableRows.removeObject(row);
             this->updateRemoveButtonVisibility();
             this->layoutContent();
-            this->applyToEngine();
+            this->applyToEngine(changedSlotId);
         });
     };
 }
@@ -299,7 +300,7 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
         this->updateSourceButtonDisplay(row);
         juce::MessageManager::callAsync([this, row] {
             this->dismissPopup();
-            this->applyToEngine();
+            this->applyToEngine(row->slotId);
             this->engine.playPreviewNote(row->slotId, row->artName, 100);
         });
     };
@@ -526,12 +527,12 @@ void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
 
 void InstrumentConfigPanel::timerCallback() { this->flushMapText(); }
 
-void InstrumentConfigPanel::applyToEngine() {
+void InstrumentConfigPanel::applyToEngine(const juce::String& changedSlotId) {
     this->stopTimer();
     auto text = this->generateMapText();
     if (text.trim().isEmpty()) return;
     DBG("InstrumentConfigPanel::applyToEngine map text:\n" + text);
-    this->engine.useInstrumentMap(text);
+    this->engine.applyInstrumentMapSlotChange(text, changedSlotId);
     this->mapTextDirty = false;
     if (this->onMapTextChanged) this->onMapTextChanged(text);
     if (this->onStatusMessage) this->onStatusMessage(this->engine.getLastInstrumentMapStatus());

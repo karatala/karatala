@@ -82,6 +82,7 @@ public:
     bool setKitLayoutDirect(KitLayout layout, bool reapplyCurrentMap = true) { return this->setKitLayout(std::move(layout), reapplyCurrentMap); }
     bool useMicLayout(juce::String name);
     bool useInstrumentMap(juce::String text);
+    bool applyInstrumentMapSlotChange(const juce::String& fullMapText, const juce::String& changedSlotId);
 
     static ParseResult<InstrumentMap> parseInstrumentMapText(const juce::String& text);
     static juce::String serializeInstrumentMap(const InstrumentMap& instrumentMap);
@@ -263,6 +264,7 @@ private:
     bool applyKitLayout();
     bool applyMicLayout();
     bool applyMicLayoutUnlocked();
+    bool useInstrumentMapInternal(juce::String text, const juce::String& changedSlotIdHint);
     void buildNoteNameCache();
     void regenerateSuggestedInstrumentMapText();
     void clearShadowSynths();

@@ -1110,7 +1110,7 @@ void PadContextPopup::applyReplaceInstrument(const SourceItem& sourceInstrument)
     auto text = this->generateReplaceMapText(sourceInstrument);
     if (text.trim().isEmpty()) return;
 
-    this->engine.useInstrumentMap(text);
+    this->engine.applyInstrumentMapSlotChange(text, this->slotId);
     this->savedInstrumentMapText = text;
     this->mapTextDirty = false;
 
@@ -1125,7 +1125,7 @@ void PadContextPopup::applyToEngine() {
     auto text = this->generateFullMapText();
     if (text.trim().isEmpty()) return;
 
-    this->engine.useInstrumentMap(text);
+    this->engine.applyInstrumentMapSlotChange(text, this->slotId);
     this->savedInstrumentMapText = text;
     this->mapTextDirty = false;
     this->recalculateLayerIndexOffset();

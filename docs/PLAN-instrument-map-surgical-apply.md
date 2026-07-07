@@ -6,7 +6,7 @@ Instrument map changes are too broad today. A small UI change can make the engin
 
 Original observed facts:
 
-- `InstrumentConfigPanel::applyToEngine()` generates full map text and calls `DrumKitEngine::useInstrumentMap()` for source changes.
+- Older `InstrumentConfigPanel::applyToEngine()` code generated full map text and called `DrumKitEngine::useInstrumentMap()` for source changes.
 - Knob changes already have a faster path through `DrumKitEngine::updateSlotParameters()`, but the saved map text is still rebuilt later.
 - `DrumKitEngine::seedInstrumentMapFingerprints()` stores map-entry fingerprints only, while `useInstrumentMap()` later compares fingerprints that also include source instrument content fingerprints.
 - Older `useInstrumentMap()` code used one `rebuildAllShadows` flag. If any shadow synth existed, or any slot had multiple entries, all old shadow synths were removed and all prepared shadows were rebuilt.
@@ -160,10 +160,10 @@ Implementation status:
 
 ## Stage 4 - Make `applyToEngine()` Surgical
 
-Issue:
+Original issue:
 
-- Source picker changes in `InstrumentConfigPanel` call `applyToEngine()`.
-- `applyToEngine()` generates full map text and calls `useInstrumentMap()`.
+- Source picker changes in `InstrumentConfigPanel` called `applyToEngine()`.
+- `applyToEngine()` generated full map text and called `useInstrumentMap()` directly.
 
 Plan:
 
@@ -189,6 +189,15 @@ Verify:
 - Changing one picker row updates playback and status.
 - Raw map apply still supports full rebuild.
 - Saved text after a surgical apply is the same as normalized full-map text.
+
+Implementation status:
+
+- Added `DrumKitEngine::applyInstrumentMapSlotChange(fullMapText, changedSlotId)`.
+- `useInstrumentMap()` remains the raw/state/full-map API.
+- Slot-change applies still parse the full map, but unchanged non-hinted slots can skip resolve/prep work after fingerprint validation.
+- `InstrumentConfigPanel` source changes and remove-layer actions pass the affected slot id.
+- `PadContextPopup` full apply and replace-instrument actions pass the affected slot id.
+- Still open: add/remove layer can use a more explicit slot/art API later, but it now reaches the engine through the slot-hint path.
 
 ## Stage 5 - Define One Routing Source Of Truth
 
