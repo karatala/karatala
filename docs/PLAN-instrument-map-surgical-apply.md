@@ -247,9 +247,9 @@ Verify:
 Implementation status:
 
 - Started. `InstrumentSynth` now stores explicit destination-route ownership as `(destinationArtNameId, destinationExprId)` pairs.
-- Engine-created primary and shadow synths now receive destination ownership from the resolved map apply path.
-- Primary and shadow engine note routing now use destination ownership when available, with old `supportsArticulation()` / `noteToArticulation` behavior only as fallback for synths without ownership.
-- Layout-change replacement synths copy destination ownership from the old synth.
+- Engine-created primary and shadow synths now get an exact list of pad articulations they are allowed to play.
+- When routing a MIDI note, the engine now asks the synth from that exact list first. Old name guessing is only fallback for older synths that do not have the list.
+- When a synth is replaced after a layout change, the new synth copies the same allowed-to-play list from the old synth.
 - This reduces shadow conflicts where a base-name match such as `bow` could catch `bow[open]` and `bow[tight]` together.
 - Fast parameter-update matching now uses destination-route ownership when available, with old note-route matching only as fallback for older synths without ownership.
 - Articulation filters now use map filter matching, so `bow[open]` can stay exact while legacy `bow` can still match the bow family.
@@ -257,13 +257,13 @@ Implementation status:
 - Explicit source expressions are now carried in a small exact remap, so `center[muff]` stays `center[muff]` during source-art lookup.
 - Empty-art alias fallback now carries source expression when one is explicit, so alias routes can prefer `center[muff]` over plain `center`.
 - The synth routing context now keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
-- Implemented the first `InstrumentSynth` resolved-route snapshot. It stores destination articulation, source instrument, source articulation, destination notes, explicit-map flag, and controller-sibling flag from the existing resolved binding path.
-- Destination ownership checks now read this route snapshot first, with old engine-provided destination keys kept as fallback for alias compatibility.
-- Runtime note, sample, and controller table apply now loops over the stored route snapshot instead of applying directly from the old binding list.
-- Primary `noteToArticulation` is now filled from the stored route snapshot during resolved routing apply. Alias fallback is also stored as alias route-plan entries and applied by the same route apply helper.
-- Alias route entries are skipped when the same destination articulation already has a normal route, so fallback aliases do not overwrite explicit routes.
-- Destination ownership checks ignore controller-sibling route rows. Siblings can build controller choices, but they do not claim destination ownership by themselves.
-- Still open: hihat controller sibling loading still needs the full route-plan path from this stage plus Stage 6.
+- `InstrumentSynth` now keeps a simple route list. Each row says: these MIDI notes for this pad articulation should play this source instrument/articulation.
+- When the engine asks "does this synth play this pad articulation?", the synth checks that route list first. Old engine-provided route keys remain only as fallback.
+- Note lookup, sample loading, and hihat pedal/CC choices are now built from that route list.
+- `noteToArticulation` is now just the final MIDI-note lookup table made from the route list. Empty-art fallback also goes through the same route list.
+- Empty-art fallback is skipped when the map already has an explicit route for the same pad articulation. Example: explicit `rim -> center` is not overwritten by fallback.
+- Extra hihat pedal states do not make a synth responsible for a pad note by themselves. Example: `bow[half]` can be available for CC selection after `bow[open]` is routed, but it does not claim the MIDI note alone.
+- Still open: hihat pedal-state loading should be moved fully into this simple route-list model.
 
 ## Stage 6 - Document And Preserve Hihat Expression Routing
 
@@ -330,7 +330,7 @@ Implementation status:
 - Cross-art remap can now include source expression id, so destination `rim` can resolve to source `center[muff]` instead of plain `center`.
 - Alias fallback now stores source name plus expression target. This keeps old fallback but makes expression-specific aliases less blind.
 - Destination-route ownership for primary synths now uses exact map filters when they exist, instead of only base articulation ids.
-- Implemented for the current resolved-routing path: ownership checks, resolved-route runtime table apply, and alias fallback now read the stored route-plan snapshot. Still open: move route-plan construction up into engine-level map planning and add tests.
+- Implemented for the current synth-load path: "who plays this pad note", final MIDI-note lookup, and empty-art fallback now use the route list. Still open: build this route list earlier in the engine map plan and add tests.
 
 ## Stage 8 - Tests To Add
 
