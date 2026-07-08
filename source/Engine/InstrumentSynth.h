@@ -467,7 +467,7 @@ public:
 
         return false;
     }
-    bool hasDestinationRoutes() const { return !this->destinationRouteKeys.empty(); }
+    bool hasDestinationRoutes() const { return !this->resolvedArticulationRoutes.empty() || !this->destinationRouteKeys.empty(); }
     void clearDestinationRoutes() { this->destinationRouteKeys.clear(); }
     void setDestinationRoutes(const std::vector<std::pair<uint32_t, uint32_t>>& routes) {
         this->destinationRouteKeys.clear();
@@ -476,6 +476,9 @@ public:
     }
     void copyDestinationRoutesFrom(const InstrumentSynth& source) { this->destinationRouteKeys = source.destinationRouteKeys; }
     bool routesDestinationArticulation(uint32_t destinationArtNameId, uint32_t destinationExprId) const {
+        for (const auto& route : this->resolvedArticulationRoutes) {
+            if (route.destinationArtNameId == destinationArtNameId && route.destinationExprId == destinationExprId) return true;
+        }
         return this->destinationRouteKeys.find(makeDestinationRouteKey(destinationArtNameId, destinationExprId)) != this->destinationRouteKeys.end();
     }
     bool hasRouteForMidiNote(int note) const {

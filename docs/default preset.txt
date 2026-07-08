@@ -6,9 +6,12 @@ crash1/edge:NakedDrums/crash-X1/edge
 crash2/bow:MuldjordKit3/ride-L1/bow:flipLR=1
 crash2/edge:NakedDrums/crash-X2/edge
 crash3/bow:AasiMonster/crash-X1/edge:tuning=-19,flipLR=1
-hihat1/bow:NakedDrums/hihat-X1/edge[close]
-hihat2/bow:TchackpoumDG1.3/hihat-14/bow[close]
-hihat2/edge:TchackpoumDG1.3/hihat-14/edge[close]
+hihat1/bow:NakedDrums/hihat-X1/edge
+hihat1/edge:NakedDrums/hihat-X1/edge
+hihat1/pedal:NakedDrums/hihat-X1/pedal
+hihat2/bow:TchackpoumDG1.3/hihat-14/bow
+hihat2/edge:TchackpoumDG1.3/hihat-14/edge
+hihat2/pedal:TchackpoumDG1.3/hihat-14/pedal
 kick1/center:NakedDrums/kick-22/center:tuning=-20
 octoban1/center:AasiMonster2/tom-X1/center:tuning=1210
 octoban2/center:AasiMonster/tom-X1/center:tuning=960
