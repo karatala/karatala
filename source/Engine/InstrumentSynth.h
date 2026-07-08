@@ -195,6 +195,27 @@ public:
     using ArticulationExactRemap = std::unordered_map<uint64_t, ArticulationTarget>; // slotArt(name,expr) -> sourceArt(name,expr)
     using ArticulationAliasMap = std::unordered_map<uint32_t, ArticulationTarget>; // fallbackArtNameId -> sourceArt(name,expr)
 
+    using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
+
+    struct ResolvedArticulationRoute {
+        LayoutArticulation destinationLayoutArt;
+        uint32_t destinationArtNameId = 0;
+        uint32_t destinationExprId = 0;
+        KitLib::InstrumentSpec* sourceInstrument = nullptr;
+        KitLib::ArticulationSpec* sourceArticulation = nullptr;
+        std::vector<uint8_t> midiNotes;
+        ArticulationTarget aliasTarget;
+        bool isExplicitMapRoute = false;
+        bool isControllerSibling = false;
+        bool isAliasRoute = false;
+        explicit ResolvedArticulationRoute(const LayoutArticulation& destinationLayoutArt)
+            : destinationLayoutArt(destinationLayoutArt)
+            , destinationArtNameId(destinationLayoutArt.nameId)
+            , destinationExprId(destinationLayoutArt.exprId)
+            , midiNotes(destinationLayoutArt.notes)
+        {}
+    };
+
     // Runtime data structures built at loadInstrument() (non-realtime)
     struct SampleEntry {
         SampledSound* sound = nullptr; // non-owning pointer into Synth::sounds
@@ -290,6 +311,8 @@ public:
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationExactRemap& artExactRemap = {}, const ArticulationAliasMap& artAliases = {}, bool strictArticulationResolution = false);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot, bool strictArticulationResolution = false);
+    std::vector<ResolvedArticulationRoute> buildResolvedRouteList(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
+    void loadInstrumentWithRouteList(KitLib::InstrumentSpec* defaultInstrument, const RoutingContext& routingContext, std::vector<ResolvedArticulationRoute> routes, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot = nullptr);
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
@@ -526,7 +549,6 @@ private:
     juce::AudioBuffer<float> tempBuffer;
 
 
-    using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
     using CcDimensionsMap = std::unordered_map<int8_t, std::vector<std::pair<int8_t, int8_t>>>;
 
     struct ResolvedArticulationBinding {
@@ -542,24 +564,6 @@ private:
         {}
     };
 
-    struct ResolvedArticulationRoute {
-        LayoutArticulation destinationLayoutArt;
-        uint32_t destinationArtNameId = 0;
-        uint32_t destinationExprId = 0;
-        KitLib::InstrumentSpec* sourceInstrument = nullptr;
-        KitLib::ArticulationSpec* sourceArticulation = nullptr;
-        std::vector<uint8_t> midiNotes;
-        ArticulationTarget aliasTarget;
-        bool isExplicitMapRoute = false;
-        bool isControllerSibling = false;
-        bool isAliasRoute = false;
-        explicit ResolvedArticulationRoute(const LayoutArticulation& destinationLayoutArt)
-            : destinationLayoutArt(destinationLayoutArt)
-            , destinationArtNameId(destinationLayoutArt.nameId)
-            , destinationExprId(destinationLayoutArt.exprId)
-            , midiNotes(destinationLayoutArt.notes)
-        {}
-    };
 
     // Runtime optimized tables for fast selection (populated by loadInstrument)
     // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
@@ -620,9 +624,10 @@ private:
     void rebuildArtLookupCache();
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
-    void storeResolvedArticulationRoutes(const std::vector<ResolvedArticulationBinding>& bindings);
-    void storeAliasArticulationRoutes(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
+    void appendResolvedArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const std::vector<ResolvedArticulationBinding>& bindings);
+    void appendAliasArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void applyResolvedArticulationRoute(const ResolvedArticulationRoute& route, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
+    void applyResolvedRouteList(bool loadSamples, bool createIfMissing);
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext, bool loadSamples, bool createIfMissing);
     std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;

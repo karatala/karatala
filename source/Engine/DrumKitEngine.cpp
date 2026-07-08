@@ -1775,38 +1775,6 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         return DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(entry) + "\nsource\n" + instSpec.getContentFingerprint();
     };
 
-    auto addDestinationRoute = [](std::vector<std::pair<uint32_t, uint32_t>>& routes, uint32_t nameId, uint32_t exprId) {
-        const auto route = std::make_pair(nameId, exprId);
-        if (std::find(routes.begin(), routes.end(), route) == routes.end()) routes.push_back(route);
-    };
-
-    auto collectPrimaryDestinationRoutes = [&addDestinationRoute](const KitLayout::InstrumentSlot& slotLayout, const std::vector<uint32_t>& allowedArticulationIds, const std::vector<juce::String>& artFilters, const InstrumentSynth::ArticulationAliasMap& artAliases) {
-        std::vector<std::pair<uint32_t, uint32_t>> routes;
-        for (const auto& layoutArt : slotLayout.articulations) {
-            bool routesArt = artFilters.empty() ? vectorContains(allowedArticulationIds, layoutArt.nameId) : false;
-            for (const auto& artFilter : artFilters) {
-                if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, layoutArt.codeRaw)) routesArt = true;
-            }
-            if (routesArt || artAliases.find(layoutArt.nameId) != artAliases.end()) addDestinationRoute(routes, layoutArt.nameId, layoutArt.exprId);
-        }
-        return routes;
-    };
-
-    auto collectShadowDestinationRoutes = [&addDestinationRoute](const KitLayout::InstrumentSlot& slotLayout, const std::vector<juce::String>& artFilters, const InstrumentSynth::ArticulationAliasMap& artAliases, uint32_t fallbackLayoutArtId) {
-        std::vector<std::pair<uint32_t, uint32_t>> routes;
-        const auto shadowArtIds = ArticulationNameHelpers::toArticulationIdList(artFilters);
-        for (const auto& layoutArt : slotLayout.articulations) {
-            bool routesArt = artFilters.empty();
-            for (const auto& artFilter : artFilters) {
-                if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, layoutArt.codeRaw)) routesArt = true;
-            }
-            const auto aliasIt = artAliases.find(layoutArt.nameId);
-            if (!routesArt && aliasIt != artAliases.end() && fallbackLayoutArtId != 0 && vectorContains(shadowArtIds, fallbackLayoutArtId)) routesArt = true;
-            if (routesArt) addDestinationRoute(routes, layoutArt.nameId, layoutArt.exprId);
-        }
-        return routes;
-    };
-
     std::vector<juce::String> slotOrder;
     std::unordered_map<juce::String, std::vector<const InstrumentMapEntry*>> entriesBySlotId;
     for (const auto& entry : parsed.value.entries) {
@@ -2145,8 +2113,17 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
             const bool primaryStrictArticulationResolution = !primary.effectiveFilter.empty() || !primaryRemap.empty() || !primaryExactRemap.empty();
-            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primary.effectiveFilter, primaryRemap, primaryExactRemap, artAliases, librarySnapshot, primaryStrictArticulationResolution);
-            replacement->setDestinationRoutes(collectPrimaryDestinationRoutes(slotLayout, primaryAllowedArticulationIds, primary.effectiveFilter, artAliases));
+            InstrumentSynth::RoutingContext primaryRoutingContext;
+            primaryRoutingContext.defaultInstrument = primary.instSpec;
+            primaryRoutingContext.artSources = artSources;
+            primaryRoutingContext.allowedArticulationNameIds = primaryAllowedArticulationIds;
+            primaryRoutingContext.allowedArticulationFilters = primary.effectiveFilter;
+            primaryRoutingContext.artNameRemap = primaryRemap;
+            primaryRoutingContext.artExactRemap = primaryExactRemap;
+            primaryRoutingContext.artAliases = artAliases;
+            primaryRoutingContext.strictArticulationResolution = primaryStrictArticulationResolution;
+            auto primaryRoutes = replacement->buildResolvedRouteList(slotLayout, primaryRoutingContext);
+            replacement->loadInstrumentWithRouteList(primary.instSpec, primaryRoutingContext, std::move(primaryRoutes), librarySnapshot);
             applyOverrides(*replacement, *primary.entry);
             LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
@@ -2169,8 +2146,18 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
                 const bool shadowStrictArticulationResolution = !shadowPlan.articulations.empty() || !shadowPlan.artNameRemap.empty() || !shadowPlan.artExactRemap.empty();
-                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.articulations, shadowPlan.artNameRemap, shadowPlan.artExactRemap, artAliases, librarySnapshot, shadowStrictArticulationResolution);
-                shadowRaw->setDestinationRoutes(collectShadowDestinationRoutes(slotLayout, shadowPlan.articulations, artAliases, fallbackLayoutArtId));
+                InstrumentSynth::ArticulationAliasMap shadowAliases;
+                if (fallbackLayoutArtId != 0 && vectorContains(shadowArtIds, fallbackLayoutArtId)) shadowAliases = artAliases;
+                InstrumentSynth::RoutingContext shadowRoutingContext;
+                shadowRoutingContext.defaultInstrument = shadowPlan.instSpec;
+                shadowRoutingContext.allowedArticulationNameIds = shadowArtIds;
+                shadowRoutingContext.allowedArticulationFilters = shadowPlan.articulations;
+                shadowRoutingContext.artNameRemap = shadowPlan.artNameRemap;
+                shadowRoutingContext.artExactRemap = shadowPlan.artExactRemap;
+                shadowRoutingContext.artAliases = shadowAliases;
+                shadowRoutingContext.strictArticulationResolution = shadowStrictArticulationResolution;
+                auto shadowRoutes = shadowRaw->buildResolvedRouteList(slotLayout, shadowRoutingContext);
+                shadowRaw->loadInstrumentWithRouteList(shadowPlan.instSpec, shadowRoutingContext, std::move(shadowRoutes), librarySnapshot);
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
                 if (LOG_ENABLED(Info)) {
                     juce::String shadowArtsStr;

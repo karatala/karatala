@@ -118,6 +118,26 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artExactRemap, artAliases, strictArticulationResolution);
 }
 
+void InstrumentSynth::loadInstrumentWithRouteList(KitLib::InstrumentSpec* defaultInstrument, const RoutingContext& routingContext, std::vector<ResolvedArticulationRoute> routes, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot) {
+    if (defaultInstrument == nullptr) return;
+    this->unloadInstrument();
+
+    this->librarySnapshotPtr = std::move(librarySnapshot);
+    this->instrumentSpecstPtr = defaultInstrument;
+    this->type = defaultInstrument->meta.type;
+    this->lastRoutingContext = routingContext;
+    if (!this->lastRoutingContext.isValid()) this->lastRoutingContext.defaultInstrument = defaultInstrument;
+
+    LOG(Debug, "loadInstrumentWithRouteList: available articulationSpecs for inst=" + defaultInstrument->meta.codeRaw + ":");
+    for (const auto& artSpec : defaultInstrument->articulationSpecs) {
+        this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
+    }
+
+    this->resolvedArticulationRoutes = std::move(routes);
+    this->applyResolvedRouteList(true, true);
+    this->rebuildArtLookupCache();
+}
+
 void InstrumentSynth::clearParameterOverrides() {
     this->tuningOffsetCents = 0;
     this->attackOverrideMs.reset();
@@ -290,9 +310,7 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
     return bindings;
 }
 
-void InstrumentSynth::storeResolvedArticulationRoutes(const std::vector<ResolvedArticulationBinding>& bindings) {
-    this->resolvedArticulationRoutes.clear();
-
+void InstrumentSynth::appendResolvedArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const std::vector<ResolvedArticulationBinding>& bindings) {
     for (const auto& binding : bindings) {
         if (binding.sourceInstrument == nullptr || binding.resolvedSpec == nullptr) continue;
 
@@ -300,7 +318,7 @@ void InstrumentSynth::storeResolvedArticulationRoutes(const std::vector<Resolved
         route.sourceInstrument = binding.sourceInstrument;
         route.sourceArticulation = binding.resolvedSpec;
         route.isExplicitMapRoute = binding.strictArticulationResolution;
-        this->resolvedArticulationRoutes.push_back(std::move(route));
+        routes.push_back(std::move(route));
 
         for (auto* siblingSpec : binding.controllerSiblingSpecs) {
             if (siblingSpec == nullptr) continue;
@@ -310,7 +328,7 @@ void InstrumentSynth::storeResolvedArticulationRoutes(const std::vector<Resolved
             siblingRoute.sourceArticulation = siblingSpec;
             siblingRoute.isExplicitMapRoute = binding.strictArticulationResolution;
             siblingRoute.isControllerSibling = true;
-            this->resolvedArticulationRoutes.push_back(std::move(siblingRoute));
+            routes.push_back(std::move(siblingRoute));
         }
     }
 }
@@ -352,9 +370,7 @@ void InstrumentSynth::applyResolvedArticulationRoute(const ResolvedArticulationR
     }
 }
 
-void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext, bool loadSamples, bool createIfMissing) {
-    this->storeResolvedArticulationRoutes(bindings);
-    this->storeAliasArticulationRoutes(layoutSlot, routingContext);
+void InstrumentSynth::applyResolvedRouteList(bool loadSamples, bool createIfMissing) {
     CcDimensionsMap foundCcDimensions;
     std::set<juce::String> skippedMicCodes;
 
@@ -380,7 +396,7 @@ void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulatio
     this->processCcDimensions(foundCcDimensions);
 }
 
-void InstrumentSynth::storeAliasArticulationRoutes(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
+void InstrumentSynth::appendAliasArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
     if (routingContext.artAliases.empty()) return;
 
     for (const auto& layoutArt : layoutSlot.articulations) {
@@ -388,7 +404,7 @@ void InstrumentSynth::storeAliasArticulationRoutes(const KitLayout::InstrumentSl
         if (aliasIt == routingContext.artAliases.end()) continue;
 
         bool hasNormalRoute = false;
-        for (const auto& route : this->resolvedArticulationRoutes) {
+        for (const auto& route : routes) {
             if (!route.isAliasRoute && !route.isControllerSibling && route.destinationArtNameId == layoutArt.nameId && route.destinationExprId == layoutArt.exprId) {
                 hasNormalRoute = true;
                 break;
@@ -399,8 +415,23 @@ void InstrumentSynth::storeAliasArticulationRoutes(const KitLayout::InstrumentSl
         ResolvedArticulationRoute aliasRoute(layoutArt);
         aliasRoute.aliasTarget = aliasIt->second;
         aliasRoute.isAliasRoute = true;
-        this->resolvedArticulationRoutes.push_back(std::move(aliasRoute));
+        routes.push_back(std::move(aliasRoute));
     }
+}
+
+std::vector<InstrumentSynth::ResolvedArticulationRoute> InstrumentSynth::buildResolvedRouteList(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {
+    const auto bindings = this->collectResolvedLayoutArticulations(layoutSlot, routingContext);
+    std::vector<ResolvedArticulationRoute> routes;
+    this->appendResolvedArticulationRoutes(routes, bindings);
+    this->appendAliasArticulationRoutes(routes, layoutSlot, routingContext);
+    return routes;
+}
+
+void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext, bool loadSamples, bool createIfMissing) {
+    this->resolvedArticulationRoutes.clear();
+    this->appendResolvedArticulationRoutes(this->resolvedArticulationRoutes, bindings);
+    this->appendAliasArticulationRoutes(this->resolvedArticulationRoutes, layoutSlot, routingContext);
+    this->applyResolvedRouteList(loadSamples, createIfMissing);
 }
 
 void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {

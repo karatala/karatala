@@ -258,12 +258,13 @@ Implementation status:
 - Empty-art alias fallback now carries source expression when one is explicit, so alias routes can prefer `center[muff]` over plain `center`.
 - The synth routing context now keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
 - `InstrumentSynth` now keeps a simple route list. Each row says: these MIDI notes for this pad articulation should play this source instrument/articulation.
+- The instrument-map apply path now builds that route list before loading the synth, then passes the list into `InstrumentSynth`.
 - When the engine asks "does this synth play this pad articulation?", the synth checks that route list first. Old engine-provided route keys remain only as fallback.
 - Note lookup, sample loading, and hihat pedal/CC choices are now built from that route list.
 - `noteToArticulation` is now just the final MIDI-note lookup table made from the route list. Empty-art fallback also goes through the same route list.
 - Empty-art fallback is skipped when the map already has an explicit route for the same pad articulation. Example: explicit `rim -> center` is not overwritten by fallback.
 - Extra hihat pedal states do not make a synth responsible for a pad note by themselves. Example: `bow[half]` can be available for CC selection after `bow[open]` is routed, but it does not claim the MIDI note alone.
-- Still open: hihat pedal-state loading should be moved fully into this simple route-list model.
+- Stage 5 code path is complete enough: map apply now decides the simple route list before synth load. Hihat-specific cleanup remains Stage 6, and tests remain Stage 8.
 
 ## Stage 6 - Document And Preserve Hihat Expression Routing
 
@@ -330,7 +331,7 @@ Implementation status:
 - Cross-art remap can now include source expression id, so destination `rim` can resolve to source `center[muff]` instead of plain `center`.
 - Alias fallback now stores source name plus expression target. This keeps old fallback but makes expression-specific aliases less blind.
 - Destination-route ownership for primary synths now uses exact map filters when they exist, instead of only base articulation ids.
-- Implemented for the current synth-load path: "who plays this pad note", final MIDI-note lookup, and empty-art fallback now use the route list. Still open: build this route list earlier in the engine map plan and add tests.
+- Implemented for the current map-apply path: "who plays this pad note", final MIDI-note lookup, and empty-art fallback now use the route list. Still open: add tests.
 
 ## Stage 8 - Tests To Add
 
