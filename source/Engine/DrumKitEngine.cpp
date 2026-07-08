@@ -1943,15 +1943,30 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         std::vector<ShadowPlan> shadowPlans;
         std::vector<uint32_t> claimedArticulations;
         std::vector<uint32_t> primaryAllowedArticulationIds;
+        std::vector<juce::String> primaryAllowedArticulationFilters;
         InstrumentSynth::ArticulationAliasMap artAliases;
+        auto appendPrimaryAllowedArticulationFilter = [&primaryAllowedArticulationFilters](const juce::String& artName) {
+            const auto normalizedArtName = artName.trim();
+            if (normalizedArtName.isEmpty()) return;
+            for (const auto& existingArtName : primaryAllowedArticulationFilters)
+                if (existingArtName.compareIgnoreCase(normalizedArtName) == 0) return;
+            primaryAllowedArticulationFilters.push_back(normalizedArtName);
+        };
+        auto removePrimaryAllowedArticulationFilter = [&primaryAllowedArticulationFilters](uint32_t artId) {
+            std::erase_if(primaryAllowedArticulationFilters, [artId](const juce::String& artName) {
+                return StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(artName)) == artId;
+            });
+        };
 
         if (primary.effectiveFilter.empty()) {
             for (const auto& layoutArt : slotLayout.articulations)
                 DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
         } else {
             for (const auto& artName : primary.effectiveFilter) {
-                if (artName.isNotEmpty())
+                if (artName.isNotEmpty()) {
                     DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(artName)));
+                    appendPrimaryAllowedArticulationFilter(artName);
+                }
             }
         }
 
@@ -1994,11 +2009,13 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                     if (!alreadyClaimed) {
                         DrumKitEngineMapHelpers::appendUniqueId(claimedArticulations, artId);
                         std::erase(primaryAllowedArticulationIds, artId);
+                        removePrimaryAllowedArticulationFilter(artId);
                     }
                 } else if (!alreadyClaimed) {
                     DrumKitEngineMapHelpers::appendUniqueId(claimedArticulations, artId);
                     artSources[artId] = resolved.instSpec;
                     DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, artId);
+                    if (!primary.effectiveFilter.empty()) appendPrimaryAllowedArticulationFilter(artName);
                     // Propagate cross-art remap for this articulation to the primary synth
                     auto entryRemap = buildArtNameRemap(*resolved.entry);
                     auto remapIt = entryRemap.find(artId);
@@ -2112,12 +2129,12 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             auto replacement = std::make_unique<InstrumentSynth>(this, slotLayout);
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
-            const bool primaryStrictArticulationResolution = !primary.effectiveFilter.empty() || !primaryRemap.empty() || !primaryExactRemap.empty();
+            const bool primaryStrictArticulationResolution = !primaryAllowedArticulationFilters.empty() || !primaryRemap.empty() || !primaryExactRemap.empty();
             InstrumentSynth::RoutingContext primaryRoutingContext;
             primaryRoutingContext.defaultInstrument = primary.instSpec;
             primaryRoutingContext.artSources = artSources;
             primaryRoutingContext.allowedArticulationNameIds = primaryAllowedArticulationIds;
-            primaryRoutingContext.allowedArticulationFilters = primary.effectiveFilter;
+            primaryRoutingContext.allowedArticulationFilters = primaryAllowedArticulationFilters;
             primaryRoutingContext.artNameRemap = primaryRemap;
             primaryRoutingContext.artExactRemap = primaryExactRemap;
             primaryRoutingContext.artAliases = artAliases;

@@ -407,7 +407,7 @@ TEST_CASE("InstrumentSynth - simple articulation aliases survive routing rebuild
     REQUIRE(edgeArtIdx == bowArtIdx);
 }
 
-TEST_CASE("InstrumentSynth - current route list keeps later primary destination ids when first filter is narrow", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
+TEST_CASE("InstrumentSynth - route list keeps all primary destination ids with combined filters", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;
     slot.id = "crash1";
@@ -425,7 +425,7 @@ TEST_CASE("InstrumentSynth - current route list keeps later primary destination 
     InstrumentSynth::RoutingContext routingContext;
     routingContext.defaultInstrument = &instrument;
     routingContext.allowedArticulationNameIds = { bowId, edgeId };
-    routingContext.allowedArticulationFilters = { "bow" };
+    routingContext.allowedArticulationFilters = { "bow", "edge" };
     routingContext.strictArticulationResolution = true;
 
     const auto routes = synth.buildResolvedRouteList(slot, routingContext);
@@ -434,7 +434,7 @@ TEST_CASE("InstrumentSynth - current route list keeps later primary destination 
     CHECK(hasNormalRoute(routes, "edge", "edge"));
 }
 
-TEST_CASE("InstrumentSynth - current route list keeps destination rim while source is center", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
+TEST_CASE("InstrumentSynth - route list keeps destination rim while source is center", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;
     slot.id = "snare1";
@@ -451,7 +451,7 @@ TEST_CASE("InstrumentSynth - current route list keeps destination rim while sour
     InstrumentSynth::RoutingContext routingContext;
     routingContext.defaultInstrument = &instrument;
     routingContext.allowedArticulationNameIds = { centerId, rimId };
-    routingContext.allowedArticulationFilters = { "center" };
+    routingContext.allowedArticulationFilters = { "center", "rim" };
     routingContext.artNameRemap[rimId] = centerId;
     routingContext.strictArticulationResolution = true;
 
@@ -461,7 +461,7 @@ TEST_CASE("InstrumentSynth - current route list keeps destination rim while sour
     CHECK(hasNormalRoute(routes, "rim", "center"));
 }
 
-TEST_CASE("InstrumentSynth - current hihat route list keeps edge and pedal rows when first filter is bow", "[InstrumentSynth][InstrumentMap][ExpressionPoints][CurrentRouting]") {
+TEST_CASE("InstrumentSynth - hihat route list keeps bow edge and pedal rows with combined filters", "[InstrumentSynth][InstrumentMap][ExpressionPoints][CurrentRouting]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;
     slot.id = "hihat1";
@@ -490,7 +490,7 @@ TEST_CASE("InstrumentSynth - current hihat route list keeps edge and pedal rows 
     InstrumentSynth::RoutingContext routingContext;
     routingContext.defaultInstrument = &instrument;
     routingContext.allowedArticulationNameIds = { bowId, edgeId, pedalId };
-    routingContext.allowedArticulationFilters = { "bow" };
+    routingContext.allowedArticulationFilters = { "bow", "edge", "pedal" };
     routingContext.artNameRemap[bowId] = edgeId;
     routingContext.strictArticulationResolution = true;
 
