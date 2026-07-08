@@ -261,6 +261,7 @@ Implementation status:
 - Destination ownership checks now read this route snapshot first, with old engine-provided destination keys kept as fallback for alias compatibility.
 - Runtime note, sample, and controller table apply now loops over the stored route snapshot instead of applying directly from the old binding list.
 - Primary `noteToArticulation` is now filled from the stored route snapshot during resolved routing apply. Alias fallback is also stored as alias route-plan entries and applied by the same route apply helper.
+- Alias route entries are skipped when the same destination articulation already has a normal route, so fallback aliases do not overwrite explicit routes.
 - Still open: hihat controller sibling loading still needs the full route-plan path from this stage plus Stage 6.
 
 ## Stage 6 - Document And Preserve Hihat Expression Routing

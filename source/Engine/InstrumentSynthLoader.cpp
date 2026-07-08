@@ -387,6 +387,15 @@ void InstrumentSynth::storeAliasArticulationRoutes(const KitLayout::InstrumentSl
         const auto aliasIt = routingContext.artAliases.find(layoutArt.nameId);
         if (aliasIt == routingContext.artAliases.end()) continue;
 
+        bool hasNormalRoute = false;
+        for (const auto& route : this->resolvedArticulationRoutes) {
+            if (!route.isAliasRoute && !route.isControllerSibling && route.destinationArtNameId == layoutArt.nameId && route.destinationExprId == layoutArt.exprId) {
+                hasNormalRoute = true;
+                break;
+            }
+        }
+        if (hasNormalRoute) continue;
+
         ResolvedArticulationRoute aliasRoute(layoutArt);
         aliasRoute.aliasTarget = aliasIt->second;
         aliasRoute.isAliasRoute = true;
