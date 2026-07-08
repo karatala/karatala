@@ -255,6 +255,7 @@ public:
         KitLib::InstrumentSpec* defaultInstrument = nullptr;
         ArticulationSourceMap artSources;
         std::vector<uint32_t> allowedArticulationNameIds;
+        std::vector<juce::String> allowedArticulationFilters;
         ArticulationNameRemap artNameRemap;
         ArticulationAliasMap artAliases;
         bool strictArticulationResolution = false;
@@ -281,8 +282,8 @@ public:
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot);
     void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources);
-    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {}, bool strictArticulationResolution = false);
-    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot, bool strictArticulationResolution = false);
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {}, bool strictArticulationResolution = false);
+    void loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot, bool strictArticulationResolution = false);
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
     void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
@@ -580,7 +581,7 @@ private:
     static uint64_t makeDestinationRouteKey(uint32_t destinationArtNameId, uint32_t destinationExprId) {
         return (static_cast<uint64_t>(destinationArtNameId) << 32) | static_cast<uint64_t>(destinationExprId);
     }
-    void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution);
+    void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution);
     void resetRoutingTables();
     void rebuildArtLookupCache();
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
@@ -591,7 +592,7 @@ private:
     bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     void refreshRuntimeExpressionValues(const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt);
     void applyArticulationAliases(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
-    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {}, bool strictArticulationResolution = false);
+    void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const std::vector<juce::String>& allowedArticulationFilters = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationAliasMap& artAliases = {}, bool strictArticulationResolution = false);
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec

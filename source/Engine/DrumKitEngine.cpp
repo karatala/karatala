@@ -1761,11 +1761,14 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         if (std::find(routes.begin(), routes.end(), route) == routes.end()) routes.push_back(route);
     };
 
-    auto collectPrimaryDestinationRoutes = [&addDestinationRoute](const KitLayout::InstrumentSlot& slotLayout, const std::vector<uint32_t>& allowedArticulationIds, const InstrumentSynth::ArticulationAliasMap& artAliases) {
+    auto collectPrimaryDestinationRoutes = [&addDestinationRoute](const KitLayout::InstrumentSlot& slotLayout, const std::vector<uint32_t>& allowedArticulationIds, const std::vector<juce::String>& artFilters, const InstrumentSynth::ArticulationAliasMap& artAliases) {
         std::vector<std::pair<uint32_t, uint32_t>> routes;
         for (const auto& layoutArt : slotLayout.articulations) {
-            if (vectorContains(allowedArticulationIds, layoutArt.nameId) || artAliases.find(layoutArt.nameId) != artAliases.end())
-                addDestinationRoute(routes, layoutArt.nameId, layoutArt.exprId);
+            bool routesArt = artFilters.empty() ? vectorContains(allowedArticulationIds, layoutArt.nameId) : false;
+            for (const auto& artFilter : artFilters) {
+                if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, layoutArt.codeRaw)) routesArt = true;
+            }
+            if (routesArt || artAliases.find(layoutArt.nameId) != artAliases.end()) addDestinationRoute(routes, layoutArt.nameId, layoutArt.exprId);
         }
         return routes;
     };
@@ -2107,8 +2110,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
             const bool primaryStrictArticulationResolution = !primary.effectiveFilter.empty() || !primaryRemap.empty();
-            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primaryRemap, artAliases, librarySnapshot, primaryStrictArticulationResolution);
-            replacement->setDestinationRoutes(collectPrimaryDestinationRoutes(slotLayout, primaryAllowedArticulationIds, artAliases));
+            replacement->loadInstrumentWithSources(primary.instSpec, artSources, primaryAllowedArticulationIds, primary.effectiveFilter, primaryRemap, artAliases, librarySnapshot, primaryStrictArticulationResolution);
+            replacement->setDestinationRoutes(collectPrimaryDestinationRoutes(slotLayout, primaryAllowedArticulationIds, primary.effectiveFilter, artAliases));
             applyOverrides(*replacement, *primary.entry);
             LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
@@ -2131,7 +2134,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
                 const bool shadowStrictArticulationResolution = !shadowPlan.articulations.empty() || !shadowPlan.artNameRemap.empty();
-                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.artNameRemap, artAliases, librarySnapshot, shadowStrictArticulationResolution);
+                shadowRaw->loadInstrumentWithSources(shadowPlan.instSpec, {}, shadowArtIds, shadowPlan.articulations, shadowPlan.artNameRemap, artAliases, librarySnapshot, shadowStrictArticulationResolution);
                 shadowRaw->setDestinationRoutes(collectShadowDestinationRoutes(slotLayout, shadowPlan.articulations, artAliases, fallbackLayoutArtId));
                 applyOverrides(*shadowRaw, *shadowPlan.entry);
                 if (LOG_ENABLED(Info)) {

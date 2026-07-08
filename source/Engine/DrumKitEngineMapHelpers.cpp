@@ -298,7 +298,7 @@ std::unique_ptr<InstrumentSynth> createReplacementSynth(
     const auto librarySnapshot = source.getLibrarySnapshot();
     const auto& routingContext = source.getLastRoutingContext();
     if (routingContext.isValid()) {
-        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.artNameRemap, routingContext.artAliases, librarySnapshot, routingContext.strictArticulationResolution);
+        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.allowedArticulationFilters, routingContext.artNameRemap, routingContext.artAliases, librarySnapshot, routingContext.strictArticulationResolution);
     } else if (auto* loadedInstrument = source.getLoadedInstrumentSpec()) {
         replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument), librarySnapshot);
     }

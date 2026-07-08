@@ -1,6 +1,7 @@
 #pragma once
 
 #include "InstrumentSynth.h"
+#include "ArticulationNameHelpers.h"
 #include "DrumKitEngine.h"
 #include "MicRoutingBuilder.h"
 #include "SampleLoader.h"
@@ -9,10 +10,11 @@ const MicLayout* InstrumentSynth::getMicLayout() const { return this->parent ? t
 const MicRoutingPlan* InstrumentSynth::getMicRoutingPlan() const { return this->parent ? this->parent->getMicRoutingPlan() : nullptr; }
 SampleLoader* InstrumentSynth::getSampleLoader() { return this->parent ? this->parent->getSampleLoader() : nullptr; }
 
-void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
+void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
     this->lastRoutingContext.defaultInstrument = defaultInstSpec;
     this->lastRoutingContext.artSources = artSources;
     this->lastRoutingContext.allowedArticulationNameIds = allowedArticulationNameIds;
+    this->lastRoutingContext.allowedArticulationFilters = allowedArticulationFilters;
     this->lastRoutingContext.artNameRemap = artNameRemap;
     this->lastRoutingContext.artAliases = artAliases;
     this->lastRoutingContext.strictArticulationResolution = strictArticulationResolution;
@@ -99,11 +101,11 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->loadInstrumentWithSources(defaultInstrument, artSources, {});
 }
 
-void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
-    this->loadInstrumentWithSources(defaultInstrument, artSources, allowedArticulationNameIds, artNameRemap, artAliases, nullptr, strictArticulationResolution);
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
+    this->loadInstrumentWithSources(defaultInstrument, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artAliases, nullptr, strictArticulationResolution);
 }
 
-void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot, bool strictArticulationResolution) {
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot, bool strictArticulationResolution) {
     if (defaultInstrument == nullptr) return;
     this->unloadInstrument();
 
@@ -111,7 +113,7 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->instrumentSpecstPtr = defaultInstrument;
     this->type = defaultInstrument->meta.type;
 
-    this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds, artNameRemap, artAliases, strictArticulationResolution);
+    this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artAliases, strictArticulationResolution);
 }
 
 void InstrumentSynth::clearParameterOverrides() {
@@ -217,7 +219,16 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
     bindings.reserve(layoutSlot.articulations.size());
 
     for (const auto& layoutArt : layoutSlot.articulations) {
-        if (!routingContext.allowedArticulationNameIds.empty() && !vectorContains(routingContext.allowedArticulationNameIds, layoutArt.nameId)) continue;
+        if (!routingContext.allowedArticulationFilters.empty()) {
+            bool matchesFilter = false;
+            for (const auto& artFilter : routingContext.allowedArticulationFilters) {
+                if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, layoutArt.codeRaw)) {
+                    matchesFilter = true;
+                    break;
+                }
+            }
+            if (!matchesFilter) continue;
+        } else if (!routingContext.allowedArticulationNameIds.empty() && !vectorContains(routingContext.allowedArticulationNameIds, layoutArt.nameId)) continue;
 
         ResolvedArticulationBinding binding(layoutArt);
         binding.sourceInstrument = routingContext.defaultInstrument;
@@ -346,10 +357,10 @@ void InstrumentSynth::applyArticulationAliases(const KitLayout::InstrumentSlot& 
     }
 }
 
-void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
+void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
     if (defaultInstSpec == nullptr) return;
 
-    this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, artNameRemap, artAliases, strictArticulationResolution);
+    this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artAliases, strictArticulationResolution);
 
     LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + defaultInstSpec->meta.codeRaw + ":");
     for (const auto& artSpec : defaultInstSpec->articulationSpecs) {
