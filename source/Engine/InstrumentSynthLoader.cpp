@@ -296,24 +296,18 @@ void InstrumentSynth::storeResolvedArticulationRoutes(const std::vector<Resolved
     for (const auto& binding : bindings) {
         if (binding.sourceInstrument == nullptr || binding.resolvedSpec == nullptr) continue;
 
-        ResolvedArticulationRoute route;
-        route.destinationArtNameId = binding.layoutArt.nameId;
-        route.destinationExprId = binding.layoutArt.exprId;
+        ResolvedArticulationRoute route(binding.layoutArt);
         route.sourceInstrument = binding.sourceInstrument;
         route.sourceArticulation = binding.resolvedSpec;
-        route.midiNotes = binding.layoutArt.notes;
         route.isExplicitMapRoute = binding.strictArticulationResolution;
         this->resolvedArticulationRoutes.push_back(std::move(route));
 
         for (auto* siblingSpec : binding.controllerSiblingSpecs) {
             if (siblingSpec == nullptr) continue;
 
-            ResolvedArticulationRoute siblingRoute;
-            siblingRoute.destinationArtNameId = binding.layoutArt.nameId;
-            siblingRoute.destinationExprId = binding.layoutArt.exprId;
+            ResolvedArticulationRoute siblingRoute(binding.layoutArt);
             siblingRoute.sourceInstrument = binding.sourceInstrument;
             siblingRoute.sourceArticulation = siblingSpec;
-            siblingRoute.midiNotes = binding.layoutArt.notes;
             siblingRoute.isExplicitMapRoute = binding.strictArticulationResolution;
             siblingRoute.isControllerSibling = true;
             this->resolvedArticulationRoutes.push_back(std::move(siblingRoute));
@@ -321,7 +315,10 @@ void InstrumentSynth::storeResolvedArticulationRoutes(const std::vector<Resolved
     }
 }
 
-void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, bool updateNoteRoutes, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
+void InstrumentSynth::applyResolvedArticulationRoute(const ResolvedArticulationRoute& route, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
+    auto* sourceInstrument = route.sourceInstrument;
+    auto* artSpec = route.sourceArticulation;
+    const auto& layoutArt = route.destinationLayoutArt;
     if (artSpec == nullptr || sourceInstrument == nullptr) return;
 
     ArtRtIdx artIdx = -1;
@@ -337,8 +334,8 @@ void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation&
         this->refreshRuntimeExpressionValues(*artSpec, artRt);
         this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
     }
-    if (updateNoteRoutes) {
-        for (uint8_t note : layoutArt.notes) this->noteToArticulation[note] = artIdx;
+    if (!route.isControllerSibling) {
+        for (uint8_t note : route.midiNotes) this->noteToArticulation[note] = artIdx;
     }
 }
 
@@ -347,22 +344,15 @@ void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulatio
     CcDimensionsMap foundCcDimensions;
     std::set<juce::String> skippedMicCodes;
 
-    for (const auto& binding : bindings) {
-        LOG(Info, "  Loading articulation: " + binding.layoutArt.codeRaw + " (notes " + midiVectorToString(binding.layoutArt.notes) + ")");
-
-        if (binding.layoutArt.nameId != binding.resolvedLayoutArt.nameId) {
-            LOG(Info, "    remap: layout art '" + binding.layoutArt.codeRaw + "' (nameId=" + juce::String((int)binding.layoutArt.nameId)
-                + ") -> resolve as nameId=" + juce::String((int)binding.resolvedLayoutArt.nameId)
-                + " ('" + StringsDictSingleton::nameOf(binding.resolvedLayoutArt.nameId) + "')");
+    for (const auto& route : this->resolvedArticulationRoutes) {
+        if (!route.isControllerSibling) {
+            LOG(Info, "  Loading articulation: " + route.destinationLayoutArt.codeRaw + " (notes " + midiVectorToString(route.midiNotes) + ")");
+            if (route.sourceArticulation != nullptr) {
+                LOG(Info, "    resolved: layout='" + route.destinationLayoutArt.codeRaw + "' -> artSpec='" + route.sourceArticulation->codeRaw
+                    + "' (nameId=" + juce::String((int)route.sourceArticulation->nameId) + " exprId=" + juce::String((int)route.sourceArticulation->exprId) + ")");
+            }
         }
-        if (binding.resolvedSpec != nullptr) {
-            LOG(Info, "    resolved: layout='" + binding.layoutArt.codeRaw + "' -> artSpec='" + binding.resolvedSpec->codeRaw
-                + "' (nameId=" + juce::String((int)binding.resolvedSpec->nameId) + " exprId=" + juce::String((int)binding.resolvedSpec->exprId) + ")");
-        }
-        this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, binding.resolvedSpec, loadSamples, createIfMissing, true, foundCcDimensions, skippedMicCodes);
-
-        for (auto* siblingSpec : binding.controllerSiblingSpecs)
-            this->applyResolvedArticulationBinding(binding.layoutArt, binding.sourceInstrument, siblingSpec, loadSamples, createIfMissing, false, foundCcDimensions, skippedMicCodes);
+        this->applyResolvedArticulationRoute(route, loadSamples, createIfMissing, foundCcDimensions, skippedMicCodes);
     }
 
     if (loadSamples && !skippedMicCodes.empty() && LOG_ENABLED(Notice)) {

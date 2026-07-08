@@ -259,7 +259,8 @@ Implementation status:
 - The synth routing context now keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
 - Implemented the first `InstrumentSynth` resolved-route snapshot. It stores destination articulation, source instrument, source articulation, destination notes, explicit-map flag, and controller-sibling flag from the existing resolved binding path.
 - Destination ownership checks now read this route snapshot first, with old engine-provided destination keys kept as fallback for alias compatibility.
-- Still open: primary `noteToArticulation` is still built inside `InstrumentSynth` from layout plus routing context. The stored route snapshot is not used as the playback source of truth yet.
+- Runtime note, sample, and controller table apply now loops over the stored route snapshot instead of applying directly from the old binding list.
+- Partly implemented: primary `noteToArticulation` is now filled from the stored route snapshot during resolved routing apply. Alias fallback still updates `noteToArticulation` after that.
 - Still open: hihat controller sibling loading still needs the full route-plan path from this stage plus Stage 6.
 
 ## Stage 6 - Document And Preserve Hihat Expression Routing
@@ -327,7 +328,7 @@ Implementation status:
 - Cross-art remap can now include source expression id, so destination `rim` can resolve to source `center[muff]` instead of plain `center`.
 - Alias fallback now stores source name plus expression target. This keeps old fallback but makes expression-specific aliases less blind.
 - Destination-route ownership for primary synths now uses exact map filters when they exist, instead of only base articulation ids.
-- Partly implemented: ownership checks can read the stored route-plan snapshot now. Still open: runtime table building must use the route plan before `noteToArticulation` is only a final lookup table.
+- Partly implemented: ownership checks and resolved-routing runtime table apply now read the stored route-plan snapshot. Still open: alias fallback should be represented in the route plan before `noteToArticulation` is only a final lookup table.
 
 ## Stage 8 - Tests To Add
 

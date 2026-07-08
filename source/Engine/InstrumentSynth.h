@@ -538,6 +538,7 @@ private:
     };
 
     struct ResolvedArticulationRoute {
+        LayoutArticulation destinationLayoutArt;
         uint32_t destinationArtNameId = 0;
         uint32_t destinationExprId = 0;
         KitLib::InstrumentSpec* sourceInstrument = nullptr;
@@ -545,6 +546,12 @@ private:
         std::vector<uint8_t> midiNotes;
         bool isExplicitMapRoute = false;
         bool isControllerSibling = false;
+        explicit ResolvedArticulationRoute(const LayoutArticulation& destinationLayoutArt)
+            : destinationLayoutArt(destinationLayoutArt)
+            , destinationArtNameId(destinationLayoutArt.nameId)
+            , destinationExprId(destinationLayoutArt.exprId)
+            , midiNotes(destinationLayoutArt.notes)
+        {}
     };
 
     // Runtime optimized tables for fast selection (populated by loadInstrument)
@@ -607,7 +614,7 @@ private:
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void storeResolvedArticulationRoutes(const std::vector<ResolvedArticulationBinding>& bindings);
-    void applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, bool updateNoteRoutes, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
+    void applyResolvedArticulationRoute(const ResolvedArticulationRoute& route, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
     std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
