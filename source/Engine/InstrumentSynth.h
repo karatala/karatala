@@ -544,8 +544,10 @@ private:
         KitLib::InstrumentSpec* sourceInstrument = nullptr;
         KitLib::ArticulationSpec* sourceArticulation = nullptr;
         std::vector<uint8_t> midiNotes;
+        ArticulationTarget aliasTarget;
         bool isExplicitMapRoute = false;
         bool isControllerSibling = false;
+        bool isAliasRoute = false;
         explicit ResolvedArticulationRoute(const LayoutArticulation& destinationLayoutArt)
             : destinationLayoutArt(destinationLayoutArt)
             , destinationArtNameId(destinationLayoutArt.nameId)
@@ -614,12 +616,12 @@ private:
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void storeResolvedArticulationRoutes(const std::vector<ResolvedArticulationBinding>& bindings);
+    void storeAliasArticulationRoutes(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void applyResolvedArticulationRoute(const ResolvedArticulationRoute& route, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
-    void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
+    void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext, bool loadSamples, bool createIfMissing);
     std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     void refreshRuntimeExpressionValues(const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt);
-    void applyArticulationAliases(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds = {}, const std::vector<juce::String>& allowedArticulationFilters = {}, const ArticulationNameRemap& artNameRemap = {}, const ArticulationExactRemap& artExactRemap = {}, const ArticulationAliasMap& artAliases = {}, bool strictArticulationResolution = false);
     void processArticulationSpec(KitLib::InstrumentSpec* instSpec
         , const LayoutArticulation& layoutArt
