@@ -193,7 +193,7 @@ public:
         uint32_t exprId = 0;
     };
     using ArticulationExactRemap = std::unordered_map<uint64_t, ArticulationTarget>; // slotArt(name,expr) -> sourceArt(name,expr)
-    using ArticulationAliasMap = std::unordered_map<uint32_t, uint32_t>; // fallbackArtNameId -> sourceArtNameId
+    using ArticulationAliasMap = std::unordered_map<uint32_t, ArticulationTarget>; // fallbackArtNameId -> sourceArt(name,expr)
 
     // Runtime data structures built at loadInstrument() (non-realtime)
     struct SampleEntry {

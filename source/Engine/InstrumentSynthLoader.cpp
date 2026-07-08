@@ -352,11 +352,12 @@ void InstrumentSynth::applyArticulationAliases(const KitLayout::InstrumentSlot& 
         if (aliasIt == routingContext.artAliases.end())
             continue;
 
-        ArtRtIdx sourceArtIdx = this->findArticulationIndex(aliasIt->second, layoutArt.exprId);
-        if (sourceArtIdx < 0 && layoutArt.exprId != 0)
-            sourceArtIdx = this->findArticulationIndex(aliasIt->second, 0);
-        if (sourceArtIdx < 0)
-            continue;
+        const auto sourceTarget = aliasIt->second;
+        ArtRtIdx sourceArtIdx = -1;
+        if (sourceTarget.exprId != 0) sourceArtIdx = this->findArticulationIndex(sourceTarget.nameId, sourceTarget.exprId);
+        if (sourceArtIdx < 0) sourceArtIdx = this->findArticulationIndex(sourceTarget.nameId, layoutArt.exprId);
+        if (sourceArtIdx < 0 && layoutArt.exprId != 0) sourceArtIdx = this->findArticulationIndex(sourceTarget.nameId, 0);
+        if (sourceArtIdx < 0) continue;
 
         for (const auto note : layoutArt.notes) {
             if (note < 128)

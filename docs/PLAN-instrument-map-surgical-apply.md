@@ -255,6 +255,7 @@ Implementation status:
 - Articulation filters now use map filter matching, so `bow[open]` can stay exact while legacy `bow` can still match the bow family.
 - Explicit articulation-filter/remap loads now use exact source-art resolution. Default full-instrument loads still keep old fallback behavior.
 - Explicit source expressions are now carried in a small exact remap, so `center[muff]` stays `center[muff]` during source-art lookup.
+- Empty-art alias fallback now carries source expression when one is explicit, so alias routes can prefer `center[muff]` over plain `center`.
 - The synth routing context now keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
 - Still open: primary `noteToArticulation` is still built inside `InstrumentSynth` from layout plus routing context. The full resolved-route object is not implemented yet.
 - Still open: hihat controller sibling loading still needs the full route-plan path from this stage plus Stage 6.
@@ -322,6 +323,7 @@ Implementation status:
 - Parameter-update layer matching now uses destination-route ownership when available. It keeps old note matching only as fallback for synths without ownership.
 - Explicit source-art fallback is now disabled for explicit articulation-filter/remap loads. Default full-instrument loads still allow fallback.
 - Cross-art remap can now include source expression id, so destination `rim` can resolve to source `center[muff]` instead of plain `center`.
+- Alias fallback now stores source name plus expression target. This keeps old fallback but makes expression-specific aliases less blind.
 - Destination-route ownership for primary synths now uses exact map filters when they exist, instead of only base articulation ids.
 - Still open: full route-plan ownership is needed before `noteToArticulation` is only a final lookup table.
 

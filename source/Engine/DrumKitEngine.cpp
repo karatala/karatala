@@ -2048,13 +2048,26 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         }
 
         uint32_t fallbackLayoutArtId = 0;
-        uint32_t fallbackSourceArtId = 0;
+        InstrumentSynth::ArticulationTarget fallbackSourceArt;
         if (slotLayout.controllers.empty()) {
             for (const auto& primaryArtName : primary.effectiveFilter) {
                 if (primaryArtName.isEmpty())
                     continue;
                 fallbackLayoutArtId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(primaryArtName));
-                fallbackSourceArtId = DrumKitEngineMapHelpers::resolveEntrySourceArtId(*primary.entry, primaryArtName);
+                fallbackSourceArt.nameId = DrumKitEngineMapHelpers::resolveEntrySourceArtId(*primary.entry, primaryArtName);
+                if (!primary.entry->articulationFilter.empty()) {
+                    if (primary.entry->slotArticulationFilter.empty()) {
+                        const KitLayout::InstrumentSlot::ArticulationTrigger sourceArt(primary.entry->articulationFilter.front());
+                        fallbackSourceArt.exprId = sourceArt.exprId;
+                    } else {
+                        for (size_t artIdx = 0; artIdx < primary.entry->slotArticulationFilter.size() && artIdx < primary.entry->articulationFilter.size(); ++artIdx) {
+                            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(primary.entry->slotArticulationFilter[artIdx], primaryArtName)) continue;
+                            const KitLayout::InstrumentSlot::ArticulationTrigger sourceArt(primary.entry->articulationFilter[artIdx]);
+                            fallbackSourceArt.exprId = sourceArt.exprId;
+                            break;
+                        }
+                    }
+                }
                 break;
             }
         }
@@ -2063,7 +2076,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         // Controller-driven slots keep their existing primary fallback so CC tables remain intact.
         for (const auto& layoutArt : slotLayout.articulations) {
             if (vectorContains(claimedArticulations, layoutArt.nameId)) continue;
-            if (fallbackSourceArtId != 0) artAliases[layoutArt.nameId] = fallbackSourceArtId;
+            if (fallbackSourceArt.nameId != 0) artAliases[layoutArt.nameId] = fallbackSourceArt;
             else DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
         }
 
