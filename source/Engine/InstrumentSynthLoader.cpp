@@ -241,16 +241,18 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
     bindings.reserve(layoutSlot.articulations.size());
 
     for (const auto& layoutArt : layoutSlot.articulations) {
-        if (!routingContext.allowedArticulationFilters.empty()) {
-            bool matchesFilter = false;
-            for (const auto& artFilter : routingContext.allowedArticulationFilters) {
-                if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, layoutArt.codeRaw)) {
-                    matchesFilter = true;
-                    break;
-                }
-            }
-            if (!matchesFilter) continue;
-        } else if (!routingContext.allowedArticulationNameIds.empty() && !vectorContains(routingContext.allowedArticulationNameIds, layoutArt.nameId)) continue;
+        //FIXME: temporarily commented "InstrumentSynthLoader now uses those filters with mapFilterMatchesArticulation()" cause it broke many things
+        // if (!routingContext.allowedArticulationFilters.empty()) {
+        //     bool matchesFilter = false;
+        //     for (const auto& artFilter : routingContext.allowedArticulationFilters) {
+        //         if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, layoutArt.codeRaw)) {
+        //             matchesFilter = true;
+        //             break;
+        //         }
+        //     }
+        //     if (!matchesFilter) continue;
+        // } else 
+        if (!routingContext.allowedArticulationNameIds.empty() && !vectorContains(routingContext.allowedArticulationNameIds, layoutArt.nameId)) continue;
 
         ResolvedArticulationBinding binding(layoutArt);
         binding.sourceInstrument = routingContext.defaultInstrument;

@@ -172,6 +172,45 @@ KitLib::InstrumentSpec::MetaInfo makeStackInstrumentMeta(const juce::String& cod
     return meta;
 }
 
+KitLib::InstrumentSpec::MetaInfo makeRouteInstrumentMeta(const juce::String& codeRaw, KitLib::InstrumentSpec::Type type) {
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = codeRaw;
+    meta.type = type;
+    return meta;
+}
+
+void addSlotArticulation(KitLayout::InstrumentSlot& slot, const juce::String& codeRaw, uint8_t midiNote) {
+    KitLayout::InstrumentSlot::ArticulationTrigger trigger { codeRaw };
+    trigger.notes.push_back(midiNote);
+    slot.articulations.push_back(std::move(trigger));
+}
+
+bool hasNormalRoute(const std::vector<InstrumentSynth::ResolvedArticulationRoute>& routes, const juce::String& destinationCodeRaw, const juce::String& sourceCodeRaw) {
+    for (const auto& route : routes) {
+        if (route.isAliasRoute || route.isControllerSibling) continue;
+        if (route.sourceArticulation == nullptr) continue;
+        if (route.destinationLayoutArt.codeRaw == destinationCodeRaw && route.sourceArticulation->codeRaw == sourceCodeRaw) return true;
+    }
+    return false;
+}
+
+bool ownsDestinationRoute(const std::vector<InstrumentSynth::ResolvedArticulationRoute>& routes, const juce::String& destinationCodeRaw) {
+    for (const auto& route : routes) {
+        if (route.isAliasRoute || route.isControllerSibling) continue;
+        if (route.destinationLayoutArt.codeRaw == destinationCodeRaw) return true;
+    }
+    return false;
+}
+
+bool hasControllerSiblingRoute(const std::vector<InstrumentSynth::ResolvedArticulationRoute>& routes, const juce::String& destinationCodeRaw, const juce::String& sourceCodeRaw) {
+    for (const auto& route : routes) {
+        if (!route.isControllerSibling) continue;
+        if (route.sourceArticulation == nullptr) continue;
+        if (route.destinationLayoutArt.codeRaw == destinationCodeRaw && route.sourceArticulation->codeRaw == sourceCodeRaw) return true;
+    }
+    return false;
+}
+
 KitLib::InstrumentSpec::MetaInfo makeInstrumentMeta() {
     KitLib::InstrumentSpec::MetaInfo meta;
     meta.codeRaw = "hihat-test";
@@ -314,9 +353,9 @@ TEST_CASE("InstrumentSynth - simple empty articulation aliases to first mapped l
     InstrumentSynth::ArticulationNameRemap remap;
     remap[bowId] = edgeId;
     InstrumentSynth::ArticulationAliasMap aliases;
-    aliases[edgeId] = edgeId;
+    aliases[edgeId] = { edgeId, 0 };
 
-    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap, aliases);
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, {}, remap, {}, aliases);
 
     const int bowArtIdx = synth.resolveArticulation(39);
     const int edgeArtIdx = synth.resolveArticulation(15);
@@ -338,7 +377,7 @@ TEST_CASE("InstrumentSynth - explicit articulation does not inherit simple fallb
     InstrumentSynth::ArticulationNameRemap remap;
     remap[bowId] = edgeId;
 
-    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap, {});
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, {}, remap, {}, {});
 
     REQUIRE(synth.resolveArticulation(39) >= 0);
     CHECK(synth.resolveArticulation(15) < 0);
@@ -357,15 +396,111 @@ TEST_CASE("InstrumentSynth - simple articulation aliases survive routing rebuild
     InstrumentSynth::ArticulationNameRemap remap;
     remap[bowId] = edgeId;
     InstrumentSynth::ArticulationAliasMap aliases;
-    aliases[edgeId] = edgeId;
+    aliases[edgeId] = { edgeId, 0 };
 
-    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap, aliases);
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, {}, remap, {}, aliases);
     synth.rebuildRoutingFromLayout(slot);
 
     const int bowArtIdx = synth.resolveArticulation(39);
     const int edgeArtIdx = synth.resolveArticulation(15);
     REQUIRE(bowArtIdx >= 0);
     REQUIRE(edgeArtIdx == bowArtIdx);
+}
+
+TEST_CASE("InstrumentSynth - current route list keeps later primary destination ids when first filter is narrow", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "crash1";
+    slot.type = KitLib::InstrumentSpec::Type::Crash;
+    addSlotArticulation(slot, "bow", 25);
+    addSlotArticulation(slot, "edge", 49);
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("crash-source", KitLib::InstrumentSpec::Type::Crash) };
+    instrument.getOrAddArticulation("bow");
+    instrument.getOrAddArticulation("edge");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    InstrumentSynth::RoutingContext routingContext;
+    routingContext.defaultInstrument = &instrument;
+    routingContext.allowedArticulationNameIds = { bowId, edgeId };
+    routingContext.allowedArticulationFilters = { "bow" };
+    routingContext.strictArticulationResolution = true;
+
+    const auto routes = synth.buildResolvedRouteList(slot, routingContext);
+
+    CHECK(hasNormalRoute(routes, "bow", "bow"));
+    CHECK(hasNormalRoute(routes, "edge", "edge"));
+}
+
+TEST_CASE("InstrumentSynth - current route list keeps destination rim while source is center", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.type = KitLib::InstrumentSpec::Type::Snare;
+    addSlotArticulation(slot, "center", 38);
+    addSlotArticulation(slot, "rim", 40);
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("snare-source", KitLib::InstrumentSpec::Type::Snare) };
+    instrument.getOrAddArticulation("center");
+
+    const auto centerId = StringsDictSingleton::getId("center");
+    const auto rimId = StringsDictSingleton::getId("rim");
+    InstrumentSynth::RoutingContext routingContext;
+    routingContext.defaultInstrument = &instrument;
+    routingContext.allowedArticulationNameIds = { centerId, rimId };
+    routingContext.allowedArticulationFilters = { "center" };
+    routingContext.artNameRemap[rimId] = centerId;
+    routingContext.strictArticulationResolution = true;
+
+    const auto routes = synth.buildResolvedRouteList(slot, routingContext);
+
+    CHECK(hasNormalRoute(routes, "center", "center"));
+    CHECK(hasNormalRoute(routes, "rim", "center"));
+}
+
+TEST_CASE("InstrumentSynth - current hihat route list keeps edge and pedal rows when first filter is bow", "[InstrumentSynth][InstrumentMap][ExpressionPoints][CurrentRouting]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "hihat1";
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+    addSlotArticulation(slot, "bow[open]", 46);
+    addSlotArticulation(slot, "bow[tight]", 42);
+    addSlotArticulation(slot, "edge[open]", 22);
+    addSlotArticulation(slot, "edge[tight]", 18);
+    addSlotArticulation(slot, "pedal", 44);
+    KitLayout::InstrumentSlot::ContinuousController pedalController { 1, "pdl_opn_cls" };
+    pedalController.notes.push_back(22);
+    pedalController.notes.push_back(46);
+    slot.controllers.push_back(std::move(pedalController));
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("hihat-source", KitLib::InstrumentSpec::Type::HiHat) };
+    instrument.getOrAddArticulation("edge[open]");
+    instrument.getOrAddArticulation("edge[half]");
+    instrument.getOrAddArticulation("edge[close]");
+    instrument.getOrAddArticulation("edge[tight]");
+    instrument.getOrAddArticulation("pedal");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    const auto pedalId = StringsDictSingleton::getId("pedal");
+    InstrumentSynth::RoutingContext routingContext;
+    routingContext.defaultInstrument = &instrument;
+    routingContext.allowedArticulationNameIds = { bowId, edgeId, pedalId };
+    routingContext.allowedArticulationFilters = { "bow" };
+    routingContext.artNameRemap[bowId] = edgeId;
+    routingContext.strictArticulationResolution = true;
+
+    const auto routes = synth.buildResolvedRouteList(slot, routingContext);
+
+    CHECK(hasNormalRoute(routes, "bow[open]", "edge[open]"));
+    CHECK(hasNormalRoute(routes, "edge[open]", "edge[open]"));
+    CHECK(hasNormalRoute(routes, "pedal", "pedal"));
+    CHECK(hasControllerSiblingRoute(routes, "bow[open]", "edge[half]"));
+    CHECK(ownsDestinationRoute(routes, "edge[tight]"));
 }
 
 TEST_CASE("InstrumentSynth - implicit pdl_opn_cls points route simplified hi-hat articulations", "[InstrumentSynth][ExpressionPoints]") {
@@ -539,7 +674,7 @@ TEST_CASE("InstrumentSynth - zone controller siblings preserve hihat note expres
     const auto edgeId = StringsDictSingleton::getId("edge");
     InstrumentSynth::ArticulationNameRemap remap;
     remap[bowId] = edgeId;
-    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, remap);
+    synth.loadInstrumentWithSources(&instrument, {}, { bowId }, {}, remap);
 
     const int openIdx = synth.resolveArticulation(46);
     const int tightIdx = synth.resolveArticulation(42);

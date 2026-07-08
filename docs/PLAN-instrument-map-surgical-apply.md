@@ -256,7 +256,7 @@ Implementation status:
 - Explicit articulation-filter/remap loads now use exact source-art resolution. Default full-instrument loads still keep old fallback behavior.
 - Explicit source expressions are now carried in a small exact remap, so `center[muff]` stays `center[muff]` during source-art lookup.
 - Empty-art alias fallback now carries source expression when one is explicit, so alias routes can prefer `center[muff]` over plain `center`.
-- The synth routing context now keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
+- //FIXME: temporarily disabled/commented in code! The synth routing context now keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
 - `InstrumentSynth` now keeps a simple route list. Each row says: these MIDI notes for this pad articulation should play this source instrument/articulation.
 - The instrument-map apply path now builds that route list before loading the synth, then passes the list into `InstrumentSynth`.
 - When the engine asks "does this synth play this pad articulation?", the synth checks that route list first. Old engine-provided route keys remain only as fallback.
