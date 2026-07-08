@@ -80,6 +80,7 @@ void InstrumentSynth::unloadInstrument() {
     this->librarySnapshotPtr.reset();
     this->lastRoutingContext = {};
     this->clearDestinationRoutes();
+    this->resolvedArticulationRoutes.clear();
     this->clearParameterOverrides();
 }
 
@@ -289,6 +290,37 @@ std::vector<InstrumentSynth::ResolvedArticulationBinding> InstrumentSynth::colle
     return bindings;
 }
 
+void InstrumentSynth::storeResolvedArticulationRoutes(const std::vector<ResolvedArticulationBinding>& bindings) {
+    this->resolvedArticulationRoutes.clear();
+
+    for (const auto& binding : bindings) {
+        if (binding.sourceInstrument == nullptr || binding.resolvedSpec == nullptr) continue;
+
+        ResolvedArticulationRoute route;
+        route.destinationArtNameId = binding.layoutArt.nameId;
+        route.destinationExprId = binding.layoutArt.exprId;
+        route.sourceInstrument = binding.sourceInstrument;
+        route.sourceArticulation = binding.resolvedSpec;
+        route.midiNotes = binding.layoutArt.notes;
+        route.isExplicitMapRoute = binding.strictArticulationResolution;
+        this->resolvedArticulationRoutes.push_back(std::move(route));
+
+        for (auto* siblingSpec : binding.controllerSiblingSpecs) {
+            if (siblingSpec == nullptr) continue;
+
+            ResolvedArticulationRoute siblingRoute;
+            siblingRoute.destinationArtNameId = binding.layoutArt.nameId;
+            siblingRoute.destinationExprId = binding.layoutArt.exprId;
+            siblingRoute.sourceInstrument = binding.sourceInstrument;
+            siblingRoute.sourceArticulation = siblingSpec;
+            siblingRoute.midiNotes = binding.layoutArt.notes;
+            siblingRoute.isExplicitMapRoute = binding.strictArticulationResolution;
+            siblingRoute.isControllerSibling = true;
+            this->resolvedArticulationRoutes.push_back(std::move(siblingRoute));
+        }
+    }
+}
+
 void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, bool updateNoteRoutes, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
     if (artSpec == nullptr || sourceInstrument == nullptr) return;
 
@@ -311,6 +343,7 @@ void InstrumentSynth::applyResolvedArticulationBinding(const LayoutArticulation&
 }
 
 void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing) {
+    this->storeResolvedArticulationRoutes(bindings);
     CcDimensionsMap foundCcDimensions;
     std::set<juce::String> skippedMicCodes;
 

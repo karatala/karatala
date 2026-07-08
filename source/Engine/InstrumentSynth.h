@@ -534,10 +534,21 @@ private:
         {}
     };
 
+    struct ResolvedArticulationRoute {
+        uint32_t destinationArtNameId = 0;
+        uint32_t destinationExprId = 0;
+        KitLib::InstrumentSpec* sourceInstrument = nullptr;
+        KitLib::ArticulationSpec* sourceArticulation = nullptr;
+        std::vector<uint8_t> midiNotes;
+        bool isExplicitMapRoute = false;
+        bool isControllerSibling = false;
+    };
+
     // Runtime optimized tables for fast selection (populated by loadInstrument)
     // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
     std::array<ArtRtIdx, 128> noteToArticulation;
     std::unordered_set<uint64_t> destinationRouteKeys;
+    std::vector<ResolvedArticulationRoute> resolvedArticulationRoutes;
     // Runtime articulations vector, index-stable after load
     std::vector<ArticulationRuntime> runtimeArticulations;
     // Flat map for O(1) articulation-index lookup by (nameId<<32|exprId) key - rebuilt after every load
@@ -592,6 +603,7 @@ private:
     void rebuildArtLookupCache();
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
+    void storeResolvedArticulationRoutes(const std::vector<ResolvedArticulationBinding>& bindings);
     void applyResolvedArticulationBinding(const LayoutArticulation& layoutArt, KitLib::InstrumentSpec* sourceInstrument, KitLib::ArticulationSpec* artSpec, bool loadSamples, bool createIfMissing, bool updateNoteRoutes, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, bool loadSamples, bool createIfMissing);
     std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
