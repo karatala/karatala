@@ -13,6 +13,7 @@
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 class DrumKitEngine {
 public:
@@ -271,7 +272,9 @@ private:
     void rebuildPrimaryInstrumentNoteRouting();
     void addShadowSynthNoteRoutes(InstrumentSynth& shadowSynth, const KitLayout::InstrumentSlot& layoutSlot);
     std::vector<int> getTargetNotesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const;
+    std::vector<std::pair<uint32_t, uint32_t>> getTargetRoutesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const;
     static bool synthMatchesTargetNotes(const InstrumentSynth& synth, const std::vector<int>& targetNotes);
+    static bool synthMatchesTargetRoutes(const InstrumentSynth& synth, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes, const std::vector<int>& fallbackTargetNotes);
     static bool synthRoutesLayoutArticulation(const InstrumentSynth& synth, const KitLayout::InstrumentSlot::ArticulationTrigger& art);
     static void applyLayerParameterUpdate(InstrumentSynth& synth, const LayerParameterUpdate& update);
     std::string makePreviewTargetCacheKey(const juce::String& kitCodeRaw,

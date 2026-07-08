@@ -251,8 +251,11 @@ Implementation status:
 - Primary and shadow engine note routing now use destination ownership when available, with old `supportsArticulation()` / `noteToArticulation` behavior only as fallback for synths without ownership.
 - Layout-change replacement synths copy destination ownership from the old synth.
 - This reduces shadow conflicts where a base-name match such as `bow` could catch `bow[open]` and `bow[tight]` together.
+- Fast parameter-update matching now uses destination-route ownership when available, with old note-route matching only as fallback for older synths without ownership.
+- Articulation filters now use map filter matching, so `bow[open]` can stay exact while legacy `bow` can still match the bow family.
+- Explicit articulation-filter/remap loads now use exact source-art resolution. Default full-instrument loads still keep old fallback behavior.
 - Still open: primary `noteToArticulation` is still built inside `InstrumentSynth` from layout plus routing context. The full resolved-route object is not implemented yet.
-- Still open: source-art fallback and hihat controller sibling loading still need the stricter route-plan path from this stage plus Stage 6.
+- Still open: hihat controller sibling loading still needs the full route-plan path from this stage plus Stage 6.
 
 ## Stage 6 - Document And Preserve Hihat Expression Routing
 
@@ -289,7 +292,7 @@ Verify:
 Remaining fragile points:
 
 - Older shadow routing used `supportsArticulation()` and could match by runtime/source articulation name instead of destination ownership.
-- Some parameter-update matching still uses note routes or `supportsArticulation()` as a proxy for ownership.
+- Parameter-update matching now prefers destination-route ownership when present, but still has fallback note matching for older synths without ownership.
 - Aliases can route destination notes to another source runtime art after bindings were already created.
 - A full route-plan object is still needed before `noteToArticulation` becomes only a final lookup table.
 
@@ -314,7 +317,8 @@ Verify:
 Implementation status:
 
 - Started through Stage 5. Destination-route ownership exists and is used by primary/shadow engine note routing when available.
-- Still open: parameter-update layer matching still has older note/source-art matching logic.
+- Parameter-update layer matching now uses destination-route ownership when available. It keeps old note matching only as fallback for synths without ownership.
+- Explicit source-art fallback is now disabled for explicit articulation-filter/remap loads. Default full-instrument loads still allow fallback.
 - Still open: full route-plan ownership is needed before `noteToArticulation` is only a final lookup table.
 
 ## Stage 8 - Tests To Add
