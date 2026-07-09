@@ -78,7 +78,7 @@ private:
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
         std::unique_ptr<CompactParameterControl> gainPot;
-        int pan = 0;
+        std::unique_ptr<CompactParameterControl> panPot;
         std::unique_ptr<juce::TextButton> flipLRButton;
         bool flipLRExplicit = false;
         std::unique_ptr<juce::TextButton> flipPhaseButton;

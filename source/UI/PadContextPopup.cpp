@@ -218,7 +218,7 @@ juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<i
     constexpr int groupPad = 4;
 
     constexpr int layerRowHeight = 68;
-    const int mainGroupWidth = potWidth * 4 + flipColumnWidth + groupPad * 2;
+    const int mainGroupWidth = potWidth * 5 + flipColumnWidth + groupPad * 2;
 
     int maxBleedCount = 0;
     for (const auto* layer : this->layerRows)
@@ -754,7 +754,6 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
 void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels) {
     auto* layer = this->layerRows.add(new LayerRow());
     layer->sourcePathHint = sourceFullPath;
-    layer->pan = pan;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
 
     // Source button (opens picker)
@@ -819,6 +818,19 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     this->layerContent.addAndMakeVisible(*layer->gainPot);
     layer->gainPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
     layer->gainPot->onDragEnd = [this] {
+        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    };
+
+    // Pan pot
+    layer->panPot = std::make_unique<CompactParameterControl>("Pan", -127.0, 127.0, 1.0, static_cast<double>(pan), [](double value) -> juce::String {
+        const int panValue = static_cast<int>(value);
+        if (panValue == 0) return "C";
+        return panValue < 0 ? "L" + juce::String(-panValue) : "R" + juce::String(panValue);
+    });
+    layer->panPot->setInteraction(0.0, 4.0, 1.0);
+    this->layerContent.addAndMakeVisible(*layer->panPot);
+    layer->panPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->panPot->onDragEnd = [this] {
         this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
     };
 
@@ -939,6 +951,7 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
     update.attackMs = static_cast<int>(layer->attackPot->getValue());
     update.decayMs = static_cast<int>(layer->decayPot->getValue());
     update.volumeDb = static_cast<float>(layer->gainPot->getValue());
+    update.pan = static_cast<int>(layer->panPot->getValue());
     update.flipLR = layer->flipLRButton->getToggleState();
     update.flipPhase = layer->flipPhaseButton->getToggleState();
 
@@ -949,10 +962,7 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
     }
     update.micBleedLevels = std::move(bleedLevels);
 
-    const auto& sourcePath = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].fullPath();
-    const int occurrenceIndex = this->getSourceOccurrenceIndex(layer);
-    if (occurrenceIndex >= 0)
-        this->engine.updateSlotSourceParameters(this->slotId, this->artName, sourcePath, occurrenceIndex, update);
+    this->engine.updateSlotParameters(this->slotId, this->artName, layerIndex + this->layerIndexOffset, update);
     this->mapTextDirty = true;
 }
 // Generate map text: rebuilds the full instrument map, replacing only this slot/art group
@@ -1011,7 +1021,8 @@ juce::String PadContextPopup::generateFullMapText() const {
         if (decayVal >= 0.0) params.add("decay=" + juce::String(static_cast<int>(decayVal)));
         double volVal = layer->gainPot->getValue();
         if (std::abs(volVal) > 0.01) params.add("vol=" + juce::String(volVal, 1));
-        if (layer->pan != 0) params.add("pan=" + juce::String(layer->pan));
+        int panValue = static_cast<int>(layer->panPot->getValue());
+        if (panValue != 0) params.add("pan=" + juce::String(panValue));
         if (layer->flipLRButton->getToggleState() || layer->flipLRExplicit)
             params.add("flipLR=" + juce::String(layer->flipLRButton->getToggleState() ? "1" : "0"));
         if (layer->flipPhaseButton->getToggleState()) params.add("flipPhase=1");
@@ -1328,8 +1339,8 @@ void PadContextPopup::resized() {
 
         rowArea.removeFromLeft(groupGap);
 
-        // Main params group: Tuning, Attack, Decay, Gain + L/R, phase
-        const int mainGroupW = potW * 4 + flipColW + groupPad * 2;
+        // Main params group: Tuning, Attack, Decay, Gain, Pan + L/R, phase
+        const int mainGroupW = potW * 5 + flipColW + groupPad * 2;
         auto mainGroupArea = rowArea.removeFromLeft(mainGroupW);
         layer->mainGroupBounds = mainGroupArea;
         auto mainInner = mainGroupArea.reduced(groupPad, 0);
@@ -1337,6 +1348,7 @@ void PadContextPopup::resized() {
         layer->attackPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
         layer->decayPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
         layer->gainPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+        layer->panPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
         auto flipArea = mainInner.removeFromLeft(flipColW).withHeight(potH);
         layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 4));
         layer->flipPhaseButton->setBounds(flipArea.reduced(2, 4));
