@@ -91,6 +91,18 @@ InstrumentSynth::ArtRtIdx InstrumentSynth::selectArticulationForController(ArtRt
 
 InstrumentSynth::ArtRtIdx InstrumentSynth::getVoiceRuntimeArticulationIdx(const InstrumentSynthVoice& voice) const {
     if (voice.artRuntimeIdx >= 0 && static_cast<size_t>(voice.artRuntimeIdx) < this->runtimeArticulations.size()) return voice.artRuntimeIdx;
+
+    if (const auto* sound = voice.getCurrentlyPlayingSound(); sound != nullptr && sound->sampleVariantSpec != nullptr) {
+        const auto* velocityLayer = sound->sampleVariantSpec->parent;
+        const auto* artSpec = velocityLayer != nullptr ? velocityLayer->parent : nullptr;
+        if (artSpec != nullptr) {
+            const uint64_t artKey = (static_cast<uint64_t>(artSpec->nameId) << 32) | static_cast<uint64_t>(artSpec->exprId);
+            const auto artCacheIt = this->artIdByNameExprId.find(artKey);
+            if (artCacheIt != this->artIdByNameExprId.end() && artCacheIt->second >= 0 && static_cast<size_t>(artCacheIt->second) < this->runtimeArticulations.size())
+                return static_cast<ArtRtIdx>(artCacheIt->second);
+        }
+    }
+
     for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx) {
         const auto& art = this->runtimeArticulations[artIdx];
         if (art.nameId == voice.artNameId && art.exprId == voice.artExprId) return static_cast<ArtRtIdx>(artIdx);
