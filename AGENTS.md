@@ -64,7 +64,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
-- speak in simplified english please, so even foreigner without tech background can understand what you mean, without fancy metaphors but better in simple examples
+- speak in simplified english please, so even a foreigner without tech background can understand what you mean, without fancy metaphors but using simple practical examples
 - no newlines between params in methods and conditions if line <200 symbols
 - Never use one-letter variable names. Use `idx` for index variables.
 - Use `this` when accessing class members from class methods.
@@ -72,6 +72,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - never create nameless namespace { ... } in the middle of code, use coresponding helper files
 - first write shorly in simple lang what code changes are you going to do (except .md files changes), then only after approve do.
 - do not build anything and run tests until asked
+- dont try to use apply_patch for your internal operations yet, there is issue: cannot read files in Windows sandbox, so use PowerShell
+- no need for backward compatibility, app is not yet released
 
 Read `DOX.md` before editing. This file is the repository-wide contract.
 
