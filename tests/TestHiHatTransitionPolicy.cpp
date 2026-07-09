@@ -46,6 +46,23 @@ TEST_CASE("HiHatTransitionPolicy - hysteresis covers MIDI boundaries and both di
             == 0);
 }
 
+TEST_CASE("HiHatTransitionPolicy - large closing jump can select tight directly", "[HiHatTransitionPolicy]") {
+    std::array<uint8_t, 128> articulationByCc {};
+    for (size_t controllerValue = 0; controllerValue < articulationByCc.size(); ++controllerValue) {
+        if (controllerValue <= 24)
+            articulationByCc[controllerValue] = 0;
+        else if (controllerValue <= 52)
+            articulationByCc[controllerValue] = 1;
+        else if (controllerValue <= 78)
+            articulationByCc[controllerValue] = 2;
+        else
+            articulationByCc[controllerValue] = 3;
+    }
+    const std::array<int, 4> pocByArticulation { 24, 52, 78, 85 };
+
+    REQUIRE(HiHatTransitionPolicy::selectOpennessArticulation(articulationByCc, pocByArticulation, 100, 10, 0, 2) == 3);
+}
+
 TEST_CASE("HiHatTransitionPolicy - direction distinguishes opening and closing", "[HiHatTransitionPolicy]") {
     REQUIRE(HiHatTransitionPolicy::getDirection(100, 40) == HiHatTransitionPolicy::Direction::Opening);
     REQUIRE(HiHatTransitionPolicy::getDirection(40, 100) == HiHatTransitionPolicy::Direction::Closing);

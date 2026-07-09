@@ -111,6 +111,7 @@ public:
         this->currentlyPlayingNote = -1;
         this->currentlyPlayingSound = nullptr;
         this->currentPlayingMidiChannel = 0;
+        this->artRuntimeIdx = -1;
         this->envelopeState = EnvelopeState::Idle;
     }
 
@@ -131,8 +132,9 @@ private:
 
     InstrumentSynth* owner = nullptr;
 
-    uint32_t artNameId;
-    uint32_t artExprId;
+    uint32_t artNameId = 0;
+    uint32_t artExprId = 0;
+    int8_t artRuntimeIdx = -1;
 
     int currentlyPlayingNote = -1;
     int currentPlayingMidiChannel = 0;
@@ -348,9 +350,9 @@ public:
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
     int resolveArticulation(int midiNoteNumber);
     int resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity);
-    bool startLayerVoices(ArticulationRuntime& art, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
+    bool startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
     void fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity);
-    void startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity);
+    void startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, ArtRtIdx artIdx, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity);
     void applyAftertouch(int midiChannel, int midiNoteNumber);
 
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
@@ -661,6 +663,8 @@ private:
     void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, ArtRtIdx artIdx, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
     int getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
+    ArtRtIdx getVoiceRuntimeArticulationIdx(const InstrumentSynthVoice& voice) const;
+    int getVoicePedalOpenCloseValue(const InstrumentSynthVoice& voice) const;
     ArtRtIdx selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const;
     bool controllerCanTransitionExistingVoices(int controllerNumber) const;
 

@@ -187,7 +187,7 @@ instruments:
       - { notes: [ 3], code: edge[tight] }
       - { notes: [ 8], code: pedal }
     controllers:
-      - { notes: [ 6,10], code: pdl_opn_cls, number: 4 }
+      - { notes: [7,10], code: pdl_opn_cls, number: 4 }
 
   - id: ride1
     display: Ride 1

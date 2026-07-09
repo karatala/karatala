@@ -62,6 +62,10 @@ struct InstrumentSynthTestAccess {
         voice.artExprId = articulationSpec.exprId;
     }
 
+    static void setVoiceRuntimeArticulation(InstrumentSynthVoice& voice, InstrumentSynth::ArtRtIdx articulationIdx) {
+        voice.artRuntimeIdx = articulationIdx;
+    }
+
     static void setPedalNote(InstrumentSynth& synth, int midiNoteNumber) {
         synth.hihatPedalNote = midiNoteNumber;
     }
@@ -896,6 +900,54 @@ TEST_CASE("InstrumentSynth - audible open tail creates a level-matched pedal eve
     const auto pedalEventId = fixture.pedalVoice->getEventId();
     fixture.synth.handleController(1, 4, 100);
     REQUIRE(fixture.pedalVoice->getEventId() == pedalEventId);
+}
+
+TEST_CASE("InstrumentSynth - hihat note choke uses exact runtime articulation when source names repeat", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
+    ControllerTransitionFixture fixture;
+    fixture.tightVoice->killImmediately();
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(fixture.synth);
+    InstrumentSynth::ArticulationRuntime plainOpen { fixture.openSpec.nameId, fixture.openSpec.exprId };
+    plainOpen.pedalOpenCloseValue = -1;
+    articulations.insert(articulations.begin(), std::move(plainOpen));
+    InstrumentSynthTestAccess::mapNote(fixture.synth, 44, 3);
+
+    fixture.synth.startVoice(fixture.openVoice, &fixture.openSound, 1, 42, 0.8f);
+    InstrumentSynthTestAccess::setVoiceArticulation(*fixture.openVoice, fixture.openSpec);
+    InstrumentSynthTestAccess::setVoiceRuntimeArticulation(*fixture.openVoice, 2);
+    fixture.openVoice->sourceSamplePosition = 4410.0;
+    fixture.openVoice->cachedEstimatedDb = -24.0f;
+
+    REQUIRE(fixture.synth.playNote(1, 44, 100));
+
+    const bool startedPedalSound = fixture.tightVoice->getCurrentlyPlayingSound() == &fixture.pedalSound
+        || fixture.pedalVoice->getCurrentlyPlayingSound() == &fixture.pedalSound;
+    CHECK(fixture.openVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    CHECK(startedPedalSound);
+}
+
+TEST_CASE("InstrumentSynth - hihat controller close uses exact runtime articulation when source names repeat", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
+    ControllerTransitionFixture fixture;
+    fixture.engine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::Off);
+    fixture.tightVoice->killImmediately();
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(fixture.synth);
+    InstrumentSynth::ArticulationRuntime plainOpen { fixture.openSpec.nameId, fixture.openSpec.exprId };
+    plainOpen.pedalOpenCloseValue = -1;
+    articulations.insert(articulations.begin(), std::move(plainOpen));
+    InstrumentSynthTestAccess::configureController(fixture.synth, 4, 2, 1);
+    InstrumentSynthTestAccess::configureCachedController(fixture.synth, 4, 10, 2);
+
+    fixture.synth.startVoice(fixture.openVoice, &fixture.openSound, 1, 42, 0.8f);
+    InstrumentSynthTestAccess::setVoiceArticulation(*fixture.openVoice, fixture.openSpec);
+    InstrumentSynthTestAccess::setVoiceRuntimeArticulation(*fixture.openVoice, 2);
+    fixture.openVoice->sourceSamplePosition = 4410.0;
+    fixture.openVoice->cachedEstimatedDb = -24.0f;
+
+    fixture.synth.handleController(1, 4, 100);
+
+    CHECK(fixture.openVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    CHECK(fixture.tightVoice->getCurrentlyPlayingSound() == &fixture.tightSound);
 }
 
 TEST_CASE("InstrumentSynth - closing the pedal in silence does not create a pedal event", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
