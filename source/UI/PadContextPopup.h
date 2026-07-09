@@ -71,6 +71,7 @@ private:
     struct LayerRow {
         juce::String sourcePathHint;
         int selectedSourceIndex = -1;
+        int mappedLayerIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst multiline
         std::unique_ptr<juce::Label> routingLabel;
@@ -100,7 +101,7 @@ private:
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
                      float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
-                     const std::unordered_map<juce::String, float>& micBleedLevels);
+                     const std::unordered_map<juce::String, float>& micBleedLevels, int mappedLayerIndex);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
     int getSourceOccurrenceIndex(const LayerRow* layer) const;
@@ -109,7 +110,7 @@ private:
     void updateSourceDisplay(LayerRow* layer);
     void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {});
     void applyToEngine();
-    void recalculateLayerIndexOffset();
+    void refreshLayerMappings();
     juce::String generateFullMapText() const;
     juce::String generateReplaceMapText(const SourceItem& sourceInstrument) const;
     void applyReplaceInstrument(const SourceItem& sourceInstrument);
@@ -128,7 +129,6 @@ private:
     void updateRoutingComboDisplay(LayerRow::MicBleedControl& bleedCtrl) const;
     void updateRoutingDisplay(LayerRow* layer);
     bool mapTextDirty = false;
-    int layerIndexOffset = 0;
 
     juce::Component::SafePointer<juce::CallOutBox> activePickerCallout;
 

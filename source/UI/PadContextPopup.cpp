@@ -186,7 +186,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->addLayerButton.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(this->addLayerButton);
     this->addLayerButton.onClick = [this] {
-        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {});
+        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, -1);
         this->updateRemoveButtonVisibility();
         this->resized();
     };
@@ -240,10 +240,6 @@ void PadContextPopup::populateLayers() {
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto& existingEntries = parseResult.value.entries;
 
-    // Count how many entries for the same slot come before this art group.
-    // This offset aligns the popup's layer indices with the engine's per-slot synth order.
-    this->layerIndexOffset = 0;
-    bool foundFirstMatch = false;
     std::vector<const DrumKitEngine::InstrumentMapEntry*> matchingEntries;
     for (const auto& entry : existingEntries) {
         if (entry.slotId != this->slotId) continue;
@@ -252,12 +248,7 @@ void PadContextPopup::populateLayers() {
             for (const auto& filter : entry.slotArticulationFilter)
                 if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, this->artName)) matchesArt = true;
         }
-        if (matchesArt) {
-            matchingEntries.push_back(&entry);
-            foundFirstMatch = true;
-        } else if (!foundFirstMatch) {
-            ++this->layerIndexOffset;
-        }
+        if (matchesArt) matchingEntries.push_back(&entry);
     }
 
     // Fallback: entries with no art filter for this slot
@@ -269,8 +260,9 @@ void PadContextPopup::populateLayers() {
     }
 
     if (matchingEntries.empty()) {
-        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {});
+        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, -1);
     } else {
+        int mappedLayerIndex = 0;
         for (const auto* entry : matchingEntries) {
             juce::String sourceFullPath = entry->kitRef;
             if (entry->instCode.isNotEmpty())
@@ -282,7 +274,8 @@ void PadContextPopup::populateLayers() {
             int attack = entry->attackTimeMs.value_or(-1);
             int decay = entry->decayTimeMs.value_or(-1);
             float volume = entry->volumeDb.value_or(0.0f);
-            this->addLayerRow(sourceFullPath, tuning, attack, decay, volume, entry->pan.value_or(0), entry->flipLR, entry->flipLRExplicit, entry->flipPhase, entry->micBleedLevels);
+            this->addLayerRow(sourceFullPath, tuning, attack, decay, volume, entry->pan.value_or(0), entry->flipLR, entry->flipLRExplicit, entry->flipPhase, entry->micBleedLevels, mappedLayerIndex);
+            ++mappedLayerIndex;
         }
     }
 
@@ -751,10 +744,11 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
     }
 }
 
-void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels) {
+void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels, int mappedLayerIndex) {
     auto* layer = this->layerRows.add(new LayerRow());
     layer->sourcePathHint = sourceFullPath;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
+    layer->mappedLayerIndex = mappedLayerIndex;
 
     // Source button (opens picker)
     layer->sourceButton = std::make_unique<juce::TextButton>();
@@ -940,7 +934,7 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
     if (layer == nullptr)
         return;
 
-    const int layerIndex = this->getLayerIndex(layer);
+    const int layerIndex = layer->mappedLayerIndex >= 0 ? layer->mappedLayerIndex : this->getLayerIndex(layer);
     if (layerIndex < 0) {
         this->mapTextDirty = true;
         return;
@@ -962,7 +956,7 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
     }
     update.micBleedLevels = std::move(bleedLevels);
 
-    this->engine.updateSlotParameters(this->slotId, this->artName, layerIndex + this->layerIndexOffset, update);
+    this->engine.updateSlotParameters(this->slotId, this->artName, layerIndex, update);
     this->mapTextDirty = true;
 }
 // Generate map text: rebuilds the full instrument map, replacing only this slot/art group
@@ -1139,29 +1133,21 @@ void PadContextPopup::applyToEngine() {
     this->engine.applyInstrumentMapSlotChange(text, this->slotId);
     this->savedInstrumentMapText = text;
     this->mapTextDirty = false;
-    this->recalculateLayerIndexOffset();
+    this->refreshLayerMappings();
 
     if (this->onMapTextChanged) this->onMapTextChanged(text);
 }
 
-void PadContextPopup::recalculateLayerIndexOffset() {
-    auto mapText = this->savedInstrumentMapText.isNotEmpty()
-        ? this->savedInstrumentMapText
-        : this->engine.getSuggestedInstrumentMapText();
-    auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
-    const auto& entries = parseResult.value.entries;
-
-    this->layerIndexOffset = 0;
-    bool foundFirstMatch = false;
-    for (const auto& entry : entries) {
-        if (entry.slotId != this->slotId) continue;
-        bool matchesArt = entry.slotArticulationFilter.empty();
-        if (!matchesArt) {
-            for (const auto& filter : entry.slotArticulationFilter)
-                if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, this->artName)) matchesArt = true;
+void PadContextPopup::refreshLayerMappings() {
+    int mappedLayerIndex = 0;
+    for (auto* layer : this->layerRows) {
+        if (layer == nullptr) continue;
+        if (layer->selectedSourceIndex < 0) {
+            layer->mappedLayerIndex = -1;
+            continue;
         }
-        if (matchesArt) foundFirstMatch = true;
-        else if (!foundFirstMatch) ++this->layerIndexOffset;
+        layer->mappedLayerIndex = mappedLayerIndex;
+        ++mappedLayerIndex;
     }
 }
 
