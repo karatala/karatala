@@ -503,6 +503,72 @@ TEST_CASE("InstrumentSynth - hihat route list keeps bow edge and pedal rows with
     CHECK(ownsDestinationRoute(routes, "edge[tight]"));
 }
 
+TEST_CASE("InstrumentSynth - explicit cymbal routes sharing edge source stay separate", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "china1";
+    slot.type = KitLib::InstrumentSpec::Type::China;
+    addSlotArticulation(slot, "bow", 25);
+    addSlotArticulation(slot, "edge", 49);
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("china-source", KitLib::InstrumentSpec::Type::China) };
+    instrument.getOrAddArticulation("edge");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    InstrumentSynth::RoutingContext routingContext;
+    routingContext.defaultInstrument = &instrument;
+    routingContext.allowedArticulationNameIds = { bowId, edgeId };
+    routingContext.allowedArticulationFilters = { "bow", "edge" };
+    routingContext.artNameRemap[bowId] = edgeId;
+    routingContext.strictArticulationResolution = true;
+
+    auto routes = synth.buildResolvedRouteList(slot, routingContext);
+    synth.loadInstrumentWithRouteList(&instrument, routingContext, std::move(routes));
+
+    const int bowArtIdx = synth.resolveArticulation(25);
+    const int edgeArtIdx = synth.resolveArticulation(49);
+    REQUIRE(bowArtIdx >= 0);
+    REQUIRE(edgeArtIdx >= 0);
+    CHECK(bowArtIdx != edgeArtIdx);
+    CHECK(synth.getArtName(bowArtIdx) == "edge");
+    CHECK(synth.getArtName(edgeArtIdx) == "edge");
+}
+
+TEST_CASE("InstrumentSynth - explicit rim route sharing center source stays separate", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "tom2";
+    slot.type = KitLib::InstrumentSpec::Type::Tom;
+    addSlotArticulation(slot, "center", 45);
+    addSlotArticulation(slot, "rim", 47);
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("tom-source", KitLib::InstrumentSpec::Type::Tom) };
+    instrument.getOrAddArticulation("center");
+
+    const auto centerId = StringsDictSingleton::getId("center");
+    const auto rimId = StringsDictSingleton::getId("rim");
+    InstrumentSynth::RoutingContext routingContext;
+    routingContext.defaultInstrument = &instrument;
+    routingContext.allowedArticulationNameIds = { centerId, rimId };
+    routingContext.allowedArticulationFilters = { "center", "rim" };
+    routingContext.artNameRemap[rimId] = centerId;
+    routingContext.strictArticulationResolution = true;
+
+    auto routes = synth.buildResolvedRouteList(slot, routingContext);
+    synth.loadInstrumentWithRouteList(&instrument, routingContext, std::move(routes));
+
+    const int centerArtIdx = synth.resolveArticulation(45);
+    const int rimArtIdx = synth.resolveArticulation(47);
+    REQUIRE(centerArtIdx >= 0);
+    REQUIRE(rimArtIdx >= 0);
+    CHECK(centerArtIdx != rimArtIdx);
+    CHECK(synth.getArtName(centerArtIdx) == "center");
+    CHECK(synth.getArtName(rimArtIdx) == "center");
+}
+
 TEST_CASE("InstrumentSynth - implicit pdl_opn_cls points route simplified hi-hat articulations", "[InstrumentSynth][ExpressionPoints]") {
     DrumKitEngine engine;
     const auto slot = makeImplicitHiHatExpressionSlot();

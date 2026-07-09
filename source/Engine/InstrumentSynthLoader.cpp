@@ -55,6 +55,12 @@ void InstrumentSynth::rebuildArtLookupCache() {
     this->artIdByNameExprId.clear();
     for (int artIdx = 0; artIdx < static_cast<int>(this->runtimeArticulations.size()); ++artIdx) {
         const auto& art = this->runtimeArticulations[artIdx];
+        if (art.routeDestinationNameId != 0 || art.routeDestinationExprId != 0) continue;
+        const uint64_t key = (static_cast<uint64_t>(art.nameId) << 32) | static_cast<uint64_t>(art.exprId);
+        this->artIdByNameExprId.emplace(key, artIdx);
+    }
+    for (int artIdx = 0; artIdx < static_cast<int>(this->runtimeArticulations.size()); ++artIdx) {
+        const auto& art = this->runtimeArticulations[artIdx];
         const uint64_t key = (static_cast<uint64_t>(art.nameId) << 32) | static_cast<uint64_t>(art.exprId);
         this->artIdByNameExprId.emplace(key, artIdx);
     }
@@ -67,6 +73,45 @@ bool InstrumentSynth::tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpe
         return true;
     }
     artIdx = this->findArticulationIndex(artSpec->nameId, artSpec->exprId);
+    return artIdx >= 0;
+}
+
+bool InstrumentSynth::routeUsesDestinationRuntimeKey(const ResolvedArticulationRoute& route) const {
+    if (route.isAliasRoute || route.sourceArticulation == nullptr) return false;
+    if (route.isControllerSibling && !route.isExplicitMapRoute) return false;
+    if (route.isExplicitMapRoute) return true;
+    return route.destinationArtNameId != route.sourceArticulation->nameId || route.destinationExprId != route.sourceArticulation->exprId;
+}
+
+InstrumentSynth::ArtRtIdx InstrumentSynth::findRuntimeArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId, StringsDictSingleton::Id destinationNameId, StringsDictSingleton::Id destinationExprId) const {
+    for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx) {
+        const auto& artRt = this->runtimeArticulations[artIdx];
+        if (artRt.nameId == nameId && artRt.exprId == exprId && artRt.routeDestinationNameId == destinationNameId && artRt.routeDestinationExprId == destinationExprId)
+            return static_cast<ArtRtIdx>(artIdx);
+    }
+    return -1;
+}
+
+InstrumentSynth::ArtRtIdx InstrumentSynth::getOrAddRuntimeArticulationIdx(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId, StringsDictSingleton::Id destinationNameId, StringsDictSingleton::Id destinationExprId) {
+    const auto existingArtIdx = this->findRuntimeArticulationIndex(nameId, exprId, destinationNameId, destinationExprId);
+    if (existingArtIdx >= 0) return existingArtIdx;
+    this->runtimeArticulations.emplace_back(nameId, exprId);
+    auto& artRt = this->runtimeArticulations.back();
+    artRt.routeDestinationNameId = destinationNameId;
+    artRt.routeDestinationExprId = destinationExprId;
+    return static_cast<ArtRtIdx>(this->runtimeArticulations.size() - 1);
+}
+
+bool InstrumentSynth::tryGetRuntimeArticulationIdx(const ResolvedArticulationRoute& route, bool createIfMissing, ArtRtIdx& artIdx) {
+    const auto* artSpec = route.sourceArticulation;
+    if (artSpec == nullptr) return false;
+    if (!this->routeUsesDestinationRuntimeKey(route)) return this->tryGetRuntimeArticulationIdx(artSpec, createIfMissing, artIdx);
+
+    if (createIfMissing) {
+        artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId, route.destinationArtNameId, route.destinationExprId);
+        return true;
+    }
+    artIdx = this->findRuntimeArticulationIndex(artSpec->nameId, artSpec->exprId, route.destinationArtNameId, route.destinationExprId);
     return artIdx >= 0;
 }
 
@@ -336,10 +381,20 @@ void InstrumentSynth::appendResolvedArticulationRoutes(std::vector<ResolvedArtic
 void InstrumentSynth::applyResolvedArticulationRoute(const ResolvedArticulationRoute& route, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
     const auto& layoutArt = route.destinationLayoutArt;
     if (route.isAliasRoute) {
+        auto findAliasSourceArticulation = [this, &route](StringsDictSingleton::Id exprId) {
+            ArtRtIdx sourceArtIdx = -1;
+            for (const auto& sourceRoute : this->resolvedArticulationRoutes) {
+                if (sourceRoute.isAliasRoute || sourceRoute.isControllerSibling || sourceRoute.sourceArticulation == nullptr) continue;
+                if (sourceRoute.sourceArticulation->nameId != route.aliasTarget.nameId || sourceRoute.sourceArticulation->exprId != exprId) continue;
+                if (this->tryGetRuntimeArticulationIdx(sourceRoute, false, sourceArtIdx)) return sourceArtIdx;
+            }
+            return this->findArticulationIndex(route.aliasTarget.nameId, exprId);
+        };
+
         ArtRtIdx sourceArtIdx = -1;
-        if (route.aliasTarget.exprId != 0) sourceArtIdx = this->findArticulationIndex(route.aliasTarget.nameId, route.aliasTarget.exprId);
-        if (sourceArtIdx < 0) sourceArtIdx = this->findArticulationIndex(route.aliasTarget.nameId, layoutArt.exprId);
-        if (sourceArtIdx < 0 && layoutArt.exprId != 0) sourceArtIdx = this->findArticulationIndex(route.aliasTarget.nameId, 0);
+        if (route.aliasTarget.exprId != 0) sourceArtIdx = findAliasSourceArticulation(route.aliasTarget.exprId);
+        if (sourceArtIdx < 0) sourceArtIdx = findAliasSourceArticulation(layoutArt.exprId);
+        if (sourceArtIdx < 0 && layoutArt.exprId != 0) sourceArtIdx = findAliasSourceArticulation(0);
         if (sourceArtIdx < 0) return;
 
         for (const auto note : route.midiNotes) {
@@ -353,17 +408,17 @@ void InstrumentSynth::applyResolvedArticulationRoute(const ResolvedArticulationR
     if (artSpec == nullptr || sourceInstrument == nullptr) return;
 
     ArtRtIdx artIdx = -1;
-    if (!this->tryGetRuntimeArticulationIdx(artSpec, createIfMissing, artIdx)) {
+    if (!this->tryGetRuntimeArticulationIdx(route, createIfMissing, artIdx)) {
         LOG(Warning, "Skipping routing rebuild for '" + layoutArt.codeRaw + "' because runtime articulation '" + artSpec->codeRaw + "' is not loaded");
         return;
     }
     auto& artRt = this->runtimeArticulations[artIdx];
     if (loadSamples) {
         artSpec->sortVelocityLayers();
-        this->processArticulationSpec(sourceInstrument, layoutArt, artSpec, artRt, foundCcDimensions, skippedMicCodes);
+        this->processArticulationSpec(sourceInstrument, layoutArt, artSpec, artRt, artIdx, foundCcDimensions, skippedMicCodes);
     } else {
         this->refreshRuntimeExpressionValues(*artSpec, artRt);
-        this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
+        this->buildCcMappings(layoutArt, artSpec, artIdx, foundCcDimensions);
     }
     if (!route.isControllerSibling) {
         for (uint8_t note : route.midiNotes) this->noteToArticulation[note] = artIdx;
@@ -460,6 +515,7 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
   , const LayoutArticulation& layoutArt
   , KitLib::ArticulationSpec* artSpec
   , ArticulationRuntime& artRt
+  , ArtRtIdx artIdx
   , CcDimensionsMap& foundCcDimensions
   , std::set<juce::String>& skippedMicCodes
 ) {
@@ -470,7 +526,7 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
     artRt.buildVelocityMapping();
 
     this->refreshRuntimeExpressionValues(*artSpec, artRt);
-    this->buildCcMappings(layoutArt, artSpec, foundCcDimensions);
+    this->buildCcMappings(layoutArt, artSpec, artIdx, foundCcDimensions);
 }
 
 void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
@@ -568,7 +624,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
 }
 
 
-void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions) {
+void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, ArtRtIdx artIdx, CcDimensionsMap& foundCcDimensions) {
 
     { // Debug: report articulation and its expression dimensions
         if (LOG_ENABLED(Debug)) {
@@ -599,7 +655,6 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
             const auto values = this->getEffectiveExpressionValues(*artSpec, cc.codeIdx);
             for (const auto& val : values) {
                 auto ccNum = static_cast<uint8_t>(cc.number);
-                const auto artIdx = this->getOrAddRuntimeArticulationIdx(artSpec->nameId, artSpec->exprId);
                 const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
                 auto& vec = foundCcDimensions[ccNum];
                 // avoid inserting identical (value,artIdx) duplicates

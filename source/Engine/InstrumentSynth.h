@@ -239,6 +239,8 @@ public:
     struct ArticulationRuntime {
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
+        StringsDictSingleton::Id routeDestinationNameId = 0;
+        StringsDictSingleton::Id routeDestinationExprId = 0;
         // pdl_opn_cls value extracted from ArticulationSpec expression dimensions.
         // Higher value = more closed/tight = stronger (mutes articulations with lower pedalOpenCloseValue).
         // -1 = not a PedalOpenClose articulation.
@@ -464,10 +466,15 @@ public:
 
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
         const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
-        for (int8_t i = 0; i < count; ++i) {
-            const auto& artRt = this->runtimeArticulations[i];
+        for (int8_t artIdx = 0; artIdx < count; ++artIdx) {
+            const auto& artRt = this->runtimeArticulations[artIdx];
+            if (artRt.nameId == nameId && artRt.exprId == exprId && artRt.routeDestinationNameId == 0 && artRt.routeDestinationExprId == 0)
+                return artIdx;
+        }
+        for (int8_t artIdx = 0; artIdx < count; ++artIdx) {
+            const auto& artRt = this->runtimeArticulations[artIdx];
             if (artRt.nameId == nameId && artRt.exprId == exprId)
-                return i;
+                return artIdx;
         }
         return -1;
     }
@@ -514,9 +521,9 @@ public:
             && this->noteToArticulation[static_cast<size_t>(note)] >= 0;
     }
     ArtRtIdx getOrAddRuntimeArticulationIdx(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) {
-        for (size_t i = 0; i < this->runtimeArticulations.size(); ++i)
-            if (this->runtimeArticulations[i].nameId == nameId && this->runtimeArticulations[i].exprId == exprId)
-                return static_cast<ArtRtIdx>(i);
+        for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx)
+            if (this->runtimeArticulations[artIdx].nameId == nameId && this->runtimeArticulations[artIdx].exprId == exprId && this->runtimeArticulations[artIdx].routeDestinationNameId == 0 && this->runtimeArticulations[artIdx].routeDestinationExprId == 0)
+                return static_cast<ArtRtIdx>(artIdx);
         this->runtimeArticulations.emplace_back(nameId, exprId);
         return static_cast<ArtRtIdx>(this->runtimeArticulations.size() - 1);
     }
@@ -623,6 +630,10 @@ private:
     void resetRoutingTables();
     void rebuildArtLookupCache();
     bool tryGetRuntimeArticulationIdx(const KitLib::ArticulationSpec* artSpec, bool createIfMissing, ArtRtIdx& artIdx);
+    bool tryGetRuntimeArticulationIdx(const ResolvedArticulationRoute& route, bool createIfMissing, ArtRtIdx& artIdx);
+    bool routeUsesDestinationRuntimeKey(const ResolvedArticulationRoute& route) const;
+    ArtRtIdx findRuntimeArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId, StringsDictSingleton::Id destinationNameId, StringsDictSingleton::Id destinationExprId) const;
+    ArtRtIdx getOrAddRuntimeArticulationIdx(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId, StringsDictSingleton::Id destinationNameId, StringsDictSingleton::Id destinationExprId);
     std::vector<ResolvedArticulationBinding> collectResolvedLayoutArticulations(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void appendResolvedArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const std::vector<ResolvedArticulationBinding>& bindings);
     void appendAliasArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
@@ -637,6 +648,7 @@ private:
         , const LayoutArticulation& layoutArt
         , KitLib::ArticulationSpec* artSpec
         , ArticulationRuntime& artRt
+        , ArtRtIdx artIdx
         , CcDimensionsMap& foundCcDimensions
         , std::set<juce::String>& skippedMicCodes
     );
@@ -646,7 +658,7 @@ private:
         , ArticulationRuntime& artRt
         , MicRoutingBuilder& micRouting
     );
-    void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, CcDimensionsMap& foundCcDimensions);
+    void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, ArtRtIdx artIdx, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
     int getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     ArtRtIdx selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const;
