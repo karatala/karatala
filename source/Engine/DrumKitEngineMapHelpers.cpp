@@ -105,7 +105,7 @@ juce::String joinValues(const std::vector<juce::String>& values) {
     return out;
 }
 
-juce::String joinBleedValues(const std::unordered_map<juce::String, float>& values) {
+juce::String joinBleedValues(const std::unordered_map<juce::String, float>& values) { //FIXME: why this instead of some generic join?
     std::vector<juce::String> keys;
     keys.reserve(values.size());
     for (const auto& [key, value] : values) {
@@ -122,6 +122,27 @@ juce::String joinBleedValues(const std::unordered_map<juce::String, float>& valu
         if (idx > 0) out += ",";
         const auto& key = keys[idx];
         out += key.trim().toLowerCase() + ":" + juce::String(values.at(key), 4);
+    }
+    return out;
+}
+
+juce::String joinRouteValues(const std::unordered_map<juce::String, juce::String>& values) { //FIXME: why this instead of some generic join?
+    std::vector<juce::String> keys;
+    keys.reserve(values.size());
+    for (const auto& [key, value] : values) {
+        juce::ignoreUnused(value);
+        keys.push_back(key);
+    }
+
+    std::sort(keys.begin(), keys.end(), [](const juce::String& left, const juce::String& right) {
+        return left.compareIgnoreCase(right) < 0;
+    });
+
+    juce::String out;
+    for (size_t idx = 0; idx < keys.size(); ++idx) {
+        if (idx > 0) out += ",";
+        const auto& key = keys[idx];
+        out += key.trim().toLowerCase() + ":" + values.at(key).trim().toLowerCase();
     }
     return out;
 }
@@ -221,6 +242,8 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
     fingerprint += entry.flipPhase ? "1" : "0";
     fingerprint += "|";
     fingerprint += Detail::joinBleedValues(entry.micBleedLevels);
+    fingerprint += "|";
+    fingerprint += Detail::joinRouteValues(entry.micRouteOverrides);
     
     return fingerprint;
 }
@@ -231,7 +254,8 @@ juce::String makeInstrumentMapEntryReloadFingerprint(const DrumKitEngine::Instru
     fingerprint += entry.kitRef.trim().toLowerCase() + "|";
     fingerprint += entry.instCode.trim().toLowerCase() + "|";
     fingerprint += Detail::joinValues(entry.slotArticulationFilter) + "|";
-    fingerprint += Detail::joinValues(entry.articulationFilter);
+    fingerprint += Detail::joinValues(entry.articulationFilter) + "|";
+    fingerprint += Detail::joinRouteValues(entry.micRouteOverrides);
     return fingerprint;
 }
 
@@ -298,7 +322,7 @@ std::unique_ptr<InstrumentSynth> createReplacementSynth(
     const auto librarySnapshot = source.getLibrarySnapshot();
     const auto& routingContext = source.getLastRoutingContext();
     if (routingContext.isValid()) {
-        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.allowedArticulationFilters, routingContext.artNameRemap, routingContext.artExactRemap, routingContext.artAliases, librarySnapshot, routingContext.strictArticulationResolution);
+        replacement->loadInstrumentWithSources(routingContext.defaultInstrument, routingContext.artSources, routingContext.allowedArticulationNameIds, routingContext.allowedArticulationFilters, routingContext.artNameRemap, routingContext.artExactRemap, routingContext.artAliases, librarySnapshot, routingContext.strictArticulationResolution, routingContext.micRouteOverrides);
     } else if (auto* loadedInstrument = source.getLoadedInstrumentSpec()) {
         replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument), librarySnapshot);
     }

@@ -3,6 +3,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "../source/Engine/DrumKitEngine.h"
+#include "../source/Engine/DrumKitEngineMapHelpers.h"
 
 TEST_CASE("InstrumentMap parser rejects empty input", "[InstrumentMap]") {
     const auto parsed = DrumKitEngine::parseInstrumentMapText("");
@@ -82,6 +83,80 @@ TEST_CASE("InstrumentMap parser does not split top-level params on comma", "[Ins
     REQUIRE(entry.micBleedLevels.size() == 2);
     CHECK_THAT(entry.micBleedLevels.at("dtm"), Catch::Matchers::WithinAbs(0.5f, 0.0001f));
     CHECK_THAT(entry.micBleedLevels.at("room"), Catch::Matchers::WithinAbs(0.8f, 0.0001f));
+}
+
+TEST_CASE("InstrumentMap parser reads mic route overrides", "[InstrumentMap]") {
+    const juce::String text = "kick1/center:MyKit/kick-24/center:micRoute=dtm:room,dsm:oh";
+    const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 1);
+    const auto& entry = parsed.value.entries.front();
+    REQUIRE(entry.micRouteOverrides.size() == 2);
+    CHECK(entry.micRouteOverrides.at("dtm") == "room");
+    CHECK(entry.micRouteOverrides.at("dsm") == "oh");
+}
+
+TEST_CASE("InstrumentMap serializer preserves mic route overrides in stable order", "[InstrumentMap]") {
+    DrumKitEngine::InstrumentMap map;
+    DrumKitEngine::InstrumentMapEntry entry;
+    entry.slotId = "kick1";
+    entry.slotArticulationFilter = { "center" };
+    entry.kitRef = "MyKit";
+    entry.instCode = "kick-24";
+    entry.articulationFilter = { "center" };
+    entry.micRouteOverrides["dtm"] = "room";
+    entry.micRouteOverrides["dsm"] = "oh";
+    map.entries.push_back(entry);
+
+    CHECK(DrumKitEngine::serializeInstrumentMap(map) == "kick1/center:MyKit/kick-24/center:micRoute=dsm:oh,dtm:room");
+}
+
+TEST_CASE("InstrumentMap fingerprints include mic route overrides", "[InstrumentMap]") {
+    DrumKitEngine::InstrumentMapEntry first;
+    first.slotId = "kick1";
+    first.kitRef = "MyKit";
+    first.instCode = "kick-24";
+
+    DrumKitEngine::InstrumentMapEntry second = first;
+    second.micRouteOverrides["dtm"] = "room";
+
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(second));
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(second));
+}
+
+TEST_CASE("MicRoutingPlan resolves explicit mic route override by output code", "[InstrumentMap][routing]") {
+    MicLayout micLayout;
+    MicLayout::Mic directMic;
+    directMic.name = "Direct Top";
+    directMic.code = "dtm";
+    directMic.specs = KitLib::MicSpec::parseMicCode("dtm").value;
+    micLayout.mics.push_back(directMic);
+
+    MicLayout::Mic roomMic;
+    roomMic.name = "Room";
+    roomMic.code = "room";
+    roomMic.specs = KitLib::MicSpec::parseMicCode("rfs").value;
+    micLayout.mics.push_back(roomMic);
+
+    MicRoutingPlan::SlotRequest request;
+    request.slotId = "kick1";
+    request.slotType = KitLib::InstrumentSpec::Type::Kick;
+    request.directPolicy = DirectMicOutPolicy::Shared;
+    request.directMicSpecs.push_back(directMic.specs);
+
+    const auto plan = MicRoutingPlan::build(micLayout, { request }, InstrumentCatalog::makeDefault());
+    const auto assignment = plan.resolveOverride("kick1", directMic.specs, "room");
+
+    REQUIRE(assignment.matched());
+    CHECK(assignment.globalStart == 1);
+    CHECK(assignment.channels == 2);
+    CHECK(assignment.micCode == "dtm");
+    CHECK(assignment.applyBalance);
+
+    const auto invalid = plan.resolveOverride("kick1", directMic.specs, "badRoom");
+    CHECK_FALSE(invalid.matched());
+    CHECK_THAT(invalid.warning.toStdString(), Catch::Matchers::ContainsSubstring("output mic 'badRoom' was not found"));
 }
 
 TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[InstrumentMap]") {

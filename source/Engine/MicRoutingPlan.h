@@ -35,6 +35,31 @@ public:
         return plan;
     }
 
+    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, const juce::String& outputMicCode) const {
+        const auto normalizedOutputCode = outputMicCode.trim();
+        if (normalizedOutputCode.isEmpty())
+            return {};
+
+        for (const auto& output : this->outputs) {
+            if (output.code.compareIgnoreCase(normalizedOutputCode) != 0)
+                continue;
+
+            Assignment assignment;
+            assignment.globalStart = output.hostStart;
+            assignment.channels = output.channels;
+            assignment.outputName = output.name;
+            assignment.micCode = sampleMicSpec.raw;
+            assignment.applyBalance = sampleMicSpec.type == KitLib::MicSpec::Type::Direct && output.channels == 2;
+            return assignment;
+        }
+
+        Assignment skipped;
+        skipped.channels = juce::jmax(1, sampleMicSpec.channels);
+        skipped.micCode = sampleMicSpec.raw;
+        skipped.warning = "Mic route override ignored for slot '" + slotId + "': output mic '" + outputMicCode + "' was not found";
+        return skipped;
+    }
+
     Assignment resolve(const juce::String& slotId,
                        KitLib::InstrumentSpec::Type slotType,
                        const KitLib::MicSpec& micSpec) const {

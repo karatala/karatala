@@ -6,7 +6,7 @@ struct ParsedSlotRef {
     juce::String slotId;
     std::vector<juce::String> articulations;
 };
-std::vector<juce::String> parseDelimitedNames(const juce::String& text) {
+std::vector<juce::String> parseDelimitedNames(const juce::String& text) {//TODO: doxygen document what doing with example
     std::vector<juce::String> result;
     juce::StringArray parts;
     parts.addTokens(text, ",", "");
@@ -15,7 +15,7 @@ std::vector<juce::String> parseDelimitedNames(const juce::String& text) {
     return result;
 }
 
-ParsedSlotRef parseSlotRef(const juce::String& text) {
+ParsedSlotRef parseSlotRef(const juce::String& text) {//TODO: doxygen document what doing with example
     ParsedSlotRef result;
     const auto trimmed = text.trim();
     const int slashIdx = trimmed.indexOfChar('/');
@@ -36,7 +36,7 @@ struct ParsedTargetRef {
     std::vector<juce::String> articulations;
 };
 
-ParsedTargetRef parseTargetRef(const juce::String& text) {
+ParsedTargetRef parseTargetRef(const juce::String& text) {//TODO: doxygen document what doing with example
     ParsedTargetRef result;
     const auto trimmed = text.trim();
     const int firstSlashIdx = trimmed.indexOfChar('/');
@@ -67,15 +67,14 @@ int findNextParamBoundary(const juce::String& text, int startIndex) {
 /**
  * Parses instrument map text.
  *
- * Format:
- *   slot/slotArt:kit/instrument/sourceArt[,sourceArt...][:params] //FIXME: [,sourceArt...]????
+ * Line format:
+ *   slot/slotArt:kitRef/instrumentCode/articulations[:param=value;param=value,value;param=key:value,key:value] //TODO: check why articulationS, it should be only one per line
  *
  * Examples:
  *   kick1/center:MyKit/kick-24/center
  *   ride1/bow:KitA/ride-20/bow:tuning=-2;attack=50;decay=300
- *   snare1/rim:MixedKit/snare-14/sidestick:vol=-3.5;bleed=oh:0.25,room:0.5
+ *   snare1/rim:MixedKit/snare-14/sidestick:vol=-3.5;bleed=oh:0.25,room:0.5;micRoute=oh:room
  *
- * Top-level params use semicolon. Commas are allowed inside list values such as bleed.
  */
 ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::String& text) {
     ParseResult<DrumKitEngine::InstrumentMap> result;
@@ -83,7 +82,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
     auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<DrumKitEngine::InstrumentMap>& parseResult, int lineNumber, std::optional<int>& target) {
         auto trimmed = valueText.trim();
         if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789")) {
-            parseResult.addWarning("Line " + juce::String(lineNumber) + ": invalid value for '" + key + "': " + valueText);
+            parseResult.addWarning("Line " + juce::String(lineNumber) + ": invalid value for '" + key + "': " + valueText); //FIXME: missing the context of what slot/art:kitref/instCode/art was that
             return;
         }
         target = trimmed.getIntValue();
@@ -96,7 +95,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
 
         const int firstColon = line.indexOfChar(':');
         if (firstColon <= 0) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": expected '<slot>:<target>'");
+            result.addWarning("Line " + juce::String(idx + 1) + ": expected '<slot>:<target>'");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
             continue;
         }
 
@@ -106,7 +105,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
         const auto paramsText = secondColon >= 0 ? line.substring(secondColon + 1).trim() : juce::String();
 
         if (slotText.isEmpty() || targetText.isEmpty()) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": empty slot or target");
+            result.addWarning("Line " + juce::String(idx + 1) + ": empty slot or target");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
             continue;
         }
 
@@ -114,11 +113,11 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
         auto targetRef = parseTargetRef(targetText);
 
         if (slotRef.slotId.isEmpty()) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": slot id is empty");
+            result.addWarning("Line " + juce::String(idx + 1) + ": slot id is empty");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
             continue;
         }
         if (targetRef.kitRef.isEmpty()) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": kit reference is empty");
+            result.addWarning("Line " + juce::String(idx + 1) + ": kit reference is empty");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
             continue;
         }
 
@@ -139,7 +138,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
 
                 const int equalsIdx = paramsText.indexOf(start, "=");
                 if (equalsIdx < 0) {
-                    result.addWarning("Line " + juce::String(idx + 1) + ": malformed param '" + paramsText.substring(start).trim() + "'");
+                    result.addWarning("Line " + juce::String(idx + 1) + ": malformed param '" + paramsText.substring(start).trim() + "'");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
                     break;
                 }
 
@@ -156,7 +155,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                 else if (key == "vol") {
                     auto trimmed = value.trim();
                     if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789."))
-                        result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'vol': " + value);
+                        result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'vol': " + value); //FIXME: missing the context of what slot/art:kitref/instCode/art was that
                     else
                         entry.volumeDb = trimmed.getFloatValue();
                 } else if (key == "pan") {
@@ -179,8 +178,21 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                                 entry.micBleedLevels[micCode] = levelStr.getFloatValue();
                         }
                     }
+                } else if (key == "micRoute") {
+                    // Format: micRoute=sourceMic:outputMic,sourceMic:outputMic,...
+                    juce::StringArray pairs;
+                    pairs.addTokens(value, ",", "");
+                    for (const auto& pair : pairs) {
+                        auto colonPos = pair.indexOf(":");
+                        if (colonPos > 0) {
+                            auto sourceMicCode = pair.substring(0, colonPos).trim();
+                            auto outputMicCode = pair.substring(colonPos + 1).trim();
+                            if (sourceMicCode.isNotEmpty() && outputMicCode.isNotEmpty())
+                                entry.micRouteOverrides[sourceMicCode] = outputMicCode;
+                        }
+                    }
                 } else
-                    result.addWarning("Line " + juce::String(idx + 1) + ": unknown param '" + key + "'");
+                    result.addWarning("Line " + juce::String(idx + 1) + ": unknown param '" + key + "'");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
 
                 if (boundaryIdx < 0)
                     break;

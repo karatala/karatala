@@ -338,6 +338,19 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
                 bleedValues.add(key + ":" + juce::String(entry.micBleedLevels.at(key), 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
             params.add("bleed=" + bleedValues.joinIntoString(","));
         }
+        if (!entry.micRouteOverrides.empty()) {
+            std::vector<juce::String> keys;
+            keys.reserve(entry.micRouteOverrides.size());
+            for (const auto& [key, value] : entry.micRouteOverrides) {
+                juce::ignoreUnused(value);
+                keys.push_back(key);
+            }
+            std::sort(keys.begin(), keys.end());
+            juce::StringArray routeValues;
+            for (const auto& key : keys)
+                routeValues.add(key + ":" + entry.micRouteOverrides.at(key));
+            params.add("micRoute=" + routeValues.joinIntoString(","));
+        }
 
         auto line = slotRef + ":" + targetRef;
         if (!params.isEmpty())
@@ -1706,13 +1719,17 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         juce::String slotArtStr, srcArtStr;
         for (const auto& sa : entry.slotArticulationFilter) slotArtStr += (slotArtStr.isEmpty() ? "" : ",") + sa;
         for (const auto& sa : entry.articulationFilter) srcArtStr += (srcArtStr.isEmpty() ? "" : ",") + sa;
+        juce::String routeStr;
+        for (const auto& [sourceMicCode, outputMicCode] : entry.micRouteOverrides)
+            routeStr += (routeStr.isEmpty() ? "" : ",") + sourceMicCode + "->" + outputMicCode;
         LOG(Info, "  entry[" + juce::String(idx) + "]: slot=" + entry.slotId
             + (slotArtStr.isNotEmpty() ? "/" + slotArtStr : "")
             + " -> kit=" + entry.kitRef + " inst=" + entry.instCode
             + (srcArtStr.isNotEmpty() ? " art=" + srcArtStr : "")
             + (entry.tuningCents.has_value() ? " tuning=" + juce::String(*entry.tuningCents) : "")
             + (entry.attackTimeMs.has_value() ? " attack=" + juce::String(*entry.attackTimeMs) : "")
-            + (entry.decayTimeMs.has_value() ? " decay=" + juce::String(*entry.decayTimeMs) : ""));
+            + (entry.decayTimeMs.has_value() ? " decay=" + juce::String(*entry.decayTimeMs) : "")
+            + (routeStr.isNotEmpty() ? " micRoute=[" + routeStr + "]" : ""));
     }
 
     struct ShadowPlan {
@@ -1998,7 +2015,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                                             || resolved.entry->pan.has_value()
                                             || resolved.entry->flipLR
                                             || resolved.entry->flipPhase
-                                            || !resolved.entry->micBleedLevels.empty();
+                                            || !resolved.entry->micBleedLevels.empty()
+                                            || !resolved.entry->micRouteOverrides.empty();
             for (const auto& artName : resolved.effectiveFilter) {
                 if (artName.isEmpty())
                     continue;
@@ -2139,6 +2157,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             primaryRoutingContext.artNameRemap = primaryRemap;
             primaryRoutingContext.artExactRemap = primaryExactRemap;
             primaryRoutingContext.artAliases = artAliases;
+            primaryRoutingContext.micRouteOverrides = primary.entry->micRouteOverrides;
             primaryRoutingContext.strictArticulationResolution = primaryStrictArticulationResolution;
             auto primaryRoutes = replacement->buildResolvedRouteList(slotLayout, primaryRoutingContext);
             replacement->loadInstrumentWithRouteList(primary.instSpec, primaryRoutingContext, std::move(primaryRoutes), librarySnapshot);
@@ -2173,6 +2192,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 shadowRoutingContext.artNameRemap = shadowPlan.artNameRemap;
                 shadowRoutingContext.artExactRemap = shadowPlan.artExactRemap;
                 shadowRoutingContext.artAliases = shadowAliases;
+                shadowRoutingContext.micRouteOverrides = shadowPlan.entry->micRouteOverrides;
                 shadowRoutingContext.strictArticulationResolution = shadowStrictArticulationResolution;
                 auto shadowRoutes = shadowRaw->buildResolvedRouteList(slotLayout, shadowRoutingContext);
                 shadowRaw->loadInstrumentWithRouteList(shadowPlan.instSpec, shadowRoutingContext, std::move(shadowRoutes), librarySnapshot);

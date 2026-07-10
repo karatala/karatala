@@ -2,7 +2,7 @@
 
 ## Goal
 
-Make the instrument map format easy to understand before adding bleed routing overrides.
+Make the instrument map format easy to understand, including bleed routing overrides.
 
 The current format mostly lives in tests and parser code. That makes changes risky, because it is not obvious which separator belongs to the whole parameter list and which separator belongs inside one parameter value.
 
@@ -18,7 +18,7 @@ Source checked:
 Current line shape:
 
 ```text
-slot/slotArt:kit/instrument/sourceArt[,sourceArt...][:params]
+slot/slotArt:kit/instrument/sourceArt[:params]
 ```
 
 Current examples:
@@ -68,46 +68,33 @@ It should include:
 7. Explanation of hihat examples with `bow[open]`, `bow[tight]`, `edge[open]`, and `pedal`.
 8. Note that raw map apply should use diff by default, with full rebuild as an explicit button later.
 
-## Proposed Bleed Routing Param
+## Bleed Routing Param
 
-Add a new param:
+Implemented param:
 
 ```text
-route=sourceMic:outputMic,sourceMic:outputMic
+micRoute=sourceMic:outputMic,sourceMic:outputMic //FIXME: 'micRoute' > 'send'
 ```
 
-Recommended full example:
+Example:
 
 ```text
-kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;route=dtm:room
+kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:room
 ```
 
 Meaning:
 
 - `bleed=dtm:0.5,room:0.8` changes levels.
-- `route=dtm:room` sends source mic `dtm` to output mic `room`.
+- `micRoute=dtm:room` sends source mic `dtm` to output mic `room`.
 
 Rules:
 
 - `sourceMic` is the sample/library mic code before routing.
 - `outputMic` is the active mic-layout output code.
-- Missing route means automatic routing.
-- Unknown route should warn and keep automatic routing.
-- `route=` changes require slot reload because sample output channels are assigned when samples are loaded.
-- UI should write `;route=...` after `bleed=...` to keep the line readable.
-
-Open naming choice:
-
-- `route=` is short but broad.
-- `micRoute=` is clearer and avoids future conflict.
-
-Recommendation: use `micRoute=` unless you strongly prefer shorter map text.
-
-Example with recommended name:
-
-```text
-kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:room
-```
+- Missing `micRoute` means automatic routing.
+- Unknown output mic warns and keeps automatic routing.
+- `micRoute` changes require slot reload because sample output channels are assigned when samples are loaded.
+- UI writes `;micRoute=...` after `bleed=...` when both are present.
 
 ## Implementation Plan
 
@@ -118,11 +105,13 @@ Create `docs/INSTRUMENT_MAP_FORMAT.md`.
 Verification:
 
 - Compare examples against `../tests/TestInstrumentMap.cpp`.
-- Keep all examples parseable by current parser, except the clearly marked future `micRoute=` examples.
+- Keep all examples parseable by current parser.
 
 ### 2. Add Doxygen Comments For Public Parser APIs
 
-Add Doxygen comments to parser declarations, not only implementation files.
+Status: implemented.
+
+Added Doxygen comments to parser declarations, not only implementation files.
 
 Target functions:
 
@@ -156,15 +145,15 @@ Doxygen comment style:
 /**
  * Parses instrument map text.
  *
- * Format:
- *   slot/slotArt:kit/instrument/sourceArt[,sourceArt...][:params]
+ * Line format:
+ *   slot/slotArt:kit/instrument/sourceArt[:param=value;param=value]
  *
  * Examples:
  *   kick1/center:MyKit/kick-24/center
  *   ride1/bow:KitA/ride-20/bow:tuning=-2;attack=50;decay=300
- *   snare1/rim:MixedKit/snare-14/sidestick:vol=-3.5;bleed=oh:0.25,room:0.5
+ *   snare1/rim:MixedKit/snare-14/sidestick:vol=-3.5;bleed=oh:0.25,room:0.5;micRoute=oh:room
  *
- * Top-level params use semicolon. Commas are allowed inside list values such as bleed.
+ * Top-level params use semicolon. Commas stay inside list values like bleed and micRoute.
  */
 ```
 
@@ -178,49 +167,52 @@ Implemented rules:
 
 - Source art belongs in the target path: `slot/slotArt:kit/instrument/sourceArt`.
 - Top-level params use semicolon, not comma.
-- Comma stays only inside list values like `bleed=oh:0.25,room:0.5` and future `micRoute=dtm:room,dsm:oh`.
+- Comma stays only inside list values like `bleed=oh:0.25,room:0.5` and `micRoute=dtm:room,dsm:oh`.
 - Unknown params still warn through the normal unknown-param path.
 - Serializer and UI map writers write semicolon between top-level params.
 - Doxygen examples show semicolon only.
 
 ### 4. Add Parser Tests For New Route Param
 
-When implementing `micRoute=`, add tests before engine behavior:
+Status: implemented.
 
-- Parser reads `micRoute=dtm:room`.
-- Parser reads multiple routes: `micRoute=dtm:room,dsm:oh`.
+Covered behavior:
+
+- Parser reads `micRoute=dtm:room` and multiple routes like `micRoute=dtm:room,dsm:oh`.
 - Serializer preserves routes in stable sorted order.
 - Reload fingerprint changes when only `micRoute` changes.
 - Normal state fingerprint also changes.
+- Routing plan resolves a source mic to an explicit output mic code.
 
 ### 5. Add Engine Behavior
 
-Add storage:
+Status: implemented.
 
-- `InstrumentMapEntry::micRouteOverrides` as `sourceMic -> outputMic`.
-- `InstrumentSynth::RoutingContext` or a small per-synth field with the same map.
+Implemented behavior:
 
-Apply behavior:
-
-- `MicRoutingBuilder` checks the route override before automatic routing.
-- If override is valid, route the sample mic to that output mic.
-- If override is invalid, log warning and use automatic routing.
-- Route changes must be in reload fingerprint.
+- `InstrumentMapEntry::micRouteOverrides` stores `sourceMic -> outputMic`.
+- `InstrumentSynth::RoutingContext` carries route overrides during load/reload.
+- `MicRoutingBuilder` checks route override before automatic routing.
+- Valid override routes the sample mic to that output mic.
+- Invalid override logs a warning and falls back to automatic routing.
+- Route changes are included in reload fingerprint.
 
 ### 6. Add Pad Popup Behavior
 
+Status: implemented.
+
 Routing combobox behavior:
 
-- On selection, update that row's `micRoute` map.
-- Write map text.
-- Apply the affected slot so samples get rebuilt with the new output channel.
-- Refresh popup route displays after apply.
+- On selection, the row stores a `micRoute` override.
+- Popup map text writes `micRoute=sourceMic:outputMic`.
+- Route combobox changes apply the affected slot so samples rebuild with the new output channel.
+- Bleed knobs remain live scalar changes.
 
 Debug logs on message thread:
 
-- `Pad popup: slot=kick1 art=center layer=1 gain=-3.5 pan=0 bleed=dtm:0.5`
-- `Pad popup route: slot=kick1 art=center layer=1 dtm -> room`
-- `Instrument map apply: changed slot=kick1 reason=pad-popup route`
+- `Pad popup: slot=kick1 art=center layer=1 source=MyKit/kick-24/center gain=-3.5 pan=0 bleed=[dtm:0.500]`
+- `Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=room`
+- `Instrument map apply: changed slot=kick1 art=center reason=pad-popup route`
 
 Engine debug logs:
 
@@ -253,5 +245,5 @@ Route implementation stage:
 ## Risks
 
 - Routing is not a live scalar like gain or pan. It changes sample output channel assignment, so it needs slot reload.
-- `route=` may be too broad as a future keyword. `micRoute=` is clearer.
-- Existing maps with unknown params currently warn. Adding `micRoute=` must update parser, serializer, fingerprints, and docs together.
+- Routing is implemented as `micRoute=` because `route=` was too broad.
+- Existing maps with unknown params currently warn.

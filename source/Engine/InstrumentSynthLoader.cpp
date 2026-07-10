@@ -10,7 +10,7 @@ const MicLayout* InstrumentSynth::getMicLayout() const { return this->parent ? t
 const MicRoutingPlan* InstrumentSynth::getMicRoutingPlan() const { return this->parent ? this->parent->getMicRoutingPlan() : nullptr; }
 SampleLoader* InstrumentSynth::getSampleLoader() { return this->parent ? this->parent->getSampleLoader() : nullptr; }
 
-void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
+void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides) {
     this->lastRoutingContext.defaultInstrument = defaultInstSpec;
     this->lastRoutingContext.artSources = artSources;
     this->lastRoutingContext.allowedArticulationNameIds = allowedArticulationNameIds;
@@ -18,6 +18,7 @@ void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpe
     this->lastRoutingContext.artNameRemap = artNameRemap;
     this->lastRoutingContext.artExactRemap = artExactRemap;
     this->lastRoutingContext.artAliases = artAliases;
+    this->lastRoutingContext.micRouteOverrides = micRouteOverrides;
     this->lastRoutingContext.strictArticulationResolution = strictArticulationResolution;
 }
 
@@ -148,11 +149,11 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->loadInstrumentWithSources(defaultInstrument, artSources, {});
 }
 
-void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
-    this->loadInstrumentWithSources(defaultInstrument, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artExactRemap, artAliases, nullptr, strictArticulationResolution);
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides) {
+    this->loadInstrumentWithSources(defaultInstrument, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artExactRemap, artAliases, nullptr, strictArticulationResolution, micRouteOverrides);
 }
 
-void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot, bool strictArticulationResolution) {
+void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultInstrument, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides) {
     if (defaultInstrument == nullptr) return;
     this->unloadInstrument();
 
@@ -160,6 +161,7 @@ void InstrumentSynth::loadInstrumentWithSources(KitLib::InstrumentSpec* defaultI
     this->instrumentSpecstPtr = defaultInstrument;
     this->type = defaultInstrument->meta.type;
 
+    this->storeRoutingContext(defaultInstrument, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artExactRemap, artAliases, strictArticulationResolution, micRouteOverrides);
     this->processLayoutArticulations(defaultInstrument, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artExactRemap, artAliases, strictArticulationResolution);
 }
 
@@ -492,7 +494,7 @@ void InstrumentSynth::applyResolvedRouting(const std::vector<ResolvedArticulatio
 void InstrumentSynth::processLayoutArticulations(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution) {
     if (defaultInstSpec == nullptr) return;
 
-    this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artExactRemap, artAliases, strictArticulationResolution);
+    this->storeRoutingContext(defaultInstSpec, artSources, allowedArticulationNameIds, allowedArticulationFilters, artNameRemap, artExactRemap, artAliases, strictArticulationResolution, this->lastRoutingContext.micRouteOverrides);
 
     LOG(Debug, "processLayoutArticulations: available articulationSpecs for inst=" + defaultInstSpec->meta.codeRaw + ":");
     for (const auto& artSpec : defaultInstSpec->articulationSpecs) {

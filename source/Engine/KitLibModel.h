@@ -491,9 +491,6 @@ public:
 
     int scanInstrumentSamples(ScanStats* stats = nullptr);
 
-    /** * Parses a sample filename. Expected parts include instrument type, size, articulation, velocity plus variant, mic chain, and optional analysis params.
-     * Example: kick-22-center-127a-dtm.flac
-     */
     static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);
 
     ArticulationSpec* findArticulation(const juce::String& codeRaw) const {

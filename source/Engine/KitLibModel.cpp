@@ -429,6 +429,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
     return sampleCount;
 }
 
+/**  Parses a sample filename <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{sampleVariant}-{micChain}-{otherOptionalParams} */
 ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(const juce::String& fileName) {
     ParseResult<InstrumentSpec::SampleFileInfo> result;
     const auto fileNameWithoutExt = fileName.upToLastOccurrenceOf(".", false, false);

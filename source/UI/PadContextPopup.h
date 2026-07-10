@@ -64,6 +64,7 @@ private:
     struct MicRoutingChoice {
         juce::String label;
         juce::String tooltip;
+        juce::String outputMicCode;
         int rank = 0;
         bool hasProblem = false;
         bool isCurrent = false;
@@ -87,6 +88,7 @@ private:
         struct MicBleedControl {
             juce::String micCode;
             juce::String micName;
+            juce::String routeOutputMicCode;
             std::unique_ptr<CompactParameterControl> bleedPot;
             std::unique_ptr<juce::ComboBox> routingCombo;
             std::vector<MicRoutingChoice> routingChoices;
@@ -101,14 +103,16 @@ private:
 
     void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
                      float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
-                     const std::unordered_map<juce::String, float>& micBleedLevels, int mappedLayerIndex);
+                     const std::unordered_map<juce::String, float>& micBleedLevels,
+                     const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
     int getSourceOccurrenceIndex(const LayerRow* layer) const;
     void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
-    void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {});
+    void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
+    void applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl);
     void applyToEngine();
     void refreshLayerMappings();
     juce::String generateFullMapText() const;

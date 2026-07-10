@@ -9,7 +9,7 @@ Each non-empty, non-comment line maps one slot or one slot articulation to one s
 ## Basic Line Shape
 
 ```text
-slot/slotArt:kit/instrument/sourceArt[,sourceArt...][:params]
+slot/slotArt:kit/instrument/sourceArt[:params]
 ```
 
 Simple examples:
@@ -72,6 +72,7 @@ Layer order is the order in the normalized map for that slot/art. UI rows should
 | `flipLR` | `flipLR=1` | swap stereo left/right | live for existing layer |
 | `flipPhase` | `flipPhase=1` | invert phase | live for existing layer |
 | `bleed` | `bleed=oh:0.25,room:0.5` | mic gain trims from 0.0 to 1.0 | live for existing layer |
+| `micRoute` | `micRoute=dtm:room,ons:oh` | send source mic to chosen output mic | requires slot reload | //FIXME: can we make it not require slot reload?
 
 
 ```text
@@ -80,7 +81,7 @@ ride1/bow:KitA/ride-20/bow
 
 ## Param Separators
 
-Top-level params can be separated by semicolon.
+Top-level params are separated by semicolon.
 
 This is fine when every value is simple:
 
@@ -88,21 +89,19 @@ This is fine when every value is simple:
 ride1/bow:KitA/ride-20/bow:tuning=-2;attack=50;decay=300
 ```
 
-Some values contain commas. `bleed=` is the important current example:
+Some values contain commas. `bleed=` and `micRoute=` are the important examples:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8
+kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8
 ```
 
-When another top-level param follows a comma-list value, prefer semicolon:
+When another top-level param follows a comma-list value, use semicolon:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;tuning=-20
+kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;tuning=-20
 ```
 
-This is easier to read than mixing every separator as a comma.
-
-Current parser detail: a comma or semicolon starts the next top-level param only when it is followed by a known `key=`.
+Commas are not top-level separators. They stay inside list values like `bleed=` and `micRoute=`.
 
 ## Hihat Notes
 
@@ -141,11 +140,11 @@ hihat1/edge[open]:TchackpoumDG1.3/hihat-14/edge[open]
 hihat1/pedal:TchackpoumDG1.3/hihat-14/pedal
 ```
 
-## Planned Mic Routing Param
+## Mic Routing Param
 
-This is planned, not implemented yet.
+Use this when one source mic should go to a different output mic than automatic routing chooses.
 
-Recommended future param:
+Param:
 
 ```text
 micRoute=sourceMic:outputMic,sourceMic:outputMic
@@ -154,7 +153,7 @@ micRoute=sourceMic:outputMic,sourceMic:outputMic
 Example:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:room
+kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:room
 ```
 
 Meaning:

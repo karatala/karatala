@@ -36,6 +36,8 @@ public:
         bool flipPhase = false;
         // Per-mic bleed levels: mic code -> gain (0.0 to 1.0)
         std::unordered_map<juce::String, float> micBleedLevels;
+        // Per-source-mic route override: sample mic code -> output mic code.
+        std::unordered_map<juce::String, juce::String> micRouteOverrides;
     };
 
     struct InstrumentMap {
@@ -164,7 +166,7 @@ public:
     bool updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
     
-    void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); }
+    void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); } //FIXME: check is this dedicated only for ui and why cant we just use there LOG(Debug, ...) like everywhere else
     DebugLevel maxDebugLevel = DebugLevel::Error;
 
     EngineSettings engineSettings;

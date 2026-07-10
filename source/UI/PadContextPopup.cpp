@@ -186,7 +186,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::Instrum
     this->addLayerButton.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     addAndMakeVisible(this->addLayerButton);
     this->addLayerButton.onClick = [this] {
-        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, -1);
+        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, {}, -1);
         this->updateRemoveButtonVisibility();
         this->resized();
     };
@@ -260,7 +260,7 @@ void PadContextPopup::populateLayers() {
     }
 
     if (matchingEntries.empty()) {
-        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, -1);
+        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, {}, -1);
     } else {
         int mappedLayerIndex = 0;
         for (const auto* entry : matchingEntries) {
@@ -274,7 +274,7 @@ void PadContextPopup::populateLayers() {
             int attack = entry->attackTimeMs.value_or(-1);
             int decay = entry->decayTimeMs.value_or(-1);
             float volume = entry->volumeDb.value_or(0.0f);
-            this->addLayerRow(sourceFullPath, tuning, attack, decay, volume, entry->pan.value_or(0), entry->flipLR, entry->flipLRExplicit, entry->flipPhase, entry->micBleedLevels, mappedLayerIndex);
+            this->addLayerRow(sourceFullPath, tuning, attack, decay, volume, entry->pan.value_or(0), entry->flipLR, entry->flipLRExplicit, entry->flipPhase, entry->micBleedLevels, entry->micRouteOverrides, mappedLayerIndex);
             ++mappedLayerIndex;
         }
     }
@@ -517,10 +517,10 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
 
 std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode) const {
     std::vector<MicRoutingChoice> choices;
-    choices.push_back({ "-", "Unassigned from output", 0, true, false });
+    // choices.push_back({ "-", "Unassigned from output", 0, true, false }); //FIXME this was removed but we also need this! needto check how to support it correctly in changed logic
 
     const auto currentDisplay = this->buildMicRoutingDisplay(sourcePath, micCode);
-    if (currentDisplay.hasProblem) choices.front().isCurrent = true;
+    choices.push_back({ "Auto", currentDisplay.tooltip.isNotEmpty() ? currentDisplay.tooltip : juce::String("Automatic routing"), {}, 0, currentDisplay.hasProblem, currentDisplay.hasProblem });
 
     const auto* kitLayout = this->engine.getKitLayout();
     const auto* micLayout = this->engine.getMicLayout();
@@ -564,12 +564,13 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
     auto addChoice = [&choices, &currentDisplay](const MicLayout::Mic& mic, int rank, const juce::String& detail) {
         const juce::String label = mic.name.isNotEmpty() ? mic.name : mic.code;
         for (const auto& existingChoice : choices) {
-            if (existingChoice.label == label) return;
+            if (existingChoice.outputMicCode.compareIgnoreCase(mic.code) == 0) return;
         }
 
         MicRoutingChoice choice;
         choice.label = label;
         choice.tooltip = label + " (" + mic.code + ")" + detail;
+        choice.outputMicCode = mic.code;
         choice.rank = rank;
         choice.isCurrent = !currentDisplay.hasProblem && currentDisplay.routeText == label;
         choices.push_back(std::move(choice));
@@ -614,7 +615,7 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
         for (auto& choice : choices) {
             if (choice.isCurrent) foundCurrent = true;
         }
-        if (!foundCurrent && currentDisplay.routeText.isNotEmpty()) choices.push_back({ currentDisplay.routeText, currentDisplay.tooltip, 5, false, true });
+        if (!foundCurrent && currentDisplay.routeText.isNotEmpty()) choices.push_back({ currentDisplay.routeText, currentDisplay.tooltip, {}, 5, false, true });
     }
 
     std::sort(choices.begin() + 1, choices.end(), [](const auto& leftChoice, const auto& rightChoice) {
@@ -630,7 +631,7 @@ void PadContextPopup::updateRoutingComboDisplay(LayerRow::MicBleedControl& bleed
 
     const int selectedIndex = bleedCtrl.routingCombo->getSelectedId() - 1;
     bool hasProblem = true;
-    juce::String tooltip = "Unassigned from output";
+    juce::String tooltip = "Automatic routing";
     if (selectedIndex >= 0 && selectedIndex < static_cast<int>(bleedCtrl.routingChoices.size())) {
         const auto& choice = bleedCtrl.routingChoices[static_cast<size_t>(selectedIndex)];
         hasProblem = choice.hasProblem;
@@ -670,15 +671,18 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
     return this->getRelevantMicsForSourcePath(this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath());
 }
 
-void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels) {
+void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels, const std::unordered_map<juce::String, juce::String>& seedRoutes) {
     if (layer == nullptr) return;
 
     std::unordered_map<juce::String, float> existingLevels = seedLevels;
+    std::unordered_map<juce::String, juce::String> existingRoutes = seedRoutes;
     if (!layer->micBleeds.empty()) {
         existingLevels.clear();
+        existingRoutes.clear();
         for (const auto& bleedCtrl : layer->micBleeds) {
             if (bleedCtrl == nullptr || bleedCtrl->bleedPot == nullptr || bleedCtrl->micCode.isEmpty()) continue;
             existingLevels[bleedCtrl->micCode] = static_cast<float>(bleedCtrl->bleedPot->getValue() / 100.0);
+            if (bleedCtrl->routeOutputMicCode.isNotEmpty()) existingRoutes[bleedCtrl->micCode] = bleedCtrl->routeOutputMicCode;
         }
     }
 
@@ -692,13 +696,24 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
 
     const auto micEntries = this->getRelevantMicsForSourcePath(sourcePath);
     std::vector<std::pair<juce::String, juce::String>> entriesToShow = micEntries;
-    if (entriesToShow.empty() && !existingLevels.empty()) {
+    if (entriesToShow.empty() && (!existingLevels.empty() || !existingRoutes.empty())) {
         for (const auto& [micCode, level] : existingLevels) {
             juce::ignoreUnused(level);
             entriesToShow.push_back({ micCode, micCode });
         }
-        std::sort(entriesToShow.begin(), entriesToShow.end(), [](const auto& a, const auto& b) {
-            return a.first.compareIgnoreCase(b.first) < 0;
+        for (const auto& [micCode, outputMicCode] : existingRoutes) {
+            juce::ignoreUnused(outputMicCode);
+            bool alreadyAdded = false;
+            for (const auto& existingEntry : entriesToShow) {
+                if (existingEntry.first.compareIgnoreCase(micCode) == 0) {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+            if (!alreadyAdded) entriesToShow.push_back({ micCode, micCode });
+        }
+        std::sort(entriesToShow.begin(), entriesToShow.end(), [](const auto& leftEntry, const auto& rightEntry) {
+            return leftEntry.first.compareIgnoreCase(rightEntry.first) < 0;
         });
     }
 
@@ -710,6 +725,8 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         const auto it = existingLevels.find(micCode);
         if (it != existingLevels.end())
             level = juce::jlimit(0.0f, 1.0f, it->second);
+        const auto routeIt = existingRoutes.find(micCode);
+        if (routeIt != existingRoutes.end()) bleedCtrl->routeOutputMicCode = routeIt->second;
         bleedCtrl->bleedPot = std::make_unique<CompactParameterControl>(micCode, 0.0, 100.0, 1.0, static_cast<double>(level * 100.0f));
         bleedCtrl->bleedPot->setTooltip(micName);
         bleedCtrl->bleedPot->setInteraction(100.0, 1.0);
@@ -731,12 +748,15 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
             const auto& choice = bleedCtrl->routingChoices[static_cast<size_t>(choiceIdx)];
             const int itemId = choiceIdx + 1;
             bleedCtrl->routingCombo->addItem(choice.label, itemId);
-            if (choice.isCurrent) selectedRouteId = itemId;
+            if (bleedCtrl->routeOutputMicCode.isNotEmpty() && choice.outputMicCode.compareIgnoreCase(bleedCtrl->routeOutputMicCode) == 0) selectedRouteId = itemId;
         }
         bleedCtrl->routingCombo->setSelectedId(selectedRouteId, juce::dontSendNotification);
+        const int selectedIndex = selectedRouteId - 1;
+        if (selectedIndex >= 0 && selectedIndex < static_cast<int>(bleedCtrl->routingChoices.size()))
+            bleedCtrl->routeOutputMicCode = bleedCtrl->routingChoices[static_cast<size_t>(selectedIndex)].outputMicCode;
         auto* bleedCtrlPtr = bleedCtrl.get();
-        bleedCtrl->routingCombo->onChange = [this, bleedCtrlPtr] {
-            if (bleedCtrlPtr != nullptr) this->updateRoutingComboDisplay(*bleedCtrlPtr);
+        bleedCtrl->routingCombo->onChange = [this, layer, bleedCtrlPtr] {
+            this->applyRoutingComboChange(layer, bleedCtrlPtr);
         };
         this->updateRoutingComboDisplay(*bleedCtrl);
         this->layerContent.addAndMakeVisible(*bleedCtrl->routingCombo);
@@ -744,7 +764,7 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
     }
 }
 
-void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels, int mappedLayerIndex) {
+void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
     auto* layer = this->layerRows.add(new LayerRow());
     layer->sourcePathHint = sourceFullPath;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
@@ -850,7 +870,7 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     };
 
     // Per-mic bleed controls
-    this->rebuildBleedControls(layer, micBleedLevels);
+    this->rebuildBleedControls(layer, micBleedLevels, micRouteOverrides);
 
     // Remove button
     layer->removeButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x97")); // remove
@@ -956,6 +976,35 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
     }
     update.micBleedLevels = std::move(bleedLevels);
 
+    juce::String sourceText = layer->sourcePathHint;
+    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size()))
+        sourceText = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].fullPath();
+
+    juce::StringArray bleedParts;
+    std::vector<juce::String> bleedKeys;
+    bleedKeys.reserve(update.micBleedLevels->size());
+    for (const auto& [micCode, level] : *update.micBleedLevels) {
+        juce::ignoreUnused(level);
+        bleedKeys.push_back(micCode);
+    }
+    std::sort(bleedKeys.begin(), bleedKeys.end(), [](const juce::String& left, const juce::String& right) {
+        return left.compareIgnoreCase(right) < 0;
+    });
+    for (const auto& micCode : bleedKeys)
+        bleedParts.add(micCode + ":" + juce::String(update.micBleedLevels->at(micCode), 3));
+
+    this->engine.logMessage("Pad popup: slot=" + this->slotId
+        + " art=" + this->artName
+        + " layer=" + juce::String(layerIndex + 1)
+        + " source=" + sourceText
+        + " tuning=" + juce::String(*update.tuningCents)
+        + " attack=" + juce::String(*update.attackMs)
+        + " decay=" + juce::String(*update.decayMs)
+        + " gain=" + juce::String(*update.volumeDb, 2)
+        + " pan=" + juce::String(*update.pan)
+        + " flipLR=" + juce::String(*update.flipLR ? "1" : "0")
+        + " flipPhase=" + juce::String(*update.flipPhase ? "1" : "0")
+        + " bleed=[" + bleedParts.joinIntoString(",") + "]", DebugLevel::Debug);
     this->engine.updateSlotParameters(this->slotId, this->artName, layerIndex, update);
     this->mapTextDirty = true;
 }
@@ -1028,6 +1077,13 @@ juce::String PadContextPopup::generateFullMapText() const {
             if (bleedVal < 0.99) bleedParts.add(bleedCtrl->micCode + ":" + juce::String(bleedVal, 2));
         }
         if (!bleedParts.isEmpty()) params.add("bleed=" + bleedParts.joinIntoString(","));
+
+        juce::StringArray routeParts;
+        for (const auto& bleedCtrl : layer->micBleeds) {
+            if (bleedCtrl == nullptr || bleedCtrl->micCode.isEmpty() || bleedCtrl->routeOutputMicCode.isEmpty()) continue;
+            routeParts.add(bleedCtrl->micCode + ":" + bleedCtrl->routeOutputMicCode);
+        }
+        if (!routeParts.isEmpty()) params.add("micRoute=" + routeParts.joinIntoString(","));
 
         juce::String line = slotRef + ":" + targetRef;
         if (!params.isEmpty()) line += ":" + params.joinIntoString(";");
@@ -1124,6 +1180,30 @@ void PadContextPopup::applyReplaceInstrument(const SourceItem& sourceInstrument)
     this->resized();
 
     if (this->onMapTextChanged) this->onMapTextChanged(text);
+}
+
+void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl) {
+    if (layer == nullptr || bleedCtrl == nullptr || bleedCtrl->routingCombo == nullptr) return;
+
+    const auto oldRoute = bleedCtrl->routeOutputMicCode;
+    const int selectedIndex = bleedCtrl->routingCombo->getSelectedId() - 1;
+    juce::String newRoute;
+    if (selectedIndex >= 0 && selectedIndex < static_cast<int>(bleedCtrl->routingChoices.size()))
+        newRoute = bleedCtrl->routingChoices[static_cast<size_t>(selectedIndex)].outputMicCode;
+
+    bleedCtrl->routeOutputMicCode = newRoute;
+    this->updateRoutingComboDisplay(*bleedCtrl);
+    if (oldRoute == newRoute) return;
+
+    const int layerIndex = layer->mappedLayerIndex >= 0 ? layer->mappedLayerIndex : this->getLayerIndex(layer);
+    this->engine.logMessage("Pad popup route: slot=" + this->slotId
+        + " art=" + this->artName
+        + " layer=" + juce::String(layerIndex + 1)
+        + " sourceMic=" + bleedCtrl->micCode
+        + " old=" + (oldRoute.isNotEmpty() ? oldRoute : juce::String("auto"))
+        + " new=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")), DebugLevel::Debug);
+    this->engine.logMessage("Instrument map apply: changed slot=" + this->slotId + " art=" + this->artName + " reason=pad-popup route", DebugLevel::Debug);
+    this->applyToEngine();
 }
 
 void PadContextPopup::applyToEngine() {
