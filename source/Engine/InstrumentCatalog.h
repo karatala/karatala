@@ -101,6 +101,16 @@ public:
         return catalog;
     }
 
+    /**
+     * Parses instrument catalog YAML.
+     *
+     * Example:
+     *   kinds:
+     *     kick: { family: drum, directMicOuts: own }
+     *     crash: cymbal
+     *   aliases:
+     *     stax: stack
+     */
     static ParseResult<InstrumentCatalog> parseYaml(const YamlHelper::YamlNode& node, InstrumentCatalog base = makeDefault()) {
         ParseResult<InstrumentCatalog> result;
 
@@ -227,6 +237,16 @@ struct MicInstrumentSelector {
     std::vector<InstrumentFamily> listFamilies;
 };
 
+/**
+ * Parses a mic-layout instrument selector.
+ *
+ * Examples:
+ *   "" means common mic.
+ *   "snare1" means exact slot id.
+ *   "tom*" means slot id or kind starts with tom.
+ *   "snare,tom" means a list of catalog kinds or families.
+ *   "cymbal" means catalog family.
+ */
 inline MicInstrumentSelector parseMicInstrumentSelector(const juce::String& raw, const InstrumentCatalog& catalog) {
     MicInstrumentSelector selector;
     selector.raw = raw;

@@ -162,6 +162,7 @@ float DecayEnvelope::getMsAtAbsoluteDb(float targetAbsDb) const {
     return -1.0f;
 }
 
+/** Parses one mic code like 'dtm' to direct top mono */
 ParseResult<MicSpec> MicSpec::parseMicCode(const juce::String& code) {
     ParseResult<MicSpec> result;
     const int codelength = code.length();
@@ -202,6 +203,7 @@ ParseResult<MicSpec> MicSpec::parseMicCode(const juce::String& code) {
     return result;
 }
 
+/** Parses a mic chain like dtm_dbm_ons */
 ParseResult<std::vector<MicSpec>> MicSpec::parseMicCodesChain(const juce::String& codeChain) {
     ParseResult<std::vector<MicSpec>> result;
 
@@ -221,7 +223,7 @@ ParseResult<std::vector<MicSpec>> MicSpec::parseMicCodesChain(const juce::String
     return result;
 }
 
-
+/** Parses an instrument folder name like kick-22 snare-14x6.5 ride-20-R42-Basian OMG Mental  */
 ParseResult<InstrumentSpec::MetaInfo> InstrumentSpec::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
     juce::String processed = dirName.trim();
@@ -542,6 +544,8 @@ juce::String InstrumentSpec::getPreferredArticulationId(const ArticulationSpec& 
     }
     return articulation.codeRaw;
 }
+
+/** Parses a drum kit folder name, like "Studio Kit by Someone [CC-BY-4.0]" */
 ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
 

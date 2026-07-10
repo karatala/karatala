@@ -148,6 +148,7 @@ struct LayoutTraits;
 
 template <>
 struct LayoutTraits<MicLayout> {
+    /** Parses mic layout YAML. See example in source\Engine\LayoutManager.cpp MicLayout::getDefault() */
     static ParseResult<MicLayout> parseYaml(const juce::String& yaml) {
         ParseResult<MicLayout> result;
         MicLayout layout;
@@ -316,6 +317,7 @@ struct LayoutTraits<KitLayout> {
             yaml << " }\n";
         }
     }
+    /** Parses kit layout YAML. See example in source\Engine\LayoutManager.cpp KitLayout::getDefault() */
     static ParseResult<KitLayout> parseYaml(const juce::String& yaml) {
         ParseResult<KitLayout> result;
 
@@ -427,6 +429,7 @@ struct LayoutTraits<KitLayout> {
         return result;
     }
 
+    /** Writes kit layout YAML in normalized field order. */
     static juce::String toYaml(const KitLayout& layout) {
         juce::String yaml;
         yaml << "id: " << layout.id << "\n";

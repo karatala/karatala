@@ -58,26 +58,28 @@ ParsedTargetRef parseTargetRef(const juce::String& text) {
     return result;
 }
 
-int findNextParamBoundary(const juce::String& text, int startIndex, const std::vector<juce::String>& knownKeys) {
-    for (int idx = startIndex; idx < text.length(); ++idx) {
-        const auto ch = text[idx];
-        if (ch != ',' && ch != ';') continue;
-
-        int probe = idx + 1;
-        while (probe < text.length() && juce::CharacterFunctions::isWhitespace(text[probe]))
-            ++probe;
-
-        for (const auto& key : knownKeys)
-            if (text.substring(probe).startsWith(key + "=")) return idx;
-    }
+int findNextParamBoundary(const juce::String& text, int startIndex) {
+    for (int idx = startIndex; idx < text.length(); ++idx)
+        if (text[idx] == ';') return idx;
     return -1;
 }
 
+/**
+ * Parses instrument map text.
+ *
+ * Format:
+ *   slot/slotArt:kit/instrument/sourceArt[,sourceArt...][:params] //FIXME: [,sourceArt...]????
+ *
+ * Examples:
+ *   kick1/center:MyKit/kick-24/center
+ *   ride1/bow:KitA/ride-20/bow:tuning=-2;attack=50;decay=300
+ *   snare1/rim:MixedKit/snare-14/sidestick:vol=-3.5;bleed=oh:0.25,room:0.5
+ *
+ * Top-level params use semicolon. Commas are allowed inside list values such as bleed.
+ */
 ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::String& text) {
     ParseResult<DrumKitEngine::InstrumentMap> result;
     const juce::StringArray lines = juce::StringArray::fromLines(text);
-    const std::vector<juce::String> knownKeys { "tuning", "attack", "decay", "art", "vol", "pan", "flipLR", "flipPhase", "bleed" };
-
     auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<DrumKitEngine::InstrumentMap>& parseResult, int lineNumber, std::optional<int>& target) {
         auto trimmed = valueText.trim();
         if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789")) {
@@ -126,12 +128,11 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
         entry.kitRef = targetRef.kitRef;
         entry.instCode = targetRef.instCode;
         entry.articulationFilter = targetRef.articulations;
-        bool sawDeprecatedArtParam = false;
 
         if (!paramsText.isEmpty()) {
             int start = 0;
             while (start < paramsText.length()) {
-                while (start < paramsText.length() && (paramsText[start] == ',' || paramsText[start] == ';' || juce::CharacterFunctions::isWhitespace(paramsText[start])))
+                while (start < paramsText.length() && (paramsText[start] == ';' || juce::CharacterFunctions::isWhitespace(paramsText[start])))
                     ++start;
                 if (start >= paramsText.length())
                     break;
@@ -143,7 +144,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                 }
 
                 const auto key = paramsText.substring(start, equalsIdx).trim();
-                const int boundaryIdx = findNextParamBoundary(paramsText, equalsIdx + 1, knownKeys);
+                const int boundaryIdx = findNextParamBoundary(paramsText, equalsIdx + 1);
                 const auto value = (boundaryIdx < 0 ? paramsText.substring(equalsIdx + 1) : paramsText.substring(equalsIdx + 1, boundaryIdx)).trim();
 
                 if (key == "tuning")
@@ -152,13 +153,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                     parseInt(value, key, result, idx + 1, entry.attackTimeMs);
                 else if (key == "decay")
                     parseInt(value, key, result, idx + 1, entry.decayTimeMs);
-                else if (key == "art") {
-                    entry.articulationFilter = parseDelimitedNames(value);
-                    if (!sawDeprecatedArtParam) {
-                        result.addWarning("Line " + juce::String(idx + 1) + ": 'art=' is deprecated; use target path articulation '<kit>/<inst>/<sourceArt>'");
-                        sawDeprecatedArtParam = true;
-                    }
-                } else if (key == "vol") {
+                else if (key == "vol") {
                     auto trimmed = value.trim();
                     if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789."))
                         result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'vol': " + value);

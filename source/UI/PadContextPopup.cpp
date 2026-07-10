@@ -1030,7 +1030,7 @@ juce::String PadContextPopup::generateFullMapText() const {
         if (!bleedParts.isEmpty()) params.add("bleed=" + bleedParts.joinIntoString(","));
 
         juce::String line = slotRef + ":" + targetRef;
-        if (!params.isEmpty()) line += ":" + params.joinIntoString(",");
+        if (!params.isEmpty()) line += ":" + params.joinIntoString(";");
         result.add(line);
     }
 

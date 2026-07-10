@@ -281,6 +281,7 @@ juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, co
     return serializeInstrumentMap(result);
 }
 
+/** Writes instrument map text in normalized slot/layer order with semicolon-separated params. */
 juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrumentMap) {
     juce::StringArray lines;
 
@@ -340,7 +341,7 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
 
         auto line = slotRef + ":" + targetRef;
         if (!params.isEmpty())
-            line += ":" + params.joinIntoString(",");
+            line += ":" + params.joinIntoString(";");
         lines.add(line);
     }
 

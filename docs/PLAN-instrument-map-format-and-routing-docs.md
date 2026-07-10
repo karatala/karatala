@@ -168,22 +168,20 @@ Doxygen comment style:
  */
 ```
 
-### 3. Remove Old `art=` And Comma Top-Level Support
+### 3. Remove Old Source-Art Param And Comma Top-Level Support
 
-Remove the old deprecated `art=` parameter completely.
+Status: implemented for parser, serializer, UI map writers, tests, and parser docs.
 
 No backward compatibility is needed because the app is not released yet.
 
-Code todos:
+Implemented rules:
 
-- Remove `art` from `knownKeys` in `DrumKitEngineMappingModel::parseInstrumentMapText()`.
-- Remove the parser branch that accepts `art=`.
-- Remove warnings that tell users to migrate from `art=`.
-- Remove tests that expect `art=` to work.
-- Update tests so top-level params use semicolon, not comma.
-- Keep comma only inside list values like `bleed=oh:0.25,room:0.5` and future `micRoute=dtm:room,dsm:oh`.
-- Make serializer write semicolon between top-level params.
-- Update Doxygen examples to show semicolon only.
+- Source art belongs in the target path: `slot/slotArt:kit/instrument/sourceArt`.
+- Top-level params use semicolon, not comma.
+- Comma stays only inside list values like `bleed=oh:0.25,room:0.5` and future `micRoute=dtm:room,dsm:oh`.
+- Unknown params still warn through the normal unknown-param path.
+- Serializer and UI map writers write semicolon between top-level params.
+- Doxygen examples show semicolon only.
 
 ### 4. Add Parser Tests For New Route Param
 
@@ -256,4 +254,4 @@ Route implementation stage:
 
 - Routing is not a live scalar like gain or pan. It changes sample output channel assignment, so it needs slot reload.
 - `route=` may be too broad as a future keyword. `micRoute=` is clearer.
-- Existing maps with unknown params currently warn. Adding `micRoute=` must update `knownKeys`, parser, serializer, fingerprints, and docs together. Before that, remove old `art=` and comma top-level separator support so the parser matches the stricter format.
+- Existing maps with unknown params currently warn. Adding `micRoute=` must update parser, serializer, fingerprints, and docs together.

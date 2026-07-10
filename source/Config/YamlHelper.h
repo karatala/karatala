@@ -15,11 +15,12 @@
  *   - nested maps and lists (indentation-based)
  *   - comments (# to end of line)
  *   - inline arrays [1, 2, 3]
+ *   - inline maps { code: bow, notes: [28] }
  * 
  * Not supported (will be ignored or partially parsed):
  *   - anchors/aliases (&, *)
  *   - complex types (!!int, !!float, etc.)
- *   - flow syntax (except inline arrays)
+ *   - flow syntax except inline arrays and inline maps
  *   - multi-line strings (|, >)
  */
 namespace YamlHelper {
@@ -73,8 +74,11 @@ namespace YamlHelper {
     };
 
     /**
-     * Parse a YAML string into a node tree.
-     * Returns the root node; if parsing fails, returns a Null node.
+     * Parses the supported YAML subset into a node tree.
+     *
+     * Supported forms include scalar maps, indentation-based maps/lists, comments, inline maps, and inline arrays.
+     * Unsupported YAML features such as anchors, tags, and multiline strings are not part of this parser contract.
+     * Returns the root node. If parsing fails, returns a Null node.
      */
     YamlNode parse(const juce::String& yaml);
 

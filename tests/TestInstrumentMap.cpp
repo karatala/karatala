@@ -14,8 +14,8 @@ TEST_CASE("InstrumentMap parser rejects empty input", "[InstrumentMap]") {
 TEST_CASE("InstrumentMap parser skips comments and parses basic entries", "[InstrumentMap]") {
     const juce::String text = R"MAP(
 # comment
-kick1:MyKit/kick-24
-snare1:MyKit/snare-14
+kick1/center:MyKit/kick-24/center
+snare1/center:MyKit/snare-14/center
 )MAP";
 
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
@@ -25,12 +25,13 @@ snare1:MyKit/snare-14
     CHECK(parsed.value.entries[0].slotId == "kick1");
     CHECK(parsed.value.entries[0].kitRef == "MyKit");
     CHECK(parsed.value.entries[0].instCode == "kick-24");
-    CHECK(parsed.value.entries[0].slotArticulationFilter.empty());
+    REQUIRE(parsed.value.entries[0].slotArticulationFilter.size() == 1);
+    CHECK(parsed.value.entries[0].slotArticulationFilter[0] == "center");
     CHECK(parsed.value.entries[1].slotId == "snare1");
 }
 
 TEST_CASE("InstrumentMap parser reads params and articulation filters", "[InstrumentMap]") {
-    const juce::String text = "ride1/bow:KitA/ride-20/bow:tuning=-2,attack=50,decay=300";
+    const juce::String text = "ride1/bow:KitA/ride-20/bow:tuning=-2;attack=50;decay=300";
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
@@ -51,7 +52,7 @@ TEST_CASE("InstrumentMap parser reads params and articulation filters", "[Instru
 }
 
 TEST_CASE("InstrumentMap parser reads gain, flip and bleed params", "[InstrumentMap]") {
-    const juce::String text = "kick1:MyKit/kick-24:vol=-6.5,flipLR=1,flipPhase=true,bleed=dtm:0.75,dom:0.25";
+    const juce::String text = "kick1/center:MyKit/kick-24/center:vol=-6.5;flipLR=1;flipPhase=true;bleed=dtm:0.75,dom:0.25";
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
@@ -69,22 +70,18 @@ TEST_CASE("InstrumentMap parser reads gain, flip and bleed params", "[Instrument
     CHECK_THAT(entry.micBleedLevels.at("dom"), Catch::Matchers::WithinAbs(0.25f, 0.0001f));
 }
 
-TEST_CASE("InstrumentMap parser supports wildcard and art param", "[InstrumentMap]") {
-    const juce::String text = "*:MyKit\nride1:KitB/ride-18:art=bow,edge";
+
+TEST_CASE("InstrumentMap parser does not split top-level params on comma", "[InstrumentMap]") {
+    const juce::String text = "kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8,tuning=-20";
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 2);
-    CHECK(parsed.value.entries[0].slotId == "*");
-    CHECK(parsed.value.entries[0].kitRef == "MyKit");
-    CHECK(parsed.value.entries[0].instCode.isEmpty());
-
-    const auto& entry = parsed.value.entries[1];
-    REQUIRE(entry.slotArticulationFilter.size() == 2);
-    CHECK(entry.slotArticulationFilter[0] == "bow");
-    CHECK(entry.slotArticulationFilter[1] == "edge");
-    CHECK_FALSE(parsed.errors.empty());
-    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("'art=' is deprecated"));
+    REQUIRE(parsed.value.entries.size() == 1);
+    const auto& entry = parsed.value.entries.front();
+    CHECK_FALSE(entry.tuningCents.has_value());
+    REQUIRE(entry.micBleedLevels.size() == 2);
+    CHECK_THAT(entry.micBleedLevels.at("dtm"), Catch::Matchers::WithinAbs(0.5f, 0.0001f));
+    CHECK_THAT(entry.micBleedLevels.at("room"), Catch::Matchers::WithinAbs(0.8f, 0.0001f));
 }
 
 TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[InstrumentMap]") {
@@ -99,14 +96,11 @@ TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[I
     CHECK(entry.slotArticulationFilter[0] == "edge");
     REQUIRE(entry.articulationFilter.size() == 1);
     CHECK(entry.articulationFilter[0] == "bell");
-
-    const auto parserMessages = parsed.error().toStdString();
-    CHECK(parserMessages.find("'art=' is deprecated") == std::string::npos);
 }
 
 TEST_CASE("InstrumentMap serializer preserves parsed assignments and parameters", "[InstrumentMap]") {
     const juce::String original =
-        "snare1/rim:MixedKit/snare-14/sidestick:tuning=-25,attack=12,decay=450,vol=-3.5,flipLR=1,flipPhase=1,bleed=oh:0.25,room:0.5";
+        "snare1/rim:MixedKit/snare-14/sidestick:tuning=-25;attack=12;decay=450;vol=-3.5;flipLR=1;flipPhase=1;bleed=oh:0.25,room:0.5";
 
     auto parsed = DrumKitEngine::parseInstrumentMapText(original);
     REQUIRE(parsed.ok());
@@ -148,7 +142,7 @@ TEST_CASE("InstrumentMap serializer omits entries without slot or kit", "[Instru
 }
 
 TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[InstrumentMap]") {
-    const juce::String text = "kick1:MyKit/kick-24:unknown=1,broken";
+    const juce::String text = "kick1/center:MyKit/kick-24/center:unknown=1,broken";
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
@@ -159,7 +153,7 @@ TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[I
 }
 
 TEST_CASE("InstrumentMap parser preserves explicit false flipLR", "[InstrumentMap][orientation]") {
-    const juce::String text = "ride1:MyKit/ride-20:flipLR=0";
+    const juce::String text = "ride1/bow:MyKit/ride-20/bow:flipLR=0";
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());

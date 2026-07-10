@@ -483,7 +483,7 @@ juce::String InstrumentConfigPanel::generateMapText() const {
 
         juce::String line = slotRef + ":" + targetRef;
         if (!params.isEmpty())
-            line += ":" + params.joinIntoString(",");
+            line += ":" + params.joinIntoString(";");
 
         lines.add(line);
     }

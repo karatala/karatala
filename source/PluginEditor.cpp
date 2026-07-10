@@ -334,7 +334,7 @@ void PluginEditor::setupRawMode() {
 
     UIHelpers::configureMonoTextEditor(this->instrumentMapEditor, UITheme::Colours::textPrimary, true);
     this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
-    this->instrumentMapEditor.setTextToShowWhenEmpty("kick1:MyKit/kick-24\nsnare1:MyKit/snare-14:tuning=-20,attack=25,decay=250", UITheme::Colours::textMuted);
+    this->instrumentMapEditor.setTextToShowWhenEmpty("kick1/center:MyKit/kick-24/center\nsnare1/center:MyKit/snare-14/center:tuning=-20;attack=25;decay=250", UITheme::Colours::textMuted);
     auto instrumentMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
     if (instrumentMapText.trim().isEmpty())
         instrumentMapText = this->processorRef.getEngine().getSuggestedInstrumentMapText();
