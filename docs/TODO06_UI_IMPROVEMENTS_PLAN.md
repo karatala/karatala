@@ -1,4 +1,4 @@
-# TODO06: UI Improvements Plan
+# ✅ COMPLETED: TODO06: UI Improvements Plan (Mostly superseded by TODO10 and UI_REVIEW_PLAN)
 
 ## 1. Compact Instrument Config Layout
 

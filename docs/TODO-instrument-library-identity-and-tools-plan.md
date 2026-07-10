@@ -1,4 +1,4 @@
-# TODO Instrument Library Identity And Tools Plan
+# ✅ COMPLETED: TODO Instrument Library Identity And Tools Plan (Remaining note: replacement scoring may still need real-library tuning)
 
 Status: phases 1-4 implemented; replacement scoring can still be refined after real-library testing.
 
@@ -212,13 +212,13 @@ Simple first version:
 - Large read-only text area below the buttons for recent `Error`, `Warning`, and `Notice` log lines.
 - Parse current instrument map text.
 - Try to resolve each entry.
-- Show one missing path at a time.
+- Show all current failing paths in one simple table: `slot`, `missing path`, and `replacement`.
 - Show the old path, for example `aasimonster2/tom-X1/center`.
-- Preselect the best replacement in a dropdown.
+- Preselect the best replacement in each row dropdown.
 - Allow manual replacement selection.
-- Confirm updates current map text and moves to the next missing path.
-- Allow skipping a missing path.
-- When finished, apply the updated map.
+- Confirm applies all selected row replacements once.
+- Allow skipping a missing path by leaving that row on `Skip`.
+- After confirm, apply the updated map and recheck once.
 - `Reload Library` rescans the sample library so folder renames and file changes can be checked again without restarting.
 
 Replacement suggestion rules:
@@ -318,7 +318,7 @@ Implemented:
 - Added the recent `Error`, `Warning`, and `Notice` log text area.
 - Added logger accessors for current log file, logs folder, recent important lines, and session file-writing toggle.
 - Added reload library action that rescans library data and reapplies current state.
-- Added missing-map fixer wizard that detects failing kit/instrument/articulation paths, shows one missing path at a time, preselects scored replacement candidates, supports skip/cancel, rewrites confirmed source paths, preserves params, and reapplies the map.
+- Added missing-map fixer table that detects failing kit/instrument/articulation paths, shows all current failures together, preselects scored replacement candidates, supports per-row skip and cancel, rewrites confirmed source paths, preserves params, and reapplies the map once.
 
 Still open:
 

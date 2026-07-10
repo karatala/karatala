@@ -1,4 +1,4 @@
-# Refactoring: Dynamic Output Buses from MicLayout
+# ✅ COMPLETED: Refactoring: Dynamic Output Buses from MicLayout Deeper per-instance VST reload work is tracked in TODO0X.
 
 ## Problem
 

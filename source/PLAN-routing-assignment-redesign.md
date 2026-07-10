@@ -1,4 +1,4 @@
-# Routing + Assignment Redesign Plan
+# ✅ COMPLETED: Routing + Assignment Redesign Plan
 
 ## Summary
 
@@ -40,6 +40,12 @@
 - In replace mode, show instrument-level picker rows instead of every articulation row.
 - In replace mode, generate explicit map entries such as `tom1/center` and `tom1/rim`.
 - If the source instrument has only one usable articulation, assign that articulation to all empty slot articulations.
+- Add replace-mode-only articulation compatibility when an exact source articulation is missing:
+  - exact source articulation match always wins
+  - `bell -> bow -> edge`, `bow -> edge -> bell`, and `edge -> bow -> bell`
+  - `rim -> center`, `center -> rim`, and `sidestick -> rim -> center`
+  - compatibility must generate explicit map text using the actual chosen source articulation, for example `tom1/rim:SomeKit/tom-X/center`
+  - do not use this compatibility in runtime routing; raw map text must remain the source of truth
 - In assign mode, keep articulation-level picker rows.
 - For hi-hat source rows, show all available articulations with their full bracketed expression labels, for example `edge[open]`, `edge[half]`, `edge[close]`, `edge[tight]`, and `pedal[splash]`.
 - Recommended UI checkbox label: `REPLACE`.
@@ -73,6 +79,8 @@
   - empty-art fallback still works for the original `stax1` simple-slot case.
 - Add instrument-map/UI model tests where possible:
   - replace-whole-instrument generation emits explicit entries for all compatible articulations.
+  - replace-mode compatibility writes the chosen source articulation explicitly when exact source art is missing.
+  - runtime routing does not silently substitute compatible articulations unless the map text explicitly requests that source art.
   - assign-articulation generation removes/replaces only the selected articulation group.
   - knob updates target the same layer that map regeneration would target.
 - Run:
@@ -94,3 +102,4 @@
 - Implementation starts with Stage 1 before touching popup redesign, because current routing bugs can invalidate UI conclusions.
 - `zon_lft_rgt` remains out of scope for implicit expression-point routing.
 - Temporary routing diagnostics are acceptable during the debugging pass, but should not remain noisy by default.
+- Articulation compatibility is a replace-mode map-generation convenience only, not a synth/runtime fallback.

@@ -1,4 +1,4 @@
-# TODO02: Voice Lifecycle Unification & Decay-Aware Voice Culling — Detailed Implementation Plan
+# ✅ COMPLETED: TODO02: Voice Lifecycle Unification & Decay-Aware Voice Culling — Detailed Implementation Plan
 
 ## Goal
 1. **Unify** the scattered voice-stopping mechanisms (`stopNote`, `fadeOutSec`, `setTailShorteningFactor`, `applyAdaptiveTailShortening`, `AftertouchChokeProcessor`) into a coherent, single-responsibility architecture with consistent ADSR handling.

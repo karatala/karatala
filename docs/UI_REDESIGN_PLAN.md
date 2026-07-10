@@ -1,4 +1,4 @@
-# UI Redesign Plan: Tabbed Layout with Drum Pads
+# ✅ COMPLETED: UI Redesign Plan: Tabbed Layout with Drum Pads (Mostly implemented or superseded. Remaining UI cleanup is better tracked in TODO10 / UI_REVIEW_PLAN)
 
 ## Overview
 

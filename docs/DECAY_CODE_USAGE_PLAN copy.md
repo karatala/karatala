@@ -1,4 +1,4 @@
-# Decay Code Usage Plan - Implementation Design (Corrected)
+# ✅ COMPLETED: Decay Code Usage Plan - Implementation Design (Corrected) (Mostly implemented or superseded by TODO01 / TODO12.)
 
 ## 1. Overview
 

@@ -1,4 +1,5 @@
-# Decay Code Usage Plan - Implementation Design
+# ✅ COMPLETED: Decay Code Usage Plan - Implementation Design
+*Phase 4 - Articulation Transitions, optional/future WAS abandoned. Mostly superseded by newer decay/hi-hat plans.
 
 ## 1. Overview
 

@@ -1,4 +1,4 @@
-# TODO01: Hi-Hat Pedal Transition — Detailed Implementation Plan
+# ✅ COMPLETED: TODO01: Hi-Hat Pedal Transition — Detailed Implementation Plan (Mostly superseded by TODO12. Old multi-mic/group transition idea was rejected/reworked, not still pending)
 
 ## Goal
 When the hi-hat pedal CC changes articulation while a sound is already playing (e.g., closed → half-open), start the new articulation's sample **at a time-offset that matches the current RMS level of the old sound**, instead of using a fixed 50ms offset. This produces a seamless, natural transition without an audible attack transient or unnatural choke+fade-in.
