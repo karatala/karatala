@@ -8,6 +8,23 @@ ParameterPot::ParameterPot(const juce::String& name,
                            double interval,
                            double initialValue,
                            std::function<juce::String(double)> textFromValueFn,
+                           std::function<double(const juce::String&)> valueFromTextFn)
+    : ParameterPot(name,
+                   minVal,
+                   maxVal,
+                   interval,
+                   initialValue,
+                   std::move(textFromValueFn),
+                   LayoutOptions{},
+                   std::move(valueFromTextFn)) {
+}
+
+ParameterPot::ParameterPot(const juce::String& name,
+                           double minVal,
+                           double maxVal,
+                           double interval,
+                           double initialValue,
+                           std::function<juce::String(double)> textFromValueFn,
                            LayoutOptions options,
                            std::function<double(const juce::String&)> valueFromTextFn)
     : layoutOptions(std::move(options)) {

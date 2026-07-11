@@ -99,7 +99,7 @@ void DrumKitEngine::initMicLayouts() {
 
 void DrumKitEngine::initSampleLibrary() {
     if (!this->globalConfig.libraryPath.isDirectory()) {
-        LOG(Error, "Sample library not found under " + this->globalConfig.libraryPath.getFullPathName());
+        LOG(Error, "Sample library not found under " + this->globalConfig.libraryPath.getFullPathName()); //FIXME: add in ui on Kit tab input  to set Library path
         jassertfalse;
         return;
     }

@@ -167,7 +167,7 @@ public:
 private:
     class WriterThread : public juce::Thread {
     public:
-        explicit WriterThread(GlobalLogger& owner): juce::Thread("Karatala Log Writer"), owner(owner) {}
+        explicit WriterThread(GlobalLogger& logger): juce::Thread("Karatala Log Writer"), owner(logger) {}
 
         void run() override {
             while (!this->threadShouldExit()) {

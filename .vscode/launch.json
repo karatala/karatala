@@ -5,6 +5,18 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "(MacOS) Debug in REAPER",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "/Applications/REAPER.app",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "lldb"
+    },
+    {
       "name": "(Windows) Debug Standalone",
       "type": "cppvsdbg",
       "request": "launch",

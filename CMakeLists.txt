@@ -140,6 +140,10 @@ target_compile_definitions(SharedCode
     PRODUCT_NAME_WITHOUT_VERSION="Karatala"
 )
 
+target_compile_options(SharedCode INTERFACE
+    $<$<CXX_COMPILER_ID:Clang>:-fno-diagnostics-show-note-include-stack>
+    $<$<CXX_COMPILER_ID:Clang>:-ferror-limit=1>)
+    
 # Link to any other modules you added (with juce_add_module) here!
 # Usually JUCE modules must have PRIVATE visibility
 # See https://github.com/juce-framework/JUCE/blob/master/docs/CMake%20API.md#juce_add_module
