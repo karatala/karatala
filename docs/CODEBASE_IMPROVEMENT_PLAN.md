@@ -1,265 +1,375 @@
 # Codebase Improvement Plan
 
-Status: steps 1, 2, and 3 implemented; remaining steps proposed.
+Status: active review and cleanup plan.
 
-This plan started from a read-only review. Steps 1, 2, and 3 have since been implemented.
+Implemented candidates:
 
-## Goals
+- Mic bleed gain is cached on `SampledSound`, removing a string lookup from voice rendering. Correctness verification is still required.
+- `StringsDictSingleton` has direct `id -> name` lookup. Focused correctness verification is still required.
 
-- Reduce repeated helper code.
-- Reduce string work in engine runtime code.
-- Find safe places to use `StringsDictSingleton` or numeric IDs instead of repeated string compares.
-- Reduce allocations in audio-sensitive paths.
-- Check struct/class layout for possible RAM savings.
-- Keep changes small and verify each step before moving to the next one.
+Candidate under review:
 
-## Success Criteria
+- Mic route overrides use cached string IDs in the staged changes. Keep this only if behavior tests pass and a realistic routing-rebuild benchmark shows a useful gain.
 
-- Audio thread does less string lookup, heap allocation, and locking.
-- Runtime code uses fixed lookup tables where MIDI values are known to be `0..127`.
-- Repeated string normalization and identity matching lives in reusable helpers.
-- Any memory-layout change is backed by measured `sizeof`, `alignof`, and member-offset data.
-- Focused tests pass for changed behavior when implementation starts.
+Rejected experiment:
 
-## Observed Facts
+- Per-articulation MIDI controller lookup tables were reverted. They added code and memory without a proven real-world benefit.
 
-- Realtime engine rules say code reached from `processBlock`, `renderNextBlock`, note handling, controller handling, and aftertouch handling must avoid strings, logging preparation, heap allocation, locks with message-thread contention, and unbounded work.
-- `DrumKitEngine::processBlock()` uses `engineGraphLock` with `ScopedTryLock` in [`../source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp).
-- `InstrumentSynth::renderNextBlock()` takes `this->lock` while rendering in [`../source/Engine/InstrumentSynth.cpp`](../source/Engine/InstrumentSynth.cpp).
-- `InstrumentSynth::startLayerVoices()` also takes `this->lock` during note start in [`../source/Engine/InstrumentSynthController.cpp`](../source/Engine/InstrumentSynthController.cpp).
-- Before step 1, `InstrumentSynthVoice::renderNextBlock()` called `owner->getMicBleedLevel(s->routedMicCode)` while rendering. Step 1 replaced this with cached sample bleed gain loaded from `SampledSound`.
-- Before step 2, `StringsDictSingleton::nameOf()` locked and scanned the whole `nameIdMap` to find a name by ID. Step 2 replaced this with direct `id -> name` lookup in [`../source/Config/Helpers.h`](../source/Config/Helpers.h).
-- Identity helper logic exists in more than one place, for example `identityKey()` and `candidateMatches()` in [`../source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp) and [`../source/Engine/KitLibModel.cpp`](../source/Engine/KitLibModel.cpp).
-- Map/fingerprint join helpers are repeated and partly called out by comments in [`../source/Engine/DrumKitEngineMapHelpers.cpp`](../source/Engine/DrumKitEngineMapHelpers.cpp).
-- Step 3 converted mic route override matching to numeric mic code IDs during routing context storage.
-- Many other engine and UI paths still repeatedly use `trim().toLowerCase()`, `compareIgnoreCase()`, or string-key maps. UI work is less urgent than engine runtime work.
+## Goal
 
-## Plan
+Make the codebase smaller, easier to read, easier to reuse, and faster where performance matters.
 
-### 1. Cache Mic Bleed Lookup For Rendering
+The project is unreleased, so internal types and layouts may change. Behavior that already works well must still be protected by tests.
 
-Status: implemented.
+## Priorities
 
-Priority: high.
+1. Correct audio and mapping behavior.
+2. Realtime safety in rendering, note, controller, and aftertouch paths.
+3. Simpler code and removal of exact duplication.
+4. Lower memory use in types that have many instances.
+5. Faster loading, routing rebuilds, and UI work when measurements show a problem.
 
-Problem:
+Do not treat all runtime code as realtime code. Parsing, routing rebuilds, `prepareToPlay()`, and most UI work are setup work. They may allocate and use strings when that keeps the code simpler.
 
-- Voice render used to do string-key lookup by mic code.
-- This happened in the audio path and could repeat many times while voices rendered.
+## Rules For Accepting A Change
 
-Implemented change:
+Every candidate must answer:
 
-- Added cached numeric mic identity and cached bleed gain to `SampledSound`.
-- Filled it during routing/load, when `routedMicCode` is already known.
-- Kept `routedMicCode` for UI, logs, and serialization.
+- Which thread calls it?
+- How often is it called in a realistic project?
+- Is the current code wrong, duplicated, difficult to maintain, slow, or memory-heavy?
+- Can deletion or simplification solve the problem?
+- What test proves behavior stays correct?
+- What measurement proves the performance or memory claim?
+
+Accept a change only when its benefit justifies its added code and state.
+
+- Extract a helper only when at least two real users need the same behavior.
+- Require an old-versus-new benchmark or full-path before-versus-after measurement for performance claims.
+- Require individual type sizes, member offsets, instance counts, and estimated total saving for memory-layout changes.
+- Do not introduce strings, allocation, blocking locks, logging preparation, or unbounded work in realtime paths.
+- Give cached data one clear owner and rebuild point. Avoid parallel representations that can become inconsistent.
+
+## Verification Strategy
+
+Tests prove behavior. Benchmarks measure cost.
+
+### Tests
+
+For each change:
+
+1. Add or identify a focused test for current behavior.
+2. Make the implementation change.
+3. Run the focused test.
+4. Run the full `Tests` target for shared engine or configuration changes.
+5. Use listening checks for changes affecting audio transitions, gain, routing, phase, or voices.
+
+String and ID conversions must cover:
+
+- Empty and repeated values.
+- Unknown IDs.
+- Case differences.
+- Intended whitespace behavior.
+- Duplicate keys that normalize to the same value.
+- Serialization and parsing round trips.
+
+### Benchmarks
+
+- Compare equivalent old and new logic in the same binary when practical.
+- Give both paths identical input and verify identical output outside the timed region.
+- Use realistic small, normal, and large data sizes.
+- Use Release builds for performance decisions.
+- Keep setup outside the timed region unless setup is being measured.
+- Record the scenario, result, and date.
+- Remove temporary decision benchmarks unless they protect an important performance limit.
+
+Memory layout is not a timing benchmark. Produce a readable size report instead of timing `sizeof` constants.
+
+## Workstream 1: Consolidate Similar Code And Organize Helpers
+
+Priority: high for readability and code size. Performance priority depends on the callers.
+
+The goal is broader than removing byte-for-byte duplicates. Repeated chunks often implement the same operation with small differences, extra normalization, different containers, or old behavior that is no longer part of the contract. These cases should be reviewed together and reduced to one clear implementation where practical.
+
+### Step 1: Enumerate Repeated And Similar Code
+
+Create an audit table containing:
+
+- Code locations and callers.
+- The shared operation each chunk appears to perform.
+- Important behavior differences and edge cases.
+- Calling domain and thread.
+- Whether the code should be deleted, merged, parameterized, or left separate.
+- Expected code reduction.
+- Whether consolidation can also reduce allocation, string work, or repeated scans.
+
+Search for more than matching function names. Include repeated loops, normalization, sorting, joining, lookup, validation, conversion, fingerprint, and error-formatting patterns.
+
+Initial candidates:
+
+- `identityKey()` and `candidateMatches()` in `source/Engine/DrumKitEngine.cpp` and `source/Engine/KitLibModel.cpp`.
+- Repeated identity candidate counting and resolving for kits, instruments, and articulations.
+- Repeated normalized string lookup and case-insensitive vector membership.
+- Repeated stable sorting and fingerprint formatting for instrument-map entries.
+- Repeated map and route parameter formatting.
+- Repeated MIDI value validation and fixed-domain lookup initialization.
+- Name joining and articulation-filter loops in the instrument-map code.
+
+Before extracting a helper, confirm that the behavior is still required. The joined instrument-map articulation code is a current example: the format requires one destination and one source articulation per line, so obsolete multi-articulation joining should be removed instead of made reusable.
+
+### Step 2: Design The Shared Operation
+
+For each accepted candidate:
+
+1. Write the common behavior in simple terms.
+2. Decide which differences are real domain rules and which are accidental duplication.
+3. Prefer one concrete function over a configurable generic framework.
+4. Prefer deletion when one caller represents obsolete behavior.
+5. Keep one-use logic local when extraction would only move code without making it clearer.
+6. If the operation is performance-sensitive, compare the existing variants and keep the simplest efficient algorithm.
+
+Do not add boolean switches or callbacks only to force unrelated code through one helper. Separate domain rules may share a small primitive without sharing the whole workflow.
+
+### Step 3: Organize Helper Files
+
+Inventory existing `*Helper*` files, free functions, local lambdas, and helper namespaces before moving them. Record their purpose, owners, callers, and dependencies.
+
+Target organization:
+
+- `source/Engine/helpers/` for engine-only identity, instrument-map, routing, MIDI, and model helpers.
+- `source/UI/helpers/` for UI-only formatting, search, and component support.
+- `source/Config/helpers/` for configuration, parsing, and shared configuration primitives.
+- `source/helpers/` only for small source-wide primitives that genuinely have callers in more than one domain.
+
+Organization rules:
+
+- Name files by responsibility, such as `InstrumentMapIdentity.h` or `MicRoutingLookup.h`, not only `Helpers.h`.
+- Use one clear named namespace that matches the owned domain.
+- Keep helper dependencies one-way. Low-level helpers must not include large owner classes only for convenience.
+- Prefer pure functions with explicit inputs and outputs.
+- Keep state and ownership in the main class when the helper does not own that state.
+- Do not create one large utility namespace or dumping-ground file.
+- Do not move helpers only to satisfy folder shape. Move them when ownership and reuse are clear.
+- Update the applicable DOX hierarchy when helper folders become durable ownership boundaries.
+
+Move helpers by concern in small changes. Do not combine a large file move, behavior change, and optimization in one diff.
+
+### Verification
+
+- Add or identify focused tests before merging similar behavior that currently differs.
+- Run identity, map parsing, mapping, fingerprint, routing, and serialization tests for affected engine helpers.
+- Add ambiguity, normalization, ordering, and error-result coverage where missing.
+- Compare serialized text before and after instrument-map helper changes.
+- Do not add performance benchmarks for pure moves.
+- Add an old-versus-new benchmark only when consolidation changes an algorithm used frequently or in realtime code.
+
+### Success Conditions
+
+- Repeated and structurally similar code has been enumerated, not selected ad hoc.
+- Obsolete variants are deleted instead of preserved in helpers.
+- Main engine and UI folders are less polluted by unrelated helper files.
+- Helper folders and namespaces have clear domain ownership.
+- Total implementation code is reduced or made clearly easier to follow.
+- No generic helper framework is introduced without several concrete users.
+
+## Workstream 2: Audit Strings And IDs
+
+Priority: high on the audio thread, medium during frequent rebuilds, low in UI and parsing.
+
+Rules:
+
+- Keep strings at configuration, YAML, serialization, logging, and UI boundaries.
+- Normalize once when the same value is compared many times later.
+- Use an enum for a closed set of known values.
+- Use `StringsDictSingleton::Id` for stable identity shared across engine structures.
+- Never call `StringsDictSingleton::getId()` from realtime code because it locks and may insert.
+- Never convert an ID back to a string in realtime code.
+
+Audit method:
+
+1. List `trim().toLowerCase()`, `compareIgnoreCase()`, string-key maps, `getId()`, and `nameOf()` call sites.
+2. Record thread, frequency, collection size, and whether text is needed afterward.
+3. Leave simple setup and UI code alone unless it is duplicated or measured slow.
+4. Change one domain at a time and keep public text formats unchanged.
+
+### Cached Mic Bleed Gain
+
+Required tests:
+
+- Default gain is `1.0`.
+- Configured code receives the configured gain.
+- Changing bleed updates already loaded sounds.
+- Clearing overrides restores the default.
+- Different mic codes remain independent.
+
+Benchmark:
+
+- Keep the current string lookup versus cached gain comparison.
+- Add a representative render scenario with several active voices and routed microphones.
+- Verify both paths produce the same accumulated gain.
+
+### `StringsDictSingleton` Reverse Lookup
+
+Required tests:
+
+- Empty name and ID `0`.
+- Repeated name returns the same ID.
+- Different names return different IDs.
+- Valid and unknown reverse lookup.
+- Concurrent reads and insertion remain protected.
+
+Benchmark:
+
+- Compare the old reverse scan with direct lookup using 1, 16, 512, and 4096 names.
+- Treat this as setup and logging improvement, not audio-thread improvement.
+
+### Staged Mic Route Override IDs
+
+Risk:
+
+- Routing rebuild is setup work and normal projects may have few overrides.
+- The staged code keeps string and ID maps, adding state and rebuild logic.
+
+Required tests:
+
+- No override and exact match.
+- Case-insensitive match and intended whitespace behavior.
+- Missing target preserves fallback behavior.
+- Multiple overrides select correct outputs.
+- Duplicate normalized keys are deterministic or rejected.
+- Routing and serialization match the string implementation.
+
+Benchmark:
+
+- Compare complete routing rebuilds using string and ID matching.
+- Use 0, 4, and 16 overrides, plus a large stress set.
+- Include normalization and ID lookup costs.
+- Verify identical routing assignments before timing.
+
+Keep the staged change only if the complete realistic rebuild improves enough to justify the duplicate cached map. Otherwise revert it.
+
+Other string candidates must go through the same audit. Do not convert strings only because IDs are available.
+
+## Workstream 3: Audit Allocations And Containers
+
+Priority: high only for realtime allocations or structures with many instances.
+
+Plan:
+
+1. Search realtime paths for temporary strings, vectors, maps, shared ownership, and buffers.
+2. Count allocations in note, controller, render, routing rebuild, and load scenarios.
+3. Separate realtime allocations from harmless setup allocations.
+4. Prefer existing contiguous storage and bounded stack arrays when the domain is fixed and code becomes simpler.
+5. Do not replace a small setup container with a large permanent table without measured total benefit.
+
+Low-priority candidates:
+
+- `VelocityLayerRuntime::roundRobinCounter` has a separately allocated shared atomic, but it is created during setup. Measure total layer count and memory before adding custom move logic.
+- `prepareToPlay()` uses a small unordered map to count variants. Replace it only if an array is shorter and clearer.
+
+Tests:
+
+- Round-robin order and wrap behavior.
+- Layer movement or rebuild preserves intended counter state.
+- Voice-count calculation remains identical.
+
+Measure allocation counts for complete operations instead of timing isolated container construction.
+
+## Workstream 4: Measure Memory Layout
+
+Priority: medium after measurement.
+
+Start with high-count or long-lived types:
+
+- `SampledSound` and `InstrumentSynth::SampleEntry`.
+- `KitLib::SampleVariantSpec`.
+- `InstrumentSynth::VelocityLayerRuntime` and `ArticulationRuntime`.
+- `InstrumentSynthVoice`.
+- `KitLib::MicSpec`.
+- `DrumKitEngine::InstrumentMapEntry`.
+
+The report must contain:
+
+- `sizeof` and `alignof` for every candidate.
+- Member sizes and offsets where available.
+- Estimated instance count for small and large kits.
+- Estimated total RAM per type, including owned heap data where practical.
+- Before and after results for any reorder.
+
+Rules:
+
+- Reorder fields only when the report shows a useful saving.
+- Prefer savings without custom packing or harder access.
+- Do not use packed runtime structs.
+- Do not mix layout and behavior changes.
+- Use compile-time size checks only for intentional long-term contracts.
 
 Verification:
 
-- Add or update a focused test for mic bleed behavior.
-- Confirm rendered gain is the same before and after the change.
-- Run focused tests when verification is requested.
+- Build coverage for affected types.
+- Existing model, routing, loading, voice, and serialization tests pass.
+- Record actual estimated total saving.
 
-### 2. Improve `StringsDictSingleton`
+## Workstream 5: Measure Realtime Locking Separately
 
-Status: implemented.
+Priority: high for reliability, but separate from compactness cleanup.
 
-Priority: high.
+Observed risks:
 
-Problem:
+- `DrumKitEngine::processBlock()` clears output when `engineGraphLock` cannot be acquired.
+- `InstrumentSynth::renderNextBlock()` holds `this->lock` while rendering.
+- Note start also takes the synth lock.
 
-- `getId()` remains map-based and locked.
-- `nameOf()` used to lock and scan every map entry.
+Measure before designing a rewrite:
 
-Implemented change:
-
-- Kept the existing `name -> id` map.
-- Added an `id -> name` vector for direct reverse lookup.
-- Reserved both containers.
-- Kept ID `0` as empty.
-
-Verification:
-
-- Add focused tests for empty name, repeated name, different names, and reverse lookup when verification is requested.
-- Check that existing ID users still behave the same.
-
-### 3. Replace Runtime String Maps With IDs Where Practical
-
-Status: implemented for mic route override matching; more candidates remain.
-
-Priority: high.
-
-Problem:
-
-- Some data is parsed from strings, then repeatedly used as strings later.
-- Good candidates were mic bleed levels, mic route overrides, expression point codes, and some slot/articulation matching.
-
-Implemented change:
-
-- Kept public mic route override config as `name -> name` strings.
-- Added a cached `sourceMicCodeId -> outputMicCodeId` map to `InstrumentSynth::RoutingContext`.
-- Made `MicRoutingBuilder` use the cached ID map instead of scanning string override keys.
-- Added cached output mic code IDs to `MicRoutingPlan` for override target lookup.
-
-Remaining candidates:
-
-- Expression point code lookup.
-- Slot/articulation matching helpers.
+- Failed graph try-lock count.
+- Typical and maximum graph lock hold time during map, layout, and routing changes.
+- Audio blocks cleared during those operations.
+- Threads that can contend for the synth lock.
 
 Verification:
 
-- Add parser tests where map text or YAML behavior changes when verification is requested.
-- Compare serialized text before and after where behavior must stay stable.
+- Add counters or a stress harness for layout and map changes during playback.
+- Test object lifetime while audio reads published state.
+- Ensure destruction and shared-owner release do not move to the audio thread.
+- Run full engine tests and listening checks.
 
-### 4. Precompute MIDI Controller Lookup Tables
+If measurements confirm a problem, create a separate snapshot/publication design. Do not mix it with helper, string, or layout cleanup. An uncontended empty-render benchmark does not measure lock contention.
 
-Priority: high.
-
-Problem:
-
-- MIDI values are bounded to `0..127`, but some runtime paths still use maps or scans.
-- `resolveArticulation()` checks `noteToControllers`, then scans `instrumentSlot.controllers`.
-- `selectArticulationForController()` scans runtime articulations.
-
-Proposed change:
-
-- Build fixed tables during instrument load/rebuild:
-  - note -> controller list or compact controller mapping
-  - controller -> transition capability
-  - controller value -> selected articulation
-- Use these tables in note and controller handling.
-
-Verification:
-
-- Add focused tests for controller-to-articulation selection.
-- Run existing synth/controller tests when implementation is requested.
-
-### 5. Reduce Audio-Thread Locking
-
-Priority: high, but more risky.
-
-Problem:
-
-- `processBlock()` and synth rendering rely on locks.
-- The current try-lock can clear output if the graph is busy.
-- Regular locks in render code can still block audio if another thread holds them.
-
-Proposed change:
-
-- Move toward immutable render snapshots:
-  - Build new synth/routing data off the audio thread.
-  - Publish it with an atomic/shared snapshot swap.
-  - Let audio read stable arrays and pointers.
-- Keep this as a separate change because it can affect many paths.
-
-Verification:
-
-- Add a small stress test or manual scenario for layout/map changes during playback.
-- Run full shared-source tests when implementation is requested.
-- Do listening checks because audio behavior can change even when tests pass.
-
-### 6. Reduce Allocations In Runtime Structures
-
-Priority: medium.
-
-Problem:
-
-- `VelocityLayerRuntime` stores `roundRobinCounter` as `std::shared_ptr<std::atomic<uint32_t>>`.
-- `prepareToPlay()` uses a small `std::unordered_map<uint8_t, int>` while calculating max simultaneous samples.
-- Some small runtime maps can probably be fixed arrays.
-
-Proposed change:
-
-- Make `VelocityLayerRuntime` move-only and store `std::atomic<uint32_t>` directly.
-- Replace small MIDI/variant maps with arrays or stack buffers where sizes are known.
-- Keep behavior unchanged.
-
-Verification:
-
-- Add compile coverage and focused round-robin tests.
-- Run focused tests when implementation is requested.
-
-### 7. Measure And Improve Memory Layout
-
-Priority: medium.
-
-Problem:
-
-- Some structs/classes mix pointers, strings, ints, floats, bools, and atomics.
-- Reordering may save RAM, but it should be measured first.
-
-Candidate types:
-
-- `SampledSound` in [`../source/Engine/InstrumentSynth.h`](../source/Engine/InstrumentSynth.h)
-- `InstrumentSynthVoice` in [`../source/Engine/InstrumentSynth.h`](../source/Engine/InstrumentSynth.h)
-- `SampleVariantSpec` in [`../source/Engine/KitLibModel.h`](../source/Engine/KitLibModel.h)
-- `MicSpec` in [`../source/Engine/KitLibConsts.h`](../source/Engine/KitLibConsts.h)
-- `DrumKitEngine::InstrumentMapEntry` in [`../source/Engine/DrumKitEngine.h`](../source/Engine/DrumKitEngine.h)
-
-Proposed change:
-
-- First add a temporary local size/offset check, or use compiler layout output if available.
-- Reorder only fields that are private or safe to move.
-- Prefer moving bools and small ints together after larger aligned fields.
-- Do not change behavior during this step.
-
-Verification:
-
-- Record before/after sizes in the implementation PR or follow-up note.
-- Build only when requested.
-
-### 8. Move Repeated Helpers To Small Helper Files
-
-Priority: medium.
-
-Problem:
-
-- Identity normalization and candidate matching are repeated.
-- Map sorting/joining helpers are very similar.
-- Instrument map parsing has local helpers that could become reusable if another parser needs them.
-
-Proposed change:
-
-- Add a small identity helper file under `source/Engine` or `source/Config`.
-- Add a sorted join helper only if it is used by more than one call site.
-- Keep helpers narrow and concrete.
-
-Verification:
-
-- Parser and serialization tests should still pass.
-- Diff should show moved logic, not behavior changes.
-
-### 9. UI String Cleanup Later
+## Workstream 6: Experimental UI
 
 Priority: low.
 
-Problem:
+- Do not optimize unfinished UI only because it contains repeated strings.
+- Reuse `UIHelpers` when touching related code.
+- Remove clear local duplication during normal UI work.
+- Cache search text only when a representative large list shows visible or measured delay.
+- Keep experimental UI changes separate from engine cleanup.
 
-- UI code has many repeated lowercase/search helpers.
-- This is usually not realtime, so it is lower risk and lower priority.
+## Benchmark File Cleanup
 
-Proposed change:
+For the current working-tree benchmark additions:
 
-- Cache normalized source paths and display text where lists are rebuilt.
-- Reuse existing `UIHelpers` for source lookup instead of adding local wrappers.
+- Keep and extend the mic bleed old-versus-cached comparison.
+- Rewrite the dictionary case to compare old scan with direct lookup.
+- Rewrite route override measurement around complete realistic routing rebuilds.
+- Remove the reverted controller-table benchmark.
+- Remove the uncontended empty-lock benchmark.
+- Remove isolated setup-container benchmarks until an alternative exists.
+- Replace the timed memory-layout total with a per-type size report.
+- Remove helper-move benchmarks.
+- Keep a UI search benchmark only when UI search is actively optimized.
 
-Verification:
+## Execution Order
 
-- Manual UI check for source search, source picker, and pad popup.
+1. Add missing correctness tests for the two implemented candidates.
+2. Repair benchmarks so they compare equivalent behavior.
+3. Use tests and realistic measurement to accept or revert staged route IDs.
+4. Merge exact duplicate helpers in small changes.
+5. Classify string and ID call sites before converting more strings.
+6. Measure allocations and layouts before changing containers or fields.
+7. Implement only candidates with a clear code-size, memory, or performance benefit.
+8. Measure realtime lock contention and create a separate design if confirmed.
+9. Leave experimental UI optimization until behavior is stable or measured slow.
 
-## Suggested Implementation Order
-
-1. Cache mic bleed lookup for rendering.
-2. Improve `StringsDictSingleton` reverse lookup.
-3. Precompute MIDI/controller runtime tables.
-4. Reduce audio-thread locking with render snapshots.
-5. Reduce runtime allocations.
-6. Measure and reorder memory layout.
-7. Move repeated helpers.
-8. Clean UI string helpers.
-
-## Notes
-
-- Do not combine all items in one change.
-- Start with the smallest high-impact runtime fix.
-- For code changes, write focused tests first where practical.
-- Build and tests were intentionally not run for this plan.
+Every changed line should connect to one measured problem or one exact duplication.
