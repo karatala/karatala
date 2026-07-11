@@ -3,22 +3,192 @@
 
 Karatala is a drum kit engine instrument for e-Drummers and everyone.
 
+
+
+reverted 4, 3 is now staged, benchmarks files are in working tree,
+
+
+the original idea was to review the codebase and make plan for improvements like:
+repeating code that can be moved to reusable helper
+inoptimal emory alignment, is there places where we can reorder some props to save some ram?
+memory allocations that can be optimized
+check where string comparison used and where could be better to replace strings with StringsDictSingleton
+
+so can u modify the plan md doc, maybe split/remove something from it and add there proper tests and benchmarks planning. main goal is very readable, reusable and performant code, since currently project got pretty bloated. its unreleased yet so there are some experimental unfinished ui, but it works kinda well now, except some places, so i wanted to make the code base more compact and readable
+
+
+
+
+
+
+FIXME:
+-when opening inst tab first time it freezes for several sec, probably because it starts for some reason rebuilding inst map (why should it?)
+-micRouting dropdown freezes everything for several seconds
+
+-instrument picker on instrument tab and on pad popup have different style, why? need to keep instrument tab's version
+
+
+
+
+-we have pad popup (when in zone tab) opening popup with only layers of clicked articulation, need to make pad popup universal and always show all layers of all articulations just with visual separators, so layers grouped by art in the popup, also it will need dedicated +Layer button for each articulation inline with the separator: edge -------- [+layer]
+-remove 'replace' check-button on pad popup and logic related to it
+-remove zen tab
+-on zone tab redesign pads, make them have black thin line with vertical title (ftom top to bottom, top-aligned) on left side (like "Kick 1"), and articulations dont prepend instrument title anymore
+-add to statusbar button that opens 
+- statusbar shows some text that usually dont fit if its multiline, what text it shows and why/when? 
+-inst tab table header should be fixed, so it stays on top when scrolling,
+
+
+-add near replace button another similar button to link param changes for all articulations of that instrument (tuning, attack, ..., bleed)
+-add similar for link toms bleed params so a
+
+- add 
+- need to standartize fonts and their sizes, now there are to many different, need to keep 2 or 3 at maximum, one is normal and small (title size maybe no need)
+
+only there are some unfinished/bad ux on some tabs, many fixme/todo comments by me in the code to be reviewed/addressed 
+
+hihats instrument map works well and shosing correct expressions (open/half/close/tight) but why the text saved in instrumentMap is [close]?  
+hihat1/bow:NakedDrums/hihat-X1/edge[close]
+hihat1/edge:NakedDrums/hihat-X1/edge[close]
+hihat1/pedal:NakedDrums/hihat-X1/pedal
+hihat2/bow:TchackpoumDG1.3/hihat-14/bow[close]
+hihat2/edge:TchackpoumDG1.3/hihat-14/edge[close]
+hihat2/pedal:TchackpoumDG1.3/hihat-14/pedal
+is there some formatting on editing that adding this [close]?
+
+
+
+
+
+
+
+
+
+questionable features:
+- in inst tab table header need to add switch button in top right corner( instead of + and x buttons column empty header that will switch compact controls to bleed controls and back, so 
+- inst tab need to have some 20px width interactive 'link' area between instrument picker and tuning control, so clicking ot that should work similar to ckechbox, but ou can select many underlying rows by moving mouse up/down while left button pressed, and that selected layers should have their controls linked together, so adjusting one change same thing for all selected
+
+
+
+docs\PLAN-instrument-map-surgical-apply.md
+Stage 6 - Document And Preserve Hihat Expression Routing
+Stage 7 - Preserve Incremental Apply Safety, mostly started but tests still open
+Stage 8 - Tests To Add, partly covered but not fully closed
+
+docs\TODO_LIBRARY_SNAPSHOT_PLAN.md
+Phase 4 - Verify Reload Behavior
+Phase 5 - Optional Articulation-Level Reload, only if later needed
+
+docs\TODO0X_PER_INSTANCE_MIC_LAYOUT_PLAN.md
+Phase 2 - VST Wrapper State-Driven Reconstruction
+Phase 3 - Bus Rename Fallback / Dynamic Bus Name Refresh
+
+docs\TODO05_INSTRUMENT_MAP_PLAN.md
+VST Automatable Parameters / APVTS, deferred
+Some optional params like hold/curve/solo/mute/fx chain remain future work
+
+docs\TODO10_UI_REVIEW_REFACTOR_PLAN.md
+Phase 3 - Architecture split, still partial
+Phase 4 - Performance improvements, partly done
+Phase 5 - Polish and consistency, still ongoing
+
+docs\TODO12_HIHAT_TRANSITION_FIX_PLAN.md
+Phase 4 - Original preload/group lookup path was not completed, it was mostly removed/reworked
+Known remaining perf debt: bounded 1024-sample validation scan
+
+docs\UI_REVIEW_PLAN.md
+Phase 3 - Architecture
+Phase 4 - Polish
+Phase 1 and Phase 2 look mostly done.
+
+docs\AUDIO_THREAD_PERF_PLAN.md
+P1-A - Aftertouch choke gain still appears per-sample/per-call sensitive
+P4 - Hi-hat CC target RMS / validation scan remains
+P5 - Voice estimated dB work was improved/throttled, but not fully gone
+
+
+therminology: layer - instrument articulation with params assigned for some pad thru pad popup or inst tab
+
+2 tasks rough description: instruments for different kits can be recorded with different volume and and samples of them named using different velocity 'curve', sometimes missrepresenting the volume, so midi velocity can have different effect on them, so need to think about way to intelegently apply some custom curves to specific instrument and articulation automatically (with ability to change it manually for any instrument/articulation), even when instrument slot is layered *have several different instruments articulations layered for that slot), need to make it with combination with analyze_drum_samples.py (which will need some improvements for that, and also new features like pan detection (as an extra code in range L127-C0-R127) for stereo samples and instrument folders, based on overhead mic, since its the most common one. pan we should use for layer panning
+
+
+
+
+
+ui changes:
+
+
+check and briefly list what knobs/sliders/interactive number inputs we have, what custom components are they using
+
+
+
+need to think how should we pan extra mics for manual routing
+
+
+
+can u review the codebase and make plan for improvements like:
+- repeating code that can be moved to reusable helper
+- inoptimal emory alignment, is there places where we can reorder some props to save some ram?
+- memory allocations that can be optimized
+- check where string comparison used and where could be better to replace strings with StringsDictSingleton
+
+
+replace '—'
+
+
+
+there are plenty ugly namespace { ... } blocks in the middle of code, need to analyze use cases and is there already repeating functionality somewhere and reorganize first those empty namespace wrapped functions to some helper file, if there are  too many lines then maybe to several files< so helpers are a little categorized and not too bloated (<700  lines or about that)
+
+
+
+
+
+
+
+thanks, half fixed, now only remained problem with fallback of empty articulation, maybe this we better review -how it implemented and plan changes/improvements:
+normally if instrument have >1 articulations and nothing asigned for them, then we assigned something to one articulation, so playing that note plays it, and playing any other instrument notes if corresponding articulation dont have assigned layers it should play same layers as main, so in our example we have stax1 with bow and edge (both empty), assigned for bow some instrument then no mater what articulation (bow/edge) we play it should make sound of assigned, until there is something else got assigned, so playing empty edge it plays all layers of bow (maybe we should do this in some different hook so we just reuse existing stuff). currently stax1 has bow with 2 layers (splash+china in this order), and when playing bow all good, but when playing edge - edge plays only 1st layer (splash). also we have more advanced cc-controlled instruments like hihat, there is some more complex stuff happens with pdl_opn_cls cc values and articulation names like edge[close] bow[close] edge[open] bow[open] etc - for hihat now all works good but maybe its a little confusing from user perspective - 
+
+
+
 TODO0A: get rid of juce completely, decide on what plugin format is needed, maybe only clap or keep also vst3, find better framework/tools to replace juce quirkiness
 TODO0X: avpts on plugin init to decide what micLayout to use?
 
-2. need to add Drums tab and dynamically fill it with pads grid that mapped to instruments, if instrument have >1 articulation, cell is splitted vertically to number of those articulations
 
-
-main idea is to have tabulated ui with main area, statusbar and left sidebar for "tab" buttons-icons to select gui mode (main area content) and some controls like velocity/hihat openness knobs, roundrobin lock knob (0-all, 1-first only, etc) and then main area with modes:
-1. default "zen" view mode - just a 6 columns x 4 rows (adjustable in settings tab) of drum pads withoud paddings
-2. "zoned" mode: same grid but pads now have zones (basically each pad splited horizontally to n parts depending on how much articulations each instrument has and articulation "importance"-, like if kick has 1 articulation only so it is not splited, snare has rim,crossstick,center,rimshot=4 articulations, ride have 3 articulations, bell,bow,edge; etc) 
-3. map mode, table with instruments+articulations, each articulation shows 2 dropdowns to select midi note like B0/35 etc and red circle button to learn note from midi.
-4. raw mode - current 'instrument map' with 'references' textarease are moved there
-5. settings mode - all engine settings sliders and toggles are here, maybe also some global settings like grid size for pads etc, show in 2 columns with labels and sliders/toggles on the right, maybe grouped in sections with group labels
+TODO: after routing-plan done, need to make preview of instrument articulation layers (can be found in pads context popup)  play not first found mic (or how its doing it now) but select mic to play using rule: first - direct mono mics (d*m, like dtm/dim/dom) if present and overhead stereo mics (codes like ons) and room stereo mics (rfs) - all 5 channels together, preview from disk (like its probably already doing now) - need to check/confirm
 
 
 
 
+
+TODO: ignore low velocity notes on polyaftertouch changes (min velocity to conf ui, 1-20, default 10
+TODO: add crosstalk support - midi filter for instruments since crash or splash can be near tom and hitting one always can produce low velocity hit for another instrument. need to add some button on map panel to record users drumkit x-talk profile womething like this (or suggest better ideas for better ux) user interactively following instructions and hit with max velocity all the notes for instruments sequentially, one at time, so plugin reads hit and records other sounding notes, so this data later getting saved and used in runtime to filter those crasstalking midi from e-kit)
+
+
+
+
+
+TODO: review hihat openness level sensitivity, think what control to add on ui for adjusting choice of hihat openness articulation between fully opened and tight together with pdl_opn_cls level if provided, mayube this even should be defined per hihat instrument, so maybe will need some user overrides config for instruments
+
+
+TODO: add to kit map  array setting with neighbor pads that can trigger crosstalk and add fn in midi processor for cancelling it so for example hitting toms rim wont trigger low velocity crash if difference in velocity is less then configurable threshold (that is also to add in conf ui, like 10-100, default 70)
+
+
+TODO: make ui code more compact overall by using some kind of ui components to less repeat stuff and make it more clear/readable
+
+git submodule add -f -b develop https://github.com/juce-framework/JUCE/ JUCE
+git submodule add -f -b main https://github.com/sudara/melatonin_inspector.git modules/melatonin_inspector
+git submodule add -f -b main https://github.com/sudara/cmake-includes.git cmake
+git submodule add -f -b main https://github.com/free-audio/clap-juce-extensions.git modules/clap-juce-extensions
+
+git add .gitmodules JUCE modules/melatonin_inspector cmake modules/clap-juce-extensions
+git commit -m "Add project submodules"
+git submodule status --recursive
+
+
+having realistic multiarticulation/expression/velocity/rr/etc drumkit engine that works with many sampled audio files of namy instruments (drums/cymbals). now in order to make it even more realistic and smart, and also save cpu and ram
+by ending voices smart way, for example when playing 
+
+for example make realistic hihat pedal changes after hit on closed/opened hihat, so if closed hitted and pedal got more opened (cc value went down) and sound is not much decayed yet, it should crossfade switch to more opened sample in the same offset that was already played, and if hat is closing after hit on opened it should switch to more close, but need to find a way to detect offset to where to switch in all cases, to avoid double-attack sound or choke+fadein after almost silence, since length of played sounds for different openness of hihat is different. based on that thinking, what params can be detected from a cymbal sound file by analysing its waveform, so those params can be hardcoded in sample file name and used in the drumkit engine for achieving that hihat transition realist (currently have a py script that can detect attack/decay ms times for samples, etc, but it is yet very approximate and not very much helping on seamless sound construction of different samples even just in a daw, by placing them serially and crossfading, it only works when visually looking for a matching amplitude level (since samples decay exponentally but still a little different depending on openness), need some logic/formula to organise it right)
 
 optional: is it possible to add round magic button for mouse click+hold so u can play on pads using pc keyboard and after pressing that and moving mouse up/down to control velocity or control hihat opennes by moving left/right and right click to choke?
 
@@ -339,6 +509,13 @@ Guidelines (read more at https://aka.ms/vscode-instructions-docs):
 Update `.github/copilot-instructions.md` for the user, then ask for feedback on any unclear or incomplete sections to iterate.
 
 GitHub Copilot: Chat took too long to get ready. Please ensure you are signed in to GitHub and that the extension `GitHub.copilot-chat` is installed and enabled.
+
+need to make next changes to Map mode page (source\UI\MidiMapTable.cpp and related):
+1. dropdown on top should also show item for 'default' layout (hardcoded in KitLayout::getDefault)
+2. dropdown dont need rounded corners and need to be half of its current width, position more on right side of top toolbar, have "Layout" label before it
+3. more ('...') button showing context menu with default juce theme colors, need to make it follow UITheme colors instead
+4. some instruments in the Map table have CC controls, currently those controls are the same as for note assignment (4 buttons [note1][learn1][note2][learn2] where 'noteN' showing for example "38 / D 1" and midi key popup on click), need to change it to have different controls, for now just one dropdown with numbers 0-127 / GM cc name to assign control number, no learn buttons needed for cc or second alternative assignment buttons
+
 
 
 

@@ -72,7 +72,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - never create nameless namespace { ... } in the middle of code, use coresponding helper files
 - first write shorly in simple lang what code changes are you going to do (except .md files changes), then only after approve do.
 - do not build anything and run tests until asked
-- dont try to use apply_patch for your internal operations yet, there is issue: cannot read files in Windows sandbox, so use PowerShell
 - no need for backward compatibility, app is not yet released
 
 Read `DOX.md` before editing. This file is the repository-wide contract.
