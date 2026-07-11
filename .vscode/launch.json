@@ -43,6 +43,11 @@
       "internalConsoleOptions": "openOnSessionStart",
       // "preLaunchTask": "Build VST3",
       "environment": [],
+      "logging": {
+          "moduleLoad": false,
+          "programOutput": true,
+          "trace": false,
+      }
     },
     {
       "name": "(Windows) Attach to process",
