@@ -199,6 +199,7 @@ public:
     };
     using ArticulationExactRemap = std::unordered_map<uint64_t, ArticulationTarget>; // slotArt(name,expr) -> sourceArt(name,expr)
     using ArticulationAliasMap = std::unordered_map<uint32_t, ArticulationTarget>; // fallbackArtNameId -> sourceArt(name,expr)
+    using MicRouteOverrideIdMap = std::unordered_map<StringsDictSingleton::Id, StringsDictSingleton::Id>; // sourceMicCodeId -> outputMicCodeId
 
     using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
 
@@ -293,8 +294,22 @@ public:
         ArticulationExactRemap artExactRemap;
         ArticulationAliasMap artAliases;
         std::unordered_map<juce::String, juce::String> micRouteOverrides;
+        MicRouteOverrideIdMap micRouteOverrideIds;
         bool strictArticulationResolution = false;
         bool isValid() const { return defaultInstrument != nullptr; }
+        void setMicRouteOverrides(const std::unordered_map<juce::String, juce::String>& overrides) {
+            this->micRouteOverrides = overrides;
+            this->rebuildMicRouteOverrideIds();
+        }
+        void rebuildMicRouteOverrideIds() {
+            this->micRouteOverrideIds.clear();
+            this->micRouteOverrideIds.reserve(this->micRouteOverrides.size());
+            for (const auto& [sourceMicCode, outputMicCode] : this->micRouteOverrides) {
+                const auto sourceMicCodeId = StringsDictSingleton::getId(sourceMicCode.trim().toLowerCase());
+                const auto outputMicCodeId = StringsDictSingleton::getId(outputMicCode.trim().toLowerCase());
+                if (sourceMicCodeId != StringsDictSingleton::EMPTY && outputMicCodeId != StringsDictSingleton::EMPTY) this->micRouteOverrideIds[sourceMicCodeId] = outputMicCodeId;
+            }
+        }
     };
 
     InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrumentSlot

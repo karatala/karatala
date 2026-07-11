@@ -154,9 +154,9 @@ TEST_CASE("MicRoutingPlan resolves explicit mic route override by output code", 
     CHECK(assignment.micCode == "dtm");
     CHECK(assignment.applyBalance);
 
-    const auto invalid = plan.resolveOverride("kick1", directMic.specs, "badRoom");
+    const auto invalid = plan.resolveOverride("kick1", directMic.specs, "bad");
     CHECK_FALSE(invalid.matched());
-    CHECK_THAT(invalid.warning.toStdString(), Catch::Matchers::ContainsSubstring("output mic 'badRoom' was not found"));
+    CHECK_THAT(invalid.warning.toStdString(), Catch::Matchers::ContainsSubstring("output mic 'bad' was not found"));
 }
 
 TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[InstrumentMap]") {

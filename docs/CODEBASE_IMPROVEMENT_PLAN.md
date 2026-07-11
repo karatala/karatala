@@ -1,8 +1,8 @@
 # Codebase Improvement Plan
 
-Status: steps 1 and 2 implemented; remaining steps proposed.
+Status: steps 1, 2, and 3 implemented; remaining steps proposed.
 
-This plan started from a read-only review. Steps 1 and 2 have since been implemented.
+This plan started from a read-only review. Steps 1, 2, and 3 have since been implemented.
 
 ## Goals
 
@@ -31,7 +31,8 @@ This plan started from a read-only review. Steps 1 and 2 have since been impleme
 - Before step 2, `StringsDictSingleton::nameOf()` locked and scanned the whole `nameIdMap` to find a name by ID. Step 2 replaced this with direct `id -> name` lookup in [`../source/Config/Helpers.h`](../source/Config/Helpers.h).
 - Identity helper logic exists in more than one place, for example `identityKey()` and `candidateMatches()` in [`../source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp) and [`../source/Engine/KitLibModel.cpp`](../source/Engine/KitLibModel.cpp).
 - Map/fingerprint join helpers are repeated and partly called out by comments in [`../source/Engine/DrumKitEngineMapHelpers.cpp`](../source/Engine/DrumKitEngineMapHelpers.cpp).
-- Many engine and UI paths repeatedly use `trim().toLowerCase()`, `compareIgnoreCase()`, or string-key maps. UI work is less urgent than engine runtime work.
+- Step 3 converted mic route override matching to numeric mic code IDs during routing context storage.
+- Many other engine and UI paths still repeatedly use `trim().toLowerCase()`, `compareIgnoreCase()`, or string-key maps. UI work is less urgent than engine runtime work.
 
 ## Plan
 
@@ -83,22 +84,30 @@ Verification:
 
 ### 3. Replace Runtime String Maps With IDs Where Practical
 
+Status: implemented for mic route override matching; more candidates remain.
+
 Priority: high.
 
 Problem:
 
 - Some data is parsed from strings, then repeatedly used as strings later.
-- Good candidates are mic bleed levels, mic route overrides, expression point codes, and some slot/articulation matching.
+- Good candidates were mic bleed levels, mic route overrides, expression point codes, and some slot/articulation matching.
 
-Proposed change:
+Implemented change:
 
-- Convert strings to `StringsDictSingleton::Id` or compact enum values during parsing/load.
-- Keep public config and UI APIs string-based where useful.
-- Store both only where UI text is needed.
+- Kept public mic route override config as `name -> name` strings.
+- Added a cached `sourceMicCodeId -> outputMicCodeId` map to `InstrumentSynth::RoutingContext`.
+- Made `MicRoutingBuilder` use the cached ID map instead of scanning string override keys.
+- Added cached output mic code IDs to `MicRoutingPlan` for override target lookup.
+
+Remaining candidates:
+
+- Expression point code lookup.
+- Slot/articulation matching helpers.
 
 Verification:
 
-- Add parser tests where map text or YAML behavior changes.
+- Add parser tests where map text or YAML behavior changes when verification is requested.
 - Compare serialized text before and after where behavior must stay stable.
 
 ### 4. Precompute MIDI Controller Lookup Tables

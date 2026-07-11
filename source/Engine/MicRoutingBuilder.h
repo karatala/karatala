@@ -33,20 +33,15 @@ public:
     // All unmatched raw codes are accumulated in skippedRawCodes for a single summary log.
     Assignment resolve(const KitLib::MicSpec& micSpec, int fileChannelCount) {
         if (const auto* plan = this->synth != nullptr ? this->synth->getMicRoutingPlan() : nullptr) {
-            const auto& routeOverrides = this->synth->getLastRoutingContext().micRouteOverrides;
-            auto overrideIt = routeOverrides.end();
-            for (auto routeIt = routeOverrides.begin(); routeIt != routeOverrides.end(); ++routeIt) {
-                if (routeIt->first.compareIgnoreCase(micSpec.raw) == 0) {
-                    overrideIt = routeIt;
-                    break;
-                }
-            }
-            if (overrideIt != routeOverrides.end()) {
+            const auto sourceMicCodeId = StringsDictSingleton::getId(micSpec.raw.trim().toLowerCase());
+            const auto& routeOverrideIds = this->synth->getLastRoutingContext().micRouteOverrideIds;
+            const auto overrideIt = routeOverrideIds.find(sourceMicCodeId);
+            if (overrideIt != routeOverrideIds.end()) {
                 const auto overrideAssignment = plan->resolveOverride(this->synth->getId(), micSpec, overrideIt->second);
                 if (overrideAssignment.matched()) {
                     LOG(Debug, "Mic route override: slot=" + this->synth->getId()
                         + " source=" + micSpec.raw
-                        + " output=" + overrideIt->second
+                        + " output=" + StringsDictSingleton::nameOf(overrideIt->second)
                         + " hostStart=" + juce::String(overrideAssignment.globalStart)
                         + " channels=" + juce::String(overrideAssignment.channels));
                     return { overrideAssignment.globalStart, overrideAssignment.channels, overrideAssignment.micCode, overrideAssignment.applyBalance };

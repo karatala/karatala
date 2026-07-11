@@ -18,7 +18,7 @@ void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpe
     this->lastRoutingContext.artNameRemap = artNameRemap;
     this->lastRoutingContext.artExactRemap = artExactRemap;
     this->lastRoutingContext.artAliases = artAliases;
-    this->lastRoutingContext.micRouteOverrides = micRouteOverrides;
+    this->lastRoutingContext.setMicRouteOverrides(micRouteOverrides);
     this->lastRoutingContext.strictArticulationResolution = strictArticulationResolution;
 }
 
@@ -173,6 +173,7 @@ void InstrumentSynth::loadInstrumentWithRouteList(KitLib::InstrumentSpec* defaul
     this->instrumentSpecstPtr = defaultInstrument;
     this->type = defaultInstrument->meta.type;
     this->lastRoutingContext = routingContext;
+    this->lastRoutingContext.rebuildMicRouteOverrideIds();
     if (!this->lastRoutingContext.isValid()) this->lastRoutingContext.defaultInstrument = defaultInstrument;
 
     LOG(Debug, "loadInstrumentWithRouteList: available articulationSpecs for inst=" + defaultInstrument->meta.codeRaw + ":");

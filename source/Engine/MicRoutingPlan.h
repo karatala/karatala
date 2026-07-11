@@ -35,14 +35,11 @@ public:
         return plan;
     }
 
-    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, const juce::String& outputMicCode) const {
-        const auto normalizedOutputCode = outputMicCode.trim();
-        if (normalizedOutputCode.isEmpty())
-            return {};
+    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, StringsDictSingleton::Id outputMicCodeId) const {
+        if (outputMicCodeId == StringsDictSingleton::EMPTY) return {};
 
         for (const auto& output : this->outputs) {
-            if (output.code.compareIgnoreCase(normalizedOutputCode) != 0)
-                continue;
+            if (output.codeId != outputMicCodeId) continue;
 
             Assignment assignment;
             assignment.globalStart = output.hostStart;
@@ -53,11 +50,16 @@ public:
             return assignment;
         }
 
+        const auto outputMicCode = StringsDictSingleton::nameOf(outputMicCodeId);
         Assignment skipped;
         skipped.channels = juce::jmax(1, sampleMicSpec.channels);
         skipped.micCode = sampleMicSpec.raw;
         skipped.warning = "Mic route override ignored for slot '" + slotId + "': output mic '" + outputMicCode + "' was not found";
         return skipped;
+    }
+
+    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, const juce::String& outputMicCode) const {
+        return this->resolveOverride(slotId, sampleMicSpec, StringsDictSingleton::getId(outputMicCode.trim().toLowerCase()));
     }
 
     Assignment resolve(const juce::String& slotId,
@@ -109,6 +111,7 @@ private:
         int channels = 0;
         juce::String name;
         juce::String code;
+        StringsDictSingleton::Id codeId = StringsDictSingleton::EMPTY;
         KitLib::MicSpec spec;
         MicInstrumentSelector selector;
     };
@@ -158,6 +161,7 @@ private:
             output.channels = juce::jmax(1, mic.specs.channels);
             output.name = mic.name;
             output.code = mic.code;
+            output.codeId = StringsDictSingleton::getId(mic.code.trim().toLowerCase());
             output.spec = mic.specs;
             output.selector = parseMicInstrumentSelector(mic.instrument, this->catalog);
             this->outputs.push_back(std::move(output));
