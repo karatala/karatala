@@ -152,24 +152,31 @@ public:
 
     Id findOrCreateId(const Name& name) {
         std::lock_guard<std::mutex> lock(this->mutex);
-        auto [it, inserted] = this->nameIdMap.try_emplace(name, nextId);
-        if (inserted) ++nextId;
-        return it->second;
+        const auto existingIt = this->nameIdMap.find(name);
+        if (existingIt != this->nameIdMap.end()) return existingIt->second;
+
+        const auto nameId = static_cast<Id>(this->namesById.size());
+        this->nameIdMap.emplace(name, nameId);
+        this->namesById.push_back(name);
+        return nameId;
     }
     Name findName(Id id) const {
         std::lock_guard<std::mutex> lock(this->mutex);
-        if (id == StringsDictSingleton::EMPTY) return "";
-        for (const auto& [name, nameId] : this->nameIdMap)
-            if (nameId == id) return name;
-        return "";
+        const auto nameIdx = static_cast<size_t>(id);
+        if (id == StringsDictSingleton::EMPTY || nameIdx >= this->namesById.size()) return "";
+        return this->namesById[nameIdx];
     }
 
 private:
     std::unordered_map<Name, Id> nameIdMap;
-    Id nextId { 1 };
+    std::vector<Name> namesById;
     mutable std::mutex mutex;
 
-    StringsDictSingleton() { this->nameIdMap.reserve(1024); }
+    StringsDictSingleton() {
+        this->nameIdMap.reserve(1024);
+        this->namesById.reserve(1024);
+        this->namesById.push_back("");
+    }
     StringsDictSingleton(const StringsDictSingleton&) = delete;
     StringsDictSingleton& operator=(const StringsDictSingleton&) = delete;
 };

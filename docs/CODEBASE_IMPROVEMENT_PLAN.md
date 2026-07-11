@@ -1,8 +1,8 @@
 # Codebase Improvement Plan
 
-Status: step 1 implemented; remaining steps proposed.
+Status: steps 1 and 2 implemented; remaining steps proposed.
 
-This plan started from a read-only review. Step 1 has since been implemented.
+This plan started from a read-only review. Steps 1 and 2 have since been implemented.
 
 ## Goals
 
@@ -28,7 +28,7 @@ This plan started from a read-only review. Step 1 has since been implemented.
 - `InstrumentSynth::renderNextBlock()` takes `this->lock` while rendering in [`../source/Engine/InstrumentSynth.cpp`](../source/Engine/InstrumentSynth.cpp).
 - `InstrumentSynth::startLayerVoices()` also takes `this->lock` during note start in [`../source/Engine/InstrumentSynthController.cpp`](../source/Engine/InstrumentSynthController.cpp).
 - Before step 1, `InstrumentSynthVoice::renderNextBlock()` called `owner->getMicBleedLevel(s->routedMicCode)` while rendering. Step 1 replaced this with cached sample bleed gain loaded from `SampledSound`.
-- `StringsDictSingleton::nameOf()` locks and scans the whole `nameIdMap` to find a name by ID in [`../source/Config/Helpers.h`](../source/Config/Helpers.h).
+- Before step 2, `StringsDictSingleton::nameOf()` locked and scanned the whole `nameIdMap` to find a name by ID. Step 2 replaced this with direct `id -> name` lookup in [`../source/Config/Helpers.h`](../source/Config/Helpers.h).
 - Identity helper logic exists in more than one place, for example `identityKey()` and `candidateMatches()` in [`../source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp) and [`../source/Engine/KitLibModel.cpp`](../source/Engine/KitLibModel.cpp).
 - Map/fingerprint join helpers are repeated and partly called out by comments in [`../source/Engine/DrumKitEngineMapHelpers.cpp`](../source/Engine/DrumKitEngineMapHelpers.cpp).
 - Many engine and UI paths repeatedly use `trim().toLowerCase()`, `compareIgnoreCase()`, or string-key maps. UI work is less urgent than engine runtime work.
@@ -60,23 +60,25 @@ Verification:
 
 ### 2. Improve `StringsDictSingleton`
 
+Status: implemented.
+
 Priority: high.
 
 Problem:
 
-- `getId()` is map-based and locked.
-- `nameOf()` is worse because it locks and scans every map entry.
+- `getId()` remains map-based and locked.
+- `nameOf()` used to lock and scan every map entry.
 
-Proposed change:
+Implemented change:
 
-- Keep the existing `name -> id` map.
-- Add an `id -> name` vector for direct reverse lookup.
-- Reserve both containers.
-- Keep ID `0` as empty.
+- Kept the existing `name -> id` map.
+- Added an `id -> name` vector for direct reverse lookup.
+- Reserved both containers.
+- Kept ID `0` as empty.
 
 Verification:
 
-- Add focused tests for empty name, repeated name, different names, and reverse lookup.
+- Add focused tests for empty name, repeated name, different names, and reverse lookup when verification is requested.
 - Check that existing ID users still behave the same.
 
 ### 3. Replace Runtime String Maps With IDs Where Practical
