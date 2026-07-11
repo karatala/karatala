@@ -194,23 +194,43 @@ void InstrumentSynth::clearParameterOverrides() {
     this->flipLR = false;
     this->flipPhase = false;
     this->micBleedLevels.clear();
+    this->micBleedLevelsById.clear();
+    this->refreshSampleMicBleedGains();
 }
 
 void InstrumentSynth::setMicBleedLevels(std::unordered_map<juce::String, float> levels) {
     this->micBleedLevels.clear();
+    this->micBleedLevelsById.clear();
     for (auto& [micCode, level] : levels) {
         const float clamped = juce::jlimit(0.0f, 1.0f, level);
-        if (clamped < 0.999f) this->micBleedLevels[micCode] = clamped;
+        if (clamped < 0.999f) {
+            this->micBleedLevels[micCode] = clamped;
+            const auto micCodeId = StringsDictSingleton::getId(micCode);
+            if (micCodeId != StringsDictSingleton::EMPTY) this->micBleedLevelsById[micCodeId] = clamped;
+        }
     }
+    this->refreshSampleMicBleedGains();
 }
 
 float InstrumentSynth::getMicBleedLevel(const juce::String& micCode) const {
     if (micCode.isEmpty()) return 1.0f;
+    return this->getMicBleedLevel(StringsDictSingleton::getId(micCode));
+}
 
-    const auto it = this->micBleedLevels.find(micCode);
-    if (it == this->micBleedLevels.end()) return 1.0f;
+float InstrumentSynth::getMicBleedLevel(StringsDictSingleton::Id micCodeId) const {
+    if (micCodeId == StringsDictSingleton::EMPTY) return 1.0f;
+
+    const auto it = this->micBleedLevelsById.find(micCodeId);
+    if (it == this->micBleedLevelsById.end()) return 1.0f;
 
     return juce::jlimit(0.0f, 1.0f, it->second);
+}
+
+void InstrumentSynth::refreshSampleMicBleedGains() {
+    for (const auto& soundPtr : this->sampledSoundPtrs) {
+        if (!soundPtr) continue;
+        soundPtr->cachedMicBleedGain.store(this->getMicBleedLevel(soundPtr->routedMicCodeId), std::memory_order_relaxed);
+    }
 }
 
 KitLib::ArticulationSpec* InstrumentSynth::resolveArticulationSpec(KitLib::InstrumentSpec* instSpec, const LayoutArticulation& layoutArt, bool allowFallback) {
@@ -564,6 +584,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             sound->micBufferChannelStart = assignment.globalStart;
             sound->micBufferChannelCount = assignment.channels;
             sound->routedMicCode = assignment.micCode;
+            sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
+            sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->routedMicCodeId), std::memory_order_relaxed);
             sound->balance = effectiveBalance.value_or(0);
             sound->useDirectBalance = assignment.applyBalance && effectiveBalance.has_value() && assignment.channels == 2 && varSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
 

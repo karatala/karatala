@@ -186,7 +186,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
 }
 
 void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
-    // micBuffer is no longer used for rendering — voices write directly to the global output
+    // micBuffer is no longer used for rendering - voices write directly to the global output
     // buffer using globally-indexed micBufferChannelStart values.  Free any previous allocation.
     micBuffer.setSize(0, 0);
 
@@ -315,7 +315,7 @@ void InstrumentSynthVoice::updateEstimatedDb() {
     float layerGainDb = 0.0f;
     if (this->owner != nullptr) {
         const float layerGain = juce::Decibels::decibelsToGain(this->owner->getVolumeDb(), -100.0f);
-        const float bleedGain = this->owner->getMicBleedLevel(s->routedMicCode);
+        const float bleedGain = s->cachedMicBleedGain.load(std::memory_order_relaxed);
         layerGainDb = juce::Decibels::gainToDecibels(juce::jmax(0.0001f, layerGain * bleedGain), -100.0f);
     }
     this->cachedEstimatedDb = s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb + layerGainDb;
@@ -357,7 +357,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     const bool flipLR = this->owner != nullptr && this->owner->getFlipLR();
     const float phaseMultiplier = (this->owner != nullptr && this->owner->getFlipPhase()) ? -1.0f : 1.0f;
     const float layerGain = this->owner != nullptr ? juce::Decibels::decibelsToGain(this->owner->getVolumeDb(), -100.0f) : 1.0f;
-    const float bleedGain = this->owner != nullptr ? this->owner->getMicBleedLevel(s->routedMicCode) : 1.0f;
+    const float bleedGain = s->cachedMicBleedGain.load(std::memory_order_relaxed);
     const float voiceGain = layerGain * bleedGain;
 
     if (this->chokeProcessor.isMuted()) {
@@ -365,7 +365,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         return;
     }
 
-    // P1-B: Pre-validate destination channels — skip voice if all out of range.
+    // P1-B: Pre-validate destination channels - skip voice if all out of range.
     const int destChBase = s->micBufferChannelStart;
     if (destChBase < 0 || destChBase >= destChCount) {
         // Advance ADSR to keep envelope state consistent
@@ -412,7 +412,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
 
     for (int i = 0; i < numSamples; ++i) {
         //TODO: use peak offset for mics (found minimal (for example di) and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) first makke script to smart-parse from samples and save to filename
-        // Per-sample choke gain — MUST stay per-sample, not per-block.
+        // Per-sample choke gain - MUST stay per-sample, not per-block.
         // getNextBlockGain() advances elapsed time by 1/sampleRate each call;
         // calling once per block freezes ducking/muting and breaks aftertouch choke.
         const float chokeGain = this->chokeProcessor.getNextBlockGain();

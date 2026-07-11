@@ -1,8 +1,8 @@
 # Codebase Improvement Plan
 
-Status: proposed, not implemented.
+Status: step 1 implemented; remaining steps proposed.
 
-This plan is based on a read-only review. No code was changed, no build was run, and no tests were run.
+This plan started from a read-only review. Step 1 has since been implemented.
 
 ## Goals
 
@@ -27,7 +27,7 @@ This plan is based on a read-only review. No code was changed, no build was run,
 - `DrumKitEngine::processBlock()` uses `engineGraphLock` with `ScopedTryLock` in [`../source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp).
 - `InstrumentSynth::renderNextBlock()` takes `this->lock` while rendering in [`../source/Engine/InstrumentSynth.cpp`](../source/Engine/InstrumentSynth.cpp).
 - `InstrumentSynth::startLayerVoices()` also takes `this->lock` during note start in [`../source/Engine/InstrumentSynthController.cpp`](../source/Engine/InstrumentSynthController.cpp).
-- `InstrumentSynthVoice::renderNextBlock()` calls `owner->getMicBleedLevel(s->routedMicCode)` while rendering, which uses a `juce::String` key lookup in [`../source/Engine/InstrumentSynth.cpp`](../source/Engine/InstrumentSynth.cpp) and [`../source/Engine/InstrumentSynthLoader.cpp`](../source/Engine/InstrumentSynthLoader.cpp).
+- Before step 1, `InstrumentSynthVoice::renderNextBlock()` called `owner->getMicBleedLevel(s->routedMicCode)` while rendering. Step 1 replaced this with cached sample bleed gain loaded from `SampledSound`.
 - `StringsDictSingleton::nameOf()` locks and scans the whole `nameIdMap` to find a name by ID in [`../source/Config/Helpers.h`](../source/Config/Helpers.h).
 - Identity helper logic exists in more than one place, for example `identityKey()` and `candidateMatches()` in [`../source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp) and [`../source/Engine/KitLibModel.cpp`](../source/Engine/KitLibModel.cpp).
 - Map/fingerprint join helpers are repeated and partly called out by comments in [`../source/Engine/DrumKitEngineMapHelpers.cpp`](../source/Engine/DrumKitEngineMapHelpers.cpp).
@@ -37,24 +37,26 @@ This plan is based on a read-only review. No code was changed, no build was run,
 
 ### 1. Cache Mic Bleed Lookup For Rendering
 
+Status: implemented.
+
 Priority: high.
 
 Problem:
 
-- Voice render currently does string-key lookup by mic code.
-- This happens in the audio path and may repeat many times while voices render.
+- Voice render used to do string-key lookup by mic code.
+- This happened in the audio path and could repeat many times while voices rendered.
 
-Proposed change:
+Implemented change:
 
-- Add a cached numeric mic identity or cached bleed gain to `SampledSound`.
-- Fill it during routing/load, when `routedMicCode` is already known.
-- Keep `routedMicCode` only for UI, logs, and serialization.
+- Added cached numeric mic identity and cached bleed gain to `SampledSound`.
+- Filled it during routing/load, when `routedMicCode` is already known.
+- Kept `routedMicCode` for UI, logs, and serialization.
 
 Verification:
 
 - Add or update a focused test for mic bleed behavior.
 - Confirm rendered gain is the same before and after the change.
-- Run focused tests when implementation is requested.
+- Run focused tests when verification is requested.
 
 ### 2. Improve `StringsDictSingleton`
 
