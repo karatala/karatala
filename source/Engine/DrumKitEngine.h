@@ -50,7 +50,7 @@ public:
     }
     ~DrumKitEngine() {
         this->previewResolveThreadPool.removeAllJobs(true, 2000);
-    };
+    }
 
     juce::File dataPath;
     const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::commonDocumentsDirectory).getChildFile("Karatala") };
@@ -120,13 +120,13 @@ public:
 
     const int getLatestContinuousControllerValue(const int ccNum) const {
         if (ccNum < 0 || ccNum > 127) return 0;
-        if (!this->trackedCCMask[ccNum]) return 0;
-        return juce::jlimit(0, 127, this->latestCCValues[ccNum]);
+        if (!this->trackedCCMask[static_cast<size_t>(ccNum)]) return 0;
+        return juce::jlimit(0, 127, this->latestCCValues[static_cast<size_t>(ccNum)]);
     }
     const int getLatestPolyphonicAftertouchValue(const int note) const {
         if (note < 0 || note > 127) return 0;
-        if (!this->trackedPAMask[note]) return 0;
-        return juce::jlimit(0, 127, this->latestPAValues[note]);
+        if (!this->trackedPAMask[static_cast<size_t>(note)]) return 0;
+        return juce::jlimit(0, 127, this->latestPAValues[static_cast<size_t>(note)]);
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock);
@@ -213,21 +213,15 @@ private:
 
     class PreviewResolveJob : public juce::ThreadPoolJob {
     public:
-        PreviewResolveJob(DrumKitEngine& owner,
-                          std::string cacheKey,
-                          juce::String kitCodeRaw,
-                          juce::String instCode,
-                          juce::String artCode,
-                          juce::uint8 resolveVelocity,
-                          juce::uint8 playbackVelocity)
+        PreviewResolveJob(DrumKitEngine& jobOwner, std::string jobCacheKey, juce::String sourceKitCodeRaw, juce::String sourceInstCode, juce::String sourceArtCode, juce::uint8 targetResolveVelocity, juce::uint8 targetPlaybackVelocity)
             : juce::ThreadPoolJob("Preview Resolve Job")
-            , owner(owner)
-            , cacheKey(std::move(cacheKey))
-            , kitCodeRaw(std::move(kitCodeRaw))
-            , instCode(std::move(instCode))
-            , artCode(std::move(artCode))
-            , resolveVelocity(resolveVelocity)
-            , playbackVelocity(playbackVelocity) {
+            , owner(jobOwner)
+            , cacheKey(std::move(jobCacheKey))
+            , kitCodeRaw(std::move(sourceKitCodeRaw))
+            , instCode(std::move(sourceInstCode))
+            , artCode(std::move(sourceArtCode))
+            , resolveVelocity(targetResolveVelocity)
+            , playbackVelocity(targetPlaybackVelocity) {
         }
 
         JobStatus runJob() override;

@@ -30,7 +30,7 @@ class SampleLoaderQueue {
 public:
     using LoadCallback = std::function<void(std::shared_ptr<juce::AudioBuffer<float>>, double)>;
 
-    explicit SampleLoaderQueue(SampleLoader& loader) : loader(loader) {
+    explicit SampleLoaderQueue(SampleLoader& sampleLoader) : loader(sampleLoader) {
         this->stopFlag.store(false);
         for (auto &a : stageInFlightCount) a.store(0);
         for (auto &a : stageDispatchedCount) a.store(0);
@@ -146,12 +146,12 @@ private:
     //========================================================
     class LoadJob : public juce::ThreadPoolJob {
     public:
-        LoadJob(SampleLoader& owner, SampleLoadSpec loadSpec, juce::String cacheKey, LoadCallback callback)
+        LoadJob(SampleLoader& owner, SampleLoadSpec spec, juce::String key, LoadCallback fn)
             : ThreadPoolJob("Sample Load Job")
             , loader(owner)
-            , loadSpec(std::move(loadSpec))
-            , cacheKey(std::move(cacheKey))
-            , callback(std::move(callback))
+            , loadSpec(std::move(spec))
+            , cacheKey(std::move(key))
+            , callback(std::move(fn))
         {}
         JobStatus runJob() override;
 

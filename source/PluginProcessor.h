@@ -56,7 +56,7 @@ public:
     void setStateInformation(const void* data, int sizeInBytes) override;
 
     // juce::AudioProcessorValueTreeState::Listener
-    void parameterChanged(const juce::String& parameterId, float newValue) {
+    void parameterChanged(const juce::String& parameterId, float newValue) override {
         // mPluginParameters->handleParameterChanged(*mAudioProcessorValueTreeStatePtr, parameterId, newValue, *mDSPManager);
         LOG(Debug, "CHECK IT OUT parameterChanged: " + parameterId + ": " + juce::String::formatted("%.3f", newValue));
     }

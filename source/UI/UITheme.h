@@ -49,10 +49,48 @@ namespace Colours {
             case KitLib::InstrumentSpec::Type::Crash:      return juce::Colour(0xff9933cc);
             case KitLib::InstrumentSpec::Type::Splash:     return juce::Colour(0xff33cc99);
             case KitLib::InstrumentSpec::Type::China:      return juce::Colour(0xffcc3399);
-            case KitLib::InstrumentSpec::Type::Cymbal:     return juce::Colour(0xff6699cc);
-            case KitLib::InstrumentSpec::Type::Drum:       return juce::Colour(0xff6666cc);
-            case KitLib::InstrumentSpec::Type::Percussion: return juce::Colour(0xff999966);
-            default:                                       return juce::Colour(0xff555555);
+            case KitLib::InstrumentSpec::Type::Bell:
+            case KitLib::InstrumentSpec::Type::Stack:
+            case KitLib::InstrumentSpec::Type::Chopper:
+            case KitLib::InstrumentSpec::Type::Gong:
+            case KitLib::InstrumentSpec::Type::Karatala:
+            case KitLib::InstrumentSpec::Type::Cymbal:
+                return juce::Colour(0xff6699cc);
+            case KitLib::InstrumentSpec::Type::Octoban:
+            case KitLib::InstrumentSpec::Type::Rototom:
+            case KitLib::InstrumentSpec::Type::Timbale:
+            case KitLib::InstrumentSpec::Type::Timpani:
+            case KitLib::InstrumentSpec::Type::Conga:
+            case KitLib::InstrumentSpec::Type::Bongo:
+            case KitLib::InstrumentSpec::Type::Djembe:
+            case KitLib::InstrumentSpec::Type::Cajon:
+            case KitLib::InstrumentSpec::Type::Taiko:
+            case KitLib::InstrumentSpec::Type::Surdo:
+            case KitLib::InstrumentSpec::Type::Mridangam:
+            case KitLib::InstrumentSpec::Type::TalkingDrum:
+            case KitLib::InstrumentSpec::Type::Drum:
+                return juce::Colour(0xff6666cc);
+            case KitLib::InstrumentSpec::Type::Cowbell:
+            case KitLib::InstrumentSpec::Type::Tambourine:
+            case KitLib::InstrumentSpec::Type::Shaker:
+            case KitLib::InstrumentSpec::Type::Maracas:
+            case KitLib::InstrumentSpec::Type::Cabasa:
+            case KitLib::InstrumentSpec::Type::Guiro:
+            case KitLib::InstrumentSpec::Type::Claves:
+            case KitLib::InstrumentSpec::Type::Agogo:
+            case KitLib::InstrumentSpec::Type::WoodBlock:
+            case KitLib::InstrumentSpec::Type::TempleBlock:
+            case KitLib::InstrumentSpec::Type::Triangle:
+            case KitLib::InstrumentSpec::Type::Vibraslap:
+            case KitLib::InstrumentSpec::Type::Castanets:
+            case KitLib::InstrumentSpec::Type::SleighBells:
+            case KitLib::InstrumentSpec::Type::Whip:
+            case KitLib::InstrumentSpec::Type::Ratchet:
+            case KitLib::InstrumentSpec::Type::Percussion:
+                return juce::Colour(0xff999966);
+            case KitLib::InstrumentSpec::Type::Unknown:
+            case KitLib::InstrumentSpec::Type::Other:
+                return juce::Colour(0xff555555);
         }
     }
 }

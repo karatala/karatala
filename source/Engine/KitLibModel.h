@@ -151,16 +151,15 @@ public:
 
     MicSpec micSpec;
 
-    explicit SampleVariantSpec(VelocityLayerSpec* parent, const juce::File& file, juce::juce_wchar letter, const MicSpec& micSpec, int fileChannelStart = 0)
-        : parent(parent)
+    explicit SampleVariantSpec(VelocityLayerSpec* parentSpec, const juce::File& file, juce::juce_wchar variantLetter, const MicSpec& newMicSpec, int channelStart = 0)
+        : parent(parentSpec)
+        , letter(variantLetter)
         , sampleFile(file)
-        , letter(letter)
         , sampleFileName(file.getFileName())
-        , micSpec(micSpec)
-    {
-        this->fileChannelStart = fileChannelStart;
-        this->fileChannelCount = micSpec.channels;
-    }
+        , fileChannelStart(channelStart)
+        , fileChannelCount(newMicSpec.channels)
+        , micSpec(newMicSpec)
+    {}
 
     bool isValid() const { return sampleFile.existsAsFile(); }
 
@@ -186,8 +185,8 @@ public:
     uint8_t velocity;
     std::vector<std::unique_ptr<SampleVariantSpec>> sampleVariantSpecs;
 
-    explicit VelocityLayerSpec(ArticulationSpec* parent, uint8_t velocity)
-        : parent(parent), velocity(velocity) {}
+    explicit VelocityLayerSpec(ArticulationSpec* parentSpec, uint8_t layerVelocity)
+        : parent(parentSpec), velocity(layerVelocity) {}
 
     SampleVariantSpec* findSampleVariant(juce::juce_wchar variantLetter, const MicSpec& micSpec) {
         for (auto& existing : this->sampleVariantSpecs)
@@ -228,8 +227,8 @@ public:
             {"zon_lft_rgt", Type::ZoneLeftRight},
         };
 
-        explicit ExpressionDimension(juce::String codeRaw) : codeRaw(codeRaw)
-            , type(ExpressionDimension::stringToType(codeRaw))
+        explicit ExpressionDimension(juce::String newCodeRaw) : codeRaw(newCodeRaw)
+            , type(ExpressionDimension::stringToType(newCodeRaw))
         {}
 
         static juce::String typeToString(Type type) {
@@ -256,11 +255,10 @@ public:
     std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
     std::vector<std::unique_ptr<VelocityLayerSpec>> velocityLayerSpecs;
 
-    explicit ArticulationSpec(InstrumentSpec* parent, const juce::String& codeRaw)
-        : parent(parent)
-        , codeRaw(codeRaw)
+    explicit ArticulationSpec(InstrumentSpec* parentSpec, const juce::String& newCodeRaw)
+        : codeRaw(newCodeRaw), parent(parentSpec)
     {
-        auto wrapSegm = extractWrappedSegment(codeRaw, "[", "]");
+        auto wrapSegm = extractWrappedSegment(newCodeRaw, "[", "]");
         this->nameId = StringsDictSingleton::getId(wrapSegm.prefix);
         this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
     }
@@ -466,9 +464,8 @@ public:
     MetaInfo meta;
     std::vector<std::unique_ptr<ArticulationSpec>> articulationSpecs;
 
-    explicit InstrumentSpec(DrumKitSpec* kit, const MetaInfo& meta)
-        : parent(kit)
-        , meta(meta) {
+    explicit InstrumentSpec(DrumKitSpec* kit, const MetaInfo& metaInfo)
+        : parent(kit), meta(metaInfo) {
     }
 
     static ParseResult<MetaInfo> parseInfo(const juce::String& dirName);
@@ -526,7 +523,7 @@ public:
         juce::String license;
     };
 
-    explicit DrumKitSpec(const MetaInfo& meta) : meta(meta) {}
+    explicit DrumKitSpec(const MetaInfo& metaInfo) : meta(metaInfo) {}
 
     static ParseResult<MetaInfo> parseInfo(const juce::String& dirName);
     static std::vector<juce::String> getIdentityCandidates(const MetaInfo& meta);
@@ -548,7 +545,7 @@ public:
 
 class LibraryManager {
 public:
-    explicit LibraryManager(const juce::File& rootDir) : rootDir(rootDir) { this->validateKitsDir(rootDir); }
+    explicit LibraryManager(const juce::File& rootDirectory) : rootDir(rootDirectory) { this->validateKitsDir(rootDirectory); }
 
     bool validateKitsDir(const juce::File& dir);
     void setKitsDir(const juce::File& dir);

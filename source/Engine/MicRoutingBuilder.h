@@ -23,7 +23,7 @@ public:
         bool applyBalance = false;
     };
 
-    explicit MicRoutingBuilder(InstrumentSynth* synth) : synth(synth) {
+    explicit MicRoutingBuilder(InstrumentSynth* instrumentSynth) : synth(instrumentSynth) {
         this->buildMicEntries();
     }
 
@@ -58,7 +58,7 @@ public:
             // publishes source-aware requests for every slot.
             if (micSpec.type != KitLib::MicSpec::Type::Direct) {
                 skippedRawCodes.insert(micSpec.raw);
-                return { -1, fileChannelCount };
+                return { -1, fileChannelCount, {}, false };
             }
         }
 
@@ -70,7 +70,7 @@ public:
             }
 
         skippedRawCodes.insert(micSpec.raw);
-        return { -1, fileChannelCount };
+        return { -1, fileChannelCount, {}, false };
     }
     // Merge skipped raw codes accumulated so far into an external set.
     void mergeSkippedInto(std::set<juce::String>& out) const {
@@ -143,7 +143,7 @@ private:
 
             if (includeForThisInst) {
                 const int globalStart = (localCursor < static_cast<int>(globalMapping.size()))
-                    ? globalMapping[localCursor]
+                    ? globalMapping[static_cast<size_t>(localCursor)]
                     : localCursor;
                 MicEntryInfo info;
                 info.mic = &mic;
@@ -168,4 +168,3 @@ private:
                 + " — check mic layout and slot id matching.");
     }
 };
-

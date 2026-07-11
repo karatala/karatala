@@ -5,8 +5,8 @@
 #include <cmath>
 
 
-EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& engine)
-    : engine(engine) {
+EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
+    : engine(drumKitEngine) {
     auto& settings = this->engine.engineSettings;
 
     // Group labels

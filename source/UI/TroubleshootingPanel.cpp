@@ -6,8 +6,8 @@
 #include "UIHelpers.h"
 #include "UITheme.h"
 
-TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& engine)
-    : engine(engine) {
+TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
+    : engine(drumKitEngine) {
     this->titleLabel.setText("Important logs:", juce::dontSendNotification);
     this->titleLabel.setFont(UITheme::Fonts::labelBoldMedium());
     this->titleLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);

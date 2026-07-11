@@ -6,9 +6,9 @@ using namespace KitLib;
 
 namespace KitLibIdentityHelpers {
 
-juce::String identityKey(const juce::String& value) { return value.trim().toLowerCase(); }
+static juce::String identityKey(const juce::String& value) { return value.trim().toLowerCase(); }
 
-void addCandidate(std::vector<juce::String>& candidates, const juce::String& value) {
+static void addCandidate(std::vector<juce::String>& candidates, const juce::String& value) {
     const auto trimmed = value.trim();
     if (trimmed.isEmpty()) return;
     const auto key = identityKey(trimmed);
@@ -17,7 +17,7 @@ void addCandidate(std::vector<juce::String>& candidates, const juce::String& val
     candidates.push_back(trimmed);
 }
 
-bool candidateMatches(const std::vector<juce::String>& candidates, const juce::String& id) {
+static bool candidateMatches(const std::vector<juce::String>& candidates, const juce::String& id) {
     const auto key = identityKey(id);
     if (key.isEmpty()) return false;
     for (const auto& candidate : candidates)
@@ -25,9 +25,9 @@ bool candidateMatches(const std::vector<juce::String>& candidates, const juce::S
     return false;
 }
 
-juce::String descriptionIdentityText(const juce::String& description) { return description.trim().replace(" ", "-"); }
+static juce::String descriptionIdentityText(const juce::String& description) { return description.trim().replace(" ", "-"); }
 
-bool looksLikeBalanceToken(const juce::String& raw) {
+static bool looksLikeBalanceToken(const juce::String& raw) {
     const auto value = raw.trim().toUpperCase();
     if (value.isEmpty()) return false;
     const auto side = value[0];
@@ -38,11 +38,11 @@ bool looksLikeBalanceToken(const juce::String& raw) {
     return true;
 }
 
-juce::String invalidBalanceWarning(const juce::String& dirName, const juce::String& token) {
+static juce::String invalidBalanceWarning(const juce::String& dirName, const juce::String& token) {
     return "Invalid or missing instrument balance value '" + token + "' in folder '" + dirName + "'; expected L1-L127, R1-R127, or C0; ignoring balance";
 }
 
-juce::String stableContentHash(const juce::String& sourceText) {
+static juce::String stableContentHash(const juce::String& sourceText) {
     std::uint64_t hash = 1469598103934665603ull;
     for (const char* textPtr = sourceText.toRawUTF8(); *textPtr != '\0'; ++textPtr) {
         hash ^= static_cast<std::uint8_t>(*textPtr);
@@ -51,11 +51,11 @@ juce::String stableContentHash(const juce::String& sourceText) {
     return juce::String::toHexString(static_cast<juce::int64>(hash)).toUpperCase();
 }
 
-juce::String relativePathForFingerprint(const juce::File& rootDir, const juce::File& file) {
+static juce::String relativePathForFingerprint(const juce::File& rootDir, const juce::File& file) {
     return file.getRelativePathFrom(rootDir).replaceCharacter('\\', '/');
 }
 
-juce::String fileMetadataFingerprint(const juce::File& rootDir, const juce::File& file) {
+static juce::String fileMetadataFingerprint(const juce::File& rootDir, const juce::File& file) {
     return "file|" + relativePathForFingerprint(rootDir, file) + "|size=" + juce::String(file.getSize()) + "|mtime=" + juce::String(file.getLastModificationTime().toMilliseconds());
 }
 } // namespace KitLibIdentityHelpers
@@ -736,7 +736,7 @@ int LibraryManager::scanAll() {
 DrumKitSpec* LibraryManager::getKit(int index) {
     if (index < 0 || index >= static_cast<int>(this->kitSpecs.size()))
         return nullptr;
-    return this->kitSpecs[index].get();
+    return this->kitSpecs[static_cast<size_t>(index)].get();
 }
 
 

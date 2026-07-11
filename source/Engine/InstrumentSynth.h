@@ -43,11 +43,11 @@ public:
     int balance = 0;
     KitLib::DecayEnvelope decayEnvelope;
 
-    SampledSound(KitLib::InstrumentSpec* instrumentSpec = nullptr, KitLib::SampleVariantSpec* sampleVariantSpec = nullptr, const juce::File& sampleFile = {}, std::vector<uint8_t> notes = {})
-        : instrumentSpec(instrumentSpec)
-        , sampleVariantSpec(sampleVariantSpec)
-        , sampleFile(sampleFile)
-        , notes(notes)
+    SampledSound(KitLib::InstrumentSpec* instSpec = nullptr, KitLib::SampleVariantSpec* sampleVarSpec = nullptr, const juce::File& file = {}, std::vector<uint8_t> midiNotes = {})
+        : instrumentSpec(instSpec)
+        , sampleVariantSpec(sampleVarSpec)
+        , sampleFile(file)
+        , notes(std::move(midiNotes))
     {}
 };
 
@@ -73,7 +73,7 @@ public:
     };
 
     InstrumentSynthVoice() {}
-    ~InstrumentSynthVoice() {};
+    ~InstrumentSynthVoice() {}
 
     bool isVoiceActive() const { return this->getCurrentlyPlayingNote() >= 0; }
     int getCurrentlyPlayingNote() const noexcept { return this->currentlyPlayingNote; }
@@ -214,11 +214,11 @@ public:
         bool isExplicitMapRoute = false;
         bool isControllerSibling = false;
         bool isAliasRoute = false;
-        explicit ResolvedArticulationRoute(const LayoutArticulation& destinationLayoutArt)
-            : destinationLayoutArt(destinationLayoutArt)
-            , destinationArtNameId(destinationLayoutArt.nameId)
-            , destinationExprId(destinationLayoutArt.exprId)
-            , midiNotes(destinationLayoutArt.notes)
+        explicit ResolvedArticulationRoute(const LayoutArticulation& destinationArticulation)
+            : destinationLayoutArt(destinationArticulation)
+            , destinationArtNameId(destinationArticulation.nameId)
+            , destinationExprId(destinationArticulation.exprId)
+            , midiNotes(destinationArticulation.notes)
         {}
     };
 
@@ -257,7 +257,7 @@ public:
         std::array<VelLayerIdx, 128> velocityToLayer; // -1 means no layer
         std::vector<VelocityLayerRuntime> layers;
 
-        explicit ArticulationRuntime(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) : nameId(nameId), exprId(exprId) {
+        explicit ArticulationRuntime(StringsDictSingleton::Id newNameId, StringsDictSingleton::Id newExprId) : nameId(newNameId), exprId(newExprId) {
             velocityToLayer.fill(-1);
         }
 
@@ -271,12 +271,12 @@ public:
         // Example: layers {27,52,77,102,127} -> 0..27->0, 28..52->1, 53..77->2, 78..102->3, 103..127->4
         void buildVelocityMapping() {
             if (this->layers.empty()) return;
-            const auto count = static_cast<VelLayerIdx>(this->layers.size());
+            const auto count = this->layers.size();
             for (uint8_t value = 0; value <= MIDI_MAX_VALUE; ++value) {
-                VelLayerIdx chosen = this->layers[count - 1].velocity == 0; // default to last layer
-                for (VelLayerIdx idx = 0; idx < count; ++idx) {
-                    if (value <= this->layers[idx].velocity) {
-                        chosen = idx;
+                VelLayerIdx chosen = static_cast<VelLayerIdx>(count - 1); // default to last layer
+                for (size_t layerIdx = 0; layerIdx < count; ++layerIdx) {
+                    if (value <= this->layers[layerIdx].velocity) {
+                        chosen = static_cast<VelLayerIdx>(layerIdx);
                         break;
                     }
                 }
@@ -312,16 +312,16 @@ public:
         }
     };
 
-    InstrumentSynth(DrumKitEngine* parent, KitLayout::InstrumentSlot instrumentSlot
+    InstrumentSynth(DrumKitEngine* parentEngine, KitLayout::InstrumentSlot layoutInstrument
         //DUNNO: add params to instrument or do it somewhere else?
         // ,juce::RangedAudioParameter& gainParameter
         // ,juce::RangedAudioParameter& panParameter
         // ,juce::AudioParameterBool& phaseParameter
     )
-        : parent(parent)
-        , instrumentSlot(instrumentSlot)
-        , id(instrumentSlot.id)
-        , type(instrumentSlot.type)
+        : parent(parentEngine)
+        , id(layoutInstrument.id)
+        , type(layoutInstrument.type)
+        , instrumentSlot(std::move(layoutInstrument))
     {
         this->lastCcArticulation.fill(-1);
         this->pendingCcArticulation.fill(-1);
@@ -488,19 +488,19 @@ public:
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
         const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());
         for (int8_t artIdx = 0; artIdx < count; ++artIdx) {
-            const auto& artRt = this->runtimeArticulations[artIdx];
+            const auto& artRt = this->runtimeArticulations[static_cast<size_t>(artIdx)];
             if (artRt.nameId == nameId && artRt.exprId == exprId && artRt.routeDestinationNameId == 0 && artRt.routeDestinationExprId == 0)
                 return artIdx;
         }
         for (int8_t artIdx = 0; artIdx < count; ++artIdx) {
-            const auto& artRt = this->runtimeArticulations[artIdx];
+            const auto& artRt = this->runtimeArticulations[static_cast<size_t>(artIdx)];
             if (artRt.nameId == nameId && artRt.exprId == exprId)
                 return artIdx;
         }
         return -1;
     }
     juce::String getArtName(const int artIdx) const {
-        const auto& art = this->runtimeArticulations[artIdx];
+        const auto& art = this->runtimeArticulations[static_cast<size_t>(artIdx)];
         juce::String artLabel = StringsDictSingleton::nameOf(art.nameId);
         if (art.exprId != 0) artLabel += "[" + StringsDictSingleton::nameOf(art.exprId) + "]";
         return artLabel;
@@ -586,9 +586,8 @@ private:
         KitLib::ArticulationSpec* resolvedSpec = nullptr;
         std::vector<KitLib::ArticulationSpec*> controllerSiblingSpecs;
         bool strictArticulationResolution = false;
-        explicit ResolvedArticulationBinding(const LayoutArticulation& layoutArt)
-            : layoutArt(layoutArt)
-            , resolvedLayoutArt(layoutArt)
+        explicit ResolvedArticulationBinding(const LayoutArticulation& sourceLayoutArt)
+            : layoutArt(sourceLayoutArt), resolvedLayoutArt(sourceLayoutArt)
         {}
     };
 

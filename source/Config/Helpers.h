@@ -73,9 +73,9 @@ struct ParseResult {
 
     juce::String error(const juce::String& separator = "\n") const {
         juce::String out;
-        for (int i = 0; i < errors.size(); ++i) {
-            out += errors[i];
-            if (i + 1 < errors.size())
+        for (size_t errorIdx = 0; errorIdx < errors.size(); ++errorIdx) {
+            out += errors[errorIdx];
+            if (errorIdx + 1 < errors.size())
                 out += separator;
         }
         return out;
@@ -83,10 +83,14 @@ struct ParseResult {
 };
 
 static inline ParseResult<juce::File> getEnvPath(const char* envName) {
+#if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4996)
+#endif
     const char* envPath = std::getenv(envName);
+#if defined(_MSC_VER)
 #pragma warning(pop)
+#endif
     ParseResult<juce::File> result;
 
     if (envPath == nullptr)

@@ -69,8 +69,8 @@ struct KitLayout {
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
-            explicit ArticulationTrigger(juce::String codeRaw) : codeRaw(codeRaw) {
-                auto wrapSegm = extractWrappedSegment(codeRaw.trim(), "[", "]");
+            explicit ArticulationTrigger(juce::String raw) : codeRaw(raw) {
+                auto wrapSegm = extractWrappedSegment(raw.trim(), "[", "]");
                 this->nameId = StringsDictSingleton::getId(wrapSegm.prefix);
                 this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
             }
@@ -80,8 +80,8 @@ struct KitLayout {
             juce::String codeRaw; // pdl_opn_cls, zon_ctr_rim, zon_bow_edg, ...
             MidiNotes notes;
             
-            explicit ContinuousController(int number, juce::String codeRaw) : number(number), codeRaw(codeRaw)
-                , codeIdx(KitLib::ArticulationSpec::ExpressionDimension::stringToType(codeRaw))
+            explicit ContinuousController(int ccNumber, juce::String raw) : number(ccNumber), codeRaw(raw)
+                , codeIdx(KitLib::ArticulationSpec::ExpressionDimension::stringToType(raw))
             {}
             KitLib::ArticulationSpec::ExpressionDimension::Type codeIdx = KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown;
         };

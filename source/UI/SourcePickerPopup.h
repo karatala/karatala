@@ -76,7 +76,7 @@ private:
 
     class ListModel : public juce::ListBoxModel {
     public:
-        explicit ListModel(SourcePickerPopup& owner) : owner(owner) {}
+        explicit ListModel(SourcePickerPopup& popupOwner) : owner(popupOwner) {}
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
         void listBoxItemClicked(int row, const juce::MouseEvent& event) override;
@@ -88,7 +88,7 @@ private:
 
     class KindListModel : public juce::ListBoxModel {
     public:
-        explicit KindListModel(SourcePickerPopup& owner) : owner(owner) {}
+        explicit KindListModel(SourcePickerPopup& popupOwner) : owner(popupOwner) {}
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
         void listBoxItemClicked(int row, const juce::MouseEvent& event) override;

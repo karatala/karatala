@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <unordered_set>
 
-KitHomePanel::KitHomePanel(DrumKitEngine& engine)
-    : engine(engine) {
+KitHomePanel::KitHomePanel(DrumKitEngine& drumKitEngine)
+    : engine(drumKitEngine) {
     this->titleLabel.setText("Kit", juce::dontSendNotification);
     this->titleLabel.setFont(UITheme::Fonts::sectionTitle().withHeight(18.0f));
     this->titleLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
@@ -523,7 +523,7 @@ void KitHomePanel::resized() {
     this->introLabel.setBounds(area.removeFromTop(24));
     area.removeFromTop(6);
 
-    auto placeComboRow = [&area, leftLabelWidth](juce::Label& label, juce::Component& combo) {
+    auto placeComboRow = [&area](juce::Label& label, juce::Component& combo) {
         auto row = area.removeFromTop(26);
         label.setBounds(row.removeFromLeft(leftLabelWidth));
         combo.setBounds(row.removeFromLeft(340).reduced(0, 2));

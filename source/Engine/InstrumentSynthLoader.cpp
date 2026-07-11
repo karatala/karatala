@@ -1,5 +1,3 @@
-#pragma once
-
 #include "InstrumentSynth.h"
 #include "ArticulationNameHelpers.h"
 #include "DrumKitEngine.h"
@@ -55,13 +53,13 @@ void InstrumentSynth::resetRoutingTables() {
 void InstrumentSynth::rebuildArtLookupCache() {
     this->artIdByNameExprId.clear();
     for (int artIdx = 0; artIdx < static_cast<int>(this->runtimeArticulations.size()); ++artIdx) {
-        const auto& art = this->runtimeArticulations[artIdx];
+        const auto& art = this->runtimeArticulations[static_cast<size_t>(artIdx)];
         if (art.routeDestinationNameId != 0 || art.routeDestinationExprId != 0) continue;
         const uint64_t key = (static_cast<uint64_t>(art.nameId) << 32) | static_cast<uint64_t>(art.exprId);
         this->artIdByNameExprId.emplace(key, artIdx);
     }
     for (int artIdx = 0; artIdx < static_cast<int>(this->runtimeArticulations.size()); ++artIdx) {
-        const auto& art = this->runtimeArticulations[artIdx];
+        const auto& art = this->runtimeArticulations[static_cast<size_t>(artIdx)];
         const uint64_t key = (static_cast<uint64_t>(art.nameId) << 32) | static_cast<uint64_t>(art.exprId);
         this->artIdByNameExprId.emplace(key, artIdx);
     }
@@ -86,7 +84,7 @@ bool InstrumentSynth::routeUsesDestinationRuntimeKey(const ResolvedArticulationR
 
 InstrumentSynth::ArtRtIdx InstrumentSynth::findRuntimeArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId, StringsDictSingleton::Id destinationNameId, StringsDictSingleton::Id destinationExprId) const {
     for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx) {
-        const auto& artRt = this->runtimeArticulations[artIdx];
+        const auto& artRt = this->runtimeArticulations[static_cast<size_t>(artIdx)];
         if (artRt.nameId == nameId && artRt.exprId == exprId && artRt.routeDestinationNameId == destinationNameId && artRt.routeDestinationExprId == destinationExprId)
             return static_cast<ArtRtIdx>(artIdx);
     }
@@ -435,7 +433,7 @@ void InstrumentSynth::applyResolvedArticulationRoute(const ResolvedArticulationR
         LOG(Warning, "Skipping routing rebuild for '" + layoutArt.codeRaw + "' because runtime articulation '" + artSpec->codeRaw + "' is not loaded");
         return;
     }
-    auto& artRt = this->runtimeArticulations[artIdx];
+    auto& artRt = this->runtimeArticulations[static_cast<size_t>(artIdx)];
     if (loadSamples) {
         artSpec->sortVelocityLayers();
         this->processArticulationSpec(sourceInstrument, layoutArt, artSpec, artRt, artIdx, foundCcDimensions, skippedMicCodes);
@@ -668,8 +666,8 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
 
     for (const auto& cc : this->instrumentSlot.controllers) {
         for (uint8_t note : cc.notes) {
-            auto ccNum = static_cast<uint8_t>(cc.number);
-            auto& vec = this->noteToControllers[note];
+            const auto ccNum = static_cast<uint8_t>(cc.number);
+            auto& vec = this->noteToControllers[static_cast<int8_t>(note)];
             if (!vectorContains(vec, ccNum))
                 vec.emplace_back(ccNum);
         }
@@ -679,7 +677,7 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
             LOG(Debug, "buildCcMappings: controller " + juce::String((int)cc.number) + " {num=" + juce::String((int)cc.number) + ",codeIdx=" + juce::String((int)cc.codeIdx) + ", notes=" + midiVectorToString(cc.notes) + "} applies to articulation " + layoutArt.codeRaw + " (layoutArt.notes=" + midiVectorToString(layoutArt.notes) + ")");
             const auto values = this->getEffectiveExpressionValues(*artSpec, cc.codeIdx);
             for (const auto& val : values) {
-                auto ccNum = static_cast<uint8_t>(cc.number);
+                const auto ccNum = static_cast<int8_t>(cc.number);
                 const auto pair = std::make_pair(static_cast<int8_t>(val), artIdx);
                 auto& vec = foundCcDimensions[ccNum];
                 // avoid inserting identical (value,artIdx) duplicates
@@ -703,20 +701,20 @@ void InstrumentSynth::processCcDimensions(CcDimensionsMap& foundCcDimensions) {
         });
 
         std::array<uint8_t, 128> map;
-        const int8_t count = static_cast<uint8_t>(valArtPairs.size());
+        const auto count = valArtPairs.size();
 
-        for (int value = 0; value <= MIDI_MAX_VALUE; ++value) {
-            uint8_t chosen = valArtPairs[count - 1].second; // default to last
-            for (uint8_t idx = 0; idx < count; ++idx) {
-                if (value <= static_cast<int>(valArtPairs[idx].first)) {
-                    chosen = valArtPairs[idx].second;
+        for (size_t valueIdx = 0; valueIdx <= static_cast<size_t>(MIDI_MAX_VALUE); ++valueIdx) {
+            int8_t chosen = valArtPairs[count - 1].second; // default to last
+            for (size_t pairIdx = 0; pairIdx < count; ++pairIdx) {
+                if (static_cast<int>(valueIdx) <= static_cast<int>(valArtPairs[pairIdx].first)) {
+                    chosen = valArtPairs[pairIdx].second;
                     break;
                 }
             }
-            map[value] = chosen;
+            map[valueIdx] = static_cast<uint8_t>(chosen);
         }
-        this->ccToArticulationMask[ccNum] = true;
-        this->ccToArticulationTable[ccNum] = map;
+        this->ccToArticulationMask[static_cast<size_t>(ccNum)] = true;
+        this->ccToArticulationTable[static_cast<size_t>(ccNum)] = map;
         
         if (LOG_ENABLED(Debug)) { // log condensed mapping: thresholds -> articulation index
             juce::String summary;

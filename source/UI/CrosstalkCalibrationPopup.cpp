@@ -2,8 +2,8 @@
 #include "UIHelpers.h"
 #include "UITheme.h"
 
-CrosstalkCalibrationPopup::CrosstalkCalibrationPopup(DrumKitEngine& engine)
-    : engine(engine) {
+CrosstalkCalibrationPopup::CrosstalkCalibrationPopup(DrumKitEngine& drumKitEngine)
+    : engine(drumKitEngine) {
     this->titleLabel.setText("Crosstalk Calibration", juce::dontSendNotification);
     this->titleLabel.setFont(UITheme::Fonts::sectionTitle().withHeight(16.0f));
     this->titleLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);

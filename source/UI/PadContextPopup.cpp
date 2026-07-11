@@ -120,12 +120,11 @@ juce::uint8 PadContextPopup::getPreviewVelocity() const {
 
 // Constructor
 
-PadContextPopup::PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedInstrumentMapText)
-    : engine(engine)
+PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedMapText)
+    : engine(drumKitEngine)
     , slotId(slot.id)
-    , slotType(slot.type)
-    , savedInstrumentMapText(savedInstrumentMapText
-) {
+    , savedInstrumentMapText(savedMapText)
+    , slotType(slot.type) {
     // Resolve articulation
     if (artIdx >= 0 && artIdx < static_cast<int>(slot.articulations.size())) {
         this->selectedArticulationIndex = artIdx;

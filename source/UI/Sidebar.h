@@ -41,7 +41,7 @@ private:
 
     struct ModeButton : public juce::TextButton {
         ViewMode mode;
-        explicit ModeButton(ViewMode mode, const juce::String& label) : mode(mode) {
+        explicit ModeButton(ViewMode buttonMode, const juce::String& label) : mode(buttonMode) {
             this->setButtonText(label);
             this->setClickingTogglesState(false);
         }

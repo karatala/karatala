@@ -77,8 +77,8 @@ struct MissingInstrumentFixTableSelection {
 
 class MissingInstrumentFixTableComponent : public juce::Component {
 public:
-    explicit MissingInstrumentFixTableComponent(std::vector<MissingInstrumentFixTableRow> rows)
-        : rows(std::move(rows)) {
+    explicit MissingInstrumentFixTableComponent(std::vector<MissingInstrumentFixTableRow> tableRows)
+        : rows(std::move(tableRows)) {
         this->slotHeader.setText("Slot", juce::dontSendNotification);
         this->missingHeader.setText("Missing path", juce::dontSendNotification);
         this->replacementHeader.setText("Replacement", juce::dontSendNotification);
@@ -202,8 +202,8 @@ void PluginEditor::setupKitMode() {
     this->kitHomePanel->onLoadRequested = [this](KitHomePanel::Commit commit) {
         struct ProcessingSuspendGuard {
             PluginProcessor& processor;
-            explicit ProcessingSuspendGuard(PluginProcessor& processor)
-                : processor(processor) {
+            explicit ProcessingSuspendGuard(PluginProcessor& pluginProcessor)
+                : processor(pluginProcessor) {
                 this->processor.suspendProcessing(true);
             }
             ~ProcessingSuspendGuard() {
@@ -470,8 +470,8 @@ void PluginEditor::setupTroubleshootingMode() {
 void PluginEditor::reloadLibraryFromTroubleshooting() {
     struct ProcessingSuspendGuard {
         PluginProcessor& processor;
-        explicit ProcessingSuspendGuard(PluginProcessor& processor)
-            : processor(processor) {
+        explicit ProcessingSuspendGuard(PluginProcessor& pluginProcessor)
+            : processor(pluginProcessor) {
             this->processor.suspendProcessing(true);
         }
         ~ProcessingSuspendGuard() {
@@ -633,8 +633,8 @@ std::vector<SourceItem> PluginEditor::buildReplacementCandidates(const MissingIn
 void PluginEditor::applyFixedInstrumentMap(const juce::String& mapText, const juce::String& statusPrefix) {
     struct ProcessingSuspendGuard {
         PluginProcessor& processor;
-        explicit ProcessingSuspendGuard(PluginProcessor& processor)
-            : processor(processor) {
+        explicit ProcessingSuspendGuard(PluginProcessor& pluginProcessor)
+            : processor(pluginProcessor) {
             this->processor.suspendProcessing(true);
         }
         ~ProcessingSuspendGuard() {

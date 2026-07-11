@@ -1290,7 +1290,7 @@ juce::String DrumKitEngine::buildCrosstalkProfileText() const {
 std::optional<juce::String> DrumKitEngine::getNameForMidiNoteNumber(int note, int /* midiChannel */) {
     if (note < 0 || note > 127) return {};
 
-    const auto& name = this->noteNameCache[note];
+    const auto& name = this->noteNameCache[static_cast<size_t>(note)];
     if (name.isNotEmpty()) return name;
     return {};
 }
@@ -1508,12 +1508,12 @@ void DrumKitEngine::saveLatestControllerValues(const juce::MidiBuffer& midiMessa
         const juce::MidiMessage msg = midiMess.getMessage();
         if (msg.isController()) {
             const auto ccNum = msg.getControllerNumber();
-            if (ccNum >= 0 && ccNum <= 127 && this->trackedCCMask[ccNum])
-                this->latestCCValues[ccNum] = msg.getControllerValue();
+            if (ccNum >= 0 && ccNum <= 127 && this->trackedCCMask[static_cast<size_t>(ccNum)])
+                this->latestCCValues[static_cast<size_t>(ccNum)] = msg.getControllerValue();
         } else if (msg.isAftertouch()) {
             const auto note = msg.getNoteNumber();
-            if (note >= 0 && note <= 127 && this->trackedPAMask[note])
-                this->latestPAValues[note] = msg.getAfterTouchValue();
+            if (note >= 0 && note <= 127 && this->trackedPAMask[static_cast<size_t>(note)])
+                this->latestPAValues[static_cast<size_t>(note)] = msg.getAfterTouchValue();
         }
     }
 }
@@ -2260,12 +2260,13 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         for (auto& prep : preparedSlots) {
             if (prep.primaryReplacement && prep.primaryIndex >= 0
                 && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
-                oldSynths.push_back(std::move(this->instrumentSynthPtrs[prep.primaryIndex]));
-                this->instrumentSynthPtrs[prep.primaryIndex] = std::move(prep.primaryReplacement);
-                this->instrumentSynthById[prep.slotId] = this->instrumentSynthPtrs[prep.primaryIndex].get();
+                const auto primaryIndex = static_cast<size_t>(prep.primaryIndex);
+                oldSynths.push_back(std::move(this->instrumentSynthPtrs[primaryIndex]));
+                this->instrumentSynthPtrs[primaryIndex] = std::move(prep.primaryReplacement);
+                this->instrumentSynthById[prep.slotId] = this->instrumentSynthPtrs[primaryIndex].get();
                 anyPrimarySwapped = true;
             } else if (prep.primaryParameterEntry != nullptr && prep.primaryIndex >= 0 && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
-                applyOverrides(*this->instrumentSynthPtrs[prep.primaryIndex], *prep.primaryParameterEntry);
+                applyOverrides(*this->instrumentSynthPtrs[static_cast<size_t>(prep.primaryIndex)], *prep.primaryParameterEntry);
                 ++applied;
             }
 

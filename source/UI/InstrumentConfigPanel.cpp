@@ -3,8 +3,8 @@
 
 // InstrumentConfigPanel
 
-InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& engine)
-    : engine(engine) {
+InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
+    : engine(drumKitEngine) {
     auto setupHeader = [this](juce::Label& label, const juce::String& text) {
         label.setText(text, juce::dontSendNotification);
         label.setFont(UITheme::Fonts::small().boldened());

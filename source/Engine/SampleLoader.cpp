@@ -43,8 +43,8 @@ void SampleLoaderQueue::enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib:
     stageQueues[idx].push_back(std::move(cand));
     this->pendingCallbacks.emplace(cacheKey, std::vector<LoadCallback>{cb});
     queuedCount.fetch_add(1);
-    juce::String artName = StringsDictSingleton::nameOf(artId);
-    // LOG(Info, "SampleLoaderQueue: enqueued varSpec file=" + loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(instType) + " art=" + artName + " vel=" + juce::String((int)vel) + " rr=" + juce::String((int)rrIndex));
+    // juce::String artName = StringsDictSingleton::nameOf(artId);
+    // LOG(Verbose, "SampleLoaderQueue: enqueued varSpec file=" + loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(instType) + " art=" + artName + " vel=" + juce::String((int)vel) + " rr=" + juce::String((int)rrIndex));
 }
 
 int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type type) const {
@@ -55,8 +55,49 @@ int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type ty
         case KitLib::InstrumentSpec::Type::Ride: return 4;
         case KitLib::InstrumentSpec::Type::Crash: return 5;
         case KitLib::InstrumentSpec::Type::Tom: return 6;
-        case KitLib::InstrumentSpec::Type::Cymbal: return 7;
-        default: return 8;
+        case KitLib::InstrumentSpec::Type::Splash:
+        case KitLib::InstrumentSpec::Type::China:
+        case KitLib::InstrumentSpec::Type::Bell:
+        case KitLib::InstrumentSpec::Type::Stack:
+        case KitLib::InstrumentSpec::Type::Chopper:
+        case KitLib::InstrumentSpec::Type::Gong:
+        case KitLib::InstrumentSpec::Type::Karatala:
+        case KitLib::InstrumentSpec::Type::Cymbal:
+            return 7;
+        case KitLib::InstrumentSpec::Type::Octoban:
+        case KitLib::InstrumentSpec::Type::Rototom:
+        case KitLib::InstrumentSpec::Type::Timbale:
+        case KitLib::InstrumentSpec::Type::Timpani:
+        case KitLib::InstrumentSpec::Type::Conga:
+        case KitLib::InstrumentSpec::Type::Bongo:
+        case KitLib::InstrumentSpec::Type::Djembe:
+        case KitLib::InstrumentSpec::Type::Cajon:
+        case KitLib::InstrumentSpec::Type::Taiko:
+        case KitLib::InstrumentSpec::Type::Surdo:
+        case KitLib::InstrumentSpec::Type::Mridangam:
+        case KitLib::InstrumentSpec::Type::TalkingDrum:
+        case KitLib::InstrumentSpec::Type::Drum:
+            return 8;
+        case KitLib::InstrumentSpec::Type::Cowbell:
+        case KitLib::InstrumentSpec::Type::Tambourine:
+        case KitLib::InstrumentSpec::Type::Shaker:
+        case KitLib::InstrumentSpec::Type::Maracas:
+        case KitLib::InstrumentSpec::Type::Cabasa:
+        case KitLib::InstrumentSpec::Type::Guiro:
+        case KitLib::InstrumentSpec::Type::Claves:
+        case KitLib::InstrumentSpec::Type::Agogo:
+        case KitLib::InstrumentSpec::Type::WoodBlock:
+        case KitLib::InstrumentSpec::Type::TempleBlock:
+        case KitLib::InstrumentSpec::Type::Triangle:
+        case KitLib::InstrumentSpec::Type::Vibraslap:
+        case KitLib::InstrumentSpec::Type::Castanets:
+        case KitLib::InstrumentSpec::Type::SleighBells:
+        case KitLib::InstrumentSpec::Type::Whip:
+        case KitLib::InstrumentSpec::Type::Ratchet:
+        case KitLib::InstrumentSpec::Type::Percussion:
+        case KitLib::InstrumentSpec::Type::Other:
+        case KitLib::InstrumentSpec::Type::Unknown:
+            return 9;
     }
 }
 
@@ -75,6 +116,19 @@ int SampleLoaderQueue::determineStage(const Candidate& cand) const {
         case KitLib::InstrumentSpec::Type::Kick:
         case KitLib::InstrumentSpec::Type::Snare:
         case KitLib::InstrumentSpec::Type::Tom:
+        case KitLib::InstrumentSpec::Type::Octoban:
+        case KitLib::InstrumentSpec::Type::Rototom:
+        case KitLib::InstrumentSpec::Type::Timbale:
+        case KitLib::InstrumentSpec::Type::Timpani:
+        case KitLib::InstrumentSpec::Type::Conga:
+        case KitLib::InstrumentSpec::Type::Bongo:
+        case KitLib::InstrumentSpec::Type::Djembe:
+        case KitLib::InstrumentSpec::Type::Cajon:
+        case KitLib::InstrumentSpec::Type::Taiko:
+        case KitLib::InstrumentSpec::Type::Surdo:
+        case KitLib::InstrumentSpec::Type::Mridangam:
+        case KitLib::InstrumentSpec::Type::TalkingDrum:
+        case KitLib::InstrumentSpec::Type::Drum:
             if (cand.artId == centerId || cand.artId == rimId) isMain = (cand.artId == centerId);
             break;
         case KitLib::InstrumentSpec::Type::Ride:
@@ -84,10 +138,35 @@ int SampleLoaderQueue::determineStage(const Candidate& cand) const {
             if (cand.artId == bowId || cand.artId == pedalId) isMain = true;
             break;
         case KitLib::InstrumentSpec::Type::Crash:
+        case KitLib::InstrumentSpec::Type::Splash:
+        case KitLib::InstrumentSpec::Type::China:
+        case KitLib::InstrumentSpec::Type::Bell:
+        case KitLib::InstrumentSpec::Type::Stack:
+        case KitLib::InstrumentSpec::Type::Chopper:
+        case KitLib::InstrumentSpec::Type::Gong:
+        case KitLib::InstrumentSpec::Type::Karatala:
         case KitLib::InstrumentSpec::Type::Cymbal:
             if (cand.artId == edgeId || cand.artId == bowId || cand.artId == bellId) isMain = (cand.artId == edgeId || cand.artId == bowId);
             break;
-        default:
+        case KitLib::InstrumentSpec::Type::Cowbell:
+        case KitLib::InstrumentSpec::Type::Tambourine:
+        case KitLib::InstrumentSpec::Type::Shaker:
+        case KitLib::InstrumentSpec::Type::Maracas:
+        case KitLib::InstrumentSpec::Type::Cabasa:
+        case KitLib::InstrumentSpec::Type::Guiro:
+        case KitLib::InstrumentSpec::Type::Claves:
+        case KitLib::InstrumentSpec::Type::Agogo:
+        case KitLib::InstrumentSpec::Type::WoodBlock:
+        case KitLib::InstrumentSpec::Type::TempleBlock:
+        case KitLib::InstrumentSpec::Type::Triangle:
+        case KitLib::InstrumentSpec::Type::Vibraslap:
+        case KitLib::InstrumentSpec::Type::Castanets:
+        case KitLib::InstrumentSpec::Type::SleighBells:
+        case KitLib::InstrumentSpec::Type::Whip:
+        case KitLib::InstrumentSpec::Type::Ratchet:
+        case KitLib::InstrumentSpec::Type::Unknown:
+        case KitLib::InstrumentSpec::Type::Percussion:
+        case KitLib::InstrumentSpec::Type::Other:
             break;
     }
 
@@ -147,8 +226,8 @@ void SampleLoaderQueue::workerLoop() {
         this->dispatchedCount.fetch_add(1);
         this->inFlightCount.fetch_add(1);
 
-        juce::String artName = StringsDictSingleton::nameOf(task.artId);
-        // LOG(Info, "SampleLoaderQueue: dispatching file=" + task.loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(task.instType) + " art=" + artName + " vel=" + juce::String((int)task.velocity) + " rr=" + juce::String((int)task.rrIndex));
+        // juce::String artName = StringsDictSingleton::nameOf(task.artId);
+        // LOG(Verbose, "SampleLoaderQueue: dispatching file=" + task.loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(task.instType) + " art=" + artName + " vel=" + juce::String((int)task.velocity) + " rr=" + juce::String((int)task.rrIndex));
 
         // Wrap callback to update stats and call all pending callbacks registered for this spec cache key
         juce::String pendingKey = task.cacheKey;
@@ -156,15 +235,15 @@ void SampleLoaderQueue::workerLoop() {
         const int stageIdx = std::clamp(taskStage - 1, 0, 3);
 
         // Update per-stage counters/timestamp for aggregated logging
-        this->stageInFlightCount[stageIdx].fetch_add(1);
-        this->stageDispatchedCount[stageIdx].fetch_add(1);
+        this->stageInFlightCount[static_cast<size_t>(stageIdx)].fetch_add(1);
+        this->stageDispatchedCount[static_cast<size_t>(stageIdx)].fetch_add(1);
         {
             std::lock_guard<std::mutex> g(this->stageTimeMutex);
-            if (this->stageFirstDispatchTime[stageIdx] == std::chrono::steady_clock::time_point())
-                this->stageFirstDispatchTime[stageIdx] = dispatchTime;
+            if (this->stageFirstDispatchTime[static_cast<size_t>(stageIdx)] == std::chrono::steady_clock::time_point())
+                this->stageFirstDispatchTime[static_cast<size_t>(stageIdx)] = dispatchTime;
         }
 
-        loader.requestAsyncLoad(task.loadSpec, [this, pendingKey, artName, taskStage, dispatchTime, stageIdx](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr){
+        loader.requestAsyncLoad(task.loadSpec, [this, pendingKey](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr){
             // collect callbacks under lock then erase entry so future enqueues will create a new pending vector
             std::vector<LoadCallback> cbs;
             {
