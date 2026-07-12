@@ -373,25 +373,6 @@ juce::String DrumKitEngine::normalizeInstrumentMapText(const juce::String& text)
     return DrumKitEngine::serializeInstrumentMap(parsed.value);
 }
 
-void DrumKitEngine::seedInstrumentMapFingerprints(const juce::String& mapText) {
-    const auto normalizedMapText = this->normalizeInstrumentMapText(mapText);
-    auto parsed = DrumKitEngine::parseInstrumentMapText(normalizedMapText);
-    if (parsed.ok()) {
-        this->lastAppliedShadowFingerprints.clear();
-        this->lastAppliedShadowReloadFingerprints.clear();
-        if (this->libraryManagerPtr != nullptr && this->activeKitLayoutPtr != nullptr) {
-            DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
-            this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *this->libraryManagerPtr);
-            this->lastAppliedSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsed.value, *this->libraryManagerPtr);
-            this->lastAppliedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
-        } else {
-            this->lastAppliedSlotFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
-            this->lastAppliedSlotReloadFingerprints = DrumKitEngineMapHelpers::buildSlotFingerprintMap(parsed.value);
-            this->lastAppliedInstrumentMapText = normalizedMapText;
-        }
-    }
-}
-
 void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, probably rewrite, simplify
     if (this->activeKitLayoutPtr == nullptr) {
         LOG(Warning, "no active kit layout to map to");

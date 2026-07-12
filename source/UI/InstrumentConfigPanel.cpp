@@ -121,7 +121,6 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
 
     this->updateRemoveButtonVisibility();
     this->layoutContent();
-    this->engine.seedInstrumentMapFingerprints(this->generateMapText());
 }
 
 void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::String& artName,
