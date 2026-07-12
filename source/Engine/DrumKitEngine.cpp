@@ -1572,6 +1572,22 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     }
 }
 
+bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::String& artName, int layerIndex, const juce::String& sourceMicCode, const juce::String& outputMicCode) {
+    if (layerIndex < 0) return false;
+
+    const auto targetNotes = this->getTargetNotesForArticulationFilter(slotId, artName);
+    const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+
+    int currentLayerIndex = 0;
+    for (auto& synthPtr : this->instrumentSynthPtrs) {
+        if (synthPtr == nullptr || synthPtr->getId() != slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes, targetNotes)) continue;
+        if (currentLayerIndex == layerIndex) return synthPtr->updateMicRoute(sourceMicCode, outputMicCode);
+        ++currentLayerIndex;
+    }
+    return false;
+}
+
 std::vector<int> DrumKitEngine::getTargetNotesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const {
     std::vector<int> targetNotes;
     const bool hasArtFilter = artName.trim().isNotEmpty() && artName.trim() != "(default)";

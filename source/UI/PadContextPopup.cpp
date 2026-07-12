@@ -990,7 +990,13 @@ void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBlee
         + " sourceMic=" + bleedCtrl->micCode
         + " old=" + (oldRoute.isNotEmpty() ? oldRoute : juce::String("auto"))
         + " new=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")), DebugLevel::Debug);
-    this->engine.logMessage("Instrument map apply: changed slot=" + this->slotId + " art=" + layer->artName + " reason=pad-popup route", DebugLevel::Debug);
+    if (this->engine.updateSlotMicRoute(this->slotId, layer->artName, layerIndex, bleedCtrl->micCode, newRoute)) {
+        this->engine.logMessage("Mic route live update: slot=" + this->slotId + " art=" + layer->artName, DebugLevel::Debug);
+        this->mapTextDirty = true;
+        this->flushMapText();
+        return;
+    }
+    this->engine.logMessage("Instrument map apply fallback: slot=" + this->slotId + " art=" + layer->artName + " reason=source mic not loaded", DebugLevel::Debug);
     this->applyToEngine();
 }
 

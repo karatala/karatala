@@ -72,7 +72,7 @@ Layer order is the order in the normalized map for that slot/art. UI rows should
 | `flipLR` | `flipLR=1` | swap stereo left/right | live for existing layer |
 | `flipPhase` | `flipPhase=1` | invert phase | live for existing layer |
 | `bleed` | `bleed=oh:0.25,room:0.5` | mic gain trims from 0.0 to 1.0 | live for existing layer |
-| `micRoute` | `micRoute=dtm:room,ons:oh` | send source mic to chosen output mic | requires slot reload | //FIXME: can we make it not require slot reload?
+| `micRoute` | `micRoute=dtm:room,ons:oh` | send source mic to chosen output mic | live in the pad popup; raw map apply reloads the slot |
 
 
 ```text

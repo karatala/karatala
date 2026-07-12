@@ -484,6 +484,7 @@ public:
     /** Rebuild note/CC routing from the given layout slot without reloading samples.
      *  Call after MIDI note or controller assignments change in the UI. */
     void rebuildRoutingFromLayout(const KitLayout::InstrumentSlot& layoutSlot);
+    bool updateMicRoute(const juce::String& sourceMicCode, const juce::String& outputMicCode);
 
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
         const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());

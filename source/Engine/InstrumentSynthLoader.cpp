@@ -740,3 +740,44 @@ void InstrumentSynth::rebuildRoutingFromLayout(const KitLayout::InstrumentSlot& 
     const auto bindings = this->collectResolvedLayoutArticulations(layoutSlot, routingContext);
     this->applyResolvedRouting(bindings, layoutSlot, routingContext, false, false);
 }
+
+bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const juce::String& outputMicCode) {
+    const auto normalizedSourceMicCode = sourceMicCode.trim();
+    if (normalizedSourceMicCode.isEmpty()) return false;
+
+    const auto oldOverrides = this->lastRoutingContext.micRouteOverrides;
+    auto newOverrides = oldOverrides;
+    std::erase_if(newOverrides, [&normalizedSourceMicCode](const auto& route) { return route.first.compareIgnoreCase(normalizedSourceMicCode) == 0; });
+    if (outputMicCode.isNotEmpty()) newOverrides[normalizedSourceMicCode] = outputMicCode.trim();
+    this->lastRoutingContext.setMicRouteOverrides(newOverrides);
+
+    MicRoutingBuilder micRouting(this);
+    int matchingSoundCount = 0;
+    for (const auto& sound : this->sampledSoundPtrs) {
+        if (sound == nullptr || sound->sampleVariantSpec == nullptr || sound->sampleVariantSpec->micSpec.raw.compareIgnoreCase(normalizedSourceMicCode) != 0) continue;
+        const int fileChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
+        if (micRouting.resolve(sound->sampleVariantSpec->micSpec, fileChannelCount).globalStart < 0) {
+            this->lastRoutingContext.setMicRouteOverrides(oldOverrides);
+            return false;
+        }
+        ++matchingSoundCount;
+    }
+
+    if (matchingSoundCount == 0) {
+        this->lastRoutingContext.setMicRouteOverrides(oldOverrides);
+        return false;
+    }
+
+    for (const auto& sound : this->sampledSoundPtrs) {
+        if (sound == nullptr || sound->sampleVariantSpec == nullptr || sound->sampleVariantSpec->micSpec.raw.compareIgnoreCase(normalizedSourceMicCode) != 0) continue;
+        const int fileChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
+        const auto assignment = micRouting.resolve(sound->sampleVariantSpec->micSpec, fileChannelCount);
+        sound->micBufferChannelStart = assignment.globalStart;
+        sound->micBufferChannelCount = assignment.channels;
+        sound->routedMicCode = assignment.micCode;
+        sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
+        sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->routedMicCodeId), std::memory_order_relaxed);
+        sound->useDirectBalance = assignment.applyBalance && assignment.channels == 2 && sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
+    }
+    return true;
+}

@@ -10,7 +10,7 @@ The goal is:
 
 - Bleed level knob stays live and cheap.
 - Routing combobox becomes a saved instrument-map setting.
-- Routing combobox applies the affected slot because routing changes require sample/output rebuild.
+- Routing combobox reroutes loaded samples in place and applies the affected slot only when the source mic is not loaded.
 - Debug logs show exactly what changed.
 
 ## Practical Example
@@ -50,11 +50,11 @@ Recommendation: use `micRoute=` because `route=` is broad and could conflict wit
 
 - `PadContextPopup::rebuildBleedControls()` creates each bleed pot and routing combo.
 - Bleed pot calls `applyLayerParametersFast()` and updates the current `InstrumentSynth` live.
-- Routing combo currently calls only `updateRoutingComboDisplay()`.
-- `InstrumentMapEntry` stores `micBleedLevels`, but has no route override storage.
+- Routing combo updates its display, reroutes the loaded layer, and saves the map text.
+- `InstrumentMapEntry` stores both `micBleedLevels` and `micRouteOverrides`.
 - `MicRoutingBuilder::resolve()` assigns sample variants to host output channels during load.
 - `SampledSound::micBufferChannelStart`, `micBufferChannelCount`, and `routedMicCode` are set during sample routing.
-- Because output channel assignment is stored in loaded sample data, a route change needs slot apply/reload. It is not the same as gain or pan.
+- Output channel assignment is stored in loaded sample data, but an existing loaded assignment can be changed safely under the engine graph lock.
 
 ## Map Format Change
 
@@ -102,7 +102,7 @@ Update:
 - `DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint()`
   - Include route overrides.
 - `DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint()`
-  - Include route overrides because routing changes require sample/output rebuild.
+  - Include route overrides so raw map changes still rebuild the affected slot when needed.
 
 ### 2. Pass Overrides To Synth Loading
 
@@ -125,7 +125,7 @@ Apply from map entries:
 
 - Primary synth gets the primary entry's route overrides.
 - Shadow synth gets its own entry's route overrides.
-- Parameter-only updates do not need route changes. Route changes are reload changes.
+- Pad popup route changes update loaded sample assignments in place. Raw map route changes remain reload changes.
 
 ### 3. Use Override In MicRoutingBuilder
 
@@ -179,17 +179,16 @@ When user changes a route combobox:
 
 1. Update that row's route override map.
 2. Log old route and new route.
-3. Mark map text dirty.
-4. Generate map text.
-5. Apply the changed slot with `applyToEngine()` or a route-specific wrapper.
+3. Update the loaded layer through the route-specific engine API.
+4. Mark map text dirty and save it without applying the full map.
+5. Fall back to `applyToEngine()` only when the source mic is not already loaded.
 6. Play preview note if useful.
-7. Refresh route displays after apply.
 
 Simple log:
 
 ```text
 Pad popup route: slot=kick1 art=center layer=1 source=dtm old=auto new=room
-Instrument map apply: changed slot=kick1 reason=pad-popup micRoute art=center
+Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=room
 ```
 
 ### 4. Keep Bleed Knob Live
