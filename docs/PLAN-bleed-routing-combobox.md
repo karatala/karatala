@@ -69,6 +69,7 @@ Rules:
 - `sourceMic` is the library/sample mic code before routing.
 - `outputMic` is the active mic-layout output code.
 - Missing entry means automatic routing.
+- Output `-` means the source mic is unassigned.
 - Unknown `outputMic` should warn and use automatic routing.
 - Unknown `sourceMic` should warn only when a sample actually tries to use it, or should be ignored during apply if no matching source mic exists.
 - Serializer should write route pairs in stable sorted order.
@@ -126,6 +127,7 @@ Apply from map entries:
 - Primary synth gets the primary entry's route overrides.
 - Shadow synth gets its own entry's route overrides.
 - Pad popup route changes update loaded sample assignments in place. Raw map route changes remain reload changes.
+- Repeated output codes are resolved by the current slot's instrument selector before pooled outputs.
 
 ### 3. Use Override In MicRoutingBuilder
 

@@ -745,33 +745,75 @@ bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const ju
     const auto normalizedSourceMicCode = sourceMicCode.trim();
     if (normalizedSourceMicCode.isEmpty()) return false;
 
-    const auto oldOverrides = this->lastRoutingContext.micRouteOverrides;
-    auto newOverrides = oldOverrides;
-    std::erase_if(newOverrides, [&normalizedSourceMicCode](const auto& route) { return route.first.compareIgnoreCase(normalizedSourceMicCode) == 0; });
-    if (outputMicCode.isNotEmpty()) newOverrides[normalizedSourceMicCode] = outputMicCode.trim();
-    this->lastRoutingContext.setMicRouteOverrides(newOverrides);
-
-    MicRoutingBuilder micRouting(this);
-    int matchingSoundCount = 0;
-    for (const auto& sound : this->sampledSoundPtrs) {
-        if (sound == nullptr || sound->sampleVariantSpec == nullptr || sound->sampleVariantSpec->micSpec.raw.compareIgnoreCase(normalizedSourceMicCode) != 0) continue;
-        const int fileChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
-        if (micRouting.resolve(sound->sampleVariantSpec->micSpec, fileChannelCount).globalStart < 0) {
-            this->lastRoutingContext.setMicRouteOverrides(oldOverrides);
-            return false;
+    const MicLayout::Mic* sourceLayoutMic = nullptr;
+    int bestSourcePriority = -1;
+    if (const auto* micLayout = this->getMicLayout()) {
+        for (const auto& mic : micLayout->mics) {
+            if (mic.code.compareIgnoreCase(normalizedSourceMicCode) != 0) continue;
+            const auto selector = parseMicInstrumentSelector(mic.instrument, this->getEngine()->getInstrumentCatalog());
+            const int priority = static_cast<int>(matchMicInstrumentSelector(selector, this->getId(), this->getType(), this->getEngine()->getInstrumentCatalog()));
+            if (priority > bestSourcePriority) {
+                sourceLayoutMic = &mic;
+                bestSourcePriority = priority;
+            }
         }
-        ++matchingSoundCount;
     }
 
-    if (matchingSoundCount == 0) {
+    std::vector<SampledSound*> matchingSounds;
+    std::vector<juce::String> matchingSourceMicCodes;
+    for (const auto& sound : this->sampledSoundPtrs) {
+        if (sound == nullptr || sound->sampleVariantSpec == nullptr) continue;
+        const auto& micSpec = sound->sampleVariantSpec->micSpec;
+        const bool codeMatches = micSpec.raw.compareIgnoreCase(normalizedSourceMicCode) == 0;
+        const bool specsMatch = sourceLayoutMic != nullptr && micSpec.type == sourceLayoutMic->specs.type && micSpec.position == sourceLayoutMic->specs.position && micSpec.format == sourceLayoutMic->specs.format;
+        if (!codeMatches && !specsMatch) continue;
+        matchingSounds.push_back(sound.get());
+        bool codeAlreadyAdded = false;
+        for (const auto& matchingCode : matchingSourceMicCodes) {
+            if (matchingCode.compareIgnoreCase(micSpec.raw) == 0) {
+                codeAlreadyAdded = true;
+                break;
+            }
+        }
+        if (!codeAlreadyAdded) matchingSourceMicCodes.push_back(micSpec.raw);
+    }
+    if (matchingSounds.empty()) return false;
+
+    const auto oldOverrides = this->lastRoutingContext.micRouteOverrides;
+    auto newOverrides = oldOverrides;
+    std::erase_if(newOverrides, [&normalizedSourceMicCode, &matchingSourceMicCodes](const auto& route) {
+        if (route.first.compareIgnoreCase(normalizedSourceMicCode) == 0) return true;
+        for (const auto& matchingCode : matchingSourceMicCodes)
+            if (route.first.compareIgnoreCase(matchingCode) == 0) return true;
+        return false;
+    });
+    const auto normalizedOutputMicCode = outputMicCode.trim();
+    if (normalizedOutputMicCode.isNotEmpty()) {
+        for (const auto& matchingCode : matchingSourceMicCodes)
+            newOverrides[matchingCode] = normalizedOutputMicCode;
+    }
+    this->lastRoutingContext.setMicRouteOverrides(newOverrides);
+
+    if (normalizedOutputMicCode == "-") {
+        for (auto* sound : matchingSounds) {
+            sound->micBufferChannelStart = -1;
+            sound->micBufferChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
+            sound->routedMicCode = sound->sampleVariantSpec->micSpec.raw;
+            sound->routedMicCodeId = StringsDictSingleton::getId(sound->routedMicCode);
+        }
+        return true;
+    }
+
+    MicRoutingBuilder micRouting(this);
+    const auto* firstMatchingSound = matchingSounds.front();
+    const int fileChannelCount = firstMatchingSound->sampleVariantSpec->fileChannelCount > 0 ? firstMatchingSound->sampleVariantSpec->fileChannelCount : firstMatchingSound->sampleVariantSpec->micSpec.channels;
+    const auto assignment = micRouting.resolve(firstMatchingSound->sampleVariantSpec->micSpec, fileChannelCount);
+    if (assignment.globalStart < 0) {
         this->lastRoutingContext.setMicRouteOverrides(oldOverrides);
         return false;
     }
 
-    for (const auto& sound : this->sampledSoundPtrs) {
-        if (sound == nullptr || sound->sampleVariantSpec == nullptr || sound->sampleVariantSpec->micSpec.raw.compareIgnoreCase(normalizedSourceMicCode) != 0) continue;
-        const int fileChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
-        const auto assignment = micRouting.resolve(sound->sampleVariantSpec->micSpec, fileChannelCount);
+    for (auto* sound : matchingSounds) {
         sound->micBufferChannelStart = assignment.globalStart;
         sound->micBufferChannelCount = assignment.channels;
         sound->routedMicCode = assignment.micCode;

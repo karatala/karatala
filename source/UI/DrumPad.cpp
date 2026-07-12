@@ -123,7 +123,7 @@ void DrumPad::paintZoned(juce::Graphics& g) {
 }
 
 void DrumPad::paintInstrumentTitle(juce::Graphics& g, const juce::Rectangle<int>& bounds) const {
-    g.setColour(UITheme::Colours::bgPage);
+    g.setColour(UITheme::Colours::bgApp);
     g.fillRect(bounds);
     g.setColour(UITheme::Colours::separator);
     g.drawVerticalLine(bounds.getRight() - 1, static_cast<float>(bounds.getY()), static_cast<float>(bounds.getBottom()));

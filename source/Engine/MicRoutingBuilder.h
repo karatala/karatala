@@ -37,7 +37,8 @@ public:
             const auto& routeOverrideIds = this->synth->getLastRoutingContext().micRouteOverrideIds;
             const auto overrideIt = routeOverrideIds.find(sourceMicCodeId);
             if (overrideIt != routeOverrideIds.end()) {
-                const auto overrideAssignment = plan->resolveOverride(this->synth->getId(), micSpec, overrideIt->second);
+                if (StringsDictSingleton::nameOf(overrideIt->second) == "-") return { -1, fileChannelCount, micSpec.raw, false };
+                const auto overrideAssignment = plan->resolveOverride(this->synth->getId(), micSpec, overrideIt->second, this->synth->getType());
                 if (overrideAssignment.matched()) {
                     LOG(Debug, "Mic route override: slot=" + this->synth->getId()
                         + " source=" + micSpec.raw

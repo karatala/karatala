@@ -8,6 +8,18 @@
 #include <optional>
 #include <unordered_set>
 
+static juce::String getMicCodeDescription(const juce::String& micCode) {
+    const auto parsed = KitLib::MicSpec::parseMicCode(micCode);
+    if (!parsed.ok()) return micCode;
+
+    auto description = parsed.value.getDescription();
+    description = description.replaceFirstOccurrenceOf("Overhead Normal", "OH");
+    description = description.replaceFirstOccurrenceOf("Overhead", "OH");
+    description = description.replaceFirstOccurrenceOf("Direct", "DI");
+    description = description.replaceFirstOccurrenceOf("MidSide", "Mid-Side");
+    return description;
+}
+
 // MIDI utility
 
 // MIDI note button helpers
@@ -292,11 +304,29 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
 
         if (routable) {
             seenCodes.insert(mic.code);
-            result.push_back({ mic.code, mic.name });
+            result.push_back({ mic.code, getMicCodeDescription(mic.code) });
         }
     }
 
     return result;
+}
+
+const MicLayout::Mic* PadContextPopup::findLayoutMicForSlot(const juce::String& micCode) const {
+    const auto* micLayout = this->engine.getMicLayout();
+    if (micLayout == nullptr) return nullptr;
+
+    const MicLayout::Mic* bestMic = nullptr;
+    int bestPriority = -1;
+    for (const auto& mic : micLayout->mics) {
+        if (mic.code.compareIgnoreCase(micCode) != 0) continue;
+        const auto selector = parseMicInstrumentSelector(mic.instrument, this->engine.getInstrumentCatalog());
+        const int priority = static_cast<int>(matchMicInstrumentSelector(selector, this->slotId, this->slotType, this->engine.getInstrumentCatalog()));
+        if (priority > bestPriority) {
+            bestMic = &mic;
+            bestPriority = priority;
+        }
+    }
+    return bestMic;
 }
 
 
@@ -385,13 +415,7 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
         return display;
     }
 
-    const MicLayout::Mic* layoutMic = nullptr;
-    for (const auto& candidate : micLayout->mics) {
-        if (candidate.code.compareIgnoreCase(micCode) == 0) {
-            layoutMic = &candidate;
-            break;
-        }
-    }
+    const auto* layoutMic = this->findLayoutMicForSlot(micCode);
 
     const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
     for (const auto& micSpec : directSpecs) {
@@ -449,10 +473,11 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
 
 std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode) const {
     std::vector<MicRoutingChoice> choices;
-    // choices.push_back({ "-", "Unassigned from output", 0, true, false }); //FIXME this was removed but we also need this! needto check how to support it correctly in changed logic
 
     const auto currentDisplay = this->buildMicRoutingDisplay(sourcePath, micCode);
-    choices.push_back({ "Auto", currentDisplay.tooltip.isNotEmpty() ? currentDisplay.tooltip : juce::String("Automatic routing"), {}, 0, currentDisplay.hasProblem, currentDisplay.hasProblem });
+    const auto automaticLabel = currentDisplay.hasProblem || currentDisplay.routeText.isEmpty() ? juce::String("Auto") : currentDisplay.routeText;
+    choices.push_back({ automaticLabel, currentDisplay.tooltip.isNotEmpty() ? currentDisplay.tooltip : juce::String("Automatic routing"), {}, 0, currentDisplay.hasProblem, currentDisplay.hasProblem });
+    choices.push_back({ "-", "Unassigned from output", "-", -1, false, false });
 
     const auto* kitLayout = this->engine.getKitLayout();
     const auto* micLayout = this->engine.getMicLayout();
@@ -473,13 +498,7 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
         return choices;
     }
 
-    const MicLayout::Mic* layoutMic = nullptr;
-    for (const auto& candidate : micLayout->mics) {
-        if (candidate.code.compareIgnoreCase(micCode) == 0) {
-            layoutMic = &candidate;
-            break;
-        }
-    }
+    const auto* layoutMic = this->findLayoutMicForSlot(micCode);
 
     std::optional<KitLib::MicSpec> sourceDirectSpec;
     const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
@@ -495,6 +514,7 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
 
     auto addChoice = [&choices, &currentDisplay](const MicLayout::Mic& mic, int rank, const juce::String& detail) {
         const juce::String label = mic.name.isNotEmpty() ? mic.name : mic.code;
+        if (!currentDisplay.hasProblem && currentDisplay.routeText == label) return;
         for (const auto& existingChoice : choices) {
             if (existingChoice.outputMicCode.compareIgnoreCase(mic.code) == 0) return;
         }
@@ -991,25 +1011,27 @@ void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBlee
         + " old=" + (oldRoute.isNotEmpty() ? oldRoute : juce::String("auto"))
         + " new=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")), DebugLevel::Debug);
     if (this->engine.updateSlotMicRoute(this->slotId, layer->artName, layerIndex, bleedCtrl->micCode, newRoute)) {
-        this->engine.logMessage("Mic route live update: slot=" + this->slotId + " art=" + layer->artName, DebugLevel::Debug);
+        this->engine.logMessage("Mic route change SUCCESS: slot=" + this->slotId + " art=" + layer->artName + " source=" + bleedCtrl->micCode + " output=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")) + " mode=live", DebugLevel::Debug);
         this->mapTextDirty = true;
         this->flushMapText();
         return;
     }
-    this->engine.logMessage("Instrument map apply fallback: slot=" + this->slotId + " art=" + layer->artName + " reason=source mic not loaded", DebugLevel::Debug);
-    this->applyToEngine();
+    this->engine.logMessage("Mic route live update FAILED: slot=" + this->slotId + " art=" + layer->artName + " source=" + bleedCtrl->micCode + " output=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")) + " fallback=full apply", DebugLevel::Debug);
+    const bool fallbackApplied = this->applyToEngine();
+    this->engine.logMessage("Mic route fallback " + juce::String(fallbackApplied ? "SUCCESS" : "FAILED") + ": slot=" + this->slotId + " art=" + layer->artName + " source=" + bleedCtrl->micCode, DebugLevel::Debug);
 }
 
-void PadContextPopup::applyToEngine() {
+bool PadContextPopup::applyToEngine() {
     auto text = this->generateFullMapText();
-    if (text.trim().isEmpty()) return;
+    if (text.trim().isEmpty()) return false;
 
-    this->engine.applyInstrumentMapSlotChange(text, this->slotId);
+    const bool applied = this->engine.applyInstrumentMapSlotChange(text, this->slotId);
     this->savedInstrumentMapText = text;
     this->mapTextDirty = false;
     this->refreshLayerMappings();
 
     if (this->onMapTextChanged) this->onMapTextChanged(text);
+    return applied;
 }
 
 void PadContextPopup::refreshLayerMappings() {

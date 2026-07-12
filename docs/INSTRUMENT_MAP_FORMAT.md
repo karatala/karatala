@@ -74,6 +74,8 @@ Layer order is the order in the normalized map for that slot/art. UI rows should
 | `bleed` | `bleed=oh:0.25,room:0.5` | mic gain trims from 0.0 to 1.0 | live for existing layer |
 | `micRoute` | `micRoute=dtm:room,ons:oh` | send source mic to chosen output mic | live in the pad popup; raw map apply reloads the slot |
 
+Use `micRoute=dtm:-` to leave source mic `dtm` unassigned from every output.
+
 
 ```text
 ride1/bow:KitA/ride-20/bow
@@ -160,8 +162,9 @@ Meaning:
 
 - `bleed=dtm:0.5,room:0.8` changes mic levels.
 - `micRoute=dtm:room` sends source mic `dtm` to output mic `room`.
+- `micRoute=dtm:-` leaves source mic `dtm` unassigned.
 
-Routing changes require slot reload because sample output channels are assigned when samples are loaded. They are not live scalar changes like gain or pan.
+Pad popup routing changes update loaded sample destinations in place. Applying a changed raw map still rebuilds the affected slot.
 
 ## Raw Map Apply
 

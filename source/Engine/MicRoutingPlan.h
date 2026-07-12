@@ -35,18 +35,27 @@ public:
         return plan;
     }
 
-    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, StringsDictSingleton::Id outputMicCodeId) const {
+    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, StringsDictSingleton::Id outputMicCodeId, KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown) const {
         if (outputMicCodeId == StringsDictSingleton::EMPTY) return {};
 
+        const OutputEntry* bestOutput = nullptr;
+        MicSelectorPriority bestPriority = MicSelectorPriority::None;
         for (const auto& output : this->outputs) {
             if (output.codeId != outputMicCodeId) continue;
-
+            const auto priority = matchMicInstrumentSelector(output.selector, slotId, slotType, this->catalog);
+            if (priority == MicSelectorPriority::None) continue;
+            if (bestOutput == nullptr || static_cast<int>(priority) > static_cast<int>(bestPriority)) {
+                bestOutput = &output;
+                bestPriority = priority;
+            }
+        }
+        if (bestOutput != nullptr) {
             Assignment assignment;
-            assignment.globalStart = output.hostStart;
-            assignment.channels = output.channels;
-            assignment.outputName = output.name;
+            assignment.globalStart = bestOutput->hostStart;
+            assignment.channels = bestOutput->channels;
+            assignment.outputName = bestOutput->name;
             assignment.micCode = sampleMicSpec.raw;
-            assignment.applyBalance = sampleMicSpec.type == KitLib::MicSpec::Type::Direct && output.channels == 2;
+            assignment.applyBalance = sampleMicSpec.type == KitLib::MicSpec::Type::Direct && bestOutput->channels == 2;
             return assignment;
         }
 
@@ -58,8 +67,8 @@ public:
         return skipped;
     }
 
-    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, const juce::String& outputMicCode) const {
-        return this->resolveOverride(slotId, sampleMicSpec, StringsDictSingleton::getId(outputMicCode.trim().toLowerCase()));
+    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, const juce::String& outputMicCode, KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown) const {
+        return this->resolveOverride(slotId, sampleMicSpec, StringsDictSingleton::getId(outputMicCode.trim().toLowerCase()), slotType);
     }
 
     Assignment resolve(const juce::String& slotId,

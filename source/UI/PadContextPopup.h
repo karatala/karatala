@@ -117,13 +117,14 @@ private:
     void updateSourceDisplay(LayerRow* layer);
     void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
     void applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl);
-    void applyToEngine();
+    bool applyToEngine();
     void refreshLayerMappings();
     juce::String generateFullMapText() const;
     void populateLayers();
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourceIndex(int sourceIndex) const;
     std::vector<KitLib::MicSpec> getDirectMicSpecsForSourcePath(const juce::String& sourcePath) const;
+    const MicLayout::Mic* findLayoutMicForSlot(const juce::String& micCode) const;
     struct MicRoutingDisplay {
         juce::String routeText;
         juce::String tooltip;
