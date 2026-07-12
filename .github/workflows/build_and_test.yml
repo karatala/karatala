@@ -31,6 +31,13 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
+    env:
+      MACOS_SIGNING_ENABLED: >-
+        ${{ secrets.DEV_ID_APP_CERT != '' && secrets.DEV_ID_APP_PASSWORD != '' &&
+            secrets.DEV_ID_INSTALLER_CERT != '' && secrets.DEV_ID_INSTALLER_PASSWORD != '' &&
+            secrets.DEVELOPER_ID_APPLICATION != '' && secrets.DEVELOPER_ID_INSTALLER != '' &&
+            secrets.NOTARIZATION_USERNAME != '' && secrets.NOTARIZATION_PASSWORD != '' &&
+            secrets.TEAM_ID != '' }}
     strategy:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
       matrix:
@@ -124,7 +131,7 @@ jobs:
       - name: Import Certificates (macOS)
         uses: sudara/basic-macos-keychain-action@v1
         id: keychain
-        if: ${{ runner.os == 'macOS'}}
+        if: ${{ runner.os == 'macOS' && env.MACOS_SIGNING_ENABLED == 'true' }}
         with:
           dev-id-app-cert: ${{ secrets.DEV_ID_APP_CERT }}
           dev-id-app-password: ${{ secrets.DEV_ID_APP_PASSWORD }}
@@ -132,7 +139,7 @@ jobs:
           dev-id-installer-password: ${{ secrets.DEV_ID_INSTALLER_PASSWORD }}
 
       - name: Codesign (macOS)
-        if: ${{ runner.os == 'macOS' }}
+        if: ${{ runner.os == 'macOS' && env.MACOS_SIGNING_ENABLED == 'true' }}
         timeout-minutes: 5
         run: |
           # Each plugin must be code signed
@@ -160,7 +167,7 @@ jobs:
           SetFile -a C "${{ env.AU_PATH }}"
           SetFile -a C "${{ env.CLAP_PATH }}"
 
-      - name: pkgbuild, Productbuild and Notarize
+      - name: Build macOS package
         if: ${{ runner.os == 'macOS' }}
         timeout-minutes: 5
         run: |
@@ -175,10 +182,16 @@ jobs:
 
           cd packaging
           envsubst < distribution.xml.template > distribution.xml
-          productbuild --resources ./resources --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp "${{ env.ARTIFACT_NAME }}.pkg"
-
-          xcrun notarytool submit "${{ env.ARTIFACT_NAME }}.pkg" --apple-id ${{ secrets.NOTARIZATION_USERNAME }} --password ${{ secrets.NOTARIZATION_PASSWORD }} --team-id ${{ secrets.TEAM_ID }} --wait
-          xcrun stapler staple "${{ env.ARTIFACT_NAME }}.pkg"
+          if [[ "$MACOS_SIGNING_ENABLED" == "true" ]]; then
+            MACOS_PACKAGE_NAME="${{ env.ARTIFACT_NAME }}.pkg"
+            productbuild --resources ./resources --distribution distribution.xml --sign "${{ secrets.DEVELOPER_ID_INSTALLER }}" --timestamp "$MACOS_PACKAGE_NAME"
+            xcrun notarytool submit "$MACOS_PACKAGE_NAME" --apple-id "${{ secrets.NOTARIZATION_USERNAME }}" --password "${{ secrets.NOTARIZATION_PASSWORD }}" --team-id "${{ secrets.TEAM_ID }}" --wait
+            xcrun stapler staple "$MACOS_PACKAGE_NAME"
+          else
+            MACOS_PACKAGE_NAME="${{ env.ARTIFACT_NAME }}-unsigned.pkg"
+            productbuild --resources ./resources --distribution distribution.xml "$MACOS_PACKAGE_NAME"
+          fi
+          echo "MACOS_PACKAGE_NAME=$MACOS_PACKAGE_NAME" >> "$GITHUB_ENV"
 
       - name: Zip
         if: ${{ runner.os == 'Linux' }}
@@ -235,8 +248,8 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ env.ARTIFACT_NAME }}.pkg
-          path: packaging/${{ env.ARTIFACT_NAME }}.pkg
+          name: ${{ env.MACOS_PACKAGE_NAME }}
+          path: packaging/${{ env.MACOS_PACKAGE_NAME }}
 
   release:
     if: contains(github.ref, 'tags/v')
@@ -257,3 +270,4 @@ jobs:
             */*.exe
             */*.zip
             */*.dmg
+            */*.pkg

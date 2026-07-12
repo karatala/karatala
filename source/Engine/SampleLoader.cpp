@@ -99,6 +99,7 @@ int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type ty
         case KitLib::InstrumentSpec::Type::Unknown:
             return 9;
     }
+    return 9;
 }
 
 int SampleLoaderQueue::determineStage(const Candidate& cand) const {

@@ -36,7 +36,7 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
 
     if (radius > 50.0f) {
         for (int idx = 0; idx < 9; ++idx) {
-            const auto angle = juce::jmap(idx / 8.0f, rotaryStartAngle, rotaryEndAngle);
+            const auto angle = juce::jmap(static_cast<float>(idx) / 8.0f, rotaryStartAngle, rotaryEndAngle);
             const auto point = centre.getPointOnCircumference(radius - 2.0f, angle);
             g.fillEllipse(point.getX() - 3, point.getY() - 3, 6, 6);
         }
@@ -142,16 +142,18 @@ int LookAndFeel::getDefaultScrollbarWidth() {
 }
 
 void LookAndFeel::drawCornerResizer(juce::Graphics& g, int w, int h, bool /*isMouseOver*/, bool /*isMouseDragging*/) {
-    const float lineThickness = juce::jmin(w, h) * 0.05f;
+    const float width = static_cast<float>(w);
+    const float height = static_cast<float>(h);
+    const float lineThickness = static_cast<float>(juce::jmin(w, h)) * 0.05f;
     const juce::Colour col1(this->findColour(juce::ResizableWindow::backgroundColourId).darker(0.2f));
     const juce::Colour col2(this->findColour(juce::ResizableWindow::backgroundColourId).brighter(0.04f));
 
     for (float idx = 0.8f; idx > 0.2f; idx -= 0.25f) {
         g.setColour(col1);
-        g.drawLine(w * idx, h + 1.0f, w + 1.0f, h * idx, lineThickness);
+        g.drawLine(width * idx, height + 1.0f, width + 1.0f, height * idx, lineThickness);
 
         g.setColour(col2);
-        g.drawLine(w * idx + lineThickness, h + 1.0f, w + 1.0f, h * idx + lineThickness, lineThickness);
+        g.drawLine(width * idx + lineThickness, height + 1.0f, width + 1.0f, height * idx + lineThickness, lineThickness);
     }
 }
 
@@ -175,11 +177,11 @@ void LookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool /*
     constexpr int triHeight = 6;
     constexpr int triWidth = 12;
     constexpr float lineThickness = 1.4f;
-    g.drawLine(static_cast<float>(width - 10 - triWidth), (height - triHeight) / 2.0f,
-               static_cast<float>(width - 10 - triWidth / 2), (height + triHeight) / 2.0f,
+    g.drawLine(static_cast<float>(width - 10 - triWidth), static_cast<float>(height - triHeight) / 2.0f,
+               static_cast<float>(width - 10 - triWidth / 2), static_cast<float>(height + triHeight) / 2.0f,
                lineThickness);
-    g.drawLine(static_cast<float>(width - 10 - triWidth / 2), (height + triHeight) / 2.0f,
-               width - 10.0f, (height - triHeight) / 2.0f,
+    g.drawLine(static_cast<float>(width - 10 - triWidth / 2), static_cast<float>(height + triHeight) / 2.0f,
+               static_cast<float>(width) - 10.0f, static_cast<float>(height - triHeight) / 2.0f,
                lineThickness);
 }
 
@@ -196,9 +198,9 @@ void LookAndFeel::drawScrollbar(juce::Graphics& g, juce::ScrollBar& /*scrollbar*
     g.setColour(juce::Colour::fromFloatRGBA(1.f, 1.f, 1.f, highlight ? 0.6f : 0.4f));
 
     if (isScrollbarVertical)
-        g.fillRoundedRectangle(float(x), float(y + thumbStartPosition), float(width), float(thumbSize), width / 2.0f);
+        g.fillRoundedRectangle(float(x), float(y + thumbStartPosition), float(width), float(thumbSize), static_cast<float>(width) / 2.0f);
     else
-        g.fillRoundedRectangle(float(x + thumbStartPosition), float(y), float(thumbSize), float(height), height / 2.0f);
+        g.fillRoundedRectangle(float(x + thumbStartPosition), float(y), float(thumbSize), float(height), static_cast<float>(height) / 2.0f);
 }
 
 void LookAndFeel::drawPopupMenuBackground(juce::Graphics& g, int /*width*/, int /*height*/) {
@@ -240,7 +242,7 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
 
         if (isTicked) {
             g.setColour(UITheme::Colours::accent);
-            g.fillEllipse(10.0f, (area.getHeight() - 5.0f) / 2.0f, 5.0f, 5.0f);
+            g.fillEllipse(10.0f, (static_cast<float>(area.getHeight()) - 5.0f) / 2.0f, 5.0f, 5.0f);
         }
     }
 }

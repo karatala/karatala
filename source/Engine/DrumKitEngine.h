@@ -166,7 +166,10 @@ public:
     bool updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
     
-    void logMessage(const juce::String& msg, DebugLevel debugLevel) { if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg); } //FIXME: check is this dedicated only for ui and why cant we just use there LOG(Debug, ...) like everywhere else
+    void logMessage(const juce::String& msg, DebugLevel debugLevel) {
+        juce::ignoreUnused(msg);
+        if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg);
+    } //FIXME: check is this dedicated only for ui and why cant we just use there LOG(Debug, ...) like everywhere else
     DebugLevel maxDebugLevel = DebugLevel::Error;
 
     EngineSettings engineSettings;

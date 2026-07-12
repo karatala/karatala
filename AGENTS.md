@@ -76,3 +76,6 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 Read `DOX.md` before editing. This file is the repository-wide contract.
 
+## Release workflow
+
+- macOS packages are signed and notarized only when every required certificate, identity, and notarization secret is available. Otherwise, CI releases an unsigned package with the `-unsigned.pkg` suffix.

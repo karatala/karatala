@@ -76,7 +76,7 @@ void InstrumentSynth::applyAdaptiveTailShortening() {
     const float ageMultiplier = settings.tailShortenAgeMultiplier.load();
     const float minimumClamp = settings.voiceTailShortenMinClamp.load();
     const int maxVoices = this->voices.size();
-    if (this->activeVoiceCount < maxVoices * loadThreshold) return;
+    if (static_cast<float>(this->activeVoiceCount) < static_cast<float>(maxVoices) * loadThreshold) return;
     const int activeVoices = this->activeVoiceCount;
     const float load = static_cast<float>(activeVoices) / static_cast<float>(maxVoices);
     const float minTailShortenFactor = juce::jmap(load, loadThreshold, 1.0f, 1.0f, minimumFactor);

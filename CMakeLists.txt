@@ -112,7 +112,7 @@ include(SharedCodeDefaults)
 # If you want to appease the CMake gods and avoid globs, manually add files like so:
 # set(SourceFiles Source/PluginEditor.h Source/PluginProcessor.h Source/PluginEditor.cpp Source/PluginProcessor.cpp)
 file(GLOB_RECURSE SourceFiles CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/source/*.h")
-target_sources(SharedCode INTERFACE ${SourceFiles})
+target_sources("${PROJECT_NAME}" PRIVATE ${SourceFiles})
 
 # Adds a BinaryData target for embedding assets into the binary
 include(Assets)
@@ -173,6 +173,19 @@ include(Tests)
 
 # A separate target for Benchmarks (keeps the Tests target fast)
 include(Benchmarks)
+
+# Tests and benchmarks need the plugin code, but should reuse its compiled library instead of
+# compiling all project and JUCE sources again through the SharedCode interface target.
+foreach(RunnerTarget IN ITEMS Tests Benchmarks)
+    get_target_property(RunnerLinkLibraries "${RunnerTarget}" LINK_LIBRARIES)
+    list(REMOVE_ITEM RunnerLinkLibraries SharedCode)
+    set_property(TARGET "${RunnerTarget}" PROPERTY LINK_LIBRARIES "${RunnerLinkLibraries}")
+    target_include_directories("${RunnerTarget}" PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},INCLUDE_DIRECTORIES>)
+    target_compile_definitions("${RunnerTarget}" PRIVATE $<TARGET_PROPERTY:SharedCode,INTERFACE_COMPILE_DEFINITIONS>)
+    target_compile_options("${RunnerTarget}" PRIVATE $<TARGET_PROPERTY:${PROJECT_NAME},COMPILE_OPTIONS>)
+    target_compile_features("${RunnerTarget}" PRIVATE cxx_std_23)
+    target_link_libraries("${RunnerTarget}" PRIVATE "${PROJECT_NAME}")
+endforeach()
 
 # Output some config for CI (like our PRODUCT_NAME)
 include(GitHubENV)
