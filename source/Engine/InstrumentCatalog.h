@@ -334,7 +334,7 @@ inline bool directMicSpecsMatchExactly(const KitLib::MicSpec& sampleMic, const K
         && outputMic.type == KitLib::MicSpec::Type::Direct
         && sampleMic.position == outputMic.position
         && sampleMic.format == outputMic.format
-        && sampleMic.variant == outputMic.variant
+        && (outputMic.variant.isEmpty() || sampleMic.variant == outputMic.variant)
         && sampleMic.channels == outputMic.channels;
 }
 
@@ -342,7 +342,7 @@ inline bool directMicSpecsCanUseGroupOutput(const KitLib::MicSpec& sampleMic, co
     if (sampleMic.type != KitLib::MicSpec::Type::Direct || outputMic.type != KitLib::MicSpec::Type::Direct)
         return false;
 
-    if (sampleMic.variant != outputMic.variant)
+    if (outputMic.variant.isNotEmpty() && sampleMic.variant != outputMic.variant)
         return false;
 
     if (sampleMic.channels == outputMic.channels && sampleMic.format == outputMic.format)

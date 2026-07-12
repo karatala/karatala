@@ -208,22 +208,26 @@ private:
 
     void allocateDirectForSlot(const SlotRequest& request, bool allowPrivateClaim, std::set<int>& reservedOutputIndices) {
         std::set<juce::String> seenCodes;
+        std::map<juce::String, Assignment> sharedVariantAssignments;
         for (const auto& micSpec : request.directMicSpecs) {
             if (micSpec.type != KitLib::MicSpec::Type::Direct)
                 continue;
             if (!seenCodes.insert(micSpec.raw).second)
                 continue;
 
-            Assignment assignment;
-            if (allowPrivateClaim)
-                assignment = this->findPrivateDirectAssignment(request, micSpec, reservedOutputIndices);
-            if (!assignment.matched())
-                assignment = this->findGroupDirectAssignment(request, micSpec);
+            const auto variantGroupKey = micSpec.raw.substring(0, 3).toLowerCase();
+            auto sharedAssignmentIt = sharedVariantAssignments.find(variantGroupKey);
+            Assignment assignment = sharedAssignmentIt != sharedVariantAssignments.end() ? sharedAssignmentIt->second : Assignment {};
+            if (!assignment.matched() && allowPrivateClaim) assignment = this->findPrivateDirectAssignment(request, micSpec, reservedOutputIndices);
+            if (!assignment.matched()) assignment = this->findGroupDirectAssignment(request, micSpec);
             if (!assignment.matched()) {
                 assignment.channels = juce::jmax(1, micSpec.channels);
                 assignment.micCode = micSpec.raw;
                 assignment.warning = "Skipping direct mic '" + micSpec.raw + "' for slot '" + request.slotId + "': no compatible direct output";
                 this->warnings.push_back(assignment.warning);
+            } else {
+                const auto parsedOutputMic = KitLib::MicSpec::parseMicCode(assignment.outputMicCode);
+                if (parsedOutputMic.ok() && parsedOutputMic.value.variant.isEmpty()) sharedVariantAssignments[variantGroupKey] = assignment;
             }
 
             this->directAssignments[makeAssignmentKey(request.slotId, micSpec.raw)] = assignment;

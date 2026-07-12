@@ -129,6 +129,9 @@ Apply from map entries:
 - Pad popup route changes update loaded sample assignments in place. Raw map route changes remain reload changes.
 - Repeated output codes are resolved by the current slot's instrument selector before pooled outputs.
 - Full map loading checks the original source mic code first, then the source mic's resolved output-layout alias.
+- Source variants such as `dtm1` and `dtm2` use separate popup controls and routes.
+- A variant-free output such as `dtm` may receive either variant. A variant-specific output only receives its matching variant.
+- The popup shows the resolved destination as the default choice instead of adding a separate `Auto` item. Selecting the default destination clears the explicit override.
 
 ### 3. Use Override In MicRoutingBuilder
 

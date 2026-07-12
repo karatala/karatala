@@ -166,6 +166,7 @@ Meaning:
 
 Pad popup routing changes update loaded sample destinations in place. Applying a changed raw map still rebuilds the affected slot.
 When a popup mic code is an output-layout alias rather than the library's original source code, full map loading resolves that alias through the source mic's automatic output assignment.
+Source variants stay independent. For example, `dtm1` and `dtm2` have separate popup controls and may use `micRoute=dtm1:dtm,dtm2:-`. A generic layout output such as `dtm` accepts both variants, while a variant output such as `dtm1` accepts only that variant.
 
 ## Raw Map Apply
 

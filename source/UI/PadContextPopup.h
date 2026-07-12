@@ -65,6 +65,7 @@ private:
         int rank = 0;
         bool hasProblem = false;
         bool isCurrent = false;
+        bool usesAutomaticRouting = false;
     };
     struct ArticulationGroup {
         juce::String artName;
@@ -128,6 +129,7 @@ private:
     struct MicRoutingDisplay {
         juce::String routeText;
         juce::String tooltip;
+        juce::String outputMicCode;
         bool hasProblem = false;
     };
     MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode) const;
