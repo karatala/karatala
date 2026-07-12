@@ -38,6 +38,10 @@ jobs:
             secrets.DEVELOPER_ID_APPLICATION != '' && secrets.DEVELOPER_ID_INSTALLER != '' &&
             secrets.NOTARIZATION_USERNAME != '' && secrets.NOTARIZATION_PASSWORD != '' &&
             secrets.TEAM_ID != '' }}
+      WINDOWS_SIGNING_ENABLED: >-
+        ${{ secrets.AZURE_TENANT_ID != '' && secrets.AZURE_CLIENT_ID != '' &&
+            secrets.AZURE_CLIENT_SECRET != '' && secrets.AZURE_ENDPOINT != '' &&
+            secrets.AZURE_CODE_SIGNING_NAME != '' && secrets.AZURE_CERT_PROFILE_NAME != '' }}
     strategy:
       fail-fast: false # show all errors for each platform (vs. cancel jobs on error)
       matrix:
@@ -205,7 +209,7 @@ jobs:
           mv "packaging/Output/${{ env.ARTIFACT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/"
 
       - name: Codesign with Azure Trusted Signing
-        if: ${{ runner.os == 'Windows' }}
+        if: ${{ runner.os == 'Windows' && env.WINDOWS_SIGNING_ENABLED == 'true' }}
         uses: azure/trusted-signing-action@v0.5.11
         with:
           # The Azure Active Directory tenant (directory) ID.
@@ -230,12 +234,23 @@ jobs:
           files-folder: ${{ env.ARTIFACTS_PATH }}
           files-folder-filter: exe
 
+      - name: Set Windows package name
+        if: ${{ runner.os == 'Windows' }}
+        run: |
+          if [[ "$WINDOWS_SIGNING_ENABLED" == "true" ]]; then
+            WINDOWS_PACKAGE_NAME="${{ env.ARTIFACT_NAME }}.exe"
+          else
+            WINDOWS_PACKAGE_NAME="${{ env.ARTIFACT_NAME }}-unsigned.exe"
+            mv "${{ env.ARTIFACTS_PATH }}/${{ env.ARTIFACT_NAME }}.exe" "${{ env.ARTIFACTS_PATH }}/$WINDOWS_PACKAGE_NAME"
+          fi
+          echo "WINDOWS_PACKAGE_NAME=$WINDOWS_PACKAGE_NAME" >> "$GITHUB_ENV"
+
       - name: Upload Exe (Windows)
         if: ${{ runner.os == 'Windows' }}
         uses: actions/upload-artifact@v6
         with:
-          name: ${{ env.ARTIFACT_NAME }}.exe
-          path: "${{ env.ARTIFACTS_PATH }}/${{ env.ARTIFACT_NAME }}.exe"
+          name: ${{ env.WINDOWS_PACKAGE_NAME }}
+          path: "${{ env.ARTIFACTS_PATH }}/${{ env.WINDOWS_PACKAGE_NAME }}"
 
       - name: Upload Zip (Linux)
         if: ${{ runner.os == 'Linux' }}

@@ -79,3 +79,4 @@ Read `DOX.md` before editing. This file is the repository-wide contract.
 ## Release workflow
 
 - macOS packages are signed and notarized only when every required certificate, identity, and notarization secret is available. Otherwise, CI releases an unsigned package with the `-unsigned.pkg` suffix.
+- Windows installers use Azure Trusted Signing only when every required Azure secret is available. Otherwise, CI releases an unsigned installer with the `-unsigned.exe` suffix.
