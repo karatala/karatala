@@ -14,6 +14,7 @@
 - Settings shown as live must update audio-thread-visible state through a thread-safe engine API.
 - Keep persistence debounced and outside the audio thread.
 - Preserve keyboard, tooltip, and resize behavior when adding controls.
+- Zone pads use a vertical instrument-name rail, equal rows for normal articulations, and a Hi-Hat grid ordered tight/close/half/open with pedal as a full-width bottom row. Painting and hit testing must share the same cell geometry.
 
 # Work Guidance
 

@@ -2,6 +2,7 @@
 #include "DrumPadHelpers.h"
 #include "UITheme.h"
 #include <algorithm>
+#include <array>
 #include <numeric>
 
 void DrumPad::setSlot(const KitLayout::InstrumentSlot* slot) {
@@ -78,7 +79,8 @@ void DrumPad::paintSimple(juce::Graphics& g) {
 }
 
 void DrumPad::paintZoned(juce::Graphics& g) {
-    auto bounds = getLocalBounds();
+    const auto fullBounds = this->getLocalBounds();
+    auto bounds = fullBounds;
     auto baseColour = this->slotPtr ? getColourForType(this->slotPtr->type) : UITheme::Colours::padEmpty;
 
     if (!this->slotPtr || this->slotPtr->articulations.empty() || this->displayOrder.empty()) {
@@ -86,69 +88,150 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         return;
     }
 
-    const auto& arts = this->slotPtr->articulations;
-    auto artCount = juce::jmin(static_cast<int>(arts.size()), static_cast<int>(this->displayOrder.size()));
-    if (artCount <= 0) {
+    const auto titleBounds = bounds.removeFromLeft(juce::jmin(UITheme::Sizes::padTitleRailWidth, bounds.getWidth()));
+    const auto cells = this->buildArticulationCells(bounds);
+    if (cells.empty()) {
         this->paintSimple(g);
         return;
     }
-    int mainDisplayIdx = DrumPadHelpers::findMainArticulationDisplayIdx(arts, this->displayOrder);
 
-    const float fontSize = static_cast<float>(juce::jlimit(9, 13, juce::jmin(bounds.getWidth() / 6, bounds.getHeight() / (artCount * 2))));
+    for (int cellIdx = 0; cellIdx < static_cast<int>(cells.size()); ++cellIdx) {
+        const auto& cell = cells[static_cast<size_t>(cellIdx)];
+        const float brightness = cell.articulationIdx >= 0 ? 0.31f : 0.25f;
+        g.setColour(baseColour.withMultipliedBrightness(brightness));
+        g.fillRect(cell.bounds);
+        g.setColour(UITheme::Colours::separator);
+        g.drawHorizontalLine(cell.bounds.getBottom() - 1, static_cast<float>(cell.bounds.getX()), static_cast<float>(cell.bounds.getRight()));
+        g.drawVerticalLine(cell.bounds.getRight() - 1, static_cast<float>(cell.bounds.getY()), static_cast<float>(cell.bounds.getBottom()));
 
-    // Use integer arithmetic to avoid sub-pixel gaps between zones
-    for (int displayIdx = 0; displayIdx < artCount; ++displayIdx) {
-        int originalIdx = this->displayOrder[static_cast<size_t>(displayIdx)];
-        int zoneTop = bounds.getY() + bounds.getHeight() * displayIdx / artCount;
-        int zoneBottom = bounds.getY() + bounds.getHeight() * (displayIdx + 1) / artCount;
-        auto zoneRect = juce::Rectangle<int>(bounds.getX(), zoneTop, bounds.getWidth(), zoneBottom - zoneTop);
-
-        // Fill zone
-        float brightVariation = 0.25f + 0.1f * static_cast<float>(displayIdx % 3);
-        g.setColour(baseColour.withMultipliedBrightness(brightVariation));
-        g.fillRect(zoneRect);
-
-        // Label
-        auto labelText = arts[static_cast<size_t>(originalIdx)].codeRaw;
-        int maxLines = 1;
-        if (displayIdx == mainDisplayIdx) {
-            labelText = DrumPadHelpers::getPadDisplayName(*this->slotPtr) + "\n" + labelText;
-            maxLines = 2;
-        }
-        DrumPadHelpers::drawPadLabel(g, zoneRect.reduced(4, 1), labelText, UITheme::Colours::textPrimary.withAlpha(0.85f), UITheme::Fonts::labelBold().withHeight(fontSize), maxLines);
+        if (cell.label.isNotEmpty()) DrumPadHelpers::drawPadLabel(g, cell.bounds.reduced(3, 2), cell.label, UITheme::Colours::textPrimary.withAlpha(0.85f), UITheme::Fonts::normal().boldened(), 2);
     }
+
+    this->paintInstrumentTitle(g, titleBounds);
 
     // Flash overlay
     if (this->flashAlpha > 0.0f) {
         g.setColour(baseColour.withAlpha(this->flashAlpha * 0.5f));
-        g.fillRect(bounds);
+        g.fillRect(fullBounds);
     }
 
     // Outer border — only when there's a visible gap between pads
     if (this->padGap > 0) {
         g.setColour(UITheme::Colours::separator);
-        g.drawRect(bounds, 1);
+        g.drawRect(fullBounds, 1);
     }
 }
 
-int DrumPad::getZoneIndexAt(int yPos) const {
-    if (!this->slotPtr || this->slotPtr->articulations.empty() || this->displayOrder.empty())
-        return 0;
+void DrumPad::paintInstrumentTitle(juce::Graphics& g, const juce::Rectangle<int>& bounds) const {
+    g.setColour(UITheme::Colours::bgPage);
+    g.fillRect(bounds);
+    g.setColour(UITheme::Colours::separator);
+    g.drawVerticalLine(bounds.getRight() - 1, static_cast<float>(bounds.getY()), static_cast<float>(bounds.getBottom()));
 
-    auto artCount = static_cast<int>(this->displayOrder.size());
-    // Use same integer arithmetic as paintZoned
-    for (int displayIdx = 0; displayIdx < artCount; ++displayIdx) {
-        int zoneBottom = getHeight() * (displayIdx + 1) / artCount;
-        if (yPos < zoneBottom)
-            return this->displayOrder[static_cast<size_t>(displayIdx)];
+    juce::Graphics::ScopedSaveState saveState(g);
+    g.addTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::halfPi).translated(static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY())));
+    const auto textBounds = juce::Rectangle<int>(0, 0, bounds.getHeight(), bounds.getWidth()).reduced(7, 2);
+    g.setColour(UITheme::Colours::textPrimary);
+    g.setFont(UITheme::Fonts::small().boldened());
+    g.drawFittedText(DrumPadHelpers::getPadDisplayName(*this->slotPtr), textBounds, juce::Justification::centredLeft, 1, 0.9f);
+}
+
+std::vector<DrumPad::ArticulationCell> DrumPad::buildArticulationCells(const juce::Rectangle<int>& bounds) const {
+    if (this->slotPtr == nullptr || this->displayOrder.empty() || bounds.isEmpty()) return {};
+    if (this->slotPtr->type == KitLib::InstrumentSpec::Type::HiHat) return this->buildHiHatCells(bounds);
+
+    std::vector<ArticulationCell> cells;
+    cells.reserve(this->displayOrder.size());
+    for (int displayIdx = 0; displayIdx < static_cast<int>(this->displayOrder.size()); ++displayIdx) {
+        const int articulationIdx = this->displayOrder[static_cast<size_t>(displayIdx)];
+        const int cellTop = bounds.getY() + bounds.getHeight() * displayIdx / static_cast<int>(this->displayOrder.size());
+        const int cellBottom = bounds.getY() + bounds.getHeight() * (displayIdx + 1) / static_cast<int>(this->displayOrder.size());
+        cells.push_back({ juce::Rectangle<int>(bounds.getX(), cellTop, bounds.getWidth(), cellBottom - cellTop), this->slotPtr->articulations[static_cast<size_t>(articulationIdx)].codeRaw, articulationIdx });
     }
-    return this->displayOrder.back();
+    return cells;
+}
+
+std::vector<DrumPad::ArticulationCell> DrumPad::buildHiHatCells(const juce::Rectangle<int>& bounds) const {
+    const juce::StringArray zoneNames { "bow", "edge" };
+    const juce::StringArray stateNames { "tight", "close", "half", "open" };
+    std::array<std::array<int, 4>, 2> zoneArticulationIndices;
+    for (auto& zoneIndices : zoneArticulationIndices) zoneIndices.fill(-1);
+    std::vector<int> otherArticulationIndices;
+    int pedalArticulationIdx = -1;
+
+    for (const int articulationIdx : this->displayOrder) {
+        const auto& articulation = this->slotPtr->articulations[static_cast<size_t>(articulationIdx)];
+        const auto baseName = ArticulationNameHelpers::normalizeArticulationName(articulation.codeRaw);
+        if (baseName == "pedal") {
+            pedalArticulationIdx = articulationIdx;
+            continue;
+        }
+
+        const int zoneIdx = zoneNames.indexOf(baseName);
+        const int stateIdx = stateNames.indexOf(DrumPadHelpers::getArticulationExpressionName(articulation.codeRaw));
+        if (zoneIdx >= 0 && stateIdx >= 0) {
+            zoneArticulationIndices[static_cast<size_t>(zoneIdx)][static_cast<size_t>(stateIdx)] = articulationIdx;
+            continue;
+        }
+        otherArticulationIndices.push_back(articulationIdx);
+    }
+
+    int zoneRowCount = 0;
+    for (const auto& zoneIndices : zoneArticulationIndices)
+        if (std::any_of(zoneIndices.begin(), zoneIndices.end(), [](int articulationIdx) { return articulationIdx >= 0; })) ++zoneRowCount;
+    const int mainRowCount = zoneRowCount + static_cast<int>(otherArticulationIndices.size());
+    int pedalHeight = 0;
+    if (pedalArticulationIdx >= 0) pedalHeight = mainRowCount > 0 ? juce::jmin(34, juce::jmax(1, bounds.getHeight() / (mainRowCount + 1))) : bounds.getHeight();
+    const int mainAreaHeight = bounds.getHeight() - pedalHeight;
+    const int totalRowCount = mainRowCount + (pedalArticulationIdx >= 0 ? 1 : 0);
+    if (totalRowCount == 0) return {};
+
+    std::vector<ArticulationCell> cells;
+    int rowIdx = 0;
+    for (int zoneIdx = 0; zoneIdx < static_cast<int>(zoneArticulationIndices.size()); ++zoneIdx) {
+        const auto& zoneIndices = zoneArticulationIndices[static_cast<size_t>(zoneIdx)];
+        if (!std::any_of(zoneIndices.begin(), zoneIndices.end(), [](int articulationIdx) { return articulationIdx >= 0; })) continue;
+        const int rowTop = bounds.getY() + mainAreaHeight * rowIdx / juce::jmax(1, mainRowCount);
+        const int rowBottom = bounds.getY() + mainAreaHeight * (rowIdx + 1) / juce::jmax(1, mainRowCount);
+        for (int stateIdx = 0; stateIdx < static_cast<int>(stateNames.size()); ++stateIdx) {
+            const int cellLeft = bounds.getX() + bounds.getWidth() * stateIdx / static_cast<int>(stateNames.size());
+            const int cellRight = bounds.getX() + bounds.getWidth() * (stateIdx + 1) / static_cast<int>(stateNames.size());
+            const int articulationIdx = zoneIndices[static_cast<size_t>(stateIdx)];
+            juce::String label;
+            if (stateIdx == 0) label = zoneNames[zoneIdx];
+            if (articulationIdx >= 0) label += (label.isNotEmpty() ? "\n" : "") + stateNames[stateIdx];
+            cells.push_back({ juce::Rectangle<int>(cellLeft, rowTop, cellRight - cellLeft, rowBottom - rowTop), label, articulationIdx });
+        }
+        ++rowIdx;
+    }
+
+    for (const int articulationIdx : otherArticulationIndices) {
+        const int rowTop = bounds.getY() + mainAreaHeight * rowIdx / juce::jmax(1, mainRowCount);
+        const int rowBottom = bounds.getY() + mainAreaHeight * (rowIdx + 1) / juce::jmax(1, mainRowCount);
+        cells.push_back({ juce::Rectangle<int>(bounds.getX(), rowTop, bounds.getWidth(), rowBottom - rowTop), this->slotPtr->articulations[static_cast<size_t>(articulationIdx)].codeRaw, articulationIdx });
+        ++rowIdx;
+    }
+
+    if (pedalArticulationIdx >= 0) cells.push_back({ juce::Rectangle<int>(bounds.getX(), bounds.getBottom() - juce::jmax(1, pedalHeight), bounds.getWidth(), juce::jmax(1, pedalHeight)), "pedal", pedalArticulationIdx });
+    return cells;
+}
+
+int DrumPad::getZoneIndexAt(juce::Point<int> position) const {
+    if (!this->slotPtr || this->slotPtr->articulations.empty() || this->displayOrder.empty())
+        return -1;
+
+    auto bodyBounds = this->getLocalBounds();
+    bodyBounds.removeFromLeft(juce::jmin(UITheme::Sizes::padTitleRailWidth, bodyBounds.getWidth()));
+    for (const auto& cell : this->buildArticulationCells(bodyBounds))
+        if (cell.articulationIdx >= 0 && cell.bounds.contains(position)) return cell.articulationIdx;
+    return -1;
 }
 
 void DrumPad::mouseDown(const juce::MouseEvent& event) {
     if (!this->slotPtr)
         return;
-    const int artIdx = this->getZoneIndexAt(event.getPosition().getY());
+    const int artIdx = this->getZoneIndexAt(event.getPosition());
+    if (artIdx < 0) return;
 
     if (event.mods.isPopupMenu()) {
         if (this->onPadRightClicked) this->onPadRightClicked(this->slotPtr, artIdx, event.getScreenPosition());

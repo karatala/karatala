@@ -138,6 +138,7 @@ namespace Sizes {
     constexpr int potHeight = 56;
     constexpr int sourceCardWidth = 170;
     constexpr int layerRowHeight = 64;
+    constexpr int padTitleRailWidth = 18;
     constexpr int midiMapInstCol = 90;
     constexpr int midiMapArtCol = 100;
 }

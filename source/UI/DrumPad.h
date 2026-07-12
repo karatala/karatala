@@ -24,6 +24,12 @@ public:
     void setPadGap(int gap) { this->padGap = gap; repaint(); }
 
 private:
+    struct ArticulationCell {
+        juce::Rectangle<int> bounds;
+        juce::String label;
+        int articulationIdx = -1;
+    };
+
     const KitLayout::InstrumentSlot* slotPtr = nullptr;
     std::vector<int> displayOrder;
     float clickVelocity = 100.0f;
@@ -33,8 +39,11 @@ private:
     static juce::Colour getColourForType(KitLib::InstrumentSpec::Type type);
     void paintSimple(juce::Graphics& g);
     void paintZoned(juce::Graphics& g);
+    void paintInstrumentTitle(juce::Graphics& g, const juce::Rectangle<int>& bounds) const;
     void refreshDisplayOrder();
-    int getZoneIndexAt(int yPos) const;
+    std::vector<ArticulationCell> buildArticulationCells(const juce::Rectangle<int>& bounds) const;
+    std::vector<ArticulationCell> buildHiHatCells(const juce::Rectangle<int>& bounds) const;
+    int getZoneIndexAt(juce::Point<int> position) const;
     void timerCallback() override;
 
     static constexpr int flashFadeDurationMs = 240;
