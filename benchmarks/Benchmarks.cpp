@@ -36,7 +36,7 @@ struct InstrumentSynthTestAccess {
 };
 
 namespace BenchmarkHelpers {
-    std::vector<juce::String> makeMicCodes(int count) {
+    static std::vector<juce::String> makeMicCodes(int count) {
         std::vector<juce::String> micCodes;
         micCodes.reserve(static_cast<size_t>(count));
         for (int micIdx = 0; micIdx < count; ++micIdx)
@@ -44,7 +44,7 @@ namespace BenchmarkHelpers {
         return micCodes;
     }
 
-    std::unordered_map<juce::String, juce::String> makeStringRouteOverrides(const std::vector<juce::String>& sourceCodes, const std::vector<juce::String>& outputCodes) {
+    static std::unordered_map<juce::String, juce::String> makeStringRouteOverrides(const std::vector<juce::String>& sourceCodes, const std::vector<juce::String>& outputCodes) {
         std::unordered_map<juce::String, juce::String> routeOverrides;
         routeOverrides.reserve(sourceCodes.size());
         for (size_t micIdx = 0; micIdx < sourceCodes.size(); ++micIdx)
@@ -52,7 +52,7 @@ namespace BenchmarkHelpers {
         return routeOverrides;
     }
 
-    InstrumentSynth::MicRouteOverrideIdMap makeIdRouteOverrides(const std::unordered_map<juce::String, juce::String>& routeOverrides) {
+    static InstrumentSynth::MicRouteOverrideIdMap makeIdRouteOverrides(const std::unordered_map<juce::String, juce::String>& routeOverrides) {
         InstrumentSynth::MicRouteOverrideIdMap routeOverrideIds;
         routeOverrideIds.reserve(routeOverrides.size());
         for (const auto& [sourceMicCode, outputMicCode] : routeOverrides) {
@@ -63,13 +63,13 @@ namespace BenchmarkHelpers {
         return routeOverrideIds;
     }
 
-    juce::String findStringRouteOverride(const std::unordered_map<juce::String, juce::String>& routeOverrides, const juce::String& sourceMicCode) {
+    static juce::String findStringRouteOverride(const std::unordered_map<juce::String, juce::String>& routeOverrides, const juce::String& sourceMicCode) {
         for (const auto& [overrideSourceMicCode, outputMicCode] : routeOverrides)
             if (overrideSourceMicCode.compareIgnoreCase(sourceMicCode) == 0) return outputMicCode;
         return {};
     }
 
-    MicLayout makeMicLayoutForRoutingPlan() {
+    static MicLayout makeMicLayoutForRoutingPlan() {
         MicLayout micLayout;
 
         MicLayout::Mic directMic;
@@ -93,7 +93,7 @@ namespace BenchmarkHelpers {
         return micLayout;
     }
 
-    std::vector<juce::String> makeArticulationNames(int count) {
+    static std::vector<juce::String> makeArticulationNames(int count) {
         std::vector<juce::String> names;
         names.reserve(static_cast<size_t>(count));
         for (int nameIdx = 0; nameIdx < count; ++nameIdx) {
@@ -103,7 +103,7 @@ namespace BenchmarkHelpers {
         return names;
     }
 
-    std::vector<juce::String> makeUiSearchRows(int count) {
+    static std::vector<juce::String> makeUiSearchRows(int count) {
         std::vector<juce::String> rows;
         rows.reserve(static_cast<size_t>(count));
         for (int rowIdx = 0; rowIdx < count; ++rowIdx) {

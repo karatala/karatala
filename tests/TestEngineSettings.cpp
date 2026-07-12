@@ -1,17 +1,18 @@
 #include "../source/Engine/DrumKitEngine.h"
+#include "catch2/catch_approx.hpp"
 #include "catch2/catch_test_macros.hpp"
 
 TEST_CASE("EngineSettings - realtime scalar settings load and store", "[EngineSettings]") {
     RealtimeSetting<float> floatSetting { 0.25f };
     RealtimeSetting<int> intSetting { 2 };
 
-    REQUIRE(floatSetting.load() == 0.25f);
+    REQUIRE(floatSetting.load() == Catch::Approx(0.25f));
     REQUIRE(intSetting.load() == 2);
 
     floatSetting.store(0.75f);
     intSetting.store(4);
 
-    REQUIRE(floatSetting.load() == 0.75f);
+    REQUIRE(floatSetting.load() == Catch::Approx(0.75f));
     REQUIRE(intSetting.load() == 4);
 }
 
@@ -28,10 +29,10 @@ engine:
 )yaml");
 
     REQUIRE(result.ok());
-    REQUIRE(engine.engineSettings.hihatOpenCrossfadeSec.load() == 0.12f);
-    REQUIRE(engine.engineSettings.hihatCloseCrossfadeSec.load() == 0.01f);
-    REQUIRE(engine.engineSettings.hihatTransitionMinRemainingSec.load() == 0.08f);
-    REQUIRE(engine.engineSettings.hihatHitChokeDbMargin.load() == 4.5f);
+    REQUIRE(engine.engineSettings.hihatOpenCrossfadeSec.load() == Catch::Approx(0.12f));
+    REQUIRE(engine.engineSettings.hihatCloseCrossfadeSec.load() == Catch::Approx(0.01f));
+    REQUIRE(engine.engineSettings.hihatTransitionMinRemainingSec.load() == Catch::Approx(0.08f));
+    REQUIRE(engine.engineSettings.hihatHitChokeDbMargin.load() == Catch::Approx(4.5f));
 }
 
 TEST_CASE("EngineSettings - hi-hat YAML clamps and serializes the new contract", "[EngineSettings][yaml]") {
@@ -57,9 +58,9 @@ engine:
 )yaml");
 
     REQUIRE(result.ok());
-    REQUIRE(engine.engineSettings.hihatHitChokeDbMargin.load() == 20.0f);
-    REQUIRE(engine.engineSettings.hihatOpenCrossfadeSec.load() == 0.250f);
-    REQUIRE(engine.engineSettings.hihatCloseCrossfadeSec.load() == 0.002f);
+    REQUIRE(engine.engineSettings.hihatHitChokeDbMargin.load() == Catch::Approx(20.0f));
+    REQUIRE(engine.engineSettings.hihatOpenCrossfadeSec.load() == Catch::Approx(0.250f));
+    REQUIRE(engine.engineSettings.hihatCloseCrossfadeSec.load() == Catch::Approx(0.002f));
     REQUIRE(engine.engineSettings.hihatBoundaryHysteresisCc.load() == 8);
     REQUIRE(engine.engineSettings.hihatTransitionCurve.load() == HiHatTransitionCurve::Smooth);
     REQUIRE(engine.engineSettings.hihatFootSampleMode.load() == HiHatFootSampleMode::Always);
@@ -117,7 +118,7 @@ TEST_CASE("EngineSettings - realtime settings remain copyable snapshots", "[Engi
     sourceSettings.roundRobinLock.store(3);
 
     EngineSettings copiedSettings = sourceSettings;
-    REQUIRE(copiedSettings.hihatOpenCrossfadeSec.load() == 0.125f);
+    REQUIRE(copiedSettings.hihatOpenCrossfadeSec.load() == Catch::Approx(0.125f));
     REQUIRE(copiedSettings.hihatTransitionCurve.load() == HiHatTransitionCurve::Smooth);
     REQUIRE(copiedSettings.roundRobinLock.load() == 3);
 
@@ -125,7 +126,7 @@ TEST_CASE("EngineSettings - realtime settings remain copyable snapshots", "[Engi
     copiedSettings.hihatTransitionCurve.store(HiHatTransitionCurve::Linear);
     copiedSettings.roundRobinLock.store(1);
 
-    REQUIRE(sourceSettings.hihatOpenCrossfadeSec.load() == 0.125f);
+    REQUIRE(sourceSettings.hihatOpenCrossfadeSec.load() == Catch::Approx(0.125f));
     REQUIRE(sourceSettings.hihatTransitionCurve.load() == HiHatTransitionCurve::Smooth);
     REQUIRE(sourceSettings.roundRobinLock.load() == 3);
 }
@@ -152,20 +153,20 @@ TEST_CASE("EngineSettings - all hi-hat transition settings survive YAML round tr
     const auto parseResult = restoredEngine.parseConfigYaml(sourceEngine.serializeSettingsYaml());
 
     REQUIRE(parseResult.ok());
-    REQUIRE(restoredEngine.engineSettings.polyphonyCrossfadeTimeoutSec.load() == 0.45f);
-    REQUIRE(restoredEngine.engineSettings.hihatHitChokeDbMargin.load() == 7.5f);
-    REQUIRE(restoredEngine.engineSettings.hihatOpenCrossfadeSec.load() == 0.125f);
-    REQUIRE(restoredEngine.engineSettings.hihatCloseCrossfadeSec.load() == 0.035f);
-    REQUIRE(restoredEngine.engineSettings.hihatControllerSmoothingSec.load() == 0.042f);
+    REQUIRE(restoredEngine.engineSettings.polyphonyCrossfadeTimeoutSec.load() == Catch::Approx(0.45f));
+    REQUIRE(restoredEngine.engineSettings.hihatHitChokeDbMargin.load() == Catch::Approx(7.5f));
+    REQUIRE(restoredEngine.engineSettings.hihatOpenCrossfadeSec.load() == Catch::Approx(0.125f));
+    REQUIRE(restoredEngine.engineSettings.hihatCloseCrossfadeSec.load() == Catch::Approx(0.035f));
+    REQUIRE(restoredEngine.engineSettings.hihatControllerSmoothingSec.load() == Catch::Approx(0.042f));
     REQUIRE(restoredEngine.engineSettings.hihatBoundaryHysteresisCc.load() == 6);
-    REQUIRE(restoredEngine.engineSettings.hihatTailMatchAmount.load() == 0.35f);
-    REQUIRE(restoredEngine.engineSettings.hihatTailMatchBiasDb.load() == -7.0f);
-    REQUIRE(restoredEngine.engineSettings.hihatTransitionAttackGuardSec.load() == 0.055f);
+    REQUIRE(restoredEngine.engineSettings.hihatTailMatchAmount.load() == Catch::Approx(0.35f));
+    REQUIRE(restoredEngine.engineSettings.hihatTailMatchBiasDb.load() == Catch::Approx(-7.0f));
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionAttackGuardSec.load() == Catch::Approx(0.055f));
     REQUIRE(restoredEngine.engineSettings.hihatTransitionMaxActiveGroups.load() == 3);
     REQUIRE(restoredEngine.engineSettings.hihatTransitionCurve.load() == HiHatTransitionCurve::Linear);
     REQUIRE(restoredEngine.engineSettings.hihatFootSampleMode.load() == HiHatFootSampleMode::Off);
-    REQUIRE(restoredEngine.engineSettings.hihatTransitionMinRemainingSec.load() == 0.175f);
-    REQUIRE(restoredEngine.engineSettings.hihatTransitionSilenceFloorDb.load() == -54.0f);
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionMinRemainingSec.load() == Catch::Approx(0.175f));
+    REQUIRE(restoredEngine.engineSettings.hihatTransitionSilenceFloorDb.load() == Catch::Approx(-54.0f));
     REQUIRE(restoredEngine.engineSettings.hihatMissingDecayPolicy.load() == HiHatMissingDecayPolicy::SimpleFade);
 }
 

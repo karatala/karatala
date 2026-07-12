@@ -43,6 +43,7 @@ int InstrumentSynth::getRuntimeExpressionValue(const ArticulationRuntime& art, K
         case KitLib::ArticulationSpec::ExpressionDimension::Type::Unknown:
             return -1;
     }
+    return -1;
 }
 
 InstrumentSynth::ArtRtIdx InstrumentSynth::selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const {

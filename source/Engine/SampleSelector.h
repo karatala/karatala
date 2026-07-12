@@ -90,7 +90,7 @@ public:
         for (const auto& s : samples)
             ptrs.push_back(&s);
 
-        ZoneNode node{0, MIDI_MAX_VALUE};
+        ZoneNode node { 0, MIDI_MAX_VALUE, {}, {} };
         SampleSelector::buildLevel(node, ptrs, 0, strategy);
         return node;
     }
@@ -114,7 +114,7 @@ public:
                     subset.push_back(s);
             }
 
-            ZoneNode child{r.min, r.max};
+            ZoneNode child { r.min, r.max, {}, {} };
             SampleSelector::buildLevel(child, subset, level + 1, strategy);
             node.children.push_back(std::move(child));
         }

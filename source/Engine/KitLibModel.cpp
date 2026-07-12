@@ -328,7 +328,7 @@ bool InstrumentSpec::isAudioFile(const juce::File& file) {
 }
 
 int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
-    const auto articulationDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*.*");
+    const auto articulationDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*");
     int sampleCount = 0;
     for (const auto& artDir : articulationDirs) {
         if (!artDir.isDirectory())
@@ -583,7 +583,7 @@ std::vector<juce::String> DrumKitSpec::getIdentityCandidates(const DrumKitSpec::
 }
 
 int DrumKitSpec::scanInstruments() {
-    const auto subDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*.*");
+    const auto subDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*");
 
     for (const auto& subDir : subDirs) {
         if (!subDir.isDirectory()) {

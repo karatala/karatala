@@ -5,7 +5,7 @@
 
 namespace UITheme {
 namespace Colours {
-    inline const juce::Colour bgApp = juce::Colours::black;
+    inline const juce::Colour bgApp = juce::Colour(0xff080808);
     inline const juce::Colour bgEditor = juce::Colour(0xff1e1e1e);
     inline const juce::Colour bgPanel = juce::Colour(0xff1a1a1a);
     inline const juce::Colour bgPanelRaised = juce::Colour(0xff222222);
@@ -15,19 +15,19 @@ namespace Colours {
     inline const juce::Colour borderSubtle = juce::Colour(0xff333333);
     inline const juce::Colour borderMid = juce::Colour(0xff444444);
     inline const juce::Colour borderStrong = juce::Colour(0xff555555);
-    inline const juce::Colour textPrimary = juce::Colours::white;
+    inline const juce::Colour textPrimary = juce::Colour(0xfffafafa);
     inline const juce::Colour textSecondary = juce::Colour(0xffcccccc);
     inline const juce::Colour textInfo = juce::Colour(0xffaaaaaa);
     inline const juce::Colour textMuted = juce::Colour(0xff888888);
     inline const juce::Colour textSubtle = juce::Colour(0xff777777);
     inline const juce::Colour textAccent = juce::Colour(0xff99bbdd);
     inline const juce::Colour textAccentSoft = juce::Colour(0xff88aacc);
-    inline const juce::Colour textSuccess = juce::Colours::lightgreen;
+    inline const juce::Colour textSuccess = juce::Colour(0xff00EE00);
     inline const juce::Colour accent = juce::Colour(0xffcc4444);
     inline const juce::Colour accentSoft = juce::Colour(0xff88aacc);
     inline const juce::Colour accentWarning = juce::Colour(0xff883333);
-    inline const juce::Colour midiLearnIdle = juce::Colours::red;
-    inline const juce::Colour midiLearnActive = juce::Colours::yellow;
+    inline const juce::Colour midiLearnIdle = juce::Colour(0xffEEEE00);
+    inline const juce::Colour midiLearnActive = juce::Colour(0xffFFFF00);
     inline const juce::Colour separator = juce::Colour(0xff111111);
     inline const juce::Colour padEmpty = juce::Colour(0xff333333);
     inline const juce::Colour listRowOdd = juce::Colour(0xff2e2e2e);
@@ -37,7 +37,7 @@ namespace Colours {
     inline const juce::Colour keyWhiteText = juce::Colour(0xff222222);
     inline const juce::Colour keyBlack = juce::Colour(0xff222222);
     inline const juce::Colour keyBlackText = juce::Colour(0xffEEEEEE);
-    inline const juce::Colour transparent = juce::Colours::transparentBlack;
+    inline const juce::Colour transparent = juce::Colour(0x00000000);
 
     inline juce::Colour instrumentType(KitLib::InstrumentSpec::Type type) {
         switch (type) {
@@ -92,6 +92,7 @@ namespace Colours {
             case KitLib::InstrumentSpec::Type::Other:
                 return juce::Colour(0xff555555);
         }
+        return juce::Colour(0xff555555);
     }
 }
 

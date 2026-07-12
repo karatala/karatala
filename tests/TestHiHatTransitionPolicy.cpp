@@ -74,11 +74,11 @@ TEST_CASE("HiHatTransitionPolicy - direction distinguishes opening and closing",
     REQUIRE((HiHatTransitionPolicy::getDirection(100, 40) == HiHatTransitionPolicy::Direction::Closing
                 ? closeDurationSec
                 : openDurationSec)
-            == openDurationSec);
+            == Catch::Approx(openDurationSec));
     REQUIRE((HiHatTransitionPolicy::getDirection(40, 100) == HiHatTransitionPolicy::Direction::Closing
                 ? closeDurationSec
                 : openDurationSec)
-            == closeDurationSec);
+            == Catch::Approx(closeDurationSec));
 }
 
 TEST_CASE("HiHatTransitionPolicy - decay matching blends fallback and matched offsets", "[HiHatTransitionPolicy]") {

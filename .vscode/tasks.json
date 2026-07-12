@@ -32,8 +32,11 @@
     },
     {
       "label": "Build & Run tests",
-      "type": "shell",
-      "command": "${workspaceFolder}/build/Debug/Tests.exe",
+      "type": "process",
+      "command": "${workspaceFolder}/build/Tests",
+      "windows": {
+        "command": "${workspaceFolder}\\build\\Debug\\Tests.exe"
+      },
       "dependsOn": "Build tests",
       "group": { "kind": "build" },
       "problemMatcher": "$gcc",
@@ -48,9 +51,13 @@
     },
     {
       "label": "Build & Run benchmarks",
-      "type": "shell",
-      "command": "${workspaceFolder}/build/Debug/Benchmarks.exe [benchmark]",
-      "dependsOn": "Build tests",
+      "type": "process",
+      "command": "${workspaceFolder}/build/Benchmarks",
+      "args": ["[benchmark]"],
+      "windows": {
+        "command": "${workspaceFolder}\\build\\Debug\\Benchmarks.exe"
+      },
+      "dependsOn": "Build benchmarks",
       "group": { "kind": "build" },
       "problemMatcher": "$gcc",
     },

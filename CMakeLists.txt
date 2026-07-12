@@ -165,11 +165,6 @@ target_link_libraries(SharedCode
 # Link the JUCE plugin targets our SharedCode target
 target_link_libraries("${PROJECT_NAME}" PRIVATE SharedCode)
 
-if(MSVC AND TARGET "${PROJECT_NAME}_VST3")
-    # Avoid stale incremental-link state corrupting the Debug VST3 UI resources.
-    target_link_options("${PROJECT_NAME}_VST3" PRIVATE "$<$<CONFIG:Debug>:/INCREMENTAL:NO>")
-endif()
-
 # IPP support, comment out to disable
 include(PamplejuceIPP)
 
