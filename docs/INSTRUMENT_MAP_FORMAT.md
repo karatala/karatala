@@ -165,6 +165,7 @@ Meaning:
 - `micRoute=dtm:-` leaves source mic `dtm` unassigned.
 
 Pad popup routing changes update loaded sample destinations in place. Applying a changed raw map still rebuilds the affected slot.
+When a popup mic code is an output-layout alias rather than the library's original source code, full map loading resolves that alias through the source mic's automatic output assignment.
 
 ## Raw Map Apply
 

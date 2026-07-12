@@ -35,13 +35,29 @@ public:
         if (const auto* plan = this->synth != nullptr ? this->synth->getMicRoutingPlan() : nullptr) {
             const auto sourceMicCodeId = StringsDictSingleton::getId(micSpec.raw.trim().toLowerCase());
             const auto& routeOverrideIds = this->synth->getLastRoutingContext().micRouteOverrideIds;
-            const auto overrideIt = routeOverrideIds.find(sourceMicCodeId);
+            const auto planned = plan->resolve(this->synth->getId(), this->synth->getType(), micSpec);
+            auto sourceOutputAlias = planned.outputMicCode;
+            if (sourceOutputAlias.isEmpty()) {
+                for (const auto& micEntry : this->micEntries) {
+                    if (!micKeyEq(micSpec, micEntry.mic->specs)) continue;
+                    sourceOutputAlias = micEntry.mic->code;
+                    break;
+                }
+            }
+            auto overrideIt = routeOverrideIds.find(sourceMicCodeId);
+            bool usedOutputAlias = false;
+            if (overrideIt == routeOverrideIds.end() && sourceOutputAlias.isNotEmpty()) {
+                const auto outputAliasId = StringsDictSingleton::getId(sourceOutputAlias.trim().toLowerCase());
+                overrideIt = routeOverrideIds.find(outputAliasId);
+                usedOutputAlias = overrideIt != routeOverrideIds.end();
+            }
             if (overrideIt != routeOverrideIds.end()) {
                 if (StringsDictSingleton::nameOf(overrideIt->second) == "-") return { -1, fileChannelCount, micSpec.raw, false };
                 const auto overrideAssignment = plan->resolveOverride(this->synth->getId(), micSpec, overrideIt->second, this->synth->getType());
                 if (overrideAssignment.matched()) {
                     LOG(Debug, "Mic route override: slot=" + this->synth->getId()
                         + " source=" + micSpec.raw
+                        + (usedOutputAlias ? " alias=" + sourceOutputAlias : "")
                         + " output=" + StringsDictSingleton::nameOf(overrideIt->second)
                         + " hostStart=" + juce::String(overrideAssignment.globalStart)
                         + " channels=" + juce::String(overrideAssignment.channels));
@@ -50,7 +66,6 @@ public:
                 LOG(Warning, overrideAssignment.warning);
             }
 
-            const auto planned = plan->resolve(this->synth->getId(), this->synth->getType(), micSpec);
             if (planned.matched())
                 return { planned.globalStart, planned.channels, planned.micCode, planned.applyBalance };
 

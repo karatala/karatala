@@ -20,6 +20,7 @@ public:
         int channels = 0;
         juce::String outputName;
         juce::String micCode;
+        juce::String outputMicCode;
         juce::String warning;
         bool applyBalance = false;
 
@@ -55,6 +56,7 @@ public:
             assignment.channels = bestOutput->channels;
             assignment.outputName = bestOutput->name;
             assignment.micCode = sampleMicSpec.raw;
+            assignment.outputMicCode = bestOutput->code;
             assignment.applyBalance = sampleMicSpec.type == KitLib::MicSpec::Type::Direct && bestOutput->channels == 2;
             return assignment;
         }
@@ -100,6 +102,7 @@ public:
             assignment.channels = output.channels;
             assignment.outputName = output.name;
             assignment.micCode = output.code;
+            assignment.outputMicCode = output.code;
             return assignment;
         }
 
@@ -274,6 +277,7 @@ private:
         assignment.channels = output.channels;
         assignment.outputName = output.name;
         assignment.micCode = sampleMicCode;
+        assignment.outputMicCode = output.code;
         assignment.applyBalance = applyBalance;
         return assignment;
     }

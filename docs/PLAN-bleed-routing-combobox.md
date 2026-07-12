@@ -128,6 +128,7 @@ Apply from map entries:
 - Shadow synth gets its own entry's route overrides.
 - Pad popup route changes update loaded sample assignments in place. Raw map route changes remain reload changes.
 - Repeated output codes are resolved by the current slot's instrument selector before pooled outputs.
+- Full map loading checks the original source mic code first, then the source mic's resolved output-layout alias.
 
 ### 3. Use Override In MicRoutingBuilder
 
