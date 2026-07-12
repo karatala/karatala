@@ -40,7 +40,7 @@ private:
     // Mode: Kit - first-run setup and instrument-map presets
     std::unique_ptr<KitHomePanel> kitHomePanel;
 
-    // Mode: Zen / Zone - drum pad grid
+    // Mode: Zone - drum pad grid
     DrumPadGrid drumPadGrid;
 
     // Mode: Map - MIDI note assignment table

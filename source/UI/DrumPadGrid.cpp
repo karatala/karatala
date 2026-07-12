@@ -15,7 +15,6 @@ void DrumPadGrid::populate(const KitLayout* layout) {
 
     for (int idx = 0; idx < totalCells; ++idx) {
         auto pad = std::make_unique<DrumPad>();
-        pad->setPadMode(this->padMode);
         pad->setPadGap(this->padGap);
 
         if (idx < slotCount) {
@@ -41,12 +40,6 @@ void DrumPadGrid::populate(const KitLayout* layout) {
     }
 
     this->resized();
-}
-
-void DrumPadGrid::setPadMode(PadMode mode) {
-    this->padMode = mode;
-    for (auto& pad : this->pads)
-        pad->setPadMode(mode);
 }
 
 void DrumPadGrid::setGridSize(int columns, int rows) {

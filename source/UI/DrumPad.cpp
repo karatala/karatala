@@ -10,11 +10,6 @@ void DrumPad::setSlot(const KitLayout::InstrumentSlot* slot) {
     repaint();
 }
 
-void DrumPad::setPadMode(PadMode mode) {
-    this->padMode = mode;
-    repaint();
-}
-
 void DrumPad::refreshDisplayOrder() { //FIXME: get rid of display order, we will keep default order as it was specified in kit layout yaml
     this->displayOrder.clear();
     if (!this->slotPtr || this->slotPtr->articulations.empty())
@@ -49,11 +44,10 @@ void DrumPad::timerCallback() {
 juce::Colour DrumPad::getColourForType(KitLib::InstrumentSpec::Type type) { return UITheme::Colours::instrumentType(type); }
 
 void DrumPad::paint(juce::Graphics& g) {
-    if (this->padMode == PadMode::Zone) this->paintZoned(g);
-    else this->paintZen(g);
+    this->paintZoned(g);
 }
 
-void DrumPad::paintZen(juce::Graphics& g) {
+void DrumPad::paintSimple(juce::Graphics& g) {
     auto bounds = getLocalBounds();
     auto baseColour = this->slotPtr ? getColourForType(this->slotPtr->type) : UITheme::Colours::padEmpty;
 
@@ -88,14 +82,14 @@ void DrumPad::paintZoned(juce::Graphics& g) {
     auto baseColour = this->slotPtr ? getColourForType(this->slotPtr->type) : UITheme::Colours::padEmpty;
 
     if (!this->slotPtr || this->slotPtr->articulations.empty() || this->displayOrder.empty()) {
-        this->paintZen(g);
+        this->paintSimple(g);
         return;
     }
 
     const auto& arts = this->slotPtr->articulations;
     auto artCount = juce::jmin(static_cast<int>(arts.size()), static_cast<int>(this->displayOrder.size()));
     if (artCount <= 0) {
-        this->paintZen(g);
+        this->paintSimple(g);
         return;
     }
     int mainDisplayIdx = DrumPadHelpers::findMainArticulationDisplayIdx(arts, this->displayOrder);
@@ -154,9 +148,7 @@ int DrumPad::getZoneIndexAt(int yPos) const {
 void DrumPad::mouseDown(const juce::MouseEvent& event) {
     if (!this->slotPtr)
         return;
-    int artIdx = 0;
-    if (this->padMode == PadMode::Zone)
-        artIdx = this->getZoneIndexAt(event.getPosition().getY());
+    const int artIdx = this->getZoneIndexAt(event.getPosition().getY());
 
     if (event.mods.isPopupMenu()) {
         if (this->onPadRightClicked) this->onPadRightClicked(this->slotPtr, artIdx, event.getScreenPosition());

@@ -4,8 +4,6 @@
 #include <vector>
 #include "../Engine/LayoutManager.h"
 
-enum class PadMode { Zen, Zone };
-
 class DrumPad : public juce::Component, private juce::Timer {
 public:
     explicit DrumPad() {}
@@ -16,7 +14,6 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
 
     void setSlot(const KitLayout::InstrumentSlot* slot);
-    void setPadMode(PadMode mode);
     void flash(float velocity);
 
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, float velocity)> onPadClicked;
@@ -28,14 +25,13 @@ public:
 
 private:
     const KitLayout::InstrumentSlot* slotPtr = nullptr;
-    PadMode padMode = PadMode::Zone;
     std::vector<int> displayOrder;
     float clickVelocity = 100.0f;
     float flashAlpha = 0.0f;
     int padGap = 0;
 
     static juce::Colour getColourForType(KitLib::InstrumentSpec::Type type);
-    void paintZen(juce::Graphics& g);
+    void paintSimple(juce::Graphics& g);
     void paintZoned(juce::Graphics& g);
     void refreshDisplayOrder();
     int getZoneIndexAt(int yPos) const;

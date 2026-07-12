@@ -11,7 +11,6 @@ public:
     void resized() override;
 
     void populate(const KitLayout* layout);
-    void setPadMode(PadMode mode);
     void setGridSize(int columns, int rows);
     void setPadGap(int gap);
     void setClickVelocity(float velocity);
@@ -24,7 +23,6 @@ public:
 private:
     std::vector<std::unique_ptr<DrumPad>> pads;
     std::vector<juce::String> padSlotIds;
-    PadMode padMode = PadMode::Zone;
     int gridColumns = 0;
     int gridRows = 0;
     int effectiveGridColumns = 1;

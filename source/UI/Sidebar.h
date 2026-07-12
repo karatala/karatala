@@ -7,7 +7,6 @@
 enum class ViewMode {
     Kit = 0,
     Map,
-    Zen,
     Zone,
     Instrument,
     Raw,

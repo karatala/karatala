@@ -268,7 +268,7 @@ void PluginEditor::setupSidebarAndStatusBar() {
 }
 
 void PluginEditor::setupDrumPadGridMode() {
-    // Drum pad grid (Zen / Zone modes)
+    // Drum pad grid (Zone mode)
     this->addAndMakeVisible(this->drumPadGrid);
     {
         auto& settings = this->processorRef.getEngine().engineSettings;
@@ -991,9 +991,8 @@ void PluginEditor::setViewMode(ViewMode mode) {
     if (mode == ViewMode::Kit)
         this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 
-    if (mode == ViewMode::Zen || mode == ViewMode::Zone) {
+    if (mode == ViewMode::Zone) {
         this->refreshDrumPadGridIfNeeded();
-        this->drumPadGrid.setPadMode(mode == ViewMode::Zone ? PadMode::Zone : PadMode::Zen);
     }
 
     if (mode == ViewMode::Map)
@@ -1060,9 +1059,8 @@ void PluginEditor::dismissCrosstalkPopup() {
 void PluginEditor::showComponentsForMode(ViewMode mode) {
     this->kitHomePanel->setVisible(mode == ViewMode::Kit);
 
-    // Drum pad grid - visible for Zen and Zone
-    bool showPads = (mode == ViewMode::Zen || mode == ViewMode::Zone);
-    this->drumPadGrid.setVisible(showPads);
+    // Drum pad grid - visible for Zone
+    this->drumPadGrid.setVisible(mode == ViewMode::Zone);
 
     // Raw mode components
     bool showRaw = (mode == ViewMode::Raw);
@@ -1104,7 +1102,6 @@ void PluginEditor::resized() {
             this->kitHomePanel->setBounds(mainArea);
             break;
 
-        case ViewMode::Zen:
         case ViewMode::Zone:
             this->drumPadGrid.setBounds(mainArea);
             break;
