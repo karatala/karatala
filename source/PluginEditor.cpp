@@ -174,6 +174,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processorRef(p) {
     this->setLookAndFeel(&this->lookAndFeel);
+    this->tooltipWindow.setOpaque(false);
 
     this->setupSidebarAndStatusBar();
     this->setupKitMode();
@@ -1142,6 +1143,12 @@ void PluginEditor::resized() {
         const auto availableBounds = this->getLocalBounds().reduced(32, 24);
         this->crosstalkPopup->setBounds(this->crosstalkPopup->getPreferredBounds(availableBounds));
     }
+    if (this->padPopupOverlay) this->padPopupOverlay->setBounds(this->getLocalBounds());
+    if (this->padContextPopup) {
+        auto padPanelBounds = mainArea.reduced(UITheme::Spacing::md, 0);
+        const int padPanelHeight = mainArea.getHeight() * 9 / 10;
+        this->padContextPopup->setBounds(padPanelBounds.withSizeKeepingCentre(padPanelBounds.getWidth(), padPanelHeight));
+    }
 }
 
 void PluginEditor::dismissPadContextPopup() {
@@ -1202,9 +1209,6 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
         }
     };
 
-    const auto availablePopupBounds = getLocalBounds().reduced(24, 18);
-    this->padContextPopup->setBounds(this->padContextPopup->getPreferredBounds(availablePopupBounds));
-
     this->padPopupOverlay = std::make_unique<DismissOverlay>();
     this->padPopupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] {
@@ -1224,6 +1228,7 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
 
     addAndMakeVisible(*this->padContextPopup);
     this->padContextPopup->toFront(true);
+    this->resized();
 }
 
 void PluginEditor::flashPadForSlot(const juce::String& slotId, float velocity) {

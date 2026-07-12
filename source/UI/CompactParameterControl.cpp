@@ -25,11 +25,11 @@ void CompactParameterControl::paint(juce::Graphics& graphics) {
     if (this->showLabel) {
         graphics.setColour(UITheme::Colours::textSubtle);
         graphics.setFont(UITheme::Fonts::small());
-        graphics.drawFittedText(this->getName(), area.removeFromTop(12), juce::Justification::centred, 1);
+        graphics.drawFittedText(this->getName(), area.removeFromTop(10), juce::Justification::centred, 1);
     }
 
-    auto lineArea = area.removeFromBottom(5).reduced(3, 1);
-    auto valueArea = area.reduced(1, 0);
+    auto lineArea = area.removeFromBottom(4).reduced(3, 1);
+    auto valueArea = area.reduced(1, 1);
 
     graphics.setColour(this->isEnabled() ? UITheme::Colours::textSecondary : UITheme::Colours::textMuted);
     graphics.setFont(UITheme::Fonts::labelBoldMedium());

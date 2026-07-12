@@ -97,6 +97,7 @@ namespace Colours {
 }
 
 namespace Fonts {
+    inline juce::Font normal() { return juce::Font(juce::FontOptions(12.0f)); }
     inline juce::Font label() { return juce::Font(juce::FontOptions(10.0f)); }
     inline juce::Font labelBold() { return juce::Font(juce::FontOptions(10.0f).withStyle("Bold")); }
     inline juce::Font labelBoldMedium() { return labelBold().withHeight(12.0f); }
@@ -124,6 +125,7 @@ namespace Sizes {
     constexpr int modeButton = 44;
     constexpr int sidebarKnob = 40;
     constexpr int midiLearnButton = 22;
+    constexpr int compactButton = 18;
     constexpr int sliderTextBoxW = 40;
     constexpr int sliderTextBoxH = 20;
     constexpr int compactPotTextBoxW = 38;

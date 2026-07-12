@@ -19,6 +19,7 @@
 
 - Use existing `ParameterPot` and `ParameterSlider` interaction conventions.
 - Keep group counts and pot index ranges in `EngineSettingsPanel::resized()` synchronized with constructor order.
+- Keep new UI compatible with the planned theme consolidation: one typeface with normal and small sizes, semantic primary/secondary/danger/success/info colours, and shared control-size tokens instead of component-specific values.
 
 # Verification
 
@@ -26,4 +27,3 @@
 - Open the standalone/plugin editor and exercise resizing and live control updates for visual changes.
 
 # Child DOX Index
-

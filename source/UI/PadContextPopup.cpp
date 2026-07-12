@@ -73,6 +73,27 @@ void PadContextPopup::rebuildSourceItems() {
     this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
 }
 
+void PadContextPopup::addArticulationGroup(const juce::String& articulationName) {
+    auto* group = this->articulationGroups.add(new ArticulationGroup());
+    group->artName = articulationName;
+    group->label.setText(articulationName, juce::dontSendNotification);
+    group->label.setFont(UITheme::Fonts::labelBold());
+    group->label.setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
+    group->label.setJustificationType(juce::Justification::centredLeft);
+    this->layerContent.addAndMakeVisible(group->label);
+
+    group->addLayerButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    group->addLayerButton.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    group->addLayerButton.getProperties().set("compactText", true);
+    group->addLayerButton.setTooltip("Add layer to " + articulationName);
+    group->addLayerButton.onClick = [this, group] {
+        this->addLayerRow(group->artName, "", 0, -1, -1, 0.0f, 0, false, false, false, {}, {}, -1);
+        this->updateRemoveButtonVisibility();
+        this->resized();
+    };
+    this->layerContent.addAndMakeVisible(group->addLayerButton);
+}
+
 int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
     return UIHelpers::findSourceIndex(this->sourceItems, searchPath);
 }
@@ -109,10 +130,10 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
         this->artName = "(default)";
     }
 
-    // Header: "Kick / center"
-    juce::String headerText = (slot.display.isNotEmpty() ? slot.display : slot.id) + " / " + this->artName;
+    // Header: "Kick"
+    juce::String headerText = slot.display.isNotEmpty() ? slot.display : slot.id;
     this->slotLabel.setText(headerText, juce::dontSendNotification);
-    this->slotLabel.setFont(UITheme::Fonts::labelBoldMedium());
+    this->slotLabel.setFont(UITheme::Fonts::labelBold());
     this->slotLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     addAndMakeVisible(this->slotLabel);
 
@@ -139,100 +160,53 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
 
     this->syncNoteButtons();
 
-    // "+ Layer" button in header
-    this->addLayerButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    this->addLayerButton.setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    addAndMakeVisible(this->addLayerButton);
-    this->addLayerButton.onClick = [this] {
-        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, {}, -1);
-        this->updateRemoveButtonVisibility();
-        this->resized();
-    };
-
     // Scrollable layer area
     this->layerContent.layerRowsPtr = &this->layerRows;
     this->layerViewport.setViewedComponent(&this->layerContent, false);
     this->layerViewport.setScrollBarsShown(true, false);
     addAndMakeVisible(this->layerViewport);
 
+    if (slot.articulations.empty()) {
+        this->addArticulationGroup("(default)");
+    } else {
+        for (const auto& articulation : slot.articulations)
+            this->addArticulationGroup(articulation.codeRaw);
+    }
+
     // Build source items and populate layers from existing instrument map
     this->rebuildSourceItems();
     this->populateLayers();
 
-    // Set a non-zero fallback size; the editor will replace this with content-aware bounds.
-    this->setSize(600, 400);
-}
-
-juce::Rectangle<int> PadContextPopup::getPreferredBounds(const juce::Rectangle<int>& availableBounds) const {
-    constexpr int popupPadding = UITheme::Sizes::popupPadding;
-    constexpr int headerHeight = 24;
-    constexpr int headerGap = 6;
-    constexpr int potWidth = 44;
-    constexpr int flipColumnWidth = 26;
-    constexpr int removeWidth = 16;
-    constexpr int sourceWidth = UITheme::Sizes::sourceCardWidth;
-    constexpr int bleedPotWidth = 50;
-    constexpr int groupGap = 6;
-    constexpr int groupPad = 4;
-
-    constexpr int layerRowHeight = 68;
-    const int mainGroupWidth = potWidth * 5 + flipColumnWidth + groupPad * 2;
-
-    int maxBleedCount = 0;
-    for (const auto* layer : this->layerRows)
-        maxBleedCount = juce::jmax(maxBleedCount, static_cast<int>(layer->micBleeds.size()));
-
-    const int bleedGroupWidth = maxBleedCount > 0 ? maxBleedCount * bleedPotWidth + groupPad * 2 : 0;
-    const int preferredWidth = popupPadding * 2 + removeWidth + sourceWidth + mainGroupWidth + bleedGroupWidth + groupGap * 2;
-    const int preferredHeight = popupPadding * 2 + headerHeight + headerGap + 5 * layerRowHeight;
-
-    const int width = juce::jlimit(420, availableBounds.getWidth(), preferredWidth);
-    const int height = juce::jlimit(220, availableBounds.getHeight(), preferredHeight);
-    return juce::Rectangle<int>(width, height).withCentre(availableBounds.getCentre());
 }
 
 void PadContextPopup::populateLayers() {
-    // Parse the saved instrument map to find layers for this slot/art
-    // Use saved map if provided, otherwise fall back to suggested map
     auto mapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto& existingEntries = parseResult.value.entries;
 
-    std::vector<const DrumKitEngine::InstrumentMapEntry*> matchingEntries;
-    for (const auto& entry : existingEntries) {
-        if (entry.slotId != this->slotId) continue;
-        bool matchesArt = entry.slotArticulationFilter.empty();
-        if (!matchesArt) {
-            for (const auto& filter : entry.slotArticulationFilter)
-                if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, this->artName)) matchesArt = true;
-        }
-        if (matchesArt) matchingEntries.push_back(&entry);
-    }
-
-    // Fallback: entries with no art filter for this slot
-    if (matchingEntries.empty()) {
-        for (const auto& entry : existingEntries) {
-            if (entry.slotId == this->slotId && entry.slotArticulationFilter.empty())
-                matchingEntries.push_back(&entry);
-        }
-    }
-
-    if (matchingEntries.empty()) {
-        this->addLayerRow("", 0, -1, -1, 0.0f, 0, false, false, false, {}, {}, -1);
-    } else {
+    for (const auto* group : this->articulationGroups) {
         int mappedLayerIndex = 0;
-        for (const auto* entry : matchingEntries) {
-            juce::String sourceFullPath = entry->kitRef;
-            if (entry->instCode.isNotEmpty())
-                sourceFullPath += "/" + entry->instCode;
-            if (!entry->articulationFilter.empty())
-                sourceFullPath += "/" + entry->articulationFilter[0];
+        for (const auto& entry : existingEntries) {
+            if (entry.slotId != this->slotId) continue;
 
-            int tuning = entry->tuningCents.value_or(0);
-            int attack = entry->attackTimeMs.value_or(-1);
-            int decay = entry->decayTimeMs.value_or(-1);
-            float volume = entry->volumeDb.value_or(0.0f);
-            this->addLayerRow(sourceFullPath, tuning, attack, decay, volume, entry->pan.value_or(0), entry->flipLR, entry->flipLRExplicit, entry->flipPhase, entry->micBleedLevels, entry->micRouteOverrides, mappedLayerIndex);
+            bool matchesArticulation = entry.slotArticulationFilter.empty();
+            for (const auto& filter : entry.slotArticulationFilter) {
+                if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, group->artName)) {
+                    matchesArticulation = true;
+                    break;
+                }
+            }
+            if (!matchesArticulation) continue;
+
+            juce::String sourceFullPath = entry.kitRef;
+            if (entry.instCode.isNotEmpty()) sourceFullPath += "/" + entry.instCode;
+            if (!entry.articulationFilter.empty()) sourceFullPath += "/" + entry.articulationFilter[0];
+
+            const int tuning = entry.tuningCents.value_or(0);
+            const int attack = entry.attackTimeMs.value_or(-1);
+            const int decay = entry.decayTimeMs.value_or(-1);
+            const float volume = entry.volumeDb.value_or(0.0f);
+            this->addLayerRow(group->artName, sourceFullPath, tuning, attack, decay, volume, entry.pan.value_or(0), entry.flipLR, entry.flipLRExplicit, entry.flipPhase, entry.micBleedLevels, entry.micRouteOverrides, mappedLayerIndex);
             ++mappedLayerIndex;
         }
     }
@@ -601,29 +575,6 @@ void PadContextPopup::updateRoutingComboDisplay(LayerRow::MicBleedControl& bleed
     bleedCtrl.routingCombo->repaint();
 }
 
-void PadContextPopup::updateRoutingDisplay(LayerRow* layer) {
-    if (layer == nullptr || layer->routingLabel == nullptr)
-        return;
-
-    juce::String text;
-    juce::String tooltip;
-    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
-        const auto& sourceItem = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
-        text = sourceItem.artCode.isNotEmpty() ? sourceItem.artCode : this->artName;
-        tooltip = "Articulation: " + text;
-    } else if (layer->sourcePathHint.isNotEmpty()) {
-        juce::StringArray pathParts;
-        pathParts.addTokens(layer->sourcePathHint, "/", "");
-        pathParts.removeEmptyStrings();
-        text = pathParts.size() > 2 ? pathParts[2] : this->artName;
-        tooltip = "Articulation: " + text;
-    }
-
-    layer->routingLabel->setText(text, juce::dontSendNotification);
-    layer->routingLabel->setTooltip(tooltip);
-    layer->routingLabel->setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
-}
-
 std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourceIndex(int sourceIndex) const {
     if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return {};
     return this->getRelevantMicsForSourcePath(this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath());
@@ -692,8 +643,8 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         bleedCtrl->bleedPot->onValueChange = [this, layer] {
             this->applyLayerParametersFast(layer);
         };
-        bleedCtrl->bleedPot->onDragEnd = [this] {
-            this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+        bleedCtrl->bleedPot->onDragEnd = [this, layer] {
+            this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
         };
 
         bleedCtrl->routingChoices = this->buildMicRoutingChoices(sourcePath, micCode);
@@ -722,8 +673,9 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
     }
 }
 
-void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
+void PadContextPopup::addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
     auto* layer = this->layerRows.add(new LayerRow());
+    layer->artName = articulationName;
     layer->sourcePathHint = sourceFullPath;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
     layer->mappedLayerIndex = mappedLayerIndex;
@@ -735,31 +687,23 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     this->layerContent.addAndMakeVisible(*layer->sourceButton);
     layer->sourceButton->onClick = [this, layer] { this->showSourcePicker(layer); };
 
-    // Source detail label (multi-line: kit / inst)
+    // Source detail label (kit / instrument / articulation)
     layer->sourceDetailLabel = std::make_unique<juce::Label>();
-    layer->sourceDetailLabel->setFont(UITheme::Fonts::tableSmall());
+    layer->sourceDetailLabel->setFont(UITheme::Fonts::normal());
     layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
     layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
     this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
 
-    layer->routingLabel = std::make_unique<juce::Label>();
-    layer->routingLabel->setFont(UITheme::Fonts::small());
-    layer->routingLabel->setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
-    layer->routingLabel->setJustificationType(juce::Justification::centredLeft);
-    layer->routingLabel->setInterceptsMouseClicks(false, false);
-    this->layerContent.addAndMakeVisible(*layer->routingLabel);
-
     this->updateSourceDisplay(layer);
-    this->updateRoutingDisplay(layer);
 
     // Tuning pot
     layer->tuningPot = std::make_unique<CompactParameterControl>("Tuning", -2400.0, 2400.0, 1.0, static_cast<double>(tuningCents));
     layer->tuningPot->setInteraction(0.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->tuningPot);
     layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->tuningPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    layer->tuningPot->onDragEnd = [this, layer] {
+        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
 
     // Attack pot
@@ -767,8 +711,8 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->attackPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->attackPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    layer->attackPot->onDragEnd = [this, layer] {
+        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
 
     // Decay pot
@@ -776,8 +720,8 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->decayPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->decayPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    layer->decayPot->onDragEnd = [this, layer] {
+        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
 
     // Gain pot (-60 to +12 dB)
@@ -789,8 +733,8 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->gainPot->setInteraction(0.0, 0.5, 0.1);
     this->layerContent.addAndMakeVisible(*layer->gainPot);
     layer->gainPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->gainPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    layer->gainPot->onDragEnd = [this, layer] {
+        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
 
     // Pan pot
@@ -802,8 +746,8 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     layer->panPot->setInteraction(0.0, 4.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->panPot);
     layer->panPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
-    layer->panPot->onDragEnd = [this] {
-        this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+    layer->panPot->onDragEnd = [this, layer] {
+        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
 
     // Flip L/R button (toggle)
@@ -833,9 +777,13 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
     // Remove button
     layer->removeButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x97")); // remove
     layer->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
-    layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
+    layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accent);
     layer->removeButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    layer->removeButton->getProperties().set("compactText", true);
+    layer->removeButton->setTooltip("Remove layer");
     this->layerContent.addAndMakeVisible(*layer->removeButton);
+    layer->sourceButton->onStateChange = [this] { this->updateRemoveButtonVisibility(); };
+    layer->removeButton->onStateChange = [this] { this->updateRemoveButtonVisibility(); };
     layer->removeButton->onClick = [this, layer] {
         juce::MessageManager::callAsync([this, layer] {
             this->layerRows.removeObject(layer);
@@ -847,15 +795,21 @@ void PadContextPopup::addLayerRow(const juce::String& sourceFullPath, int tuning
 }
 
 void PadContextPopup::updateRemoveButtonVisibility() {
-    bool showRemove = this->layerRows.size() > 1;
-    for (auto* layer : this->layerRows) layer->removeButton->setVisible(showRemove);
+    for (auto* layer : this->layerRows) {
+        int articulationLayerCount = 0;
+        for (const auto* candidate : this->layerRows)
+            if (candidate->artName == layer->artName) ++articulationLayerCount;
+        const bool canRemove = articulationLayerCount > 1;
+        layer->removeButton->setVisible(canRemove);
+        layer->removeButton->setAlpha(canRemove && (layer->sourceButton->isMouseOver() || layer->removeButton->isMouseOver()) ? 1.0f : 0.0f);
+    }
 }
 
 void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
     if (layer->selectedSourceIndex >= 0) {
         const auto& src = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
-        juce::String line1 = src.kitDisplayName + "  " + juce::String::charToString(0x25BC);
-        juce::String detail = line1 + "\n" + src.instCode;
+        const auto sourceArticulation = src.artCode.isNotEmpty() ? src.artCode : layer->artName;
+        const auto detail = src.kitDisplayName + "\n" + src.instCode + "\n" + sourceArticulation;
         layer->sourceDetailLabel->setText(detail, juce::dontSendNotification);
         layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
         layer->sourceButton->setTooltip(src.fullPath());
@@ -864,7 +818,7 @@ void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
         layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::accentWarning);
         layer->sourceButton->setTooltip(layer->sourcePathHint);
     } else {
-        layer->sourceDetailLabel->setText("Select source\n" + juce::String::charToString(0x25BC), juce::dontSendNotification);
+        layer->sourceDetailLabel->setText("Select source", juce::dontSendNotification);
         layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
         layer->sourceButton->setTooltip({});
     }
@@ -878,6 +832,7 @@ int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
     int mappedLayerIndex = 0;
     for (int idx = 0; idx < this->layerRows.size(); ++idx) {
         const auto* currentLayer = this->layerRows[idx];
+        if (currentLayer->artName != layer->artName) continue;
         if (currentLayer->selectedSourceIndex < 0) continue;
         if (currentLayer == layer) return mappedLayerIndex;
         ++mappedLayerIndex;
@@ -895,6 +850,8 @@ int PadContextPopup::getSourceOccurrenceIndex(const LayerRow* layer) const {
     for (int idx = 0; idx < this->layerRows.size(); ++idx) {
         const auto* currentLayer = this->layerRows[idx];
         if (currentLayer == nullptr || currentLayer->selectedSourceIndex < 0)
+            continue;
+        if (currentLayer->artName != layer->artName)
             continue;
 
         const auto& current = this->sourceItems[static_cast<size_t>(currentLayer->selectedSourceIndex)].fullPath();
@@ -952,7 +909,7 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
         bleedParts.add(micCode + ":" + juce::String(update.micBleedLevels->at(micCode), 3));
 
     this->engine.logMessage("Pad popup: slot=" + this->slotId
-        + " art=" + this->artName
+        + " art=" + layer->artName
         + " layer=" + juce::String(layerIndex + 1)
         + " source=" + sourceText
         + " tuning=" + juce::String(*update.tuningCents)
@@ -963,92 +920,54 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
         + " flipLR=" + juce::String(*update.flipLR ? "1" : "0")
         + " flipPhase=" + juce::String(*update.flipPhase ? "1" : "0")
         + " bleed=[" + bleedParts.joinIntoString(",") + "]", DebugLevel::Debug);
-    this->engine.updateSlotParameters(this->slotId, this->artName, layerIndex, update);
+    this->engine.updateSlotParameters(this->slotId, layer->artName, layerIndex, update);
     this->mapTextDirty = true;
 }
-// Generate map text: rebuilds the full instrument map, replacing only this slot/art group
+// Generate map text: rebuilds this slot while preserving every other slot.
 
 juce::String PadContextPopup::generateFullMapText() const {
-    // Start with current map, remove lines for this slot/art, then append our layers
     auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
-    juce::StringArray existingLines;
-    existingLines.addTokens(currentMapText, "\n", "");
+    auto parseResult = DrumKitEngine::parseInstrumentMapText(currentMapText);
+    if (!parseResult.ok()) return currentMapText;
 
-    juce::StringArray result;
-    juce::String slotArtPrefix1 = this->slotId + "/" + this->artName + ":";
-    juce::String slotArtPrefix2 = this->slotId + ":";
+    auto& entries = parseResult.value.entries;
+    entries.erase(std::remove_if(entries.begin(), entries.end(), [this](const DrumKitEngine::InstrumentMapEntry& entry) { return entry.slotId.compareIgnoreCase(this->slotId) == 0; }), entries.end());
 
-    for (const auto& line : existingLines) {
-        auto trimmed = line.trim();
-        if (trimmed.isEmpty()) continue;
-
-        // Remove lines matching this slot/art
-        if (trimmed.startsWithIgnoreCase(slotArtPrefix1)) continue;
-        // For (default) articulation or unfiltered entries: remove if matches slot
-        if (this->artName == "(default)" && trimmed.startsWith(slotArtPrefix2) && !trimmed.substring(slotArtPrefix2.length()).contains("/")) continue;
-        // Also remove lines that match this slot with exact art filter
-        // Parse the slot part to check
-        auto colonPos = trimmed.indexOf(":");
-        if (colonPos > 0) {
-            auto slotPart = trimmed.substring(0, colonPos);
-            auto slashPos = slotPart.indexOf("/");
-            if (slashPos > 0) {
-                auto lineSlotId = slotPart.substring(0, slashPos);
-                auto lineArt = slotPart.substring(slashPos + 1);
-                if (lineSlotId == this->slotId && ArticulationNameHelpers::mapFilterMatchesArticulation(lineArt, this->artName)) continue;
-            }
-        }
-        result.add(trimmed);
-    }
-
-    // Now add our layers
     for (const auto* layer : this->layerRows) {
         if (layer->selectedSourceIndex < 0) continue;
 
         const auto& srcItem = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
-        juce::String slotRef = this->slotId;
-        if (this->artName != "(default)") slotRef += "/" + this->artName;
+        DrumKitEngine::InstrumentMapEntry entry;
+        entry.slotId = this->slotId;
+        if (layer->artName != "(default)") entry.slotArticulationFilter.push_back(layer->artName);
+        entry.kitRef = srcItem.kitCodeRaw;
+        entry.instCode = srcItem.instCode;
+        if (srcItem.artCode.isNotEmpty()) entry.articulationFilter.push_back(srcItem.artCode);
 
-        juce::String targetRef = srcItem.kitCodeRaw;
-        if (srcItem.instCode.isNotEmpty()) targetRef += "/" + srcItem.instCode;
-        if (srcItem.artCode.isNotEmpty()) targetRef += "/" + srcItem.artCode;
+        const int tuning = static_cast<int>(layer->tuningPot->getValue());
+        if (tuning != 0) entry.tuningCents = tuning;
+        const int attack = static_cast<int>(layer->attackPot->getValue());
+        if (attack >= 0) entry.attackTimeMs = attack;
+        const int decay = static_cast<int>(layer->decayPot->getValue());
+        if (decay >= 0) entry.decayTimeMs = decay;
+        const float volume = static_cast<float>(layer->gainPot->getValue());
+        if (std::abs(volume) > 0.01f) entry.volumeDb = volume;
+        const int pan = static_cast<int>(layer->panPot->getValue());
+        if (pan != 0) entry.pan = pan;
+        entry.flipLR = layer->flipLRButton->getToggleState();
+        entry.flipLRExplicit = entry.flipLR || layer->flipLRExplicit;
+        entry.flipPhase = layer->flipPhaseButton->getToggleState();
 
-        juce::StringArray params;
-        int tuning = static_cast<int>(layer->tuningPot->getValue());
-        if (tuning != 0) params.add("tuning=" + juce::String(tuning));
-        double attackVal = layer->attackPot->getValue();
-        if (attackVal >= 0.0) params.add("attack=" + juce::String(static_cast<int>(attackVal)));
-        double decayVal = layer->decayPot->getValue();
-        if (decayVal >= 0.0) params.add("decay=" + juce::String(static_cast<int>(decayVal)));
-        double volVal = layer->gainPot->getValue();
-        if (std::abs(volVal) > 0.01) params.add("vol=" + juce::String(volVal, 1));
-        int panValue = static_cast<int>(layer->panPot->getValue());
-        if (panValue != 0) params.add("pan=" + juce::String(panValue));
-        if (layer->flipLRButton->getToggleState() || layer->flipLRExplicit)
-            params.add("flipLR=" + juce::String(layer->flipLRButton->getToggleState() ? "1" : "0"));
-        if (layer->flipPhaseButton->getToggleState()) params.add("flipPhase=1");
-
-        // Bleed levels: only emit non-default values (< 100)
-        juce::StringArray bleedParts;
         for (const auto& bleedCtrl : layer->micBleeds) {
-            double bleedVal = bleedCtrl->bleedPot->getValue() / 100.0;
-            if (bleedVal < 0.99) bleedParts.add(bleedCtrl->micCode + ":" + juce::String(bleedVal, 2));
+            if (bleedCtrl == nullptr || bleedCtrl->micCode.isEmpty()) continue;
+            const float bleed = static_cast<float>(bleedCtrl->bleedPot->getValue() / 100.0);
+            if (bleed < 0.99f) entry.micBleedLevels[bleedCtrl->micCode] = bleed;
+            if (bleedCtrl->routeOutputMicCode.isNotEmpty()) entry.micRouteOverrides[bleedCtrl->micCode] = bleedCtrl->routeOutputMicCode;
         }
-        if (!bleedParts.isEmpty()) params.add("bleed=" + bleedParts.joinIntoString(","));
-
-        juce::StringArray routeParts;
-        for (const auto& bleedCtrl : layer->micBleeds) {
-            if (bleedCtrl == nullptr || bleedCtrl->micCode.isEmpty() || bleedCtrl->routeOutputMicCode.isEmpty()) continue;
-            routeParts.add(bleedCtrl->micCode + ":" + bleedCtrl->routeOutputMicCode);
-        }
-        if (!routeParts.isEmpty()) params.add("micRoute=" + routeParts.joinIntoString(","));
-
-        juce::String line = slotRef + ":" + targetRef;
-        if (!params.isEmpty()) line += ":" + params.joinIntoString(";");
-        result.add(line);
+        entries.push_back(std::move(entry));
     }
 
-    return this->engine.normalizeInstrumentMapText(result.joinIntoString("\n"));
+    return this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(parseResult.value));
 }
 
 void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl) {
@@ -1066,12 +985,12 @@ void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBlee
 
     const int layerIndex = layer->mappedLayerIndex >= 0 ? layer->mappedLayerIndex : this->getLayerIndex(layer);
     this->engine.logMessage("Pad popup route: slot=" + this->slotId
-        + " art=" + this->artName
+        + " art=" + layer->artName
         + " layer=" + juce::String(layerIndex + 1)
         + " sourceMic=" + bleedCtrl->micCode
         + " old=" + (oldRoute.isNotEmpty() ? oldRoute : juce::String("auto"))
         + " new=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")), DebugLevel::Debug);
-    this->engine.logMessage("Instrument map apply: changed slot=" + this->slotId + " art=" + this->artName + " reason=pad-popup route", DebugLevel::Debug);
+    this->engine.logMessage("Instrument map apply: changed slot=" + this->slotId + " art=" + layer->artName + " reason=pad-popup route", DebugLevel::Debug);
     this->applyToEngine();
 }
 
@@ -1088,15 +1007,17 @@ void PadContextPopup::applyToEngine() {
 }
 
 void PadContextPopup::refreshLayerMappings() {
-    int mappedLayerIndex = 0;
-    for (auto* layer : this->layerRows) {
-        if (layer == nullptr) continue;
-        if (layer->selectedSourceIndex < 0) {
-            layer->mappedLayerIndex = -1;
-            continue;
+    for (const auto* group : this->articulationGroups) {
+        int mappedLayerIndex = 0;
+        for (auto* layer : this->layerRows) {
+            if (layer == nullptr || layer->artName != group->artName) continue;
+            if (layer->selectedSourceIndex < 0) {
+                layer->mappedLayerIndex = -1;
+                continue;
+            }
+            layer->mappedLayerIndex = mappedLayerIndex;
+            ++mappedLayerIndex;
         }
-        layer->mappedLayerIndex = mappedLayerIndex;
-        ++mappedLayerIndex;
     }
 }
 
@@ -1117,40 +1038,62 @@ void PadContextPopup::flushMapText() {
 void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->dismissSourcePicker();
 
-    auto pickerPopup = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
-    pickerPopup->setFilterType(this->slotType);
-    pickerPopup->setSize(juce::jlimit(240, 420, getWidth() - 16), 240);
+    this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
+    this->activePicker->setFilterType(this->slotType);
 
-    pickerPopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
+    const auto sourceBounds = this->getLocalArea(layer->sourceButton.get(), layer->sourceButton->getLocalBounds());
+    const int maxPopupWidth = juce::jmax(300, this->getWidth() - 8);
+    const int popupWidth = juce::jmin(maxPopupWidth, juce::jmax(460, sourceBounds.getWidth() + 160));
+    const int popupHeight = 280;
+    int popupX = sourceBounds.getX();
+    int popupY = sourceBounds.getBottom();
+
+    if (popupY + popupHeight > this->getHeight()) popupY = sourceBounds.getY() - popupHeight;
+    if (popupX + popupWidth > this->getWidth()) popupX = this->getWidth() - popupWidth;
+
+    this->activePicker->setBounds(popupX, popupY, popupWidth, popupHeight);
+
+    this->activePicker->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
         const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
         this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
     };
 
-    pickerPopup->onItemSelected = [this, layer](int sourceIndex) {
+    this->activePicker->onItemSelected = [this, layer](int sourceIndex) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
         const auto& selectedItem = this->sourceItems[static_cast<size_t>(sourceIndex)];
         layer->selectedSourceIndex = sourceIndex;
         layer->sourcePathHint = selectedItem.fullPath();
         this->updateSourceDisplay(layer);
-        this->updateRoutingDisplay(layer);
         this->rebuildBleedControls(layer);
         this->resized();
-        juce::MessageManager::callAsync([this] {
+        juce::MessageManager::callAsync([this, layer] {
             this->dismissSourcePicker();
             this->applyToEngine();
-            this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+            this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
         });
     };
 
-    auto& pickerCallout = juce::CallOutBox::launchAsynchronously(std::move(pickerPopup), layer->sourceButton->getScreenBounds(), nullptr);
-    this->activePickerCallout = &pickerCallout;
+    this->pickerOverlay = std::make_unique<DismissOverlay>();
+    this->pickerOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    };
+    this->pickerOverlay->setBounds(this->getLocalBounds());
+    this->addAndMakeVisible(*this->pickerOverlay);
+    this->pickerOverlay->toFront(false);
+
+    this->addAndMakeVisible(*this->activePicker);
+    this->activePicker->toFront(true);
 }
 
 void PadContextPopup::dismissSourcePicker() {
-    if (this->activePickerCallout != nullptr) {
-        this->activePickerCallout->exitModalState(0);
-        this->activePickerCallout = nullptr;
+    if (this->pickerOverlay) {
+        this->removeChildComponent(this->pickerOverlay.get());
+        this->pickerOverlay.reset();
+    }
+    if (this->activePicker) {
+        this->removeChildComponent(this->activePicker.get());
+        this->activePicker.reset();
     }
 }
 
@@ -1177,11 +1120,8 @@ void PadContextPopup::paint(juce::Graphics& g) {
 void PadContextPopup::resized() {
     auto area = getLocalBounds().reduced(8);
 
-    // Header row: "Kick / center" | MIDI controls | [+ Layer]
+    // Header row: "Kick" | MIDI controls
     auto headerRow = area.removeFromTop(24);
-    const int addLayerBtnW = 60;
-    this->addLayerButton.setBounds(headerRow.removeFromRight(addLayerBtnW).reduced(0, 2));
-    headerRow.removeFromRight(8);
 
     // MIDI: right-aligned in header
     const int midiControlW = this->midiAssignmentControl ? this->midiAssignmentControl->getPreferredWidth() : 0;
@@ -1197,74 +1137,89 @@ void PadContextPopup::resized() {
     this->layerViewport.setBounds(area);
 
     // Layer rows - single row per layer (compact parameter controls):
-    // [Remove] [Source Card] | [Tuning|Attack|Decay|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
+    // [Source Card with hover delete] | [Tuning|Attack|Decay|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
     const int potW = 44;
-    const int potH = 44;
+    const int potH = 36;
     const int flipColW = 26;
-    const int removeW = 16;
-    const int sourceW = 170;
+    const int sourceW = UITheme::Sizes::sourceCardWidth;
     const int routingComboH = 14;
     const int bleedControlH = potH + routingComboH + 2;
-    const int layerRowH = juce::jmax(potH, bleedControlH) + 8;
+    const int layerRowH = juce::jmax(potH, bleedControlH) + 4;
+    const int layerGap = 2;
     const int bleedPotW = 50;
     const int groupGap = 6;
     const int groupPad = 4;
+    const int articulationHeaderH = UITheme::Spacing::rowNormal;
+    const int compactButtonSize = UITheme::Sizes::compactButton;
+    const int rightPadding = UITheme::Spacing::sm;
 
-    const int contentHeight = static_cast<int>(this->layerRows.size()) * (layerRowH + 2);
-    this->layerContent.setSize(area.getWidth() - (this->layerViewport.isVerticalScrollBarShown() ? this->layerViewport.getScrollBarThickness() : 0), juce::jmax(area.getHeight(), contentHeight));
+    const int contentHeight = this->articulationGroups.size() * articulationHeaderH + this->layerRows.size() * (layerRowH + layerGap);
+    const bool needsVerticalScrollbar = contentHeight > area.getHeight();
+    const int scrollbarWidth = needsVerticalScrollbar ? this->layerViewport.getScrollBarThickness() : 0;
+    const int contentWidth = juce::jmax(0, area.getWidth() - scrollbarWidth - rightPadding);
+    this->layerViewport.setScrollBarsShown(needsVerticalScrollbar, false);
+    this->layerContent.setSize(contentWidth, juce::jmax(area.getHeight(), contentHeight));
 
     auto contentArea = this->layerContent.getLocalBounds();
-    for (auto* layer : this->layerRows) {
-        auto layerArea = contentArea.removeFromTop(layerRowH);
-        auto rowArea = layerArea.reduced(0, 4);
+    for (auto* group : this->articulationGroups) {
+        auto articulationHeaderArea = contentArea.removeFromTop(articulationHeaderH);
+        auto addLayerButtonArea = articulationHeaderArea.removeFromRight(compactButtonSize);
+        group->addLayerButton.setBounds(addLayerButtonArea.withSizeKeepingCentre(compactButtonSize, compactButtonSize));
+        articulationHeaderArea.removeFromRight(UITheme::Spacing::sm);
+        group->label.setBounds(articulationHeaderArea);
 
-        // Remove button on far left, vertically centered
-        if (layer->removeButton->isVisible()) layer->removeButton->setBounds(rowArea.removeFromLeft(removeW).withSizeKeepingCentre(14, 14));
+        for (auto* layer : this->layerRows) {
+            if (layer->artName != group->artName) continue;
 
-        // Source card
-        auto srcArea = rowArea.removeFromLeft(sourceW);
-        layer->sourceButton->setBounds(srcArea);
-        auto sourceInner = srcArea.reduced(6, 4);
-        auto routingArea = sourceInner.removeFromBottom(14);
-        layer->sourceDetailLabel->setBounds(sourceInner);
-        if (layer->routingLabel != nullptr)
-            layer->routingLabel->setBounds(routingArea);
+            auto layerArea = contentArea.removeFromTop(layerRowH);
+            auto rowArea = layerArea.reduced(0, 2);
 
-        rowArea.removeFromLeft(groupGap);
+            // Source card
+            auto srcArea = rowArea.removeFromLeft(sourceW);
+            layer->sourceButton->setBounds(srcArea);
+            auto sourceInner = srcArea.reduced(6, 2).withTrimmedRight(compactButtonSize + UITheme::Spacing::sm);
+            layer->sourceDetailLabel->setBounds(sourceInner);
+            auto removeButtonArea = srcArea.reduced(UITheme::Spacing::xs);
+            auto removeButtonRow = removeButtonArea.removeFromBottom(compactButtonSize);
+            layer->removeButton->setBounds(removeButtonRow.removeFromRight(compactButtonSize));
 
-        // Main params group: Tuning, Attack, Decay, Gain, Pan + L/R, phase
-        const int mainGroupW = potW * 5 + flipColW + groupPad * 2;
-        auto mainGroupArea = rowArea.removeFromLeft(mainGroupW);
-        layer->mainGroupBounds = mainGroupArea;
-        auto mainInner = mainGroupArea.reduced(groupPad, 0);
-        layer->tuningPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-        layer->attackPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-        layer->decayPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-        layer->gainPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-        layer->panPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-        auto flipArea = mainInner.removeFromLeft(flipColW).withHeight(potH);
-        layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 4));
-        layer->flipPhaseButton->setBounds(flipArea.reduced(2, 4));
+            rowArea.removeFromLeft(groupGap);
 
-        rowArea.removeFromLeft(groupGap);
+            // Main params group: Tuning, Attack, Decay, Gain, Pan + L/R, phase
+            const int mainGroupW = potW * 5 + flipColW + groupPad * 2;
+            auto mainGroupArea = rowArea.removeFromLeft(mainGroupW);
+            layer->mainGroupBounds = mainGroupArea;
+            auto mainInner = mainGroupArea.reduced(groupPad, 0);
+            layer->tuningPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+            layer->attackPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+            layer->decayPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+            layer->gainPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+            layer->panPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
+            auto flipArea = mainInner.removeFromLeft(flipColW).withHeight(potH);
+            layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 4));
+            layer->flipPhaseButton->setBounds(flipArea.reduced(2, 4));
 
-        // Bleed group
-        const int numBleeds = static_cast<int>(layer->micBleeds.size());
-        if (numBleeds > 0) {
-            const int bleedGroupW = juce::jmin(rowArea.getWidth(), numBleeds * bleedPotW + groupPad * 2);
-            auto bleedGroupArea = rowArea.removeFromLeft(bleedGroupW);
-            layer->bleedGroupBounds = bleedGroupArea;
-            auto bleedInner = bleedGroupArea.reduced(groupPad, 0);
-            const int actualBleedW = bleedInner.getWidth() / numBleeds;
-            for (auto& bleedCtrl : layer->micBleeds) {
-                auto bleedArea = bleedInner.removeFromLeft(actualBleedW);
-                bleedCtrl->bleedPot->setBounds(bleedArea.removeFromTop(potH).withHeight(potH));
-                if (bleedCtrl->routingCombo != nullptr) bleedCtrl->routingCombo->setBounds(bleedArea.removeFromTop(routingComboH).reduced(1, 0));
+            rowArea.removeFromLeft(groupGap);
+
+            // Bleed group
+            const int numBleeds = static_cast<int>(layer->micBleeds.size());
+            if (numBleeds > 0) {
+                const int bleedGroupW = juce::jmin(rowArea.getWidth(), numBleeds * bleedPotW + groupPad * 2);
+                auto bleedGroupArea = rowArea.removeFromLeft(bleedGroupW);
+                layer->bleedGroupBounds = bleedGroupArea;
+                auto bleedInner = bleedGroupArea.reduced(groupPad, 0);
+                const int actualBleedW = bleedInner.getWidth() / numBleeds;
+                for (auto& bleedCtrl : layer->micBleeds) {
+                    auto bleedArea = bleedInner.removeFromLeft(actualBleedW);
+                    bleedCtrl->bleedPot->setBounds(bleedArea.removeFromTop(potH).withHeight(potH));
+                    if (bleedCtrl->routingCombo != nullptr) bleedCtrl->routingCombo->setBounds(bleedArea.removeFromTop(routingComboH).reduced(1, 0));
+                }
+            } else {
+                layer->bleedGroupBounds = {};
             }
-        } else {
-            layer->bleedGroupBounds = {};
-        }
 
-        contentArea.removeFromTop(2); // gap between layers
+            contentArea.removeFromTop(layerGap);
+        }
     }
+    this->layerContent.repaint();
 }

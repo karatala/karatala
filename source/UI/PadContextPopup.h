@@ -4,6 +4,7 @@
 #include "../Engine/DrumKitEngine.h"
 #include "SourceItem.h"
 #include "SourcePickerPopup.h"
+#include "DismissOverlay.h"
 #include "MidiNoteAssignmentControl.h"
 #include "CompactParameterControl.h"
 
@@ -15,7 +16,6 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     void flushMapText();
-    juce::Rectangle<int> getPreferredBounds(const juce::Rectangle<int>& availableBounds) const;
     void setPreviewVelocityProvider(std::function<int()> provider) { this->previewVelocityProvider = std::move(provider); }
 
     std::function<void()> onDismiss;
@@ -44,7 +44,6 @@ private:
     // ─── MIDI map (inline in header) ───
     juce::Label     midiHeaderLabel;
     std::unique_ptr<MidiNoteAssignmentControl> midiAssignmentControl;
-    juce::TextButton addLayerButton { "+ Layer" };
     KitLayout::MidiNotes* midiNotesPtr = nullptr;
     KitLayout::MidiNotes midiNotesOwned;
     int selectedArticulationIndex = -1;
@@ -67,13 +66,18 @@ private:
         bool hasProblem = false;
         bool isCurrent = false;
     };
+    struct ArticulationGroup {
+        juce::String artName;
+        juce::Label label;
+        juce::TextButton addLayerButton { "+" };
+    };
     struct LayerRow {
+        juce::String artName;
         juce::String sourcePathHint;
         int selectedSourceIndex = -1;
         int mappedLayerIndex = -1;
         std::unique_ptr<juce::TextButton> sourceButton;
-        std::unique_ptr<juce::Label> sourceDetailLabel; // kit/inst multiline
-        std::unique_ptr<juce::Label> routingLabel;
+        std::unique_ptr<juce::Label> sourceDetailLabel;
         std::unique_ptr<CompactParameterControl> tuningPot;
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
@@ -97,9 +101,11 @@ private:
         juce::Rectangle<int> mainGroupBounds;
         juce::Rectangle<int> bleedGroupBounds;
     };
+    juce::OwnedArray<ArticulationGroup> articulationGroups;
     juce::OwnedArray<LayerRow> layerRows;
 
-    void addLayerRow(const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+    void addArticulationGroup(const juce::String& articulationName);
+    void addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
                      float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
                      const std::unordered_map<juce::String, float>& micBleedLevels,
                      const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
@@ -126,10 +132,10 @@ private:
     MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode) const;
     std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode) const;
     void updateRoutingComboDisplay(LayerRow::MicBleedControl& bleedCtrl) const;
-    void updateRoutingDisplay(LayerRow* layer);
     bool mapTextDirty = false;
 
-    juce::Component::SafePointer<juce::CallOutBox> activePickerCallout;
+    std::unique_ptr<DismissOverlay> pickerOverlay;
+    std::unique_ptr<SourcePickerPopup> activePicker;
 
     // ─── Scrollable layer area ───
     struct LayerContentComponent : public juce::Component {
