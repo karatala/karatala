@@ -8,18 +8,18 @@
 namespace DrumKitEngineMapHelpers {
 namespace Detail {
 
-int balanceSide(const std::optional<int>& balance) {
+static int balanceSide(const std::optional<int>& balance) {
     if (!balance.has_value() || *balance == 0) return 0;
     return *balance < 0 ? -1 : 1;
 }
 
-const KitLayout::InstrumentSlot* findLayoutSlot(const KitLayout& layout, const juce::String& slotId) {
+static const KitLayout::InstrumentSlot* findLayoutSlot(const KitLayout& layout, const juce::String& slotId) {
     for (const auto& slot : layout.instrumentSlots)
         if (slot.id == slotId) return &slot;
     return nullptr;
 }
 
-std::vector<const KitLib::ArticulationSpec*> collectOrientationArticulations(
+static std::vector<const KitLib::ArticulationSpec*> collectOrientationArticulations(
     const KitLib::InstrumentSpec& instrumentSpec,
     const DrumKitEngine::InstrumentMapEntry& entry) {
     std::vector<const KitLib::ArticulationSpec*> result;
@@ -49,7 +49,7 @@ std::vector<const KitLib::ArticulationSpec*> collectOrientationArticulations(
     return result;
 }
 
-std::optional<bool> inferAutomaticFlipLR(
+static std::optional<bool> inferAutomaticFlipLR(
     const KitLayout::InstrumentSlot& slot,
     const KitLib::InstrumentSpec& instrumentSpec,
     const DrumKitEngine::InstrumentMapEntry& entry) {
@@ -74,7 +74,7 @@ std::optional<bool> inferAutomaticFlipLR(
     return *sourceSide != slotSide;
 }
 
-void copySynthOverrides(InstrumentSynth& target, const InstrumentSynth& source) {
+static void copySynthOverrides(InstrumentSynth& target, const InstrumentSynth& source) {
     target.setTuningOffsetCents(source.getTuningOffsetCents());
 
     const auto attackOverride = source.getAttackOverrideMs();
@@ -90,13 +90,13 @@ void copySynthOverrides(InstrumentSynth& target, const InstrumentSynth& source) 
     target.setMicBleedLevels(source.getMicBleedLevels());
 }
 
-void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int samplesPerBlock) {
+static void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int samplesPerBlock) {
     if (sampleRate <= 0.0 || samplesPerBlock <= 0) return;
     synth.setCurrentPlaybackSampleRate(sampleRate);
     synth.prepareToPlay(sampleRate, samplesPerBlock);
 }
 
-juce::String joinValues(const std::vector<juce::String>& values) {
+static juce::String joinValues(const std::vector<juce::String>& values) {
     juce::String out;
     for (size_t idx = 0; idx < values.size(); ++idx) {
         if (idx > 0) out += ",";
@@ -105,7 +105,7 @@ juce::String joinValues(const std::vector<juce::String>& values) {
     return out;
 }
 
-juce::String joinBleedValues(const std::unordered_map<juce::String, float>& values) { //FIXME: why this instead of some generic join?
+static juce::String joinBleedValues(const std::unordered_map<juce::String, float>& values) { //FIXME: why this instead of some generic join?
     std::vector<juce::String> keys;
     keys.reserve(values.size());
     for (const auto& [key, value] : values) {
@@ -126,7 +126,7 @@ juce::String joinBleedValues(const std::unordered_map<juce::String, float>& valu
     return out;
 }
 
-juce::String joinRouteValues(const std::unordered_map<juce::String, juce::String>& values) { //FIXME: why this instead of some generic join?
+static juce::String joinRouteValues(const std::unordered_map<juce::String, juce::String>& values) { //FIXME: why this instead of some generic join?
     std::vector<juce::String> keys;
     keys.reserve(values.size());
     for (const auto& [key, value] : values) {

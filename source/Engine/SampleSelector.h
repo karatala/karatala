@@ -35,12 +35,12 @@ public:
         uint8_t max;
     };
 
-    explicit SampleSelector(const std::vector<Sample>& samples, ZoneSplitStrategy strategy = ZoneSplitStrategy::Boundary)
-        : strategy(strategy)
+    explicit SampleSelector(const std::vector<Sample>& samples, ZoneSplitStrategy splitStrategy = ZoneSplitStrategy::Boundary)
+        : strategy(splitStrategy)
     {
         this->validateSamples(samples);
         this->ownedSamples = samples;
-        this->root = buildTree(this->ownedSamples, strategy);
+        this->root = buildTree(this->ownedSamples, splitStrategy);
     }
 
     const ZoneNode* findZone(const std::array<uint8_t, N>& values) const { return this->findZoneRecursive(this->root, values); }

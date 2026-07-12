@@ -128,6 +128,8 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
 
         const auto state = voice->getEnvelopeState();
         switch (state) {
+            case InstrumentSynthVoice::EnvelopeState::Idle:
+                break;
             case InstrumentSynthVoice::EnvelopeState::Dying:
                 if (oldestDying == nullptr || voice->wasStartedBefore(*oldestDying))
                     oldestDying = voice;
@@ -165,8 +167,6 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
                 }
                 break;
             }
-            default:
-                break;
         }
     }
 

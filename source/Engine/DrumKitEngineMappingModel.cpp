@@ -6,7 +6,7 @@ struct ParsedSlotRef {
     juce::String slotId;
     std::vector<juce::String> articulations;
 };
-std::vector<juce::String> parseDelimitedNames(const juce::String& text) {//TODO: doxygen document what doing with example
+static std::vector<juce::String> parseDelimitedNames(const juce::String& text) {//TODO: doxygen document what doing with example
     std::vector<juce::String> result;
     juce::StringArray parts;
     parts.addTokens(text, ",", "");
@@ -15,7 +15,7 @@ std::vector<juce::String> parseDelimitedNames(const juce::String& text) {//TODO:
     return result;
 }
 
-ParsedSlotRef parseSlotRef(const juce::String& text) {//TODO: doxygen document what doing with example
+static ParsedSlotRef parseSlotRef(const juce::String& text) {//TODO: doxygen document what doing with example
     ParsedSlotRef result;
     const auto trimmed = text.trim();
     const int slashIdx = trimmed.indexOfChar('/');
@@ -36,7 +36,7 @@ struct ParsedTargetRef {
     std::vector<juce::String> articulations;
 };
 
-ParsedTargetRef parseTargetRef(const juce::String& text) {//TODO: doxygen document what doing with example
+static ParsedTargetRef parseTargetRef(const juce::String& text) {//TODO: doxygen document what doing with example
     ParsedTargetRef result;
     const auto trimmed = text.trim();
     const int firstSlashIdx = trimmed.indexOfChar('/');
@@ -58,7 +58,7 @@ ParsedTargetRef parseTargetRef(const juce::String& text) {//TODO: doxygen docume
     return result;
 }
 
-int findNextParamBoundary(const juce::String& text, int startIndex) {
+static int findNextParamBoundary(const juce::String& text, int startIndex) {
     for (int idx = startIndex; idx < text.length(); ++idx)
         if (text[idx] == ';') return idx;
     return -1;

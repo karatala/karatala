@@ -602,7 +602,7 @@ private:
     // Flat map for O(1) articulation-index lookup by (nameId<<32|exprId) key - rebuilt after every load
     std::unordered_map<uint64_t, int> artIdByNameExprId;
     
-    std::unordered_map<int8_t, std::vector<uint8_t>> noteToControllers;
+    std::unordered_map<uint8_t, std::vector<uint8_t>> noteToControllers;
     // Flat lookup table for CC -> articulation mapping (replaces unordered_map for cache locality)
     // ccToArticulationMask[cc] = true if CC number has an articulation mapping
     std::array<bool, 128> ccToArticulationMask {};

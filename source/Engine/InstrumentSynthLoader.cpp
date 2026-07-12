@@ -667,7 +667,7 @@ void InstrumentSynth::buildCcMappings(const LayoutArticulation& layoutArt, KitLi
     for (const auto& cc : this->instrumentSlot.controllers) {
         for (uint8_t note : cc.notes) {
             const auto ccNum = static_cast<uint8_t>(cc.number);
-            auto& vec = this->noteToControllers[static_cast<int8_t>(note)];
+            auto& vec = this->noteToControllers[note];
             if (!vectorContains(vec, ccNum))
                 vec.emplace_back(ccNum);
         }
