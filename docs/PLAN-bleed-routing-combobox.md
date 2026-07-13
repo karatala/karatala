@@ -2,11 +2,7 @@
 
 ## Goal
 
-Make the bleed routing combobox do real work.
-
-Today the combobox mostly shows possible routing choices. Changing it updates the visual state, but it does not change the instrument map and does not change the loaded sample output route.
-
-The goal is:
+The bleed routing combobox now changes and saves the loaded sample output route.
 
 - Bleed level knob stays live and cheap.
 - Routing combobox becomes a saved instrument-map setting.
@@ -21,30 +17,22 @@ Current bleed level setting:
 kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8
 ```
 
-Proposed routing override:
+Routing override:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:room
+kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:dtm@25
 ```
 
 Meaning:
 
 - `bleed=dtm:0.5` means source/output mic `dtm` plays at 50 percent.
 - `bleed=room:0.8` means `room` plays at 80 percent.
-- `micRoute=dtm:room` means source mic `dtm` should be written to output mic `room`.
+- `micRoute=dtm:dtm@25` means source mic `dtm` should be written to the `dtm` output beginning at host channel 25.
 
 Why semicolon:
 
 - `bleed=` already uses commas inside its value.
 - `;micRoute=...` makes the next top-level param clear.
-
-If we choose the shorter name, the same idea is:
-
-```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;route=dtm:room
-```
-
-Recommendation: use `micRoute=` because `route=` is broad and could conflict with future map features.
 
 ## Current Facts
 
@@ -61,24 +49,24 @@ Recommendation: use `micRoute=` because `route=` is broad and could conflict wit
 Add a new param:
 
 ```text
-micRoute=sourceMic:outputMic,sourceMic:outputMic
+micRoute=sourceMic:outputRouteId,sourceMic:outputRouteId
 ```
 
 Rules:
 
 - `sourceMic` is the library/sample mic code before routing.
-- `outputMic` is the active mic-layout output code.
+- `outputRouteId` is `micCode@firstHostChannel`, for example `dtm@7` or `dtm@25`.
 - Missing entry means automatic routing.
 - Output `-` means the source mic is unassigned.
-- Unknown `outputMic` should warn and use automatic routing.
+- Unknown `outputRouteId` should warn and use automatic routing.
 - Unknown `sourceMic` should warn only when a sample actually tries to use it, or should be ignored during apply if no matching source mic exists.
 - Serializer should write route pairs in stable sorted order.
 
 Parser examples:
 
 ```text
-kick1:MyKit/kick-24:micRoute=dtm:room
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:room,dsm:oh
+kick1:MyKit/kick-24:micRoute=dtm:dtm@25
+kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:dtm@25,dsm:dts@29
 ```
 
 ## Engine Support
@@ -95,7 +83,7 @@ Update:
 
 - `DrumKitEngineMappingModel::parseInstrumentMapText()`
   - Add `micRoute` to `knownKeys`.
-  - Parse `sourceMic:outputMic` pairs.
+  - Parse `sourceMic:outputRouteId` pairs.
   - Store normalized trimmed keys and values.
 - `DrumKitEngine::serializeInstrumentMap()`
   - Serialize `micRoute=` after `bleed=`.
@@ -127,11 +115,12 @@ Apply from map entries:
 - Primary synth gets the primary entry's route overrides.
 - Shadow synth gets its own entry's route overrides.
 - Pad popup route changes update loaded sample assignments in place. Raw map route changes remain reload changes.
-- Repeated output codes are resolved by the current slot's instrument selector before pooled outputs.
+- Repeated output codes stay as separate destinations through their unique route IDs.
 - Full map loading checks the original source mic code first, then the source mic's resolved output-layout alias.
-- Source variants such as `dtm1` and `dtm2` use separate popup controls and routes.
+- Source variants such as `dtm1` and `dtm2` are retained by library loading and use separate popup controls and routes.
 - A variant-free output such as `dtm` may receive either variant. A variant-specific output only receives its matching variant.
 - The popup shows the resolved destination as the default choice instead of adding a separate `Auto` item. Selecting the default destination clears the explicit override.
+- Output names remain the visible labels. Saved values use unique route IDs, so `Snr1 Top`, `Aux1`, `Aux2`, `Aux3`, and `Aux4` can all appear even when each output code is `dtm`.
 
 ### 3. Use Override In MicRoutingBuilder
 
@@ -146,8 +135,8 @@ In `MicRoutingBuilder::resolve()`:
 Example log:
 
 ```text
-Mic route override: slot=kick1 source=dtm output=room hostStart=8 channels=2
-Mic route override ignored: slot=kick1 source=dtm output=badRoom reason=output not found
+Mic route override: slot=kick1 source=dtm target=dtm@25 hostStart=24 channels=1
+Mic route override ignored: slot=kick1 source=dtm target=dtm@99 reason=output not found
 ```
 
 ## Pad Popup Behavior
@@ -157,17 +146,17 @@ Mic route override ignored: slot=kick1 source=dtm output=badRoom reason=output n
 Extend `LayerRow::MicBleedControl` with selected route state:
 
 ```cpp
-juce::String selectedOutputMicCode;
-juce::String currentOutputMicCode;
+juce::String selectedOutputRouteId;
+juce::String currentOutputRouteId;
 ```
 
 Or store enough data in `MicRoutingChoice`:
 
 ```cpp
-juce::String outputMicCode;
+juce::String outputRouteId;
 ```
 
-Recommendation: add `outputMicCode` to `MicRoutingChoice`, because labels are not stable enough. Display label can be `Room`, but saved value should be `room`.
+The output name is the visible label. `outputRouteId` is the stable saved selection.
 
 ### 2. Load Existing Route From Map
 
@@ -194,7 +183,7 @@ Simple log:
 
 ```text
 Pad popup route: slot=kick1 art=center layer=1 source=dtm old=auto new=room
-Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=room
+Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=dtm@25
 ```
 
 ### 4. Keep Bleed Knob Live
@@ -235,13 +224,13 @@ Instrument map apply: changedSlot=kick1 reason=pad-popup micRoute
 ### Engine Route Override
 
 ```text
-Mic route override: slot=kick1 source=dtm output=room hostStart=8 channels=2
+Mic route override: slot=kick1 source=dtm target=dtm@25 hostStart=24 channels=1
 ```
 
 Invalid route:
 
 ```text
-Mic route override ignored: slot=kick1 source=dtm output=badRoom reason=output not found
+Mic route override ignored: slot=kick1 source=dtm target=dtm@99 reason=output not found
 ```
 
 ## Tests
@@ -250,9 +239,9 @@ Mic route override ignored: slot=kick1 source=dtm output=badRoom reason=output n
 
 Add to `tests/TestInstrumentMap.cpp`:
 
-- `micRoute=dtm:room` parses.
-- `micRoute=dtm:room,dsm:oh` parses.
-- `bleed=dtm:0.5,room:0.8;micRoute=dtm:room` parses correctly.
+- `micRoute=dtm:dtm@25` parses.
+- `micRoute=dtm:dtm@25,dsm:dts@29` parses.
+- `bleed=dtm:0.5,room:0.8;micRoute=dtm:dtm@25` parses correctly.
 - Serializer preserves `micRoute` in stable order.
 - Unknown/malformed pairs warn or skip, depending on chosen policy.
 
@@ -269,7 +258,7 @@ Add focused checks that:
 If practical, add a small `MicRoutingBuilder` or engine-level test:
 
 - Source mic `dtm` normally routes to `dtm` output.
-- With `micRoute=dtm:room`, it routes to `room` output.
+- With `micRoute=dtm:dtm@25`, it routes to the output beginning at host channel 25.
 - Invalid override falls back to automatic routing and warns.
 
 ## Manual Verification

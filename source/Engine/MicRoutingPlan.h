@@ -21,11 +21,16 @@ public:
         juce::String outputName;
         juce::String micCode;
         juce::String outputMicCode;
+        juce::String outputRouteId;
         juce::String warning;
         bool applyBalance = false;
 
         bool matched() const noexcept { return globalStart >= 0 && channels > 0; }
     };
+
+    static juce::String makeOutputRouteId(const juce::String& outputMicCode, int oneBasedHostChannel) {
+        return outputMicCode.trim().toLowerCase() + "@" + juce::String(oneBasedHostChannel);
+    }
 
     static MicRoutingPlan build(const MicLayout& micLayout,
                                 const std::vector<SlotRequest>& slotRequests,
@@ -36,13 +41,13 @@ public:
         return plan;
     }
 
-    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, StringsDictSingleton::Id outputMicCodeId, KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown) const {
-        if (outputMicCodeId == StringsDictSingleton::EMPTY) return {};
+    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, StringsDictSingleton::Id outputRouteId, KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown) const {
+        if (outputRouteId == StringsDictSingleton::EMPTY) return {};
 
         const OutputEntry* bestOutput = nullptr;
         MicSelectorPriority bestPriority = MicSelectorPriority::None;
         for (const auto& output : this->outputs) {
-            if (output.codeId != outputMicCodeId) continue;
+            if (output.routeIdId != outputRouteId) continue;
             const auto priority = matchMicInstrumentSelector(output.selector, slotId, slotType, this->catalog);
             if (priority == MicSelectorPriority::None) continue;
             if (bestOutput == nullptr || static_cast<int>(priority) > static_cast<int>(bestPriority)) {
@@ -57,20 +62,21 @@ public:
             assignment.outputName = bestOutput->name;
             assignment.micCode = sampleMicSpec.raw;
             assignment.outputMicCode = bestOutput->code;
+            assignment.outputRouteId = bestOutput->routeId;
             assignment.applyBalance = sampleMicSpec.type == KitLib::MicSpec::Type::Direct && bestOutput->channels == 2;
             return assignment;
         }
 
-        const auto outputMicCode = StringsDictSingleton::nameOf(outputMicCodeId);
+        const auto requestedRouteId = StringsDictSingleton::nameOf(outputRouteId);
         Assignment skipped;
         skipped.channels = juce::jmax(1, sampleMicSpec.channels);
         skipped.micCode = sampleMicSpec.raw;
-        skipped.warning = "Mic route override ignored for slot '" + slotId + "': output mic '" + outputMicCode + "' was not found";
+        skipped.warning = "Mic route override ignored for slot '" + slotId + "': output route '" + requestedRouteId + "' was not found";
         return skipped;
     }
 
-    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, const juce::String& outputMicCode, KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown) const {
-        return this->resolveOverride(slotId, sampleMicSpec, StringsDictSingleton::getId(outputMicCode.trim().toLowerCase()), slotType);
+    Assignment resolveOverride(const juce::String& slotId, const KitLib::MicSpec& sampleMicSpec, const juce::String& outputRouteId, KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown) const {
+        return this->resolveOverride(slotId, sampleMicSpec, StringsDictSingleton::getId(outputRouteId.trim().toLowerCase()), slotType);
     }
 
     Assignment resolve(const juce::String& slotId,
@@ -103,6 +109,7 @@ public:
             assignment.outputName = output.name;
             assignment.micCode = output.code;
             assignment.outputMicCode = output.code;
+            assignment.outputRouteId = output.routeId;
             return assignment;
         }
 
@@ -123,7 +130,8 @@ private:
         int channels = 0;
         juce::String name;
         juce::String code;
-        StringsDictSingleton::Id codeId = StringsDictSingleton::EMPTY;
+        juce::String routeId;
+        StringsDictSingleton::Id routeIdId = StringsDictSingleton::EMPTY;
         KitLib::MicSpec spec;
         MicInstrumentSelector selector;
     };
@@ -173,7 +181,8 @@ private:
             output.channels = juce::jmax(1, mic.specs.channels);
             output.name = mic.name;
             output.code = mic.code;
-            output.codeId = StringsDictSingleton::getId(mic.code.trim().toLowerCase());
+            output.routeId = MicRoutingPlan::makeOutputRouteId(mic.code, cursor + 1);
+            output.routeIdId = StringsDictSingleton::getId(output.routeId);
             output.spec = mic.specs;
             output.selector = parseMicInstrumentSelector(mic.instrument, this->catalog);
             this->outputs.push_back(std::move(output));
@@ -218,6 +227,7 @@ private:
             const auto variantGroupKey = micSpec.raw.substring(0, 3).toLowerCase();
             auto sharedAssignmentIt = sharedVariantAssignments.find(variantGroupKey);
             Assignment assignment = sharedAssignmentIt != sharedVariantAssignments.end() ? sharedAssignmentIt->second : Assignment {};
+            if (assignment.matched()) assignment.micCode = micSpec.raw;
             if (!assignment.matched() && allowPrivateClaim) assignment = this->findPrivateDirectAssignment(request, micSpec, reservedOutputIndices);
             if (!assignment.matched()) assignment = this->findGroupDirectAssignment(request, micSpec);
             if (!assignment.matched()) {
@@ -282,6 +292,7 @@ private:
         assignment.outputName = output.name;
         assignment.micCode = sampleMicCode;
         assignment.outputMicCode = output.code;
+        assignment.outputRouteId = output.routeId;
         assignment.applyBalance = applyBalance;
         return assignment;
     }

@@ -20,6 +20,8 @@
 - Entering the most-closed mapped hi-hat controller state may trigger the layout's `pedal` note only when the closure gesture contains an audible open/half tail. Its velocity follows that tail's remaining estimated loudness; silence and equal-POC tight-only playback do not generate an implicit pedal event.
 - Publish asynchronously loaded buffers before setting their `loaded` flag with release semantics; audio-thread readers check the flag with acquire semantics first.
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
+- Sample mic identity includes the full mic code, so variants such as `dtm1` and `dtm2` remain separate.
+- Saved mic-route destinations use `micCode@firstHostChannel`, such as `dtm@7`, so repeated layout output codes stay distinct.
 
 # Work Guidance
 

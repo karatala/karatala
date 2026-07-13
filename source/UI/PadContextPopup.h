@@ -61,7 +61,7 @@ private:
     struct MicRoutingChoice {
         juce::String label;
         juce::String tooltip;
-        juce::String outputMicCode;
+        juce::String outputRouteId;
         int rank = 0;
         bool hasProblem = false;
         bool isCurrent = false;
@@ -91,7 +91,7 @@ private:
         struct MicBleedControl {
             juce::String micCode;
             juce::String micName;
-            juce::String routeOutputMicCode;
+            juce::String routeOutputId;
             std::unique_ptr<CompactParameterControl> bleedPot;
             std::unique_ptr<juce::ComboBox> routingCombo;
             std::vector<MicRoutingChoice> routingChoices;
@@ -129,7 +129,7 @@ private:
     struct MicRoutingDisplay {
         juce::String routeText;
         juce::String tooltip;
-        juce::String outputMicCode;
+        juce::String outputRouteId;
         bool hasProblem = false;
     };
     MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode) const;

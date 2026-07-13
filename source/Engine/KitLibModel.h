@@ -190,7 +190,7 @@ public:
 
     SampleVariantSpec* findSampleVariant(juce::juce_wchar variantLetter, const MicSpec& micSpec) {
         for (auto& existing : this->sampleVariantSpecs)
-            if (existing->letter == variantLetter && existing->micSpec.type == micSpec.type && existing->micSpec.position == micSpec.position && existing->micSpec.format == micSpec.format)
+            if (existing->letter == variantLetter && existing->micSpec.raw.compareIgnoreCase(micSpec.raw) == 0)
                 return existing.get();
         return nullptr;
     }    

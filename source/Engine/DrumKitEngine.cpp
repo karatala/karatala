@@ -1120,7 +1120,10 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
             outCursor += channelCount; // still reserve host channels
             continue;
         } else {
-            LOG(Debug, "Assigning mic " + mic.name + " (" + juce::String(mic.specs.channels) + "ch)" + " for instrument '" + mic.instrument + "'");
+            juce::StringArray targetSlotIds;
+            for (const auto* targetSynth : targets) targetSlotIds.addIfNotAlreadyThere(targetSynth->getId());
+            const auto outputRouteId = MicRoutingPlan::makeOutputRouteId(mic.code, outCursor + 1);
+            LOG(Notice, "Mic output available: name='" + mic.name + "' route=" + outputRouteId + " channels=" + juce::String(channelCount) + " slots=[" + targetSlotIds.joinIntoString(",") + "]");
         }
 
         // Host channel indices for this mic - directly maps to mono bus indices
@@ -1572,7 +1575,7 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     }
 }
 
-bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::String& artName, int layerIndex, const juce::String& sourceMicCode, const juce::String& outputMicCode) {
+bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::String& artName, int layerIndex, const juce::String& sourceMicCode, const juce::String& outputRouteId) {
     if (layerIndex < 0) {
         this->logMessage("Engine mic route FAILED: slot=" + slotId + " art=" + artName + " reason=invalid layer index", DebugLevel::Debug);
         return false;
@@ -1586,8 +1589,8 @@ bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::S
     for (auto& synthPtr : this->instrumentSynthPtrs) {
         if (synthPtr == nullptr || synthPtr->getId() != slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes, targetNotes)) continue;
         if (currentLayerIndex == layerIndex) {
-            const bool updated = synthPtr->updateMicRoute(sourceMicCode, outputMicCode);
-            this->logMessage("Engine mic route " + juce::String(updated ? "SUCCESS" : "FAILED") + ": slot=" + slotId + " art=" + artName + " layer=" + juce::String(layerIndex + 1) + " source=" + sourceMicCode + " output=" + (outputMicCode.isNotEmpty() ? outputMicCode : juce::String("auto")) + (updated ? "" : " reason=no matching loaded sound or output route"), DebugLevel::Debug);
+            const bool updated = synthPtr->updateMicRoute(sourceMicCode, outputRouteId);
+            this->logMessage("Engine mic route " + juce::String(updated ? "SUCCESS" : "FAILED") + ": slot=" + slotId + " art=" + artName + " layer=" + juce::String(layerIndex + 1) + " source=" + sourceMicCode + " target=" + (outputRouteId.isNotEmpty() ? outputRouteId : juce::String("auto")) + (updated ? "" : " reason=no matching loaded sound or output route"), DebugLevel::Debug);
             return updated;
         }
         ++currentLayerIndex;
@@ -1725,8 +1728,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         for (const auto& sa : entry.slotArticulationFilter) slotArtStr += (slotArtStr.isEmpty() ? "" : ",") + sa;
         for (const auto& sa : entry.articulationFilter) srcArtStr += (srcArtStr.isEmpty() ? "" : ",") + sa;
         juce::String routeStr;
-        for (const auto& [sourceMicCode, outputMicCode] : entry.micRouteOverrides)
-            routeStr += (routeStr.isEmpty() ? "" : ",") + sourceMicCode + "->" + outputMicCode;
+        for (const auto& [sourceMicCode, outputRouteId] : entry.micRouteOverrides)
+            routeStr += (routeStr.isEmpty() ? "" : ",") + sourceMicCode + "->" + outputRouteId;
         LOG(Info, "  entry[" + juce::String(idx) + "]: slot=" + entry.slotId
             + (slotArtStr.isNotEmpty() ? "/" + slotArtStr : "")
             + " -> kit=" + entry.kitRef + " inst=" + entry.instCode

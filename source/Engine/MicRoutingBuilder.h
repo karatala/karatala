@@ -58,7 +58,7 @@ public:
                     LOG(Debug, "Mic route override: slot=" + this->synth->getId()
                         + " source=" + micSpec.raw
                         + (usedOutputAlias ? " alias=" + sourceOutputAlias : "")
-                        + " output=" + StringsDictSingleton::nameOf(overrideIt->second)
+                        + " target=" + StringsDictSingleton::nameOf(overrideIt->second)
                         + " hostStart=" + juce::String(overrideAssignment.globalStart)
                         + " channels=" + juce::String(overrideAssignment.channels));
                     return { overrideAssignment.globalStart, overrideAssignment.channels, overrideAssignment.micCode, overrideAssignment.applyBalance };

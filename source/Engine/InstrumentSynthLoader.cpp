@@ -741,7 +741,7 @@ void InstrumentSynth::rebuildRoutingFromLayout(const KitLayout::InstrumentSlot& 
     this->applyResolvedRouting(bindings, layoutSlot, routingContext, false, false);
 }
 
-bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const juce::String& outputMicCode) {
+bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const juce::String& outputRouteId) {
     const auto normalizedSourceMicCode = sourceMicCode.trim();
     if (normalizedSourceMicCode.isEmpty()) return false;
 
@@ -787,14 +787,14 @@ bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const ju
             if (route.first.compareIgnoreCase(matchingCode) == 0) return true;
         return false;
     });
-    const auto normalizedOutputMicCode = outputMicCode.trim();
-    if (normalizedOutputMicCode.isNotEmpty()) {
+    const auto normalizedOutputRouteId = outputRouteId.trim();
+    if (normalizedOutputRouteId.isNotEmpty()) {
         for (const auto& matchingCode : matchingSourceMicCodes)
-            newOverrides[matchingCode] = normalizedOutputMicCode;
+            newOverrides[matchingCode] = normalizedOutputRouteId;
     }
     this->lastRoutingContext.setMicRouteOverrides(newOverrides);
 
-    if (normalizedOutputMicCode == "-") {
+    if (normalizedOutputRouteId == "-") {
         for (auto* sound : matchingSounds) {
             sound->micBufferChannelStart = -1;
             sound->micBufferChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;

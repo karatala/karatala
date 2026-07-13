@@ -73,6 +73,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - first write shorly in simple lang what code changes are you going to do (except .md files changes), then only after approve do.
 - do not build anything and run tests until asked
 - no need for backward compatibility, app is not yet released
+- when implementing tasks from md todo/fixme/plan document, mark completed sections or steps with ✅ emoji, and when the entire doc is completed, make its main header start with "# ✅ COMPLETED: "
 
 Read `DOX.md` before editing. This file is the repository-wide contract.
 

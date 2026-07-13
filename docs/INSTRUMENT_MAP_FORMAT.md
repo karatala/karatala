@@ -72,9 +72,9 @@ Layer order is the order in the normalized map for that slot/art. UI rows should
 | `flipLR` | `flipLR=1` | swap stereo left/right | live for existing layer |
 | `flipPhase` | `flipPhase=1` | invert phase | live for existing layer |
 | `bleed` | `bleed=oh:0.25,room:0.5` | mic gain trims from 0.0 to 1.0 | live for existing layer |
-| `micRoute` | `micRoute=dtm:room,ons:oh` | send source mic to chosen output mic | live in the pad popup; raw map apply reloads the slot |
+| `micRoute` | `micRoute=dtm1:dtm@7,ons:ons@1` | send source mic to one exact output route | live in the pad popup; raw map apply reloads the slot |
 
-Use `micRoute=dtm:-` to leave source mic `dtm` unassigned from every output.
+Use `micRoute=dtm1:-` to leave source mic `dtm1` unassigned from every output.
 
 
 ```text
@@ -149,24 +149,25 @@ Use this when one source mic should go to a different output mic than automatic 
 Param:
 
 ```text
-micRoute=sourceMic:outputMic,sourceMic:outputMic
+micRoute=sourceMic:outputRouteId,sourceMic:outputRouteId
 ```
 
 Example:
 
 ```text
-kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:room
+snare1/center:MyKit/snare-14/center:micRoute=dtm1:dtm@7,dtm2:dtm@25
 ```
 
 Meaning:
 
-- `bleed=dtm:0.5,room:0.8` changes mic levels.
-- `micRoute=dtm:room` sends source mic `dtm` to output mic `room`.
-- `micRoute=dtm:-` leaves source mic `dtm` unassigned.
+- `dtm1` and `dtm2` are separate source mics.
+- `dtm@7` is the `dtm` output whose first host channel is 7, such as `Snr1 Top` in the default mic layout.
+- `dtm@25` is a different `dtm` output, such as `Aux1` in the default mic layout.
+- `micRoute=dtm1:-` leaves source mic `dtm1` unassigned.
 
 Pad popup routing changes update loaded sample destinations in place. Applying a changed raw map still rebuilds the affected slot.
 When a popup mic code is an output-layout alias rather than the library's original source code, full map loading resolves that alias through the source mic's automatic output assignment.
-Source variants stay independent. For example, `dtm1` and `dtm2` have separate popup controls and may use `micRoute=dtm1:dtm,dtm2:-`. A generic layout output such as `dtm` accepts both variants, while a variant output such as `dtm1` accepts only that variant.
+Source variants stay independent. For example, `dtm1` and `dtm2` have separate popup controls and may use `micRoute=dtm1:dtm@7,dtm2:-`. A generic layout output such as `dtm` accepts both variants, while a variant output such as `dtm1` accepts only that variant. The popup shows output names, but saves the unique `micCode@firstHostChannel` route ID so repeated output codes remain separate.
 
 ## Raw Map Apply
 
