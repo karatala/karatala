@@ -1038,3 +1038,19 @@ TEST_CASE("InstrumentSynthVoice - flips stereo direct mic before balance", "[Ins
     REQUIRE(output.getSample(0, 0) == Catch::Approx(1.0f).margin(0.0001f));
     REQUIRE(output.getSample(1, 0) == Catch::Approx(0.0f).margin(0.0001f));
 }
+
+TEST_CASE("InstrumentSynth - bleed follows source mic after routing to generic output code", "[InstrumentSynth][routing]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    const auto sourceMic = KitLib::MicSpec::parseMicCode("dtm1");
+    REQUIRE(sourceMic.ok());
+
+    KitLib::SampleVariantSpec variant(nullptr, {}, 'a', sourceMic.value);
+    auto sound = std::make_shared<SampledSound>(nullptr, &variant);
+    sound->routedMicCode = "dtm";
+    sound->routedMicCodeId = StringsDictSingleton::getId(sound->routedMicCode);
+    synth.addSound(sound);
+
+    synth.setMicBleedLevels({ { "dtm1", 0.25f } });
+
+    REQUIRE(sound->cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(0.25f));
+}

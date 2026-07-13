@@ -227,8 +227,8 @@ float InstrumentSynth::getMicBleedLevel(StringsDictSingleton::Id micCodeId) cons
 
 void InstrumentSynth::refreshSampleMicBleedGains() {
     for (const auto& soundPtr : this->sampledSoundPtrs) {
-        if (!soundPtr) continue;
-        soundPtr->cachedMicBleedGain.store(this->getMicBleedLevel(soundPtr->routedMicCodeId), std::memory_order_relaxed);
+        if (!soundPtr || soundPtr->sampleVariantSpec == nullptr) continue;
+        soundPtr->cachedMicBleedGain.store(this->getMicBleedLevel(soundPtr->sampleVariantSpec->micSpec.raw), std::memory_order_relaxed);
     }
 }
 
@@ -584,7 +584,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             sound->micBufferChannelCount = assignment.channels;
             sound->routedMicCode = assignment.micCode;
             sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
-            sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->routedMicCodeId), std::memory_order_relaxed);
+            sound->cachedMicBleedGain.store(this->getMicBleedLevel(varSpec->micSpec.raw), std::memory_order_relaxed);
             sound->balance = effectiveBalance.value_or(0);
             sound->useDirectBalance = assignment.applyBalance && effectiveBalance.has_value() && assignment.channels == 2 && varSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
 
@@ -800,6 +800,7 @@ bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const ju
             sound->micBufferChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
             sound->routedMicCode = sound->sampleVariantSpec->micSpec.raw;
             sound->routedMicCodeId = StringsDictSingleton::getId(sound->routedMicCode);
+            sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->sampleVariantSpec->micSpec.raw), std::memory_order_relaxed);
         }
         return true;
     }
@@ -818,7 +819,7 @@ bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const ju
         sound->micBufferChannelCount = assignment.channels;
         sound->routedMicCode = assignment.micCode;
         sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
-        sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->routedMicCodeId), std::memory_order_relaxed);
+        sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->sampleVariantSpec->micSpec.raw), std::memory_order_relaxed);
         sound->useDirectBalance = assignment.applyBalance && assignment.channels == 2 && sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
     }
     return true;
