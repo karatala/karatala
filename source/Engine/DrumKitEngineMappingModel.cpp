@@ -179,16 +179,16 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                         }
                     }
                 } else if (key == "micRoute") {
-                    // Format: micRoute=sourceMic:outputRouteId,sourceMic:outputRouteId,...
+                    // Format: micRoute=sourceMic:outputId,sourceMic:outputId,...
                     juce::StringArray pairs;
                     pairs.addTokens(value, ",", "");
                     for (const auto& pair : pairs) {
                         auto colonPos = pair.indexOf(":");
                         if (colonPos > 0) {
                             auto sourceMicCode = pair.substring(0, colonPos).trim();
-                            auto outputRouteId = pair.substring(colonPos + 1).trim();
-                            if (sourceMicCode.isNotEmpty() && outputRouteId.isNotEmpty())
-                                entry.micRouteOverrides[sourceMicCode] = outputRouteId;
+                            auto outputId = pair.substring(colonPos + 1).trim();
+                            if (sourceMicCode.isNotEmpty() && outputId.isNotEmpty())
+                                entry.micRouteOverrides[sourceMicCode] = outputId;
                         }
                     }
                 } else

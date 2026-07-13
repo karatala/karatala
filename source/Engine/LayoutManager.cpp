@@ -6,72 +6,98 @@ MicLayout MicLayout::getDefault() {
 id: default
 name: default
 mics:
-  - name: OH # 1-2
+  - id: overhead/ons
+    name: OH # 1-2
     code: ons
-  - name: Hat1
+  - id: hihat1/dtm
+    name: Hat1
     instrument: hihat1 # 3
     code: dtm
-  - name: Rid1
+  - id: ride1/dtm
+    name: Rid1
     instrument: ride1 # 4
     code: dtm
-  - name: Kik In
+  - id: kick1/dim
+    name: Kik In
     instrument: kick1 # 5
     code: dim
-  - name: Kik Out
+  - id: kick1/dom
+    name: Kik Out
     instrument: kick1 # 6
     code: dom
-  - name: Snr1 Top # 7
+  - id: snare1/dtm
+    name: Snr1 Top # 7
     instrument: snare1
     code: dtm
-  - name: Snr1 Btm # 8
+  - id: snare1/dbm
+    name: Snr1 Btm # 8
     instrument: snare1
     code: dbm
-  - name: Tom1 # 9
+  - id: tom1/dtm
+    name: Tom1 # 9
     instrument: tom1
     code: dtm
-  - name: Tom2 # 10
+  - id: tom2/dtm
+    name: Tom2 # 10
     instrument: tom2
     code: dtm
-  - name: Tom3 # 11
+  - id: tom3/dtm
+    name: Tom3 # 11
     instrument: tom3
     code: dtm
-  - name: Tom4 # 12
+  - id: tom4/dtm
+    name: Tom4 # 12
     instrument: tom4
     code: dtm
-  - name: Tom5 # 13
+  - id: tom5/dtm
+    name: Tom5 # 13
     instrument: tom5
     code: dtm
-  - name: Amb Cls # 14
+  - id: room/rcm
+    name: Amb Cls # 14
     code: rcm
-  - name: Amb Far # 15-16
+  - id: room/rfs
+    name: Amb Far # 15-16
     code: rfs
-  - name: OH MS # 17-18
+  - id: overhead/oni
+    name: OH MS # 17-18
     code: oni
-  - name: OH wide # 19-20
+  - id: overhead/ows
+    name: OH wide # 19-20
     code: ows
-  - name: Hat2
+  - id: hihat2/dtm
+    name: Hat2
     instrument: hihat2 # 21
     code: dtm
-  - name: Rid2
+  - id: ride2/dtm
+    name: Rid2
     instrument: ride2 # 22
     code: dtm
-  - name: Oct1 # 23
+  - id: octoban1/dtm
+    name: Oct1 # 23
     instrument: octoban1
     code: dtm
-  - name: Oct2 # 24
+  - id: octoban2/dtm
+    name: Oct2 # 24
     instrument: octoban2
     code: dtm
-  - name: Aux1 # 25
+  - id: aux1/dtm
+    name: Aux1 # 25
     code: dtm
-  - name: Aux2 # 26
+  - id: aux2/dtm
+    name: Aux2 # 26
     code: dtm
-  - name: Aux3 # 27
+  - id: aux3/dtm
+    name: Aux3 # 27
     code: dtm
-  - name: Aux4 # 28
+  - id: aux4/dtm
+    name: Aux4 # 28
     code: dtm
-  - name: LR Aux1 # 29-30
+  - id: aux1/dts
+    name: LR Aux1 # 29-30
     code: dts
-  - name: LR Aux2 # 31-32
+  - id: aux2/dts
+    name: LR Aux2 # 31-32
     code: dts
 )yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);

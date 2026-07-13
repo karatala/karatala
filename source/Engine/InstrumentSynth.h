@@ -199,7 +199,7 @@ public:
     };
     using ArticulationExactRemap = std::unordered_map<uint64_t, ArticulationTarget>; // slotArt(name,expr) -> sourceArt(name,expr)
     using ArticulationAliasMap = std::unordered_map<uint32_t, ArticulationTarget>; // fallbackArtNameId -> sourceArt(name,expr)
-    using MicRouteOverrideIdMap = std::unordered_map<StringsDictSingleton::Id, StringsDictSingleton::Id>; // sourceMicCodeId -> outputRouteId
+    using MicRouteOverrideIdMap = std::unordered_map<StringsDictSingleton::Id, StringsDictSingleton::Id>; // sourceMicCodeId -> outputKey
 
     using LayoutArticulation = KitLayout::InstrumentSlot::ArticulationTrigger;
 
@@ -304,10 +304,10 @@ public:
         void rebuildMicRouteOverrideIds() {
             this->micRouteOverrideIds.clear();
             this->micRouteOverrideIds.reserve(this->micRouteOverrides.size());
-            for (const auto& [sourceMicCode, outputRouteId] : this->micRouteOverrides) {
+            for (const auto& [sourceMicCode, outputId] : this->micRouteOverrides) {
                 const auto sourceMicCodeId = StringsDictSingleton::getId(sourceMicCode.trim().toLowerCase());
-                const auto outputRouteIdValue = StringsDictSingleton::getId(outputRouteId.trim().toLowerCase());
-                if (sourceMicCodeId != StringsDictSingleton::EMPTY && outputRouteIdValue != StringsDictSingleton::EMPTY) this->micRouteOverrideIds[sourceMicCodeId] = outputRouteIdValue;
+                const auto outputKey = StringsDictSingleton::getId(outputId.trim().toLowerCase());
+                if (sourceMicCodeId != StringsDictSingleton::EMPTY && outputKey != StringsDictSingleton::EMPTY) this->micRouteOverrideIds[sourceMicCodeId] = outputKey;
             }
         }
     };
@@ -484,7 +484,7 @@ public:
     /** Rebuild note/CC routing from the given layout slot without reloading samples.
      *  Call after MIDI note or controller assignments change in the UI. */
     void rebuildRoutingFromLayout(const KitLayout::InstrumentSlot& layoutSlot);
-    bool updateMicRoute(const juce::String& sourceMicCode, const juce::String& outputRouteId);
+    bool updateMicRoute(const juce::String& sourceMicCode, const juce::String& outputId);
 
     int8_t findArticulationIndex(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) const { //FIXME: unused
         const int8_t count = static_cast<int8_t>(this->runtimeArticulations.size());

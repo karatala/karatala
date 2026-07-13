@@ -10,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <algorithm>
+#include <set>
 
 struct KitLayout {
     using MidiNotes = std::vector<uint8_t>;
@@ -120,6 +121,7 @@ struct MicLayout {
     juce::String id;
     juce::String name;
     struct Mic {
+        juce::String id;
         juce::String name;
         juce::String instrument;
         juce::String code;
@@ -158,13 +160,16 @@ struct LayoutTraits<MicLayout> {
         layout.id = root["id"].asString();
         layout.name = root["name"].asString();
         const auto& arr = root["mics"];
+        std::set<juce::String> micIds;
         if (arr.isSequence()) {
             for (size_t i = 0; i < arr.size(); ++i) {
                 const auto& it = arr[i];
                 MicLayout::Mic mic;
+                mic.id = it["id"].asString().trim().toLowerCase();
                 mic.name = it["name"].asString();
                 mic.instrument = it["instrument"].asString();
                 mic.code = it["code"].asString();
+                if (mic.id.isEmpty()) return result.returnWithError("mics: id is empty for " + mic.name);
                 if (mic.code.isNotEmpty()) {
                     auto parsed = KitLib::MicSpec::parseMicCode(mic.code);
                     if (parsed.ok()) {
@@ -172,6 +177,7 @@ struct LayoutTraits<MicLayout> {
                     } else {
                         result.addWarning("mics: invalid mic code for " + mic.name + ": " + parsed.error());
                     }
+                    if (!micIds.insert(mic.id).second) return result.returnWithError("mics: duplicate id '" + mic.id + "'");
                     layout.mics.push_back(mic);
                 } else
                     result.addWarning("mics: code is empty for " + mic.name);

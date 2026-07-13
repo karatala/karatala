@@ -241,31 +241,37 @@ Example:
 
 ```yaml
 mics:
-  - name: Overheads
+  - id: overhead/ons
+    name: Overheads
     code: ons
 
-  - name: Tom 1
+  - id: tom1/dtm
+    name: Tom 1
     instrument: tom1
     code: dtm
 
-  - name: Percussion Direct
+  - id: percussion/dts
+    name: Percussion Direct
     instrument: tambourine,cowbell,vibraslap
     code: dts
 
-  - name: Other Direct
+  - id: other/dts
+    name: Other Direct
     instrument: other
     code: dts
 
-  - name: Other Drums
+  - id: drum/dts
+    name: Other Drums
     instrument: drum
     code: dts
 
-  - name: Rototoms
+  - id: rototom/dts
+    name: Rototoms
     instrument: rototom*
     code: dts
 ```
 
-Each mic item must have a non-empty `code`. If `code` is missing, warn and skip that mic item. Empty `instrument` is valid and means a normal common mic for all instruments.
+Each mic item must have a unique non-empty `id` and a non-empty `code`. Missing or duplicate IDs invalidate the layout. If `code` is missing, warn and skip that mic item. Empty `instrument` is valid and means a normal common mic for all instruments.
 
 Selector meanings:
 
@@ -423,4 +429,3 @@ Routing plan:
 - Orientation: opposite-side auto `flipLR`, matching-side no flip, unknown/center no inference, manual override preserved.
 - UI smoke test: type/balance/directMicOuts edits, source selection, resize, preset save/reload.
 - Build `Tests` and run the focused parser/routing tests plus the full Catch2 suite for cross-domain changes.
-

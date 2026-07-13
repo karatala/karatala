@@ -21,7 +21,7 @@
 - Publish asynchronously loaded buffers before setting their `loaded` flag with release semantics; audio-thread readers check the flag with acquire semantics first.
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
 - Sample mic identity includes the full mic code, so variants such as `dtm1` and `dtm2` remain separate.
-- Saved mic-route destinations use `micCode@firstHostChannel`, such as `dtm@7`, so repeated layout output codes stay distinct.
+- Every mic-layout output has a required unique semantic ID, such as `snare1/dtm` or `aux1/dtm`. Saved routes use this ID so repeated codes stay distinct across layout reordering.
 
 # Work Guidance
 

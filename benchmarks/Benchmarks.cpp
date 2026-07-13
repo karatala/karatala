@@ -44,28 +44,28 @@ namespace BenchmarkHelpers {
         return micCodes;
     }
 
-    static std::unordered_map<juce::String, juce::String> makeStringRouteOverrides(const std::vector<juce::String>& sourceCodes, const std::vector<juce::String>& outputCodes) {
+    static std::unordered_map<juce::String, juce::String> makeStringRouteOverrides(const std::vector<juce::String>& sourceCodes, const std::vector<juce::String>& outputIds) {
         std::unordered_map<juce::String, juce::String> routeOverrides;
         routeOverrides.reserve(sourceCodes.size());
         for (size_t micIdx = 0; micIdx < sourceCodes.size(); ++micIdx)
-            routeOverrides[sourceCodes[micIdx]] = outputCodes[micIdx % outputCodes.size()];
+            routeOverrides[sourceCodes[micIdx]] = outputIds[micIdx % outputIds.size()];
         return routeOverrides;
     }
 
     static InstrumentSynth::MicRouteOverrideIdMap makeIdRouteOverrides(const std::unordered_map<juce::String, juce::String>& routeOverrides) {
         InstrumentSynth::MicRouteOverrideIdMap routeOverrideIds;
         routeOverrideIds.reserve(routeOverrides.size());
-        for (const auto& [sourceMicCode, outputMicCode] : routeOverrides) {
+        for (const auto& [sourceMicCode, outputId] : routeOverrides) {
             const auto sourceMicCodeId = StringsDictSingleton::getId(sourceMicCode.trim().toLowerCase());
-            const auto outputMicCodeId = StringsDictSingleton::getId(outputMicCode.trim().toLowerCase());
-            routeOverrideIds[sourceMicCodeId] = outputMicCodeId;
+            const auto outputKey = StringsDictSingleton::getId(outputId.trim().toLowerCase());
+            routeOverrideIds[sourceMicCodeId] = outputKey;
         }
         return routeOverrideIds;
     }
 
     static juce::String findStringRouteOverride(const std::unordered_map<juce::String, juce::String>& routeOverrides, const juce::String& sourceMicCode) {
-        for (const auto& [overrideSourceMicCode, outputMicCode] : routeOverrides)
-            if (overrideSourceMicCode.compareIgnoreCase(sourceMicCode) == 0) return outputMicCode;
+        for (const auto& [overrideSourceMicCode, outputId] : routeOverrides)
+            if (overrideSourceMicCode.compareIgnoreCase(sourceMicCode) == 0) return outputId;
         return {};
     }
 
@@ -73,20 +73,23 @@ namespace BenchmarkHelpers {
         MicLayout micLayout;
 
         MicLayout::Mic directMic;
+        directMic.id = "kick1/dtm";
         directMic.name = "Direct Top";
         directMic.code = "dtm";
         directMic.specs = KitLib::MicSpec::parseMicCode("dtm").value;
         micLayout.mics.push_back(directMic);
 
         MicLayout::Mic overheadMic;
+        overheadMic.id = "overhead/ons";
         overheadMic.name = "Overhead";
-        overheadMic.code = "oh";
+        overheadMic.code = "ons";
         overheadMic.specs = KitLib::MicSpec::parseMicCode("ons").value;
         micLayout.mics.push_back(overheadMic);
 
         MicLayout::Mic roomMic;
+        roomMic.id = "room/rfs";
         roomMic.name = "Room";
-        roomMic.code = "room";
+        roomMic.code = "rfs";
         roomMic.specs = KitLib::MicSpec::parseMicCode("rfs").value;
         micLayout.mics.push_back(roomMic);
 
@@ -206,8 +209,8 @@ TEST_CASE("Plan item 2 - StringsDictSingleton performance", "[benchmark][PlanIte
 
 TEST_CASE("Plan item 3 - route override ID lookup performance", "[benchmark][PlanItem3][MicRoute]") {
     const auto sourceCodes = BenchmarkHelpers::makeMicCodes(96);
-    const auto outputCodes = BenchmarkHelpers::makeMicCodes(16);
-    const auto stringOverrides = BenchmarkHelpers::makeStringRouteOverrides(sourceCodes, outputCodes);
+    const auto outputIds = BenchmarkHelpers::makeMicCodes(16);
+    const auto stringOverrides = BenchmarkHelpers::makeStringRouteOverrides(sourceCodes, outputIds);
     const auto idOverrides = BenchmarkHelpers::makeIdRouteOverrides(stringOverrides);
 
     BENCHMARK("Old-style string route override scan") {
@@ -237,13 +240,13 @@ TEST_CASE("Plan item 3 - routing plan override target lookup performance", "[ben
     request.directMicSpecs.push_back(micLayout.mics.front().specs);
 
     const auto plan = MicRoutingPlan::build(micLayout, { request }, InstrumentCatalog::makeDefault());
-    const auto outputMicCodeId = StringsDictSingleton::getId("room");
+    const auto outputKey = StringsDictSingleton::getId("room/rfs");
     const auto directMicSpec = micLayout.mics.front().specs;
 
     BENCHMARK("Resolve override target by ID") {
         int matches = 0;
         for (int lookupIdx = 0; lookupIdx < 256; ++lookupIdx)
-            if (plan.resolveOverride("kick1", directMicSpec, outputMicCodeId).matched()) ++matches;
+            if (plan.resolveOverride("kick1", directMicSpec, outputKey).matched()) ++matches;
         return matches;
     };
 }

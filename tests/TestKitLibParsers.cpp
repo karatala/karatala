@@ -214,9 +214,11 @@ TEST_CASE("MicLayout - parser skips entries without mic code", "[MicLayout][yaml
 id: mics
 name: Mics
 mics:
-  - name: Broken
+  - id: broken/dtm
+    name: Broken
     instrument: tom1
-  - name: Overheads
+  - id: overhead/ons
+    name: Overheads
     code: ons
 )yaml";
 
@@ -225,6 +227,35 @@ mics:
     REQUIRE(parsed.value.mics.size() == 1);
     REQUIRE(parsed.value.mics[0].code == "ons");
     CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("code is empty"));
+}
+
+TEST_CASE("MicLayout - parser requires unique output ids", "[MicLayout][yaml][routing]") {
+    const juce::String missingIdYaml = R"yaml(
+id: missing
+name: Missing
+mics:
+  - name: Overheads
+    code: ons
+)yaml";
+    const juce::String duplicateIdYaml = R"yaml(
+id: duplicate
+name: Duplicate
+mics:
+  - id: aux1/dtm
+    name: Aux 1
+    code: dtm
+  - id: aux1/dtm
+    name: Aux 2
+    code: dtm
+)yaml";
+
+    const auto missingId = LayoutTraits<MicLayout>::parseYaml(missingIdYaml);
+    const auto duplicateId = LayoutTraits<MicLayout>::parseYaml(duplicateIdYaml);
+
+    CHECK_FALSE(missingId.ok());
+    CHECK_THAT(missingId.error().toStdString(), Catch::Matchers::ContainsSubstring("id is empty"));
+    CHECK_FALSE(duplicateId.ok());
+    CHECK_THAT(duplicateId.error().toStdString(), Catch::Matchers::ContainsSubstring("duplicate id 'aux1/dtm'"));
 }
 
 
@@ -304,16 +335,20 @@ TEST_CASE("MicRoutingPlan - allocates direct claims and group fallbacks", "[MicR
 id: routing
 name: Routing
 mics:
-  - name: Tom 1
+  - id: tom1/dtm
+    name: Tom 1
     instrument: tom1
     code: dtm
-  - name: Drum Shared
+  - id: drum/dts
+    name: Drum Shared
     instrument: drum
     code: dts
-  - name: Other Shared
+  - id: other/dss
+    name: Other Shared
     instrument: other
     code: dss
-  - name: Overheads
+  - id: overhead/ons
+    name: Overheads
     code: ons
 )yaml";
 

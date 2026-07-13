@@ -20,14 +20,14 @@ kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8
 Routing override:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:dtm@25
+kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/dtm
 ```
 
 Meaning:
 
 - `bleed=dtm:0.5` means source/output mic `dtm` plays at 50 percent.
 - `bleed=room:0.8` means `room` plays at 80 percent.
-- `micRoute=dtm:dtm@25` means source mic `dtm` should be written to the `dtm` output beginning at host channel 25.
+- `micRoute=dtm:aux1/dtm` means source mic `dtm` should be written to the mic-layout output whose stable ID is `aux1/dtm`.
 
 Why semicolon:
 
@@ -49,24 +49,24 @@ Why semicolon:
 Add a new param:
 
 ```text
-micRoute=sourceMic:outputRouteId,sourceMic:outputRouteId
+micRoute=sourceMic:outputId,sourceMic:outputId
 ```
 
 Rules:
 
 - `sourceMic` is the library/sample mic code before routing.
-- `outputRouteId` is `micCode@firstHostChannel`, for example `dtm@7` or `dtm@25`.
+- `outputId` is the stable ID declared by the mic-layout output, for example `snare1/dtm` or `aux1/dtm`.
 - Missing entry means automatic routing.
 - Output `-` means the source mic is unassigned.
-- Unknown `outputRouteId` should warn and use automatic routing.
+- Unknown `outputId` should warn and use automatic routing.
 - Unknown `sourceMic` should warn only when a sample actually tries to use it, or should be ignored during apply if no matching source mic exists.
 - Serializer should write route pairs in stable sorted order.
 
 Parser examples:
 
 ```text
-kick1:MyKit/kick-24:micRoute=dtm:dtm@25
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:dtm@25,dsm:dts@29
+kick1:MyKit/kick-24:micRoute=dtm:aux1/dtm
+kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/dtm,dsm:aux1/dts
 ```
 
 ## Engine Support
@@ -83,7 +83,7 @@ Update:
 
 - `DrumKitEngineMappingModel::parseInstrumentMapText()`
   - Add `micRoute` to `knownKeys`.
-  - Parse `sourceMic:outputRouteId` pairs.
+  - Parse `sourceMic:outputId` pairs.
   - Store normalized trimmed keys and values.
 - `DrumKitEngine::serializeInstrumentMap()`
   - Serialize `micRoute=` after `bleed=`.
@@ -135,8 +135,8 @@ In `MicRoutingBuilder::resolve()`:
 Example log:
 
 ```text
-Mic route override: slot=kick1 source=dtm target=dtm@25 hostStart=24 channels=1
-Mic route override ignored: slot=kick1 source=dtm target=dtm@99 reason=output not found
+Mic route override: slot=kick1 source=dtm target=aux1/dtm hostStart=24 channels=1
+Mic route override ignored: slot=kick1 source=dtm target=missing/dtm reason=output not found
 ```
 
 ## Pad Popup Behavior
@@ -146,17 +146,16 @@ Mic route override ignored: slot=kick1 source=dtm target=dtm@99 reason=output no
 Extend `LayerRow::MicBleedControl` with selected route state:
 
 ```cpp
-juce::String selectedOutputRouteId;
-juce::String currentOutputRouteId;
+juce::String selectedOutputId;
 ```
 
 Or store enough data in `MicRoutingChoice`:
 
 ```cpp
-juce::String outputRouteId;
+juce::String outputId;
 ```
 
-The output name is the visible label. `outputRouteId` is the stable saved selection.
+The output name is the visible label. `outputId` is the stable saved selection.
 
 ### 2. Load Existing Route From Map
 
@@ -183,7 +182,7 @@ Simple log:
 
 ```text
 Pad popup route: slot=kick1 art=center layer=1 source=dtm old=auto new=room
-Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=dtm@25
+Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=aux1/dtm
 ```
 
 ### 4. Keep Bleed Knob Live
@@ -224,13 +223,13 @@ Instrument map apply: changedSlot=kick1 reason=pad-popup micRoute
 ### Engine Route Override
 
 ```text
-Mic route override: slot=kick1 source=dtm target=dtm@25 hostStart=24 channels=1
+Mic route override: slot=kick1 source=dtm target=aux1/dtm hostStart=24 channels=1
 ```
 
 Invalid route:
 
 ```text
-Mic route override ignored: slot=kick1 source=dtm target=dtm@99 reason=output not found
+Mic route override ignored: slot=kick1 source=dtm target=missing/dtm reason=output not found
 ```
 
 ## Tests
@@ -239,9 +238,9 @@ Mic route override ignored: slot=kick1 source=dtm target=dtm@99 reason=output no
 
 Add to `tests/TestInstrumentMap.cpp`:
 
-- `micRoute=dtm:dtm@25` parses.
-- `micRoute=dtm:dtm@25,dsm:dts@29` parses.
-- `bleed=dtm:0.5,room:0.8;micRoute=dtm:dtm@25` parses correctly.
+- `micRoute=dtm:aux1/dtm` parses.
+- `micRoute=dtm:aux1/dtm,dsm:aux1/dts` parses.
+- `bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/dtm` parses correctly.
 - Serializer preserves `micRoute` in stable order.
 - Unknown/malformed pairs warn or skip, depending on chosen policy.
 
@@ -258,7 +257,7 @@ Add focused checks that:
 If practical, add a small `MicRoutingBuilder` or engine-level test:
 
 - Source mic `dtm` normally routes to `dtm` output.
-- With `micRoute=dtm:dtm@25`, it routes to the output beginning at host channel 25.
+- With `micRoute=dtm:aux1/dtm`, it routes to the output whose stable ID is `aux1/dtm`.
 - Invalid override falls back to automatic routing and warns.
 
 ## Manual Verification

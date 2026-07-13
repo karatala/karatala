@@ -422,18 +422,23 @@ need to make engine to use MicLayout with definition of mic destinations so any 
 3) Implement mic-layout → bus routing
 
 mics:
-  - name: Overheads
+  - id: overhead/ons
+    name: Overheads
     code: ons
-  - name: Kick In
+  - id: kick1/dim
+    name: Kick In
     instrument: kick1
     code: dim
-  - name: Kick Out
+  - id: kick1/dom
+    name: Kick Out
     instrument: kick1
     code: dom
-  - name: Snare Top
+  - id: snare1/dtm
+    name: Snare Top
     instrument: snare1
     code: dtm
-  - name: Snare Bottom
+  - id: snare1/dbm
+    name: Snare Bottom
     instrument: snare1
     code: dbm
 

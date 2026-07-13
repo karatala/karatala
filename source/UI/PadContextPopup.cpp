@@ -413,7 +413,7 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
         if (assignment.matched()) {
             display.routeText = assignment.outputName;
             display.tooltip = micCode + " -> " + assignment.outputName;
-            display.outputRouteId = assignment.outputRouteId;
+            display.outputId = assignment.outputId;
             return display;
         }
 
@@ -442,7 +442,7 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
     if (assignment.matched()) {
         display.routeText = assignment.outputName;
         display.tooltip = micCode + " -> " + assignment.outputName;
-        display.outputRouteId = assignment.outputRouteId;
+        display.outputId = assignment.outputId;
         return display;
     }
 
@@ -491,18 +491,18 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
         }
     }
 
-    auto addChoice = [&choices, &currentDisplay](const MicLayout::Mic& mic, const juce::String& outputRouteId, int rank, const juce::String& detail) {
+    auto addChoice = [&choices, &currentDisplay](const MicLayout::Mic& mic, const juce::String& outputId, int rank, const juce::String& detail) {
         const juce::String label = mic.name.isNotEmpty() ? mic.name : mic.code;
-        const bool isDefault = !currentDisplay.hasProblem && currentDisplay.outputRouteId.compareIgnoreCase(outputRouteId) == 0;
+        const bool isDefault = !currentDisplay.hasProblem && currentDisplay.outputId.compareIgnoreCase(outputId) == 0;
         MicRoutingChoice choice;
         choice.label = label;
-        choice.tooltip = (isDefault ? "Default routing: " : juce::String()) + label + " (" + outputRouteId + ")" + detail;
-        choice.outputRouteId = outputRouteId;
+        choice.tooltip = (isDefault ? "Default routing: " : juce::String()) + label + " (" + outputId + ")" + detail;
+        choice.outputId = outputId;
         choice.rank = isDefault ? 0 : rank;
         choice.isCurrent = isDefault;
         choice.usesAutomaticRouting = isDefault;
         for (auto& existingChoice : choices) {
-            if (existingChoice.outputRouteId.compareIgnoreCase(outputRouteId) != 0) continue;
+            if (existingChoice.outputId.compareIgnoreCase(outputId) != 0) continue;
             if (choice.isCurrent || choice.rank < existingChoice.rank) existingChoice = std::move(choice);
             return;
         }
@@ -510,10 +510,8 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
     };
 
     const auto slotIdLower = slot->id.trim().toLowerCase();
-    int outputCursor = 0;
     for (const auto& mic : micLayout->mics) {
-        const auto outputRouteId = MicRoutingPlan::makeOutputRouteId(mic.code, outputCursor + 1);
-        outputCursor += juce::jmax(1, mic.specs.channels);
+        const auto& outputId = mic.id;
         bool compatible = false;
         bool exactDirect = false;
         bool groupDirect = false;
@@ -543,7 +541,7 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
         else if (pooledOutput && groupDirect) rank = 70;
 
         const juce::String detail = sameInstrument ? " for " + slot->id : (pooledOutput ? " pool" : " for " + mic.instrument);
-        addChoice(mic, outputRouteId, rank, detail);
+        addChoice(mic, outputId, rank, detail);
     }
 
     if (!currentDisplay.hasProblem) {
@@ -551,7 +549,7 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
         for (auto& choice : choices) {
             if (choice.isCurrent) foundCurrent = true;
         }
-        if (!foundCurrent && currentDisplay.routeText.isNotEmpty()) choices.push_back({ currentDisplay.routeText, currentDisplay.tooltip, currentDisplay.outputRouteId, 5, false, true, true });
+        if (!foundCurrent && currentDisplay.routeText.isNotEmpty()) choices.push_back({ currentDisplay.routeText, currentDisplay.tooltip, currentDisplay.outputId, 5, false, true, true });
     } else {
         choices.push_back({ "No route", currentDisplay.tooltip, {}, 5, true, true, true });
     }
@@ -597,7 +595,7 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         for (const auto& bleedCtrl : layer->micBleeds) {
             if (bleedCtrl == nullptr || bleedCtrl->bleedPot == nullptr || bleedCtrl->micCode.isEmpty()) continue;
             existingLevels[bleedCtrl->micCode] = static_cast<float>(bleedCtrl->bleedPot->getValue() / 100.0);
-            if (bleedCtrl->routeOutputId.isNotEmpty()) existingRoutes[bleedCtrl->micCode] = bleedCtrl->routeOutputId;
+            if (bleedCtrl->selectedOutputId.isNotEmpty()) existingRoutes[bleedCtrl->micCode] = bleedCtrl->selectedOutputId;
         }
     }
 
@@ -616,8 +614,8 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
             juce::ignoreUnused(level);
             entriesToShow.push_back({ micCode, micCode });
         }
-        for (const auto& [micCode, outputRouteId] : existingRoutes) {
-            juce::ignoreUnused(outputRouteId);
+        for (const auto& [micCode, outputId] : existingRoutes) {
+            juce::ignoreUnused(outputId);
             bool alreadyAdded = false;
             for (const auto& existingEntry : entriesToShow) {
                 if (existingEntry.first.compareIgnoreCase(micCode) == 0) {
@@ -641,7 +639,7 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         if (it != existingLevels.end())
             level = juce::jlimit(0.0f, 1.0f, it->second);
         const auto routeIt = existingRoutes.find(micCode);
-        if (routeIt != existingRoutes.end()) bleedCtrl->routeOutputId = routeIt->second;
+        if (routeIt != existingRoutes.end()) bleedCtrl->selectedOutputId = routeIt->second;
         bleedCtrl->bleedPot = std::make_unique<CompactParameterControl>(micCode, 0.0, 100.0, 1.0, static_cast<double>(level * 100.0f));
         bleedCtrl->bleedPot->setTooltip(micName);
         bleedCtrl->bleedPot->setInteraction(100.0, 1.0);
@@ -658,20 +656,20 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         UIHelpers::configureComboBox(*bleedCtrl->routingCombo);
         bleedCtrl->routingCombo->getProperties().set("compactRoute", true);
         bleedCtrl->routingCombo->getProperties().set("hideArrow", true);
-        int selectedRouteId = 0;
+        int selectedItemId = 0;
         for (int choiceIdx = 0; choiceIdx < static_cast<int>(bleedCtrl->routingChoices.size()); ++choiceIdx) {
             const auto& choice = bleedCtrl->routingChoices[static_cast<size_t>(choiceIdx)];
             const int itemId = choiceIdx + 1;
             bleedCtrl->routingCombo->addItem(choice.label, itemId);
-            if (bleedCtrl->routeOutputId.isEmpty() && choice.usesAutomaticRouting) selectedRouteId = itemId;
-            else if (bleedCtrl->routeOutputId.isNotEmpty() && choice.outputRouteId.compareIgnoreCase(bleedCtrl->routeOutputId) == 0) selectedRouteId = itemId;
+            if (bleedCtrl->selectedOutputId.isEmpty() && choice.usesAutomaticRouting) selectedItemId = itemId;
+            else if (bleedCtrl->selectedOutputId.isNotEmpty() && choice.outputId.compareIgnoreCase(bleedCtrl->selectedOutputId) == 0) selectedItemId = itemId;
         }
-        if (selectedRouteId == 0) selectedRouteId = 1;
-        bleedCtrl->routingCombo->setSelectedId(selectedRouteId, juce::dontSendNotification);
-        const int selectedIndex = selectedRouteId - 1;
+        if (selectedItemId == 0) selectedItemId = 1;
+        bleedCtrl->routingCombo->setSelectedId(selectedItemId, juce::dontSendNotification);
+        const int selectedIndex = selectedItemId - 1;
         if (selectedIndex >= 0 && selectedIndex < static_cast<int>(bleedCtrl->routingChoices.size())) {
             const auto& selectedChoice = bleedCtrl->routingChoices[static_cast<size_t>(selectedIndex)];
-            bleedCtrl->routeOutputId = selectedChoice.usesAutomaticRouting ? juce::String() : selectedChoice.outputRouteId;
+            bleedCtrl->selectedOutputId = selectedChoice.usesAutomaticRouting ? juce::String() : selectedChoice.outputId;
         }
         auto* bleedCtrlPtr = bleedCtrl.get();
         bleedCtrl->routingCombo->onChange = [this, layer, bleedCtrlPtr] {
@@ -972,7 +970,7 @@ juce::String PadContextPopup::generateFullMapText() const {
             if (bleedCtrl == nullptr || bleedCtrl->micCode.isEmpty()) continue;
             const float bleed = static_cast<float>(bleedCtrl->bleedPot->getValue() / 100.0);
             if (bleed < 0.99f) entry.micBleedLevels[bleedCtrl->micCode] = bleed;
-            if (bleedCtrl->routeOutputId.isNotEmpty()) entry.micRouteOverrides[bleedCtrl->micCode] = bleedCtrl->routeOutputId;
+            if (bleedCtrl->selectedOutputId.isNotEmpty()) entry.micRouteOverrides[bleedCtrl->micCode] = bleedCtrl->selectedOutputId;
         }
         entries.push_back(std::move(entry));
     }
@@ -983,15 +981,15 @@ juce::String PadContextPopup::generateFullMapText() const {
 void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl) {
     if (layer == nullptr || bleedCtrl == nullptr || bleedCtrl->routingCombo == nullptr) return;
 
-    const auto oldRoute = bleedCtrl->routeOutputId;
+    const auto oldRoute = bleedCtrl->selectedOutputId;
     const int selectedIndex = bleedCtrl->routingCombo->getSelectedId() - 1;
     juce::String newRoute;
     if (selectedIndex >= 0 && selectedIndex < static_cast<int>(bleedCtrl->routingChoices.size())) {
         const auto& selectedChoice = bleedCtrl->routingChoices[static_cast<size_t>(selectedIndex)];
-        if (!selectedChoice.usesAutomaticRouting) newRoute = selectedChoice.outputRouteId;
+        if (!selectedChoice.usesAutomaticRouting) newRoute = selectedChoice.outputId;
     }
 
-    bleedCtrl->routeOutputId = newRoute;
+    bleedCtrl->selectedOutputId = newRoute;
     this->updateRoutingComboDisplay(*bleedCtrl);
     if (oldRoute == newRoute) return;
 

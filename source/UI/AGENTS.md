@@ -15,7 +15,7 @@
 - Keep persistence debounced and outside the audio thread.
 - Preserve keyboard, tooltip, and resize behavior when adding controls.
 - Zone pads use a vertical instrument-name rail, equal rows for normal articulations, and a Hi-Hat grid ordered tight/close/half/open with pedal as a full-width bottom row. Painting and hit testing must share the same cell geometry.
-- Pad-popup mic routing shows output names but selects and saves the exact `micCode@firstHostChannel` route ID, so repeated output codes remain separate choices.
+- Pad-popup mic routing shows output names but selects and saves each mic-layout output's stable semantic ID, so repeated output codes remain separate choices across layout reordering.
 
 # Work Guidance
 
