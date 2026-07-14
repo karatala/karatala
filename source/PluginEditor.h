@@ -15,6 +15,7 @@
 #include "UI/PadContextPopup.h"
 #include "UI/TroubleshootingPanel.h"
 #include "UI/SourceItem.h"
+#include "UI/ThemePlaygroundPanel.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
 //==============================================================================
@@ -61,6 +62,9 @@ private:
     // Mode: Fix
     std::unique_ptr<TroubleshootingPanel> troubleshootingPanel;
 
+    // Mode: UI theme playground
+    std::unique_ptr<ThemePlaygroundPanel> themePlaygroundPanel;
+
     // Mode: Instrument Config
     std::unique_ptr<InstrumentConfigPanel> instrumentConfigPanel;
 
@@ -84,6 +88,7 @@ private:
     void setupMapMode();
     void setupSettingsMode();
     void setupTroubleshootingMode();
+    void setupThemePlaygroundMode();
     void setupInstrumentConfigMode();
     void reloadLibraryFromTroubleshooting();
     void fixMissingInstrumentsFromTroubleshooting();

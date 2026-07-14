@@ -5,6 +5,7 @@
 # Ownership
 
 - `UITheme.h` and `LookAndFeel*` own shared visual tokens and JUCE drawing behavior.
+- `ThemePlaygroundPanel.*` owns the live component, font, and color inventory used to review theme consistency.
 - Reusable controls live in `Parameter*`, `CompactParameterControl`, `HorizontalKnobBrick`, MIDI assignment, popup, and helper classes.
 - Page/panel classes compose controls and translate user actions into engine operations.
 

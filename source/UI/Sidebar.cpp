@@ -10,6 +10,7 @@ Sidebar::Sidebar() {
     this->modeButtons.add(new ModeButton(ViewMode::Raw, "Raw"));
     this->modeButtons.add(new ModeButton(ViewMode::Settings, "Conf"));
     this->modeButtons.add(new ModeButton(ViewMode::Fix, "Fix"));
+    this->modeButtons.add(new ModeButton(ViewMode::Playground, "UI"));
 
     for (auto* btn : this->modeButtons) {
         btn->onClick = [this, btn] {

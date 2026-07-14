@@ -184,6 +184,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->setupMapMode();
     this->setupSettingsMode();
     this->setupTroubleshootingMode();
+    this->setupThemePlaygroundMode();
     this->setupInstrumentConfigMode();
 
     const auto instrumentMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
@@ -266,6 +267,11 @@ void PluginEditor::setupSidebarAndStatusBar() {
     // Status bar
     this->addAndMakeVisible(this->statusBar);
     this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
+}
+
+void PluginEditor::setupThemePlaygroundMode() {
+    this->themePlaygroundPanel = std::make_unique<ThemePlaygroundPanel>();
+    this->addChildComponent(*this->themePlaygroundPanel);
 }
 
 void PluginEditor::setupDrumPadGridMode() {
@@ -1080,6 +1086,9 @@ void PluginEditor::showComponentsForMode(ViewMode mode) {
 
     // Fix
     this->troubleshootingPanel->setVisible(mode == ViewMode::Fix);
+
+    // UI theme playground
+    this->themePlaygroundPanel->setVisible(mode == ViewMode::Playground);
 }
 
 void PluginEditor::paint(juce::Graphics& g) {
@@ -1134,6 +1143,10 @@ void PluginEditor::resized() {
 
         case ViewMode::Map:
             this->midiMapTable.setBounds(mainArea);
+            break;
+
+        case ViewMode::Playground:
+            this->themePlaygroundPanel->setBounds(mainArea);
             break;
     }
 

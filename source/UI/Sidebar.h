@@ -11,7 +11,8 @@ enum class ViewMode {
     Instrument,
     Raw,
     Settings,
-    Fix
+    Fix,
+    Playground
 };
 
 class Sidebar : public juce::Component {
