@@ -15,8 +15,7 @@ import soundfile as sf
 from scipy.signal import resample_poly
 from scipy.stats import spearmanr
 
-
-ANALYSIS_VERSION = "todo14-phase1-v4"
+ANALYSIS_VERSION = "todo14-phase1-v5"
 APPROVED_METRIC_VERSION = "todo14-k-weighted-400ms-v1"
 APPROVED_METRIC_NAME = "k_weighted_400ms_db"
 COMMON_REFERENCE_DB = -38.0
@@ -31,14 +30,19 @@ REFERENCE_KIT_NAMES = (
     "TchackpoumDG1.3 by Tchackpoum [CC-BY-4.0]",
 )
 FIXED_WINDOW_MS = (50, 100, 200, 400)
-ONSET_FRAME_MS = 5
+ONSET_FRAME_MS = 10
 ONSET_RELATIVE_THRESHOLD_DB = -30.0
 ONSET_ABSOLUTE_THRESHOLD_DB = -60.0
 SHORT_RMS_WINDOW_MS = 10
 SHORT_RMS_SEARCH_MS = 100
 TRUE_PEAK_OVERSAMPLE_FACTOR = 4
 MAX_VARIANTS_PER_VELOCITY = 3
-LISTENING_PROFILES = (("baseline", APPROVED_METRIC_NAME, {}),)
+LISTENING_PROFILES = (
+    ("50ms", "k_weighted_50ms_db", {}),
+    ("100ms", "k_weighted_100ms_db", {}),
+    ("200ms", "k_weighted_200ms_db", {}),
+    ("400ms", "k_weighted_400ms_db", {}),
+)
 LISTENING_TARGET_DB = -30.0
 LISTENING_CLIP_MS = 500
 LISTENING_GAP_MS = 50
