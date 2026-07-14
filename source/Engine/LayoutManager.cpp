@@ -81,25 +81,25 @@ mics:
     name: Oct2 # 24
     instrument: octoban2
     code: dtm
-  - id: aux1/dtm
+  - id: aux1/**m
     name: Aux1 # 25
-    code: dtm
-  - id: aux2/dtm
+    code: **m
+  - id: aux2/**m
     name: Aux2 # 26
-    code: dtm
-  - id: aux3/dtm
+    code: **m
+  - id: aux3/**m
     name: Aux3 # 27
-    code: dtm
-  - id: aux4/dtm
+    code: **m
+  - id: aux4/**m
     name: Aux4 # 28
-    code: dtm
-  - id: aux1/dts
+    code: **m
+  - id: aux1/**s
     name: LR Aux1 # 29-30
-    code: dts
-  - id: aux2/dts
+    code: **s
+  - id: aux2/**s
     name: LR Aux2 # 31-32
-    code: dts
-)yaml";
+    code: **s
+)yaml"; //TODO: changed for auxes dtm and dsm to **m and **s - so any mono/stereo mic can be routed to auxes with *, need to update implementation, tests and document
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
     if (!result.ok()) {
         jassertfalse;
