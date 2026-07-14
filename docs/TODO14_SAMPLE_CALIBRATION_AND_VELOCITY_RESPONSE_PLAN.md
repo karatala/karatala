@@ -1,6 +1,6 @@
 # TODO14: Sample Calibration And Velocity Response Plan
 
-Status: Design plan only. No implementation or verification has started.
+Status: Phase 1 is complete. K-weighted 400 ms calibration with no instrument-family offsets is approved. Phases 2 through 6 have not started.
 
 ## Scope And Terminology
 
@@ -53,7 +53,7 @@ Success means:
 - early loading covers calibrated target intensities instead of trusting raw filename velocity labels;
 - analyzer report mode never changes files or folders.
 
-Phase 1 must choose the actual metric, reference level, and tolerances. This document does not invent those numbers.
+Phase 1 approved the actual metric, reference level, trim limits, headroom, and tolerances recorded below.
 
 ## Plan Decisions
 
@@ -76,7 +76,7 @@ These choices are part of this plan:
 - Timing and possible room orientation analysis are report-only in this plan.
 - Do not modify source audio files in this plan.
 
-Phase 1 still needs measured answers for:
+The Phase 1 reference pass below provides approved answers for:
 
 - the logical-hit loudness metric and analysis window;
 - the loudness reference mic and fallback rule;
@@ -351,16 +351,67 @@ Report-only timing and orientation stay in the analyzer report. If a reviewed va
 
 ## Implementation Phases
 
-### Phase 1: Choose metrics and acceptance values
+### ✅ Phase 1: Choose metrics and acceptance values
 
-- Build a small reference corpus with several kits, drums, cymbals, and short percussion.
-- Compare fixed post-onset loudness candidates, short RMS, true peak, and listening judgments.
-- Choose the reference mic rule, logical-hit intensity metric expressed in dB, `commonReferenceDb`, raw velocity-median rule, monotonic-fit rule, outlier rule, trim cap, headroom, and tolerance.
-- Confirm the `selectionTargetDb` equation and clamping behavior on the reference corpus.
-- Choose complete-hit readiness rules and representative calibrated preload targets.
-- Choose the pan dead zone and confidence threshold.
+- ✅ Build a small reference corpus with several kits, drums, cymbals, and short percussion.
+- ✅ Compare fixed post-onset loudness candidates, short RMS, and true peak by measurement and listening.
+- ✅ Choose the reference mic rule, logical-hit intensity metric expressed in dB, `commonReferenceDb`, raw velocity-median rule, monotonic-fit rule, outlier rule, trim cap, headroom, and tolerance.
+- ✅ Confirm the `selectionTargetDb` equation and clamping behavior on the reference corpus.
+- ✅ Choose complete-hit readiness rules and representative calibrated preload targets.
+- ✅ Choose the pan dead zone and confidence threshold.
 
-Verify later: record the chosen values and listening result in this plan.
+#### Phase 1 reference pass
+
+[`analyze_drum_samples_phase1.py`](../scripts/analyze_drum_samples_phase1.py) is a read-only comparison tool with versioned constants and explicit output paths. It does not rename or rewrite source files.
+
+The final `todo14-phase1-v4` pass measured 184 logical hits from 30 articulations in four kits. It used low, middle, and high named velocities with up to three round robins, covering kicks, snares, toms, closed and open hi-hats, crashes, rides, and cowbells. It measured every selected reference hit from signed stereo channels and checked true peak across every linked file in the selected hit.
+
+| Candidate | Median round-robin MAD | Velocity inversions | Median low-to-high range |
+| --- | ---: | ---: | ---: |
+| K-weighted 50 ms | 0.255 dB | 4 | 20.26 dB |
+| K-weighted 100 ms | 0.329 dB | 5 | 19.78 dB |
+| K-weighted 200 ms | 0.281 dB | 8 | 19.59 dB |
+| K-weighted 400 ms | 0.315 dB | 8 | 19.54 dB |
+| RMS 100 ms | 0.270 dB | 6 | 18.12 dB |
+| Peak 10 ms RMS | 0.338 dB | 7 | 20.74 dB |
+
+Measured findings:
+
+- K-weighted 50 ms has the best numeric velocity result, but the first listening pass rejected all windows up to 200 ms for cross-instrument loudness. Rides remained too loud, toms remained too quiet, and the 1000 ms clips with 250 ms gaps were too slow.
+- The second listening pass compared K-weighted 100, 200, and 400 ms with 500 ms clips and 50 ms gaps. Listening preferred 400 ms. Toms no longer needed a reported correction, while rides remained slightly loud and cowbells remained a little loud.
+- The third listening pass compared light, medium, and strong ride and cowbell offsets. The approved first version keeps the 400 ms metric without any ride, cowbell, or other instrument-family offset.
+- Linked-file true peak was `-9.25 dBTP` at the median, `+0.02 dBTP` at the 90th percentile, and `+1.63 dBTP` at the maximum before any new calibration trim.
+- The selected corpus contains 198 linked files with existing legacy `v` trim tokens. Phase 1 ignored those tokens and measured the unmodified audio.
+- The first K-weighted 50 ms experiment showed that requiring every post-trim cache buffer to stay below `-1 dBTP` would force `commonReferenceDb` down to `-46.79 dB`. This is too quiet for the intended maximum. The approved rule therefore checks peak safety after the matching global target gain, while allowing immutable floating-point cache buffers to exceed `1.0` internally.
+- With the approved `commonReferenceDb = -38.0 dB`, required trim is `-2.59 dB` at the median, `+27.07 dB` at the 90th percentile, and `+41.31 dB` at the maximum across 79 named-velocity groups.
+- Ten groups cross the `+24 dB` noise-risk warning. The `+36 dB` cap limits two very quiet Crocell groups: kick velocity 7 is `3.16 dB` short and ride velocity 16 is `5.31 dB` short. They stay explicitly marked `Limited`.
+- After calibration trim and the velocity-127 global target, the maximum linked-file true peak among highest named velocities is `-2.20 dBTP`. All reference articulations pass the `1.0 dB` headroom rule.
+
+Approved Phase 1 constants:
+
+- Metric: `todo14-k-weighted-400ms-v1`.
+- Onset: non-overlapping 5 ms signed-channel energy frames; first frame at or above the greater of `peak - 30 dB` and `-60 dBFS`.
+- Logical-hit intensity: ungated BS.1770 K-weighted energy over 400 ms from detected onset.
+- Reference mic order: normal stereo overhead `ons`, another normal overhead stereo, another overhead stereo, decoded overhead mid-side, otherwise `Uncalibrated`.
+- Mid-side decoding: energy-preserving `L = (M + S) / sqrt(2)` and `R = (M - S) / sqrt(2)`.
+- Raw velocity median: median of all valid logical-hit intensities at the named velocity.
+- Monotonic fit: weighted pool-adjacent-violators isotonic fit in original named-velocity order, weighted by valid logical-hit count.
+- Instrument-family offsets: none in the first version.
+- Common reference: `-38.0 dB`.
+- Positive-trim noise-risk warning: above `+24.0 dB`.
+- Positive-trim cap: `+36.0 dB`; mark the velocity group `Limited` when more gain is required.
+- Peak safety: require at least `1.0 dB` headroom after automatic calibration trim and the matching global target gain, before manual residual correction and `Mix Gain`.
+- Default global response: preserve the current linear MIDI gain as `20 * log10(midiVelocity / 127)`, with velocity 127 at `0 dB`.
+- Numeric acceptance: recomputed raw medians within `0.25 dB`; median sample-boundary steps within `1.5 dB` after calibration.
+- Round-robin outlier: report any hit more than `3.0 dB` from its raw velocity median; do not flatten it.
+- Complete-hit readiness: every active routed mic buffer and every required voice slot must be ready before any voice in the hit starts. Inactive or unrouted mic entries do not block it.
+- Early-load target intensities relative to the highest fitted value: `-24`, `-12`, `-6`, `-3`, and `0 dB`.
+- Source-balance window: signed stereo energy over 200 ms from onset.
+- Pan confidence: center dead zone `-8..8`; require at least six hits over at least two named velocities, at least 80% side agreement, median absolute position above 12, and position MAD no greater than 12.
+
+The approved baseline listening sequence is in `build/todo14_phase1_listening_v4/`. It uses K-weighted 400 ms normalization without instrument-family offsets.
+
+Verification result: weighted isotonic fitting plus the clamped `selectionTargetDb` equation produced no decreasing targets and no backward named-velocity choices across all 30 reference articulations and MIDI velocities 1 to 127.
 
 ### Phase 2: Make analyzer output correct and safe
 
@@ -469,4 +520,4 @@ Non-goals:
 - no source audio-file modification;
 - no new realtime parsing, allocation, file I/O, locking, or unbounded work.
 
-No build, tests, analyzer run, or listening check was performed while writing this plan.
+No build or tests were run for Phase 1. The read-only Phase 1 analyzer was run; no sample filename or source audio was changed. Listening review is complete.

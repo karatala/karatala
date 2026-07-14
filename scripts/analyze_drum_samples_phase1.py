@@ -16,7 +16,13 @@ from scipy.signal import resample_poly
 from scipy.stats import spearmanr
 
 
-ANALYSIS_VERSION = "todo14-phase1-v1"
+ANALYSIS_VERSION = "todo14-phase1-v4"
+APPROVED_METRIC_VERSION = "todo14-k-weighted-400ms-v1"
+APPROVED_METRIC_NAME = "k_weighted_400ms_db"
+COMMON_REFERENCE_DB = -38.0
+POSITIVE_TRIM_WARNING_DB = 24.0
+POSITIVE_TRIM_CAP_DB = 36.0
+MIN_RENDERED_HEADROOM_DB = 1.0
 SUPPORTED_AUDIO_EXTENSIONS = (".wav", ".bwf", ".flac", ".aif", ".aiff")
 REFERENCE_KIT_NAMES = (
     "CrocellKit by Crocell [CC-BY-4.0]",
@@ -32,10 +38,10 @@ SHORT_RMS_WINDOW_MS = 10
 SHORT_RMS_SEARCH_MS = 100
 TRUE_PEAK_OVERSAMPLE_FACTOR = 4
 MAX_VARIANTS_PER_VELOCITY = 3
-LISTENING_METRICS = ("k_weighted_50ms_db", "k_weighted_100ms_db", "k_weighted_200ms_db", "rms_100ms_dbfs", "short_rms_peak_10ms_dbfs")
+LISTENING_PROFILES = (("baseline", APPROVED_METRIC_NAME, {}),)
 LISTENING_TARGET_DB = -30.0
-LISTENING_CLIP_MS = 1000
-LISTENING_GAP_MS = 250
+LISTENING_CLIP_MS = 500
+LISTENING_GAP_MS = 50
 LISTENING_SAMPLE_RATE = 48000
 
 
@@ -443,6 +449,120 @@ def summarize_records(records: list[dict[str, object]]) -> dict[str, object]:
     }
 
 
+def weighted_isotonic_fit(ordered_values: list[tuple[int, float, int]]) -> dict[int, float]:
+    blocks = []
+    for velocity, raw_median_db, valid_hit_count in ordered_values:
+        blocks.append({"velocities": [velocity], "weighted_sum": raw_median_db * valid_hit_count, "weight": valid_hit_count})
+        while len(blocks) >= 2 and blocks[-2]["weighted_sum"] / blocks[-2]["weight"] > blocks[-1]["weighted_sum"] / blocks[-1]["weight"]:
+            previous_block = blocks[-2]
+            current_block = blocks[-1]
+            blocks[-2:] = [{
+                "velocities": previous_block["velocities"] + current_block["velocities"],
+                "weighted_sum": previous_block["weighted_sum"] + current_block["weighted_sum"],
+                "weight": previous_block["weight"] + current_block["weight"],
+            }]
+
+    fitted_values = {}
+    for block in blocks:
+        fitted_value = block["weighted_sum"] / block["weight"]
+        for velocity in block["velocities"]:
+            fitted_values[velocity] = fitted_value
+    return fitted_values
+
+
+def default_global_target_db(midi_velocity: int) -> float:
+    return 20.0 * math.log10(midi_velocity / 127.0)
+
+
+def summarize_approved_calibration(records: list[dict[str, object]]) -> dict[str, object]:
+    articulation_velocity_values = defaultdict(list)
+    articulation_velocity_records = defaultdict(list)
+    for record in records:
+        articulation_key = record["kit"], record["instrument"], record["articulation"]
+        velocity_key = articulation_key, int(record["velocity"])
+        articulation_velocity_values[velocity_key].append(float(record["metrics"][APPROVED_METRIC_NAME]))
+        articulation_velocity_records[velocity_key].append(record)
+
+    articulation_groups = defaultdict(list)
+    required_trims = []
+    limited_groups = []
+    trim_warning_group_count = 0
+    for (articulation_key, velocity), metric_values in articulation_velocity_values.items():
+        raw_median_db = float(statistics.median(metric_values))
+        required_trim_db = COMMON_REFERENCE_DB - raw_median_db
+        required_trims.append(required_trim_db)
+        if required_trim_db > POSITIVE_TRIM_WARNING_DB:
+            trim_warning_group_count += 1
+        if required_trim_db > POSITIVE_TRIM_CAP_DB:
+            limited_groups.append({
+                "kit": articulation_key[0],
+                "instrument": articulation_key[1],
+                "articulation": articulation_key[2],
+                "velocity": velocity,
+                "raw_median_db": round(raw_median_db, 4),
+                "required_trim_db": round(required_trim_db, 4),
+                "applied_trim_db": POSITIVE_TRIM_CAP_DB,
+                "reference_shortfall_db": round(required_trim_db - POSITIVE_TRIM_CAP_DB, 4),
+            })
+        articulation_groups[articulation_key].append((velocity, raw_median_db, len(metric_values)))
+
+    selection_target_failure_count = 0
+    selected_velocity_failure_count = 0
+    rendered_high_velocity_peaks = []
+    for articulation_key, velocity_groups in articulation_groups.items():
+        ordered_groups = sorted(velocity_groups)
+        fitted_values = weighted_isotonic_fit(ordered_groups)
+        lowest_fitted_db = fitted_values[ordered_groups[0][0]]
+        highest_fitted_db = fitted_values[ordered_groups[-1][0]]
+        previous_target_db = -math.inf
+        previous_selected_velocity = 0
+        for midi_velocity in range(1, 128):
+            unclamped_target_db = highest_fitted_db + default_global_target_db(midi_velocity)
+            selection_target_db = min(highest_fitted_db, max(lowest_fitted_db, unclamped_target_db))
+            selected_velocity = min(fitted_values, key=lambda named_velocity: (abs(fitted_values[named_velocity] - selection_target_db), named_velocity))
+            if selection_target_db < previous_target_db:
+                selection_target_failure_count += 1
+            if selected_velocity < previous_selected_velocity:
+                selected_velocity_failure_count += 1
+            previous_target_db = selection_target_db
+            previous_selected_velocity = selected_velocity
+
+        highest_velocity = ordered_groups[-1][0]
+        highest_raw_median_db = ordered_groups[-1][1]
+        applied_trim_db = min(POSITIVE_TRIM_CAP_DB, COMMON_REFERENCE_DB - highest_raw_median_db)
+        for record in articulation_velocity_records[(articulation_key, highest_velocity)]:
+            rendered_high_velocity_peaks.append(float(record["linked_max_true_peak_db"]) + applied_trim_db)
+
+    required_trim_values = np.asarray(required_trims, dtype=np.float64)
+    rendered_peak_values = np.asarray(rendered_high_velocity_peaks, dtype=np.float64)
+    maximum_safe_peak_db = -MIN_RENDERED_HEADROOM_DB
+    return {
+        "metric_version": APPROVED_METRIC_VERSION,
+        "metric_name": APPROVED_METRIC_NAME,
+        "common_reference_db": COMMON_REFERENCE_DB,
+        "positive_trim_warning_db": POSITIVE_TRIM_WARNING_DB,
+        "positive_trim_cap_db": POSITIVE_TRIM_CAP_DB,
+        "minimum_rendered_headroom_db": MIN_RENDERED_HEADROOM_DB,
+        "instrument_family_offsets_db": {},
+        "velocity_group_count": len(required_trims),
+        "required_trim_p50_db": float(np.percentile(required_trim_values, 50)),
+        "required_trim_p90_db": float(np.percentile(required_trim_values, 90)),
+        "required_trim_max_db": float(np.max(required_trim_values)),
+        "trim_warning_group_count": trim_warning_group_count,
+        "limited_group_count": len(limited_groups),
+        "limited_groups": limited_groups,
+        "highest_velocity_rendered_peak_p50_db": float(np.percentile(rendered_peak_values, 50)),
+        "highest_velocity_rendered_peak_p90_db": float(np.percentile(rendered_peak_values, 90)),
+        "highest_velocity_rendered_peak_max_db": float(np.max(rendered_peak_values)),
+        "highest_velocity_headroom_failure_count": int(np.sum(rendered_peak_values > maximum_safe_peak_db)),
+        "selection_articulation_count": len(articulation_groups),
+        "selection_target_monotonic_failure_count": selection_target_failure_count,
+        "selected_velocity_monotonic_failure_count": selected_velocity_failure_count,
+        "default_global_target_db_at_velocity_1": default_global_target_db(1),
+        "default_global_target_db_at_velocity_127": default_global_target_db(127),
+    }
+
+
 def resample_audio(audio_waveform: npt.NDArray[np.float64], source_sample_rate: int, target_sample_rate: int) -> npt.NDArray[np.float64]:
     if source_sample_rate == target_sample_rate:
         return audio_waveform
@@ -478,21 +598,22 @@ def render_listening_sequences(listening_folder: Path, records: list[dict[str, o
     listening_folder.mkdir(parents=True, exist_ok=True)
     output_files = []
     silence = np.zeros((gap_samples, 2), dtype=np.float64)
-    for metric_name in LISTENING_METRICS:
+    for profile_name, metric_name, family_offsets_db in LISTENING_PROFILES:
         sequence_parts = []
         for record, source_clip in prepared_clips:
             metric_value = float(record["metrics"][metric_name])
-            gain = 10.0 ** ((LISTENING_TARGET_DB - metric_value) / 20.0)
+            family_offset_db = family_offsets_db.get(str(record["case"]), 0.0)
+            gain = 10.0 ** ((LISTENING_TARGET_DB - metric_value + family_offset_db) / 20.0)
             sequence_parts.extend((source_clip * gain, silence))
         sequence = np.concatenate(sequence_parts, axis=0)
         sequence_peak = float(np.max(np.abs(sequence)))
         if sequence_peak > 0.0:
             sequence *= min(1.0, (10.0 ** (-1.0 / 20.0)) / sequence_peak)
-        output_path = listening_folder / f"{metric_name}.wav"
+        output_path = listening_folder / f"k_weighted_400ms_{profile_name}.wav"
         sf.write(output_path, sequence, LISTENING_SAMPLE_RATE, subtype="PCM_24")
         output_files.append(str(output_path))
 
-    manifest_lines = ["TODO14 Phase 1 listening order", "", "Each WAV uses the same order:"]
+    manifest_lines = ["TODO14 Phase 1 approved baseline listening pass", "", "K-weighted 400 ms with no instrument-family offsets", "", "Each WAV uses the same order:"]
     for clip_idx, (record, _) in enumerate(prepared_clips, start=1):
         manifest_lines.append(f"{clip_idx}. {record['case']} | {record['kit']} | {record['instrument']} | {record['articulation']} | velocity {record['velocity']} | RR {record['round_robin']}")
     manifest_path = listening_folder / "manifest.txt"
@@ -542,12 +663,13 @@ def main() -> None:
             "true_peak_oversample_factor": TRUE_PEAK_OVERSAMPLE_FACTOR,
             "max_variants_per_velocity": MAX_VARIANTS_PER_VELOCITY,
             "reference_mic_order": ("ons", "normal overhead stereo", "other overhead stereo", "decoded overhead mid-side"),
-            "listening_metrics": LISTENING_METRICS,
+            "listening_profiles": [{"name": profile_name, "metric": metric_name, "family_offsets_db": family_offsets_db} for profile_name, metric_name, family_offsets_db in LISTENING_PROFILES],
             "listening_target_db": LISTENING_TARGET_DB,
             "listening_clip_ms": LISTENING_CLIP_MS,
             "listening_gap_ms": LISTENING_GAP_MS,
         },
         "summary": summarize_records(records),
+        "approved_calibration_summary": summarize_approved_calibration(records),
         "records": records,
         "listening_files": listening_files,
         "warnings": scan_warnings + selection_warnings + analysis_warnings,
