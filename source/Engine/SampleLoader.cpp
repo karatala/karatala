@@ -361,8 +361,8 @@ juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
         return jobHasFinished;
     }
 
-    if (this->loadSpec.volumeTrimDb != 0.0f) {
-        const float gainLinear = juce::Decibels::decibelsToGain(this->loadSpec.volumeTrimDb);
+    if (this->loadSpec.manualGainDb != 0.0f) {
+        const float gainLinear = juce::Decibels::decibelsToGain(this->loadSpec.manualGainDb);
         for (int channelIdx = 0; channelIdx < channels; ++channelIdx)
             buffer->applyGain(channelIdx, 0, samplesToRead, gainLinear);
     }

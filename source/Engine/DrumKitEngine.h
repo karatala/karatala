@@ -211,7 +211,7 @@ private:
         juce::String micCode;
         int fileChannelStart = 0;
         int fileChannelCount = 0;
-        float volumeTrimDb = 0.0f;
+        float manualGainDb = 0.0f;
     };
 
     class PreviewResolveJob : public juce::ThreadPoolJob {

@@ -47,7 +47,7 @@ Current sample loading broadly does this on a worker:
 
 1. Read the source audio.
 2. Limit the resolved sample length.
-3. Apply filename `volumeTrimDb`.
+3. Apply filename `manualGainDb`.
 4. Apply the resolved end fade.
 5. Insert the processed buffer into the RAM cache.
 6. Publish it for playback.

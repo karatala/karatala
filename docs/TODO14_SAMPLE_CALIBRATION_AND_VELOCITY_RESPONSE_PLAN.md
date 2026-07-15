@@ -1,6 +1,6 @@
 # TODO14: Sample Calibration And Velocity Response Plan
 
-Status: Phase 1 is complete. Phase 2 analyzer implementation is complete, but its fixture and library verification has not been run. Phases 3 through 6 have not started.
+Status: Phase 1 is complete. Phase 2 measurement implementation is complete, but its fixture and library verification has not been run. Per-kit `metadata.csv` generation and C++ loading have not started.
 
 ## Scope And Terminology
 
@@ -12,7 +12,7 @@ Status: Phase 1 is complete. Phase 2 analyzer implementation is complete, but it
 - `fitted source value`: the monotonic value fitted from raw velocity medians and used only for source selection.
 - `global loudness response`: the user-controlled target loudness for MIDI velocities 1 to 127.
 - `source response profile`: the stable monotonic relation between named velocities and their fitted source values for one articulation.
-- `sample calibration trim`: fixed gain derived from one raw velocity median, repeated in every filename at that named velocity, and applied before cache publication.
+- `sample calibration trim`: fixed gain derived from one raw velocity median and applied before cache publication.
 - `source preprocessing recipe`: every fixed audio transform resolved before a sample buffer enters the cache.
 - `layer calibration override`: a manual correction saved for one map layer.
 - `source balance`: detected recorded position using the existing folder codes `L1..L127`, `C0`, and `R1..R127`.
@@ -20,7 +20,7 @@ Status: Phase 1 is complete. Phase 2 analyzer implementation is complete, but it
 
 Do not use one generic curve for both sample selection and output loudness. They are separate problems.
 
-This plan owns analysis, filename calibration metadata, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, per-layer overrides, and report-only balance and timing work. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense, low-round-robin libraries. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct.
+This plan owns analysis, per-kit `metadata.csv`, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, per-layer overrides, and report-only balance and timing work. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense, low-round-robin libraries. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct.
 
 Velocity and loudness calibration are the first release. Pan recommendations and timing reports follow after the core works. Runtime timing correction and source audio rewriting need a later plan after listening review.
 
@@ -44,14 +44,14 @@ Success means:
 - calibrated raw velocity medians stay within an agreed analysis and listening tolerance at velocity 127;
 - useful lower raw velocity medians stay within an agreed tolerance of the global response;
 - sample changes reduce level steps to the agreed tolerance;
-- `--rename-files` writes resolved metadata into every affected sample filename and repeated runs are idempotent;
-- conflicting repeated metadata is reported and never resolved by scan order;
+- the generator backs up the old per-kit `metadata.csv` and replaces it only after the complete new file is ready;
+- the generator never renames or modifies sample audio files;
 - manual changes affect only the chosen primary or shadow layer;
 - manual response changes rebuild lookup tables without reloading sample audio;
-- library filename trim or preprocessing changes reload only affected library content;
+- `Reload All Kits` rereads per-kit metadata and rebuilds the affected runtime data;
 - two different source preprocessing recipes never share one cached buffer;
 - early loading covers calibrated target intensities instead of trusting raw filename velocity labels;
-- analyzer report mode never changes files or folders.
+- generator failure leaves the existing `metadata.csv` and its backup unchanged.
 
 Phase 1 approved the actual metric, reference level, trim limits, headroom, and tolerances recorded below.
 
@@ -65,9 +65,9 @@ These choices are part of this plan:
 - Measure every audio file independently and keep one complete result record per file.
 - Group completed file records only in a second pass for logical-hit intensity, round-robin statistics, raw velocity medians, linked-mic comparisons, folder balance, timing, and confidence.
 - Keep every logical hit's pre-trim intensity. Use the raw velocity median to fit a stable source profile, but never replace or discard the individual hit values or raw median.
-- Write per-file measurements, repeated velocity-level trim, repeated logical-hit intensity, repeated raw velocity median, and required metric version data into every affected filename.
-- Reconstruct core runtime calibration from filenames. A calibration sidecar is not required.
-- Keep the analyzer report as an audit artifact, not a playback dependency.
+- Write measured sample and mic data into one generated `metadata.csv` in each kit root.
+- Let C++ define the required columns and derive logical hits, raw velocity medians, fitted source profiles, and calibration trims when the kit loads.
+- Keep sample filenames for identity only. Do not add generated analysis suffixes, hashes, checksums, or version fields.
 - Keep existing `L/C/R` source balance in instrument or articulation folder names.
 - Use overhead stereo as the source-balance reference.
 - Apply fixed source preprocessing once, in a defined order, before an immutable buffer is published to the RAM cache.
@@ -98,7 +98,7 @@ The Phase 1 reference pass below provides approved answers for:
 - Preview, voice loudness estimates, voice removal, and hi-hat transitions also depend on this linear gain in several paths.
 - One `InstrumentMapEntry` is one layer. Extra matching entries use shadow `InstrumentSynth` objects.
 - Current layer params are `tuning`, `attack`, `decay`, `vol`, `pan`, `flipLR`, `flipPhase`, `bleed`, and `micRoute`.
-- Sample filename metadata already supports whole-dB `v` gain trim plus `p`, `d`, and `c` peak and decay data.
+- Sample filenames still contain legacy whole-dB `v` trim plus `p`, `d`, and `c` peak and decay data. New generated analysis moves to `metadata.csv`.
 - Gain trim is applied while loading audio, before the processed buffer enters the RAM cache.
 - Effective peak and decay level estimates do not fully include that gain change.
 - The current RAM-cache key uses path, source size, source modification time, and `preprocessTag`.
@@ -111,16 +111,15 @@ The Phase 1 reference pass below provides approved answers for:
 - The pad popup and Instrument tab can rebuild map text through different paths. New fields must not be lost by an editor that does not display them.
 - All runtime velocity and routing data must be precomputed. The audio thread must not parse text, allocate, lock, scan files, or log.
 
-Current `../scripts/analyze_drum_samples.py` has these blocking issues:
+Current `../scripts/sample_calibr_phase2.py` contains the Phase 2 measurement prototype. Before it becomes the normal generator, it must be simplified:
 
-- separate file measurement is the correct first step, but there is no second pass for logical hits, round-robin statistics, raw velocity medians, or linked-mic comparisons;
-- it converts multichannel audio to a positive RMS mono signal before LUFS analysis, losing pan, phase, sign, and timing;
-- full-file integrated LUFS is not a stable hit-loudness value for both short drums and long cymbals;
-- its filename parser differs from the engine parser;
-- rename mode can drop existing optional metadata and does not validate all collisions first;
-- after rename, it writes the new path into the CSV `instr` column;
-- decay analysis can encode padded silence as valid points;
-- it does not calculate true peak, source balance, mic timing, or calibration profiles.
+- rename it to a clear name such as `generate_sample_metadata.py`;
+- keep the useful measurement code and function comments;
+- remove filename rename/apply logic and JSON as a required output;
+- accept one kit root or one sample-library root;
+- write one deterministic `metadata.csv` per kit with a safe `.bak` replacement workflow.
+
+The older `analyze_drum_samples*.py` experiments are deprecated except for the Phase 1 listening tool.
 
 ## Proposed Core Model
 
@@ -129,10 +128,10 @@ Keep these independent values:
 | Value | Scope | Purpose |
 | --- | --- | --- |
 | Global loudness response | plugin instance | raw MIDI velocity to target relative dB |
-| Logical-hit pre-trim intensity | logical hit, repeated in linked filenames | preserve each recorded hit's original strength |
-| Raw velocity median | named velocity, repeated in filenames | calculate stable trim without flattening round robins |
+| Logical-hit pre-trim intensity | logical hit, derived by C++ from measured CSV rows | preserve each recorded hit's original strength |
+| Raw velocity median | named velocity, derived by C++ from logical hits | calculate stable trim without flattening round robins |
 | Fitted source profile | library articulation runtime | build monotonic source selection across named velocities |
-| Sample calibration trim | named velocity, repeated in every related filename | move the raw velocity median to one common calibrated reference |
+| Sample calibration trim | named velocity, derived by C++ | move the raw velocity median to one common calibrated reference |
 | Source preprocessing recipe | one load request and cached buffer | define every fixed transform applied before cache publication |
 | Layer calibration override | instrument map layer | adjust automatic selection or residual gain manually |
 
@@ -176,7 +175,7 @@ residualOutputDb(layer, midiVelocity)
 
 Exact selection chooses the named velocity whose `fittedSourceDb` is closest to `selectionTargetDb`. TODO15 floating selection chooses a logical hit by comparing `hitIntensityDb` with the same `selectionTargetDb`.
 
-Every filename at one named velocity, across all variants and linked mic files, receives the same `calibrationTrimDb`. The median rendered reference before creative controls is therefore:
+Every sample at one named velocity, across all variants and linked mic entries, receives the same derived `calibrationTrimDb`. The median rendered reference before creative controls is therefore:
 
 ```text
 commonReferenceDb + globalTargetDb(midiVelocity) + residualOutputDb(layer, midiVelocity)
@@ -210,7 +209,7 @@ Build outside the audio thread:
 
 - one global 128-value gain table;
 - one 128-value `selectionTargetDb` table for each loaded layer articulation;
-- one `velocityCalibrationTrimDb` entry for each named velocity, reconstructed from the repeated filename values;
+- one `velocityCalibrationTrimDb` entry for each named velocity, derived from measured CSV data;
 - one exact source-region lookup for each loaded layer articulation;
 - immutable logical-hit descriptions with linked sample entries;
 - a thread-safe readiness snapshot for every logical hit;
@@ -223,30 +222,27 @@ Interpolation of loudness and gain correction happens in dB. Table output used f
 
 ### File measurement, logical hits, and source profiles
 
-The analyzer first measures every file independently. It preserves signed real channels and produces one deterministic record with per-file peak, decay, balance, headroom, and trim evidence.
+The generator first measures every file independently. It preserves signed real channels and produces deterministic per-mic rows with the fields required by C++.
 
-Only after file measurement, a second pass groups records by:
+Only after file measurement, C++ groups loaded CSV rows by:
 
 ```text
 kit + instrument + articulation + named velocity + round robin
 ```
 
-The second pass finds the linked mic files and channel ranges for one logical hit.
+The C++ load pass finds the linked mic files and channel ranges for one logical hit.
 
 - Derive one logical-hit pre-trim intensity from the agreed reference mic rule.
-- Repeat that exact value in every linked filename for the logical hit.
 - Keep the individual logical-hit intensity for every round robin.
 - Calculate `rawMedianDb` from logical hits that share one articulation and named velocity.
-- Repeat that raw median in every filename at that named velocity.
 - Fit `fittedSourceDb` from the raw medians while keeping original named-velocity order as a strong hint.
 - Calculate `calibrationTrimDb` from `rawMedianDb` and `commonReferenceDb`.
-- Repeat the same `calibrationTrimDb` in every filename at that named velocity, across all variants and linked mic files.
 - Use the same correction for direct, overhead, and room entries of one hit so their recorded balance is preserved.
 - Report strong inversions and round-robin outliers instead of silently flattening or reordering them.
 - Keep individual per-file measurements separate from the shared logical-hit intensity, raw velocity median, fitted source profile, and velocity-level trim.
 - Report noise risk, clipping risk, and unsafe positive trim.
 
-The group pass compares completed records. It does not mix channel data between files and does not replace any per-file result.
+The C++ group pass compares completed rows. It does not mix channel data between files and does not replace any per-file result.
 
 If an articulation has too little valid data, use a clearly marked instrument-level profile only when it is compatible. Otherwise mark the layer `Uncalibrated` and use original exact velocity selection.
 
@@ -256,18 +252,21 @@ Core runtime ownership:
 
 | Location | Data |
 | --- | --- |
-| Sample filename | per-file peak and decay, shared velocity-level trim, shared logical-hit intensity, shared raw velocity median, metric/reference/schema version, and approved fixed source transforms |
+| Sample filename | sample identity: instrument, articulation, named velocity, round robin, and mic chain |
+| Per-kit `metadata.csv` | generated per-file and per-mic measurements required by C++ |
 | Instrument or articulation folder | aggregate existing `L/C/R` source balance |
 | Instrument map | manual override for one mapped layer |
-| Analyzer report | raw file records, grouping evidence, confidence, warnings, timing and orientation evidence, proposed rename plan, and original paths |
+| C++ runtime | logical hits, raw velocity medians, fitted source profiles, calibration trims, decay envelopes, and pan decisions |
 
-The exact compact filename codes and precision are chosen with parser fixtures before any library rename. Keep the existing filename `v` purpose, but add enough decimal precision for calibration.
+Rows are identified by kit-relative sample path plus mic code. The initial CSV contains the measurements required by the planned runtime phases: `content_hash`, `file_size_bytes`, `onset_ms`, `intensity_db`, `true_peak_db`, `peak_db`, `peak_ms`, `decay_end_ms`, `stereo_balance`, and readable decay columns named `-6db_ms`, `-12db_ms`, `-18db_ms`, `-24db_ms`, `-30db_ms`, `-36db_ms`, `-42db_ms`, `-48db_ms`, `-54db_ms`, and `-60db_ms`. A value may be empty when it does not apply, such as stereo balance for a mono mic.
 
-The loader reconstructs logical hits and raw velocity medians from filename metadata, then builds the monotonic fitted source profile. Repeated logical-hit intensity, raw velocity median, and velocity-level trim values must agree at their defined scopes. A conflict marks the affected calibration invalid instead of using whichever file was scanned first.
+`onset_ms` also provides the timing evidence needed to compare linked mic entries, so a separate timing column is not required initially. C++ derives relative mic timing, logical-hit intensity, velocity medians, calibration trim, decay envelopes, and pan decisions from the measured CSV rows.
 
-The format must distinguish measured, proposed, runtime-applied, and audio-baked values. This prevents double correction after a later audio-editing tool is added.
+The readable peak and decay fields replace the runtime use of legacy `p`, `d`, and compressed base62 `c` filename values. Existing `a`, `p`, `d`, and `c` tokens may be ignored when CSV metadata is active. The `v` token remains supported as explicit per-file `manualGainDb` for correcting recording or mic-balance problems. Automatic decimal `calibrationTrimDb` is derived separately by C++. Manual gain is included when calculating effective intensity and true peak, and the final preprocessing gain combines `manualGainDb` with `calibrationTrimDb`.
 
-An optional generated audit or index file may exist later for faster inspection, but core playback must not require it.
+`content_hash` is a BLAKE2b-128 hash of the complete raw sample file. It detects modified files and can match files that were renamed or moved. `file_size_bytes` provides a quick additional check. Hashes stay in `metadata.csv` and are never added to sample filenames.
+
+Exact measurement methods can still be tuned. Regenerating `metadata.csv` and using `Reload All Kits` applies the new measurements without renaming samples. Missing or invalid metadata disables only the affected calibrated behavior and falls back to current uncalibrated loading. No separate JSON runtime database, schema-version system, file watching, or realtime metadata parsing is required.
 
 ### Source preprocessing and cache identity
 
@@ -275,7 +274,7 @@ Resolve one typed source preprocessing recipe before cache lookup.
 
 Processing order:
 
-1. Parse and validate filename metadata.
+1. Parse sample identity from the filename and read available per-kit CSV metadata.
 2. Resolve defaults into concrete typed values.
 3. Build one canonical recipe with an algorithm version.
 4. Build the cache key from source identity and the complete recipe.
@@ -297,7 +296,7 @@ Preview, progressive loading, normal playback, and future cache baking must use 
 
 Global loudness response, manual layer calibration, `Mix Gain`, tuning, envelopes, bleed, pan, routing, choke, aftertouch, and instance effects remain runtime controls. They do not belong in the source recipe.
 
-A changed velocity-level trim or other audio-changing filename token creates a new RAM-cache identity and reloads only affected source content. A changed logical-hit intensity, raw velocity median, fitted-profile algorithm, or manual curve rebuilds selection tables but does not change buffer identity when source content and the audio recipe are unchanged. TODO16 consumes the same identity for persistent disk storage, Bake Cache UI, cleanup, and multi-instance safety.
+A changed derived velocity-level trim or other audio-changing metadata creates a new RAM-cache identity after `Reload All Kits`. A changed logical-hit intensity, raw velocity median, fitted-profile algorithm, or manual curve rebuilds selection tables but does not change buffer identity when source content and the audio recipe are unchanged. TODO16 consumes the same identity for persistent disk storage, Bake Cache UI, cleanup, and multi-instance safety.
 
 ### Global and layer controls
 
@@ -305,7 +304,7 @@ A changed velocity-level trim or other audio-changing filename token creates a n
 - Build the full table outside playback.
 - Add a simple global editor with reset and machine-default actions.
 - Add `Library` and `Manual` calibration modes per layer. These are separate from TODO15's sample-selection mode. `Uncalibrated` is a status, not a user mode.
-- `Library` uses the analyzer-derived profile and zero manual offsets.
+- `Library` uses the metadata-derived profile and zero manual offsets.
 - `Manual` starts from library calibration and can adjust `selectionOffsetDb` for source selection plus `residualOutputDb` for a small output correction.
 - Reset removes the map override and returns to library calibration.
 - Keep `Mix Gain` separate.
@@ -347,7 +346,7 @@ Possible room L/R reversal is per mic, not per layer. Report it only when room d
 
 Timing analysis compares linked hits across many samples. A stable repeated delay for one mic or interface is possible technical latency. A delay that changes by instrument or distance is likely acoustic. Report both, but do not apply timing correction in this plan.
 
-Report-only timing and orientation stay in the analyzer report. If a reviewed value later becomes runtime input, write it into every affected filename and include every audio-changing transform in the source recipe key.
+Report-only timing and orientation stay outside playback. If a reviewed value later becomes runtime input, add a C++-owned CSV field and include every audio-changing transform in the source recipe key.
 
 ## Implementation Phases
 
@@ -362,7 +361,7 @@ Report-only timing and orientation stay in the analyzer report. If a reviewed va
 
 #### Phase 1 reference pass
 
-[`analyze_drum_samples_phase1.py`](../scripts/analyze_drum_samples_phase1.py) is a read-only comparison tool with versioned constants and explicit output paths. It does not rename or rewrite source files.
+[`analyze_drum_samples_phase1.py`](../scripts/analyze_drum_samples_phase1.py) is a read-only comparison tool with explicit measurement constants and output paths. It does not rename or rewrite source files.
 
 The final `todo14-phase1-v4` pass measured 184 logical hits from 30 articulations in four kits. It used low, middle, and high named velocities with up to three round robins, covering kicks, snares, toms, closed and open hi-hats, crashes, rides, and cowbells. It measured every selected reference hit from signed stereo channels and checked true peak across every linked file in the selected hit.
 
@@ -411,37 +410,41 @@ Approved Phase 1 constants:
 
 The approved baseline listening sequence is in `build/todo14_phase1_listening_v4/`. It uses K-weighted 400 ms normalization without instrument-family offsets.
 
+These are the current working values, not a permanent file-format contract. The measurement window and other analysis constants can be tuned later, then `metadata.csv` can be regenerated without renaming samples.
+
 Verification result: weighted isotonic fitting plus the clamped `selectionTargetDb` equation produced no decreasing targets and no backward named-velocity choices across all 30 reference articulations and MIDI velocities 1 to 127.
 
-### Phase 2: Make analyzer output correct and safe (implementation complete, verification pending)
+### Phase 2: Make analyzer measurements correct (implementation complete, verification pending)
 
-- ✅ Separate parsing, file measurement, grouping, reporting, and apply logic.
+- ✅ Separate parsing, file measurement, grouping, and reporting.
 - ✅ Preserve signed channels and decode mic channel ranges.
 - ✅ Match the engine filename parser.
 - ✅ Measure every file first, then build logical hits from completed records.
 - ✅ Calculate and retain each logical-hit pre-trim intensity.
 - ✅ Calculate raw velocity medians without replacing individual hit values.
 - ✅ Add onset, fixed-window loudness, true peak, channel balance, corrected decay, and timing evidence.
-- ✅ Make report-only mode the default and generate a complete no-write rename plan.
-- ✅ Preserve all metadata and validate all rename collisions before any write.
-- ✅ Fix the CSV and decay problems listed above.
+- ✅ Correct decay measurement and CSV path output in the prototype.
 
-Implementation result: [`analyze_drum_samples.py`](../scripts/analyze_drum_samples.py) now writes a complete JSON report and an optional flat CSV. Measurement settings are command-line options so later listening experiments do not require code edits. Rename mode replaces only existing `p`, `d`, and `c` analysis metadata, preserves `v` and unknown tokens, and refuses all writes when parsing, measurement, uniqueness, or destination checks block the complete plan. Transactional temporary names and rollback remain Phase 3 work.
+Implementation result: [`sample_calibr_phase2.py`](../scripts/sample_calibr_phase2.py) contains the Phase 2 measurement prototype. Measurement settings are command-line options so later listening experiments do not require code edits. Its rename-oriented and JSON-oriented parts are no longer part of the target workflow and will be removed when the per-kit metadata generator is completed.
 
-Verify later: mono, stereo, separate-file, and multichannel fixtures; no-write report mode; deterministic output; parser round-trip; linked-hit grouping; collision protection.
+Verify later: mono, stereo, mid-side, separate-file, and multichannel fixtures; deterministic measurements; linked-hit grouping; no sample-file changes.
 
-### Phase 3: Define filename metadata and generate calibration
+### Phase 3: Generate and load per-kit `metadata.csv`
 
-- Finalize compact filename codes for logical-hit intensity, raw velocity median, decimal trim, metric/reference/schema version, and approved transforms.
-- Add Python schema validation and C++ parsing.
-- Write shared values into every affected filename and validate that repeated values agree.
-- Reject mixed metric or common-reference versions inside one calibrated articulation.
-- Reconstruct logical hits and raw velocity medians from filenames, then fit source profiles in C++.
+- Define the required CSV columns and their playback meaning in C++.
+- Rename the generator prototype to `generate_sample_metadata.py` and keep useful measurement comments.
+- Accept one kit root or one sample-library root and write deterministic rows sorted by relative path and mic code.
+- Store readable decay columns from `-6db_ms` through `-60db_ms` instead of the compressed base62 `c` suffix.
+- Add only measured fields that have a defined C++ consumer.
+- Back up the current `metadata.csv` to `metadata.csv.bak`, then atomically replace it only after the complete kit succeeds.
+- Load and match rows outside the audio thread, then reconstruct logical hits and raw velocity medians and fit source profiles in C++.
 - Fit monotonic source profiles and calculate safe shared velocity-level trim recommendations.
-- Make `--rename-files` transactional at the planned rename-set level: prevalidate all paths, use temporary names where needed, roll back on failure, and remain idempotent.
-- Add stale-analysis warnings to the analyzer report without making the report a runtime dependency.
+- Add `Reload All Kits` support that rereads CSV files and rebuilds loaded kit state.
+- Ignore legacy analysis suffix values when CSV metadata is active so correction is not applied twice.
+- Use current uncalibrated behavior when a CSV, row, or required field is missing or invalid.
+- Do not rename samples or add hashes, checksums, schema versions, metric versions, reference versions, or transform versions.
 
-Verify later: Python-to-engine round-trip; missing, invalid, and conflicting fallback; repeated apply without duplicate correction; reference-corpus predictions within Phase 1 tolerance.
+Verify later: Python-to-C++ row matching; backup and replacement behavior; failed-kit rollback; missing and invalid fallback; repeated generation; reference-corpus predictions within Phase 1 tolerance.
 
 ### Phase 4: Add calibrated exact runtime and complete RAM-cache identity
 
@@ -481,7 +484,7 @@ Verify later: independent primary and shadow edits; two articulations in one slo
 - Precompute mic-aware placement modes for overhead and approved mono-to-stereo routes.
 - Add per-mic room-orientation recommendations to the report.
 - Add report-only mic timing analysis that separates stable technical offsets from likely acoustic delay.
-- Define reviewed future filename tokens before any orientation or timing transform becomes runtime input.
+- Define reviewed future CSV fields before any orientation or timing transform becomes runtime input.
 
 Verify later: known left, center, right, mirrored, and delayed fixtures; low-confidence no-change behavior; direct and room routing exclusions; listening check for mic-aware pan.
 
@@ -500,7 +503,7 @@ Update `INSTRUMENT_MAP_FORMAT.md` when final map fields are chosen. Relevant pla
 
 Likely implementation areas:
 
-- analyzer: `../scripts/analyze_drum_samples.py`;
+- generator: `../scripts/sample_calibr_phase2.py`, later renamed to `generate_sample_metadata.py`;
 - library and loading: `../source/Engine/KitLibModel.*`, `InstrumentSynthLoader.cpp`, and `SampleLoader.*`;
 - runtime and maps: `../source/Engine/InstrumentSynth*`, `DrumKitEngine*`, and mapping helpers;
 - UI: `../source/UI/PadContextPopup.*`, `InstrumentConfigPanel.*`, and `EngineSettingsPanel.*`;
@@ -508,7 +511,9 @@ Likely implementation areas:
 
 Non-goals:
 
-- no mandatory calibration sidecar;
+- no sample or folder renaming for generated analysis data;
+- no generated analysis, hash, checksum, or version suffixes in sample filenames;
+- no separate JSON runtime database;
 - no loss of individual logical-hit intensity after median calculation;
 - no independent mic or round-robin selection after a logical hit is chosen;
 - no full floating-selection implementation, because TODO15 owns it;
@@ -522,4 +527,4 @@ Non-goals:
 - no source audio-file modification;
 - no new realtime parsing, allocation, file I/O, locking, or unbounded work.
 
-No build or tests were run for Phases 1 or 2. The read-only Phase 1 analyzer was run. The Phase 2 analyzer was not run, and no sample filename or source audio was changed. Phase 2 verification remains pending.
+No build or tests were run for Phases 1 or 2. The read-only Phase 1 analyzer was run. The Phase 2 measurement prototype was not run, and no sample filename or source audio was changed. Phase 2 verification remains pending.

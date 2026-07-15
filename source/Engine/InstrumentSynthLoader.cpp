@@ -601,7 +601,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
 
                 SampleLoadSpec loadSpec;
                 loadSpec.file = varSpec->sampleFile;
-                loadSpec.volumeTrimDb = varSpec->volumeTrimDb;
+                loadSpec.manualGainDb = varSpec->manualGainDb;
 
                 loader->getQueue().enqueueCandidate(
                     loadSpec,

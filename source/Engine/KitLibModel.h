@@ -26,9 +26,7 @@
  *          └─ <instrumentType>-<size>[-<balance>][-<description>]/
  *              └─ <articulation>[optionalExpressionShortName]-<optionalExpressionCode><value>-<anotherExpressionCode><value>/
  *                  └─ <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
- * otherOptionalSampleParams: includes RMS values for v{n or p}{volume_trim_db, vn - negative, vp - positive}-p{peak_db*-10}_{peak_ms}-d{decay_ms}-c{decay_code}), 
- * where decay_code is a base62-encoded string representing the decay curve of relative interval in ms from peak to -60dB with 6dB steps (can have less then 10 steps for quiet samples!)
- * (refer to scripts\analyze_drum_samples.py line decay_code: str = encode_time_intervals_as_base62(decay_points))
+ * otherOptionalSampleParams: includes values for v{n or p}{manual_gain_db, vn - negative, vp - positive}
  * 
  *     instruments/                                                 LibraryManager
  *       └─ Kit Name by Author Name  [CC-BY-4.0]/                   DrumKitSpec
@@ -37,8 +35,8 @@
  *                  └─ kick-22-center-127a-dim.flac                                VelocityLayerSpec, SampleVariantSpec, MicSpec
  *          └─ hihat-14-Sabian HHX/
  *              └─ bow[half]-pdl_opn_cls043-zon_bel_edg085/
- *                  └─ hihat-14-bow[half]-043a-oni-p556_51-d1650-2U_c26_2g_3S_1s_1C_26_42_6s_3S.flac
- *                  └─ hihat-14-bow[half]-085a-oni-p396_70-d2078-3y_2q_2g_2U_2g_26_2q_34_7K_2U.flac
+ *                  └─ hihat-14-bow[half]-043a-oni-vp5.flac
+ *                  └─ hihat-14-bow[half]-085a-oni-vp3.flac
  *                  ...
  *              └─ bow[close]-pdl_opn_cls085/
  *                  ...
@@ -143,7 +141,7 @@ public:
     // Number of channels occupied by this mic inside the source file (usually equals micSpec.channels)
     int fileChannelCount = 0;
 
-    float volumeTrimDb = 0.0f;
+    float manualGainDb = 0.0f;
     float peakDb = 0.0f;
     float peakMs = 0.0f;
     float decayMs = 0.0f;
@@ -452,7 +450,7 @@ public:
         std::vector<MicSpec> micDescriptors;
         juce::File file;
         
-        float volumeTrimDb = 0.0f; // positive or negative volume adjustment in dB to apply to this sample for better level matching in the kit (ex. for cymbals with close mics that are too loud compared to other samples)
+        float manualGainDb = 0.0f; // positive or negative volume adjustment in dB to apply to this sample for better level matching in the kit (ex. for cymbals with close mics that are too loud compared to other samples)
         float peakDb = 0.0f;
         float peakMs = 0.0f;
         float decayMs = 0.0f;

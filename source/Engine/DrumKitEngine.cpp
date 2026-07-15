@@ -1404,7 +1404,7 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     target.micCode = bestVariant->micSpec.raw;
     target.fileChannelStart = juce::jmax(0, bestVariant->fileChannelStart);
     target.fileChannelCount = bestVariant->fileChannelCount > 0 ? bestVariant->fileChannelCount : bestVariant->micSpec.channels;
-    target.volumeTrimDb = bestVariant->volumeTrimDb;
+    target.manualGainDb = bestVariant->manualGainDb;
     return target;
 }
 
@@ -1414,12 +1414,12 @@ void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::ui
     if (loader == nullptr || !target.sampleFile.existsAsFile())
         return;
 
-    const float gain = juce::Decibels::decibelsToGain(target.volumeTrimDb)
+    const float gain = juce::Decibels::decibelsToGain(target.manualGainDb)
                      * (static_cast<float>(velocity) / 127.0f);
 
     SampleLoadSpec loadSpec;
     loadSpec.file = target.sampleFile;
-    loadSpec.volumeTrimDb = 0.0f;
+    loadSpec.manualGainDb = 0.0f;
     loadSpec.preprocessTag = "preview";
 
     const int fileChannelStart = juce::jmax(0, target.fileChannelStart);

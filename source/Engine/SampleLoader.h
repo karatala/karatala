@@ -18,7 +18,7 @@ struct SampleLoadSpec {
     juce::File file;
 
     // Pre-processing options that affect cached audio identity.
-    float volumeTrimDb = 0.0f;
+    float manualGainDb = 0.0f;
     double maxReadLengthMs = 0.0; // <=0: use loader default
     double fadeOutMs = 0.0;       // <=0: use loader default
 
@@ -120,7 +120,7 @@ public:
     juce::String makeCacheKey(const SampleLoadSpec& loadSpec) const {
         // const double resolvedMaxReadLengthMs = loadSpec.maxReadLengthMs > 0.0 ? loadSpec.maxReadLengthMs : this->maxSampleLengthMs;
         // const double resolvedFadeOutMs = loadSpec.fadeOutMs > 0.0 ? loadSpec.fadeOutMs : this->fadeOutMs;
-        // const int volumeMilliDb = juce::roundToInt(loadSpec.volumeTrimDb * 1000.0f);
+        // const int volumeMilliDb = juce::roundToInt(loadSpec.manualGainDb * 1000.0f);
         // const int maxReadUs = juce::roundToInt(static_cast<float>(resolvedMaxReadLengthMs * 1000.0));
         // const int fadeOutUs = juce::roundToInt(static_cast<float>(resolvedFadeOutMs * 1000.0));
         return loadSpec.file.getFullPathName()

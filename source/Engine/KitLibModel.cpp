@@ -409,7 +409,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 sv->peakDb = parsedInfo.value.peakDb;
                 sv->peakMs = parsedInfo.value.peakMs;
                 sv->decayMs = parsedInfo.value.decayMs;
-                sv->volumeTrimDb = parsedInfo.value.volumeTrimDb;
+                sv->manualGainDb = parsedInfo.value.manualGainDb;
                 sv->decayCode = parsedInfo.value.decayCode;
                 sampleCount++;
 
@@ -476,8 +476,8 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     result.value.sampleVariant = sampleVariant;
     result.value.micDescriptors = parsedMics.value;
 
-    // Parse optional metadata parameters if present (format: v{n or p}{volume_trim_db, vn - negative, vp - positive}-p{peak_db*-10}_{peak_ms}-d{decay_ms}-c{decay_code})
-    // Example: hihat-14-bow[half]-vn4-p556_51-d1650-2U_c26_2g_3S_1s_1C_26_42_6s_3S.flac
+    // Parse optional metadata parameters if present (format: v{n or p}{manual_gain_db, vn - negative, vp - positive}
+    // Example: hihat-14-bow[half]-vn4.flac
     if (nameParts.size() > 5) {
         for (int i = 5; i < nameParts.size(); ++i) {
             const juce::String& part = nameParts[i];
@@ -487,17 +487,17 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
             const juce::String paramValue = part.substring(1);
             
             switch (paramType) {
-                case 'v': { // volume trim (negative or positive)
+                case 'v': { // manual gain, dB (negative or positive)
                     if (paramValue.startsWith("n")) {
-                        result.value.volumeTrimDb = -static_cast<float>(paramValue.substring(1).getIntValue());
+                        result.value.manualGainDb = -static_cast<float>(paramValue.substring(1).getIntValue());
                     } else if (paramValue.startsWith("p")) {
-                        result.value.volumeTrimDb = static_cast<float>(paramValue.substring(1).getIntValue());
+                        result.value.manualGainDb = static_cast<float>(paramValue.substring(1).getIntValue());
                     } else {
                         result.addWarning("Unknown volume trim format: " + paramValue);
                     }
                     break;
                 }
-                case 'p': { // peak in dB*-10 (negative value, e.g., p19 means -1.9dB)
+                case 'p': { // peak in dB*-10 (negative value, e.g., p19 means -1.9dB) //FIXME: remove obsolete a/p/d/c (where is a?)
                     juce::StringArray peakParts;
                     peakParts.addTokens(paramValue, "_", "");
                     if (peakParts.size() >= 1)
@@ -506,10 +506,10 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
                         result.value.peakMs = static_cast<float>(peakParts[1].getIntValue());
                     break;
                 }
-                case 'd':
+                case 'd': //FIXME: remove obsolete
                     result.value.decayMs = static_cast<float>(paramValue.getIntValue());
                     break;
-                case 'c': // decay code (base62 encoded)
+                case 'c': // decay code (base62 encoded) //FIXME: remove obsolete
                     result.value.decayCode = paramValue;
                     break;
                 default:
