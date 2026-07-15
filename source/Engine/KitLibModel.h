@@ -10,6 +10,7 @@
 #include "../Config/Helpers.h"
 #include "KitLibConsts.h"
 #include "RoutingTypes.h"
+#include "SampleMetadata.h"
 
 /**
  * Class Hierarchy:
@@ -102,13 +103,14 @@ struct DecayEnvelope {
         this->points.fill(-1.0f);
     }
 
-    bool isValid() const { return this->validPoints > 0 && this->peakDb < 0.0f; }
+    bool isValid() const { return this->validPoints > 0; }
 
     float getAbsoluteDbAtMs(float elapsedMs) const;
     float getMsAtAbsoluteDb(float targetAbsDb) const;
 
     static int base62ToInt(const juce::String& s);
     static DecayEnvelope decode(const juce::String& decayCode, float peakDb, float peakMs);
+    static DecayEnvelope fromPoints(float peakDb, float peakMs, const std::array<std::optional<float>, NUM_POINTS>& pointsMs);
 };
 
 class DrumKitSpec;
@@ -146,6 +148,15 @@ public:
     float peakMs = 0.0f;
     float decayMs = 0.0f;
     juce::String decayCode;
+    DecayEnvelope decayEnvelope;
+    bool hasCsvMetadata = false;
+    juce::String metadataContentHash;
+    juce::int64 metadataFileSizeBytes = 0;
+    std::optional<float> onsetMs;
+    std::optional<float> intensityDb;
+    std::optional<float> truePeakDb;
+    std::optional<float> stereoBalance;
+    std::optional<float> timingOffsetMs;
 
     MicSpec micSpec;
 
@@ -179,9 +190,20 @@ public:
  */
 class VelocityLayerSpec {
 public:
+    struct LogicalHitMeasurement {
+        uint8_t variantIdx = 0;
+        float intensityDb = 0.0f;
+        std::optional<float> maxTruePeakDb;
+    };
+
     ArticulationSpec* parent = nullptr;
     uint8_t velocity;
     std::vector<std::unique_ptr<SampleVariantSpec>> sampleVariantSpecs;
+    std::vector<LogicalHitMeasurement> logicalHitMeasurements;
+    std::optional<float> rawVelocityMedianDb;
+    std::optional<float> fittedSourceDb;
+    std::optional<float> calibrationTrimDb;
+    bool calibrationLimited = false;
 
     explicit VelocityLayerSpec(ArticulationSpec* parentSpec, uint8_t layerVelocity)
         : parent(parentSpec), velocity(layerVelocity) {}
@@ -485,6 +507,7 @@ public:
     };
 
     int scanInstrumentSamples(ScanStats* stats = nullptr);
+    void buildCalibrationProfiles();
 
     static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);
 
@@ -536,6 +559,7 @@ public:
     std::vector<InstrumentSpec*> getInstrumentsByType(InstrumentSpec::Type type) const;
 
     MetaInfo meta;
+    SampleMetadataTable sampleMetadata;
     std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>> instrumentSpecsMap;
     const std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>>& getInstrumentSpecsMap() const { return this->instrumentSpecsMap; }
 };

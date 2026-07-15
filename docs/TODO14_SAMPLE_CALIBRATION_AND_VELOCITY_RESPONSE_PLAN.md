@@ -1,6 +1,6 @@
 # TODO14: Sample Calibration And Velocity Response Plan
 
-Status: Phase 1 is complete. Phase 2 measurement implementation is complete, but its fixture and library verification has not been run. Per-kit `metadata.csv` generation and C++ loading have not started.
+Status: Phase 1 is complete. Phase 2 and Phase 3 implementation is complete, but their fixture, library, and C++ verification has not been run.
 
 ## Scope And Terminology
 
@@ -51,7 +51,7 @@ Success means:
 - `Reload All Kits` rereads per-kit metadata and rebuilds the affected runtime data;
 - two different source preprocessing recipes never share one cached buffer;
 - early loading covers calibrated target intensities instead of trusting raw filename velocity labels;
-- generator failure leaves the existing `metadata.csv` and its backup unchanged.
+- kit parsing or measurement failure leaves the existing `metadata.csv` and its backup unchanged.
 
 Phase 1 approved the actual metric, reference level, trim limits, headroom, and tolerances recorded below.
 
@@ -67,7 +67,7 @@ These choices are part of this plan:
 - Keep every logical hit's pre-trim intensity. Use the raw velocity median to fit a stable source profile, but never replace or discard the individual hit values or raw median.
 - Write measured sample and mic data into one generated `metadata.csv` in each kit root.
 - Let C++ define the required columns and derive logical hits, raw velocity medians, fitted source profiles, and calibration trims when the kit loads.
-- Keep sample filenames for identity only. Do not add generated analysis suffixes, hashes, checksums, or version fields.
+- Keep sample filenames for identity plus optional explicit `v` manual gain. Do not add generated analysis suffixes, hashes, checksums, or version fields.
 - Keep existing `L/C/R` source balance in instrument or articulation folder names.
 - Use overhead stereo as the source-balance reference.
 - Apply fixed source preprocessing once, in a defined order, before an immutable buffer is published to the RAM cache.
@@ -98,7 +98,7 @@ The Phase 1 reference pass below provides approved answers for:
 - Preview, voice loudness estimates, voice removal, and hi-hat transitions also depend on this linear gain in several paths.
 - One `InstrumentMapEntry` is one layer. Extra matching entries use shadow `InstrumentSynth` objects.
 - Current layer params are `tuning`, `attack`, `decay`, `vol`, `pan`, `flipLR`, `flipPhase`, `bleed`, and `micRoute`.
-- Sample filenames still contain legacy whole-dB `v` trim plus `p`, `d`, and `c` peak and decay data. New generated analysis moves to `metadata.csv`.
+- Sample filenames still contain explicit whole-dB `v` manual gain plus legacy `p`, `d`, and `c` peak and decay data. New generated analysis moves to `metadata.csv`.
 - Gain trim is applied while loading audio, before the processed buffer enters the RAM cache.
 - Effective peak and decay level estimates do not fully include that gain change.
 - The current RAM-cache key uses path, source size, source modification time, and `preprocessTag`.
@@ -111,13 +111,7 @@ The Phase 1 reference pass below provides approved answers for:
 - The pad popup and Instrument tab can rebuild map text through different paths. New fields must not be lost by an editor that does not display them.
 - All runtime velocity and routing data must be precomputed. The audio thread must not parse text, allocate, lock, scan files, or log.
 
-Current `../scripts/sample_calibr_phase2.py` contains the Phase 2 measurement prototype. Before it becomes the normal generator, it must be simplified:
-
-- rename it to a clear name such as `generate_sample_metadata.py`;
-- keep the useful measurement code and function comments;
-- remove filename rename/apply logic and JSON as a required output;
-- accept one kit root or one sample-library root;
-- write one deterministic `metadata.csv` per kit with a safe `.bak` replacement workflow.
+Current [`generate_sample_metadata.py`](../scripts/generate_sample_metadata.py) is the developer metadata generator. It keeps the useful Phase 2 measurements, accepts one kit or sample-library root, and writes deterministic per-kit CSV files without renaming samples or producing a separate JSON database.
 
 The older `analyze_drum_samples*.py` experiments are deprecated except for the Phase 1 listening tool.
 
@@ -252,7 +246,7 @@ Core runtime ownership:
 
 | Location | Data |
 | --- | --- |
-| Sample filename | sample identity: instrument, articulation, named velocity, round robin, and mic chain |
+| Sample filename | sample identity plus optional explicit `v` manual gain |
 | Per-kit `metadata.csv` | generated per-file and per-mic measurements required by C++ |
 | Instrument or articulation folder | aggregate existing `L/C/R` source balance |
 | Instrument map | manual override for one mapped layer |
@@ -260,7 +254,7 @@ Core runtime ownership:
 
 Rows are identified by kit-relative sample path plus mic code. The initial CSV contains the measurements required by the planned runtime phases: `content_hash`, `file_size_bytes`, `onset_ms`, `intensity_db`, `true_peak_db`, `peak_db`, `peak_ms`, `decay_end_ms`, `stereo_balance`, and readable decay columns named `-6db_ms`, `-12db_ms`, `-18db_ms`, `-24db_ms`, `-30db_ms`, `-36db_ms`, `-42db_ms`, `-48db_ms`, `-54db_ms`, and `-60db_ms`. A value may be empty when it does not apply, such as stereo balance for a mono mic.
 
-`onset_ms` also provides the timing evidence needed to compare linked mic entries, so a separate timing column is not required initially. C++ derives relative mic timing, logical-hit intensity, velocity medians, calibration trim, decay envelopes, and pan decisions from the measured CSV rows.
+`onset_ms` also provides the timing evidence needed to compare linked mic entries, so a separate timing column is not required initially. Phase 3 C++ derives relative mic timing, logical-hit intensity, velocity medians, calibration trim, and decay envelopes from the measured CSV rows. Phase 6 will use `stereo_balance` for pan decisions.
 
 The readable peak and decay fields replace the runtime use of legacy `p`, `d`, and compressed base62 `c` filename values. Existing `a`, `p`, `d`, and `c` tokens may be ignored when CSV metadata is active. The `v` token remains supported as explicit per-file `manualGainDb` for correcting recording or mic-balance problems. Automatic decimal `calibrationTrimDb` is derived separately by C++. Manual gain is included when calculating effective intensity and true peak, and the final preprocessing gain combines `manualGainDb` with `calibrationTrimDb`.
 
@@ -425,26 +419,27 @@ Verification result: weighted isotonic fitting plus the clamped `selectionTarget
 - ✅ Add onset, fixed-window loudness, true peak, channel balance, corrected decay, and timing evidence.
 - ✅ Correct decay measurement and CSV path output in the prototype.
 
-Implementation result: [`sample_calibr_phase2.py`](../scripts/sample_calibr_phase2.py) contains the Phase 2 measurement prototype. Measurement settings are command-line options so later listening experiments do not require code edits. Its rename-oriented and JSON-oriented parts are no longer part of the target workflow and will be removed when the per-kit metadata generator is completed.
+Implementation result: [`generate_sample_metadata.py`](../scripts/generate_sample_metadata.py) contains the Phase 2 measurements used by the Phase 3 generator. Measurement settings are command-line options so later listening experiments do not require code edits.
 
 Verify later: mono, stereo, mid-side, separate-file, and multichannel fixtures; deterministic measurements; linked-hit grouping; no sample-file changes.
 
-### Phase 3: Generate and load per-kit `metadata.csv`
+### ✅ Phase 3: Generate and load per-kit `metadata.csv` (implementation complete, verification pending)
 
-- Define the required CSV columns and their playback meaning in C++.
-- Rename the generator prototype to `generate_sample_metadata.py` and keep useful measurement comments.
-- Accept one kit root or one sample-library root and write deterministic rows sorted by relative path and mic code.
-- Store readable decay columns from `-6db_ms` through `-60db_ms` instead of the compressed base62 `c` suffix.
-- Add only measured fields that have a defined C++ consumer.
-- Back up the current `metadata.csv` to `metadata.csv.bak`, then atomically replace it only after the complete kit succeeds.
-- Load and match rows outside the audio thread, then reconstruct logical hits and raw velocity medians and fit source profiles in C++.
-- Fit monotonic source profiles and calculate safe shared velocity-level trim recommendations.
-- Add `Reload All Kits` support that rereads CSV files and rebuilds loaded kit state.
-- Ignore legacy analysis suffix values when CSV metadata is active so correction is not applied twice.
-- Use current uncalibrated behavior when a CSV, row, or required field is missing or invalid.
-- Do not rename samples or add hashes, checksums, schema versions, metric versions, reference versions, or transform versions.
+- ✅ Define the required CSV columns and their runtime meaning in C++.
+- ✅ Rename the prototype to `generate_sample_metadata.py` and remove JSON, report, and sample-rename behavior.
+- ✅ Accept one kit root or one sample-library root and write deterministic per-mic rows sorted by relative path and mic code.
+- ✅ Measure onset, K-weighted intensity, true peak, RMS peak and decay, stereo balance, file size, and BLAKE2b-128 content hash.
+- ✅ Store readable decay columns from `-6db_ms` through `-60db_ms` instead of compressed base62 codes.
+- ✅ Back up the current `metadata.csv` to `metadata.csv.bak` and replace the CSV only after the complete kit measurement succeeds.
+- ✅ Load and match rows outside the audio thread by kit-relative path plus mic code.
+- ✅ Keep filename `v` as `manualGainDb`; include it in effective intensity and peak calculations.
+- ✅ Ignore legacy filename `p`, `d`, and `c` values when a matching CSV row is active.
+- ✅ Reconstruct logical hits and velocity medians, fit monotonic source profiles, and calculate safe shared velocity-level calibration trims in C++.
+- ✅ Use the existing `Reload All Kits` path to reread metadata and rebuild loaded kit state.
+- ✅ Keep current uncalibrated behavior when a CSV, row, or required feature field is missing or invalid.
+- ✅ Do not rename samples or add generated analysis data to sample filenames.
 
-Verify later: Python-to-C++ row matching; backup and replacement behavior; failed-kit rollback; missing and invalid fallback; repeated generation; reference-corpus predictions within Phase 1 tolerance.
+Verify later: deterministic generation; Python-to-C++ row matching; backup and replacement behavior; failed-kit protection; missing and invalid fallback; repeated generation; modified-file and rename detection; reference-corpus predictions within Phase 1 tolerance.
 
 ### Phase 4: Add calibrated exact runtime and complete RAM-cache identity
 
@@ -503,7 +498,7 @@ Update `INSTRUMENT_MAP_FORMAT.md` when final map fields are chosen. Relevant pla
 
 Likely implementation areas:
 
-- generator: `../scripts/sample_calibr_phase2.py`, later renamed to `generate_sample_metadata.py`;
+- generator: `../scripts/generate_sample_metadata.py`;
 - library and loading: `../source/Engine/KitLibModel.*`, `InstrumentSynthLoader.cpp`, and `SampleLoader.*`;
 - runtime and maps: `../source/Engine/InstrumentSynth*`, `DrumKitEngine*`, and mapping helpers;
 - UI: `../source/UI/PadContextPopup.*`, `InstrumentConfigPanel.*`, and `EngineSettingsPanel.*`;

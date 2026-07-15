@@ -1,6 +1,8 @@
 #include "KitLibModel.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 
 using namespace KitLib;
 
@@ -60,6 +62,140 @@ static juce::String fileMetadataFingerprint(const juce::File& rootDir, const juc
 }
 } // namespace KitLibIdentityHelpers
 
+namespace KitLibCalibrationHelpers {
+
+static constexpr float COMMON_REFERENCE_DB = -38.0f;
+static constexpr float MAX_POSITIVE_TRIM_DB = 36.0f;
+static constexpr float REQUIRED_HEADROOM_DB = 1.0f;
+
+static std::optional<int> referenceMicPriority(const KitLib::SampleVariantSpec& sampleVariant) {
+    if (!sampleVariant.intensityDb.has_value()) return std::nullopt;
+    if (sampleVariant.micSpec.raw.compareIgnoreCase("ons") == 0) return 0;
+    if (sampleVariant.micSpec.type == KitLib::MicSpec::Type::Overhead && sampleVariant.micSpec.position == KitLib::MicSpec::Position::Normal && sampleVariant.micSpec.format == KitLib::MicSpec::Format::Stereo) return 1;
+    if (sampleVariant.micSpec.type == KitLib::MicSpec::Type::Overhead && sampleVariant.micSpec.format == KitLib::MicSpec::Format::Stereo) return 2;
+    if (sampleVariant.micSpec.type == KitLib::MicSpec::Type::Overhead && sampleVariant.micSpec.format == KitLib::MicSpec::Format::MidSide) return 3;
+    return std::nullopt;
+}
+
+static float median(std::vector<float> values) {
+    std::sort(values.begin(), values.end());
+    const size_t middleIdx = values.size() / 2;
+    if (values.size() % 2 == 1) return values[middleIdx];
+    return 0.5f * (values[middleIdx - 1] + values[middleIdx]);
+}
+
+static float defaultGlobalTargetDb(uint8_t velocity) {
+    return 20.0f * std::log10(static_cast<float>(juce::jmax(1, static_cast<int>(velocity))) / 127.0f);
+}
+
+static void buildLogicalHitMeasurements(KitLib::VelocityLayerSpec& velocityLayer) {
+    velocityLayer.logicalHitMeasurements.clear();
+    velocityLayer.rawVelocityMedianDb.reset();
+    velocityLayer.fittedSourceDb.reset();
+    velocityLayer.calibrationTrimDb.reset();
+    velocityLayer.calibrationLimited = false;
+
+    std::map<uint8_t, std::vector<KitLib::SampleVariantSpec*>> samplesByVariant;
+    for (const auto& sampleVariant : velocityLayer.sampleVariantSpecs) {
+        sampleVariant->timingOffsetMs.reset();
+        samplesByVariant[KitLib::SampleVariantSpec::letterToIdx(sampleVariant->letter)].push_back(sampleVariant.get());
+    }
+
+    for (auto& [variantIdx, linkedSamples] : samplesByVariant) {
+        for (const auto* sampleVariant : linkedSamples) {
+            if (!sampleVariant->hasCsvMetadata || !sampleVariant->truePeakDb.has_value()) {
+                velocityLayer.logicalHitMeasurements.clear();
+                return;
+            }
+        }
+        KitLib::SampleVariantSpec* referenceSample = nullptr;
+        int referencePriority = std::numeric_limits<int>::max();
+        for (auto* sampleVariant : linkedSamples) {
+            const auto priority = referenceMicPriority(*sampleVariant);
+            if (!priority.has_value()) continue;
+            const bool samePriorityEarlierPath = referenceSample != nullptr && *priority == referencePriority && sampleVariant->sampleFile.getFullPathName().compare(referenceSample->sampleFile.getFullPathName()) < 0;
+            if (referenceSample == nullptr || *priority < referencePriority || samePriorityEarlierPath) {
+                referenceSample = sampleVariant;
+                referencePriority = *priority;
+            }
+        }
+        if (referenceSample == nullptr) {
+            velocityLayer.logicalHitMeasurements.clear();
+            return;
+        }
+
+        KitLib::VelocityLayerSpec::LogicalHitMeasurement hitMeasurement;
+        hitMeasurement.variantIdx = variantIdx;
+        hitMeasurement.intensityDb = *referenceSample->intensityDb + referenceSample->manualGainDb;
+        std::optional<float> maxTruePeakDb;
+        for (auto* sampleVariant : linkedSamples) {
+            if (referenceSample->onsetMs.has_value() && sampleVariant->onsetMs.has_value()) sampleVariant->timingOffsetMs = *sampleVariant->onsetMs - *referenceSample->onsetMs;
+            if (!sampleVariant->truePeakDb.has_value()) continue;
+            const float effectiveTruePeakDb = *sampleVariant->truePeakDb + sampleVariant->manualGainDb;
+            if (!maxTruePeakDb.has_value() || effectiveTruePeakDb > *maxTruePeakDb) maxTruePeakDb = effectiveTruePeakDb;
+        }
+        hitMeasurement.maxTruePeakDb = maxTruePeakDb;
+        velocityLayer.logicalHitMeasurements.push_back(hitMeasurement);
+    }
+
+    if (velocityLayer.logicalHitMeasurements.empty()) return;
+    std::vector<float> hitIntensities;
+    hitIntensities.reserve(velocityLayer.logicalHitMeasurements.size());
+    for (const auto& hitMeasurement : velocityLayer.logicalHitMeasurements) hitIntensities.push_back(hitMeasurement.intensityDb);
+    velocityLayer.rawVelocityMedianDb = median(std::move(hitIntensities));
+
+    const float requiredTrimDb = COMMON_REFERENCE_DB - *velocityLayer.rawVelocityMedianDb;
+    float safeTrimDb = juce::jmin(requiredTrimDb, MAX_POSITIVE_TRIM_DB);
+    if (safeTrimDb < requiredTrimDb) velocityLayer.calibrationLimited = true;
+    std::optional<float> maxTruePeakDb;
+    for (const auto& hitMeasurement : velocityLayer.logicalHitMeasurements) {
+        if (hitMeasurement.maxTruePeakDb.has_value() && (!maxTruePeakDb.has_value() || *hitMeasurement.maxTruePeakDb > *maxTruePeakDb)) maxTruePeakDb = hitMeasurement.maxTruePeakDb;
+    }
+    if (maxTruePeakDb.has_value()) {
+        const float peakLimitedTrimDb = -REQUIRED_HEADROOM_DB - defaultGlobalTargetDb(velocityLayer.velocity) - *maxTruePeakDb;
+        if (safeTrimDb > peakLimitedTrimDb) {
+            safeTrimDb = peakLimitedTrimDb;
+            velocityLayer.calibrationLimited = true;
+        }
+    }
+    velocityLayer.calibrationTrimDb = safeTrimDb;
+}
+
+static void fitMonotonicSourceProfile(KitLib::ArticulationSpec& articulation) {
+    struct FitBlock {
+        std::vector<KitLib::VelocityLayerSpec*> layers;
+        double weightedSum = 0.0;
+        int weight = 0;
+        double mean() const { return this->weight > 0 ? this->weightedSum / static_cast<double>(this->weight) : 0.0; }
+    };
+
+    std::vector<FitBlock> blocks;
+    for (const auto& velocityLayer : articulation.velocityLayerSpecs) {
+        if (!velocityLayer->rawVelocityMedianDb.has_value()) continue;
+        const int weight = juce::jmax(1, static_cast<int>(velocityLayer->logicalHitMeasurements.size()));
+        FitBlock block;
+        block.layers.push_back(velocityLayer.get());
+        block.weightedSum = static_cast<double>(*velocityLayer->rawVelocityMedianDb) * static_cast<double>(weight);
+        block.weight = weight;
+        blocks.push_back(std::move(block));
+        while (blocks.size() >= 2 && blocks[blocks.size() - 2].mean() > blocks.back().mean()) {
+            auto rightBlock = std::move(blocks.back());
+            blocks.pop_back();
+            auto& leftBlock = blocks.back();
+            leftBlock.layers.insert(leftBlock.layers.end(), rightBlock.layers.begin(), rightBlock.layers.end());
+            leftBlock.weightedSum += rightBlock.weightedSum;
+            leftBlock.weight += rightBlock.weight;
+        }
+    }
+
+    for (const auto& block : blocks) {
+        const float fittedValueDb = static_cast<float>(block.mean());
+        for (auto* velocityLayer : block.layers) velocityLayer->fittedSourceDb = fittedValueDb;
+    }
+}
+
+} // namespace KitLibCalibrationHelpers
+
 int DecayEnvelope::base62ToInt(const juce::String& s) {
     if (s.isEmpty())
         return -1;
@@ -107,6 +243,21 @@ DecayEnvelope DecayEnvelope::decode(const juce::String& decayCode, float peakDb,
     }
 
     return env;
+}
+
+DecayEnvelope DecayEnvelope::fromPoints(float peakDb, float peakMs, const std::array<std::optional<float>, NUM_POINTS>& pointsMs) {
+    DecayEnvelope envelope;
+    envelope.peakDb = peakDb;
+    envelope.peakMs = peakMs;
+    float previousMs = peakMs;
+    for (int pointIdx = 0; pointIdx < NUM_POINTS; ++pointIdx) {
+        const auto pointMs = pointsMs[static_cast<size_t>(pointIdx)];
+        if (!pointMs.has_value() || *pointMs < previousMs) break;
+        envelope.points[static_cast<size_t>(pointIdx)] = *pointMs;
+        envelope.validPoints = pointIdx + 1;
+        previousMs = *pointMs;
+    }
+    return envelope;
 }
 
 float DecayEnvelope::getAbsoluteDbAtMs(float elapsedMs) const {
@@ -330,6 +481,9 @@ bool InstrumentSpec::isAudioFile(const juce::File& file) {
 int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
     const auto articulationDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*");
     int sampleCount = 0;
+    int matchedMetadataRowCount = 0;
+    int missingMetadataRowCount = 0;
+    int staleMetadataRowCount = 0;
     for (const auto& artDir : articulationDirs) {
         if (!artDir.isDirectory())
             continue;
@@ -396,6 +550,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
             }
 
             auto* velSpec = artSpec->getOrAddVelocityLayer(parsedInfo.value.velocity);
+            const auto kitRelativePath = sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
 
             // Add one sample variant per mic chain. Track channel cursor for multi-channel files.
             int channelCursor = 0;
@@ -406,11 +561,36 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
 
                 const auto& micDesc = parsedInfo.value.micDescriptors[i];
                 auto* sv = velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
-                sv->peakDb = parsedInfo.value.peakDb;
+                sv->manualGainDb = parsedInfo.value.manualGainDb;
+                sv->peakDb = parsedInfo.value.peakDb + sv->manualGainDb;
                 sv->peakMs = parsedInfo.value.peakMs;
                 sv->decayMs = parsedInfo.value.decayMs;
-                sv->manualGainDb = parsedInfo.value.manualGainDb;
                 sv->decayCode = parsedInfo.value.decayCode;
+                sv->decayEnvelope = parsedInfo.value.peakDb < 0.0f ? DecayEnvelope::decode(sv->decayCode, sv->peakDb, sv->peakMs) : DecayEnvelope {};
+                if (this->parent->sampleMetadata.isActive()) {
+                    const auto* metadataRow = this->parent->sampleMetadata.find(kitRelativePath, micDesc.raw);
+                    const bool fileSizeMatches = metadataRow != nullptr && metadataRow->fileSizeBytes > 0 && metadataRow->fileSizeBytes == sampleFile.getSize();
+                    if (metadataRow != nullptr && fileSizeMatches) {
+                        sv->hasCsvMetadata = true;
+                        sv->metadataContentHash = metadataRow->contentHash;
+                        sv->metadataFileSizeBytes = metadataRow->fileSizeBytes;
+                        sv->onsetMs = metadataRow->onsetMs;
+                        sv->intensityDb = metadataRow->intensityDb;
+                        sv->truePeakDb = metadataRow->truePeakDb;
+                        sv->stereoBalance = metadataRow->stereoBalance;
+                        sv->peakDb = metadataRow->peakDb.has_value() ? *metadataRow->peakDb + sv->manualGainDb : 0.0f;
+                        sv->peakMs = metadataRow->peakMs.value_or(0.0f);
+                        sv->decayMs = metadataRow->decayEndMs.value_or(0.0f);
+                        sv->decayCode.clear();
+                        sv->decayEnvelope = {};
+                        if (metadataRow->peakDb.has_value() && metadataRow->peakMs.has_value()) sv->decayEnvelope = DecayEnvelope::fromPoints(sv->peakDb, sv->peakMs, metadataRow->decayPointsMs);
+                        ++matchedMetadataRowCount;
+                    } else if (metadataRow != nullptr) {
+                        ++staleMetadataRowCount;
+                    } else {
+                        ++missingMetadataRowCount;
+                    }
+                }
                 sampleCount++;
 
                 // update global counters per actual file+mic occurrence (reflects sample files counted per mic)
@@ -426,7 +606,19 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
             }
         }
     }
+    this->buildCalibrationProfiles();
+    if (this->parent->sampleMetadata.isActive() && (missingMetadataRowCount > 0 || staleMetadataRowCount > 0)) {
+        LOG(Warning, "metadata.csv for instrument '" + this->meta.codeRaw + "': " + juce::String(matchedMetadataRowCount) + " matched, " + juce::String(missingMetadataRowCount) + " missing, " + juce::String(staleMetadataRowCount) + " file-size mismatches");
+    }
     return sampleCount;
+}
+
+void InstrumentSpec::buildCalibrationProfiles() {
+    for (const auto& articulation : this->articulationSpecs) {
+        articulation->sortVelocityLayers();
+        for (const auto& velocityLayer : articulation->velocityLayerSpecs) KitLibCalibrationHelpers::buildLogicalHitMeasurements(*velocityLayer);
+        KitLibCalibrationHelpers::fitMonotonicSourceProfile(*articulation);
+    }
 }
 
 /**  Parses a sample filename <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{sampleVariant}-{micChain}-{otherOptionalParams} */
@@ -693,6 +885,9 @@ int LibraryManager::scanAll() {
         }
 
         auto kit = std::make_unique<DrumKitSpec>(parsedInfo.value);
+        auto metadataResult = kit->sampleMetadata.loadFromKitRoot(kitDir);
+        for (const auto& metadataMessage : metadataResult.errors) LOG(Warning, "Kit metadata: " + metadataMessage);
+        if (metadataResult.ok() && kit->sampleMetadata.isActive()) LOG(Info, "Loaded " + juce::String(metadataResult.value) + " metadata.csv rows for kit " + kitDir.getFileName());
         int instrsInKit = kit->scanInstruments();
         int samplesInKit = 0;
 

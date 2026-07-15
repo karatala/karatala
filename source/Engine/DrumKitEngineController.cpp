@@ -13,6 +13,10 @@ void DrumKitEngine::reloadAll() {
     this->initKitLayouts();
     this->initMicLayouts();
     this->initSampleLibrary();
+    this->lastAppliedSlotFingerprints.clear();
+    this->lastAppliedSlotReloadFingerprints.clear();
+    this->lastAppliedShadowFingerprints.clear();
+    this->lastAppliedShadowReloadFingerprints.clear();
 }
 
 void DrumKitEngine::initGlobalSettings() {
