@@ -9,6 +9,7 @@
 #include "MidiCrosstalkFilter.h"
 #include "MicRoutingPlan.h"
 #include "SampleLoader.h"
+#include "VelocityResponse.h"
 #include <array>
 #include <optional>
 #include <unordered_map>
@@ -61,6 +62,7 @@ public:
         uint64_t sampleLoaderCacheLimitMegabytes = 1024ull;
         juce::String kitLayout;
         juce::String micLayout;
+        juce::String velocityResponse { "linear" };
         DebugLevel logLevel = DebugLevel::Off;
         InstrumentCatalog instrumentCatalog = InstrumentCatalog::makeDefault();
     };
@@ -69,7 +71,7 @@ public:
     juce::String getDefaultYaml();
     juce::String serializeSettingsYaml() const;
 
-    void init(const juce::AudioProcessorValueTreeState& treeState);
+    void init(juce::AudioProcessorValueTreeState& treeState);
     void useState(const juce::AudioProcessorValueTreeState& treeState);
     void saveSettings();
 
@@ -174,11 +176,13 @@ public:
 
     EngineSettings engineSettings;
     const EngineSettings& getEngineSettings() const { return this->engineSettings; }
+    const VelocityResponse& getVelocityResponse() const { return this->velocityResponse; }
 
     const std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>>& getArticulationFallbackIdMap() const { return this->articulationFallbackIdMap; }
 
 private:
     Config globalConfig;
+    VelocityResponse velocityResponse = VelocityResponse::linear();
 
     std::vector<std::unique_ptr<InstrumentSynth>> instrumentSynthPtrs;
     std::unordered_map<juce::String, InstrumentSynth*> instrumentSynthById; //TODO: review if this map is actually needed, maybe we can do without it 
@@ -208,10 +212,12 @@ private:
 
     struct PreviewTarget {
         juce::File sampleFile;
+        juce::String contentHash;
+        juce::int64 metadataFileSizeBytes = 0;
         juce::String micCode;
         int fileChannelStart = 0;
         int fileChannelCount = 0;
-        float manualGainDb = 0.0f;
+        float fixedGainDb = 0.0f;
     };
 
     class PreviewResolveJob : public juce::ThreadPoolJob {

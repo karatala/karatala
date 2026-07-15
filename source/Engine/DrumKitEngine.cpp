@@ -470,6 +470,13 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
     if (micLayout.isNotEmpty())
         config.micLayout = micLayout;
 
+    const auto velocityResponseDefinition = root["velocityResponse"].asString();
+    if (velocityResponseDefinition.isNotEmpty()) {
+        auto parsedResponse = VelocityResponse::fromDefinition(velocityResponseDefinition);
+        if (parsedResponse.ok()) config.velocityResponse = parsedResponse.value.getDefinition();
+        else result.addWarning("Invalid velocityResponse: " + parsedResponse.error() + ". Using linear.");
+    }
+
     const auto logLevel = root["logLevel"].asString();
     if (logLevel.isNotEmpty()) {
         if (isValidDebugLevelString(logLevel))
@@ -645,6 +652,7 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "kitLayout: default\n";
     result += "micLayout: default\n";
     result += "sampleLoaderCacheLimitMegabytes: 1024\n";
+    result += "velocityResponse: linear\n";
     result += "logLevel: off\n";
     const juce::File libDir = this->dataPath.getChildFile("sample_library");
     if (libDir.exists())
@@ -703,6 +711,7 @@ juce::String DrumKitEngine::serializeSettingsYaml() const {
     yaml += "kitLayout: " + this->globalConfig.kitLayout + "\n";
     yaml += "micLayout: " + this->globalConfig.micLayout + "\n";
     yaml += "sampleLoaderCacheLimitMegabytes: " + juce::String(this->globalConfig.sampleLoaderCacheLimitMegabytes) + "\n";
+    yaml += "velocityResponse: \"" + this->globalConfig.velocityResponse + "\"\n";
     yaml += "logLevel: " + DebugLevelToYaml(this->globalConfig.logLevel) + "\n";
     if (this->globalConfig.libraryPath.exists())
         yaml += "libraryPath: " + this->globalConfig.libraryPath.getFullPathName() + "\n";
@@ -1376,13 +1385,34 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     if (artSpec == nullptr || artSpec->velocityLayerSpecs.empty())
         return std::nullopt;
 
+    bool calibrated = !artSpec->velocityLayerSpecs.empty();
+    for (const auto& layer : artSpec->velocityLayerSpecs) {
+        if (!layer->fittedSourceDb.has_value() || !layer->calibrationTrimDb.has_value()) {
+            calibrated = false;
+            break;
+        }
+    }
+
     KitLib::VelocityLayerSpec* bestLayer = nullptr;
-    int bestDist = std::numeric_limits<int>::max();
-    for (auto& layer : artSpec->velocityLayerSpecs) {
-        const int dist = std::abs(static_cast<int>(layer->velocity) - static_cast<int>(velocity));
-        if (dist < bestDist) {
-            bestDist = dist;
-            bestLayer = layer.get();
+    if (calibrated) {
+        const float lowestFittedDb = *artSpec->velocityLayerSpecs.front()->fittedSourceDb;
+        const float highestFittedDb = *artSpec->velocityLayerSpecs.back()->fittedSourceDb;
+        const float targetDb = juce::jlimit(lowestFittedDb, highestFittedDb, highestFittedDb + this->velocityResponse.getTargetDb(velocity));
+        float bestDistanceDb = std::numeric_limits<float>::max();
+        for (auto& layer : artSpec->velocityLayerSpecs) {
+            const float distanceDb = std::abs(*layer->fittedSourceDb - targetDb);
+            if (distanceDb < bestDistanceDb) {
+                bestDistanceDb = distanceDb;
+                bestLayer = layer.get();
+            }
+        }
+    } else {
+        bestLayer = artSpec->velocityLayerSpecs.back().get();
+        for (auto& layer : artSpec->velocityLayerSpecs) {
+            if (velocity <= layer->velocity) {
+                bestLayer = layer.get();
+                break;
+            }
         }
     }
 
@@ -1401,10 +1431,12 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
 
     PreviewTarget target;
     target.sampleFile = bestVariant->sampleFile;
+    target.contentHash = bestVariant->metadataContentHash;
+    target.metadataFileSizeBytes = bestVariant->metadataFileSizeBytes;
     target.micCode = bestVariant->micSpec.raw;
     target.fileChannelStart = juce::jmax(0, bestVariant->fileChannelStart);
     target.fileChannelCount = bestVariant->fileChannelCount > 0 ? bestVariant->fileChannelCount : bestVariant->micSpec.channels;
-    target.manualGainDb = bestVariant->manualGainDb;
+    target.fixedGainDb = bestVariant->manualGainDb + (calibrated ? *bestLayer->calibrationTrimDb : 0.0f);
     return target;
 }
 
@@ -1414,13 +1446,13 @@ void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::ui
     if (loader == nullptr || !target.sampleFile.existsAsFile())
         return;
 
-    const float gain = juce::Decibels::decibelsToGain(target.manualGainDb)
-                     * (static_cast<float>(velocity) / 127.0f);
+    const float gain = this->velocityResponse.getGain(velocity);
 
     SampleLoadSpec loadSpec;
     loadSpec.file = target.sampleFile;
-    loadSpec.manualGainDb = 0.0f;
-    loadSpec.preprocessTag = "preview";
+    loadSpec.contentHash = target.contentHash;
+    loadSpec.metadataFileSizeBytes = target.metadataFileSizeBytes;
+    loadSpec.fixedGainDb = target.fixedGainDb;
 
     const int fileChannelStart = juce::jmax(0, target.fileChannelStart);
     const int fileChannelCount = target.fileChannelCount;

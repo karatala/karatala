@@ -1,6 +1,6 @@
 # TODO14: Sample Calibration And Velocity Response Plan
 
-Status: Phase 1 is complete. Phase 2 and Phase 3 implementation is complete, but their fixture, library, and C++ verification has not been run.
+Status: Phase 1 is complete. Phase 2, Phase 3, and Phase 4 implementation is complete, but their fixture, library, C++, and listening verification has not been run.
 
 ## Scope And Terminology
 
@@ -87,7 +87,7 @@ The Phase 1 reference pass below provides approved answers for:
 - representative target intensities for early loading;
 - source-balance center dead zone and confidence threshold.
 
-## Current Facts And Constraints
+## Baseline Facts And Constraints
 
 - `../source/Engine/KitLibModel.cpp` reads sample velocity from filenames.
 - `../source/Engine/InstrumentSynth.h` builds a 128-value table that selects the first recorded velocity greater than or equal to raw MIDI velocity.
@@ -441,23 +441,23 @@ Verify later: mono, stereo, mid-side, separate-file, and multichannel fixtures; 
 
 Verify later: deterministic generation; Python-to-C++ row matching; backup and replacement behavior; failed-kit protection; missing and invalid fallback; repeated generation; modified-file and rename detection; reference-corpus predictions within Phase 1 tolerance.
 
-### Phase 4: Add calibrated exact runtime and complete RAM-cache identity
+### ✅ Phase 4: Add calibrated exact runtime and complete RAM-cache identity (implementation complete, verification pending)
 
-- Add explicit immutable logical-hit runtime descriptions and separate thread-safe readiness snapshots.
-- Persist global curve points in instance state and machine defaults.
-- Build global gain, `selectionTargetDb`, `velocityCalibrationTrimDb`, exact source-region, and per-layer correction tables outside playback.
-- Make selection return one logical hit and start only its linked active mic entries.
-- Remove any fallback that chooses a variant when only part of its active mic set is ready.
-- Let loaded fallback search only complete logical hits.
-- Preflight buffers and reserve all required voice slots as one fixed-size operation before starting a hit.
-- Start all required voices or start none. Never replace one missing mic entry with data from another logical hit.
-- Replace raw linear velocity gain without multiplying both systems.
-- Resolve fixed source preprocessing before RAM-cache publication.
-- Define the source content identity used by the canonical RAM-cache key.
-- Replace the incomplete cache tag contract with one canonical typed recipe and complete key.
-- Use the same recipe builder for preview, progressive loading, and normal playback.
-- Derive early-load priority from representative calibrated target intensities and complete logical hits.
-- Update preview, voice management, and hi-hat loudness estimates.
+- ✅ Add explicit immutable logical-hit runtime descriptions and separate thread-safe readiness snapshots.
+- ✅ Persist global curve points in instance state and machine defaults.
+- ✅ Build global gain, `selectionTargetDb`, `velocityCalibrationTrimDb`, exact source-region, and per-layer correction tables outside playback.
+- ✅ Make selection return one logical hit and start only its linked active mic entries.
+- ✅ Remove any fallback that chooses a variant when only part of its active mic set is ready.
+- ✅ Let loaded fallback search only complete logical hits.
+- ✅ Preflight buffers and reserve all required voice slots as one fixed-size operation before starting a hit.
+- ✅ Start all required voices or start none. Never replace one missing mic entry with data from another logical hit.
+- ✅ Replace raw linear velocity gain without multiplying both systems.
+- ✅ Resolve fixed source preprocessing before RAM-cache publication.
+- ✅ Define the source content identity used by the canonical RAM-cache key.
+- ✅ Replace the incomplete cache tag contract with one canonical typed recipe and complete key.
+- ✅ Use the same recipe builder for preview, progressive loading, and normal playback.
+- ✅ Derive early-load priority from representative calibrated target intensities and complete logical hits.
+- ✅ Update preview, voice management, and hi-hat loudness estimates.
 
 For each representative target, load one close logical hit and all its active linked mic entries in the same stage. Do not prefer variants `a` and `b` only because their indexes are small. Load every remaining mapped hit later.
 
@@ -522,4 +522,4 @@ Non-goals:
 - no source audio-file modification;
 - no new realtime parsing, allocation, file I/O, locking, or unbounded work.
 
-No build or tests were run for Phases 1 or 2. The read-only Phase 1 analyzer was run. The Phase 2 measurement prototype was not run, and no sample filename or source audio was changed. Phase 2 verification remains pending.
+No build or tests were run for Phases 1 through 4. The read-only Phase 1 analyzer was run. The Phase 2 measurement prototype was not run, and no sample filename or source audio was changed. Phase 2 through Phase 4 verification remains pending.

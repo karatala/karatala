@@ -1,8 +1,9 @@
 #include "DrumKitEngine.h"
 #include "../Config/Helpers.h"
 
-void DrumKitEngine::init(const juce::AudioProcessorValueTreeState& treeState) {
+void DrumKitEngine::init(juce::AudioProcessorValueTreeState& treeState) {
     this->initGlobalSettings();
+    if (!treeState.state.hasProperty("velocity_response")) treeState.state.setProperty("velocity_response", this->globalConfig.velocityResponse, nullptr);
     this->initDefaultLayouts();
     this->initArticulationFallbackMap();
     this->reloadAll();
@@ -126,6 +127,16 @@ void DrumKitEngine::initSampleLibrary() {
 }
 
 void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState) {
+    const auto responseDefinition = treeState.state["velocity_response"].toString();
+    auto parsedResponse = VelocityResponse::fromDefinition(responseDefinition.isNotEmpty() ? responseDefinition : this->globalConfig.velocityResponse);
+    if (parsedResponse.ok()) {
+        this->velocityResponse = std::move(parsedResponse.value);
+    } else {
+        LOG(Warning, "Invalid instance velocity response: " + parsedResponse.error() + ". Using machine default.");
+        auto defaultResponse = VelocityResponse::fromDefinition(this->globalConfig.velocityResponse);
+        this->velocityResponse = defaultResponse.ok() ? std::move(defaultResponse.value) : VelocityResponse::linear();
+    }
+
     auto kitLayout = treeState.state["kit_layout"].toString();
     if (kitLayout.isEmpty() || !this->useKitLayout(kitLayout)) {
         if (this->activeKitLayoutPtr == nullptr) {
@@ -152,5 +163,8 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
     } else {
         if (!this->useInstrumentMap(instrumentMap))
             this->mapDefaultKit();
+    }
+    for (const auto& synth : this->instrumentSynthPtrs) {
+        if (synth != nullptr) synth->rebuildVelocityResponseTables();
     }
 }

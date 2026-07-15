@@ -322,9 +322,9 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
 
         // Now prepare to start a replacement voice from new articulation
         const auto& newArt = this->runtimeArticulations[static_cast<size_t>(newArtIdx)];
-        // choose layer by current voice velocity
-        int midiVel = static_cast<int>(juce::jlimit(0.0f, 1.0f, voice->getVelocityGain()) * 127.0f);
-        int layerIdx = newArt.velocityToLayer[static_cast<size_t>(midiVel)];
+        // Choose the target layer from the original MIDI velocity, not from the calibrated output gain.
+        const juce::uint8 midiVelocity = voice->getMidiVelocity();
+        int layerIdx = newArt.velocityToLayer[static_cast<size_t>(midiVelocity)];
         if (layerIdx < 0 || layerIdx >= static_cast<int>(newArt.layers.size())) continue;
         const auto& layer = newArt.layers[static_cast<size_t>(layerIdx)];
 
@@ -380,6 +380,8 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         const float elapsedMs = static_cast<float>((voice->sourceSamplePosition / oldSrcRate) * 1000.0);
 
         const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
+        const float targetVelocityGain = newArt.velocityGain[static_cast<size_t>(midiVelocity)];
+        const float targetVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, targetVelocityGain), -100.0f);
         const float currentAudibleDb = oldEnv.isValid()
             ? oldEnv.getAbsoluteDbAtMs(elapsedMs) + oldVelDb
             : voice->getEstimatedCurrentDb();
@@ -394,7 +396,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             &newEnv,
             elapsedMs,
             currentAudibleDb,
-            oldVelDb,
+            targetVelocityDb,
             sampleLengthMs,
             attackGuardSec * 1000.0f,
             silenceFloorDb,
@@ -513,14 +515,14 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             : openCrossfadeSec;
         voice->requestFadeOut(transitionCrossfadeSec);
 
-        float vel = voice->getVelocityGain();
-        this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), vel);
+        this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), targetVelocityGain);
         newVoice->hitGroupId = targetSe->sound->micBufferChannelStart;
         newVoice->artNameId = newArt.nameId;
         newVoice->artExprId = newArt.exprId;
         newVoice->artRuntimeIdx = static_cast<ArtRtIdx>(newArtIdx);
         newVoice->sourceSamplePosition = clampedOffset;
-        newVoice->setVelocityGain(vel);
+        newVoice->setVelocityGain(targetVelocityGain);
+        newVoice->setMidiVelocity(midiVelocity);
         ++replacementsStarted;
 
         if (LOG_ENABLED(Verbose)) {
@@ -541,7 +543,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
             LOG(Verbose, "PedalVoiceStart inst=" + this->getId()
                 + " ch=" + juce::String(midiChannel)
                 + " note=" + juce::String(voice->getCurrentlyPlayingNote())
-                + " vel=" + juce::String(vel, 3)
+                + " vel=" + juce::String(targetVelocityGain, 3)
                 + " fromArt=" + oldArtCode
                 + " toArt=" + newArtCode
                 + " micStart=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelStart : -1)
@@ -638,8 +640,11 @@ bool InstrumentSynth::triggerHiHatPedalSample(int midiChannel, float sourceAudib
     if (pedalPeakDb <= -100.0f)
         return false;
 
-    const float velocityGain = juce::jlimit(1.0f / 127.0f, 1.0f, juce::Decibels::decibelsToGain(sourceAudibleDb - pedalPeakDb, -100.0f));
-    const int velocity = juce::jlimit(1, 127, static_cast<int>(std::round(velocityGain * 127.0f)));
+    const auto& pedalArt = this->runtimeArticulations[static_cast<size_t>(pedalArtIdx)];
+    const float relativeTargetDb = juce::jlimit(-100.0f, 0.0f, sourceAudibleDb - pedalPeakDb);
+    const int velocity = pedalArt.calibrated
+        ? juce::jlimit(1, 127, static_cast<int>(this->parent->getVelocityResponse().findClosestVelocityForTargetDb(relativeTargetDb)))
+        : juce::jlimit(1, 127, static_cast<int>(std::round(juce::Decibels::decibelsToGain(relativeTargetDb, -100.0f) * 127.0f)));
     return this->playNote(midiChannel, this->hihatPedalNote, static_cast<juce::uint8>(velocity));
 }
 
@@ -659,13 +664,13 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
         return false;
 
     auto& layer = art.layers[static_cast<size_t>(layerIdx)];
+    auto* logicalHit = this->chooseLogicalHit(layer);
+    if (logicalHit == nullptr) return false;
 
-    uint8_t chosenVariant = this->chooseVariantGroup(layer);
-    float velf = juce::jlimit(0.0f, 1.0f, velocity / 127.0f);
+    const float velocityGain = art.velocityGain[static_cast<size_t>(velocity)];
+    this->lastRequestedVelocity.store(velocityGain);
 
-    this->lastRequestedVelocity.store(velf);
-
-    bool anyStarted = this->startLayerVoices(art, static_cast<ArtRtIdx>(artIdx), layer, chosenVariant, midiChannel, midiNoteNumber, velf);
+    bool anyStarted = this->startLayerVoices(art, static_cast<ArtRtIdx>(artIdx), layer, *logicalHit, midiChannel, midiNoteNumber, velocityGain, velocity);
     if (!anyStarted) return false;
 
     this->applyAftertouch(midiChannel, midiNoteNumber);
@@ -702,131 +707,104 @@ int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
 int InstrumentSynth::resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity) {
     int layerIdx = art.velocityToLayer[static_cast<size_t>(velocity)];
     if (layerIdx >= 0 && layerIdx < (int)art.layers.size()) {
-        if (this->hasAnyLoadedVariant(art.layers[static_cast<size_t>(layerIdx)]))
-            return layerIdx;
+        if (this->hasReadyLogicalHit(art.layers[static_cast<size_t>(layerIdx)])) return layerIdx;
     }
 
     int bestIdx = -1;
-    int bestDist = 128;
+    float bestDistance = std::numeric_limits<float>::max();
     for (int idx = 0; idx < (int)art.layers.size(); ++idx) {
         const auto& layer = art.layers[static_cast<size_t>(idx)];
-        if (layer.samples.empty()) continue;
-        if (!this->hasAnyLoadedVariant(layer)) continue;
-        const int dist = std::abs((int)layer.velocity - (int)velocity);
-        if (dist < bestDist) {
-            bestDist = dist;
+        if (!this->hasReadyLogicalHit(layer)) continue;
+        const float distance = art.calibrated && layer.fittedSourceDb.has_value()
+            ? std::abs(*layer.fittedSourceDb - art.selectionTargetDb[static_cast<size_t>(velocity)])
+            : static_cast<float>(std::abs(static_cast<int>(layer.velocity) - static_cast<int>(velocity)));
+        if (distance < bestDistance) {
+            bestDistance = distance;
             bestIdx = idx;
         }
     }
     return bestIdx;
 }
 
-bool InstrumentSynth::hasAnyLoadedVariant(const VelocityLayerRuntime& layer) const {
-    for (const auto& se : layer.samples) {
-        if (se.sound == nullptr) continue;
-        if (!se.sound->loaded.load(std::memory_order_acquire)) continue;
-        if (se.sound->buffer == nullptr) continue;
-        return true;
+bool InstrumentSynth::hasReadyLogicalHit(const VelocityLayerRuntime& layer) const {
+    for (const auto& logicalHit : layer.logicalHits) {
+        if (logicalHit.isReady()) return true;
     }
     return false;
 }
 
-bool InstrumentSynth::isVariantReady(const VelocityLayerRuntime& layer, uint8_t variantIdx) const {
-    bool seen = false;
-    for (const auto& se : layer.samples) {
-        if (se.variantIdx != variantIdx) continue;
-        if (se.sound == nullptr) return false;
-        seen = true;
-        if (!se.sound->loaded.load(std::memory_order_acquire)) return false;
-        if (se.sound->buffer == nullptr) return false;
-    }
-    return seen;
-}
+InstrumentSynth::LogicalHitRuntime* InstrumentSynth::chooseLogicalHit(VelocityLayerRuntime& layer) {
+    if (layer.logicalHits.empty()) return nullptr;
 
-
-uint8_t InstrumentSynth::chooseVariantGroup(VelocityLayerRuntime& layer) {
-    // Collect unique variant indices using a bitmask — no heap allocation.
-    // Supports up to 32 variant indices (0..31), far more than any round-robin group.
-    uint32_t allMask = 0;
-    for (const auto& se : layer.samples) {
-        if (se.variantIdx < 32)
-            allMask |= (1u << se.variantIdx);
-    }
-    if (allMask == 0) return 0;
-
-    // RR lock: force a specific variant index (1-based setting)
     const auto& settings = this->parent->getEngineSettings();
     const int roundRobinLock = settings.roundRobinLock.load();
     if (roundRobinLock > 0) {
-        const int lockIdx = roundRobinLock - 1;
-        int count = 0;
-        for (uint32_t mask = allMask; mask != 0; mask &= (mask - 1)) {
-            if (count == lockIdx)
-                return static_cast<uint8_t>(std::countr_zero(mask));
-            ++count;
-        }
-        return static_cast<uint8_t>(std::countr_zero(allMask));
+        const size_t lockedIdx = static_cast<size_t>(roundRobinLock - 1) % layer.logicalHits.size();
+        return layer.logicalHits[lockedIdx].isReady() ? &layer.logicalHits[lockedIdx] : nullptr;
     }
 
-    uint32_t readyMask = 0;
-    for (uint32_t remaining = allMask; remaining != 0; ) {
-        uint8_t variantIdx = static_cast<uint8_t>(std::countr_zero(remaining));
-        remaining &= ~(1u << variantIdx);
-        if (this->isVariantReady(layer, variantIdx))
-            readyMask |= (1u << variantIdx);
+    size_t readyCount = 0;
+    for (const auto& logicalHit : layer.logicalHits) {
+        if (logicalHit.isReady()) ++readyCount;
     }
+    if (readyCount == 0) return nullptr;
 
-    const uint32_t choiceMask = readyMask != 0 ? readyMask : allMask;
-    const int choiceCount = std::popcount(choiceMask);
-    if (choiceCount == 1) return static_cast<uint8_t>(std::countr_zero(choiceMask));
-
-    uint32_t rr = layer.roundRobinCounter->fetch_add(1u);
-    int target = static_cast<int>(rr % static_cast<uint32_t>(choiceCount));
-    uint32_t remaining = choiceMask;
-    for (int idx = 0; idx < target; ++idx)
-        remaining &= (remaining - 1);
-    return static_cast<uint8_t>(std::countr_zero(remaining));
+    const uint32_t roundRobinValue = layer.roundRobinCounter->fetch_add(1u, std::memory_order_relaxed);
+    size_t readyTargetIdx = static_cast<size_t>(roundRobinValue) % readyCount;
+    for (auto& logicalHit : layer.logicalHits) {
+        if (!logicalHit.isReady()) continue;
+        if (readyTargetIdx == 0) return &logicalHit;
+        --readyTargetIdx;
+    }
+    return nullptr;
 }
 
-bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity) {
+bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLayerRuntime& layer, LogicalHitRuntime& logicalHit, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity) {
     const juce::ScopedLock sl(this->lock);
     const auto& settings = this->parent->getEngineSettings();
     const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
+    static constexpr size_t MAX_LOGICAL_HIT_VOICES = 64;
+    if (!logicalHit.isReady() || logicalHit.sampleEntryIndexes.empty() || logicalHit.sampleEntryIndexes.size() > MAX_LOGICAL_HIT_VOICES) return false;
 
-    this->cullMaskedVoices(layer, chosenVariant, midiChannel, midiNoteNumber, velocity);
+    std::array<InstrumentSynthVoice*, MAX_LOGICAL_HIT_VOICES> reservedVoices {};
+    size_t reservedVoiceCount = 0;
+    for (const size_t sampleEntryIdx : logicalHit.sampleEntryIndexes) {
+        if (sampleEntryIdx >= layer.samples.size()) return false;
+        const auto& sampleEntry = layer.samples[sampleEntryIdx];
+        if (sampleEntry.sound == nullptr || !sampleEntry.sound->loaded.load(std::memory_order_acquire) || sampleEntry.sound->buffer == nullptr) return false;
+
+        InstrumentSynthVoice* reservedVoice = nullptr;
+        for (auto* candidateVoice : this->voices) {
+            if (candidateVoice == nullptr || candidateVoice->isVoiceActive()) continue;
+            bool alreadyReserved = false;
+            for (size_t reservedIdx = 0; reservedIdx < reservedVoiceCount; ++reservedIdx) {
+                if (reservedVoices[reservedIdx] == candidateVoice) {
+                    alreadyReserved = true;
+                    break;
+                }
+            }
+            if (!alreadyReserved) {
+                reservedVoice = candidateVoice;
+                break;
+            }
+        }
+        if (reservedVoice == nullptr) reservedVoice = this->findVoiceToSteal(midiChannel, midiNoteNumber, sampleEntry.sound->micBufferChannelStart, reservedVoices.data(), reservedVoiceCount);
+        if (reservedVoice == nullptr) return false;
+        reservedVoices[reservedVoiceCount++] = reservedVoice;
+    }
+
+    this->cullMaskedVoices(layer, logicalHit.variantIdx, midiChannel, midiNoteNumber, velocityGain);
 
     // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
     // fades out ringing voices from more-open articulations.
     if (this->type == KitLib::InstrumentSpec::Type::HiHat)
         this->chokeHiHatVoicesByPoc(art.pedalOpenCloseValue, closeCrossfadeSec);
 
-    bool anyStarted = false;
-    for (const auto& se : layer.samples) {
-        if (!se.sound || se.variantIdx != chosenVariant) continue;
-
-        if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) {
-            if (LOG_ENABLED(Debug))
-                LOG(Debug, "Sample buffer not loaded for note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " file=" + se.sound->sampleVariantSpec->sampleFile.getFullPathName());
-            continue;
-        }
-        auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
-        if (!voice) continue;
-        this->startSampleVoice(*voice, art, artIdx, se, midiChannel, midiNoteNumber, velocity);
-        anyStarted = true;
+    for (size_t logicalEntryIdx = 0; logicalEntryIdx < logicalHit.sampleEntryIndexes.size(); ++logicalEntryIdx) {
+        const auto& sampleEntry = layer.samples[logicalHit.sampleEntryIndexes[logicalEntryIdx]];
+        this->startSampleVoice(*reservedVoices[logicalEntryIdx], art, artIdx, sampleEntry, midiChannel, midiNoteNumber, velocityGain, midiVelocity);
     }
-
-    if (!anyStarted) {
-        for (const auto& se : layer.samples) {
-            if (!se.sound) continue;
-            if (!se.sound->loaded.load(std::memory_order_acquire) || se.sound->buffer == nullptr) continue;
-            auto* voice = this->findFreeVoice(midiChannel, midiNoteNumber, se.sound->micBufferChannelStart);
-            if (!voice) continue;
-            this->startSampleVoice(*voice, art, artIdx, se, midiChannel, midiNoteNumber, velocity);
-            anyStarted = true;
-        }
-    }
-
-    return anyStarted;
+    return true;
 }
 
 void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity) {
@@ -977,12 +955,12 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float
     }
 }
 
-void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, ArtRtIdx artIdx, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity) {
+void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, ArtRtIdx artIdx, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity) {
     if (LOG_ENABLED(Verbose)) {
         auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.codeRaw;
         auto& artCode = se.sound->sampleVariantSpec->parent->parent->codeRaw;
         auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
-        LOG(Verbose, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(velocity)) + " inst " + instCode + " art " + artCode + " micBuf(" + juce::String(se.sound->micBufferChannelStart) + "," + juce::String(se.sound->micBufferChannelCount) + ") file=" + filePath);
+        LOG(Verbose, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(midiVelocity)) + " inst " + instCode + " art " + artCode + " micBuf(" + juce::String(se.sound->micBufferChannelStart) + "," + juce::String(se.sound->micBufferChannelCount) + ") file=" + filePath);
     }
     // use samples mic index as voice's hitGroupId so we can use it in stealing logic to prefer stealing voices with same mic
     voice.hitGroupId = se.sound->micBufferChannelStart;
@@ -995,10 +973,11 @@ void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, Articulation
     voice.setReleaseTimeSec(this->decayOverrideMs.has_value() ? static_cast<float>(*this->decayOverrideMs) / 1000.0f : 0.1f);
     voice.setUseOneShotDecayEnvelope(this->decayOverrideMs.has_value());
 
-    this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocity);
+    this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocityGain);
 
     voice.artNameId = art.nameId;
     voice.artExprId = art.exprId;
     voice.artRuntimeIdx = artIdx;
-    voice.setVelocityGain(velocity);
+    voice.setVelocityGain(velocityGain);
+    voice.setMidiVelocity(midiVelocity);
 }

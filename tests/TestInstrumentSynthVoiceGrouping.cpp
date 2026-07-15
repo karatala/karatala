@@ -314,6 +314,17 @@ struct ControllerTransitionFixture {
         if (includeOpenTarget)
             articulations[1].layers[0].samples.push_back({ &this->openSound, 1 });
         articulations[2].layers[0].samples.push_back({ &this->pedalSound, 1 });
+        for (auto& articulation : articulations) {
+            auto& layer = articulation.layers[0];
+            if (layer.samples.empty()) continue;
+            InstrumentSynth::LogicalHitRuntime logicalHit;
+            logicalHit.variantIdx = 1;
+            logicalHit.sampleEntryIndexes.push_back(0);
+            logicalHit.readiness->requiredEntryCount = 1;
+            logicalHit.readiness->loadedEntryCount.store(1);
+            logicalHit.readiness->ready.store(true);
+            layer.logicalHits.push_back(std::move(logicalHit));
+        }
 
         this->tightVoice = this->synth.addVoice(new InstrumentSynthVoice());
         this->openVoice = this->synth.addVoice(new InstrumentSynthVoice());

@@ -98,7 +98,7 @@ void InstrumentSynth::applyAdaptiveTailShortening() {
     }
 }
 
-InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int /*midiNoteNumber*/, int groupId) const {
+InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int /*midiNoteNumber*/, int groupId, InstrumentSynthVoice* const* excludedVoices, size_t excludedVoiceCount) const {
     // Single-pass scan: find best candidate per state category without heap allocations.
     // Priority order: Dying (oldest) > FadingOut (quietest) > Releasing (quietest)
     //               > Playing (quietest non-protected) > oldest in group.
@@ -119,6 +119,14 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
     InstrumentSynthVoice* oldestInGroup = nullptr;
 
     for (auto* voice : this->voices) {
+        bool excluded = false;
+        for (size_t excludedIdx = 0; excludedIdx < excludedVoiceCount; ++excludedIdx) {
+            if (excludedVoices[excludedIdx] == voice) {
+                excluded = true;
+                break;
+            }
+        }
+        if (excluded) continue;
         if (!voice->isVoiceActive()) continue;
         if (voice->hitGroupId != groupId) continue;
 

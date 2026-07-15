@@ -16,14 +16,39 @@ class SampleLoader;
 
 struct SampleLoadSpec {
     juce::File file;
+    juce::String contentHash;
+    juce::int64 metadataFileSizeBytes = 0;
 
     // Pre-processing options that affect cached audio identity.
-    float manualGainDb = 0.0f;
+    float fixedGainDb = 0.0f;
     double maxReadLengthMs = 0.0; // <=0: use loader default
     double fadeOutMs = 0.0;       // <=0: use loader default
+};
 
-    // Future-proof extension marker for additional transforms.
-    juce::String preprocessTag;
+struct SamplePreprocessingRecipe {
+    static constexpr int ALGORITHM_VERSION = 1;
+
+    int gainMilliDb = 0;
+    juce::int64 maxReadMicroseconds = 0;
+    juce::int64 fadeOutMicroseconds = 0;
+
+    float getGainDb() const { return static_cast<float>(this->gainMilliDb) / 1000.0f; }
+    double getMaxReadLengthMs() const { return static_cast<double>(this->maxReadMicroseconds) / 1000.0; }
+    double getFadeOutMs() const { return static_cast<double>(this->fadeOutMicroseconds) / 1000.0; }
+    juce::String makeKey() const {
+        return "recipe=v" + juce::String(ALGORITHM_VERSION)
+            + "|gain_mdb=" + juce::String(this->gainMilliDb)
+            + "|max_read_us=" + juce::String(this->maxReadMicroseconds)
+            + "|fade_us=" + juce::String(this->fadeOutMicroseconds);
+    }
+};
+
+struct ResolvedSampleLoadSpec {
+    juce::File file;
+    juce::String sourceIdentity;
+    SamplePreprocessingRecipe recipe;
+
+    juce::String makeCacheKey() const { return this->sourceIdentity + "|" + this->recipe.makeKey(); }
 };
 
 class SampleLoaderQueue {
@@ -43,7 +68,7 @@ public:
     // - `artId` is the articulation id (StringsDictSingleton::Id)
     // - `velocity` is the velocity layer value (1..127)
     // - `rrIndex` is the round-robin index (1..26)
-    void enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, LoadCallback cb);
+    void enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, bool earlyLoad, LoadCallback cb);
 
     // Attempt to mark the worker as started. Returns true if the worker
     // was already started, false if we successfully marked it started.
@@ -53,12 +78,13 @@ public:
     }
 private:
     struct Candidate {
-        SampleLoadSpec loadSpec;
+        ResolvedSampleLoadSpec loadSpec;
         juce::String cacheKey;
         KitLib::InstrumentSpec::Type instType;
         StringsDictSingleton::Id artId;
         uint8_t velocity;
         uint8_t rrIndex;
+        bool earlyLoad = false;
         int priority; // lower is higher priority
     };
 
@@ -97,8 +123,8 @@ public:
     uint32_t getLoadedCount() const { return this->loadedCount.load(); }
 
     void workerLoop();
-    int computeInstrumentPriority(KitLib::InstrumentSpec::Type t) const;
-    int determineStage(const Candidate& c) const;
+    int computeInstrumentPriority(KitLib::InstrumentSpec::Type type) const;
+    int determineStage(const Candidate& candidate) const;
 };
 
 class SampleLoader {
@@ -116,22 +142,10 @@ public:
     }
 
     void requestAsyncLoad(const SampleLoadSpec& loadSpec, LoadCallback callback);
+    void requestAsyncLoad(const ResolvedSampleLoadSpec& loadSpec, LoadCallback callback);
 
-    juce::String makeCacheKey(const SampleLoadSpec& loadSpec) const {
-        // const double resolvedMaxReadLengthMs = loadSpec.maxReadLengthMs > 0.0 ? loadSpec.maxReadLengthMs : this->maxSampleLengthMs;
-        // const double resolvedFadeOutMs = loadSpec.fadeOutMs > 0.0 ? loadSpec.fadeOutMs : this->fadeOutMs;
-        // const int volumeMilliDb = juce::roundToInt(loadSpec.manualGainDb * 1000.0f);
-        // const int maxReadUs = juce::roundToInt(static_cast<float>(resolvedMaxReadLengthMs * 1000.0));
-        // const int fadeOutUs = juce::roundToInt(static_cast<float>(resolvedFadeOutMs * 1000.0));
-        return loadSpec.file.getFullPathName()
-            + "|size=" + juce::String(loadSpec.file.getSize())
-            + "|mtime=" + juce::String(loadSpec.file.getLastModificationTime().toMilliseconds())
-            // + "|v=" + juce::String(volumeMilliDb)
-            // + "|len=" + juce::String(maxReadUs)
-            // + "|fade=" + juce::String(fadeOutUs)
-            + "|tag=" + loadSpec.preprocessTag
-        ;
-    }
+    ResolvedSampleLoadSpec resolveLoadSpec(const SampleLoadSpec& loadSpec) const;
+    juce::String makeCacheKey(const SampleLoadSpec& loadSpec) const { return this->resolveLoadSpec(loadSpec).makeCacheKey(); }
 
     SampleLoaderQueue& getQueue() { return *this->queuePtr; }
 
@@ -146,7 +160,7 @@ private:
     //========================================================
     class LoadJob : public juce::ThreadPoolJob {
     public:
-        LoadJob(SampleLoader& owner, SampleLoadSpec spec, juce::String key, LoadCallback fn)
+        LoadJob(SampleLoader& owner, ResolvedSampleLoadSpec spec, juce::String key, LoadCallback fn)
             : ThreadPoolJob("Sample Load Job")
             , loader(owner)
             , loadSpec(std::move(spec))
@@ -157,7 +171,7 @@ private:
 
     private:
         SampleLoader& loader;
-        SampleLoadSpec loadSpec;
+        ResolvedSampleLoadSpec loadSpec;
         juce::String cacheKey;
         LoadCallback callback;
     };
@@ -176,6 +190,7 @@ private:
         double sampleRate = 0.0;
     };
     std::unordered_map<juce::String, CacheEntry> cache;
+    std::unordered_map<juce::String, std::vector<LoadCallback>> pendingLoads;
 
     size_t currentCacheBytes = 0;
     size_t cacheLimitBytes;

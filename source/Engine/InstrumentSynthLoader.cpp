@@ -8,6 +8,58 @@ const MicLayout* InstrumentSynth::getMicLayout() const { return this->parent ? t
 const MicRoutingPlan* InstrumentSynth::getMicRoutingPlan() const { return this->parent ? this->parent->getMicRoutingPlan() : nullptr; }
 SampleLoader* InstrumentSynth::getSampleLoader() { return this->parent ? this->parent->getSampleLoader() : nullptr; }
 
+void InstrumentSynth::ArticulationRuntime::buildVelocityMapping(const VelocityResponse& velocityResponse) {
+    this->velocityToLayer.fill(-1);
+    this->velocityGain.fill(0.0f);
+    this->selectionTargetDb.fill(-100.0f);
+    this->calibrated = !this->layers.empty();
+    for (const auto& layer : this->layers) {
+        if (!layer.fittedSourceDb.has_value() || !layer.calibrationTrimDb.has_value()) {
+            this->calibrated = false;
+            break;
+        }
+    }
+    if (this->layers.empty()) return;
+
+    if (!this->calibrated) {
+        for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
+            VelLayerIdx chosenLayerIdx = static_cast<VelLayerIdx>(this->layers.size() - 1);
+            for (size_t layerIdx = 0; layerIdx < this->layers.size(); ++layerIdx) {
+                if (velocity <= this->layers[layerIdx].velocity) {
+                    chosenLayerIdx = static_cast<VelLayerIdx>(layerIdx);
+                    break;
+                }
+            }
+            this->velocityToLayer[static_cast<size_t>(velocity)] = chosenLayerIdx;
+            this->velocityGain[static_cast<size_t>(velocity)] = static_cast<float>(velocity) / 127.0f;
+        }
+        return;
+    }
+
+    const float lowestFittedDb = *this->layers.front().fittedSourceDb;
+    const float highestFittedDb = *this->layers.back().fittedSourceDb;
+    for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
+        const float targetDb = juce::jlimit(lowestFittedDb, highestFittedDb, highestFittedDb + velocityResponse.getTargetDb(static_cast<juce::uint8>(velocity)) + this->selectionOffsetDb[static_cast<size_t>(velocity)]);
+        VelLayerIdx chosenLayerIdx = 0;
+        float bestDistanceDb = std::numeric_limits<float>::max();
+        for (size_t layerIdx = 0; layerIdx < this->layers.size(); ++layerIdx) {
+            const float distanceDb = std::abs(*this->layers[layerIdx].fittedSourceDb - targetDb);
+            if (distanceDb < bestDistanceDb) {
+                bestDistanceDb = distanceDb;
+                chosenLayerIdx = static_cast<VelLayerIdx>(layerIdx);
+            }
+        }
+        this->selectionTargetDb[static_cast<size_t>(velocity)] = targetDb;
+        this->velocityToLayer[static_cast<size_t>(velocity)] = chosenLayerIdx;
+        this->velocityGain[static_cast<size_t>(velocity)] = velocityResponse.getGain(static_cast<juce::uint8>(velocity)) * juce::Decibels::decibelsToGain(this->residualOutputDb[static_cast<size_t>(velocity)], -100.0f);
+    }
+}
+
+void InstrumentSynth::rebuildVelocityResponseTables() {
+    if (this->parent == nullptr) return;
+    for (auto& articulation : this->runtimeArticulations) articulation.buildVelocityMapping(this->parent->getVelocityResponse());
+}
+
 void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides) {
     this->lastRoutingContext.defaultInstrument = defaultInstSpec;
     this->lastRoutingContext.artSources = artSources;
@@ -467,7 +519,7 @@ void InstrumentSynth::applyResolvedRouteList(bool loadSamples, bool createIfMiss
             if (codes.isNotEmpty()) codes += ", ";
             codes += "'" + c + "'";
         }
-        LOG(Notice, "    Skipping samples for mic(s) " + codes + " - not present in active mic layout");
+        LOG(Notice, "    Skipping samples for mic(s) " + codes + " - not present in active mic layout"); //FIXME: missing context, line alone on 'notice' level not informative!
     }
     this->processCcDimensions(foundCcDimensions);
 }
@@ -544,7 +596,6 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
 
     this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, micRouting);
     micRouting.mergeSkippedInto(skippedMicCodes);
-    artRt.buildVelocityMapping();
 
     this->refreshRuntimeExpressionValues(*artSpec, artRt);
     this->buildCcMappings(layoutArt, artSpec, artIdx, foundCcDimensions);
@@ -556,9 +607,19 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
     , ArticulationRuntime& artRt
     , MicRoutingBuilder& micRouting
 ) {
+    bool articulationCalibrationAvailable = !artSpec->velocityLayerSpecs.empty();
+    for (const auto& velocitySpec : artSpec->velocityLayerSpecs) {
+        if (!velocitySpec->fittedSourceDb.has_value() || !velocitySpec->calibrationTrimDb.has_value()) {
+            articulationCalibrationAvailable = false;
+            break;
+        }
+    }
+
     for (const auto& velSpec : artSpec->velocityLayerSpecs) {
         VelocityLayerRuntime layer;
         layer.velocity = velSpec->velocity;
+        layer.fittedSourceDb = velSpec->fittedSourceDb;
+        layer.calibrationTrimDb = velSpec->calibrationTrimDb;
         layer.samples.reserve(velSpec->sampleVariantSpecs.size());
 
         for (const auto& varSpec : velSpec->sampleVariantSpecs) {
@@ -577,6 +638,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                 ? this->instrumentSlot.balance
                 : (artSpec->balanceConflict ? std::optional<int> {} : artSpec->balance);
             sound->decayEnvelope = varSpec->decayEnvelope;
+            if (articulationCalibrationAvailable && sound->decayEnvelope.isValid()) sound->decayEnvelope.peakDb += layer.calibrationTrimDb.value_or(0.0f);
             if ((varSpec->hasCsvMetadata || !varSpec->decayCode.isEmpty()) && !sound->decayEnvelope.isValid()) {
                 LOG(Warning, "Invalid decay metadata for sample: " + varSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
             }
@@ -591,58 +653,136 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             this->addSound(sound);
             SampleEntry se;
             se.sound = sound.get();
+            se.weakSound = sound;
             // Store variant key (1..26) as returned by SampleVariantSpec::letterToIdx (0 if no letter)
             se.variantIdx = static_cast<uint8_t>(KitLib::SampleVariantSpec::letterToIdx(varSpec->letter));
             layer.samples.push_back(se);
+        }
 
-            SampleLoader* loader = this->getSampleLoader();
-            if (loader != nullptr) {
-                std::weak_ptr<SampledSound> weakSound = sound;
-
-                SampleLoadSpec loadSpec;
-                loadSpec.file = varSpec->sampleFile;
-                loadSpec.manualGainDb = varSpec->manualGainDb;
-
-                loader->getQueue().enqueueCandidate(
-                    loadSpec,
-                    instSpec->meta.type,
-                    artSpec->nameId,
-                    velSpec->velocity,
-                    KitLib::SampleVariantSpec::letterToIdx(varSpec->letter),
-                    [weakSound](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr) {
-                        auto soundLocked = weakSound.lock();
-                        if (!soundLocked) return;
-                        soundLocked->buffer = buf;
-                        soundLocked->sampleRate = sr;
-                        soundLocked->sampleLengthSamples = buf != nullptr ? buf->getNumSamples() : 0;
-                        soundLocked->sampleLengthMs = buf != nullptr && sr > 0.0
-                            ? static_cast<float>((static_cast<double>(soundLocked->sampleLengthSamples) / sr) * 1000.0)
-                            : 0.0f;
-                        soundLocked->transitionAudioValid = false;
-                        if (buf != nullptr && buf->getNumChannels() > 0 && buf->getNumSamples() > 0) {
-                            int sourceChannelStart = 0;
-                            int sourceChannelCount = buf->getNumChannels();
-                            if (soundLocked->sampleVariantSpec != nullptr) {
-                                sourceChannelStart = soundLocked->sampleVariantSpec->fileChannelStart;
-                                if (soundLocked->sampleVariantSpec->fileChannelCount > 0)
-                                    sourceChannelCount = soundLocked->sampleVariantSpec->fileChannelCount;
-                            }
-                            const int sourceChannelEnd = juce::jmin(
-                                buf->getNumChannels(),
-                                sourceChannelStart + sourceChannelCount);
-                            for (int sourceChannel = juce::jmax(0, sourceChannelStart); sourceChannel < sourceChannelEnd; ++sourceChannel) {
-                                if (buf->getMagnitude(sourceChannel, 0, buf->getNumSamples()) > 0.000001f) {
-                                    soundLocked->transitionAudioValid = true;
-                                    break;
-                                }
-                            }
-                        }
-                        soundLocked->loaded.store(buf != nullptr, std::memory_order_release);
-                    }
-                );
+        std::map<uint8_t, size_t> logicalHitIndexByVariant;
+        for (size_t sampleEntryIdx = 0; sampleEntryIdx < layer.samples.size(); ++sampleEntryIdx) {
+            const auto variantIdx = layer.samples[sampleEntryIdx].variantIdx;
+            auto logicalHitIt = logicalHitIndexByVariant.find(variantIdx);
+            if (logicalHitIt == logicalHitIndexByVariant.end()) {
+                LogicalHitRuntime logicalHit;
+                logicalHit.variantIdx = variantIdx;
+                layer.logicalHits.push_back(std::move(logicalHit));
+                const size_t logicalHitIdx = layer.logicalHits.size() - 1;
+                logicalHitIndexByVariant[variantIdx] = logicalHitIdx;
+                logicalHitIt = logicalHitIndexByVariant.find(variantIdx);
+            }
+            layer.logicalHits[logicalHitIt->second].sampleEntryIndexes.push_back(sampleEntryIdx);
+        }
+        for (auto& logicalHit : layer.logicalHits) {
+            logicalHit.readiness->requiredEntryCount = static_cast<int>(logicalHit.sampleEntryIndexes.size());
+            for (const auto& measurement : velSpec->logicalHitMeasurements) {
+                if (measurement.variantIdx == logicalHit.variantIdx) {
+                    logicalHit.preTrimIntensityDb = measurement.intensityDb;
+                    break;
+                }
             }
         }
         artRt.layers.push_back(std::move(layer));
+    }
+
+    artRt.buildVelocityMapping(this->parent->getVelocityResponse());
+
+    static constexpr std::array<float, 5> CALIBRATED_EARLY_TARGETS_DB { -24.0f, -12.0f, -6.0f, -3.0f, 0.0f };
+    static constexpr std::array<int, 5> UNCALIBRATED_EARLY_VELOCITIES { 10, 35, 65, 95, 120 };
+    for (size_t targetIdx = 0; targetIdx < CALIBRATED_EARLY_TARGETS_DB.size(); ++targetIdx) {
+        size_t bestLayerIdx = 0;
+        size_t bestLogicalHitIdx = 0;
+        bool foundLogicalHit = false;
+        for (int selectionPass = 0; selectionPass < 2 && !foundLogicalHit; ++selectionPass) {
+            float bestDistance = std::numeric_limits<float>::max();
+            for (size_t layerIdx = 0; layerIdx < artRt.layers.size(); ++layerIdx) {
+                auto& layer = artRt.layers[layerIdx];
+                for (size_t logicalHitOffset = 0; logicalHitOffset < layer.logicalHits.size(); ++logicalHitOffset) {
+                    const size_t logicalHitIdx = (targetIdx + logicalHitOffset) % layer.logicalHits.size();
+                    auto& logicalHit = layer.logicalHits[logicalHitIdx];
+                    if (selectionPass == 0 && logicalHit.earlyLoad) continue;
+                    const float representativeValue = artRt.calibrated
+                        ? logicalHit.preTrimIntensityDb.value_or(*layer.fittedSourceDb)
+                        : static_cast<float>(layer.velocity);
+                    const float targetValue = artRt.calibrated
+                        ? *artRt.layers.back().fittedSourceDb + CALIBRATED_EARLY_TARGETS_DB[targetIdx]
+                        : static_cast<float>(UNCALIBRATED_EARLY_VELOCITIES[targetIdx]);
+                    const float distance = std::abs(representativeValue - targetValue);
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        bestLayerIdx = layerIdx;
+                        bestLogicalHitIdx = logicalHitIdx;
+                        foundLogicalHit = true;
+                    }
+                }
+            }
+        }
+        if (foundLogicalHit) artRt.layers[bestLayerIdx].logicalHits[bestLogicalHitIdx].earlyLoad = true;
+    }
+
+    SampleLoader* loader = this->getSampleLoader();
+    if (loader == nullptr) return;
+    for (int loadPass = 0; loadPass < 2; ++loadPass) {
+        const bool loadEarlyHits = loadPass == 0;
+        for (auto& layer : artRt.layers) {
+            const float calibrationTrimDb = artRt.calibrated ? layer.calibrationTrimDb.value_or(0.0f) : 0.0f;
+            for (auto& logicalHit : layer.logicalHits) {
+                if (logicalHit.earlyLoad != loadEarlyHits) continue;
+                for (const auto sampleEntryIdx : logicalHit.sampleEntryIndexes) {
+                    auto* sound = layer.samples[sampleEntryIdx].sound;
+                    if (sound == nullptr || sound->sampleVariantSpec == nullptr) continue;
+                    auto* sampleVariantSpec = sound->sampleVariantSpec;
+                    const auto weakSound = layer.samples[sampleEntryIdx].weakSound;
+
+                    SampleLoadSpec loadSpec;
+                    loadSpec.file = sampleVariantSpec->sampleFile;
+                    loadSpec.contentHash = sampleVariantSpec->metadataContentHash;
+                    loadSpec.metadataFileSizeBytes = sampleVariantSpec->metadataFileSizeBytes;
+                    loadSpec.fixedGainDb = sampleVariantSpec->manualGainDb + calibrationTrimDb;
+                    const auto readiness = logicalHit.readiness;
+
+                    loader->getQueue().enqueueCandidate(
+                        loadSpec,
+                        instSpec->meta.type,
+                        artSpec->nameId,
+                        layer.velocity,
+                        logicalHit.variantIdx,
+                        logicalHit.earlyLoad,
+                        [weakSound, readiness](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampRate) {
+                            auto soundLocked = weakSound.lock();
+                            if (!soundLocked) return;
+                            soundLocked->buffer = buffer;
+                            soundLocked->sampleRate = sampRate;
+                            soundLocked->sampleLengthSamples = buffer != nullptr ? buffer->getNumSamples() : 0;
+                            soundLocked->sampleLengthMs = buffer != nullptr && sampRate > 0.0
+                                ? static_cast<float>((static_cast<double>(soundLocked->sampleLengthSamples) / sampRate) * 1000.0)
+                                : 0.0f;
+                            soundLocked->transitionAudioValid = false;
+                            if (buffer != nullptr && buffer->getNumChannels() > 0 && buffer->getNumSamples() > 0) {
+                                int sourceChannelStart = 0;
+                                int sourceChannelCount = buffer->getNumChannels();
+                                if (soundLocked->sampleVariantSpec != nullptr) {
+                                    sourceChannelStart = soundLocked->sampleVariantSpec->fileChannelStart;
+                                    if (soundLocked->sampleVariantSpec->fileChannelCount > 0)
+                                        sourceChannelCount = soundLocked->sampleVariantSpec->fileChannelCount;
+                                }
+                                const int sourceChannelEnd = juce::jmin(
+                                    buffer->getNumChannels(),
+                                    sourceChannelStart + sourceChannelCount);
+                                for (int sourceChannel = juce::jmax(0, sourceChannelStart); sourceChannel < sourceChannelEnd; ++sourceChannel) {
+                                    if (buffer->getMagnitude(sourceChannel, 0, buffer->getNumSamples()) > 0.000001f) {
+                                        soundLocked->transitionAudioValid = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            soundLocked->loaded.store(buffer != nullptr, std::memory_order_release);
+                            readiness->markLoaded(buffer != nullptr);
+                        }
+                    );
+                }
+            }
+        }
     }
 }
 

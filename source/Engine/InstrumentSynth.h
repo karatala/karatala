@@ -15,6 +15,7 @@
 #include "HiHatTransitionPolicy.h"
 #include "KitLibModel.h"
 #include "LayoutManager.h"
+#include "VelocityResponse.h"
 
 class DrumKitEngine;
 class SampleLoader;
@@ -92,6 +93,8 @@ public:
     
     float getVelocityGain() const { return this->velocityGain; }
     void setVelocityGain(float value) { this->velocityGain = value; }
+    juce::uint8 getMidiVelocity() const { return this->midiVelocity; }
+    void setMidiVelocity(juce::uint8 value) { this->midiVelocity = value; }
     void requestFadeOut(float durationSec);
     void requestRelease();
     void killImmediately();
@@ -115,6 +118,7 @@ public:
         this->currentlyPlayingSound = nullptr;
         this->currentPlayingMidiChannel = 0;
         this->artRuntimeIdx = -1;
+        this->midiVelocity = 0;
         this->envelopeState = EnvelopeState::Idle;
     }
 
@@ -174,6 +178,7 @@ public:
     double pitchRatioMultiplier = 1.0;
     
     float velocityGain = 1.0f;
+    juce::uint8 midiVelocity = 0;
     float tailShortenFactor = 1.0f;   // 1.0 = normal, <1 = shortened
     float lastEnvelopeValue = 0.0f;
     float cachedEstimatedDb = -100.0f;
@@ -226,11 +231,37 @@ public:
     struct SampleEntry {
         SampledSound* sound = nullptr; // non-owning pointer into Synth::sounds
         uint8_t variantIdx = 0; // variant index (optional)
+        std::weak_ptr<SampledSound> weakSound;
+    };
+
+    struct LogicalHitReadiness {
+        std::atomic<int> loadedEntryCount { 0 };
+        std::atomic<bool> ready { false };
+        int requiredEntryCount = 0;
+
+        void markLoaded(bool loadedSuccessfully) {
+            if (!loadedSuccessfully) return;
+            const int loadedCount = this->loadedEntryCount.fetch_add(1, std::memory_order_acq_rel) + 1;
+            if (loadedCount == this->requiredEntryCount) this->ready.store(true, std::memory_order_release);
+        }
+    };
+
+    struct LogicalHitRuntime {
+        uint8_t variantIdx = 0;
+        std::vector<size_t> sampleEntryIndexes;
+        std::shared_ptr<LogicalHitReadiness> readiness = std::make_shared<LogicalHitReadiness>();
+        std::optional<float> preTrimIntensityDb;
+        bool earlyLoad = false;
+
+        bool isReady() const { return this->readiness->ready.load(std::memory_order_acquire); }
     };
 
     struct VelocityLayerRuntime {
         uint8_t velocity = 0; // base velocity for layer
         std::vector<SampleEntry> samples; // contiguous sample entries
+        std::vector<LogicalHitRuntime> logicalHits;
+        std::optional<float> fittedSourceDb;
+        std::optional<float> calibrationTrimDb;
         // Use shared_ptr to an atomic so the runtime struct remains copyable/movable
         std::shared_ptr<std::atomic<uint32_t>> roundRobinCounter = std::make_shared<std::atomic<uint32_t>>(0);
     };
@@ -255,10 +286,19 @@ public:
         int zoneBowEdgeValue = -1;
         // For each incoming MIDI velocity (0..127) map to a preferred velocity layer index
         std::array<VelLayerIdx, 128> velocityToLayer; // -1 means no layer
+        std::array<float, 128> velocityGain;
+        std::array<float, 128> selectionTargetDb;
+        std::array<float, 128> selectionOffsetDb;
+        std::array<float, 128> residualOutputDb;
+        bool calibrated = false;
         std::vector<VelocityLayerRuntime> layers;
 
         explicit ArticulationRuntime(StringsDictSingleton::Id newNameId, StringsDictSingleton::Id newExprId) : nameId(newNameId), exprId(newExprId) {
             velocityToLayer.fill(-1);
+            for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) velocityGain[static_cast<size_t>(velocity)] = static_cast<float>(velocity) / 127.0f;
+            selectionTargetDb.fill(-100.0f);
+            selectionOffsetDb.fill(0.0f);
+            residualOutputDb.fill(0.0f);
         }
 
         juce::String getCodeRaw() const {
@@ -267,22 +307,7 @@ public:
             return result;
         }
 
-        // choose the first layer whose configured velocity is >= current velocity.
-        // Example: layers {27,52,77,102,127} -> 0..27->0, 28..52->1, 53..77->2, 78..102->3, 103..127->4
-        void buildVelocityMapping() {
-            if (this->layers.empty()) return;
-            const auto count = this->layers.size();
-            for (uint8_t value = 0; value <= MIDI_MAX_VALUE; ++value) {
-                VelLayerIdx chosen = static_cast<VelLayerIdx>(count - 1); // default to last layer
-                for (size_t layerIdx = 0; layerIdx < count; ++layerIdx) {
-                    if (value <= this->layers[layerIdx].velocity) {
-                        chosen = static_cast<VelLayerIdx>(layerIdx);
-                        break;
-                    }
-                }
-                this->velocityToLayer[value] = chosen;
-            }
-        }
+        void buildVelocityMapping(const VelocityResponse& velocityResponse);
     };
 
     struct RoutingContext {
@@ -369,9 +394,9 @@ public:
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
     int resolveArticulation(int midiNoteNumber);
     int resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity);
-    bool startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float velocity);
+    bool startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLayerRuntime& layer, LogicalHitRuntime& logicalHit, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity);
     void fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity);
-    void startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, ArtRtIdx artIdx, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocity);
+    void startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, ArtRtIdx artIdx, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity);
     void applyAftertouch(int midiChannel, int midiNoteNumber);
 
     void handleController(int midiChannel, int controllerNumber, int controllerValue);
@@ -425,6 +450,7 @@ public:
         voice->currentPlayingMidiChannel = midiChannel;
         voice->noteOnTime = ++this->lastNoteOnCounter;
         voice->currentlyPlayingSound = sound;
+        voice->midiVelocity = static_cast<juce::uint8>(juce::jlimit(0, 127, juce::roundToInt(velocity * 127.0f)));
         voice->startNote(midiNoteNumber, velocity, sound);
     }
     
@@ -461,7 +487,7 @@ public:
     void renderNextBlock(juce::AudioBuffer<float>& outputAudio, const juce::MidiBuffer& inputMidi, int startSample, int numSamples);
     void renderVoices(juce::AudioBuffer<float>& buffer, int startSample, int numSamples);
 
-    InstrumentSynthVoice* findVoiceToSteal(int midiChannel, int midiNoteNumber, int groupId) const;
+    InstrumentSynthVoice* findVoiceToSteal(int midiChannel, int midiNoteNumber, int groupId, InstrumentSynthVoice* const* excludedVoices = nullptr, size_t excludedVoiceCount = 0) const;
 
     int getMicChannelCount() const { return mMicChannelCount; }
 
@@ -551,6 +577,7 @@ public:
     }
 
     void applyAdaptiveTailShortening();
+    void rebuildVelocityResponseTables();
 
 private:
     friend struct InstrumentSynthTestAccess;
@@ -690,9 +717,8 @@ private:
     ArtRtIdx selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const;
     bool controllerCanTransitionExistingVoices(int controllerNumber) const;
 
-    uint8_t chooseVariantGroup(VelocityLayerRuntime& layer);
-    bool hasAnyLoadedVariant(const VelocityLayerRuntime& layer) const;
-    bool isVariantReady(const VelocityLayerRuntime& layer, uint8_t variantIdx) const;
+    LogicalHitRuntime* chooseLogicalHit(VelocityLayerRuntime& layer);
+    bool hasReadyLogicalHit(const VelocityLayerRuntime& layer) const;
     void cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity);
     void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
     void processPendingHiHatControllers();
