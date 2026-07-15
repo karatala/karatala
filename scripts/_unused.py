@@ -1,4 +1,4 @@
-
+# DEPRECATED!
 
 def compute_lufs_momentary_envelope(
     audio_waveform: npt.NDArray[np.float64],

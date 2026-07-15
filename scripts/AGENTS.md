@@ -13,6 +13,8 @@
 
 - Metadata encodings must remain compatible with engine decoders, especially base62 decay deltas and filename parameter syntax.
 - Scripts may perform filesystem changes only within explicitly selected input/output locations.
+- `analyze_drum_samples.py` is report-only unless `--rename-files` is explicitly supplied. Its JSON report is the complete audit record; CSV output is an optional flat view.
+- Analyzer rename mode must preserve metadata it does not own and must block all writes when the complete selected rename plan has parsing, measurement, uniqueness, or destination errors.
 
 # Work Guidance
 
@@ -23,4 +25,3 @@
 - Validate generated filenames with `InstrumentSpec::parseSampleFile` tests when metadata syntax changes.
 
 # Child DOX Index
-

@@ -1,6 +1,6 @@
 # TODO14: Sample Calibration And Velocity Response Plan
 
-Status: Phase 1 is complete. K-weighted 400 ms calibration with no instrument-family offsets is approved. Phases 2 through 6 have not started.
+Status: Phase 1 is complete. Phase 2 analyzer implementation is complete, but its fixture and library verification has not been run. Phases 3 through 6 have not started.
 
 ## Scope And Terminology
 
@@ -413,18 +413,20 @@ The approved baseline listening sequence is in `build/todo14_phase1_listening_v4
 
 Verification result: weighted isotonic fitting plus the clamped `selectionTargetDb` equation produced no decreasing targets and no backward named-velocity choices across all 30 reference articulations and MIDI velocities 1 to 127.
 
-### Phase 2: Make analyzer output correct and safe
+### Phase 2: Make analyzer output correct and safe (implementation complete, verification pending)
 
-- Separate parsing, file measurement, grouping, reporting, and apply logic.
-- Preserve signed channels and decode mic channel ranges.
-- Match the engine filename parser.
-- Measure every file first, then build logical hits from completed records.
-- Calculate and retain each logical-hit pre-trim intensity.
-- Calculate raw velocity medians without replacing individual hit values.
-- Add onset, fixed-window loudness, true peak, channel balance, corrected decay, and timing evidence.
-- Make report-only mode the default and generate a complete no-write rename plan.
-- Preserve all metadata and validate all rename collisions before any write.
-- Fix the CSV and decay problems listed above.
+- ✅ Separate parsing, file measurement, grouping, reporting, and apply logic.
+- ✅ Preserve signed channels and decode mic channel ranges.
+- ✅ Match the engine filename parser.
+- ✅ Measure every file first, then build logical hits from completed records.
+- ✅ Calculate and retain each logical-hit pre-trim intensity.
+- ✅ Calculate raw velocity medians without replacing individual hit values.
+- ✅ Add onset, fixed-window loudness, true peak, channel balance, corrected decay, and timing evidence.
+- ✅ Make report-only mode the default and generate a complete no-write rename plan.
+- ✅ Preserve all metadata and validate all rename collisions before any write.
+- ✅ Fix the CSV and decay problems listed above.
+
+Implementation result: [`analyze_drum_samples.py`](../scripts/analyze_drum_samples.py) now writes a complete JSON report and an optional flat CSV. Measurement settings are command-line options so later listening experiments do not require code edits. Rename mode replaces only existing `p`, `d`, and `c` analysis metadata, preserves `v` and unknown tokens, and refuses all writes when parsing, measurement, uniqueness, or destination checks block the complete plan. Transactional temporary names and rollback remain Phase 3 work.
 
 Verify later: mono, stereo, separate-file, and multichannel fixtures; no-write report mode; deterministic output; parser round-trip; linked-hit grouping; collision protection.
 
@@ -520,4 +522,4 @@ Non-goals:
 - no source audio-file modification;
 - no new realtime parsing, allocation, file I/O, locking, or unbounded work.
 
-No build or tests were run for Phase 1. The read-only Phase 1 analyzer was run; no sample filename or source audio was changed. Listening review is complete.
+No build or tests were run for Phases 1 or 2. The read-only Phase 1 analyzer was run. The Phase 2 analyzer was not run, and no sample filename or source audio was changed. Phase 2 verification remains pending.
