@@ -107,9 +107,13 @@ public:
     const juce::String& getSuggestedInstrumentMapText() const { return this->suggestedInstrumentMapText; }
     const juce::String& getGlobalKitLayoutId() const { return this->globalConfig.kitLayout; }
     const juce::String& getGlobalMicLayoutId() const { return this->globalConfig.micLayout; }
+    const juce::File& getGlobalLibraryPath() const { return this->globalConfig.libraryPath; }
+    uint64_t getGlobalSampleLoaderCacheLimitMegabytes() const { return this->globalConfig.sampleLoaderCacheLimitMegabytes; }
     const InstrumentCatalog& getInstrumentCatalog() const { return this->globalConfig.instrumentCatalog; }
     DebugLevel getGlobalLogLevel() const { return this->globalConfig.logLevel; }
     void setGlobalLogLevel(DebugLevel level);
+    bool setGlobalLibraryPath(const juce::File& libraryPath);
+    void setGlobalSampleLoaderCacheLimitMegabytes(uint64_t limitMegabytes);
     bool setGlobalKitLayoutId(const juce::String& layoutId);
     bool setGlobalMicLayoutId(const juce::String& layoutId);
 

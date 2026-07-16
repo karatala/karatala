@@ -1,4 +1,5 @@
 #include "SourcePickerPopup.h"
+#include "../Engine/ArticulationNameHelpers.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 
@@ -11,32 +12,53 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->filterField.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
     this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
     this->filterField.onTextChange = [this] { this->queueRebuildFiltered(); };
-    addAndMakeVisible(this->filterField);
+    this->addAndMakeVisible(this->filterField);
 
     for (auto* button : { &this->allCategoryButton, &this->drumsCategoryButton, &this->cymbalsCategoryButton, &this->otherCategoryButton }) {
         UIHelpers::configureCategoryButton(*button);
-        addAndMakeVisible(*button);
+        this->addAndMakeVisible(*button);
     }
     this->allCategoryButton.onClick = [this] { this->setCategory(Category::All); };
     this->drumsCategoryButton.onClick = [this] { this->setCategory(Category::Drums); };
     this->cymbalsCategoryButton.onClick = [this] { this->setCategory(Category::Cymbals); };
     this->otherCategoryButton.onClick = [this] { this->setCategory(Category::Other); };
 
+    UIHelpers::configureControlButton(this->closeButton);
+    this->closeButton.onClick = [this] {
+        if (this->onClose) this->onClose();
+    };
+    this->addAndMakeVisible(this->closeButton);
+
+    this->kindListLabel.setText("Types", juce::dontSendNotification);
+    UIHelpers::configureCaptionLabel(this->kindListLabel, juce::Justification::centredLeft);
+    this->addAndMakeVisible(this->kindListLabel);
+
     this->kindListBox.setModel(&this->kindListModel);
     this->kindListBox.setRowHeight(22);
     this->kindListBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
-    addAndMakeVisible(this->kindListBox);
+    this->addAndMakeVisible(this->kindListBox);
+
+    this->articulationListLabel.setText("Articulations", juce::dontSendNotification);
+    UIHelpers::configureCaptionLabel(this->articulationListLabel, juce::Justification::centredLeft);
+    this->addAndMakeVisible(this->articulationListLabel);
+    this->articulationListBox.setModel(&this->articulationListModel);
+    this->articulationListBox.setRowHeight(22);
+    this->articulationListBox.setMultipleSelectionEnabled(true);
+    this->articulationListBox.setClickingTogglesRowSelection(true);
+    this->articulationListBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
+    this->addAndMakeVisible(this->articulationListBox);
 
     this->listBox.setModel(&this->listModel);
     this->listBox.setRowHeight(22);
     this->listBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
-    addAndMakeVisible(this->listBox);
+    this->addAndMakeVisible(this->listBox);
 
     this->cachedLowerDisplayText.reserve(this->allItems.size());
     for (const auto& item : this->allItems)
         this->cachedLowerDisplayText.push_back(item.displayText().toLowerCase());
 
     this->rebuildKindEntries();
+    this->rebuildArticulationEntries();
     this->rebuildFiltered();
     this->updateCategoryButtons();
 }
@@ -46,13 +68,20 @@ void SourcePickerPopup::setFilterType(KitLib::InstrumentSpec::Type type) {
     this->selectedCategory = this->categoryForType(type);
     this->selectedKind = type;
     this->rebuildKindEntries();
+    this->rebuildArticulationEntries();
     this->rebuildFiltered();
     this->updateCategoryButtons();
 }
 
+void SourcePickerPopup::focusItemList() {
+    this->listBox.grabKeyboardFocus();
+}
+
 void SourcePickerPopup::resized() {
-    auto area = getLocalBounds().reduced(4);
+    auto area = this->getLocalBounds().reduced(4);
     auto topRow = area.removeFromTop(22);
+    this->closeButton.setBounds(topRow.removeFromRight(24).reduced(1));
+    topRow.removeFromRight(4);
     const int categoryAreaW = juce::jmin(232, juce::jmax(184, topRow.getWidth() / 2));
     auto categoryArea = topRow.removeFromRight(categoryAreaW);
     this->filterField.setBounds(topRow.reduced(0, 1));
@@ -66,8 +95,17 @@ void SourcePickerPopup::resized() {
 
     area.removeFromTop(4);
     auto body = area;
-    const int kindsW = juce::jmin(kindListWidth, juce::jmax(70, body.getWidth() / 3));
-    this->kindListBox.setBounds(body.removeFromLeft(kindsW));
+    const int leftWidth = juce::jmin(sidebarWidth, juce::jmax(90, body.getWidth() / 4));
+    auto sidebarArea = body.removeFromLeft(leftWidth);
+    const int labelHeight = 16;
+    const int listGap = 4;
+    const int availableListHeight = sidebarArea.getHeight() - labelHeight * 2 - listGap;
+    const int kindListHeight = availableListHeight * 7 / 10;
+    this->kindListLabel.setBounds(sidebarArea.removeFromTop(labelHeight));
+    this->kindListBox.setBounds(sidebarArea.removeFromTop(kindListHeight));
+    sidebarArea.removeFromTop(listGap);
+    this->articulationListLabel.setBounds(sidebarArea.removeFromTop(labelHeight));
+    this->articulationListBox.setBounds(sidebarArea);
     body.removeFromLeft(4);
     this->listBox.setBounds(body);
 }
@@ -75,7 +113,7 @@ void SourcePickerPopup::resized() {
 void SourcePickerPopup::paint(juce::Graphics& g) {
     g.fillAll(UITheme::Colours::bgPanelRaised);
     g.setColour(UITheme::Colours::borderStrong);
-    g.drawRect(getLocalBounds(), 1);
+    g.drawRect(this->getLocalBounds(), 1);
 }
 
 void SourcePickerPopup::setCategory(Category category) {
@@ -85,6 +123,7 @@ void SourcePickerPopup::setCategory(Category category) {
     this->selectedCategory = category;
     this->selectedKind = KitLib::InstrumentSpec::Type::Unknown;
     this->rebuildKindEntries();
+    this->rebuildArticulationEntries();
     this->rebuildFiltered();
     this->updateCategoryButtons();
 }
@@ -148,20 +187,62 @@ void SourcePickerPopup::rebuildKindEntries() {
     this->kindListBox.selectRow(selectedRow);
 }
 
+void SourcePickerPopup::rebuildArticulationEntries() {
+    std::set<juce::String> availableArticulations;
+    for (const auto& item : this->allItems) {
+        if (!this->matchesCategory(item.instType)) continue;
+        if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && item.instType != this->selectedKind) continue;
+        const auto articulationName = ArticulationNameHelpers::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
+        if (articulationName.isNotEmpty()) availableArticulations.insert(articulationName);
+    }
+
+    this->articulationEntries.assign(availableArticulations.begin(), availableArticulations.end());
+    for (auto selectedIterator = this->selectedArticulations.begin(); selectedIterator != this->selectedArticulations.end();) {
+        if (availableArticulations.find(*selectedIterator) == availableArticulations.end())
+            selectedIterator = this->selectedArticulations.erase(selectedIterator);
+        else
+            ++selectedIterator;
+    }
+
+    this->articulationListBox.updateContent();
+    juce::SparseSet<int> selectedRows;
+    for (int idx = 0; idx < static_cast<int>(this->articulationEntries.size()); ++idx) {
+        if (this->selectedArticulations.find(this->articulationEntries[static_cast<size_t>(idx)]) != this->selectedArticulations.end())
+            selectedRows.addRange({ idx, idx + 1 });
+    }
+    this->articulationListBox.setSelectedRows(selectedRows, juce::dontSendNotification);
+}
+
 bool SourcePickerPopup::matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const {
     if (!this->matchesCategory(item.instType))
         return false;
     if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && item.instType != this->selectedKind)
         return false;
-    if (filterText.isNotEmpty() && !lowerDisplayText.contains(filterText))
-        return false;
+    if (!this->selectedArticulations.empty()) {
+        const auto articulationName = ArticulationNameHelpers::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
+        if (this->selectedArticulations.find(articulationName) == this->selectedArticulations.end()) return false;
+    }
+
+    juce::StringArray filterTerms;
+    filterTerms.addTokens(filterText, " \t\r\n", "");
+    filterTerms.removeEmptyStrings();
+    for (const auto& filterTerm : filterTerms) {
+        if (filterTerm.startsWithChar('-') && filterTerm.length() > 1) {
+            if (lowerDisplayText.contains(filterTerm.substring(1))) return false;
+        } else if (filterTerm != "-" && !lowerDisplayText.contains(filterTerm)) {
+            return false;
+        }
+    }
     return true;
 }
 
 void SourcePickerPopup::rebuildFiltered() {
     this->stopTimer();
+    this->listBox.deselectAllRows();
     this->filteredEntries.clear();
     this->actionRow = -1;
+    this->actionRowBeforeMouseSelection = -1;
+    this->mouseSelectionChanged = false;
     auto filterText = this->filterField.getText().toLowerCase();
 
     for (int idx = 0; idx < static_cast<int>(this->allItems.size()); ++idx) {
@@ -231,6 +312,30 @@ void SourcePickerPopup::KindListModel::listBoxItemClicked(int row, const juce::M
 
     this->owner.kindListBox.selectRow(row);
     this->owner.kindListBox.repaint();
+    this->owner.rebuildArticulationEntries();
+    this->owner.rebuildFiltered();
+}
+
+int SourcePickerPopup::ArticulationListModel::getNumRows() {
+    return static_cast<int>(this->owner.articulationEntries.size());
+}
+
+void SourcePickerPopup::ArticulationListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
+    if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.articulationEntries.size())) return;
+    g.fillAll(rowIsSelected ? UITheme::Colours::listSelection : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd));
+    g.setColour(rowIsSelected ? UITheme::Colours::textPrimary : UITheme::Colours::textSecondary);
+    g.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+    g.drawText(this->owner.articulationEntries[static_cast<size_t>(rowNumber)], 6, 0, width - 10, height, juce::Justification::centredLeft);
+}
+
+void SourcePickerPopup::ArticulationListModel::selectedRowsChanged(int lastRowSelected) {
+    juce::ignoreUnused(lastRowSelected);
+    this->owner.selectedArticulations.clear();
+    for (int idx = 0; idx < this->owner.articulationListBox.getNumSelectedRows(); ++idx) {
+        const int selectedRow = this->owner.articulationListBox.getSelectedRow(idx);
+        if (selectedRow >= 0 && selectedRow < static_cast<int>(this->owner.articulationEntries.size()))
+            this->owner.selectedArticulations.insert(this->owner.articulationEntries[static_cast<size_t>(selectedRow)]);
+    }
     this->owner.rebuildFiltered();
 }
 
@@ -296,8 +401,10 @@ void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::Mouse
     if (this->owner.filteredEntries.empty()) return;
     if (row < 0 || row >= static_cast<int>(this->owner.filteredEntries.size())) return;
 
-    auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
-    const bool wasActionRow = this->owner.actionRow == row;
+    const auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
+    const bool wasActionRow = this->owner.mouseSelectionChanged ? this->owner.actionRowBeforeMouseSelection == row : this->owner.actionRow == row;
+    this->owner.mouseSelectionChanged = false;
+    this->owner.actionRowBeforeMouseSelection = -1;
     this->owner.actionRow = row;
     this->owner.listBox.selectRow(row);
     this->owner.listBox.repaint();
@@ -324,4 +431,30 @@ void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::Mouse
     } else {
         if (this->owner.onPreview) this->owner.onPreview(originalIdx, static_cast<juce::uint8>(127));
     }
+}
+
+void SourcePickerPopup::ListModel::selectedRowsChanged(int lastRowSelected) {
+    if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.filteredEntries.size())) {
+        this->owner.actionRow = -1;
+        this->owner.listBox.repaint();
+        return;
+    }
+
+    if (this->owner.listBox.isMouseButtonDown(true)) {
+        this->owner.actionRowBeforeMouseSelection = this->owner.actionRow;
+        this->owner.mouseSelectionChanged = true;
+    }
+    this->owner.actionRow = lastRowSelected;
+    this->owner.listBox.repaint();
+
+    if (!this->owner.listBox.isMouseButtonDown(true) && this->owner.onPreview) {
+        const int originalIdx = this->owner.filteredEntries[static_cast<size_t>(lastRowSelected)].originalIndex;
+        this->owner.onPreview(originalIdx, static_cast<juce::uint8>(127));
+    }
+}
+
+void SourcePickerPopup::ListModel::returnKeyPressed(int lastRowSelected) {
+    if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.filteredEntries.size())) return;
+    const int originalIdx = this->owner.filteredEntries[static_cast<size_t>(lastRowSelected)].originalIndex;
+    if (this->owner.onItemSelected) this->owner.onItemSelected(originalIdx);
 }

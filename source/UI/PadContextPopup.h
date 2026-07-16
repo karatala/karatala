@@ -150,6 +150,7 @@ private:
 
     void showSourcePicker(LayerRow* layer);
     void dismissSourcePicker();
+    void layoutSourcePicker();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PadContextPopup)
 };

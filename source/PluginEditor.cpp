@@ -462,6 +462,7 @@ void PluginEditor::setupSettingsMode() {
         this->markDrumPadGridDirty();
         this->refreshDrumPadGridIfNeeded();
     };
+    this->settingsPanel->onLibraryReloadRequested = [this] { this->reloadLibraryFromTroubleshooting(); };
 }
 
 void PluginEditor::setupTroubleshootingMode() {

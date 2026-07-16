@@ -3,6 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/InstrumentCatalog.h"
 #include "SourceItem.h"
+#include <set>
 
 /**
  * @file SourcePickerPopup.h
@@ -19,6 +20,7 @@ public:
     void paint(juce::Graphics& g) override;
 
     void setFilterType(KitLib::InstrumentSpec::Type type);
+    void focusItemList();
 
     /** Fires when an item is confirmed via the select button. */
     std::function<void(int)> onItemSelected;
@@ -26,10 +28,13 @@ public:
     /** Fires on preview click with velocity. */
     std::function<void(int, juce::uint8)> onPreview;
 
+    /** Fires when the close button is clicked. */
+    std::function<void()> onClose;
+
 private:
     static constexpr int selectButtonWidth = 22;
     static constexpr int previewButtonWidth = 80;
-    static constexpr int kindListWidth = 80;
+    static constexpr int sidebarWidth = 110;
 
     enum class Category {
         All,
@@ -49,7 +54,11 @@ private:
     juce::TextButton drumsCategoryButton { "drums" };
     juce::TextButton cymbalsCategoryButton { "cymbals" };
     juce::TextButton otherCategoryButton { "other" };
+    juce::TextButton closeButton { "x" };
+    juce::Label kindListLabel;
     juce::ListBox kindListBox;
+    juce::Label articulationListLabel;
+    juce::ListBox articulationListBox;
     juce::ListBox listBox;
 
     struct FilteredEntry { 
@@ -57,11 +66,16 @@ private:
     };
     std::vector<FilteredEntry> filteredEntries;
     int actionRow = -1;
+    int actionRowBeforeMouseSelection = -1;
+    bool mouseSelectionChanged = false;
     std::vector<KitLib::InstrumentSpec::Type> kindEntries;
+    std::vector<juce::String> articulationEntries;
+    std::set<juce::String> selectedArticulations;
     std::vector<juce::String> cachedLowerDisplayText;
 
     void setCategory(Category category);
     void rebuildKindEntries();
+    void rebuildArticulationEntries();
     void rebuildFiltered();
     bool matchesCategory(KitLib::InstrumentSpec::Type type) const;
     bool matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const;
@@ -80,6 +94,8 @@ private:
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
         void listBoxItemClicked(int row, const juce::MouseEvent& event) override;
+        void selectedRowsChanged(int lastRowSelected) override;
+        void returnKeyPressed(int lastRowSelected) override;
     private:
         SourcePickerPopup& owner;
     };
@@ -97,6 +113,18 @@ private:
     };
 
     KindListModel kindListModel { *this };
+
+    class ArticulationListModel : public juce::ListBoxModel {
+    public:
+        explicit ArticulationListModel(SourcePickerPopup& popupOwner) : owner(popupOwner) {}
+        int getNumRows() override;
+        void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
+        void selectedRowsChanged(int lastRowSelected) override;
+    private:
+        SourcePickerPopup& owner;
+    };
+
+    ArticulationListModel articulationListModel { *this };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourcePickerPopup)
 };

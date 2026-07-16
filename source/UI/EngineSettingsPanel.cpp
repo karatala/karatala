@@ -10,6 +10,53 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     auto& settings = this->engine.engineSettings;
 
     // Group labels
+    this->generalGroupLabel.setText("General", juce::dontSendNotification);
+    UIHelpers::configureSectionLabel(this->generalGroupLabel);
+    this->contentComponent.addAndMakeVisible(this->generalGroupLabel);
+
+    this->libraryPathLabel.setText("Sample library", juce::dontSendNotification);
+    UIHelpers::configureCaptionLabel(this->libraryPathLabel, juce::Justification::centredLeft);
+    this->contentComponent.addAndMakeVisible(this->libraryPathLabel);
+    UIHelpers::configureMonoTextEditor(this->libraryPathEditor, UITheme::Colours::textSecondary, false);
+    this->libraryPathEditor.setReadOnly(true);
+    this->libraryPathEditor.setScrollbarsShown(false);
+    this->contentComponent.addAndMakeVisible(this->libraryPathEditor);
+    UIHelpers::configureControlButton(this->browseLibraryButton);
+    this->browseLibraryButton.onClick = [this] { this->chooseLibraryPath(); };
+    this->contentComponent.addAndMakeVisible(this->browseLibraryButton);
+
+    this->kitLayoutLabel.setText("Default kit layout", juce::dontSendNotification);
+    UIHelpers::configureCaptionLabel(this->kitLayoutLabel, juce::Justification::centredLeft);
+    this->contentComponent.addAndMakeVisible(this->kitLayoutLabel);
+    UIHelpers::configureComboBox(this->kitLayoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
+    this->contentComponent.addAndMakeVisible(this->kitLayoutCombo);
+
+    this->micLayoutLabel.setText("Default mic layout", juce::dontSendNotification);
+    UIHelpers::configureCaptionLabel(this->micLayoutLabel, juce::Justification::centredLeft);
+    this->contentComponent.addAndMakeVisible(this->micLayoutLabel);
+    UIHelpers::configureComboBox(this->micLayoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
+    this->contentComponent.addAndMakeVisible(this->micLayoutCombo);
+
+    UIHelpers::configureControlButton(this->saveLayoutDefaultsButton);
+    this->saveLayoutDefaultsButton.onClick = [this] { this->saveLayoutDefaults(); };
+    this->contentComponent.addAndMakeVisible(this->saveLayoutDefaultsButton);
+    this->layoutDefaultsWarningLabel.setText("Layout defaults apply to plugin instances created afterward. The current instance does not change.", juce::dontSendNotification);
+    this->layoutDefaultsWarningLabel.setFont(UITheme::Fonts::small());
+    this->layoutDefaultsWarningLabel.setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
+    this->layoutDefaultsWarningLabel.setJustificationType(juce::Justification::topLeft);
+    this->contentComponent.addAndMakeVisible(this->layoutDefaultsWarningLabel);
+
+    const double cacheLimitMegabytes = static_cast<double>(this->engine.getGlobalSampleLoaderCacheLimitMegabytes());
+    this->cacheLimitControl = std::make_unique<CompactParameterControl>("Sample cache", 1.0, juce::jmax(65536.0, cacheLimitMegabytes), 1.0, cacheLimitMegabytes, [](double value) {
+        return juce::String(static_cast<juce::int64>(value)) + " MB";
+    });
+    this->cacheLimitControl->setInteraction(1024.0, 64.0, 16.0);
+    this->cacheLimitControl->setTooltip("Maximum memory used by the loaded sample cache.");
+    this->cacheLimitControl->onDragEnd = [this] {
+        this->engine.setGlobalSampleLoaderCacheLimitMegabytes(static_cast<uint64_t>(this->cacheLimitControl->getValue()));
+    };
+    this->contentComponent.addAndMakeVisible(*this->cacheLimitControl);
+
     this->chokeGroupLabel.setText("Aftertouch Choke", juce::dontSendNotification);
     UIHelpers::configureSectionLabel(this->chokeGroupLabel);
     this->contentComponent.addAndMakeVisible(this->chokeGroupLabel);
@@ -25,26 +72,6 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     this->uiGridGroupLabel.setText("UI / Grid", juce::dontSendNotification);
     UIHelpers::configureSectionLabel(this->uiGridGroupLabel);
     this->contentComponent.addAndMakeVisible(this->uiGridGroupLabel);
-
-    this->outputGroupLabel.setText("Advanced / Output Layout", juce::dontSendNotification);
-    UIHelpers::configureSectionLabel(this->outputGroupLabel);
-    this->contentComponent.addAndMakeVisible(this->outputGroupLabel);
-    UIHelpers::configureComboBox(this->micLayoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
-    this->contentComponent.addAndMakeVisible(this->micLayoutCombo);
-    UIHelpers::configureControlButton(this->saveMicLayoutButton);
-    this->contentComponent.addAndMakeVisible(this->saveMicLayoutButton);
-    this->micLayoutWarningLabel.setText(
-        "This machine-wide setting changes output bus names only for plugin instances created afterward. The current instance cannot be changed.",
-        juce::dontSendNotification);
-    this->micLayoutWarningLabel.setFont(UITheme::Fonts::small());
-    this->micLayoutWarningLabel.setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
-    this->micLayoutWarningLabel.setJustificationType(juce::Justification::topLeft);
-    this->contentComponent.addAndMakeVisible(this->micLayoutWarningLabel);
-    this->saveMicLayoutButton.onClick = [this] {
-        const int idx = this->micLayoutCombo.getSelectedId() - 1;
-        if (idx >= 0 && idx < static_cast<int>(this->micLayouts.size()))
-            this->engine.setGlobalMicLayoutId(this->micLayouts[static_cast<size_t>(idx)].id);
-    };
 
     // -- Aftertouch Choke --
     this->addPot("Max Duck", "How much to duck the volume on aftertouch press. Higher = more muting, lower = subtler effect.",
@@ -114,7 +141,6 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     this->addPot("Gap", "", &settings.padGap, 0, 8);
     this->uiChoiceStart = static_cast<int>(this->choices.size());
 
-    this->rebuildMicLayouts();
     this->loadFromEngine();
 }
 
@@ -132,7 +158,7 @@ void EngineSettingsPanel::addPot(const juce::String& name,
                                  std::function<double(const juce::String&)> valueFromTextFn,
                                  double defaultValue) {
     this->addPotCommon(name, tooltip, target, nullptr,
-                       static_cast<double>(minVal), static_cast<double>(maxVal), static_cast<double>(interval), false,
+                       static_cast<double>(minVal), static_cast<double>(maxVal), static_cast<double>(interval),
                        std::move(textFromValueFn), std::move(valueFromTextFn), defaultValue);
 }
 
@@ -146,7 +172,7 @@ void EngineSettingsPanel::addPot(const juce::String& name,
         ? std::numeric_limits<double>::quiet_NaN()
         : static_cast<double>(defaultValue);
     this->addPotCommon(name, tooltip, nullptr, target,
-                       static_cast<double>(minVal), static_cast<double>(maxVal), 1.0, true,
+                       static_cast<double>(minVal), static_cast<double>(maxVal), 1.0,
                        nullptr, nullptr, defaultOverride);
 }
 
@@ -157,27 +183,25 @@ void EngineSettingsPanel::addPotCommon(const juce::String& name,
                                        double minVal,
                                        double maxVal,
                                        double interval,
-                                       bool isInteger,
                                        std::function<juce::String(double)> textFromValueFn,
                                        std::function<double(const juce::String&)> valueFromTextFn,
                                        double defaultValue) {
-    auto entry = std::make_unique<PotEntry>();
+    auto entry = std::make_unique<ControlEntry>();
     entry->target = target;
     entry->intTarget = intTarget;
     const double currentValue = entry->target != nullptr
         ? static_cast<double>(entry->target->load())
         : static_cast<double>(entry->intTarget->load());
     entry->defaultValue = std::isnan(defaultValue) ? currentValue : defaultValue;
-    entry->parameterPot = std::make_unique<ParameterPot>(
-        name, minVal, maxVal, interval, currentValue,
-        std::move(textFromValueFn), ParameterPotHelpers::makeSettingsPotLayout(isInteger), std::move(valueFromTextFn));
-    entry->parameterPot->setInteraction(entry->defaultValue, interval);
-    entry->parameterPot->setTooltipText(tooltip);
-    entry->parameterPot->onValueChange = [this] { this->onSettingChanged(); };
-    entry->parameterPot->onDragEnd = [this] { this->flushPendingSettingsSave(); };
-    this->contentComponent.addAndMakeVisible(*entry->parameterPot);
+    entry->parameterControl = std::make_unique<CompactParameterControl>(name, minVal, maxVal, interval, currentValue, std::move(textFromValueFn));
+    if (valueFromTextFn) entry->parameterControl->valueFromTextFunction = std::move(valueFromTextFn);
+    entry->parameterControl->setInteraction(entry->defaultValue, interval);
+    entry->parameterControl->setTooltip(tooltip);
+    entry->parameterControl->onValueChange = [this] { this->onSettingChanged(); };
+    entry->parameterControl->onDragEnd = [this] { this->flushPendingSettingsSave(); };
+    this->contentComponent.addAndMakeVisible(*entry->parameterControl);
 
-    this->pots.push_back(std::move(entry));
+    this->controls.push_back(std::move(entry));
 }
 
 void EngineSettingsPanel::addChoice(const juce::String& name,
@@ -215,18 +239,45 @@ void EngineSettingsPanel::addChoice(const juce::String& name,
 }
 
 void EngineSettingsPanel::loadFromEngine() {
-    for (auto& entry : this->pots) {
+    for (auto& entry : this->controls) {
         if (entry->target != nullptr)
-            entry->parameterPot->setValue(static_cast<double>(entry->target->load()), juce::dontSendNotification);
+            entry->parameterControl->setValue(static_cast<double>(entry->target->load()), juce::dontSendNotification);
         else if (entry->intTarget != nullptr)
-            entry->parameterPot->setValue(static_cast<double>(entry->intTarget->load()), juce::dontSendNotification);
+            entry->parameterControl->setValue(static_cast<double>(entry->intTarget->load()), juce::dontSendNotification);
     }
     for (auto& entry : this->choices)
         entry->comboBox.setSelectedId(entry->loadSelectedId(), juce::dontSendNotification);
-    this->rebuildMicLayouts();
+    this->libraryPathEditor.setText(this->engine.getGlobalLibraryPath().getFullPathName(), false);
+    this->cacheLimitControl->setValue(static_cast<double>(this->engine.getGlobalSampleLoaderCacheLimitMegabytes()), juce::dontSendNotification);
+    this->rebuildLayoutChoices();
 }
 
-void EngineSettingsPanel::rebuildMicLayouts() {
+void EngineSettingsPanel::rebuildLayoutChoices() {
+    this->kitLayouts.clear();
+    this->kitLayoutCombo.clear(juce::dontSendNotification);
+    this->kitLayouts.push_back(this->engine.getKitLayoutManager()->getDefault());
+    for (const auto& layout : this->engine.getKitLayoutManager()->getLayouts())
+        this->kitLayouts.push_back(layout);
+
+    const auto userPresetDirectory = this->engine.getUserPresetsDir();
+    if (userPresetDirectory.isDirectory()) {
+        for (const auto& file : userPresetDirectory.findChildFiles(juce::File::findFiles, false, "*.yml;*.yaml")) {
+            auto parsed = LayoutTraits<KitLayout>::parseYaml(file.loadFileAsString());
+            if (!parsed.ok()) continue;
+            parsed.value.id = file.getFileNameWithoutExtension();
+            parsed.value.rebuildIndices();
+            this->kitLayouts.push_back(std::move(parsed.value));
+        }
+    }
+
+    int selectedKitLayoutId = 1;
+    for (size_t idx = 0; idx < this->kitLayouts.size(); ++idx) {
+        const auto& layout = this->kitLayouts[idx];
+        this->kitLayoutCombo.addItem(layout.name.isNotEmpty() ? layout.name : layout.id, static_cast<int>(idx + 1));
+        if (layout.id == this->engine.getGlobalKitLayoutId()) selectedKitLayoutId = static_cast<int>(idx + 1);
+    }
+    this->kitLayoutCombo.setSelectedId(selectedKitLayoutId, juce::dontSendNotification);
+
     this->micLayouts.clear();
     this->micLayoutCombo.clear(juce::dontSendNotification);
     this->micLayouts.push_back(this->engine.getMicLayoutManager()->getDefault());
@@ -243,14 +294,35 @@ void EngineSettingsPanel::rebuildMicLayouts() {
     this->micLayoutCombo.setSelectedId(selectedId, juce::dontSendNotification);
 }
 
+void EngineSettingsPanel::chooseLibraryPath() {
+    this->libraryChooser = std::make_unique<juce::FileChooser>("Choose sample library", this->engine.getGlobalLibraryPath(), juce::String(), true, false, this);
+    this->libraryChooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories, [this](const juce::FileChooser& chooser) {
+        const auto selectedDirectory = chooser.getResult();
+        if (selectedDirectory.isDirectory() && this->engine.setGlobalLibraryPath(selectedDirectory)) {
+            this->libraryPathEditor.setText(selectedDirectory.getFullPathName(), false);
+            if (this->onLibraryReloadRequested) this->onLibraryReloadRequested();
+        }
+        this->libraryChooser.reset();
+    });
+}
+
+void EngineSettingsPanel::saveLayoutDefaults() {
+    const int kitLayoutIdx = this->kitLayoutCombo.getSelectedId() - 1;
+    const int micLayoutIdx = this->micLayoutCombo.getSelectedId() - 1;
+    if (kitLayoutIdx >= 0 && kitLayoutIdx < static_cast<int>(this->kitLayouts.size()))
+        this->engine.setGlobalKitLayoutId(this->kitLayouts[static_cast<size_t>(kitLayoutIdx)].id);
+    if (micLayoutIdx >= 0 && micLayoutIdx < static_cast<int>(this->micLayouts.size()))
+        this->engine.setGlobalMicLayoutId(this->micLayouts[static_cast<size_t>(micLayoutIdx)].id);
+}
+
 void EngineSettingsPanel::onSettingChanged() {
     bool gridChanged = false;
-    for (auto& entry : this->pots) {
+    for (auto& entry : this->controls) {
         if (entry->target != nullptr)
-            entry->target->store(static_cast<float>(entry->parameterPot->getValue()));
+            entry->target->store(static_cast<float>(entry->parameterControl->getValue()));
         else if (entry->intTarget != nullptr) {
             const int oldValue = entry->intTarget->load();
-            const int newValue = static_cast<int>(entry->parameterPot->getValue());
+            const int newValue = static_cast<int>(entry->parameterControl->getValue());
             entry->intTarget->store(newValue);
             if (oldValue != newValue)
                 gridChanged = true;
@@ -275,29 +347,29 @@ void EngineSettingsPanel::resized() {
 
     const int contentWidth = this->viewport.getWidth() - this->viewport.getScrollBarThickness();
 
-    // Pot grid layout: each pot cell is potCellW x potCellH
-    const int potCellW = 80;
-    const int potCellH = 90;
+    const int controlCellW = 110;
+    const int controlCellH = 44;
     const int choiceCellW = 150;
     const int choiceCellH = 54;
     const int groupLabelHeight = 22;
+    const int generalContentHeight = 168;
     const int gap = 4;
 
     const int availableWidth = juce::jmax(contentWidth, 400) - 16; // 8px padding each side
-    const int potsPerRow = juce::jmax(1, availableWidth / potCellW);
+    const int controlsPerRow = juce::jmax(1, availableWidth / controlCellW);
     const int choicesPerRow = juce::jmax(1, availableWidth / choiceCellW);
 
     // Calculate group row counts
-    auto groupRows = [&](int count) { return (count + potsPerRow - 1) / potsPerRow; };
+    auto groupRows = [&](int count) { return (count + controlsPerRow - 1) / controlsPerRow; };
     auto choiceRowsFor = [&](int count) { return count <= 0 ? 0 : (count + choicesPerRow - 1) / choicesPerRow; };
     const int uiChoiceCount = static_cast<int>(this->choices.size()) - this->uiChoiceStart;
 
     int totalHeight = 8; // top padding
-    totalHeight += groupLabelHeight + gap + groupRows(7) * potCellH + gap; // choke (7 pots)
-    totalHeight += groupLabelHeight + gap + groupRows(6) * potCellH + gap; // tail (6 pots)
-    totalHeight += groupLabelHeight + gap + groupRows(11) * potCellH + choiceRowsFor(this->hihatChoiceCount) * choiceCellH + gap; // hihat
-    totalHeight += groupLabelHeight + gap + groupRows(3) * potCellH + choiceRowsFor(uiChoiceCount) * choiceCellH + gap; // grid (3 pots)
-    totalHeight += groupLabelHeight + 64 + gap; // output layout
+    totalHeight += groupLabelHeight + gap + generalContentHeight + gap;
+    totalHeight += groupLabelHeight + gap + groupRows(7) * controlCellH + gap;
+    totalHeight += groupLabelHeight + gap + groupRows(6) * controlCellH + gap;
+    totalHeight += groupLabelHeight + gap + groupRows(11) * controlCellH + choiceRowsFor(this->hihatChoiceCount) * choiceCellH + gap;
+    totalHeight += groupLabelHeight + gap + groupRows(3) * controlCellH + choiceRowsFor(uiChoiceCount) * choiceCellH + gap;
     totalHeight += 8; // bottom padding
 
     this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 400), totalHeight);
@@ -309,25 +381,22 @@ void EngineSettingsPanel::resized() {
         area.removeFromTop(gap);
     };
 
-    auto placePotGrid = [&](int startIdx, int count) {
-        int col = 0;
+    auto placeControlGrid = [&](int startIdx, int count) {
+        int column = 0;
         int rowStartY = area.getY();
-        for (int idx = startIdx; idx < startIdx + count && idx < static_cast<int>(this->pots.size()); ++idx) {
-            int cellX = area.getX() + col * potCellW;
-            int cellY = rowStartY;
+        for (int idx = startIdx; idx < startIdx + count && idx < static_cast<int>(this->controls.size()); ++idx) {
+            const int cellX = area.getX() + column * controlCellW;
+            auto& entry = this->controls[static_cast<size_t>(idx)];
+            entry->parameterControl->setBounds(cellX, rowStartY, controlCellW, controlCellH - 2);
 
-            auto& entry = this->pots[static_cast<size_t>(idx)];
-
-            entry->parameterPot->setBounds(cellX, cellY, potCellW, potCellH - 2);
-
-            ++col;
-            if (col >= potsPerRow) {
-                col = 0;
-                rowStartY += potCellH;
+            ++column;
+            if (column >= controlsPerRow) {
+                column = 0;
+                rowStartY += controlCellH;
             }
         }
-        int rowsUsed = groupRows(count);
-        area.removeFromTop(rowsUsed * potCellH + gap);
+        const int rowsUsed = groupRows(count);
+        area.removeFromTop(rowsUsed * controlCellH + gap);
     };
 
     auto placeChoiceGrid = [&](int startIdx, int count) {
@@ -349,24 +418,48 @@ void EngineSettingsPanel::resized() {
         area.removeFromTop(choiceRowsFor(count) * choiceCellH + gap);
     };
 
+    placeGroupLabel(this->generalGroupLabel);
+    auto generalArea = area.removeFromTop(generalContentHeight);
+    auto libraryRow = generalArea.removeFromTop(28);
+    this->libraryPathLabel.setBounds(libraryRow.removeFromLeft(110));
+    this->browseLibraryButton.setBounds(libraryRow.removeFromRight(86).reduced(0, 2));
+    libraryRow.removeFromRight(gap);
+    this->libraryPathEditor.setBounds(libraryRow.reduced(0, 2));
+    generalArea.removeFromTop(gap);
+
+    auto cacheRow = generalArea.removeFromTop(40);
+    cacheRow.removeFromLeft(110);
+    this->cacheLimitControl->setBounds(cacheRow.removeFromLeft(170));
+    generalArea.removeFromTop(gap);
+
+    auto kitLayoutRow = generalArea.removeFromTop(28);
+    this->kitLayoutLabel.setBounds(kitLayoutRow.removeFromLeft(110));
+    this->kitLayoutCombo.setBounds(kitLayoutRow.removeFromLeft(340).reduced(0, 2));
+    generalArea.removeFromTop(gap);
+
+    auto micLayoutRow = generalArea.removeFromTop(28);
+    this->micLayoutLabel.setBounds(micLayoutRow.removeFromLeft(110));
+    this->micLayoutCombo.setBounds(micLayoutRow.removeFromLeft(340).reduced(0, 2));
+    generalArea.removeFromTop(gap);
+
+    auto defaultsRow = generalArea.removeFromTop(28);
+    defaultsRow.removeFromLeft(110);
+    this->saveLayoutDefaultsButton.setBounds(defaultsRow.removeFromLeft(160).reduced(0, 2));
+    defaultsRow.removeFromLeft(8);
+    this->layoutDefaultsWarningLabel.setBounds(defaultsRow);
+    area.removeFromTop(gap);
+
     placeGroupLabel(this->chokeGroupLabel);
-    placePotGrid(0, 7);
+    placeControlGrid(0, 7);
 
     placeGroupLabel(this->tailGroupLabel);
-    placePotGrid(7, 6);
+    placeControlGrid(7, 6);
 
     placeGroupLabel(this->hihatGroupLabel);
-    placePotGrid(13, 11);
+    placeControlGrid(13, 11);
     placeChoiceGrid(0, this->hihatChoiceCount);
 
     placeGroupLabel(this->uiGridGroupLabel);
-    placePotGrid(24, 3);
+    placeControlGrid(24, 3);
     placeChoiceGrid(this->uiChoiceStart, uiChoiceCount);
-
-    placeGroupLabel(this->outputGroupLabel);
-    auto outputRow = area.removeFromTop(26);
-    this->micLayoutCombo.setBounds(outputRow.removeFromLeft(260).reduced(0, 2));
-    outputRow.removeFromLeft(6);
-    this->saveMicLayoutButton.setBounds(outputRow.removeFromLeft(180).reduced(0, 2));
-    this->micLayoutWarningLabel.setBounds(area.removeFromTop(38));
 }

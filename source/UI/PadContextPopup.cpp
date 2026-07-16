@@ -1072,18 +1072,6 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
     this->activePicker->setFilterType(this->slotType);
 
-    const auto sourceBounds = this->getLocalArea(layer->sourceButton.get(), layer->sourceButton->getLocalBounds());
-    const int maxPopupWidth = juce::jmax(300, this->getWidth() - 8);
-    const int popupWidth = juce::jmin(maxPopupWidth, juce::jmax(460, sourceBounds.getWidth() + 160));
-    const int popupHeight = 280;
-    int popupX = sourceBounds.getX();
-    int popupY = sourceBounds.getBottom();
-
-    if (popupY + popupHeight > this->getHeight()) popupY = sourceBounds.getY() - popupHeight;
-    if (popupX + popupWidth > this->getWidth()) popupX = this->getWidth() - popupWidth;
-
-    this->activePicker->setBounds(popupX, popupY, popupWidth, popupHeight);
-
     this->activePicker->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
         const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
@@ -1104,17 +1092,21 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
             this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
         });
     };
+    this->activePicker->onClose = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    };
 
     this->pickerOverlay = std::make_unique<DismissOverlay>();
     this->pickerOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
     };
-    this->pickerOverlay->setBounds(this->getLocalBounds());
     this->addAndMakeVisible(*this->pickerOverlay);
     this->pickerOverlay->toFront(false);
 
     this->addAndMakeVisible(*this->activePicker);
     this->activePicker->toFront(true);
+    this->layoutSourcePicker();
+    this->activePicker->focusItemList();
 }
 
 void PadContextPopup::dismissSourcePicker() {
@@ -1125,6 +1117,15 @@ void PadContextPopup::dismissSourcePicker() {
     if (this->activePicker) {
         this->removeChildComponent(this->activePicker.get());
         this->activePicker.reset();
+    }
+}
+
+void PadContextPopup::layoutSourcePicker() {
+    if (this->pickerOverlay) this->pickerOverlay->setBounds(this->getLocalBounds());
+    if (this->activePicker) {
+        const int pickerWidth = this->getWidth() * 4 / 5;
+        const int pickerHeight = this->getHeight() * 4 / 5;
+        this->activePicker->setBounds(this->getLocalBounds().withSizeKeepingCentre(pickerWidth, pickerHeight));
     }
 }
 
@@ -1253,4 +1254,5 @@ void PadContextPopup::resized() {
         }
     }
     this->layerContent.repaint();
+    this->layoutSourcePicker();
 }

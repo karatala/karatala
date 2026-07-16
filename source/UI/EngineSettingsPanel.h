@@ -3,7 +3,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/EngineSettings.h"
 #include "../Engine/LayoutManager.h"
-#include "ParameterPot.h"
+#include "CompactParameterControl.h"
 #include "ScrollablePanel.h"
 #include "UITheme.h"
 #include <limits>
@@ -22,8 +22,8 @@ public:
 private:
     DrumKitEngine& engine;
 
-    struct PotEntry {
-        std::unique_ptr<ParameterPot> parameterPot;
+    struct ControlEntry {
+        std::unique_ptr<CompactParameterControl> parameterControl;
         RealtimeSetting<float>* target = nullptr;
         RealtimeSetting<int>* intTarget = nullptr;
         double defaultValue = 0.0;
@@ -38,17 +38,27 @@ private:
         int defaultSelectedId = 1;
     };
 
+    juce::Label generalGroupLabel;
+    juce::Label libraryPathLabel;
+    juce::TextEditor libraryPathEditor;
+    juce::TextButton browseLibraryButton { "Browse..." };
+    juce::Label kitLayoutLabel;
+    juce::ComboBox kitLayoutCombo;
+    juce::Label micLayoutLabel;
+    juce::ComboBox micLayoutCombo;
+    juce::TextButton saveLayoutDefaultsButton { "Save layout defaults" };
+    juce::Label layoutDefaultsWarningLabel;
+    std::unique_ptr<CompactParameterControl> cacheLimitControl;
+    std::unique_ptr<juce::FileChooser> libraryChooser;
+    std::vector<KitLayout> kitLayouts;
+    std::vector<MicLayout> micLayouts;
+
     juce::Label chokeGroupLabel;
     juce::Label tailGroupLabel;
     juce::Label hihatGroupLabel;
     juce::Label uiGridGroupLabel;
-    juce::Label outputGroupLabel;
-    juce::ComboBox micLayoutCombo;
-    juce::TextButton saveMicLayoutButton { "Set for future instances" };
-    juce::Label micLayoutWarningLabel;
-    std::vector<MicLayout> micLayouts;
 
-    std::vector<std::unique_ptr<PotEntry>> pots;
+    std::vector<std::unique_ptr<ControlEntry>> controls;
     std::vector<std::unique_ptr<ChoiceEntry>> choices;
     int hihatChoiceCount = 0;
     int uiChoiceStart = 0;
@@ -75,7 +85,6 @@ private:
                       double minVal,
                       double maxVal,
                       double interval,
-                      bool isInteger,
                       std::function<juce::String(double)> textFromValueFn = nullptr,
                       std::function<double(const juce::String&)> valueFromTextFn = nullptr,
                       double defaultValue = std::numeric_limits<double>::quiet_NaN());
@@ -89,12 +98,15 @@ private:
     void timerCallback() override;
     void queueSettingsSave();
     void flushPendingSettingsSave();
-    void rebuildMicLayouts();
+    void rebuildLayoutChoices();
+    void chooseLibraryPath();
+    void saveLayoutDefaults();
 
     static constexpr int settingsSaveDebounceMs = 350;
 
 public:
     std::function<void()> onGridSizeChanged;
+    std::function<void()> onLibraryReloadRequested;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EngineSettingsPanel)
 };

@@ -24,9 +24,9 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
 }
 
 void InstrumentConfigPanel::resized() {
-    this->dismissPopup();
     this->layoutViewportToBounds();
     this->layoutContent();
+    this->layoutPopup();
 }
 
 void InstrumentConfigPanel::rebuildSourceItems() {
@@ -267,24 +267,6 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
     this->activePopup->setFilterType(row->slotType);
 
-    auto buttonBounds = row->sourceButton->getBoundsInParent();
-    auto posInContent = buttonBounds.getPosition();
-    auto posInViewport = posInContent - juce::Point<int>(0, this->viewport.getViewPositionY());
-    auto posInPanel = posInViewport + this->viewport.getPosition();
-
-    const int maxPopupWidth = juce::jmax(300, getWidth() - 8);
-    int popupWidth = juce::jmin(maxPopupWidth, juce::jmax(460, buttonBounds.getWidth() + 160));
-    int popupHeight = 280;
-    int popupX = posInPanel.getX();
-    int popupY = posInPanel.getY() + buttonBounds.getHeight();
-
-    if (popupY + popupHeight > getHeight())
-        popupY = posInPanel.getY() - popupHeight;
-    if (popupX + popupWidth > getWidth())
-        popupX = getWidth() - popupWidth;
-
-    this->activePopup->setBounds(popupX, popupY, popupWidth, popupHeight);
-
     this->activePopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
         const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
@@ -303,17 +285,21 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
             this->engine.playPreviewNote(row->slotId, row->artName, 100);
         });
     };
+    this->activePopup->onClose = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissPopup(); });
+    };
 
     this->popupOverlay = std::make_unique<DismissOverlay>();
     this->popupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] { this->dismissPopup(); });
     };
-    this->popupOverlay->setBounds(getLocalBounds());
-    addAndMakeVisible(*this->popupOverlay);
+    this->addAndMakeVisible(*this->popupOverlay);
     this->popupOverlay->toFront(false);
 
-    addAndMakeVisible(*this->activePopup);
+    this->addAndMakeVisible(*this->activePopup);
     this->activePopup->toFront(true);
+    this->layoutPopup();
+    this->activePopup->focusItemList();
 }
 
 void InstrumentConfigPanel::updateSourceButtonDisplay(TableRow* row) {
@@ -347,6 +333,15 @@ void InstrumentConfigPanel::dismissPopup() {
     if (this->activePopup) {
         removeChildComponent(this->activePopup.get());
         this->activePopup.reset();
+    }
+}
+
+void InstrumentConfigPanel::layoutPopup() {
+    if (this->popupOverlay) this->popupOverlay->setBounds(this->getLocalBounds());
+    if (this->activePopup) {
+        const int popupWidth = this->getWidth() * 4 / 5;
+        const int popupHeight = this->getHeight() * 4 / 5;
+        this->activePopup->setBounds(this->getLocalBounds().withSizeKeepingCentre(popupWidth, popupHeight));
     }
 }
 

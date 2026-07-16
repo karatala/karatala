@@ -215,6 +215,20 @@ bool DrumKitEngine::setGlobalMicLayoutId(const juce::String& layoutId) {
     return true;
 }
 
+bool DrumKitEngine::setGlobalLibraryPath(const juce::File& libraryPath) {
+    if (!libraryPath.isDirectory()) return false;
+    this->globalConfig.libraryPath = libraryPath;
+    this->saveSettings();
+    return true;
+}
+
+void DrumKitEngine::setGlobalSampleLoaderCacheLimitMegabytes(uint64_t limitMegabytes) {
+    this->globalConfig.sampleLoaderCacheLimitMegabytes = juce::jmax<uint64_t>(1, limitMegabytes);
+    if (this->sampleLoaderPtr != nullptr)
+        this->sampleLoaderPtr->setCacheLimitBytes(this->globalConfig.sampleLoaderCacheLimitMegabytes * 1024ull * 1024ull);
+    this->saveSettings();
+}
+
 void DrumKitEngine::setGlobalLogLevel(DebugLevel level) {
     this->globalConfig.logLevel = level;
     GlobalLogger::instance().setLogLevel(level);

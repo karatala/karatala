@@ -19,6 +19,8 @@
 - Pad-popup mic routing shows output names but selects and saves each mic-layout output's stable semantic ID, so repeated output codes remain separate choices across layout reordering.
 - Pad-popup routing choices use the engine's mic-output matcher, including independent type and position wildcards such as `**m`, `*tm`, and `d*m`.
 - Pad-popup layer controls update only their own articulation layer. Removing an unmapped empty row must not reapply the instrument map.
+- The Conf panel General section owns the sample-library path, sample-cache limit, and machine-wide default kit and mic layout controls. Changing the library path reloads the library; layout defaults affect future plugin instances.
+- The shared source picker is a centered modal using 80% of its host content area. It supports `-word` exclusions, OR-based multi-select base-articulation filters, arrow-key preview, Enter to use, and an explicit close button.
 
 # Work Guidance
 
