@@ -1131,7 +1131,7 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
         } else {
             juce::StringArray targetSlotIds;
             for (const auto* targetSynth : targets) targetSlotIds.addIfNotAlreadyThere(targetSynth->getId());
-            LOG(Notice, "Mic output available: name='" + mic.name + "' route=" + mic.id + " channels=" + juce::String(channelCount) + " slots=[" + targetSlotIds.joinIntoString(",") + "]");
+            LOG(Info, "Mic output available: name='" + mic.name + "' route=" + mic.id + " channels=" + juce::String(channelCount) + " slots=[" + targetSlotIds.joinIntoString(",") + "]");
         }
 
         // Host channel indices for this mic - directly maps to mono bus indices
@@ -1393,26 +1393,11 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
         }
     }
 
-    KitLib::VelocityLayerSpec* bestLayer = nullptr;
-    if (calibrated) {
-        const float lowestFittedDb = *artSpec->velocityLayerSpecs.front()->fittedSourceDb;
-        const float highestFittedDb = *artSpec->velocityLayerSpecs.back()->fittedSourceDb;
-        const float targetDb = juce::jlimit(lowestFittedDb, highestFittedDb, highestFittedDb + this->velocityResponse.getTargetDb(velocity));
-        float bestDistanceDb = std::numeric_limits<float>::max();
-        for (auto& layer : artSpec->velocityLayerSpecs) {
-            const float distanceDb = std::abs(*layer->fittedSourceDb - targetDb);
-            if (distanceDb < bestDistanceDb) {
-                bestDistanceDb = distanceDb;
-                bestLayer = layer.get();
-            }
-        }
-    } else {
-        bestLayer = artSpec->velocityLayerSpecs.back().get();
-        for (auto& layer : artSpec->velocityLayerSpecs) {
-            if (velocity <= layer->velocity) {
-                bestLayer = layer.get();
-                break;
-            }
+    KitLib::VelocityLayerSpec* bestLayer = artSpec->velocityLayerSpecs.back().get();
+    for (auto& layer : artSpec->velocityLayerSpecs) {
+        if (velocity <= layer->velocity) {
+            bestLayer = layer.get();
+            break;
         }
     }
 

@@ -385,17 +385,12 @@ juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
         return jobHasFinished;
     }
 
-    if (this->loadSpec.recipe.gainMilliDb != 0) {
-        const float gainLinear = juce::Decibels::decibelsToGain(this->loadSpec.recipe.getGainDb());
-        for (int channelIdx = 0; channelIdx < channels; ++channelIdx)
-            buffer->applyGain(channelIdx, 0, samplesToRead, gainLinear);
-    }
-
-    // Apply fade out
+    const float fixedGain = this->loadSpec.recipe.gainMilliDb != 0 ? juce::Decibels::decibelsToGain(this->loadSpec.recipe.getGainDb()) : 1.0f;
     const int fadeSamples = (int)(sampleRate * (resolvedFadeOutMs * 0.001));
     const int fadeStart = std::max(0, samplesToRead - fadeSamples);
-    for (int ch = 0; ch < channels; ++ch) {
-        buffer->applyGainRamp(ch, fadeStart, samplesToRead - fadeStart, 1.0f, 0.0f);
+    for (int channelIdx = 0; channelIdx < channels; ++channelIdx) {
+        if (fixedGain != 1.0f && fadeStart > 0) buffer->applyGain(channelIdx, 0, fadeStart, fixedGain);
+        buffer->applyGainRamp(channelIdx, fadeStart, samplesToRead - fadeStart, fixedGain, 0.0f);
     }
 
     { // Cache insert

@@ -15,7 +15,7 @@
 - Code reached from `processBlock`, `renderNextBlock`, `handleMidiEvent`, note-on, controller, or aftertouch paths is realtime code.
 - Realtime settings shared with the message thread must use atomics or an immutable snapshot; do not introduce unsynchronized mutable scalar reads/writes.
 - Precompute routing, articulation, velocity, variant, and envelope lookup data during load/rebuild work where practical.
-- Calibrated articulations use the instance's precomputed 128-value loudness response and source-selection tables. Missing articulation calibration keeps the original linear gain and exact named-velocity selection.
+- Exact source selection follows named velocity boundaries for both calibrated and uncalibrated articulations. Calibration uses the instance's precomputed 128-value loudness response and preserves each articulation's own hardest measured reference instead of forcing different instruments to one common level.
 - Normal note selection returns one complete ready logical hit. Reserve voices for all active linked mic entries before starting any of them; never mix mic entries from different velocity or round-robin hits.
 - `SampleLoader` cache identity is source content identity plus one resolved typed preprocessing recipe. Preview and progressive playback must use the same recipe path, and audio-changing recipe values must be part of the cache key.
 - Hi-hat CC tail transitions use the listening-approved per-voice replacement path. Do not reintroduce shared event IDs, atomic all-mic commits, canonical reference-mic offsets, or complementary target ramps without a separate listening comparison.

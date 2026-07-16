@@ -64,7 +64,6 @@ static juce::String fileMetadataFingerprint(const juce::File& rootDir, const juc
 
 namespace KitLibCalibrationHelpers {
 
-static constexpr float COMMON_REFERENCE_DB = -38.0f;
 static constexpr float MAX_POSITIVE_TRIM_DB = 36.0f;
 static constexpr float REQUIRED_HEADROOM_DB = 1.0f;
 
@@ -143,22 +142,6 @@ static void buildLogicalHitMeasurements(KitLib::VelocityLayerSpec& velocityLayer
     hitIntensities.reserve(velocityLayer.logicalHitMeasurements.size());
     for (const auto& hitMeasurement : velocityLayer.logicalHitMeasurements) hitIntensities.push_back(hitMeasurement.intensityDb);
     velocityLayer.rawVelocityMedianDb = median(std::move(hitIntensities));
-
-    const float requiredTrimDb = COMMON_REFERENCE_DB - *velocityLayer.rawVelocityMedianDb;
-    float safeTrimDb = juce::jmin(requiredTrimDb, MAX_POSITIVE_TRIM_DB);
-    if (safeTrimDb < requiredTrimDb) velocityLayer.calibrationLimited = true;
-    std::optional<float> maxTruePeakDb;
-    for (const auto& hitMeasurement : velocityLayer.logicalHitMeasurements) {
-        if (hitMeasurement.maxTruePeakDb.has_value() && (!maxTruePeakDb.has_value() || *hitMeasurement.maxTruePeakDb > *maxTruePeakDb)) maxTruePeakDb = hitMeasurement.maxTruePeakDb;
-    }
-    if (maxTruePeakDb.has_value()) {
-        const float peakLimitedTrimDb = -REQUIRED_HEADROOM_DB - defaultGlobalTargetDb(velocityLayer.velocity) - *maxTruePeakDb;
-        if (safeTrimDb > peakLimitedTrimDb) {
-            safeTrimDb = peakLimitedTrimDb;
-            velocityLayer.calibrationLimited = true;
-        }
-    }
-    velocityLayer.calibrationTrimDb = safeTrimDb;
 }
 
 static void fitMonotonicSourceProfile(KitLib::ArticulationSpec& articulation) {
@@ -191,6 +174,31 @@ static void fitMonotonicSourceProfile(KitLib::ArticulationSpec& articulation) {
     for (const auto& block : blocks) {
         const float fittedValueDb = static_cast<float>(block.mean());
         for (auto* velocityLayer : block.layers) velocityLayer->fittedSourceDb = fittedValueDb;
+    }
+}
+
+static void finalizeArticulationCalibration(KitLib::ArticulationSpec& articulation) {
+    if (articulation.velocityLayerSpecs.empty()) return;
+    for (const auto& velocityLayer : articulation.velocityLayerSpecs)
+        if (!velocityLayer->rawVelocityMedianDb.has_value() || !velocityLayer->fittedSourceDb.has_value() || velocityLayer->logicalHitMeasurements.empty()) return;
+
+    const float articulationReferenceDb = *articulation.velocityLayerSpecs.back()->fittedSourceDb;
+    for (const auto& velocityLayer : articulation.velocityLayerSpecs) {
+        const float requiredTrimDb = articulationReferenceDb - *velocityLayer->rawVelocityMedianDb;
+        float safeTrimDb = juce::jmin(requiredTrimDb, MAX_POSITIVE_TRIM_DB);
+        if (safeTrimDb < requiredTrimDb) velocityLayer->calibrationLimited = true;
+
+        std::optional<float> maxTruePeakDb;
+        for (const auto& hitMeasurement : velocityLayer->logicalHitMeasurements)
+            if (hitMeasurement.maxTruePeakDb.has_value() && (!maxTruePeakDb.has_value() || *hitMeasurement.maxTruePeakDb > *maxTruePeakDb)) maxTruePeakDb = hitMeasurement.maxTruePeakDb;
+        if (maxTruePeakDb.has_value()) {
+            const float peakLimitedTrimDb = -REQUIRED_HEADROOM_DB - defaultGlobalTargetDb(velocityLayer->velocity) - *maxTruePeakDb;
+            if (safeTrimDb > peakLimitedTrimDb) {
+                safeTrimDb = peakLimitedTrimDb;
+                velocityLayer->calibrationLimited = true;
+            }
+        }
+        velocityLayer->calibrationTrimDb = safeTrimDb;
     }
 }
 
@@ -618,6 +626,7 @@ void InstrumentSpec::buildCalibrationProfiles() {
         articulation->sortVelocityLayers();
         for (const auto& velocityLayer : articulation->velocityLayerSpecs) KitLibCalibrationHelpers::buildLogicalHitMeasurements(*velocityLayer);
         KitLibCalibrationHelpers::fitMonotonicSourceProfile(*articulation);
+        KitLibCalibrationHelpers::finalizeArticulationCalibration(*articulation);
     }
 }
 

@@ -26,7 +26,7 @@ struct SampleLoadSpec {
 };
 
 struct SamplePreprocessingRecipe {
-    static constexpr int ALGORITHM_VERSION = 1;
+    static constexpr int ALGORITHM_VERSION = 2;
 
     int gainMilliDb = 0;
     juce::int64 maxReadMicroseconds = 0;

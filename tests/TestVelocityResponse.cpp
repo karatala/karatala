@@ -1,4 +1,4 @@
-#include "../source/Engine/VelocityResponse.h"
+#include "../source/Engine/InstrumentSynth.h"
 #include "catch2/catch_approx.hpp"
 #include "catch2/catch_test_macros.hpp"
 
@@ -28,4 +28,25 @@ TEST_CASE("VelocityResponse - invalid custom definitions are rejected", "[Veloci
     REQUIRE_FALSE(VelocityResponse::fromDefinition("1:-12,64:-24,127:0").ok());
     REQUIRE_FALSE(VelocityResponse::fromDefinition("10:-24,127:0").ok());
     REQUIRE_FALSE(VelocityResponse::fromDefinition("1:-24,127:1").ok());
+}
+
+TEST_CASE("Calibrated runtime keeps named velocity layer boundaries", "[VelocityResponse]") {
+    InstrumentSynth::ArticulationRuntime articulation(1, 0);
+    const std::array<juce::uint8, 5> namedVelocities { 27, 52, 77, 102, 127 };
+    const std::array<float, 5> fittedLevelsDb { -38.0f, -37.5f, -37.0f, -36.0f, -35.5f };
+    for (size_t layerIdx = 0; layerIdx < namedVelocities.size(); ++layerIdx) {
+        InstrumentSynth::VelocityLayerRuntime layer;
+        layer.velocity = namedVelocities[layerIdx];
+        layer.fittedSourceDb = fittedLevelsDb[layerIdx];
+        layer.calibrationTrimDb = 0.0f;
+        articulation.layers.push_back(std::move(layer));
+    }
+
+    articulation.buildVelocityMapping(VelocityResponse::linear());
+
+    REQUIRE(articulation.calibrated);
+    REQUIRE(articulation.velocityToLayer[100] == 3);
+    REQUIRE(articulation.velocityToLayer[103] == 4);
+    REQUIRE(articulation.selectionTargetDb[100] == Catch::Approx(fittedLevelsDb[3]));
+    REQUIRE(articulation.velocityGain[100] == Catch::Approx(100.0f / 127.0f));
 }

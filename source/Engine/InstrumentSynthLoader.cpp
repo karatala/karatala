@@ -21,37 +21,21 @@ void InstrumentSynth::ArticulationRuntime::buildVelocityMapping(const VelocityRe
     }
     if (this->layers.empty()) return;
 
-    if (!this->calibrated) {
-        for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
-            VelLayerIdx chosenLayerIdx = static_cast<VelLayerIdx>(this->layers.size() - 1);
-            for (size_t layerIdx = 0; layerIdx < this->layers.size(); ++layerIdx) {
-                if (velocity <= this->layers[layerIdx].velocity) {
-                    chosenLayerIdx = static_cast<VelLayerIdx>(layerIdx);
-                    break;
-                }
+    for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
+        VelLayerIdx chosenLayerIdx = static_cast<VelLayerIdx>(this->layers.size() - 1);
+        for (size_t layerIdx = 0; layerIdx < this->layers.size(); ++layerIdx) {
+            if (velocity <= this->layers[layerIdx].velocity) {
+                chosenLayerIdx = static_cast<VelLayerIdx>(layerIdx);
+                break;
             }
-            this->velocityToLayer[static_cast<size_t>(velocity)] = chosenLayerIdx;
+        }
+        this->velocityToLayer[static_cast<size_t>(velocity)] = chosenLayerIdx;
+        if (this->calibrated) {
+            this->selectionTargetDb[static_cast<size_t>(velocity)] = *this->layers[static_cast<size_t>(chosenLayerIdx)].fittedSourceDb;
+            this->velocityGain[static_cast<size_t>(velocity)] = velocityResponse.getGain(static_cast<juce::uint8>(velocity)) * juce::Decibels::decibelsToGain(this->residualOutputDb[static_cast<size_t>(velocity)], -100.0f);
+        } else {
             this->velocityGain[static_cast<size_t>(velocity)] = static_cast<float>(velocity) / 127.0f;
         }
-        return;
-    }
-
-    const float lowestFittedDb = *this->layers.front().fittedSourceDb;
-    const float highestFittedDb = *this->layers.back().fittedSourceDb;
-    for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
-        const float targetDb = juce::jlimit(lowestFittedDb, highestFittedDb, highestFittedDb + velocityResponse.getTargetDb(static_cast<juce::uint8>(velocity)) + this->selectionOffsetDb[static_cast<size_t>(velocity)]);
-        VelLayerIdx chosenLayerIdx = 0;
-        float bestDistanceDb = std::numeric_limits<float>::max();
-        for (size_t layerIdx = 0; layerIdx < this->layers.size(); ++layerIdx) {
-            const float distanceDb = std::abs(*this->layers[layerIdx].fittedSourceDb - targetDb);
-            if (distanceDb < bestDistanceDb) {
-                bestDistanceDb = distanceDb;
-                chosenLayerIdx = static_cast<VelLayerIdx>(layerIdx);
-            }
-        }
-        this->selectionTargetDb[static_cast<size_t>(velocity)] = targetDb;
-        this->velocityToLayer[static_cast<size_t>(velocity)] = chosenLayerIdx;
-        this->velocityGain[static_cast<size_t>(velocity)] = velocityResponse.getGain(static_cast<juce::uint8>(velocity)) * juce::Decibels::decibelsToGain(this->residualOutputDb[static_cast<size_t>(velocity)], -100.0f);
     }
 }
 

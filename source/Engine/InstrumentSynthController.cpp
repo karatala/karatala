@@ -715,9 +715,7 @@ int InstrumentSynth::resolveVelocityLayer(const ArticulationRuntime& art, juce::
     for (int idx = 0; idx < (int)art.layers.size(); ++idx) {
         const auto& layer = art.layers[static_cast<size_t>(idx)];
         if (!this->hasReadyLogicalHit(layer)) continue;
-        const float distance = art.calibrated && layer.fittedSourceDb.has_value()
-            ? std::abs(*layer.fittedSourceDb - art.selectionTargetDb[static_cast<size_t>(velocity)])
-            : static_cast<float>(std::abs(static_cast<int>(layer.velocity) - static_cast<int>(velocity)));
+        const float distance = static_cast<float>(std::abs(static_cast<int>(layer.velocity) - static_cast<int>(velocity)));
         if (distance < bestDistance) {
             bestDistance = distance;
             bestIdx = idx;
