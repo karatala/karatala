@@ -28,9 +28,6 @@ public:
     /** Fires on preview click with velocity. */
     std::function<void(int, juce::uint8)> onPreview;
 
-    /** Fires when the close button is clicked. */
-    std::function<void()> onClose;
-
 private:
     static constexpr int selectButtonWidth = 22;
     static constexpr int previewButtonWidth = 80;
@@ -54,7 +51,6 @@ private:
     juce::TextButton drumsCategoryButton { "drums" };
     juce::TextButton cymbalsCategoryButton { "cymbals" };
     juce::TextButton otherCategoryButton { "other" };
-    juce::TextButton closeButton { "x" };
     juce::Label kindListLabel;
     juce::ListBox kindListBox;
     juce::Label articulationListLabel;

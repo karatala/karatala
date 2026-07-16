@@ -233,7 +233,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     };
 
     // Remove button
-    row->removeButton = std::make_unique<juce::TextButton>("x");
+    row->removeButton = std::make_unique<juce::TextButton>("×");
     row->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     row->removeButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     this->contentComponent.addAndMakeVisible(*row->removeButton);
@@ -285,11 +285,8 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
             this->engine.playPreviewNote(row->slotId, row->artName, 100);
         });
     };
-    this->activePopup->onClose = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissPopup(); });
-    };
-
     this->popupOverlay = std::make_unique<DismissOverlay>();
+    this->popupOverlay->setDarkened(true);
     this->popupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] { this->dismissPopup(); });
     };

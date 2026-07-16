@@ -1092,11 +1092,8 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
             this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
         });
     };
-    this->activePicker->onClose = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
-    };
-
     this->pickerOverlay = std::make_unique<DismissOverlay>();
+    this->pickerOverlay->setDarkened(true);
     this->pickerOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
     };
@@ -1143,10 +1140,11 @@ void PadContextPopup::LayerContentComponent::paint(juce::Graphics& g) {
 }
 
 void PadContextPopup::paint(juce::Graphics& g) {
+    const auto bounds = this->getLocalBounds().toFloat();
+    juce::Path backgroundPath;
+    backgroundPath.addRoundedRectangle(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(), 6.0f, 6.0f, true, true, false, false);
     g.setColour(UITheme::Colours::bgPanelRaised);
-    g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f);
-    g.setColour(UITheme::Colours::borderStrong);
-    g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(0.5f), 6.0f, 1.0f);
+    g.fillPath(backgroundPath);
 }
 
 void PadContextPopup::resized() {

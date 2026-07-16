@@ -1157,11 +1157,15 @@ void PluginEditor::resized() {
         const auto availableBounds = this->getLocalBounds().reduced(32, 24);
         this->crosstalkPopup->setBounds(this->crosstalkPopup->getPreferredBounds(availableBounds));
     }
-    if (this->padPopupOverlay) this->padPopupOverlay->setBounds(this->getLocalBounds());
+    if (this->padPopupOverlay) {
+        this->padPopupOverlay->setBounds(mainArea);
+        const int overlayStripHeight = mainArea.getHeight() - mainArea.getHeight() * 9 / 10;
+        const int closeButtonSize = juce::jmin(44, overlayStripHeight);
+        this->padPopupOverlay->setCloseButtonBounds({ UITheme::Spacing::md, (overlayStripHeight - closeButtonSize) / 2, closeButtonSize, closeButtonSize });
+    }
     if (this->padContextPopup) {
-        auto padPanelBounds = mainArea.reduced(UITheme::Spacing::md, 0);
-        const int padPanelHeight = mainArea.getHeight() * 9 / 10;
-        this->padContextPopup->setBounds(padPanelBounds.withSizeKeepingCentre(padPanelBounds.getWidth(), padPanelHeight));
+        auto padPanelBounds = mainArea;
+        this->padContextPopup->setBounds(padPanelBounds.removeFromBottom(mainArea.getHeight() * 9 / 10));
     }
 }
 
@@ -1224,6 +1228,8 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
     };
 
     this->padPopupOverlay = std::make_unique<DismissOverlay>();
+    this->padPopupOverlay->setDarkened(true);
+    this->padPopupOverlay->setDismissOnBackgroundClick(false);
     this->padPopupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] {
             if (this->padContextPopup) {
@@ -1236,11 +1242,10 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
             this->dismissPadContextPopup();
         });
     };
-    this->padPopupOverlay->setBounds(getLocalBounds());
-    addAndMakeVisible(*this->padPopupOverlay);
+    this->addAndMakeVisible(*this->padPopupOverlay);
     this->padPopupOverlay->toFront(false);
 
-    addAndMakeVisible(*this->padContextPopup);
+    this->addAndMakeVisible(*this->padContextPopup);
     this->padContextPopup->toFront(true);
     this->resized();
 }

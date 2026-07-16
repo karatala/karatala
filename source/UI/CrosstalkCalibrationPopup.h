@@ -31,7 +31,7 @@ private:
     juce::TextButton startSkipButton { "Start" };
     juce::TextButton stopButton { "Stop" };
     juce::TextButton clearButton { "Clear" };
-    juce::TextButton closeButton { "x" };
+    juce::TextButton closeButton { "×" };
     juce::TextEditor profileEditor;
     std::vector<Target> targets;
     std::array<int, 128> capturedVelocities {};

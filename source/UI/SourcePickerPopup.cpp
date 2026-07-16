@@ -23,12 +23,6 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->cymbalsCategoryButton.onClick = [this] { this->setCategory(Category::Cymbals); };
     this->otherCategoryButton.onClick = [this] { this->setCategory(Category::Other); };
 
-    UIHelpers::configureControlButton(this->closeButton);
-    this->closeButton.onClick = [this] {
-        if (this->onClose) this->onClose();
-    };
-    this->addAndMakeVisible(this->closeButton);
-
     this->kindListLabel.setText("Types", juce::dontSendNotification);
     UIHelpers::configureCaptionLabel(this->kindListLabel, juce::Justification::centredLeft);
     this->addAndMakeVisible(this->kindListLabel);
@@ -80,8 +74,6 @@ void SourcePickerPopup::focusItemList() {
 void SourcePickerPopup::resized() {
     auto area = this->getLocalBounds().reduced(4);
     auto topRow = area.removeFromTop(22);
-    this->closeButton.setBounds(topRow.removeFromRight(24).reduced(1));
-    topRow.removeFromRight(4);
     const int categoryAreaW = juce::jmin(232, juce::jmax(184, topRow.getWidth() / 2));
     auto categoryArea = topRow.removeFromRight(categoryAreaW);
     this->filterField.setBounds(topRow.reduced(0, 1));
