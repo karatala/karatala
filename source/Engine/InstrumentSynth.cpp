@@ -322,7 +322,9 @@ void InstrumentSynthVoice::updateEstimatedDb() {
     const float velDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, this->velocityGain), -100.0f);
     float layerGainDb = 0.0f;
     if (this->owner != nullptr) {
-        const float layerGain = juce::Decibels::decibelsToGain(this->owner->getVolumeDb(), -100.0f);
+        const auto* layerParameters = this->owner->getLayerParameters(this->artRuntimeIdx);
+        const float volumeDb = layerParameters != nullptr ? layerParameters->volumeDb : this->owner->getVolumeDb();
+        const float layerGain = juce::Decibels::decibelsToGain(volumeDb, -100.0f);
         const float bleedGain = s->cachedMicBleedGain.load(std::memory_order_relaxed);
         layerGainDb = juce::Decibels::gainToDecibels(juce::jmax(0.0001f, layerGain * bleedGain), -100.0f);
     }
@@ -362,9 +364,12 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     }
 
     const int destChCount = outputBuffer.getNumChannels();
-    const bool flipLR = this->owner != nullptr && this->owner->getFlipLR();
-    const float phaseMultiplier = (this->owner != nullptr && this->owner->getFlipPhase()) ? -1.0f : 1.0f;
-    const float layerGain = this->owner != nullptr ? juce::Decibels::decibelsToGain(this->owner->getVolumeDb(), -100.0f) : 1.0f;
+    const auto* layerParameters = this->owner != nullptr ? this->owner->getLayerParameters(this->artRuntimeIdx) : nullptr;
+    const bool flipLR = layerParameters != nullptr ? layerParameters->flipLR : this->owner != nullptr && this->owner->getFlipLR();
+    const bool flipPhase = layerParameters != nullptr ? layerParameters->flipPhase : this->owner != nullptr && this->owner->getFlipPhase();
+    const float volumeDb = layerParameters != nullptr ? layerParameters->volumeDb : this->owner != nullptr ? this->owner->getVolumeDb() : 0.0f;
+    const float phaseMultiplier = flipPhase ? -1.0f : 1.0f;
+    const float layerGain = juce::Decibels::decibelsToGain(volumeDb, -100.0f);
     const float bleedGain = s->cachedMicBleedGain.load(std::memory_order_relaxed);
     const float voiceGain = layerGain * bleedGain;
 
@@ -408,7 +413,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     for (int dc = 0; dc < effectiveDestCount; ++dc)
         destPtrs[dc] = outputBuffer.getWritePointer(destChBase + dc);
 
-    const int layerPan = this->owner != nullptr ? this->owner->getPan() : 0;
+    const int layerPan = layerParameters != nullptr ? layerParameters->pan : this->owner != nullptr ? this->owner->getPan() : 0;
     const bool useBalancedDirectStereo = (s->useDirectBalance || layerPan != 0) && effectiveDestCount >= 2;
     const int effectiveBalance = (s->useDirectBalance ? s->balance : 0) + layerPan;
     const float pan = juce::jlimit(-1.0f, 1.0f, static_cast<float>(juce::jlimit(-127, 127, effectiveBalance)) / 127.0f);

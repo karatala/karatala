@@ -25,6 +25,7 @@
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
 - Sample mic identity includes the full mic code, so variants such as `dtm1` and `dtm2` remain separate.
 - Every mic-layout output has a required unique semantic ID, such as `snare1/dtm` or `aux1/dtm`. Saved routes use this ID so repeated codes stay distinct across layout reordering.
+- Pad-popup layer parameters belong to the destination articulation runtime, even when one `InstrumentSynth` contains several articulations.
 
 # Work Guidance
 

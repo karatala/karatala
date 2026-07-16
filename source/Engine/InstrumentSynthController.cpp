@@ -966,10 +966,10 @@ void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, Articulation
     // Apply overrides BEFORE startVoice so startNote() reads the correct values when
     // baking pitchRatio and ADSR parameters. Setting these after startVoice means the
     // first (and every) note-on uses stale defaults.
-    voice.setPitchRatioMultiplier(std::pow(2.0, static_cast<double>(this->tuningOffsetCents) / 1200.0));
-    voice.setAttackTimeSec(this->attackOverrideMs.has_value() ? static_cast<float>(*this->attackOverrideMs) / 1000.0f : 0.001f);
-    voice.setReleaseTimeSec(this->decayOverrideMs.has_value() ? static_cast<float>(*this->decayOverrideMs) / 1000.0f : 0.1f);
-    voice.setUseOneShotDecayEnvelope(this->decayOverrideMs.has_value());
+    voice.setPitchRatioMultiplier(std::pow(2.0, static_cast<double>(art.parameters.tuningCents) / 1200.0));
+    voice.setAttackTimeSec(art.parameters.attackMs >= 0 ? static_cast<float>(art.parameters.attackMs) / 1000.0f : 0.001f);
+    voice.setReleaseTimeSec(art.parameters.decayMs >= 0 ? static_cast<float>(art.parameters.decayMs) / 1000.0f : 0.1f);
+    voice.setUseOneShotDecayEnvelope(art.parameters.decayMs >= 0);
 
     this->startVoice(&voice, se.sound, midiChannel, midiNoteNumber, velocityGain);
 

@@ -249,12 +249,14 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
 }
 
 juce::String makeInstrumentMapEntryReloadFingerprint(const DrumKitEngine::InstrumentMapEntry& entry) {
+    const bool changesSynthShape = entry.tuningCents.has_value() || entry.attackTimeMs.has_value() || entry.decayTimeMs.has_value() || entry.volumeDb.has_value() || entry.pan.has_value() || entry.flipLR || entry.flipPhase || !entry.micBleedLevels.empty();
     juce::String fingerprint;
     fingerprint += entry.slotId.trim().toLowerCase() + "|";
     fingerprint += entry.kitRef.trim().toLowerCase() + "|";
     fingerprint += entry.instCode.trim().toLowerCase() + "|";
     fingerprint += Detail::joinValues(entry.slotArticulationFilter) + "|";
     fingerprint += Detail::joinValues(entry.articulationFilter) + "|";
+    fingerprint += changesSynthShape ? "layered|" : "shared|";
     fingerprint += Detail::joinRouteValues(entry.micRouteOverrides);
     return fingerprint;
 }

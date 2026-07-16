@@ -794,10 +794,12 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->removeButton->onStateChange = [this] { this->updateRemoveButtonVisibility(); };
     layer->removeButton->onClick = [this, layer] {
         juce::MessageManager::callAsync([this, layer] {
+            const bool removedMappedLayer = layer->selectedSourceIndex >= 0;
             this->layerRows.removeObject(layer);
             this->updateRemoveButtonVisibility();
             this->resized();
-            this->applyToEngine();
+            this->refreshLayerMappings();
+            if (removedMappedLayer) this->applyToEngine();
         });
     };
 }
@@ -928,7 +930,9 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
         + " flipLR=" + juce::String(*update.flipLR ? "1" : "0")
         + " flipPhase=" + juce::String(*update.flipPhase ? "1" : "0")
         + " bleed=[" + bleedParts.joinIntoString(",") + "]", DebugLevel::Debug);
-    this->engine.updateSlotParameters(this->slotId, layer->artName, layerIndex, update);
+    const int sourceOccurrenceIndex = this->getSourceOccurrenceIndex(layer);
+    if (!this->engine.updateSlotSourceParameters(this->slotId, layer->artName, sourceText, sourceOccurrenceIndex, update))
+        this->engine.updateSlotParameters(this->slotId, layer->artName, layerIndex, update);
     this->mapTextDirty = true;
 }
 // Generate map text: rebuilds this slot while preserving every other slot.
@@ -1014,6 +1018,11 @@ void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBlee
 bool PadContextPopup::applyToEngine() {
     auto text = this->generateFullMapText();
     if (text.trim().isEmpty()) return false;
+    if (text == this->savedInstrumentMapText) {
+        this->mapTextDirty = false;
+        this->refreshLayerMappings();
+        return true;
+    }
 
     const bool applied = this->engine.applyInstrumentMapSlotChange(text, this->slotId);
     this->savedInstrumentMapText = text;

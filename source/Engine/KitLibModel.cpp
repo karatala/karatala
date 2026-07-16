@@ -453,6 +453,7 @@ std::optional<int> ArticulationSpec::getEffectiveBalance() const {
 }
 
 juce::String InstrumentSpec::getContentFingerprint() const {
+    if (this->contentFingerprintCache.has_value()) return this->contentFingerprintCache.value();
     std::vector<juce::String> records;
     records.push_back("instrument|" + this->meta.codeRaw + "|" + this->meta.rootDir.getFullPathName());
 
@@ -474,7 +475,8 @@ juce::String InstrumentSpec::getContentFingerprint() const {
     for (const auto& record : records)
         sourceText += record + "\n";
 
-    return KitLibIdentityHelpers::stableContentHash(sourceText);
+    this->contentFingerprintCache = KitLibIdentityHelpers::stableContentHash(sourceText);
+    return this->contentFingerprintCache.value();
 }
 
 bool InstrumentSpec::isAudioFile(const juce::File& file) {
@@ -487,6 +489,7 @@ bool InstrumentSpec::isAudioFile(const juce::File& file) {
 }
 
 int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
+    this->contentFingerprintCache = std::nullopt;
     const auto articulationDirs = meta.rootDir.findChildFiles(juce::File::findDirectories, false, "*");
     int sampleCount = 0;
     int matchedMetadataRowCount = 0;

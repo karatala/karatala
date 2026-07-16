@@ -221,16 +221,54 @@ void InstrumentSynth::loadInstrumentWithRouteList(KitLib::InstrumentSpec* defaul
 }
 
 void InstrumentSynth::clearParameterOverrides() {
-    this->tuningOffsetCents = 0;
-    this->attackOverrideMs.reset();
-    this->decayOverrideMs.reset();
-    this->volumeDb = 0.0f;
+    this->setTuningOffsetCents(0);
+    this->setAttackOverrideMs(-1);
+    this->setDecayOverrideMs(-1);
+    this->setVolumeDb(0.0f);
     this->setPan(0);
-    this->flipLR = false;
-    this->flipPhase = false;
+    this->setFlipLR(false);
+    this->setFlipPhase(false);
     this->micBleedLevels.clear();
     this->micBleedLevelsById.clear();
     this->refreshSampleMicBleedGains();
+}
+
+void InstrumentSynth::setTuningOffsetCents(int cents) {
+    this->tuningOffsetCents = cents;
+    for (auto& art : this->runtimeArticulations) art.parameters.tuningCents = cents;
+}
+
+void InstrumentSynth::setAttackOverrideMs(int ms) {
+    if (ms < 0) this->attackOverrideMs.reset();
+    else this->attackOverrideMs = ms;
+    for (auto& art : this->runtimeArticulations) art.parameters.attackMs = ms;
+}
+
+void InstrumentSynth::setDecayOverrideMs(int ms) {
+    if (ms < 0) this->decayOverrideMs.reset();
+    else this->decayOverrideMs = ms;
+    for (auto& art : this->runtimeArticulations) art.parameters.decayMs = ms;
+}
+
+void InstrumentSynth::setVolumeDb(float db) {
+    this->volumeDb = db;
+    for (auto& art : this->runtimeArticulations) art.parameters.volumeDb = db;
+}
+
+void InstrumentSynth::setPan(int newPan) {
+    const int clampedPan = juce::jlimit(-127, 127, newPan);
+    this->pan.store(clampedPan, std::memory_order_relaxed);
+    for (auto& art : this->runtimeArticulations) art.parameters.pan = clampedPan;
+}
+
+void InstrumentSynth::setFlipLR(bool shouldFlip) {
+    this->flipLR = shouldFlip;
+    for (auto& art : this->runtimeArticulations) art.parameters.flipLR = shouldFlip;
+}
+
+void InstrumentSynth::setFlipPhase(bool shouldFlip) {
+    this->flipPhase = shouldFlip;
+    for (auto& art : this->runtimeArticulations) art.parameters.flipPhase = shouldFlip;
 }
 
 void InstrumentSynth::setMicBleedLevels(std::unordered_map<juce::String, float> levels) {
@@ -245,6 +283,79 @@ void InstrumentSynth::setMicBleedLevels(std::unordered_map<juce::String, float> 
         }
     }
     this->refreshSampleMicBleedGains();
+}
+
+const InstrumentSynth::LayerParameters* InstrumentSynth::getLayerParameters(ArtRtIdx artIdx) const {
+    if (artIdx < 0 || static_cast<size_t>(artIdx) >= this->runtimeArticulations.size()) return nullptr;
+    return &this->runtimeArticulations[static_cast<size_t>(artIdx)].parameters;
+}
+
+void InstrumentSynth::applyParameterUpdate(ArticulationRuntime& art, const LayerParameterUpdate& update) {
+    if (update.tuningCents.has_value()) art.parameters.tuningCents = *update.tuningCents;
+    if (update.attackMs.has_value()) art.parameters.attackMs = *update.attackMs;
+    if (update.decayMs.has_value()) art.parameters.decayMs = *update.decayMs;
+    if (update.volumeDb.has_value()) art.parameters.volumeDb = *update.volumeDb;
+    if (update.pan.has_value()) art.parameters.pan = juce::jlimit(-127, 127, *update.pan);
+    if (update.flipLR.has_value()) art.parameters.flipLR = *update.flipLR;
+    if (update.flipPhase.has_value()) art.parameters.flipPhase = *update.flipPhase;
+    if (!update.micBleedLevels.has_value()) return;
+
+    std::unordered_map<StringsDictSingleton::Id, float> levelsByMicId;
+    for (const auto& [micCode, level] : *update.micBleedLevels) {
+        const auto micCodeId = StringsDictSingleton::getId(micCode.trim().toLowerCase());
+        if (micCodeId != StringsDictSingleton::EMPTY) levelsByMicId[micCodeId] = juce::jlimit(0.0f, 1.0f, level);
+    }
+    for (const auto& layer : art.layers) {
+        for (const auto& sample : layer.samples) {
+            if (sample.sound == nullptr || sample.sound->sampleVariantSpec == nullptr) continue;
+            const auto micCodeId = StringsDictSingleton::getId(sample.sound->sampleVariantSpec->micSpec.raw.trim().toLowerCase());
+            const auto levelIt = levelsByMicId.find(micCodeId);
+            const float level = levelIt != levelsByMicId.end() ? levelIt->second : 1.0f;
+            sample.sound->cachedMicBleedGain.store(level, std::memory_order_relaxed);
+        }
+    }
+}
+
+bool InstrumentSynth::updateArticulationParameters(const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes, const LayerParameterUpdate& update) {
+    std::array<bool, 128> matchedArticulations {};
+    if (targetRoutes.empty()) {
+        for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx)
+            if (!this->runtimeArticulations[artIdx].layers.empty()) matchedArticulations[artIdx] = true;
+    } else {
+        for (const auto& route : this->resolvedArticulationRoutes) {
+            bool targetMatches = false;
+            for (const auto& targetRoute : targetRoutes) {
+                if (route.destinationArtNameId == targetRoute.first && route.destinationExprId == targetRoute.second) {
+                    targetMatches = true;
+                    break;
+                }
+            }
+            if (!targetMatches) continue;
+            ArtRtIdx artIdx = -1;
+            if (this->tryGetRuntimeArticulationIdx(route, false, artIdx) && artIdx >= 0) matchedArticulations[static_cast<size_t>(artIdx)] = true;
+            for (const auto note : route.midiNotes) {
+                if (note >= this->noteToArticulation.size()) continue;
+                const auto mappedArtIdx = this->noteToArticulation[static_cast<size_t>(note)];
+                if (mappedArtIdx >= 0) matchedArticulations[static_cast<size_t>(mappedArtIdx)] = true;
+            }
+        }
+        for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx) {
+            const auto& art = this->runtimeArticulations[artIdx];
+            const auto destinationNameId = art.routeDestinationNameId != 0 ? art.routeDestinationNameId : art.nameId;
+            const auto destinationExprId = art.routeDestinationNameId != 0 || art.routeDestinationExprId != 0 ? art.routeDestinationExprId : art.exprId;
+            for (const auto& targetRoute : targetRoutes) {
+                if (destinationNameId == targetRoute.first && destinationExprId == targetRoute.second) matchedArticulations[artIdx] = true;
+            }
+        }
+    }
+
+    bool updated = false;
+    for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx) {
+        if (!matchedArticulations[artIdx]) continue;
+        this->applyParameterUpdate(this->runtimeArticulations[artIdx], update);
+        updated = true;
+    }
+    return updated;
 }
 
 float InstrumentSynth::getMicBleedLevel(const juce::String& micCode) const {
@@ -924,7 +1035,6 @@ bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const ju
             sound->micBufferChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
             sound->routedMicCode = sound->sampleVariantSpec->micSpec.raw;
             sound->routedMicCodeId = StringsDictSingleton::getId(sound->routedMicCode);
-            sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->sampleVariantSpec->micSpec.raw), std::memory_order_relaxed);
         }
         return true;
     }
@@ -943,7 +1053,6 @@ bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const ju
         sound->micBufferChannelCount = assignment.channels;
         sound->routedMicCode = assignment.micCode;
         sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
-        sound->cachedMicBleedGain.store(this->getMicBleedLevel(sound->sampleVariantSpec->micSpec.raw), std::memory_order_relaxed);
         sound->useDirectBalance = assignment.applyBalance && assignment.channels == 2 && sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
     }
     return true;

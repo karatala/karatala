@@ -273,6 +273,27 @@ public:
         uint64_t completed = 0;
     };
 
+    struct LayerParameterUpdate {
+        std::optional<int> tuningCents;
+        std::optional<int> attackMs;
+        std::optional<int> decayMs;
+        std::optional<float> volumeDb;
+        std::optional<int> pan;
+        std::optional<bool> flipLR;
+        std::optional<bool> flipPhase;
+        std::optional<std::unordered_map<juce::String, float>> micBleedLevels;
+    };
+
+    struct LayerParameters {
+        int tuningCents = 0;
+        int attackMs = -1;
+        int decayMs = -1;
+        float volumeDb = 0.0f;
+        int pan = 0;
+        bool flipLR = false;
+        bool flipPhase = false;
+    };
+
     struct ArticulationRuntime {
         StringsDictSingleton::Id nameId = 0;
         StringsDictSingleton::Id exprId = 0;
@@ -291,6 +312,7 @@ public:
         std::array<float, 128> selectionOffsetDb;
         std::array<float, 128> residualOutputDb;
         bool calibrated = false;
+        LayerParameters parameters;
         std::vector<VelocityLayerRuntime> layers;
 
         explicit ArticulationRuntime(StringsDictSingleton::Id newNameId, StringsDictSingleton::Id newExprId) : nameId(newNameId), exprId(newExprId) {
@@ -362,21 +384,22 @@ public:
     std::vector<ResolvedArticulationRoute> buildResolvedRouteList(const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void loadInstrumentWithRouteList(KitLib::InstrumentSpec* defaultInstrument, const RoutingContext& routingContext, std::vector<ResolvedArticulationRoute> routes, std::shared_ptr<const KitLib::LibraryManager> librarySnapshot = nullptr);
     bool isLoaded() { return instrumentSpecstPtr != nullptr; }
-    void setTuningOffsetCents(int cents) { this->tuningOffsetCents = cents; }
+    void setTuningOffsetCents(int cents);
     int getTuningOffsetCents() const { return this->tuningOffsetCents; }
-    void setAttackOverrideMs(int ms) { if (ms < 0) this->attackOverrideMs.reset(); else this->attackOverrideMs = ms; }
+    void setAttackOverrideMs(int ms);
     std::optional<int> getAttackOverrideMs() const { return this->attackOverrideMs; }
-    void setDecayOverrideMs(int ms) { if (ms < 0) this->decayOverrideMs.reset(); else this->decayOverrideMs = ms; }
+    void setDecayOverrideMs(int ms);
     std::optional<int> getDecayOverrideMs() const { return this->decayOverrideMs; }
-    void setVolumeDb(float db) { this->volumeDb = db; }
+    void setVolumeDb(float db);
     float getVolumeDb() const { return this->volumeDb; }
-    void setPan(int newPan) { this->pan.store(juce::jlimit(-127, 127, newPan), std::memory_order_relaxed); }
+    void setPan(int newPan);
     int getPan() const { return this->pan.load(std::memory_order_relaxed); }
-    void setFlipLR(bool shouldFlip) { this->flipLR = shouldFlip; }
+    void setFlipLR(bool shouldFlip);
     bool getFlipLR() const { return this->flipLR; }
-    void setFlipPhase(bool shouldFlip) { this->flipPhase = shouldFlip; }
+    void setFlipPhase(bool shouldFlip);
     bool getFlipPhase() const { return this->flipPhase; }
     void setMicBleedLevels(std::unordered_map<juce::String, float> levels);
+    bool updateArticulationParameters(const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes, const LayerParameterUpdate& update);
     float getMicBleedLevel(const juce::String& micCode) const;
     const std::unordered_map<juce::String, float>& getMicBleedLevels() const { return this->micBleedLevels; }
     void clearParameterOverrides();
@@ -580,6 +603,7 @@ public:
     void rebuildVelocityResponseTables();
 
 private:
+    friend class InstrumentSynthVoice;
     friend struct InstrumentSynthTestAccess;
 
     DrumKitEngine* parent = nullptr;
@@ -676,6 +700,8 @@ private:
         return (static_cast<uint64_t>(destinationArtNameId) << 32) | static_cast<uint64_t>(destinationExprId);
     }
     float getMicBleedLevel(StringsDictSingleton::Id micCodeId) const;
+    const LayerParameters* getLayerParameters(ArtRtIdx artIdx) const;
+    void applyParameterUpdate(ArticulationRuntime& art, const LayerParameterUpdate& update);
     void refreshSampleMicBleedGains();
     void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides = {});
     void resetRoutingTables();

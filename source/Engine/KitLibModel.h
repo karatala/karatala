@@ -483,6 +483,7 @@ public:
     DrumKitSpec* parent = nullptr;
     MetaInfo meta;
     std::vector<std::unique_ptr<ArticulationSpec>> articulationSpecs;
+    mutable std::optional<juce::String> contentFingerprintCache;
 
     explicit InstrumentSpec(DrumKitSpec* kit, const MetaInfo& metaInfo)
         : parent(kit), meta(metaInfo) {

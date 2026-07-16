@@ -152,16 +152,7 @@ public:
     void setCrosstalkThreshold(int primaryNote, int secondaryNote, int velocityRatio);
     int getCrosstalkProfileEntryCount() const { return this->crosstalkProfile.getEntryCount(); }
     juce::String buildCrosstalkProfileText() const;
-    struct LayerParameterUpdate {
-        std::optional<int> tuningCents;
-        std::optional<int> attackMs;
-        std::optional<int> decayMs;
-        std::optional<float> volumeDb;
-        std::optional<int> pan;
-        std::optional<bool> flipLR;
-        std::optional<bool> flipPhase;
-        std::optional<std::unordered_map<juce::String, float>> micBleedLevels;
-    };
+    using LayerParameterUpdate = InstrumentSynth::LayerParameterUpdate;
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, std::optional<int> tuningCents, std::optional<int> attackMs, std::optional<int> decayMs);
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, const LayerParameterUpdate& update);
     bool updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update);

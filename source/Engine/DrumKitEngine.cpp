@@ -1558,8 +1558,7 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const
         if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes, targetNotes) || !synthMatchesSource(*synthPtr)) continue;
 
         if (currentOccurrence == sourceOccurrenceIndex) {
-            DrumKitEngine::applyLayerParameterUpdate(*synthPtr, update);
-            return true;
+            return synthPtr->updateArticulationParameters(targetRoutes, update);
         }
 
         ++currentOccurrence;
@@ -1583,7 +1582,7 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
         if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes, targetNotes)) continue;
 
         if (currentLayerIndex == layerIndex) {
-            DrumKitEngine::applyLayerParameterUpdate(*synthPtr, update);
+            synthPtr->updateArticulationParameters(targetRoutes, update);
             return;
         }
 
@@ -1809,6 +1808,37 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         synth.setMicBleedLevels(entry.micBleedLevels);
     };
 
+    auto makeParameterUpdate = [](const InstrumentMapEntry& entry) {
+        LayerParameterUpdate update;
+        update.tuningCents = entry.tuningCents.value_or(0);
+        update.attackMs = entry.attackTimeMs.value_or(-1);
+        update.decayMs = entry.decayTimeMs.value_or(-1);
+        update.volumeDb = entry.volumeDb.value_or(0.0f);
+        update.pan = entry.pan.value_or(0);
+        update.flipLR = entry.flipLR;
+        update.flipPhase = entry.flipPhase;
+        update.micBleedLevels = entry.micBleedLevels;
+        return update;
+    };
+
+    auto buildTargetRoutes = [](const KitLayout::InstrumentSlot& slotLayout, const std::vector<juce::String>& articulationFilters) {
+        std::vector<std::pair<uint32_t, uint32_t>> targetRoutes;
+        if (articulationFilters.empty()) return targetRoutes;
+        for (const auto& articulation : slotLayout.articulations) {
+            for (const auto& filter : articulationFilters) {
+                if (!ArticulationNameHelpers::mapFilterMatchesArticulation(filter, articulation.codeRaw)) continue;
+                const auto route = std::make_pair(articulation.nameId, articulation.exprId);
+                if (std::find(targetRoutes.begin(), targetRoutes.end(), route) == targetRoutes.end()) targetRoutes.push_back(route);
+            }
+        }
+        return targetRoutes;
+    };
+
+    auto applyPrimaryOverrides = [&applyOverrides, &makeParameterUpdate](InstrumentSynth& synth, const InstrumentMapEntry& entry, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
+        if (targetRoutes.empty()) applyOverrides(synth, entry);
+        else synth.updateArticulationParameters(targetRoutes, makeParameterUpdate(entry));
+    };
+
     auto makeResolvedEntryFingerprint = [](const InstrumentMapEntry& entry, const KitLib::InstrumentSpec& instSpec) {
         return DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(entry) + "\nsource\n" + instSpec.getContentFingerprint();
     };
@@ -1876,6 +1906,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         int primaryIndex = -1;
         std::unique_ptr<InstrumentSynth> primaryReplacement;
         const InstrumentMapEntry* primaryParameterEntry = nullptr;
+        std::vector<std::pair<uint32_t, uint32_t>> primaryParameterRoutes;
         bool removeOldShadows = false;
         bool rebuildShadows = false;
         std::vector<PreparedShadow> shadows;
@@ -2131,7 +2162,10 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         prep.slotId = slotId;
         auto pIdxIt = primarySlotIndex.find(slotId);
         prep.primaryIndex = (pIdxIt != primarySlotIndex.end()) ? pIdxIt->second : -1;
-        if (!slotChanged && slotStateChanged && prep.primaryIndex >= 0) prep.primaryParameterEntry = primary.entry;
+        if (!slotChanged && slotStateChanged && prep.primaryIndex >= 0) {
+            prep.primaryParameterEntry = primary.entry;
+            prep.primaryParameterRoutes = buildTargetRoutes(slotLayout, primary.effectiveFilter);
+        }
 
         const auto existingShadowIt = existingShadowsBySlotId.find(slotId);
         const bool slotHasExistingShadows = existingShadowIt != existingShadowsBySlotId.end() && !existingShadowIt->second.empty();
@@ -2185,7 +2219,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             primaryRoutingContext.strictArticulationResolution = primaryStrictArticulationResolution;
             auto primaryRoutes = replacement->buildResolvedRouteList(slotLayout, primaryRoutingContext);
             replacement->loadInstrumentWithRouteList(primary.instSpec, primaryRoutingContext, std::move(primaryRoutes), librarySnapshot);
-            applyOverrides(*replacement, *primary.entry);
+            applyPrimaryOverrides(*replacement, *primary.entry, buildTargetRoutes(slotLayout, primary.effectiveFilter));
             LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
                 + (primary.entry->attackTimeMs.has_value() ? " attack=" + juce::String(*primary.entry->attackTimeMs) : "")
@@ -2290,7 +2324,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 this->instrumentSynthById[prep.slotId] = this->instrumentSynthPtrs[primaryIndex].get();
                 anyPrimarySwapped = true;
             } else if (prep.primaryParameterEntry != nullptr && prep.primaryIndex >= 0 && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
-                applyOverrides(*this->instrumentSynthPtrs[static_cast<size_t>(prep.primaryIndex)], *prep.primaryParameterEntry);
+                applyPrimaryOverrides(*this->instrumentSynthPtrs[static_cast<size_t>(prep.primaryIndex)], *prep.primaryParameterEntry, prep.primaryParameterRoutes);
                 ++applied;
             }
 
@@ -2337,7 +2371,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
     }
     // Old synths destroyed here outside the lock - audio thread cannot access them
 
-    if (this->sampleLoaderPtr != nullptr)
+    if (applied > 0 && this->sampleLoaderPtr != nullptr)
         this->sampleLoaderPtr->getQueue().startProcessing();
 
     if (applied <= 0 && statusLines.isEmpty())

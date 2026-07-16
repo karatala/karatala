@@ -1065,3 +1065,46 @@ TEST_CASE("InstrumentSynth - bleed follows source mic after routing to generic o
 
     REQUIRE(sound->cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(0.25f));
 }
+
+TEST_CASE("InstrumentSynth - layer parameters update only the target articulation", "[InstrumentSynth][InstrumentMap][routing]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    const auto bellId = StringsDictSingleton::getId("bell");
+    const auto bowId = StringsDictSingleton::getId("bow");
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(bellId, 0);
+    articulations.back().routeDestinationNameId = bellId;
+    articulations.back().layers.emplace_back();
+    articulations.emplace_back(bowId, 0);
+    articulations.back().routeDestinationNameId = bowId;
+    articulations.back().layers.emplace_back();
+
+    const auto sourceMic = KitLib::MicSpec::parseMicCode("dtm1");
+    REQUIRE(sourceMic.ok());
+    KitLib::SampleVariantSpec variant(nullptr, {}, 'a', sourceMic.value);
+    SampledSound bellSound(nullptr, &variant);
+    SampledSound bowSound(nullptr, &variant);
+    articulations[0].layers[0].samples.push_back({ &bellSound, 1 });
+    articulations[1].layers[0].samples.push_back({ &bowSound, 1 });
+
+    InstrumentSynth::LayerParameterUpdate update;
+    update.tuningCents = 120;
+    update.volumeDb = -6.0f;
+    update.pan = -40;
+    update.flipLR = true;
+    update.flipPhase = true;
+    update.micBleedLevels = std::unordered_map<juce::String, float> { { "dtm1", 0.25f } };
+
+    REQUIRE(synth.updateArticulationParameters({ { bellId, 0 } }, update));
+    CHECK(articulations[0].parameters.tuningCents == 120);
+    CHECK(articulations[0].parameters.volumeDb == Catch::Approx(-6.0f));
+    CHECK(articulations[0].parameters.pan == -40);
+    CHECK(articulations[0].parameters.flipLR);
+    CHECK(articulations[0].parameters.flipPhase);
+    CHECK(bellSound.cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(0.25f));
+    CHECK(articulations[1].parameters.tuningCents == 0);
+    CHECK(articulations[1].parameters.volumeDb == Catch::Approx(0.0f));
+    CHECK(articulations[1].parameters.pan == 0);
+    CHECK_FALSE(articulations[1].parameters.flipLR);
+    CHECK_FALSE(articulations[1].parameters.flipPhase);
+    CHECK(bowSound.cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(1.0f));
+}

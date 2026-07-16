@@ -125,6 +125,19 @@ TEST_CASE("InstrumentMap fingerprints include mic route overrides", "[Instrument
     CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(second));
 }
 
+TEST_CASE("InstrumentMap reload fingerprint changes when an entry becomes a parameter layer", "[InstrumentMap]") {
+    DrumKitEngine::InstrumentMapEntry sharedEntry;
+    sharedEntry.slotId = "ride1";
+    sharedEntry.kitRef = "MyKit";
+    sharedEntry.instCode = "ride-20";
+    sharedEntry.slotArticulationFilter = { "bow" };
+
+    auto parameterLayer = sharedEntry;
+    parameterLayer.volumeDb = -3.0f;
+
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(sharedEntry) != DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(parameterLayer));
+}
+
 TEST_CASE("MicRoutingPlan resolves explicit mic route override by output id", "[InstrumentMap][routing]") {
     MicLayout micLayout;
     MicLayout::Mic directMic;
