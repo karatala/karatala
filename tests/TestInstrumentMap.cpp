@@ -97,6 +97,17 @@ TEST_CASE("InstrumentMap parser reads mic route overrides", "[InstrumentMap]") {
     CHECK(entry.micRouteOverrides.at("dsm") == "overhead/ons");
 }
 
+TEST_CASE("InstrumentMap parser preserves wildcard aux output ids", "[InstrumentMap][routing]") {
+    const juce::String text = "snare1/center:MyKit/snare-14/center:micRoute=dtm1:aux1/**m,oni:aux1/**i";
+    const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 1);
+    CHECK(parsed.value.entries.front().micRouteOverrides.at("dtm1") == "aux1/**m");
+    CHECK(parsed.value.entries.front().micRouteOverrides.at("oni") == "aux1/**i");
+    CHECK(DrumKitEngine::serializeInstrumentMap(parsed.value) == text);
+}
+
 TEST_CASE("InstrumentMap serializer preserves mic route overrides in stable order", "[InstrumentMap]") {
     DrumKitEngine::InstrumentMap map;
     DrumKitEngine::InstrumentMapEntry entry;

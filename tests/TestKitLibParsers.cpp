@@ -258,6 +258,28 @@ mics:
     CHECK_THAT(duplicateId.error().toStdString(), Catch::Matchers::ContainsSubstring("duplicate id 'aux1/dtm'"));
 }
 
+TEST_CASE("MicLayout - default aux outputs use wildcard mic selectors", "[MicLayout][routing]") {
+    const auto layout = MicLayout::getDefault();
+    REQUIRE(layout.getTotalChannelCount() == 32);
+
+    const auto findOutput = [&layout](const juce::String& outputId) -> const MicLayout::Mic* {
+        for (const auto& mic : layout.mics)
+            if (mic.id == outputId) return &mic;
+        return nullptr;
+    };
+
+    const auto* monoAux = findOutput("aux1/**m");
+    const auto* stereoAux = findOutput("aux1/**s");
+    REQUIRE(monoAux != nullptr);
+    REQUIRE(stereoAux != nullptr);
+    CHECK(monoAux->specs.type == MicSpec::Type::Any);
+    CHECK(monoAux->specs.position == MicSpec::Position::Any);
+    CHECK(monoAux->specs.format == MicSpec::Format::Mono);
+    CHECK(stereoAux->specs.type == MicSpec::Type::Any);
+    CHECK(stereoAux->specs.position == MicSpec::Position::Any);
+    CHECK(stereoAux->specs.format == MicSpec::Format::Stereo);
+}
+
 
 TEST_CASE("InstrumentCatalog - defaults and YAML overrides", "[InstrumentCatalog][routing]") {
     auto catalog = InstrumentCatalog::makeDefault();
@@ -314,12 +336,20 @@ TEST_CASE("Mic instrument selectors parse and match by priority", "[InstrumentCa
     REQUIRE(static_cast<int>(MicSelectorPriority::Family) > static_cast<int>(MicSelectorPriority::EmptyCommon));
 }
 
-TEST_CASE("Direct mic compatibility helpers compare full codes and group outputs", "[InstrumentCatalog][routing]") {
+TEST_CASE("Direct source mics match concrete and wildcard target outputs", "[InstrumentCatalog][routing]") {
     const auto dtm1 = MicSpec::parseMicCode("dtm1").value;
     const auto dtm1b = MicSpec::parseMicCode("dtm1").value;
     const auto dtm2 = MicSpec::parseMicCode("dtm2").value;
     const auto dsm = MicSpec::parseMicCode("dsm").value;
     const auto dss = MicSpec::parseMicCode("dss").value;
+    const auto ons = MicSpec::parseMicCode("ons").value;
+    const auto oni = MicSpec::parseMicCode("oni").value;
+    const auto anyMonoOutput = MicSpec::parseMicCode("**m").value;
+    const auto anyStereoOutput = MicSpec::parseMicCode("**s").value;
+    const auto anyMidSideOutput = MicSpec::parseMicCode("**i").value;
+    const auto anyTopMonoOutput = MicSpec::parseMicCode("*tm").value;
+    const auto directAnyMonoOutput = MicSpec::parseMicCode("d*m").value;
+    const auto anyMonoVariant1Output = MicSpec::parseMicCode("**m1").value;
 
     REQUIRE(directMicSpecsMatchExactly(dtm1, dtm1b));
     REQUIRE_FALSE(directMicSpecsMatchExactly(dtm1, dtm2));
@@ -327,6 +357,16 @@ TEST_CASE("Direct mic compatibility helpers compare full codes and group outputs
     REQUIRE(directMicSpecsCanUseGroupOutput(dsm, dss));
     REQUIRE(directMicSpecsCanUseGroupOutput(dtm1, dtm1b));
     REQUIRE_FALSE(directMicSpecsCanUseGroupOutput(dtm1, dtm2));
+    REQUIRE(directMicSpecsMatchExactly(dtm1, anyMonoOutput));
+    REQUIRE(directMicSpecsMatchExactly(dtm1, anyTopMonoOutput));
+    REQUIRE(directMicSpecsMatchExactly(dtm1, directAnyMonoOutput));
+    REQUIRE(directMicSpecsMatchExactly(dtm1, anyMonoVariant1Output));
+    REQUIRE_FALSE(directMicSpecsMatchExactly(dtm2, anyMonoVariant1Output));
+    REQUIRE_FALSE(directMicSpecsCanUseGroupOutput(dtm1, anyStereoOutput));
+    REQUIRE(micSpecsMatchOutput(ons, anyStereoOutput));
+    REQUIRE(micSpecsMatchOutput(oni, anyMidSideOutput));
+    REQUIRE_FALSE(micSpecsMatchOutput(ons, anyMonoOutput));
+    REQUIRE_FALSE(micSpecsMatchOutput(oni, anyStereoOutput));
 }
 
 
@@ -404,6 +444,48 @@ mics:
     REQUIRE(plan.getAssignedHostChannelCount() == 7);
 }
 
+TEST_CASE("MicRoutingPlan - wildcard aux outputs match non-direct mic formats", "[MicRoutingPlan][routing]") {
+    const juce::String yaml = R"yaml(
+id: wildcard-routing
+name: Wildcard Routing
+mics:
+  - id: snare1/d*m
+    name: Snare Direct
+    instrument: snare1
+    code: d*m
+  - id: aux1/**m
+    name: Aux Mono
+    code: **m
+  - id: aux1/**s
+    name: Aux Stereo
+    code: **s
+  - id: aux1/**i
+    name: Aux Mid-Side
+    code: **i
+)yaml";
+    const auto layout = LayoutTraits<MicLayout>::parseYaml(yaml);
+    REQUIRE(layout.ok());
+    MicRoutingPlan::SlotRequest request;
+    request.slotId = "snare1";
+    request.slotType = InstrumentSpec::Type::Snare;
+    request.directPolicy = DirectMicOutPolicy::Own;
+    request.directMicSpecs = { MicSpec::parseMicCode("dtm1").value };
+    const auto plan = MicRoutingPlan::build(layout.value, { request }, InstrumentCatalog::makeDefault());
+
+    const auto snareDirect = plan.resolve("snare1", InstrumentSpec::Type::Snare, MicSpec::parseMicCode("dtm1").value);
+    const auto roomMono = plan.resolve("ride1", InstrumentSpec::Type::Ride, MicSpec::parseMicCode("rcm").value);
+    const auto overheadStereo = plan.resolve("ride1", InstrumentSpec::Type::Ride, MicSpec::parseMicCode("ons").value);
+    const auto overheadMidSide = plan.resolve("ride1", InstrumentSpec::Type::Ride, MicSpec::parseMicCode("oni").value);
+    REQUIRE(snareDirect.matched());
+    REQUIRE(roomMono.matched());
+    REQUIRE(overheadStereo.matched());
+    REQUIRE(overheadMidSide.matched());
+    CHECK(snareDirect.outputId == "snare1/d*m");
+    CHECK(roomMono.outputId == "aux1/**m");
+    CHECK(overheadStereo.outputId == "aux1/**s");
+    CHECK(overheadMidSide.outputId == "aux1/**i");
+}
+
 TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain", "[InstrumentSpec]") {
     {
         auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-127a-dim_dom_ons.flac");
@@ -474,6 +556,26 @@ TEST_CASE("KitLib - MicSpec::parseMicCode validates and parses codes", "[MicSpec
         REQUIRE(!r.ok());
         REQUIRE(!r.value.isValid());
     }
+}
+
+TEST_CASE("KitLib - MicSpec::parseMicCode parses mic-layout target wildcards", "[MicSpec][MicLayout][routing]") {
+    const auto anyMidSide = MicSpec::parseMicCode("**i");
+    const auto anyTopMono = MicSpec::parseMicCode("*tm");
+    const auto directAnyMono = MicSpec::parseMicCode("d*m");
+    const auto anyMonoVariant1 = MicSpec::parseMicCode("**m1");
+    REQUIRE(anyMidSide.ok());
+    REQUIRE(anyMidSide.value.type == MicSpec::Type::Any);
+    REQUIRE(anyMidSide.value.position == MicSpec::Position::Any);
+    REQUIRE(anyMidSide.value.format == MicSpec::Format::MidSide);
+    REQUIRE(anyMidSide.value.channels == 2);
+    REQUIRE(anyTopMono.ok());
+    REQUIRE(anyTopMono.value.type == MicSpec::Type::Any);
+    REQUIRE(anyTopMono.value.position == MicSpec::Position::Top);
+    REQUIRE(directAnyMono.ok());
+    REQUIRE(directAnyMono.value.type == MicSpec::Type::Direct);
+    REQUIRE(directAnyMono.value.position == MicSpec::Position::Any);
+    REQUIRE(anyMonoVariant1.ok());
+    REQUIRE(anyMonoVariant1.value.variant == "1");
 }
 
 TEST_CASE("KitLib - MicSpec::parseMicCodesChain parses chains and skips invalid entries", "[MicSpec]") {

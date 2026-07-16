@@ -329,24 +329,24 @@ inline MicSelectorPriority matchMicInstrumentSelector(const MicInstrumentSelecto
     return MicSelectorPriority::None;
 }
 
+inline bool micSpecSelectorsMatchOutput(const KitLib::MicSpec& sampleMic, const KitLib::MicSpec& outputMic) {
+    return (outputMic.type == KitLib::MicSpec::Type::Any || sampleMic.type == outputMic.type)
+        && (outputMic.position == KitLib::MicSpec::Position::Any || sampleMic.position == outputMic.position)
+        && (outputMic.variant.isEmpty() || sampleMic.variant == outputMic.variant);
+}
+
+inline bool micSpecsMatchOutput(const KitLib::MicSpec& sampleMic, const KitLib::MicSpec& outputMic) {
+    return micSpecSelectorsMatchOutput(sampleMic, outputMic) && sampleMic.format == outputMic.format && sampleMic.channels == outputMic.channels;
+}
+
 inline bool directMicSpecsMatchExactly(const KitLib::MicSpec& sampleMic, const KitLib::MicSpec& outputMic) {
-    return sampleMic.type == KitLib::MicSpec::Type::Direct
-        && outputMic.type == KitLib::MicSpec::Type::Direct
-        && sampleMic.position == outputMic.position
-        && sampleMic.format == outputMic.format
-        && (outputMic.variant.isEmpty() || sampleMic.variant == outputMic.variant)
-        && sampleMic.channels == outputMic.channels;
+    return sampleMic.type == KitLib::MicSpec::Type::Direct && micSpecsMatchOutput(sampleMic, outputMic);
 }
 
 inline bool directMicSpecsCanUseGroupOutput(const KitLib::MicSpec& sampleMic, const KitLib::MicSpec& outputMic) {
-    if (sampleMic.type != KitLib::MicSpec::Type::Direct || outputMic.type != KitLib::MicSpec::Type::Direct)
-        return false;
-
-    if (outputMic.variant.isNotEmpty() && sampleMic.variant != outputMic.variant)
-        return false;
-
-    if (sampleMic.channels == outputMic.channels && sampleMic.format == outputMic.format)
-        return true;
+    if (sampleMic.type != KitLib::MicSpec::Type::Direct || !micSpecSelectorsMatchOutput(sampleMic, outputMic)) return false;
+    if (outputMic.type == KitLib::MicSpec::Type::Any || outputMic.position == KitLib::MicSpec::Position::Any) return micSpecsMatchOutput(sampleMic, outputMic);
+    if (sampleMic.channels == outputMic.channels && sampleMic.format == outputMic.format) return true;
 
     return sampleMic.format == KitLib::MicSpec::Format::Mono
         && sampleMic.channels == 1

@@ -20,14 +20,14 @@ kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8
 Routing override:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/dtm
+kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m
 ```
 
 Meaning:
 
 - `bleed=dtm:0.5` means source/output mic `dtm` plays at 50 percent.
 - `bleed=room:0.8` means `room` plays at 80 percent.
-- `micRoute=dtm:aux1/dtm` means source mic `dtm` should be written to the mic-layout output whose stable ID is `aux1/dtm`.
+- `micRoute=dtm:aux1/**m` means source mic `dtm` should be written to the mic-layout output whose stable ID is `aux1/**m`.
 
 Why semicolon:
 
@@ -55,7 +55,7 @@ micRoute=sourceMic:outputId,sourceMic:outputId
 Rules:
 
 - `sourceMic` is the library/sample mic code before routing.
-- `outputId` is the stable ID declared by the mic-layout output, for example `snare1/dtm` or `aux1/dtm`.
+- `outputId` is the stable ID declared by the mic-layout output, for example `snare1/dtm` or `aux1/**m`.
 - Missing entry means automatic routing.
 - Output `-` means the source mic is unassigned.
 - Unknown `outputId` should warn and use automatic routing.
@@ -65,8 +65,8 @@ Rules:
 Parser examples:
 
 ```text
-kick1:MyKit/kick-24:micRoute=dtm:aux1/dtm
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/dtm,dsm:aux1/dts
+kick1:MyKit/kick-24:micRoute=dtm:aux1/**m
+kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m,dss:aux1/**s
 ```
 
 ## Engine Support
@@ -120,7 +120,8 @@ Apply from map entries:
 - Source variants such as `dtm1` and `dtm2` are retained by library loading and use separate popup controls and routes.
 - A variant-free output such as `dtm` may receive either variant. A variant-specific output only receives its matching variant.
 - The popup shows the resolved destination as the default choice instead of adding a separate `Auto` item. Selecting the default destination clears the explicit override.
-- Output names remain the visible labels. Saved values use unique route IDs, so `Snr1 Top`, `Aux1`, `Aux2`, `Aux3`, and `Aux4` can all appear even when each output code is `dtm`.
+- Output names remain the visible labels. Saved values use unique route IDs, so `Snr1 Top`, `Aux1`, `Aux2`, `Aux3`, and `Aux4` remain separate choices even though the aux outputs use wildcard codes such as `**m`.
+- Only mic-layout target output codes allow `*`, independently for type and position. Source mic codes and sample filenames stay concrete. Format stays exact, and a present variant must match.
 
 ### 3. Use Override In MicRoutingBuilder
 
@@ -135,7 +136,7 @@ In `MicRoutingBuilder::resolve()`:
 Example log:
 
 ```text
-Mic route override: slot=kick1 source=dtm target=aux1/dtm hostStart=24 channels=1
+Mic route override: slot=kick1 source=dtm target=aux1/**m hostStart=24 channels=1
 Mic route override ignored: slot=kick1 source=dtm target=missing/dtm reason=output not found
 ```
 
@@ -182,7 +183,7 @@ Simple log:
 
 ```text
 Pad popup route: slot=kick1 art=center layer=1 source=dtm old=auto new=room
-Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=aux1/dtm
+Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=aux1/**m
 ```
 
 ### 4. Keep Bleed Knob Live
@@ -223,7 +224,7 @@ Instrument map apply: changedSlot=kick1 reason=pad-popup micRoute
 ### Engine Route Override
 
 ```text
-Mic route override: slot=kick1 source=dtm target=aux1/dtm hostStart=24 channels=1
+Mic route override: slot=kick1 source=dtm target=aux1/**m hostStart=24 channels=1
 ```
 
 Invalid route:
@@ -238,9 +239,9 @@ Mic route override ignored: slot=kick1 source=dtm target=missing/dtm reason=outp
 
 Add to `tests/TestInstrumentMap.cpp`:
 
-- `micRoute=dtm:aux1/dtm` parses.
-- `micRoute=dtm:aux1/dtm,dsm:aux1/dts` parses.
-- `bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/dtm` parses correctly.
+- `micRoute=dtm:aux1/**m` parses.
+- `micRoute=dtm:aux1/**m,dss:aux1/**s` parses.
+- `bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m` parses correctly.
 - Serializer preserves `micRoute` in stable order.
 - Unknown/malformed pairs warn or skip, depending on chosen policy.
 
@@ -257,7 +258,7 @@ Add focused checks that:
 If practical, add a small `MicRoutingBuilder` or engine-level test:
 
 - Source mic `dtm` normally routes to `dtm` output.
-- With `micRoute=dtm:aux1/dtm`, it routes to the output whose stable ID is `aux1/dtm`.
+- With `micRoute=dtm:aux1/**m`, it routes to the output whose stable ID is `aux1/**m`.
 - Invalid override falls back to automatic routing and warns.
 
 ## Manual Verification

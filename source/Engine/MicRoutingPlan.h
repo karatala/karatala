@@ -143,9 +143,7 @@ private:
     }
 
     static bool normalMicSpecsMatch(const KitLib::MicSpec& sampleMic, const KitLib::MicSpec& outputMic) {
-        return sampleMic.type == outputMic.type
-            && sampleMic.position == outputMic.position
-            && sampleMic.format == outputMic.format;
+        return micSpecsMatchOutput(sampleMic, outputMic);
     }
 
     static bool isPrivateSelector(const MicInstrumentSelector& selector) {

@@ -24,7 +24,8 @@
 - Publish asynchronously loaded buffers before setting their `loaded` flag with release semantics; audio-thread readers check the flag with acquire semantics first.
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
 - Sample mic identity includes the full mic code, so variants such as `dtm1` and `dtm2` remain separate.
-- Every mic-layout output has a required unique semantic ID, such as `snare1/dtm` or `aux1/dtm`. Saved routes use this ID so repeated codes stay distinct across layout reordering.
+- Every mic-layout output has a required unique semantic ID, such as `snare1/dtm` or `aux1/**m`. Saved routes use this ID so repeated codes stay distinct across layout reordering.
+- Only mic-layout target output codes may use `*`, independently for type or position. Source mic codes and sample filenames stay concrete. The format remains exact. A present variant is exact, while an omitted variant accepts all variants.
 - Pad-popup layer parameters belong to the destination articulation runtime, even when one `InstrumentSynth` contains several articulations.
 
 # Work Guidance

@@ -17,6 +17,7 @@
 - Preserve keyboard, tooltip, and resize behavior when adding controls.
 - Zone pads use a vertical instrument-name rail, equal rows for normal articulations, and a Hi-Hat grid ordered tight/close/half/open with pedal as a full-width bottom row. Painting and hit testing must share the same cell geometry.
 - Pad-popup mic routing shows output names but selects and saves each mic-layout output's stable semantic ID, so repeated output codes remain separate choices across layout reordering.
+- Pad-popup routing choices use the engine's mic-output matcher, including independent type and position wildcards such as `**m`, `*tm`, and `d*m`.
 - Pad-popup layer controls update only their own articulation layer. Removing an unmapped empty row must not reapply the instrument map.
 
 # Work Guidance

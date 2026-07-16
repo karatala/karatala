@@ -321,7 +321,7 @@ float DecayEnvelope::getMsAtAbsoluteDb(float targetAbsDb) const {
     return -1.0f;
 }
 
-/** Parses one mic code like 'dtm' to direct top mono */
+/** Parses a concrete source mic code or a mic-layout target code. Wildcards are used only by target outputs. */
 ParseResult<MicSpec> MicSpec::parseMicCode(const juce::String& code) {
     ParseResult<MicSpec> result;
     const int codelength = code.length();
@@ -334,18 +334,21 @@ ParseResult<MicSpec> MicSpec::parseMicCode(const juce::String& code) {
     const juce::juce_wchar format = code[2];
     const juce::String variant = (codelength == 4 ? code.substring(3) : "");
 
-    if (!juce::String("dor").containsChar(type)) {
-        return result.returnWithError("Invalid mic type: '" + juce::String::charToString(type) + "' in '" + code + "'. Expected one of: d (direct), o (overhead), r (room)");
+    if (!juce::String("dor*").containsChar(type)) {
+        return result.returnWithError("Invalid mic type: '" + juce::String::charToString(type) + "' in '" + code + "'. Expected one of: d (direct), o (overhead), r (room), * (any)");
     }
 
-    if (type == 'd' && !juce::String("ustbio").containsChar(pos)) {
-        return result.returnWithError("Invalid position for direct mic: '" + juce::String::charToString(pos) + "' in '" + code + "'. Expected: u (sub), s (side), t (top), b (bottom), i (in), o (out)");
+    if (pos != '*' && type == '*' && !juce::String("ustbionwcf").containsChar(pos)) {
+        return result.returnWithError("Invalid mic position: '" + juce::String::charToString(pos) + "' in '" + code + "'. Expected a known position or * (any)");
     }
-    if (type == 'o' && !juce::String("nw").containsChar(pos)) {
-        return result.returnWithError("Invalid position for overhead mic: '" + juce::String::charToString(pos) + "' in '" + code + "'. Expected: n (normal), w (wide)");
+    if (pos != '*' && type == 'd' && !juce::String("ustbio").containsChar(pos)) {
+        return result.returnWithError("Invalid position for direct mic: '" + juce::String::charToString(pos) + "' in '" + code + "'. Expected: u (sub), s (side), t (top), b (bottom), i (in), o (out), * (any)");
     }
-    if (type == 'r' && !juce::String("cf").containsChar(pos)) {
-        return result.returnWithError("Invalid position for room mic: '" + juce::String::charToString(pos) + "' in '" + code + "'. Expected: c (close), f (far)");
+    if (pos != '*' && type == 'o' && !juce::String("nw").containsChar(pos)) {
+        return result.returnWithError("Invalid position for overhead mic: '" + juce::String::charToString(pos) + "' in '" + code + "'. Expected: n (normal), w (wide), * (any)");
+    }
+    if (pos != '*' && type == 'r' && !juce::String("cf").containsChar(pos)) {
+        return result.returnWithError("Invalid position for room mic: '" + juce::String::charToString(pos) + "' in '" + code + "'. Expected: c (close), f (far), * (any)");
     }
 
     if (!juce::String("msi").containsChar(format)) {

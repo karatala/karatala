@@ -395,6 +395,7 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
     }
 
     const auto* layoutMic = this->findLayoutMicForSlot(micCode);
+    const auto parsedSourceMic = KitLib::MicSpec::parseMicCode(micCode);
 
     const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
     for (const auto& micSpec : directSpecs) {
@@ -423,7 +424,7 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
         return display;
     }
 
-    if (layoutMic == nullptr) {
+    if (layoutMic == nullptr && !parsedSourceMic.ok()) {
         display.routeText = "No route";
         display.tooltip = "No mic layout entry for " + micCode;
         display.hasProblem = true;
@@ -438,7 +439,8 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
         return display;
     }
 
-    const auto assignment = plan->resolve(slot->id, slot->type, layoutMic->specs);
+    const auto& sourceMicSpec = layoutMic != nullptr ? layoutMic->specs : parsedSourceMic.value;
+    const auto assignment = plan->resolve(slot->id, slot->type, sourceMicSpec);
     if (assignment.matched()) {
         display.routeText = assignment.outputName;
         display.tooltip = micCode + " -> " + assignment.outputName;
@@ -478,6 +480,7 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
     }
 
     const auto* layoutMic = this->findLayoutMicForSlot(micCode);
+    const auto parsedSourceMic = KitLib::MicSpec::parseMicCode(micCode);
 
     std::optional<KitLib::MicSpec> sourceDirectSpec;
     const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
@@ -519,8 +522,9 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
             exactDirect = directMicSpecsMatchExactly(*sourceDirectSpec, mic.specs);
             groupDirect = directMicSpecsCanUseGroupOutput(*sourceDirectSpec, mic.specs);
             compatible = exactDirect || groupDirect;
-        } else if (layoutMic != nullptr) {
-            compatible = layoutMic->specs.type == mic.specs.type && layoutMic->specs.position == mic.specs.position && layoutMic->specs.format == mic.specs.format;
+        } else if (layoutMic != nullptr || parsedSourceMic.ok()) {
+            const auto& sourceMicSpec = layoutMic != nullptr ? layoutMic->specs : parsedSourceMic.value;
+            compatible = micSpecsMatchOutput(sourceMicSpec, mic.specs);
         }
         if (!compatible) continue;
 

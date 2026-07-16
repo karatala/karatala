@@ -155,19 +155,28 @@ micRoute=sourceMic:outputId,sourceMic:outputId
 Example:
 
 ```text
-snare1/center:MyKit/snare-14/center:micRoute=dtm1:snare1/dtm,dtm2:aux1/dtm
+snare1/center:MyKit/snare-14/center:micRoute=dtm1:snare1/dtm,dtm2:aux1/**m
 ```
 
 Meaning:
 
 - `dtm1` and `dtm2` are separate source mics.
 - `snare1/dtm` is the stable ID of `Snr1 Top` in the default mic layout.
-- `aux1/dtm` is the stable ID of the mono `Aux1` output.
+- `aux1/**m` is the stable ID of the mono `Aux1` output.
 - `micRoute=dtm1:-` leaves source mic `dtm1` unassigned.
 
 Pad popup routing changes update loaded sample destinations in place. Applying a changed raw map still rebuilds the affected slot.
 When a popup mic code is an output-layout alias rather than the library's original source code, full map loading resolves that alias through the source mic's automatic output assignment.
 Source variants stay independent. For example, `dtm1` and `dtm2` have separate popup controls and may use `micRoute=dtm1:snare1/dtm,dtm2:-`. A generic layout output code such as `dtm` accepts both variants, while a variant output code such as `dtm1` accepts only that variant. The popup shows output names, but saves each mic-layout output's unique ID so repeated output codes remain separate and layout reordering does not change saved routes.
+
+Only mic-layout target output `code` values may use `*`, independently in the type and position characters. Source mic codes and sample filenames never use `*`. The format stays exact. A present variant must match, while an omitted variant accepts all variants:
+
+- `**m` accepts any mono mic, including numbered variants.
+- `**s` accepts any stereo mic.
+- `**i` accepts any mid-side mic.
+- `*tm` accepts any top-position mono mic.
+- `d*m` accepts any direct mono mic position.
+- `**m1` accepts any mono mic whose variant is `1`.
 
 ## Raw Map Apply
 

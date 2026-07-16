@@ -10,19 +10,24 @@ namespace KitLib {
 
 /**
  * MicSpec
- * Represents a parsed mic token from the micChain.
+ * Represents a parsed concrete source mic token or a mic-layout target selector.
  * Example: "ons" → {type=Overhead, position=Normak, format=Stereo, variant=""}
  * Example: "dtm1" → {type=Direct, position=Top, format=mono, variant="1"}
  * Example: "rfi" → {type=Room, position=Far, format=Mid-Side, variant=""}
+ * Mic-layout target example: "**i" → {type=Any, position=Any, format=Mid-Side, variant=""}
+ * Mic-layout target example: "d*m1" → {type=Direct, position=Any, format=Mono, variant="1"}
+ * Wildcards are target selectors only. Source mic codes and sample filenames use concrete type and position characters.
  */
 class MicSpec {
 public:
     enum class Type : char { Unknown = 0,
+        Any = '*',
         Direct = 'd',
         Overhead = 'o',
         Room = 'r'
     };
     enum class Position : char { Unknown = 0,
+        Any = '*',
         Sub = 'u',
         Side = 's',
         Top = 't',
@@ -50,6 +55,7 @@ public:
     bool isValid() const { return this->type != Type::Unknown && this->position != Position::Unknown && this->format != Format::Unknown; }
 
     static ParseResult<MicSpec> parseMicCode(const juce::String& code);
+    /** Parses the concrete source mic chain stored in a sample filename. */
     static ParseResult<std::vector<MicSpec>> parseMicCodesChain(const juce::String& codeChain);
 
     juce::String getDescription() const {
@@ -67,12 +73,14 @@ private:
     struct EnumEntry { E value; juce::juce_wchar code; const char* name; };
 
     static constexpr EnumEntry<Type> typeTable[] {
+        { Type::Any, '*', "Any" },
         { Type::Direct, 'd', "Direct" },
         { Type::Overhead, 'o', "Overhead" },
         { Type::Room, 'r', "Room" }
     };
 
     static constexpr EnumEntry<Position> positionTable[] {
+        { Position::Any, '*', "Any" },
         { Position::Sub, 'u', "Sub" },
         { Position::Side, 's', "Side" },
         { Position::Top, 't', "Top" },

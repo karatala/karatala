@@ -103,8 +103,8 @@ private:
     std::vector<MicEntryInfo>  micEntries;
     std::set<juce::String>     skippedRawCodes;
 
-    static bool micKeyEq(const KitLib::MicSpec& a, const KitLib::MicSpec& b) {
-        return a.type == b.type && a.position == b.position && a.format == b.format;
+    static bool micKeyEq(const KitLib::MicSpec& sourceMic, const KitLib::MicSpec& outputMic) {
+        return micSpecsMatchOutput(sourceMic, outputMic);
     }
 
     void buildMicEntries() {

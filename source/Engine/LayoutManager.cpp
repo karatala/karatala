@@ -99,7 +99,7 @@ mics:
   - id: aux2/**s
     name: LR Aux2 # 31-32
     code: **s
-)yaml"; //TODO: changed for auxes dtm and dsm to **m and **s - so any mono/stereo mic can be routed to auxes with *, need to update implementation, tests and document
+)yaml";
     auto result = LayoutTraits<MicLayout>::parseYaml(defaultYaml);
     if (!result.ok()) {
         jassertfalse;
