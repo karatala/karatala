@@ -387,6 +387,12 @@ def summarize_identity_changes(previous: dict[str, tuple[str, int]], rows: list[
     return messages
 
 
+def format_csv_value(value: object) -> object:
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        return int(value)
+    return value
+
+
 def write_metadata_csv(kit_root: Path, rows: list[dict[str, object]]) -> None:
     metadata_path = kit_root / "metadata.csv"
     backup_path = kit_root / "metadata.csv.bak"
@@ -396,7 +402,7 @@ def write_metadata_csv(kit_root: Path, rows: list[dict[str, object]]) -> None:
         with temporary_path.open("w", newline="", encoding="utf-8") as output_file:
             writer = csv.DictWriter(output_file, fieldnames=CSV_COLUMNS)
             writer.writeheader()
-            writer.writerows(rows)
+            writer.writerows({column_name: format_csv_value(value) for column_name, value in row.items()} for row in rows)
             output_file.flush()
             os.fsync(output_file.fileno())
         if metadata_path.is_file():

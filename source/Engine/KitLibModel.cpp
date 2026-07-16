@@ -483,12 +483,8 @@ juce::String InstrumentSpec::getContentFingerprint() const {
 }
 
 bool InstrumentSpec::isAudioFile(const juce::File& file) {
-    juce::StringArray audioFileExtensions = { ".wav", ".flac", ".aiff", ".mp3", ".ogg" }; //TODO: refactor dynamical support from plugin's config.yaml
-    juce::String ext = file.getFileExtension().toLowerCase();
-    for (int i = 0; i < audioFileExtensions.size(); ++i)
-        if (ext == audioFileExtensions[i])
-            return true;
-    return false;
+    const auto extension = file.getFileExtension();
+    return extension.equalsIgnoreCase(".wav") || extension.equalsIgnoreCase(".flac") || extension.equalsIgnoreCase(".aiff") || extension.equalsIgnoreCase(".mp3") || extension.equalsIgnoreCase(".ogg"); //TODO: refactor dynamical support from plugin's config.yaml
 }
 
 int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
@@ -543,11 +539,6 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
 
         const auto sampleFiles = artDir.findChildFiles(juce::File::findFiles, false, "*.*");
         for (const auto& sampleFile : sampleFiles) {
-            if (!sampleFile.existsAsFile()) {
-                LOG(Info, "File does not exist: " + sampleFile.getFullPathName());
-                continue;
-            }
-
             const auto fileName = sampleFile.getFileName();
             if (!InstrumentSpec::isAudioFile(sampleFile)) {
                 LOG(Info, "Skipping non-audio file: " + fileName);
@@ -565,6 +556,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
 
             auto* velSpec = artSpec->getOrAddVelocityLayer(parsedInfo.value.velocity);
             const auto kitRelativePath = sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
+            const auto sampleFileSize = this->parent->sampleMetadata.isActive() ? sampleFile.getSize() : 0;
 
             // Add one sample variant per mic chain. Track channel cursor for multi-channel files.
             int channelCursor = 0;
@@ -583,7 +575,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 sv->decayEnvelope = parsedInfo.value.peakDb < 0.0f ? DecayEnvelope::decode(sv->decayCode, sv->peakDb, sv->peakMs) : DecayEnvelope {};
                 if (this->parent->sampleMetadata.isActive()) {
                     const auto* metadataRow = this->parent->sampleMetadata.find(kitRelativePath, micDesc.raw);
-                    const bool fileSizeMatches = metadataRow != nullptr && metadataRow->fileSizeBytes > 0 && metadataRow->fileSizeBytes == sampleFile.getSize();
+                    const bool fileSizeMatches = metadataRow != nullptr && metadataRow->fileSizeBytes > 0 && metadataRow->fileSizeBytes == sampleFileSize;
                     if (metadataRow != nullptr && fileSizeMatches) {
                         sv->hasCsvMetadata = true;
                         sv->metadataContentHash = metadataRow->contentHash;
@@ -886,6 +878,7 @@ int LibraryManager::scanAll() {
 
     for (const juce::DirectoryEntry& entry : juce::RangedDirectoryIterator(this->rootDir, false, "*", juce::File::TypesOfFileToFind::findDirectories)) {
         const juce::File& kitDir = entry.getFile();
+        const double kitScanStartTimeMs = juce::Time::getMillisecondCounterHiRes();
         if (!kitDir.isDirectory()) {
             LOG(Info, "Parse DrumKitSpec failed: rootDir is not a directory: " + kitDir.getFullPathName());
             continue;
@@ -900,9 +893,11 @@ int LibraryManager::scanAll() {
         }
 
         auto kit = std::make_unique<DrumKitSpec>(parsedInfo.value);
+        const double metadataStartTimeMs = juce::Time::getMillisecondCounterHiRes();
         auto metadataResult = kit->sampleMetadata.loadFromKitRoot(kitDir);
+        const double metadataElapsedMs = juce::Time::getMillisecondCounterHiRes() - metadataStartTimeMs;
         for (const auto& metadataMessage : metadataResult.errors) LOG(Warning, "Kit metadata: " + metadataMessage);
-        if (metadataResult.ok() && kit->sampleMetadata.isActive()) LOG(Info, "Loaded " + juce::String(metadataResult.value) + " metadata.csv rows for kit " + kitDir.getFileName());
+        if (metadataResult.ok() && kit->sampleMetadata.isActive()) LOG(Info, "Loaded " + juce::String(metadataResult.value) + " metadata.csv rows for kit " + kitDir.getFileName() + " in " + juce::String(metadataElapsedMs, 1) + " ms");
         int instrsInKit = kit->scanInstruments();
         int samplesInKit = 0;
 
@@ -922,7 +917,8 @@ int LibraryManager::scanAll() {
         for (const auto& [k, v] : stats.sampleVariantCounts) globalStats.sampleVariantCounts[k] += v;
         for (const auto& [k, v] : stats.velocityCounts) globalStats.velocityCounts[k] += v;
         totalKits++;
-        LOG(Info, "Scanned kit: " + kitDir.getFileName() + ", " + juce::String(instrsInKit) + " instruments, " + juce::String(samplesInKit) + " samples");
+        const double kitScanElapsedMs = juce::Time::getMillisecondCounterHiRes() - kitScanStartTimeMs;
+        LOG(Info, "Scanned kit: " + kitDir.getFileName() + ", " + juce::String(instrsInKit) + " instruments, " + juce::String(samplesInKit) + " samples in " + juce::String(kitScanElapsedMs, 1) + " ms");
     }
 
     if (LOG_ENABLED(Info)) {
