@@ -181,6 +181,6 @@ private:
             LOG(Warning, "MicRoutingBuilder: instrument '" + this->synth->getId()
                 + "' cursor mismatch: walked " + juce::String(localCursor)
                 + " channels but micOutputMapping has " + juce::String(assigned)
-                + " — check mic layout and slot id matching.");
+                + " - check mic layout and slot id matching.");
     }
 };

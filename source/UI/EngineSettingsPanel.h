@@ -32,7 +32,7 @@ private:
     struct ChoiceEntry {
         juce::Label label;
         juce::ComboBox comboBox;
-        juce::TextButton resetButton { "×" };
+        juce::TextButton resetButton { UITheme::Symbols::times };
         std::function<int()> loadSelectedId;
         std::function<void(int)> storeSelectedId;
         int defaultSelectedId = 1;

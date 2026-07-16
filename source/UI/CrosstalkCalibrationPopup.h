@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Engine/DrumKitEngine.h"
+#include "UITheme.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class CrosstalkCalibrationPopup : public juce::Component,
@@ -31,7 +32,7 @@ private:
     juce::TextButton startSkipButton { "Start" };
     juce::TextButton stopButton { "Stop" };
     juce::TextButton clearButton { "Clear" };
-    juce::TextButton closeButton { "×" };
+    juce::TextButton closeButton { UITheme::Symbols::times };
     juce::TextEditor profileEditor;
     std::vector<Target> targets;
     std::array<int, 128> capturedVelocities {};

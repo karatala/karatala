@@ -1,5 +1,6 @@
 #pragma once
 
+#include "UITheme.h"
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -46,7 +47,7 @@ private:
             }
             graphics.setColour(juce::Colours::white);
             graphics.setFont(juce::Font(juce::FontOptions(34.0f)));
-            graphics.drawText(juce::String::charToString(0x00d7), this->getLocalBounds(), juce::Justification::centred);
+            graphics.drawText(UITheme::Symbols::times, this->getLocalBounds(), juce::Justification::centred);
         }
     };
 

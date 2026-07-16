@@ -787,7 +787,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     this->rebuildBleedControls(layer, micBleedLevels, micRouteOverrides);
 
     // Remove button
-    layer->removeButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x97")); // remove
+    layer->removeButton = std::make_unique<juce::TextButton>(UITheme::Symbols::times); // remove
     layer->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
     layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accent);
     layer->removeButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);

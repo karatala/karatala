@@ -233,7 +233,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     };
 
     // Remove button
-    row->removeButton = std::make_unique<juce::TextButton>("×");
+    row->removeButton = std::make_unique<juce::TextButton>(UITheme::Symbols::times);
     row->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     row->removeButton->setConnectedEdges(juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     this->contentComponent.addAndMakeVisible(*row->removeButton);

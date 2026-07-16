@@ -4,6 +4,10 @@
 #include "../Engine/KitLibModel.h"
 
 namespace UITheme {
+namespace Symbols {
+    inline const juce::String times = juce::String::charToString(0x00d7);
+}
+
 namespace Colours {
     inline const juce::Colour bgApp = juce::Colour(0xff080808);
     inline const juce::Colour bgEditor = juce::Colour(0xff1e1e1e);
