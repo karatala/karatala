@@ -7,11 +7,12 @@
 #include "DismissOverlay.h"
 #include "MidiNoteAssignmentControl.h"
 #include "CompactParameterControl.h"
+#include "VelocityResponseEditor.h"
 
 class PadContextPopup : public juce::Component {
 public:
     explicit PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedInstrumentMapText = "");
-    ~PadContextPopup() override { this->dismissSourcePicker(); }
+    ~PadContextPopup() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -81,7 +82,7 @@ private:
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel;
         std::unique_ptr<juce::ComboBox> velocityResponseMode;
-        std::unique_ptr<juce::TextEditor> velocityResponseEditor;
+        std::unique_ptr<juce::TextButton> velocityResponseEditButton;
         std::unique_ptr<CompactParameterControl> tuningPot;
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
@@ -118,6 +119,7 @@ private:
     int getLayerIndex(const LayerRow* layer) const;
     int getSourceOccurrenceIndex(const LayerRow* layer) const;
     void commitVelocityResponse(LayerRow* layer);
+    void updateVelocityResponseDisplay(LayerRow* layer);
     void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
@@ -144,6 +146,8 @@ private:
 
     std::unique_ptr<DismissOverlay> pickerOverlay;
     std::unique_ptr<SourcePickerPopup> activePicker;
+    std::unique_ptr<DismissOverlay> velocityResponseOverlay;
+    std::unique_ptr<VelocityResponseEditor> activeVelocityResponseEditor;
 
     // ─── Scrollable layer area ───
     struct LayerContentComponent : public juce::Component {
@@ -156,6 +160,9 @@ private:
     void showSourcePicker(LayerRow* layer);
     void dismissSourcePicker();
     void layoutSourcePicker();
+    void showVelocityResponseEditor(LayerRow* layer);
+    void dismissVelocityResponseEditor();
+    void layoutVelocityResponseEditor();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PadContextPopup)
 };

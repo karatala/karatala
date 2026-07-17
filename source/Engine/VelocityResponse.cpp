@@ -8,11 +8,6 @@
 
 namespace VelocityResponseHelpers {
 
-struct CurvePoint {
-    int velocity = 0;
-    float targetDb = 0.0f;
-};
-
 static std::optional<float> parseFloat(const juce::String& text) {
     const auto trimmed = text.trim();
     if (trimmed.isEmpty()) return std::nullopt;
@@ -24,7 +19,7 @@ static std::optional<float> parseFloat(const juce::String& text) {
     return value;
 }
 
-static juce::String serializePoints(const std::vector<CurvePoint>& points) {
+static juce::String serializePoints(const std::vector<VelocityResponse::Point>& points) {
     juce::StringArray tokens;
     for (const auto& point : points) {
         auto targetDb = juce::String(point.targetDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd(".");
@@ -57,12 +52,12 @@ ParseResult<VelocityResponse> VelocityResponse::fromDefinition(const juce::Strin
         return result;
     }
 
-    std::vector<VelocityResponseHelpers::CurvePoint> points;
+    std::vector<VelocityResponse::Point> points;
     const auto pointTokens = juce::StringArray::fromTokens(trimmedDefinition, ",", "");
     for (const auto& pointToken : pointTokens) {
         const auto pointParts = juce::StringArray::fromTokens(pointToken, ":", "");
         if (pointParts.size() != 2 || !pointParts[0].trim().containsOnly("0123456789")) return result.returnWithError("Velocity response point must use velocity:db format: " + pointToken);
-        VelocityResponseHelpers::CurvePoint point;
+        VelocityResponse::Point point;
         point.velocity = pointParts[0].trim().getIntValue();
         const auto targetDb = VelocityResponseHelpers::parseFloat(pointParts[1]);
         if (point.velocity < 1 || point.velocity > 127 || !targetDb.has_value()) return result.returnWithError("Invalid velocity response point: " + pointToken);
@@ -79,6 +74,7 @@ ParseResult<VelocityResponse> VelocityResponse::fromDefinition(const juce::Strin
 
     VelocityResponse response;
     response.definition = VelocityResponseHelpers::serializePoints(points);
+    response.points = points;
     response.targetDbByVelocity[0] = -100.0f;
     response.gainByVelocity[0] = 0.0f;
     size_t pointIdx = 0;
@@ -94,6 +90,14 @@ ParseResult<VelocityResponse> VelocityResponse::fromDefinition(const juce::Strin
     }
     result.value = std::move(response);
     return result;
+}
+
+ParseResult<VelocityResponse> VelocityResponse::fromPoints(const std::vector<Point>& points) {
+    if (points.empty()) {
+        ParseResult<VelocityResponse> result;
+        return result.returnWithError("Velocity response needs at least two points");
+    }
+    return VelocityResponse::fromDefinition(VelocityResponseHelpers::serializePoints(points));
 }
 
 juce::uint8 VelocityResponse::findClosestVelocityForTargetDb(float targetDb) const {

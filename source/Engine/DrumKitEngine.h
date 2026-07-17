@@ -46,6 +46,26 @@ public:
         std::vector<InstrumentMapEntry> entries;
     };
 
+    struct VelocityResponsePreset {
+        juce::String name;
+        juce::String definition;
+        juce::File file;
+        bool isUser = false;
+    };
+
+    struct VelocityResponseLevelInfo {
+        int velocity = 0;
+        std::optional<float> rawMedianRelativeDb;
+        std::optional<float> fittedRelativeDb;
+        std::optional<float> calibrationTrimDb;
+        bool calibrationLimited = false;
+    };
+
+    struct VelocityResponseSourceInfo {
+        bool sourceFound = false;
+        std::vector<VelocityResponseLevelInfo> levels;
+    };
+
     explicit DrumKitEngine() {
         this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
         this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
@@ -83,6 +103,10 @@ public:
     KitLayout* getKitLayout() { return this->activeKitLayoutPtr.get(); }
     MicLayout* getMicLayout() { return this->activeMicLayoutPtr.get(); }
     juce::File getUserPresetsDir() const { return this->dataPath.getChildFile("presets"); }
+    juce::File getUserVelocityResponsePresetsDir() const { return this->dataPath.getChildFile("velocity_response_presets"); }
+    std::vector<VelocityResponsePreset> getVelocityResponsePresets(juce::StringArray* warnings = nullptr) const;
+    ParseResult<VelocityResponsePreset> saveVelocityResponsePreset(const juce::String& name, const juce::String& definition, bool replaceExisting) const;
+    VelocityResponseSourceInfo getSourceVelocityResponseInfo(const juce::String& sourcePath) const;
 
     bool useKitLayout(juce::String name);
     bool setKitLayoutDirect(KitLayout layout, bool reapplyCurrentMap = true) { return this->setKitLayout(std::move(layout), reapplyCurrentMap); }

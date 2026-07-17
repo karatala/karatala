@@ -1,6 +1,6 @@
 # TODO14: Sample Calibration And Velocity Response Plan
 
-Status: Phase 1 is complete. Phase 2, Phase 3, and Phase 5 implementation is complete. Phase 4 core implementation and its first listening correction are complete, but clear load-complete status and the remaining fixture, library, C++, UI, and listening verification are pending.
+Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, and Phase 5B implementation is complete. Phase 4 core implementation and its first listening correction are complete, but clear load-complete status and the remaining fixture, library, C++, UI, and listening verification are pending.
 
 ## Scope And Terminology
 
@@ -472,6 +472,64 @@ Verify later: deterministic monotonic tables; the `articulationReferenceDb + eff
 
 Verify later: independent primary and shadow edits; two articulations in one slot; no sample reload for live popup changes; raw-map load; save and reload; invalid curve feedback; reset to Global; editor layout and focus behavior.
 
+### ✅ Phase 5B: Replace the temporary text field with a visual velocity-response editor (implementation complete, verification pending)
+
+Keep the Phase 5 engine behavior and `velocityResponse` map format. Replace only the temporary text input in the pad popup.
+
+Use one custom JUCE `Component` that paints the complete chart and handles its own mouse interaction. Do not create a separate JUCE `Slider` child for every velocity level. One painted component makes it simpler to show the curve, recorded sample levels, measured dB markers, and selection state in the same area.
+
+#### User flow and chart
+
+- ✅ Keep the compact `Global` or `Custom` selector in the layer row and replace the response text field with an `Edit Curve` button.
+- ✅ Open the editor as a child overlay inside the plugin window, not as a native desktop window.
+- ✅ Show the current destination articulation and source at the top so the user knows which layer is being edited.
+- ✅ Use MIDI velocity `1..127` on the horizontal axis and relative output dB on the vertical axis.
+- ✅ Draw a labelled column for every recorded sample velocity available in this source articulation. Lightly show the MIDI range that selects each sample level in exact mode.
+- ✅ Draw the effective 128-value response as the main line.
+- ✅ At each recorded level, show a fixed marker for the fitted sample level relative to the articulation's hardest fitted level.
+- ✅ Show a short selected-level readout such as `Velocity 64 | Curve -12.0 dB | Sample -18.3 dB | Trim +6.3 dB`. Keep raw median and calibration status in the tooltip instead of adding more permanent chart lines.
+- ✅ When calibration metadata is missing, still show and edit the response, but label sample dB and trim as unavailable.
+
+#### Editing and validation
+
+- ✅ In `Global` mode the chart is read-only. `Make Custom` copies the current global curve into this layer.
+- ✅ In `Custom` mode, create vertical drag handles at velocity `1`, every recorded sample level, velocity `127`, and any extra points present in the loaded curve or preset.
+- ✅ Keep handle velocities fixed. The user changes only dB, so editing the response cannot change recorded sample selection.
+- ✅ Keep velocity `127` fixed at `0 dB`.
+- ✅ Clamp vertical dragging between the neighbouring handles and at or below `0 dB`, so the curve cannot become decreasing or invalid.
+- ✅ Provide one numeric dB field for the selected handle for exact edits. Validate the final definition with the existing `VelocityResponse` parser and keep the last valid curve when text input is invalid.
+- ✅ Update the existing 128-value runtime table while dragging, without reloading samples. Commit map text once on mouse-up or numeric edit completion.
+- ✅ Provide a `Preview` action that plays the selected MIDI velocity through the existing layer preview path. Do not repeatedly trigger samples for every mouse-move event.
+- ✅ Resetting the layer to `Global` removes the map override exactly as Phase 5 does now.
+
+#### Curve presets
+
+- ✅ Add a preset selector with the built-in `Linear` curve and saved user curves.
+- ✅ Add `Save As`. Confirm before replacing a user preset with the same name. Preset delete, rename, import, and export are not required in this phase.
+- ✅ Store user curves in a separate `velocity_response_presets` directory, not in the existing kit-layout preset directory.
+- ✅ Keep each preset file simple:
+
+```yaml
+name: Soft response
+velocityResponse: "1:-48,64:-12,127:0"
+```
+
+- ✅ Do not add a preset schema or version system. Validate the stored definition with the same engine parser.
+- ✅ A preset stores only the response curve, not kit, instrument, articulation, or sample-level data, so it can be loaded for any layer.
+- ✅ When a preset lacks a point at one of the current articulation's sample velocities, calculate that handle from the preset curve. Adding this handle must not change the loaded curve shape.
+- ✅ Applying a preset copies its curve into the layer's map entry. The saved session must not depend on the preset file remaining on disk.
+- ✅ File loading or validation failure leaves the current curve unchanged and shows a short error in the editor.
+
+#### Engine and UI boundary
+
+- ✅ Add a read-only snapshot containing each recorded velocity, raw median relative to the hardest fitted level, fitted level relative to the hardest fitted level, calibration trim, and calibration availability.
+- ✅ Resolve measurement data from the selected source articulation. Keep Phase 5's destination articulation, source, and layer occurrence identity for applying curve edits. Do not expose mutable runtime objects to the UI.
+- ✅ Build or refresh this snapshot outside playback. Preset file I/O also stays on the message thread.
+- ✅ Keep exact named-velocity selection, calibration preprocessing, cache identity, and `Mix Gain` unchanged.
+- ✅ Keep the component reusable for the later global-response editor, but implement only the pad-popup layer editor in this phase.
+
+Verify later: sparse and dense articulations; articulation without metadata; correct recorded velocity columns and dB readouts; Global read-only mode; Make Custom; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; selected-velocity preview; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; resizing, keyboard focus, tooltips, and visual review.
+
 ### Phase 6: Add balance and timing reports
 
 - Add high-confidence overhead balance recommendations and reviewed folder updates.
@@ -521,4 +579,4 @@ Non-goals:
 - no source audio-file modification;
 - no new realtime parsing, allocation, file I/O, locking, or unbounded work.
 
-No build or tests were run for Phases 1 through 5 or the Phase 4 listening correction. The read-only Phase 1 analyzer was run. The Phase 2 measurement prototype was not run, and no sample filename or source audio was changed. Phase 2 through Phase 5 verification remains pending.
+No build or tests were run for Phases 1 through 5B or the Phase 4 listening correction. The read-only Phase 1 analyzer was run. The Phase 2 measurement prototype was not run, and no sample filename or source audio was changed. Phase 2 through Phase 5B verification remains pending.

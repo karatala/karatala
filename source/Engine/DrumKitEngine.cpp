@@ -114,6 +114,14 @@ static void normalizeInstrumentMapEntries(DrumKitEngine::InstrumentMap& instrume
 
 } // namespace DrumKitEngineIdentityMapHelpers
 
+namespace DrumKitEngineVelocityResponseHelpers {
+
+static juce::String safePresetName(const juce::String& name) {
+    return juce::File::createLegalFileName(name.trim()).replaceCharacters(":#\r\n\"", "_____").trim();
+}
+
+} // namespace DrumKitEngineVelocityResponseHelpers
+
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
     const auto defaultDataPath = DrumKitEngine().defaultDataPath;
@@ -176,6 +184,111 @@ bool DrumKitEngine::useKitLayout(juce::String name) {
     }
     LOG(Warning, "KitLayout not found: " + name);
     return false;
+}
+
+std::vector<DrumKitEngine::VelocityResponsePreset> DrumKitEngine::getVelocityResponsePresets(juce::StringArray* warnings) const {
+    std::vector<VelocityResponsePreset> presets;
+    VelocityResponsePreset linearPreset;
+    linearPreset.name = "Linear";
+    linearPreset.definition = "linear";
+    presets.push_back(std::move(linearPreset));
+
+    const auto directory = this->getUserVelocityResponsePresetsDir();
+    if (!directory.isDirectory()) return presets;
+
+    auto files = directory.findChildFiles(juce::File::findFiles, false, "*.yml;*.yaml");
+    std::sort(files.begin(), files.end(), [](const juce::File& leftFile, const juce::File& rightFile) {
+        return leftFile.getFileName().compareIgnoreCase(rightFile.getFileName()) < 0;
+    });
+
+    for (const auto& file : files) {
+        const auto root = YamlHelper::parse(file.loadFileAsString());
+        const auto name = root["name"].asString().trim();
+        const auto definition = root["velocityResponse"].asString().trim();
+        auto parsedResponse = VelocityResponse::fromDefinition(definition);
+        if (root.isNull() || name.isEmpty() || definition.isEmpty() || !parsedResponse.ok()) {
+            if (warnings != nullptr) warnings->add("Invalid velocity-response preset: " + file.getFileName());
+            continue;
+        }
+
+        VelocityResponsePreset preset;
+        preset.name = name;
+        preset.definition = parsedResponse.value.getDefinition();
+        preset.file = file;
+        preset.isUser = true;
+        presets.push_back(std::move(preset));
+    }
+
+    return presets;
+}
+
+ParseResult<DrumKitEngine::VelocityResponsePreset> DrumKitEngine::saveVelocityResponsePreset(const juce::String& name, const juce::String& definition, bool replaceExisting) const {
+    ParseResult<VelocityResponsePreset> result;
+    const auto safeName = DrumKitEngineVelocityResponseHelpers::safePresetName(name);
+    if (safeName.isEmpty() || safeName == "." || safeName == "..") return result.returnWithError("Preset name is empty");
+
+    auto parsedResponse = VelocityResponse::fromDefinition(definition);
+    if (!parsedResponse.ok()) return result.returnWithError(parsedResponse.error());
+
+    const auto directory = this->getUserVelocityResponsePresetsDir();
+    const auto createResult = directory.createDirectory();
+    if (createResult.failed()) return result.returnWithError("Could not create velocity-response preset directory");
+
+    auto file = directory.getChildFile(safeName + ".yaml");
+    const auto alternateFile = directory.getChildFile(safeName + ".yml");
+    if (!file.existsAsFile() && alternateFile.existsAsFile()) file = alternateFile;
+    if (file.existsAsFile() && !replaceExisting) return result.returnWithError("Preset already exists");
+
+    const auto yaml = "name: \"" + safeName + "\"\nvelocityResponse: \"" + parsedResponse.value.getDefinition() + "\"\n";
+    if (!file.replaceWithText(yaml)) return result.returnWithError("Could not save velocity-response preset");
+
+    result.value.name = safeName;
+    result.value.definition = parsedResponse.value.getDefinition();
+    result.value.file = file;
+    result.value.isUser = true;
+    return result;
+}
+
+DrumKitEngine::VelocityResponseSourceInfo DrumKitEngine::getSourceVelocityResponseInfo(const juce::String& sourcePath) const {
+    VelocityResponseSourceInfo result;
+    if (this->libraryManagerPtr == nullptr) return result;
+
+    juce::StringArray sourceParts;
+    sourceParts.addTokens(sourcePath.trim(), "/", "");
+    sourceParts.removeEmptyStrings();
+    if (sourceParts.size() < 2) return result;
+
+    const auto* kit = this->libraryManagerPtr->findKitById(sourceParts[0]);
+    const auto* instrument = kit != nullptr ? kit->findInstrumentById(sourceParts[1]) : nullptr;
+    if (instrument == nullptr) return result;
+
+    const KitLib::ArticulationSpec* articulation = nullptr;
+    if (sourceParts.size() >= 3) articulation = instrument->findArticulationById(sourceParts[2]);
+    else if (instrument->articulationSpecs.size() == 1) articulation = instrument->articulationSpecs.front().get();
+    if (articulation == nullptr) return result;
+
+    result.sourceFound = true;
+    std::optional<float> hardestFittedDb;
+    for (auto layerIt = articulation->velocityLayerSpecs.rbegin(); layerIt != articulation->velocityLayerSpecs.rend(); ++layerIt) {
+        if (*layerIt != nullptr && (*layerIt)->fittedSourceDb.has_value()) {
+            hardestFittedDb = (*layerIt)->fittedSourceDb;
+            break;
+        }
+    }
+
+    result.levels.reserve(articulation->velocityLayerSpecs.size());
+    for (const auto& layer : articulation->velocityLayerSpecs) {
+        if (layer == nullptr) continue;
+        VelocityResponseLevelInfo level;
+        level.velocity = layer->velocity;
+        if (hardestFittedDb.has_value() && layer->rawVelocityMedianDb.has_value()) level.rawMedianRelativeDb = *layer->rawVelocityMedianDb - *hardestFittedDb;
+        if (hardestFittedDb.has_value() && layer->fittedSourceDb.has_value()) level.fittedRelativeDb = *layer->fittedSourceDb - *hardestFittedDb;
+        level.calibrationTrimDb = layer->calibrationTrimDb;
+        level.calibrationLimited = layer->calibrationLimited;
+        result.levels.push_back(std::move(level));
+    }
+
+    return result;
 }
 
 bool DrumKitEngine::useMicLayout(juce::String name) {

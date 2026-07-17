@@ -191,6 +191,11 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
 
 }
 
+PadContextPopup::~PadContextPopup() {
+    this->dismissVelocityResponseEditor();
+    this->dismissSourcePicker();
+}
+
 void PadContextPopup::populateLayers() {
     auto mapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
@@ -715,22 +720,13 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->velocityResponseMode->setTooltip("Use the global velocity response or a custom response for this layer");
     this->layerContent.addAndMakeVisible(*layer->velocityResponseMode);
 
-    layer->velocityResponseEditor = std::make_unique<juce::TextEditor>();
-    layer->velocityResponseEditor->setMultiLine(false);
-    layer->velocityResponseEditor->setText(layer->velocityResponse.value_or(this->engine.getVelocityResponse().getDefinition()), false);
-    layer->velocityResponseEditor->setTooltip("Example: 1:-48,64:-12,127:0");
-    layer->velocityResponseEditor->setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgControl);
-    layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
-    layer->velocityResponseEditor->setColour(juce::TextEditor::outlineColourId, UITheme::Colours::transparent);
-    layer->velocityResponseEditor->setColour(juce::TextEditor::focusedOutlineColourId, UITheme::Colours::transparent);
-    layer->velocityResponseEditor->setVisible(layer->velocityResponse.has_value());
-    this->layerContent.addAndMakeVisible(*layer->velocityResponseEditor);
+    layer->velocityResponseEditButton = std::make_unique<juce::TextButton>("Edit Curve");
+    UIHelpers::configureControlButton(*layer->velocityResponseEditButton);
+    layer->velocityResponseEditButton->getProperties().set("compactText", true);
+    this->layerContent.addAndMakeVisible(*layer->velocityResponseEditButton);
     layer->velocityResponseMode->onChange = [this, layer] { this->commitVelocityResponse(layer); };
-    layer->velocityResponseEditor->onReturnKey = [this, layer] {
-        this->commitVelocityResponse(layer);
-        layer->velocityResponseEditor->giveAwayKeyboardFocus();
-    };
-    layer->velocityResponseEditor->onFocusLost = [this, layer] { this->commitVelocityResponse(layer); };
+    layer->velocityResponseEditButton->onClick = [this, layer] { this->showVelocityResponseEditor(layer); };
+    this->updateVelocityResponseDisplay(layer);
 
     this->updateSourceDisplay(layer);
 
@@ -906,31 +902,25 @@ int PadContextPopup::getSourceOccurrenceIndex(const LayerRow* layer) const {
 }
 
 void PadContextPopup::commitVelocityResponse(LayerRow* layer) {
-    if (layer == nullptr || layer->velocityResponseMode == nullptr || layer->velocityResponseEditor == nullptr) return;
+    if (layer == nullptr || layer->velocityResponseMode == nullptr || layer->velocityResponseEditButton == nullptr) return;
     const bool useCustomResponse = layer->velocityResponseMode->getSelectedId() == 2;
-    layer->velocityResponseEditor->setVisible(useCustomResponse);
     if (!useCustomResponse) {
         layer->velocityResponse.reset();
-        layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
-        layer->velocityResponseEditor->setTooltip("Example: 1:-48,64:-12,127:0");
-        this->applyLayerParametersFast(layer);
-        this->resized();
-        return;
+    } else if (!layer->velocityResponse.has_value()) {
+        layer->velocityResponse = this->engine.getVelocityResponse().getDefinition();
     }
-
-    auto parsedResponse = VelocityResponse::fromDefinition(layer->velocityResponseEditor->getText());
-    if (!parsedResponse.ok()) {
-        layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::accentWarning);
-        layer->velocityResponseEditor->setTooltip(parsedResponse.error());
-        return;
-    }
-
-    layer->velocityResponse = parsedResponse.value.getDefinition();
-    layer->velocityResponseEditor->setText(*layer->velocityResponse, false);
-    layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
-    layer->velocityResponseEditor->setTooltip("Example: 1:-48,64:-12,127:0");
+    this->updateVelocityResponseDisplay(layer);
     this->applyLayerParametersFast(layer);
+    this->flushMapText();
     this->resized();
+}
+
+void PadContextPopup::updateVelocityResponseDisplay(LayerRow* layer) {
+    if (layer == nullptr || layer->velocityResponseMode == nullptr || layer->velocityResponseEditButton == nullptr) return;
+    const bool customResponse = layer->velocityResponse.has_value();
+    layer->velocityResponseMode->setSelectedId(customResponse ? 2 : 1, juce::dontSendNotification);
+    layer->velocityResponseEditButton->setTooltip(customResponse ? "Custom: " + *layer->velocityResponse : "Global: " + this->engine.getVelocityResponse().getDefinition());
+    layer->velocityResponseEditButton->setColour(juce::TextButton::textColourOffId, customResponse ? UITheme::Colours::textAccent : UITheme::Colours::textSecondary);
 }
 
 void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
@@ -1124,9 +1114,75 @@ void PadContextPopup::flushMapText() {
     if (this->onMapTextChanged) this->onMapTextChanged(text);
 }
 
+void PadContextPopup::showVelocityResponseEditor(LayerRow* layer) {
+    if (layer == nullptr) return;
+    this->dismissSourcePicker();
+    this->dismissVelocityResponseEditor();
+
+    juce::String sourcePath = layer->sourcePathHint;
+    juce::String sourceDisplay = sourcePath.isNotEmpty() ? sourcePath : juce::String("No source selected");
+    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
+        const auto& source = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
+        sourcePath = source.fullPath();
+        sourceDisplay = source.displayText();
+    }
+
+    this->activeVelocityResponseEditor = std::make_unique<VelocityResponseEditor>(this->engine);
+    VelocityResponseEditor::LayerData data;
+    data.title = layer->artName + " | " + sourceDisplay;
+    data.customDefinition = layer->velocityResponse;
+    data.sourceInfo = this->engine.getSourceVelocityResponseInfo(sourcePath);
+    this->activeVelocityResponseEditor->setLayerData(std::move(data));
+    this->activeVelocityResponseEditor->onResponseChanged = [this, layer](const std::optional<juce::String>& definition, bool commit) {
+        layer->velocityResponse = definition;
+        this->updateVelocityResponseDisplay(layer);
+        this->applyLayerParametersFast(layer);
+        if (commit) this->flushMapText();
+    };
+    this->activeVelocityResponseEditor->onPreview = [this, layer](int velocity) {
+        this->engine.playPreviewNote(this->slotId, layer->artName, static_cast<juce::uint8>(juce::jlimit(1, 127, velocity)));
+    };
+    this->activeVelocityResponseEditor->onDone = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissVelocityResponseEditor(); });
+    };
+
+    this->velocityResponseOverlay = std::make_unique<DismissOverlay>();
+    this->velocityResponseOverlay->setDarkened(true);
+    this->velocityResponseOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissVelocityResponseEditor(); });
+    };
+    this->addAndMakeVisible(*this->velocityResponseOverlay);
+    this->velocityResponseOverlay->toFront(false);
+    this->addAndMakeVisible(*this->activeVelocityResponseEditor);
+    this->activeVelocityResponseEditor->toFront(true);
+    this->layoutVelocityResponseEditor();
+}
+
+void PadContextPopup::dismissVelocityResponseEditor() {
+    this->flushMapText();
+    if (this->velocityResponseOverlay) {
+        this->removeChildComponent(this->velocityResponseOverlay.get());
+        this->velocityResponseOverlay.reset();
+    }
+    if (this->activeVelocityResponseEditor) {
+        this->removeChildComponent(this->activeVelocityResponseEditor.get());
+        this->activeVelocityResponseEditor.reset();
+    }
+}
+
+void PadContextPopup::layoutVelocityResponseEditor() {
+    if (this->velocityResponseOverlay) this->velocityResponseOverlay->setBounds(this->getLocalBounds());
+    if (this->activeVelocityResponseEditor) {
+        const int editorWidth = this->getWidth() * 9 / 10;
+        const int editorHeight = this->getHeight() * 17 / 20;
+        this->activeVelocityResponseEditor->setBounds(this->getLocalBounds().withSizeKeepingCentre(editorWidth, editorHeight));
+    }
+}
+
 // Source picker
 
 void PadContextPopup::showSourcePicker(LayerRow* layer) {
+    this->dismissVelocityResponseEditor();
     this->dismissSourcePicker();
 
     this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
@@ -1274,7 +1330,7 @@ void PadContextPopup::resized() {
             layer->sourceDetailLabel->setBounds(sourceInner);
             layer->velocityResponseMode->setBounds(velocityResponseArea.removeFromLeft(62).reduced(0, 1));
             velocityResponseArea.removeFromLeft(3);
-            layer->velocityResponseEditor->setBounds(velocityResponseArea.reduced(0, 1));
+            layer->velocityResponseEditButton->setBounds(velocityResponseArea.reduced(0, 1));
             auto removeButtonArea = srcArea.reduced(UITheme::Spacing::xs);
             auto removeButtonRow = removeButtonArea.removeFromBottom(compactButtonSize);
             layer->removeButton->setBounds(removeButtonRow.removeFromRight(compactButtonSize));
@@ -1319,4 +1375,5 @@ void PadContextPopup::resized() {
     }
     this->layerContent.repaint();
     this->layoutSourcePicker();
+    this->layoutVelocityResponseEditor();
 }
