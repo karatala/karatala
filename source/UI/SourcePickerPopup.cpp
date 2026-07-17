@@ -104,9 +104,8 @@ void SourcePickerPopup::resized() {
 }
 
 void SourcePickerPopup::paint(juce::Graphics& g) {
-    g.fillAll(UITheme::Colours::bgPanelRaised);
-    g.setColour(UITheme::Colours::borderStrong);
-    g.drawRect(this->getLocalBounds(), 1);
+    g.setColour(UITheme::Colours::bgPanelRaised);
+    g.fillRoundedRectangle(this->getLocalBounds().toFloat(), 6.0f);
 }
 
 void SourcePickerPopup::setCategory(Category category) {

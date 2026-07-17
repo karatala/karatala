@@ -982,6 +982,8 @@ void PluginEditor::handlePresetDelete() {
 }
 
 void PluginEditor::setViewMode(ViewMode mode) {
+    if (mode != this->activeMode)
+        this->dismissPadContextPopup();
     if (mode != ViewMode::Map)
         this->dismissCrosstalkPopup();
     if (this->activeMode == ViewMode::Instrument && mode != ViewMode::Instrument)
@@ -1230,7 +1232,7 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
 
     this->padPopupOverlay = std::make_unique<DismissOverlay>();
     this->padPopupOverlay->setDarkened(true);
-    this->padPopupOverlay->setDismissOnBackgroundClick(false);
+    this->padPopupOverlay->setDismissOnBackgroundClick(true);
     this->padPopupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] {
             if (this->padContextPopup) {
