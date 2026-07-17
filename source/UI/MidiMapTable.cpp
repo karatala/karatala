@@ -52,6 +52,18 @@ MidiMapTable::MidiMapTable() {
         if (this->onCrosstalkPopupRequested) this->onCrosstalkPopupRequested();
     };
     this->addAndMakeVisible(this->crosstalkButton);
+
+    auto setupHeader = [this](juce::Label& label, const juce::String& text) {
+        label.setText(text, juce::dontSendNotification);
+        UIHelpers::configureTableHeaderLabel(label);
+        this->addAndMakeVisible(label);
+    };
+    setupHeader(this->headerInstrument1, "Instrument");
+    setupHeader(this->headerArticulation1, "Articulation");
+    setupHeader(this->headerMapping1, "MIDI Notes / Controller");
+    setupHeader(this->headerInstrument2, "Instrument");
+    setupHeader(this->headerArticulation2, "Articulation");
+    setupHeader(this->headerMapping2, "MIDI Notes / Controller");
 }
 
 void MidiMapTable::populate(KitLayout* layout) {
@@ -124,7 +136,7 @@ void MidiMapTable::buildRows() {
     auto setupNoteRow = [this, &setupCommonRow](std::unique_ptr<MapRow>& row, int rowIdx) {
         setupCommonRow(row);
         row->midiAssignmentControl = std::make_unique<MidiNoteAssignmentControl>();
-        row->midiAssignmentControl->setLayoutMetrics({ noteButtonWidth, learnButtonSize, midiControlGap, midiControlGap, 3 });
+        row->midiAssignmentControl->setLayoutMetrics({ this->noteButtonWidth, this->learnButtonSize, this->midiControlGap, this->midiControlGap, 1 });
         row->midiAssignmentControl->onNoteSelected = [this, rowIdx](int slotIdx, int note) {
             if (rowIdx < static_cast<int>(this->rows.size()))
                 this->applyNoteToSlot(*this->rows[static_cast<size_t>(rowIdx)], slotIdx, note);
@@ -182,7 +194,7 @@ void MidiMapTable::buildRows() {
             UIHelpers::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
 
             row->articulationLabel.setText(art.codeRaw, juce::dontSendNotification);
-            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textPrimary);
+            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccent);
 
             int rowIdx = static_cast<int>(this->rows.size());
             setupNoteRow(row, rowIdx);
@@ -205,7 +217,7 @@ void MidiMapTable::buildRows() {
             UIHelpers::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
 
             row->articulationLabel.setText(row->articulationCode, juce::dontSendNotification);
-            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccentSoft);
+            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccent);
 
             int rowIdx = static_cast<int>(this->rows.size());
             setupControllerRow(row, rowIdx);
@@ -356,10 +368,10 @@ void MidiMapTable::midiLearnNoteReceived(int midiNote) {
 }
 
 void MidiMapTable::paint(juce::Graphics& g) {
-    g.fillAll(UITheme::Colours::bgEditor);
+    g.fillAll(UITheme::Colours::bgApp);
 
     // Draw toolbar background
-    auto toolbarArea = getLocalBounds().removeFromTop(toolbarHeight);
+    auto toolbarArea = this->getLocalBounds().removeFromTop(this->toolbarHeight);
     g.setColour(UITheme::Colours::bgPanel);
     g.fillRect(toolbarArea);
     g.setColour(UITheme::Colours::borderSubtle);
@@ -367,10 +379,10 @@ void MidiMapTable::paint(juce::Graphics& g) {
 }
 
 void MidiMapTable::resized() {
-    auto area = getLocalBounds();
+    auto area = this->getLocalBounds();
 
     // Toolbar strip at the top (non-scrolling)
-    auto toolbarArea = area.removeFromTop(toolbarHeight);
+    auto toolbarArea = area.removeFromTop(this->toolbarHeight);
     toolbarArea.reduce(UITheme::Spacing::sm, UITheme::Spacing::xs);
     const int moreWidth = 28;
     const int saveWidth = 44;
@@ -384,25 +396,22 @@ void MidiMapTable::resized() {
     toolbarArea.removeFromRight(gap);
     const int selectorWidth = toolbarArea.getWidth() / 2;
     auto selectorArea = toolbarArea.removeFromRight(selectorWidth);
-    this->layoutLabel.setBounds(selectorArea.removeFromLeft(layoutLabelWidth));
+    this->layoutLabel.setBounds(selectorArea.removeFromLeft(this->layoutLabelWidth));
     selectorArea.removeFromLeft(gap);
     this->presetCombo.setBounds(selectorArea);
 
-    // Scrollable table below toolbar
+    auto tableHeaderArea = area.removeFromTop(this->headerHeight);
     this->viewport.setBounds(area);
 
-    const int midiControlWidth = noteButtonWidth * 2 + learnButtonSize * 2 + midiControlGap * 3;
+    const int midiControlWidth = this->noteButtonWidth * 2 + this->learnButtonSize * 2 + this->midiControlGap * 3;
     const int controllerCurveButtonWidth = 42;
-    // Single column width for one instrument group
-    const int singleColWidth = instColWidth + artColWidth + midiControlWidth + 8;
+    const int singleColWidth = this->instColWidth + this->artColWidth + midiControlWidth + 8;
 
-    // Determine if we can fit 2 columns
-    int availWidth = this->viewport.getWidth() - (this->viewport.isVerticalScrollBarShown() ? 14 : 0);
-    bool twoColumns = availWidth >= singleColWidth * 2 + columnGap;
+    const int availableWidth = this->viewport.getWidth() - this->viewport.getScrollBarThickness();
+    const bool twoColumns = availableWidth >= singleColWidth * 2 + this->columnGap;
 
-    // Split rows into columns by instrument groups
-    int totalRows = static_cast<int>(this->rows.size());
-    int halfRows = totalRows / 2;
+    const int totalRows = static_cast<int>(this->rows.size());
+    const int halfRows = totalRows / 2;
     int splitRow = halfRows;
 
     if (twoColumns && totalRows > 2) {
@@ -414,45 +423,61 @@ void MidiMapTable::resized() {
         }
     }
 
-    int col1Count = twoColumns ? splitRow : totalRows;
-    int col2Count = twoColumns ? (totalRows - splitRow) : 0;
-    int maxColRows = juce::jmax(col1Count, col2Count);
+    const int column1Count = twoColumns ? splitRow : totalRows;
+    const int column2Count = twoColumns ? (totalRows - splitRow) : 0;
+    const int maxColumnRows = juce::jmax(column1Count, column2Count);
 
-    int contentHeight = headerHeight + maxColRows * rowHeight + 8;
-    int contentWidth = twoColumns ? (singleColWidth * 2 + columnGap) : singleColWidth;
-    contentWidth = juce::jmax(contentWidth, availWidth);
+    const int contentHeight = maxColumnRows * this->rowHeight + UITheme::Spacing::sm;
+    int contentWidth = twoColumns ? (singleColWidth * 2 + this->columnGap) : singleColWidth;
+    contentWidth = juce::jmax(contentWidth, availableWidth);
 
     this->contentComponent.setBounds(0, 0, contentWidth, contentHeight);
 
-    auto layoutColumn = [&](int startIdx, int endIdx, int xOffset) {
-        int yPos = headerHeight;
+    auto layoutHeaderColumn = [this, &tableHeaderArea, midiControlWidth](juce::Label& instrumentHeader, juce::Label& articulationHeader, juce::Label& mappingHeader, int xOffset, bool visible) {
+        instrumentHeader.setVisible(visible);
+        articulationHeader.setVisible(visible);
+        mappingHeader.setVisible(visible);
+        if (!visible) return;
+
+        const int headerY = tableHeaderArea.getY();
+        instrumentHeader.setBounds(xOffset, headerY, this->instColWidth - this->midiControlGap, this->headerHeight);
+        xOffset += this->instColWidth;
+        articulationHeader.setBounds(xOffset, headerY, this->artColWidth - this->midiControlGap, this->headerHeight);
+        xOffset += this->artColWidth;
+        mappingHeader.setBounds(xOffset, headerY, midiControlWidth, this->headerHeight);
+    };
+    layoutHeaderColumn(this->headerInstrument1, this->headerArticulation1, this->headerMapping1, UITheme::Spacing::sm, true);
+    layoutHeaderColumn(this->headerInstrument2, this->headerArticulation2, this->headerMapping2, singleColWidth + this->columnGap, column2Count > 0);
+
+    auto layoutColumn = [this, midiControlWidth, controllerCurveButtonWidth](int startIdx, int endIdx, int xOffset) {
+        int yPos = 0;
         for (int idx = startIdx; idx < endIdx; ++idx) {
             auto& row = *this->rows[static_cast<size_t>(idx)];
             int xPos = xOffset;
 
-            row.instrumentLabel.setBounds(xPos, yPos, instColWidth - midiControlGap, rowHeight);
-            xPos += instColWidth;
+            row.instrumentLabel.setBounds(xPos, yPos, this->instColWidth - this->midiControlGap, this->rowHeight);
+            xPos += this->instColWidth;
 
-            row.articulationLabel.setBounds(xPos, yPos, artColWidth - midiControlGap, rowHeight);
-            xPos += artColWidth;
+            row.articulationLabel.setBounds(xPos, yPos, this->artColWidth - this->midiControlGap, this->rowHeight);
+            xPos += this->artColWidth;
 
             if (row.midiAssignmentControl)
-                row.midiAssignmentControl->setBounds(xPos, yPos, midiControlWidth, rowHeight);
+                row.midiAssignmentControl->setBounds(xPos, yPos, midiControlWidth, this->rowHeight);
             if (row.controllerCombo) {
-                auto controlArea = juce::Rectangle<int>(xPos, yPos, midiControlWidth, rowHeight).reduced(0, 3);
+                auto controlArea = juce::Rectangle<int>(xPos, yPos, midiControlWidth, this->rowHeight).reduced(0, 1);
                 if (row.curveButton) {
                     row.curveButton->setBounds(controlArea.removeFromRight(controllerCurveButtonWidth));
-                    controlArea.removeFromRight(midiControlGap);
+                    controlArea.removeFromRight(this->midiControlGap);
                 }
                 row.controllerCombo->setBounds(controlArea);
             }
 
-            yPos += rowHeight;
+            yPos += this->rowHeight;
         }
     };
 
-    layoutColumn(0, col1Count, 4);
-    if (twoColumns && col2Count > 0) {
-        layoutColumn(splitRow, totalRows, singleColWidth + columnGap);
+    layoutColumn(0, column1Count, UITheme::Spacing::sm);
+    if (twoColumns && column2Count > 0) {
+        layoutColumn(splitRow, totalRows, singleColWidth + this->columnGap);
     }
 }

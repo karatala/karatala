@@ -25,7 +25,8 @@
 - Text editors have no normal, focused, or shadow outline.
 - Standard buttons, toggles, dropdowns, and menu text use the shared 20 px control height with normal 14 px text.
   The pad-popup source picker card and compact mic-routing dropdown keep their purpose-specific sizes.
-- Instrument table headers stay outside the scrolling viewport so the header remains visible while rows scroll.
+- Instrument and Map tables use fixed 18 px headers, 22 px rows, shared 90/100 px instrument and articulation columns, and normal 12 px name text.
+- Pad-popup instrument and articulation headings use the same normal 12 px name text.
 - The pad popup is bottom-docked at 90% of the tab-content height and uses the full tab-content width. Its uncovered top strip is dark, closes the popup when clicked, and contains a large white `×` aligned left. Switching tabs also closes the popup. The popup keeps rounded top corners, square bottom corners, and no outline border.
 
 # Work Guidance

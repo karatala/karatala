@@ -7,13 +7,12 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine) {
     auto setupHeader = [this](juce::Label& label, const juce::String& text) {
         label.setText(text, juce::dontSendNotification);
-        label.setFont(UITheme::Fonts::small().boldened());
-        label.setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
-        label.setJustificationType(juce::Justification::centredLeft);
+        UIHelpers::configureTableHeaderLabel(label);
         this->addAndMakeVisible(label);
     };
     setupHeader(this->headerSlot, "Slot");
-    setupHeader(this->headerInstrument, "Instrument");
+    setupHeader(this->headerArticulation, "Articulation");
+    setupHeader(this->headerSource, "Source");
     setupHeader(this->headerResponse, "Response");
     setupHeader(this->headerTuning, "Tuning");
     setupHeader(this->headerAttack, "Attack");
@@ -139,15 +138,13 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     // Slot label
     row->slotLabel = std::make_unique<juce::Label>();
     row->slotLabel->setText(slotId, juce::dontSendNotification);
-    row->slotLabel->setFont(UITheme::Fonts::labelBold());
-    row->slotLabel->setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
+    UIHelpers::configureTableRowLabel(*row->slotLabel, UITheme::Colours::textPrimary);
     this->contentComponent.addAndMakeVisible(*row->slotLabel);
 
     // Art label
     row->artLabel = std::make_unique<juce::Label>();
     row->artLabel->setText(artName, juce::dontSendNotification);
-    row->artLabel->setFont(UITheme::Fonts::small());
-    row->artLabel->setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
+    UIHelpers::configureTableRowLabel(*row->artLabel, UITheme::Colours::textAccent);
     this->contentComponent.addAndMakeVisible(*row->artLabel);
 
     // Source button
@@ -358,8 +355,8 @@ void InstrumentConfigPanel::layoutContent() {
     this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 880), totalHeight);
 
     const int width = this->contentComponent.getWidth();
-    const int slotCol = 70;
-    const int artCol = 58;
+    const int slotCol = UITheme::Sizes::tableInstrumentColumnWidth;
+    const int artCol = UITheme::Sizes::tableArticulationColumnWidth;
     const int btnsCol = 44;
     const int flipCol = 40;
     const int responseCol = 62;
@@ -375,8 +372,8 @@ void InstrumentConfigPanel::layoutContent() {
 
     int xPos = 0;
     this->headerSlot.setBounds(xPos, 0, slotCol, headerHeight); xPos += slotCol;
-    xPos += artCol;
-    this->headerInstrument.setBounds(xPos, 0, sourceCol, headerHeight); xPos += sourceCol;
+    this->headerArticulation.setBounds(xPos, 0, artCol, headerHeight); xPos += artCol;
+    this->headerSource.setBounds(xPos, 0, sourceCol, headerHeight); xPos += sourceCol;
     this->headerResponse.setBounds(xPos, 0, responseCol, headerHeight); xPos += responseCol;
     this->headerTuning.setBounds(xPos, 0, tuningCol, headerHeight); xPos += tuningCol;
     this->headerAttack.setBounds(xPos, 0, attackCol, headerHeight); xPos += attackCol;

@@ -37,6 +37,8 @@ void configureCategoryButton(juce::TextButton& button);
 
 void configureToggleButton(juce::TextButton& button, int connectedEdges = 0);
 
+void configureTableHeaderLabel(juce::Label& label);
+
 void configureTableRowLabel(juce::Label& label,
                             juce::Colour colour = UITheme::Colours::textPrimary,
                             juce::Justification justification = juce::Justification::centredLeft);

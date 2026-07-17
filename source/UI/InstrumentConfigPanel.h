@@ -58,7 +58,7 @@ private:
 
     juce::OwnedArray<TableRow> tableRows;
 
-    juce::Label headerSlot, headerInstrument, headerResponse, headerTuning, headerAttack, headerDecay, headerGain, headerPan, headerLR, headerPhase;
+    juce::Label headerSlot, headerArticulation, headerSource, headerResponse, headerTuning, headerAttack, headerDecay, headerGain, headerPan, headerLR, headerPhase;
 
     // Popup management
     std::unique_ptr<DismissOverlay> popupOverlay;

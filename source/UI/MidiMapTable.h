@@ -50,11 +50,11 @@ public:
     std::function<void()> onCrosstalkPopupRequested;
 
 private:
-    static constexpr int rowHeight = UITheme::Spacing::rowLarge;
-    static constexpr int headerHeight = UITheme::Spacing::rowLarge + 2;
+    static constexpr int rowHeight = UITheme::Spacing::rowNormal;
+    static constexpr int headerHeight = UITheme::Spacing::rowCompact;
     static constexpr int toolbarHeight = UITheme::Sizes::standardControlHeight + UITheme::Spacing::sm;
-    static constexpr int instColWidth = UITheme::Sizes::midiMapInstCol;
-    static constexpr int artColWidth = UITheme::Sizes::midiMapArtCol;
+    static constexpr int instColWidth = UITheme::Sizes::tableInstrumentColumnWidth;
+    static constexpr int artColWidth = UITheme::Sizes::tableArticulationColumnWidth;
     static constexpr int noteButtonWidth = 84;
     static constexpr int learnButtonSize = UITheme::Sizes::standardControlHeight;
     static constexpr int midiControlGap = 3;
@@ -69,6 +69,8 @@ private:
     juce::TextButton saveButton { "Save" };
     juce::TextButton moreButton { "..." };
     juce::TextButton crosstalkButton { "Crosstalk..." };
+    juce::Label headerInstrument1, headerArticulation1, headerMapping1;
+    juce::Label headerInstrument2, headerArticulation2, headerMapping2;
     std::vector<PresetEntry> presetEntries;
 
     struct MapRow {

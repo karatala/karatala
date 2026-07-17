@@ -74,10 +74,16 @@ void configureToggleButton(juce::TextButton& button, int connectedEdges) {
     button.setConnectedEdges(connectedEdges);
 }
 
+void configureTableHeaderLabel(juce::Label& label) {
+    label.setFont(UITheme::Fonts::small().boldened());
+    label.setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
+    label.setJustificationType(juce::Justification::centredLeft);
+}
+
 void configureTableRowLabel(juce::Label& label,
                             juce::Colour colour,
                             juce::Justification justification) {
-    label.setFont(UITheme::Fonts::tableSmall());
+    label.setFont(UITheme::Fonts::normal());
     label.setColour(juce::Label::textColourId, colour);
     label.setJustificationType(justification);
 }

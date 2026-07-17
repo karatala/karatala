@@ -47,12 +47,6 @@ TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
     this->logsFolderButton.onClick = [this] { this->openLogsFolder(); };
     this->addAndMakeVisible(this->logsFolderButton);
 
-    UIHelpers::configureControlButton(this->fixMissingButton);
-    this->fixMissingButton.onClick = [this] {
-        if (this->onFixMissingInstrumentsRequested) this->onFixMissingInstrumentsRequested();
-    };
-    this->addAndMakeVisible(this->fixMissingButton);
-
     UIHelpers::configureControlButton(this->reloadLibraryButton);
     this->reloadLibraryButton.onClick = [this] {
         if (this->onReloadLibraryRequested) this->onReloadLibraryRequested();
@@ -124,8 +118,6 @@ void TroubleshootingPanel::resized() {
     this->logsFolderButton.setBounds(header.removeFromLeft(90));
     header.removeFromLeft(gap);
     this->reloadLibraryButton.setBounds(header.removeFromRight(112));
-    header.removeFromRight(gap);
-    this->fixMissingButton.setBounds(header.removeFromRight(148));
 
     area.removeFromTop(gap);
     this->importantLogsEditor.setBounds(area);

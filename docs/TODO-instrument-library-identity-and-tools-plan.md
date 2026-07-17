@@ -1,6 +1,6 @@
-# ✅ COMPLETED: TODO Instrument Library Identity And Tools Plan (Remaining note: replacement scoring may still need real-library tuning)
+# ✅ COMPLETED: TODO Instrument Library Identity And Tools Plan
 
-Status: phases 1-4 implemented; replacement scoring can still be refined after real-library testing.
+Status: identity, resolver, rename, and troubleshooting-log work is implemented. The missing-instrument fixer was later removed because its behavior was no longer wanted.
 
 ## Goal
 
@@ -8,7 +8,7 @@ Make library paths safer to rename and easier to fix.
 
 The instrument map should not depend on full folder names when the extra folder text is only secondary information. It should use the shortest unique identity for kits, instruments, and articulations. Older full paths should still resolve when possible.
 
-This plan also covers helper tools for renaming sample files after parent folders are renamed, balance support, and a small troubleshooting UI for broken instrument-map paths and logs.
+This plan also covers helper tools for renaming sample files after parent folders are renamed, balance support, and a small troubleshooting UI for logs and library reload.
 
 ## Current Facts
 
@@ -22,7 +22,7 @@ This plan also covers helper tools for renaming sample files after parent folder
 - `../source/Engine/KitLibModel.cpp` currently resolves kits by kit display name or full kit folder name.
 - `../source/Engine/KitLibModel.cpp` currently resolves instruments by exact full instrument folder name.
 - `../source/Engine/DrumKitEngine.cpp` currently reports missing kits, missing instruments, and unknown source articulations while applying a map.
-- `../source/UI/TroubleshootingPanel.*` owns the `Log Level` dropdown, log file buttons, important-log text area, library reload button, and missing-map fixer entry point.
+- `../source/UI/TroubleshootingPanel.*` owns the `Log Level` dropdown, log file buttons, important-log text area, and library reload button.
 - `../source/Config/PluginLogger.h` writes instance logs under the data path `logs` folder and keeps recent `Error`, `Warning`, and `Notice` lines for the troubleshooting UI.
 
 ## Proposed Identity Rules
@@ -202,40 +202,9 @@ Verification later:
 - Review generated `.bat` output.
 - Do not run the generated `.bat` during normal tests.
 
-## Missing Instrument Map Fixer UI
+## Removed Missing Instrument Map Fixer UI
 
-Add a troubleshooting area as a new sidebar 'FIX' page.
-
-Simple first version:
-
-- Top button row: `Important logs:`, `Log level`, `Write Log Files`, `Open Log`, `Logs Folder`, spacer, `Fix Missing Instruments`, and `Reload Library`.
-- Large read-only text area below the buttons for recent `Error`, `Warning`, and `Notice` log lines.
-- Parse current instrument map text.
-- Try to resolve each entry.
-- Show all current failing paths in one simple table: `slot`, `missing path`, and `replacement`.
-- Show the old path, for example `aasimonster2/tom-X1/center`.
-- Preselect the best replacement in each row dropdown.
-- Allow manual replacement selection.
-- Confirm applies all selected row replacements once.
-- Allow skipping a missing path by leaving that row on `Skip`.
-- After confirm, apply the updated map and recheck once.
-- `Reload Library` rescans the sample library so folder renames and file changes can be checked again without restarting.
-
-Replacement suggestion rules:
-
-1. Prefer same slot type from the active kit layout.
-2. Prefer same parsed instrument type and size.
-3. Prefer same articulation base name.
-4. Prefer close text match for kit, instrument, and articulation names.
-5. Prefer loaded library items with samples.
-
-Implemented engine/UI support:
-
-- Existing identity resolver is reused to detect failing kit, instrument, and articulation paths.
-- Replacement candidates use library `SourceItem` paths and are scored by slot type, parsed instrument type/size, articulation name, and text match.
-- Confirmed replacements rewrite only selected failing source paths and preserve params.
-- Recent `Error`, `Warning`, and `Notice` log lines are exposed for the Fix page text area.
-- Reload action rescans the library and rechecks the current map.
+The missing-instrument repair button, replacement table, scoring, and map rewrite action were later removed. The shared library identity resolver and source parsing remain because normal map loading and source selection still use them.
 
 ## Logs UI
 
@@ -314,20 +283,15 @@ Implemented:
 
 - Added `Fix` sidebar page.
 - Moved log level from config page to the Fix page.
-- Added `Write Log Files`, `Open Log`, `Logs Folder`, `Fix Missing Instruments`, and `Reload Library` controls.
+- Added `Write Log Files`, `Open Log`, `Logs Folder`, and `Reload Library` controls.
 - Added the recent `Error`, `Warning`, and `Notice` log text area.
 - Added logger accessors for current log file, logs folder, recent important lines, and session file-writing toggle.
 - Added reload library action that rescans library data and reapplies current state.
-- Added missing-map fixer table that detects failing kit/instrument/articulation paths, shows all current failures together, preselects scored replacement candidates, supports per-row skip and cancel, rewrites confirmed source paths, preserves params, and reapplies the map once.
-
-Still open:
-
-- Tune replacement scoring after testing with larger real libraries.
+- Removed the later unwanted missing-instrument repair button and its replacement workflow.
 
 Verify later:
 
 - Open UI manually.
-- Test missing instrument path replacement.
 - Test log level save/load.
 - Test open log and logs folder buttons.
 
@@ -335,7 +299,6 @@ Verify later:
 
 - Do not change audio-thread behavior.
 - Do not remove support for full folder names.
-- Do not auto-edit user maps without confirmation in the UI fixer.
 - Do not run generated rename batch files from the app.
 - Do not move all balance logic to instrument level.
 
@@ -345,5 +308,4 @@ Verify later:
 - When a changed map preset is saved, revalidation and sorting should apply.
 - Sorting is only for grouping lines by destination slot. It must not reorder layer order inside the same destination instrument/articulation slot.
 - Old full names that still resolve can be silently normalized on any map change.
-- The missing-map fixer works only on failing entries.
 - Kit identity keeps the exact license text from the folder, for example `[CC-BY-SA-whatever]`.

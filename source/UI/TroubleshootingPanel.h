@@ -13,7 +13,6 @@ public:
     void resized() override;
     void refresh();
 
-    std::function<void()> onFixMissingInstrumentsRequested;
     std::function<void()> onReloadLibraryRequested;
     std::function<void(const juce::String&)> onStatusMessage;
 
@@ -26,7 +25,6 @@ private:
     juce::ToggleButton writeLogFilesToggle { "Write Log Files" };
     juce::TextButton openLogButton { "Open Log" };
     juce::TextButton logsFolderButton { "Logs Folder" };
-    juce::TextButton fixMissingButton { "Fix Missing Instruments" };
     juce::TextButton reloadLibraryButton { "Reload Library" };
     juce::TextEditor importantLogsEditor;
 

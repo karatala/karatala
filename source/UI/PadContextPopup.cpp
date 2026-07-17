@@ -89,7 +89,7 @@ void PadContextPopup::addArticulationGroup(const juce::String& articulationName)
     auto* group = this->articulationGroups.add(new ArticulationGroup());
     group->artName = articulationName;
     group->label.setText(articulationName, juce::dontSendNotification);
-    group->label.setFont(UITheme::Fonts::labelBold());
+    group->label.setFont(UITheme::Fonts::normal());
     group->label.setColour(juce::Label::textColourId, UITheme::Colours::textAccent);
     group->label.setJustificationType(juce::Justification::centredLeft);
     this->layerContent.addAndMakeVisible(group->label);
@@ -145,7 +145,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
     // Header: "Kick"
     juce::String headerText = slot.display.isNotEmpty() ? slot.display : slot.id;
     this->slotLabel.setText(headerText, juce::dontSendNotification);
-    this->slotLabel.setFont(UITheme::Fonts::labelBold());
+    this->slotLabel.setFont(UITheme::Fonts::normal());
     this->slotLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     addAndMakeVisible(this->slotLabel);
 

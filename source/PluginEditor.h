@@ -14,7 +14,6 @@
 #include "UI/KitHomePanel.h"
 #include "UI/PadContextPopup.h"
 #include "UI/TroubleshootingPanel.h"
-#include "UI/SourceItem.h"
 #include "UI/ThemePlaygroundPanel.h"
 #include "melatonin_inspector/melatonin_inspector.h"
 
@@ -91,21 +90,6 @@ private:
     void setupThemePlaygroundMode();
     void setupInstrumentConfigMode();
     void reloadLibraryFromTroubleshooting();
-    void fixMissingInstrumentsFromTroubleshooting();
-    struct MissingInstrumentFixChoice {
-        juce::String oldPath;
-        juce::String reason;
-        juce::String slotPath;
-        juce::String wantedInstCode;
-        juce::String wantedArtCode;
-        KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
-        std::vector<int> entryIndexes;
-        std::vector<SourceItem> candidates;
-    };
-    std::vector<MissingInstrumentFixChoice> collectMissingInstrumentFixChoices(const juce::String& mapText) const;
-    std::vector<SourceItem> buildReplacementCandidates(const MissingInstrumentFixChoice& choice) const;
-    void showMissingInstrumentFixTable(const juce::String& mapText);
-    void applyFixedInstrumentMap(const juce::String& mapText, const juce::String& statusPrefix);
     void setupSidebarKnobs();
     void applyInstrumentMapFromEditor();
 
