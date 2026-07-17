@@ -53,7 +53,7 @@ private:
     // Mode: Raw - existing instrument map editor
     juce::TextEditor instrumentMapEditor;
     juce::Label instrumentMapLabel;
-    juce::TextButton applyButton { "Apply instrument map" };
+    juce::TextButton applyButton { "Apply" };
 
     // Mode: Settings
     std::unique_ptr<EngineSettingsPanel> settingsPanel;

@@ -449,7 +449,7 @@ void MidiMapTable::resized() {
     layoutHeaderColumn(this->headerInstrument1, this->headerArticulation1, this->headerMapping1, UITheme::Spacing::sm, true);
     layoutHeaderColumn(this->headerInstrument2, this->headerArticulation2, this->headerMapping2, singleColWidth + this->columnGap, column2Count > 0);
 
-    auto layoutColumn = [this, midiControlWidth, controllerCurveButtonWidth](int startIdx, int endIdx, int xOffset) {
+    auto layoutColumn = [this, midiControlWidth](int startIdx, int endIdx, int xOffset) {
         int yPos = 0;
         for (int idx = startIdx; idx < endIdx; ++idx) {
             auto& row = *this->rows[static_cast<size_t>(idx)];

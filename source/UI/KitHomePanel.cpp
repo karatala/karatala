@@ -524,7 +524,7 @@ void KitHomePanel::resized() {
     this->introLabel.setBounds(area.removeFromTop(24));
     area.removeFromTop(6);
 
-    auto placeComboRow = [&area, controlHeight, leftLabelWidth](juce::Label& label, juce::Component& combo) {
+    auto placeComboRow = [&area](juce::Label& label, juce::Component& combo) {
         auto row = area.removeFromTop(26);
         label.setBounds(row.removeFromLeft(leftLabelWidth));
         auto comboArea = row.removeFromLeft(340);
