@@ -221,7 +221,7 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
             g.fillRect(area.reduced(1, 1));
         }
 
-        g.setFont(UITheme::Fonts::popupMenu());
+        g.setFont(this->getPopupMenuFont());
         g.setColour(UITheme::Colours::textPrimary.withAlpha(isActive ? 0.85f : 0.25f));
         g.drawText(text, area.withTrimmedLeft(25).withTrimmedRight(4), juce::Justification::left);
 
@@ -249,11 +249,11 @@ void LookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int
 
 juce::Font LookAndFeel::getComboBoxFont(juce::ComboBox& comboBox) {
     if (comboBox.getProperties().getWithDefault("compactRoute", false)) return UITheme::Fonts::small();
-    return UITheme::Fonts::comboBox();
+    return UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight));
 }
 
 juce::Font LookAndFeel::getPopupMenuFont() {
-    return UITheme::Fonts::popupMenu();
+    return UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight));
 }
 
 juce::PopupMenu::Options LookAndFeel::getOptionsForComboBoxPopupMenu(juce::ComboBox& cb, juce::Label& label) {
@@ -303,9 +303,21 @@ void LookAndFeel::drawTabButton(juce::TabBarButton& button, juce::Graphics& g, b
 }
 
 juce::Font LookAndFeel::getTextButtonFont(juce::TextButton& button, int buttonHeight) {
-    if (button.getProperties().getWithDefault("compactText", false)) return UITheme::Fonts::normal();
+    juce::ignoreUnused(button);
+    const auto textHeight = juce::jmin(static_cast<float>(UITheme::Sizes::standardControlTextHeight), static_cast<float>(buttonHeight) * 0.7f);
+    return UITheme::Fonts::normal().withHeight(textHeight);
+}
 
-    // For small buttons (like +, x, ●), use a font that actually fits
-    // without JUCE's drawFittedText truncating to "..."
-    return juce::Font(juce::FontOptions(juce::jmin(14.0f, static_cast<float>(buttonHeight) * 0.7f)));
+void LookAndFeel::drawToggleButton(juce::Graphics& g, juce::ToggleButton& button, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) {
+    const auto font = UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight));
+    const auto tickWidth = font.getHeight() * 1.1f;
+
+    this->drawTickBox(g, button, 4.0f, (static_cast<float>(button.getHeight()) - tickWidth) * 0.5f, tickWidth, tickWidth,
+                      button.getToggleState(), button.isEnabled(), shouldDrawButtonAsHighlighted, shouldDrawButtonAsDown);
+
+    g.setColour(button.findColour(juce::ToggleButton::textColourId));
+    g.setFont(font);
+    if (!button.isEnabled()) g.setOpacity(0.5f);
+
+    g.drawFittedText(button.getButtonText(), button.getLocalBounds().withTrimmedLeft(juce::roundToInt(tickWidth) + 10).withTrimmedRight(2), juce::Justification::centredLeft, 10);
 }

@@ -222,15 +222,15 @@ void CrosstalkCalibrationPopup::paint(juce::Graphics& graphics) {
 
 void CrosstalkCalibrationPopup::resized() {
     auto area = this->getLocalBounds().reduced(12);
-    auto titleRow = area.removeFromTop(26);
-    this->closeButton.setBounds(titleRow.removeFromRight(24));
+    auto titleRow = area.removeFromTop(UITheme::Sizes::standardControlHeight);
+    this->closeButton.setBounds(titleRow.removeFromRight(UITheme::Sizes::standardControlHeight));
     titleRow.removeFromRight(6);
     this->titleLabel.setBounds(titleRow);
     area.removeFromTop(8);
     this->statusLabel.setBounds(area.removeFromTop(46));
     area.removeFromTop(8);
 
-    auto buttonRow = area.removeFromTop(32);
+    auto buttonRow = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->startSkipButton.setBounds(buttonRow.removeFromLeft(110));
     buttonRow.removeFromLeft(8);
     this->stopButton.setBounds(buttonRow.removeFromLeft(90));

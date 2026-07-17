@@ -108,8 +108,6 @@ namespace Fonts {
     inline juce::Font small() { return juce::Font(juce::FontOptions(9.0f)); }
     inline juce::Font table() { return juce::Font(juce::FontOptions(10.0f)); }
     inline juce::Font tableSmall() { return table().withHeight(11.0f); }
-    inline juce::Font comboBox() { return juce::Font(juce::FontOptions(12.0f)); }
-    inline juce::Font popupMenu() { return comboBox(); }
     inline juce::Font mono() { return juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName())); }
     inline juce::Font sectionTitle() { return juce::Font(juce::FontOptions(13.0f).withStyle("Bold")); }
 }
@@ -128,8 +126,10 @@ namespace Sizes {
     constexpr int statusBarHeight = 24;
     constexpr int modeButton = 44;
     constexpr int sidebarKnob = 40;
-    constexpr int midiLearnButton = 22;
-    constexpr int compactButton = 18;
+    constexpr int standardControlHeight = 20;
+    constexpr int standardControlTextHeight = 14;
+    constexpr int midiLearnButton = standardControlHeight;
+    constexpr int compactButton = standardControlHeight;
     constexpr int sliderTextBoxW = 40;
     constexpr int sliderTextBoxH = 20;
     constexpr int compactPotTextBoxW = 38;

@@ -9,13 +9,15 @@
 TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine) {
     this->titleLabel.setText("Important logs:", juce::dontSendNotification);
-    this->titleLabel.setFont(UITheme::Fonts::labelBoldMedium());
+    this->titleLabel.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->titleLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->titleLabel.setJustificationType(juce::Justification::centredLeft);
     this->addAndMakeVisible(this->titleLabel);
 
     this->logLevelLabel.setText("Log level:", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->logLevelLabel, juce::Justification::centredLeft, UITheme::Colours::textSecondary);
+    this->logLevelLabel.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
+    this->logLevelLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+    this->logLevelLabel.setJustificationType(juce::Justification::centredLeft);
     this->addAndMakeVisible(this->logLevelLabel);
 
     UIHelpers::configureComboBox(this->logLevelCombo);
@@ -59,6 +61,7 @@ TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
 
     UIHelpers::configureMonoTextEditor(this->importantLogsEditor, UITheme::Colours::textSecondary, true);
     UIHelpers::configureBorderlessTextEditor(this->importantLogsEditor);
+    this->importantLogsEditor.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->importantLogsEditor.setReadOnly(true);
     this->importantLogsEditor.setCaretVisible(false);
     this->importantLogsEditor.setTextToShowWhenEmpty("No error, warning, or notice lines in this session.", UITheme::Colours::textMuted);
@@ -106,24 +109,24 @@ void TroubleshootingPanel::sendStatus(const juce::String& message) {
 
 void TroubleshootingPanel::resized() {
     auto area = this->getLocalBounds().reduced(UITheme::Spacing::md);
-    auto header = area.removeFromTop(32);
+    auto header = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     const int gap = UITheme::Spacing::sm;
 
     this->titleLabel.setBounds(header.removeFromLeft(104));
     header.removeFromLeft(gap);
     this->logLevelLabel.setBounds(header.removeFromLeft(66));
-    this->logLevelCombo.setBounds(header.removeFromLeft(92).reduced(0, 3));
+    this->logLevelCombo.setBounds(header.removeFromLeft(92));
     header.removeFromLeft(gap);
     this->writeLogFilesToggle.setBounds(header.removeFromLeft(128));
     header.removeFromLeft(gap);
-    this->openLogButton.setBounds(header.removeFromLeft(78).reduced(0, 3));
+    this->openLogButton.setBounds(header.removeFromLeft(78));
     header.removeFromLeft(gap);
-    this->logsFolderButton.setBounds(header.removeFromLeft(90).reduced(0, 3));
+    this->logsFolderButton.setBounds(header.removeFromLeft(90));
     header.removeFromLeft(gap);
-    this->reloadLibraryButton.setBounds(header.removeFromRight(112).reduced(0, 3));
+    this->reloadLibraryButton.setBounds(header.removeFromRight(112));
     header.removeFromRight(gap);
-    this->fixMissingButton.setBounds(header.removeFromRight(148).reduced(0, 3));
+    this->fixMissingButton.setBounds(header.removeFromRight(148));
 
-    area.removeFromTop(UITheme::Spacing::md);
+    area.removeFromTop(gap);
     this->importantLogsEditor.setBounds(area);
 }

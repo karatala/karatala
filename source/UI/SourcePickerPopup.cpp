@@ -10,7 +10,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     : allItems(items)
     , catalog(instrumentCatalog) {
     UIHelpers::configureBorderlessTextEditor(this->filterField);
-    this->filterField.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+    this->filterField.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
     this->filterField.onTextChange = [this] { this->queueRebuildFiltered(); };
     this->addAndMakeVisible(this->filterField);
@@ -299,7 +299,7 @@ void SourcePickerPopup::KindListModel::paintListBoxItem(int rowNumber, juce::Gra
         text = kindLabel(this->owner.kindEntries[static_cast<size_t>(rowNumber - 1)]);
 
     g.setColour(selected ? UITheme::Colours::textPrimary : UITheme::Colours::textSecondary);
-    g.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+    g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     g.drawText(text, 6, 0, width - 10, height, juce::Justification::centredLeft);
 }
 
@@ -327,7 +327,7 @@ void SourcePickerPopup::ArticulationListModel::paintListBoxItem(int rowNumber, j
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.articulationEntries.size())) return;
     g.fillAll(rowIsSelected ? UITheme::Colours::listSelection : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd));
     g.setColour(rowIsSelected ? UITheme::Colours::textPrimary : UITheme::Colours::textSecondary);
-    g.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+    g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     g.drawText(this->owner.articulationEntries[static_cast<size_t>(rowNumber)], 6, 0, width - 10, height, juce::Justification::centredLeft);
 }
 
@@ -350,7 +350,7 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
     if (this->owner.filteredEntries.empty()) {
         g.fillAll(UITheme::Colours::bgControlAlt);
         g.setColour(UITheme::Colours::textMuted);
-        g.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+        g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
 
         const auto emptyMessage = this->owner.allItems.empty()
             ? juce::String("No sources available")
@@ -361,7 +361,7 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
 
         g.drawText(emptyMessage, 8, 1, width - 16, height / 2, juce::Justification::centredLeft);
         g.setColour(UITheme::Colours::textMuted.withAlpha(0.75f));
-        g.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+        g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
         g.drawText(emptyHint, 8, height / 2 - 1, width - 16, height / 2, juce::Justification::centredLeft);
         return;
     }
@@ -379,7 +379,7 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
     g.fillAll(rowIsSelected ? UITheme::Colours::listSelection : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd));
 
     g.setColour(UITheme::Colours::textPrimary);
-    g.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+    g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     g.drawText(item.displayText(), 4, 0, textWidth - 8, height, juce::Justification::centredLeft);
 
     if (!showActions) return;
@@ -396,7 +396,7 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
     g.setColour(UITheme::Colours::borderMid);
     g.fillRoundedRectangle(btnArea.toFloat(), 2.0f);
     g.setColour(UITheme::Colours::textPrimary.withAlpha(0.8f));
-    g.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+    g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     g.drawText(juce::String::charToString(0x2713), btnArea, juce::Justification::centred);
 }
 

@@ -27,6 +27,7 @@ public:
         this->compactParameterControl.setLabelVisible(true);
 
         this->midiNoteAssignmentControl.setNotes(36, 38);
+        this->midiNoteAssignmentControl.setLayoutMetrics({ 60, UITheme::Sizes::standardControlHeight, 0, 6, 0 });
         this->midiNoteAssignmentControl.onLearnButtonClicked = [this](int slotIdx) {
             this->midiNoteAssignmentControl.setLearningSlot(this->midiNoteAssignmentControl.getLearningSlot() == slotIdx ? -1 : slotIdx);
         };
@@ -63,7 +64,7 @@ public:
         this->midiCombo.addItemList({ "1 / Modulation Wheel", "7 / Channel Volume", "11 / Expression", "64 / Sustain" }, 1);
         this->midiCombo.setSelectedId(3, juce::dontSendNotification);
 
-        this->filterEditor.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+        this->filterEditor.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
         this->filterEditor.setText("Source filter TextEditor", false);
         this->filterEditor.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
 
@@ -97,7 +98,8 @@ public:
             { "ParameterPot", "Shared vertical rotary control with caption and editable value", &this->parameterPot, 92, 110 },
             { "HorizontalKnobBrick", "Horizontal ParameterPot layout used in compact rows", &this->horizontalKnobBrick, 68, 230 },
             { "CompactParameterControl", "Compact value, label, track, and accent fill", &this->compactParameterControl, 56, 170 },
-            { "MidiNoteAssignmentControl", "Two note buttons and two MIDI learn buttons", &this->midiNoteAssignmentControl, 50, this->midiNoteAssignmentControl.getPreferredWidth() },
+            { "MidiNoteAssignmentControl", "Two note buttons and two MIDI learn buttons", &this->midiNoteAssignmentControl, 50,
+              this->midiNoteAssignmentControl.getPreferredWidth(), UITheme::Sizes::standardControlHeight },
             { "DrumPadGrid / DrumPad", "Empty pad state. Instrument colors are shown in the color section", &this->drumPadGrid, 112, 430 },
             { "MidiMapTable", "Map toolbar and layout-selector styling without engine data", &this->midiMapTable, 100, 650 },
             { "MidiNotePicker", "Full note picker used by MidiNoteAssignmentControl callouts", &this->midiNotePicker, 326, 380 },
@@ -105,27 +107,29 @@ public:
         };
 
         this->standardDemos = {
-            { "juce::Label", "Direct caption label styled by UIHelpers", &this->standardLabel, 40, 420 },
-            { "juce::TextButton / control", "Normal project button style and TooltipWindow target", &this->controlButton, 42, 220 },
-            { "juce::TextButton / category", "Connected category selector style", &this->categoryButton, 42, 220 },
-            { "juce::TextButton / toggle", "Clicking toggle style in its active state", &this->toggleTextButton, 42, 220 },
-            { "juce::ToggleButton", "JUCE toggle text uses inherited JUCE font sizing", &this->standardToggle, 42, 260 },
-            { "juce::ComboBox / standard", "Standard list selector", &this->standardCombo, 44, 340 },
-            { "juce::ComboBox / layout", "Wide single-column layout selector popup", &this->layoutCombo, 44, 340 },
-            { "juce::ComboBox / MIDI", "Four-column popup mode for MIDI controllers", &this->midiCombo, 44, 340 },
-            { "juce::TextEditor / filter", "Source-picker filter style with a 14 px font override", &this->filterEditor, 46, 420 },
-            { "juce::TextEditor / mono", "Raw map and troubleshooting log editor style", &this->monoEditor, 78, 520 },
+            { "juce::Label", "Direct caption label styled by UIHelpers", &this->standardLabel, 40, 420, UITheme::Sizes::standardControlHeight },
+            { "juce::TextButton / control", "Standard 20 px project button", &this->controlButton, 42, 220, UITheme::Sizes::standardControlHeight },
+            { "juce::TextButton / category", "Standard 20 px connected category selector", &this->categoryButton, 42, 220, UITheme::Sizes::standardControlHeight },
+            { "juce::TextButton / toggle", "Standard 20 px active toggle", &this->toggleTextButton, 42, 220, UITheme::Sizes::standardControlHeight },
+            { "juce::ToggleButton", "Standard 20 px toggle with normal 14 px text", &this->standardToggle, 42, 260, UITheme::Sizes::standardControlHeight },
+            { "juce::ComboBox / standard", "Standard 20 px list selector", &this->standardCombo, 44, 340, UITheme::Sizes::standardControlHeight },
+            { "juce::ComboBox / layout", "Standard 20 px layout selector", &this->layoutCombo, 44, 340, UITheme::Sizes::standardControlHeight },
+            { "juce::ComboBox / MIDI", "Standard 20 px MIDI controller selector", &this->midiCombo, 44, 340, UITheme::Sizes::standardControlHeight },
+            { "juce::TextEditor / filter", "Source-picker filter with normal 14 px text", &this->filterEditor, 46, 420, UITheme::Sizes::standardControlHeight },
+            { "juce::TextEditor / mono", "Monospaced calibration and compact value editor style", &this->monoEditor, 78, 520 },
             { "juce::ListBox", "List rows used by SourcePickerPopup", &this->listBox, 108, 420 },
-            { "juce::PopupMenu", "Temporary menu styled by LookAndFeel", &this->popupMenuButton, 42, 220 },
+            { "juce::PopupMenu", "Temporary menu opened by a standard 20 px button", &this->popupMenuButton, 42, 220, UITheme::Sizes::standardControlHeight },
         };
 
         this->fontUsages = {
             { "normal()", UITheme::Fonts::normal(), "Compact button text, layer source details, and normal drum-pad labels" },
+            { "normal() at 14 px", UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)),
+              "Standard buttons, toggles, dropdowns, menus, source lists, Raw, and Fix" },
             { "normal().boldened()", UITheme::Fonts::normal().boldened(), "Drum-pad articulation cell labels" },
             { "label()", UITheme::Fonts::label(), "Editable values below ParameterPot controls" },
             { "label() at 13 px", UITheme::Fonts::label().withHeight(13.0f), "Editable values inside HorizontalKnobBrick controls" },
             { "labelBold()", UITheme::Fonts::labelBold(), "Instrument slots, articulation groups, and popup headings" },
-            { "labelBoldMedium()", UITheme::Fonts::labelBoldMedium(), "CompactParameterControl values, Raw title, Fix title, and Kit intro" },
+            { "labelBoldMedium()", UITheme::Fonts::labelBoldMedium(), "CompactParameterControl values and Kit intro" },
             { "labelBold() at 10-15 px", UITheme::Fonts::labelBold().withHeight(15.0f), "Responsive DrumPad instrument names" },
             { "labelBold() at 15 px", UITheme::Fonts::labelBold().withHeight(15.0f), "Crosstalk calibration status" },
             { "small()", UITheme::Fonts::small(), "Control captions, CompactParameterControl labels, warnings, and MIDI headers" },
@@ -133,16 +137,11 @@ public:
             { "small() at 11 px", UITheme::Fonts::small().withHeight(11.0f), "Empty DrumPad label" },
             { "table()", UITheme::Fonts::table(), "Base of tableSmall(). No direct UI use found" },
             { "tableSmall()", UITheme::Fonts::tableSmall(), "Table rows and both StatusBar text fields" },
-            { "comboBox()", UITheme::Fonts::comboBox(), "ComboBox values and PopupMenu items" },
-            { "comboBox() at 14 px", UITheme::Fonts::comboBox().withHeight(14.0f), "SourcePickerPopup filter, categories, list rows, and messages" },
-            { "popupMenu()", UITheme::Fonts::popupMenu(), "PopupMenu items. Currently the same size as comboBox()" },
-            { "mono()", UITheme::Fonts::mono(), "Raw instrument map, balance fields, and troubleshooting logs" },
+            { "mono()", UITheme::Fonts::mono(), "Balance fields, MIDI note names, and calibration profiles" },
             { "mono() at 10.5 px", UITheme::Fonts::mono().withHeight(10.5f), "MidiNotePicker note names and numbers" },
             { "sectionTitle()", UITheme::Fonts::sectionTitle(), "Kit assignment heading and shared section labels" },
             { "sectionTitle() at 16 px", UITheme::Fonts::sectionTitle().withHeight(16.0f), "Crosstalk calibration title" },
             { "sectionTitle() at 18 px", UITheme::Fonts::sectionTitle().withHeight(18.0f), "Kit page title" },
-            { "TextButton automatic", juce::Font(juce::FontOptions(14.0f)), "Normal TextButton labels use a dynamic size up to 14 px" },
-            { "ToggleButton automatic", juce::Font(juce::FontOptions(15.0f)), "ToggleButton labels use a dynamic size up to 15 px" },
             { "Graphics default", juce::Font(juce::FontOptions(14.0f)), "Large rotary-control tick labels when enough space is available" },
             { "TooltipWindow default", juce::Font(juce::FontOptions(13.0f).withStyle("Bold")), "TooltipWindow text inherited from JUCE LookAndFeel_V4" },
             { "AlertWindow title", juce::Font(juce::FontOptions(18.0f).withStyle("Bold")), "AlertWindow titles inherited from JUCE LookAndFeel_V4" },
@@ -361,6 +360,7 @@ private:
         juce::Component* component = nullptr;
         int rowHeight = 0;
         int preferredWidth = 0;
+        int preferredHeight = 0;
     };
 
     struct FontUsage {
@@ -388,7 +388,7 @@ private:
             const auto background = rowIsSelected ? UITheme::Colours::listSelection : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd);
             graphics.fillAll(background);
             graphics.setColour(UITheme::Colours::textPrimary);
-            graphics.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
+            graphics.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
             graphics.drawText("SourcePickerPopup list row " + juce::String(rowNumber + 1), 8, 0, width - 16, height, juce::Justification::centredLeft);
         }
     };
@@ -476,7 +476,8 @@ private:
             const int descriptionWidth = juce::jlimit(190, 310, componentArea.getWidth() * 2 / 5);
             componentArea.removeFromLeft(descriptionWidth);
             const int componentWidth = juce::jmin(demo.preferredWidth, componentArea.getWidth());
-            demo.component->setBounds(componentArea.withSizeKeepingCentre(componentWidth, componentArea.getHeight()));
+            const int componentHeight = demo.preferredHeight > 0 ? juce::jmin(demo.preferredHeight, componentArea.getHeight()) : componentArea.getHeight();
+            demo.component->setBounds(componentArea.withSizeKeepingCentre(componentWidth, componentHeight));
         }
     }
 

@@ -351,9 +351,9 @@ void EngineSettingsPanel::resized() {
     const int controlCellW = 110;
     const int controlCellH = 44;
     const int choiceCellW = 150;
-    const int choiceCellH = 54;
+    const int choiceCellH = 40;
     const int groupLabelHeight = 22;
-    const int generalContentHeight = 168;
+    const int generalContentHeight = 136;
     const int gap = 4;
 
     const int availableWidth = juce::jmax(contentWidth, 400) - 16; // 8px padding each side
@@ -407,8 +407,8 @@ void EngineSettingsPanel::resized() {
             auto& entry = this->choices[static_cast<size_t>(idx)];
             const int cellX = area.getX() + column * choiceCellW;
             entry->label.setBounds(cellX, rowStartY, choiceCellW - 4, 14);
-            entry->comboBox.setBounds(cellX, rowStartY + 16, choiceCellW - 24, 28);
-            entry->resetButton.setBounds(cellX + choiceCellW - 20, rowStartY + 23, 16, 14);
+            entry->comboBox.setBounds(cellX, rowStartY + 16, choiceCellW - 24, UITheme::Sizes::standardControlHeight);
+            entry->resetButton.setBounds(cellX + choiceCellW - UITheme::Sizes::standardControlHeight, rowStartY + 16, UITheme::Sizes::standardControlHeight, UITheme::Sizes::standardControlHeight);
 
             ++column;
             if (column >= choicesPerRow) {
@@ -421,11 +421,11 @@ void EngineSettingsPanel::resized() {
 
     placeGroupLabel(this->generalGroupLabel);
     auto generalArea = area.removeFromTop(generalContentHeight);
-    auto libraryRow = generalArea.removeFromTop(28);
+    auto libraryRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->libraryPathLabel.setBounds(libraryRow.removeFromLeft(110));
-    this->browseLibraryButton.setBounds(libraryRow.removeFromRight(86).reduced(0, 2));
+    this->browseLibraryButton.setBounds(libraryRow.removeFromRight(86));
     libraryRow.removeFromRight(gap);
-    this->libraryPathEditor.setBounds(libraryRow.reduced(0, 2));
+    this->libraryPathEditor.setBounds(libraryRow);
     generalArea.removeFromTop(gap);
 
     auto cacheRow = generalArea.removeFromTop(40);
@@ -433,19 +433,19 @@ void EngineSettingsPanel::resized() {
     this->cacheLimitControl->setBounds(cacheRow.removeFromLeft(170));
     generalArea.removeFromTop(gap);
 
-    auto kitLayoutRow = generalArea.removeFromTop(28);
+    auto kitLayoutRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->kitLayoutLabel.setBounds(kitLayoutRow.removeFromLeft(110));
-    this->kitLayoutCombo.setBounds(kitLayoutRow.removeFromLeft(340).reduced(0, 2));
+    this->kitLayoutCombo.setBounds(kitLayoutRow.removeFromLeft(340));
     generalArea.removeFromTop(gap);
 
-    auto micLayoutRow = generalArea.removeFromTop(28);
+    auto micLayoutRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->micLayoutLabel.setBounds(micLayoutRow.removeFromLeft(110));
-    this->micLayoutCombo.setBounds(micLayoutRow.removeFromLeft(340).reduced(0, 2));
+    this->micLayoutCombo.setBounds(micLayoutRow.removeFromLeft(340));
     generalArea.removeFromTop(gap);
 
-    auto defaultsRow = generalArea.removeFromTop(28);
+    auto defaultsRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
     defaultsRow.removeFromLeft(110);
-    this->saveLayoutDefaultsButton.setBounds(defaultsRow.removeFromLeft(160).reduced(0, 2));
+    this->saveLayoutDefaultsButton.setBounds(defaultsRow.removeFromLeft(160));
     defaultsRow.removeFromLeft(8);
     this->layoutDefaultsWarningLabel.setBounds(defaultsRow);
     area.removeFromTop(gap);

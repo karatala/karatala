@@ -10,7 +10,7 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
         label.setFont(UITheme::Fonts::small().boldened());
         label.setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
         label.setJustificationType(juce::Justification::centredLeft);
-        this->contentComponent.addAndMakeVisible(label);
+        this->addAndMakeVisible(label);
     };
     setupHeader(this->headerSlot, "Slot");
     setupHeader(this->headerInstrument, "Instrument");
@@ -25,7 +25,7 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
 }
 
 void InstrumentConfigPanel::resized() {
-    this->layoutViewportToBounds();
+    this->viewport.setBounds(this->getLocalBounds().withTrimmedTop(headerHeight));
     this->layoutContent();
     this->layoutPopup();
 }
@@ -45,16 +45,6 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->rebuildSourceItems();
     this->tableRows.clear();
     this->contentComponent.removeAllChildren();
-    this->contentComponent.addAndMakeVisible(this->headerSlot);
-    this->contentComponent.addAndMakeVisible(this->headerInstrument);
-    this->contentComponent.addAndMakeVisible(this->headerResponse);
-    this->contentComponent.addAndMakeVisible(this->headerTuning);
-    this->contentComponent.addAndMakeVisible(this->headerAttack);
-    this->contentComponent.addAndMakeVisible(this->headerDecay);
-    this->contentComponent.addAndMakeVisible(this->headerGain);
-    this->contentComponent.addAndMakeVisible(this->headerPan);
-    this->contentComponent.addAndMakeVisible(this->headerLR);
-    this->contentComponent.addAndMakeVisible(this->headerPhase);
     this->populated = true;
 
     auto* layout = this->engine.getKitLayout();
@@ -363,8 +353,7 @@ void InstrumentConfigPanel::layoutPopup() {
 void InstrumentConfigPanel::layoutContent() {
     const int contentWidth = this->viewport.getWidth() - this->viewport.getScrollBarThickness();
     const int totalRows = this->tableRows.size();
-    const int headerH = UITheme::Spacing::rowCompact;
-    const int totalHeight = headerH + totalRows * rowHeight + 4;
+    const int totalHeight = totalRows * rowHeight + UITheme::Spacing::sm;
 
     this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 880), totalHeight);
 
@@ -385,20 +374,20 @@ void InstrumentConfigPanel::layoutContent() {
     const int panCol = parameterArea - tuningCol - attackCol - decayCol - gainCol;
 
     int xPos = 0;
-    this->headerSlot.setBounds(xPos, 0, slotCol, headerH); xPos += slotCol;
+    this->headerSlot.setBounds(xPos, 0, slotCol, headerHeight); xPos += slotCol;
     xPos += artCol;
-    this->headerInstrument.setBounds(xPos, 0, sourceCol, headerH); xPos += sourceCol;
-    this->headerResponse.setBounds(xPos, 0, responseCol, headerH); xPos += responseCol;
-    this->headerTuning.setBounds(xPos, 0, tuningCol, headerH); xPos += tuningCol;
-    this->headerAttack.setBounds(xPos, 0, attackCol, headerH); xPos += attackCol;
-    this->headerDecay.setBounds(xPos, 0, decayCol, headerH); xPos += decayCol;
-    this->headerGain.setBounds(xPos, 0, gainCol, headerH); xPos += gainCol;
-    this->headerPan.setBounds(xPos, 0, panCol, headerH); xPos += panCol;
-    this->headerLR.setBounds(xPos, 0, flipCol, headerH); xPos += flipCol;
-    this->headerPhase.setBounds(xPos, 0, flipCol, headerH);
+    this->headerInstrument.setBounds(xPos, 0, sourceCol, headerHeight); xPos += sourceCol;
+    this->headerResponse.setBounds(xPos, 0, responseCol, headerHeight); xPos += responseCol;
+    this->headerTuning.setBounds(xPos, 0, tuningCol, headerHeight); xPos += tuningCol;
+    this->headerAttack.setBounds(xPos, 0, attackCol, headerHeight); xPos += attackCol;
+    this->headerDecay.setBounds(xPos, 0, decayCol, headerHeight); xPos += decayCol;
+    this->headerGain.setBounds(xPos, 0, gainCol, headerHeight); xPos += gainCol;
+    this->headerPan.setBounds(xPos, 0, panCol, headerHeight); xPos += panCol;
+    this->headerLR.setBounds(xPos, 0, flipCol, headerHeight); xPos += flipCol;
+    this->headerPhase.setBounds(xPos, 0, flipCol, headerHeight);
 
     juce::String lastSlotId, lastArtName;
-    int yPos = headerH;
+    int yPos = 0;
 
     for (int idx = 0; idx < this->tableRows.size(); ++idx) {
         auto* row = this->tableRows[idx];

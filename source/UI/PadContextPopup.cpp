@@ -156,7 +156,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
     addAndMakeVisible(this->midiHeaderLabel);
 
     this->midiAssignmentControl = std::make_unique<MidiNoteAssignmentControl>();
-    this->midiAssignmentControl->setLayoutMetrics({ 60, 18, 0, 6, 2 });
+    this->midiAssignmentControl->setLayoutMetrics({ 60, UITheme::Sizes::standardControlHeight, 0, 6, 0 });
     this->midiAssignmentControl->onNoteSelected = [this](int slotIdx, int note) {
         this->applyNoteToSlot(slotIdx, note);
     };
@@ -714,6 +714,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
 
     layer->velocityResponseMode = std::make_unique<juce::ComboBox>();
+    UIHelpers::configureComboBox(*layer->velocityResponseMode);
     layer->velocityResponseMode->addItem("Global", 1);
     layer->velocityResponseMode->addItem("Custom", 2);
     layer->velocityResponseMode->setSelectedId(layer->velocityResponse.has_value() ? 2 : 1, juce::dontSendNotification);
@@ -1286,7 +1287,7 @@ void PadContextPopup::resized() {
     // Layer rows - single row per layer (compact parameter controls):
     // [Source Card with hover delete] | [Tuning|Attack|Decay|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
     const int potW = 44;
-    const int potH = 36;
+    const int potH = 44;
     const int flipColW = 26;
     const int sourceW = UITheme::Sizes::sourceCardWidth;
     const int routingComboH = 14;
@@ -1326,11 +1327,11 @@ void PadContextPopup::resized() {
             auto srcArea = rowArea.removeFromLeft(sourceW);
             layer->sourceButton->setBounds(srcArea);
             auto sourceInner = srcArea.reduced(6, 2).withTrimmedRight(compactButtonSize + UITheme::Spacing::sm);
-            auto velocityResponseArea = sourceInner.removeFromBottom(18);
+            auto velocityResponseArea = sourceInner.removeFromBottom(UITheme::Sizes::standardControlHeight);
             layer->sourceDetailLabel->setBounds(sourceInner);
-            layer->velocityResponseMode->setBounds(velocityResponseArea.removeFromLeft(62).reduced(0, 1));
+            layer->velocityResponseMode->setBounds(velocityResponseArea.removeFromLeft(62));
             velocityResponseArea.removeFromLeft(3);
-            layer->velocityResponseEditButton->setBounds(velocityResponseArea.reduced(0, 1));
+            layer->velocityResponseEditButton->setBounds(velocityResponseArea);
             auto removeButtonArea = srcArea.reduced(UITheme::Spacing::xs);
             auto removeButtonRow = removeButtonArea.removeFromBottom(compactButtonSize);
             layer->removeButton->setBounds(removeButtonRow.removeFromRight(compactButtonSize));
@@ -1348,8 +1349,8 @@ void PadContextPopup::resized() {
             layer->gainPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
             layer->panPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
             auto flipArea = mainInner.removeFromLeft(flipColW).withHeight(potH);
-            layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 4));
-            layer->flipPhaseButton->setBounds(flipArea.reduced(2, 4));
+            layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 1));
+            layer->flipPhaseButton->setBounds(flipArea.reduced(2, 1));
 
             rowArea.removeFromLeft(groupGap);
 

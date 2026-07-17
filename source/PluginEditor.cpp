@@ -148,15 +148,15 @@ public:
 
         for (int rowIndex = 0; rowIndex < static_cast<int>(this->rows.size()); ++rowIndex) {
             auto rowArea = juce::Rectangle<int>(0, rowIndex * rowHeight, contentWidth, rowHeight).reduced(0, 2);
-            this->slotLabels[rowIndex]->setBounds(rowArea.removeFromLeft(slotWidth).reduced(0, 1));
-            this->missingLabels[rowIndex]->setBounds(rowArea.removeFromLeft(missingWidth).reduced(0, 1));
-            this->replacementCombos[rowIndex]->setBounds(rowArea.reduced(0, 1));
+            this->slotLabels[rowIndex]->setBounds(rowArea.removeFromLeft(slotWidth));
+            this->missingLabels[rowIndex]->setBounds(rowArea.removeFromLeft(missingWidth));
+            this->replacementCombos[rowIndex]->setBounds(rowArea);
         }
     }
 
 private:
     static constexpr int headerHeight = 22;
-    static constexpr int rowHeight = 30;
+    static constexpr int rowHeight = UITheme::Sizes::standardControlHeight + UITheme::Spacing::sm;
 
     std::vector<MissingInstrumentFixTableRow> rows;
     juce::Label slotHeader;
@@ -335,12 +335,13 @@ void PluginEditor::setupRawMode() {
     this->addChildComponent(this->applyButton);
 
     this->instrumentMapLabel.setText("Instrument Map", juce::dontSendNotification);
-    this->instrumentMapLabel.setFont(UITheme::Fonts::labelBoldMedium());
+    this->instrumentMapLabel.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->instrumentMapLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
 
     UIHelpers::configureMonoTextEditor(this->instrumentMapEditor, UITheme::Colours::textPrimary, true);
     UIHelpers::configureBorderlessTextEditor(this->instrumentMapEditor);
+    this->instrumentMapEditor.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
     this->instrumentMapEditor.setTextToShowWhenEmpty("kick1/center:MyKit/kick-24/center\nsnare1/center:MyKit/snare-14/center:tuning=-20;attack=25;decay=250", UITheme::Colours::textMuted);
     auto instrumentMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
@@ -348,6 +349,7 @@ void PluginEditor::setupRawMode() {
         instrumentMapText = this->processorRef.getEngine().getSuggestedInstrumentMapText();
     this->instrumentMapEditor.setText(instrumentMapText, false);
 
+    UIHelpers::configureControlButton(this->applyButton);
     this->applyButton.onClick = [this] { this->applyInstrumentMapFromEditor(); };
 }
 
@@ -1122,13 +1124,12 @@ void PluginEditor::resized() {
 
         case ViewMode::Raw: {
             auto rawArea = mainArea.reduced(UITheme::Spacing::md);
-            const int gap = UITheme::Spacing::md;
-            const int labelHeight = UITheme::Spacing::rowCompact;
-            const int buttonHeight = 32;
-            auto headerArea = rawArea.removeFromTop(buttonHeight);
+            const int gap = UITheme::Spacing::sm;
+            auto headerArea = rawArea.removeFromTop(UITheme::Sizes::standardControlHeight);
             this->applyButton.setBounds(headerArea.removeFromRight(180));
             headerArea.removeFromRight(gap);
-            this->instrumentMapLabel.setBounds(headerArea.removeFromTop(labelHeight));
+            this->instrumentMapLabel.setBounds(headerArea);
+            rawArea.removeFromTop(gap);
             this->instrumentMapEditor.setBounds(rawArea);
             break;
         }

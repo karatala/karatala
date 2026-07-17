@@ -9,10 +9,10 @@ class MidiNoteAssignmentControl : public juce::Component {
 public:
     struct LayoutMetrics {
         int noteButtonWidth = 60;
-        int learnButtonSize = 18;
+        int learnButtonSize = UITheme::Sizes::standardControlHeight;
         int noteLearnGap = 0;
         int pairGap = 6;
-        int verticalInset = 2;
+        int verticalInset = 0;
     };
 
     MidiNoteAssignmentControl();

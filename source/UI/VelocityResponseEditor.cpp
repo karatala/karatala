@@ -441,13 +441,13 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
 
 void VelocityResponseEditor::resized() {
     auto area = this->getLocalBounds().reduced(12);
-    auto header = area.removeFromTop(24);
+    auto header = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->doneButton.setBounds(header.removeFromRight(54));
     header.removeFromRight(6);
     this->titleLabel.setBounds(header);
     area.removeFromTop(6);
 
-    auto toolbar = area.removeFromTop(22);
+    auto toolbar = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->presetCombo.setBounds(toolbar.removeFromLeft(190));
     toolbar.removeFromLeft(4);
     this->saveAsButton.setBounds(toolbar.removeFromLeft(62));
@@ -456,7 +456,7 @@ void VelocityResponseEditor::resized() {
     this->useGlobalButton.setBounds(toolbar.removeFromLeft(76));
     area.removeFromTop(6);
 
-    auto readout = area.removeFromTop(22);
+    auto readout = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->previewButton.setBounds(readout.removeFromRight(64));
     readout.removeFromRight(4);
     this->dbEditor.setBounds(readout.removeFromRight(58));

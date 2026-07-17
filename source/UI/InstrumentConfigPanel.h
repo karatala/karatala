@@ -88,6 +88,7 @@ private:
 
     static constexpr int mapTextFlushDebounceMs = 300;
 
+    static constexpr int headerHeight = UITheme::Spacing::rowCompact;
     static constexpr int rowHeight = UITheme::Spacing::rowNormal;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentConfigPanel)

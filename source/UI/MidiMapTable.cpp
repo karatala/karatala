@@ -124,7 +124,7 @@ void MidiMapTable::buildRows() {
     auto setupNoteRow = [this, &setupCommonRow](std::unique_ptr<MapRow>& row, int rowIdx) {
         setupCommonRow(row);
         row->midiAssignmentControl = std::make_unique<MidiNoteAssignmentControl>();
-        row->midiAssignmentControl->setLayoutMetrics({ noteButtonWidth, learnButtonSize, midiControlGap, midiControlGap, 2 });
+        row->midiAssignmentControl->setLayoutMetrics({ noteButtonWidth, learnButtonSize, midiControlGap, midiControlGap, 3 });
         row->midiAssignmentControl->onNoteSelected = [this, rowIdx](int slotIdx, int note) {
             if (rowIdx < static_cast<int>(this->rows.size()))
                 this->applyNoteToSlot(*this->rows[static_cast<size_t>(rowIdx)], slotIdx, note);
@@ -439,7 +439,7 @@ void MidiMapTable::resized() {
             if (row.midiAssignmentControl)
                 row.midiAssignmentControl->setBounds(xPos, yPos, midiControlWidth, rowHeight);
             if (row.controllerCombo) {
-                auto controlArea = juce::Rectangle<int>(xPos, yPos, midiControlWidth, rowHeight).reduced(0, 2);
+                auto controlArea = juce::Rectangle<int>(xPos, yPos, midiControlWidth, rowHeight).reduced(0, 3);
                 if (row.curveButton) {
                     row.curveButton->setBounds(controlArea.removeFromRight(controllerCurveButtonWidth));
                     controlArea.removeFromRight(midiControlGap);

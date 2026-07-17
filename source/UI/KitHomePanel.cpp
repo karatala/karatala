@@ -514,6 +514,7 @@ void KitHomePanel::resized() {
     this->layoutViewportToBounds();
     const int width = juce::jmax(860, this->viewport.getWidth() - this->viewport.getScrollBarThickness());
     const int rowHeight = 26;
+    const int controlHeight = UITheme::Sizes::standardControlHeight;
     const int leftLabelWidth = 150;
     const int contentHeight = 260 + static_cast<int>(this->slotRows.size()) * rowHeight + 116;
     this->contentComponent.setBounds(0, 0, width, contentHeight);
@@ -523,14 +524,15 @@ void KitHomePanel::resized() {
     this->introLabel.setBounds(area.removeFromTop(24));
     area.removeFromTop(6);
 
-    auto placeComboRow = [&area](juce::Label& label, juce::Component& combo) {
+    auto placeComboRow = [&area, controlHeight, leftLabelWidth](juce::Label& label, juce::Component& combo) {
         auto row = area.removeFromTop(26);
         label.setBounds(row.removeFromLeft(leftLabelWidth));
-        combo.setBounds(row.removeFromLeft(340).reduced(0, 2));
+        auto comboArea = row.removeFromLeft(340);
+        combo.setBounds(comboArea.withSizeKeepingCentre(comboArea.getWidth(), controlHeight));
         area.removeFromTop(4);
     };
     placeComboRow(this->layoutLabel, this->layoutCombo);
-    auto globalRow = area.removeFromTop(22);
+    auto globalRow = area.removeFromTop(controlHeight);
     globalRow.removeFromLeft(leftLabelWidth);
     this->globalLayoutToggle.setBounds(globalRow.removeFromLeft(300));
     area.removeFromTop(4);
@@ -538,11 +540,13 @@ void KitHomePanel::resized() {
 
     auto presetRow = area.removeFromTop(28);
     this->presetLabel.setBounds(presetRow.removeFromLeft(leftLabelWidth));
-    this->presetCombo.setBounds(presetRow.removeFromLeft(260).reduced(0, 2));
+    auto presetComboArea = presetRow.removeFromLeft(260);
+    this->presetCombo.setBounds(presetComboArea.withSizeKeepingCentre(presetComboArea.getWidth(), controlHeight));
     presetRow.removeFromLeft(4);
     for (auto* button : { &this->presetLoadButton, &this->presetSaveButton, &this->presetDuplicateButton, &this->presetDeleteButton }) {
         const int buttonWidth = button == &this->presetDuplicateButton ? 74 : 62;
-        button->setBounds(presetRow.removeFromLeft(buttonWidth).reduced(1, 2));
+        auto buttonArea = presetRow.removeFromLeft(buttonWidth).reduced(1, 0);
+        button->setBounds(buttonArea.withSizeKeepingCentre(buttonArea.getWidth(), controlHeight));
     }
     area.removeFromTop(8);
 
@@ -556,20 +560,25 @@ void KitHomePanel::resized() {
     for (auto& row : this->slotRows) {
         auto slotArea = area.removeFromTop(rowHeight);
         row->slotLabel.setBounds(slotArea.removeFromLeft(leftLabelWidth));
-        row->typeCombo.setBounds(slotArea.removeFromLeft(104).reduced(0, 2));
+        auto typeArea = slotArea.removeFromLeft(104);
+        row->typeCombo.setBounds(typeArea.withSizeKeepingCentre(typeArea.getWidth(), controlHeight));
         slotArea.removeFromLeft(4);
-        row->balanceEditor.setBounds(slotArea.removeFromLeft(64).reduced(0, 3));
+        auto balanceArea = slotArea.removeFromLeft(64);
+        row->balanceEditor.setBounds(balanceArea.withSizeKeepingCentre(balanceArea.getWidth(), controlHeight));
         slotArea.removeFromLeft(8);
-        row->directMicOutsCombo.setBounds(slotArea.removeFromLeft(82).reduced(0, 2));
+        auto directArea = slotArea.removeFromLeft(82);
+        row->directMicOutsCombo.setBounds(directArea.withSizeKeepingCentre(directArea.getWidth(), controlHeight));
         slotArea.removeFromLeft(8);
-        row->sourceCombo.setBounds(slotArea.removeFromLeft(420).reduced(0, 2));
+        auto sourceArea = slotArea.removeFromLeft(420);
+        row->sourceCombo.setBounds(sourceArea.withSizeKeepingCentre(sourceArea.getWidth(), controlHeight));
     }
     area.removeFromTop(10);
 
     auto micRow = area.removeFromTop(26);
     this->micLabel.setBounds(micRow.removeFromLeft(leftLabelWidth));
-    this->micCombo.setBounds(micRow.removeFromLeft(340).reduced(0, 2));
+    auto micComboArea = micRow.removeFromLeft(340);
+    this->micCombo.setBounds(micComboArea.withSizeKeepingCentre(micComboArea.getWidth(), controlHeight));
     this->micWarningLabel.setBounds(area.removeFromTop(42).withTrimmedLeft(leftLabelWidth));
     area.removeFromTop(6);
-    this->loadButton.setBounds(area.removeFromTop(34).removeFromLeft(180));
+    this->loadButton.setBounds(area.removeFromTop(controlHeight).removeFromLeft(180));
 }
