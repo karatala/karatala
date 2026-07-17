@@ -20,6 +20,7 @@ public:
     void paint(juce::Graphics& g) override;
 
     void setFilterType(KitLib::InstrumentSpec::Type type);
+    void setSelectedItem(int originalIndex);
     void focusItemList();
 
     /** Fires when an item is confirmed via the select button. */
@@ -64,6 +65,7 @@ private:
     int actionRow = -1;
     int actionRowBeforeMouseSelection = -1;
     bool mouseSelectionChanged = false;
+    bool suppressSelectionPreview = false;
     std::vector<KitLib::InstrumentSpec::Type> kindEntries;
     std::vector<juce::String> articulationEntries;
     std::set<juce::String> selectedArticulations;

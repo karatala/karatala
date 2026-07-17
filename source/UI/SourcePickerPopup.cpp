@@ -68,6 +68,17 @@ void SourcePickerPopup::setFilterType(KitLib::InstrumentSpec::Type type) {
     this->updateCategoryButtons();
 }
 
+void SourcePickerPopup::setSelectedItem(int originalIndex) {
+    for (int idx = 0; idx < static_cast<int>(this->filteredEntries.size()); ++idx) {
+        if (this->filteredEntries[static_cast<size_t>(idx)].originalIndex != originalIndex) continue;
+        this->suppressSelectionPreview = true;
+        this->listBox.selectRow(idx);
+        this->suppressSelectionPreview = false;
+        this->listBox.scrollToEnsureRowIsOnscreen(idx);
+        return;
+    }
+}
+
 void SourcePickerPopup::focusItemList() {
     this->listBox.grabKeyboardFocus();
 }
@@ -76,9 +87,9 @@ void SourcePickerPopup::resized() {
     auto area = this->getLocalBounds().reduced(4);
     auto topRow = area.removeFromTop(22);
     const int categoryAreaW = juce::jmin(232, juce::jmax(184, topRow.getWidth() / 2));
-    auto categoryArea = topRow.removeFromRight(categoryAreaW);
+    auto categoryArea = topRow.removeFromLeft(categoryAreaW);
+    topRow.removeFromLeft(4);
     this->filterField.setBounds(topRow.reduced(0, 1));
-    categoryArea.removeFromLeft(4);
 
     const int buttonW = categoryArea.getWidth() / 4;
     this->allCategoryButton.setBounds(categoryArea.removeFromLeft(buttonW).reduced(1, 1));
@@ -93,7 +104,7 @@ void SourcePickerPopup::resized() {
     const int labelHeight = 16;
     const int listGap = 4;
     const int availableListHeight = sidebarArea.getHeight() - labelHeight * 2 - listGap;
-    const int kindListHeight = availableListHeight * 7 / 10;
+    const int kindListHeight = juce::jmin(this->kindListBox.getRowHeight() * 10, availableListHeight);
     this->kindListLabel.setBounds(sidebarArea.removeFromTop(labelHeight));
     this->kindListBox.setBounds(sidebarArea.removeFromTop(kindListHeight));
     sidebarArea.removeFromTop(listGap);
@@ -439,7 +450,7 @@ void SourcePickerPopup::ListModel::selectedRowsChanged(int lastRowSelected) {
     this->owner.actionRow = lastRowSelected;
     this->owner.listBox.repaint();
 
-    if (!this->owner.listBox.isMouseButtonDown(true) && this->owner.onPreview) {
+    if (!this->owner.suppressSelectionPreview && !this->owner.listBox.isMouseButtonDown(true) && this->owner.onPreview) {
         const int originalIdx = this->owner.filteredEntries[static_cast<size_t>(lastRowSelected)].originalIndex;
         this->owner.onPreview(originalIdx, static_cast<juce::uint8>(127));
     }

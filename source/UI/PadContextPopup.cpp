@@ -1163,6 +1163,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->addAndMakeVisible(*this->activePicker);
     this->activePicker->toFront(true);
     this->layoutSourcePicker();
+    this->activePicker->setSelectedItem(layer->selectedSourceIndex);
     this->activePicker->focusItemList();
 }
 
