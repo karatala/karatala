@@ -12,6 +12,7 @@
 
 - Parsing returns structured results with warnings/errors instead of silently accepting malformed required data.
 - Logging used from realtime paths must not perform avoidable formatting or allocation when its level is disabled.
+- Human-readable log lines use local `HH:MM:SS.mmm` timestamps without a date or timezone.
 
 # Work Guidance
 
@@ -22,4 +23,3 @@
 - Run the `[yaml]` Catch2 tests after parser changes.
 
 # Child DOX Index
-

@@ -73,6 +73,10 @@ static inline bool isValidDebugLevelString(const juce::String& value) {
         || normalized == "verbose";
 }
 
+static inline juce::String formatLogTimestamp(const juce::Time& timestamp) {
+    return timestamp.formatted("%H:%M:%S") + "." + juce::String(timestamp.getMilliseconds()).paddedLeft('0', 3);
+}
+
 class GlobalLogger {
 public:
     static GlobalLogger& instance() {
@@ -215,7 +219,7 @@ private:
         const std::lock_guard<std::mutex> lock(this->recentLinesMutex);
         if (this->recentImportantLines.size() >= maxRecentImportantLines)
             this->recentImportantLines.pop_front();
-        this->recentImportantLines.push_back(juce::Time::getCurrentTime().toISO8601(true) + " " + line);
+        this->recentImportantLines.push_back(formatLogTimestamp(juce::Time::getCurrentTime()) + " " + line);
     }
 
     void enqueueLine(const juce::String& line) {
@@ -246,7 +250,7 @@ private:
 
         juce::String out;
         for (const auto& line : lines)
-            out += juce::Time::getCurrentTime().toISO8601(true) + " " + line + "\n";
+            out += formatLogTimestamp(juce::Time::getCurrentTime()) + " " + line + "\n";
         target.appendText(out);
     }
 
