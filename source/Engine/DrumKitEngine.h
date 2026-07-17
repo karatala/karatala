@@ -213,6 +213,7 @@ private:
         int fileChannelStart = 0;
         int fileChannelCount = 0;
         float fixedGainDb = 0.0f;
+        float playbackOffsetMs = 0.0f;
     };
 
     class PreviewResolveJob : public juce::ThreadPoolJob {

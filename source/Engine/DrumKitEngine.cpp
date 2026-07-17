@@ -1436,6 +1436,7 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     target.fileChannelStart = juce::jmax(0, bestVariant->fileChannelStart);
     target.fileChannelCount = bestVariant->fileChannelCount > 0 ? bestVariant->fileChannelCount : bestVariant->micSpec.channels;
     target.fixedGainDb = bestVariant->manualGainDb + (calibrated ? *bestLayer->calibrationTrimDb : 0.0f);
+    target.playbackOffsetMs = bestVariant->playbackOffsetMs;
     return target;
 }
 
@@ -1455,21 +1456,28 @@ void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::ui
 
     const int fileChannelStart = juce::jmax(0, target.fileChannelStart);
     const int fileChannelCount = target.fileChannelCount;
+    const float playbackOffsetMs = target.playbackOffsetMs;
 
-    loader->requestAsyncLoad(loadSpec, [this, gain, fileChannelStart, fileChannelCount](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+    loader->requestAsyncLoad(loadSpec, [this, gain, fileChannelStart, fileChannelCount, playbackOffsetMs](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
         if (buffer == nullptr || buffer->getNumChannels() <= 0 || buffer->getNumSamples() <= 0) return;
 
         const int sourceChannels = buffer->getNumChannels();
         const int sourceStart = juce::jlimit(0, sourceChannels - 1, fileChannelStart);
         const int availableChannels = sourceChannels - sourceStart;
         const int selectedChannels = juce::jlimit(1, availableChannels, fileChannelCount > 0 ? fileChannelCount : availableChannels);
+        const int offsetSamples = juce::jmax(0, juce::roundToInt(std::abs(static_cast<double>(playbackOffsetMs)) * sampleRate / 1000.0));
+        const int sourceReadStart = playbackOffsetMs < 0.0f ? juce::jmin(offsetSamples, buffer->getNumSamples()) : 0;
+        const int destinationStart = playbackOffsetMs > 0.0f ? offsetSamples : 0;
+        const int samplesToCopy = buffer->getNumSamples() - sourceReadStart;
+        if (samplesToCopy <= 0) return;
 
-        auto selectedBuffer = std::make_shared<juce::AudioBuffer<float>>(2, buffer->getNumSamples());
-        selectedBuffer->copyFrom(0, 0, *buffer, sourceStart, 0, buffer->getNumSamples());
+        auto selectedBuffer = std::make_shared<juce::AudioBuffer<float>>(2, destinationStart + samplesToCopy);
+        selectedBuffer->clear();
+        selectedBuffer->copyFrom(0, destinationStart, *buffer, sourceStart, sourceReadStart, samplesToCopy);
         if (selectedChannels >= 2)
-            selectedBuffer->copyFrom(1, 0, *buffer, sourceStart + 1, 0, buffer->getNumSamples());
+            selectedBuffer->copyFrom(1, destinationStart, *buffer, sourceStart + 1, sourceReadStart, samplesToCopy);
         else
-            selectedBuffer->copyFrom(1, 0, *buffer, sourceStart, 0, buffer->getNumSamples());
+            selectedBuffer->copyFrom(1, destinationStart, *buffer, sourceStart, sourceReadStart, samplesToCopy);
 
         const juce::SpinLock::ScopedLockType scopedLock(this->previewLock);
         this->previewBuffer = std::move(selectedBuffer);

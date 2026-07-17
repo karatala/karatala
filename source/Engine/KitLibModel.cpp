@@ -62,6 +62,36 @@ static juce::String fileMetadataFingerprint(const juce::File& rootDir, const juc
 }
 } // namespace KitLibIdentityHelpers
 
+namespace KitLibSampleMetadataHelpers {
+
+static std::optional<float> parseSignedOffsetMs(const juce::String& value) {
+    if (value.length() < 2) return std::nullopt;
+    const auto direction = value[0];
+    if (direction != 'n' && direction != 'p') return std::nullopt;
+
+    const auto numberText = value.substring(1);
+    bool hasDigit = false;
+    bool hasDecimalPoint = false;
+    for (int idx = 0; idx < numberText.length(); ++idx) {
+        const auto character = numberText[idx];
+        if (juce::CharacterFunctions::isDigit(character)) {
+            hasDigit = true;
+            continue;
+        }
+        if (character == '.' && !hasDecimalPoint) {
+            hasDecimalPoint = true;
+            continue;
+        }
+        return std::nullopt;
+    }
+    if (!hasDigit) return std::nullopt;
+
+    const float magnitudeMs = std::abs(static_cast<float>(numberText.getDoubleValue()));
+    return direction == 'n' ? -magnitudeMs : magnitudeMs;
+}
+
+} // namespace KitLibSampleMetadataHelpers
+
 namespace KitLibCalibrationHelpers {
 
 static constexpr float MAX_POSITIVE_TRIM_DB = 36.0f;
@@ -568,6 +598,8 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 const auto& micDesc = parsedInfo.value.micDescriptors[i];
                 auto* sv = velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
                 sv->manualGainDb = parsedInfo.value.manualGainDb;
+                const auto micOffsetIt = parsedInfo.value.playbackOffsetMsByMic.find(micDesc.raw.toLowerCase());
+                sv->playbackOffsetMs = micOffsetIt != parsedInfo.value.playbackOffsetMsByMic.end() ? micOffsetIt->second : parsedInfo.value.playbackOffsetMs;
                 sv->peakDb = parsedInfo.value.peakDb + sv->manualGainDb;
                 sv->peakMs = parsedInfo.value.peakMs;
                 sv->decayMs = parsedInfo.value.decayMs;
@@ -675,11 +707,10 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     result.value.sampleVariant = sampleVariant;
     result.value.micDescriptors = parsedMics.value;
 
-    // Parse optional metadata parameters if present (format: v{n or p}{manual_gain_db, vn - negative, vp - positive}
-    // Example: hihat-14-bow[half]-vn4.flac
+    // Optional metadata examples: vn4 = -4 dB, on5.5 = advance 5.5 ms, op2_ons_rfs = delay ons and rfs by 2 ms.
     if (nameParts.size() > 5) {
-        for (int i = 5; i < nameParts.size(); ++i) {
-            const juce::String& part = nameParts[i];
+        for (int partIdx = 5; partIdx < nameParts.size(); ++partIdx) {
+            const juce::String& part = nameParts[partIdx];
             if (part.isEmpty()) continue;
             
             const juce::juce_wchar paramType = part[0];
@@ -693,6 +724,32 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
                         result.value.manualGainDb = static_cast<float>(paramValue.substring(1).getIntValue());
                     } else {
                         result.addWarning("Unknown volume trim format: " + paramValue);
+                    }
+                    break;
+                }
+                case 'o': { // playback offset in ms: negative advances, positive delays
+                    juce::StringArray offsetParts;
+                    offsetParts.addTokens(paramValue, "_", "");
+                    offsetParts.removeEmptyStrings();
+                    std::optional<float> parsedOffsetMs;
+                    if (!offsetParts.isEmpty()) parsedOffsetMs = KitLibSampleMetadataHelpers::parseSignedOffsetMs(offsetParts[0].toLowerCase());
+                    if (!parsedOffsetMs.has_value()) {
+                        result.addWarning("Unknown playback offset format: " + paramValue + "; expected on<ms> or op<ms>");
+                        break;
+                    }
+                    if (offsetParts.size() == 1) {
+                        result.value.playbackOffsetMs = *parsedOffsetMs;
+                        break;
+                    }
+                    for (int micIdx = 1; micIdx < offsetParts.size(); ++micIdx) {
+                        const auto micCode = offsetParts[micIdx].trim().toLowerCase();
+                        const bool knownMic = std::any_of(result.value.micDescriptors.begin(), result.value.micDescriptors.end(), [&micCode](const auto& micDescriptor) {
+                            return micDescriptor.raw.compareIgnoreCase(micCode) == 0;
+                        });
+                        if (knownMic)
+                            result.value.playbackOffsetMsByMic[micCode] = *parsedOffsetMs;
+                        else
+                            result.addWarning("Playback offset references unknown mic code '" + micCode + "'");
                     }
                     break;
                 }

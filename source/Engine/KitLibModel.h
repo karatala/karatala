@@ -27,7 +27,9 @@
  *          └─ <instrumentType>-<size>[-<balance>][-<description>]/
  *              └─ <articulation>[optionalExpressionShortName]-<optionalExpressionCode><value>-<anotherExpressionCode><value>/
  *                  └─ <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
- * otherOptionalSampleParams: includes values for v{n or p}{manual_gain_db, vn - negative, vp - positive}
+ * otherOptionalSampleParams:
+ *     v{n|p}<gainDb>                  manual gain, where vn is negative and vp is positive
+ *     o{n|p}<milliseconds>[_micCode...]  playback timing, where on advances and op delays; optional mic codes limit the offset
  * 
  *     instruments/                                                 LibraryManager
  *       └─ Kit Name by Author Name  [CC-BY-4.0]/                   DrumKitSpec
@@ -144,6 +146,7 @@ public:
     int fileChannelCount = 0;
 
     float manualGainDb = 0.0f;
+    float playbackOffsetMs = 0.0f;
     float peakDb = 0.0f;
     float peakMs = 0.0f;
     float decayMs = 0.0f;
@@ -473,10 +476,11 @@ public:
         juce::File file;
         
         float manualGainDb = 0.0f; // positive or negative volume adjustment in dB to apply to this sample for better level matching in the kit (ex. for cymbals with close mics that are too loud compared to other samples)
+        float playbackOffsetMs = 0.0f; // negative advances by skipping the beginning; positive delays playback
+        std::unordered_map<juce::String, float> playbackOffsetMsByMic;
         float peakDb = 0.0f;
         float peakMs = 0.0f;
         float decayMs = 0.0f;
-        float offsetMs = 0.0f; //TODO: calculated offset for distant mics based on peakMs difference with closest mic, used for making choke more realistic by delaying the choke for distant mics 
         juce::String decayCode; // base62-encoded decay curve code for more precise envelope reconstruction.  refer to scripts\analyze_drum_samples.py line decay_code: str = encode_time_intervals_as_base62(decay_points)
     };
 

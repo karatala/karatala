@@ -2,6 +2,7 @@
 #include "../source/Engine/LayoutManager.h"
 #include "../source/Engine/InstrumentCatalog.h"
 #include "../source/Engine/MicRoutingPlan.h"
+#include "catch2/catch_approx.hpp"
 #include "catch2/catch_test_macros.hpp"
 #include "catch2/matchers/catch_matchers_floating_point.hpp"
 #include "catch2/matchers/catch_matchers_string.hpp"
@@ -496,6 +497,19 @@ TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain
         REQUIRE(parsed.value.micDescriptors[0].raw == "dim");
         REQUIRE(parsed.value.micDescriptors[1].raw == "dom");
         REQUIRE(parsed.value.micDescriptors[2].raw == "ons");
+    }
+    {
+        auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-127a-dim_ons-on5.5.flac");
+        REQUIRE(parsed.ok());
+        REQUIRE(parsed.value.playbackOffsetMs == Catch::Approx(-5.5f));
+        REQUIRE(parsed.value.playbackOffsetMsByMic.empty());
+    }
+    {
+        auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-127a-dim_ons-op2.25_dim-on3_ons.flac");
+        REQUIRE(parsed.ok());
+        REQUIRE(parsed.value.playbackOffsetMs == Catch::Approx(0.0f));
+        REQUIRE(parsed.value.playbackOffsetMsByMic.at("dim") == Catch::Approx(2.25f));
+        REQUIRE(parsed.value.playbackOffsetMsByMic.at("ons") == Catch::Approx(-3.0f));
     }
     {// missing leading digits
         auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-a12-dim.wav");

@@ -742,6 +742,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             sound->routedMicCode = assignment.micCode;
             sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
             sound->cachedMicBleedGain.store(this->getMicBleedLevel(varSpec->micSpec.raw), std::memory_order_relaxed);
+            sound->playbackOffsetMs = varSpec->playbackOffsetMs;
             sound->balance = effectiveBalance.value_or(0);
             sound->useDirectBalance = assignment.applyBalance && effectiveBalance.has_value() && assignment.channels == 2 && varSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
 

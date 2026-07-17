@@ -1017,6 +1017,55 @@ TEST_CASE("InstrumentSynthVoice - pans mono direct mic into stereo output", "[In
     REQUIRE(output.getSample(1, 0) == Catch::Approx(0.7071067f).margin(0.0001f));
 }
 
+TEST_CASE("InstrumentSynthVoice - negative playback offset advances the source", "[InstrumentSynth][timing]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(1, 3);
+    buffer->setSample(0, 0, 0.25f);
+    buffer->setSample(0, 1, 0.5f);
+    buffer->setSample(0, 2, 0.75f);
+
+    SampledSound sound;
+    sound.buffer = buffer;
+    sound.sampleRate = 1000.0;
+    sound.sampleLengthSamples = buffer->getNumSamples();
+    sound.playbackOffsetMs = -1.0f;
+
+    InstrumentSynthVoice voice;
+    InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
+
+    juce::AudioBuffer<float> output(1, 1);
+    output.clear();
+    voice.renderNextBlock(output, 0, 1);
+
+    REQUIRE(output.getSample(0, 0) == Catch::Approx(0.5f).margin(0.0001f));
+}
+
+TEST_CASE("InstrumentSynthVoice - positive playback offset delays the source", "[InstrumentSynth][timing]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(1, 3);
+    buffer->clear();
+    buffer->setSample(0, 0, 1.0f);
+    buffer->setSample(0, 1, 1.0f);
+    buffer->setSample(0, 2, 1.0f);
+
+    SampledSound sound;
+    sound.buffer = buffer;
+    sound.sampleRate = 44100.0;
+    sound.sampleLengthSamples = buffer->getNumSamples();
+    sound.playbackOffsetMs = 2000.0f / 44100.0f;
+
+    InstrumentSynthVoice voice;
+    InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
+
+    juce::AudioBuffer<float> output(1, 3);
+    output.clear();
+    voice.renderNextBlock(output, 0, 3);
+
+    REQUIRE(output.getSample(0, 0) == Catch::Approx(0.0f));
+    REQUIRE(output.getSample(0, 1) == Catch::Approx(0.0f));
+    REQUIRE(output.getSample(0, 2) == Catch::Approx(1.0f).margin(0.0001f));
+}
+
 TEST_CASE("InstrumentSynthVoice - flips stereo direct mic before balance", "[InstrumentSynth][routing]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;

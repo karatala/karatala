@@ -487,7 +487,7 @@ Verify later: independent primary and shadow edits; two articulations in one slo
 
 Verify later: known left, center, right, mirrored, and delayed fixtures; low-confidence no-change behavior; direct and room routing exclusions; listening check for mic-aware pan.
 
-Runtime timing correction, source audio gain baking, offset baking, and channel swapping are deferred.
+Automatic analysis-driven timing correction, offset baking, and channel swapping remain deferred. Explicit filename-authored `on<ms>` advance and `op<ms>` delay corrections are applied at runtime per mic and in preview without changing the shared sample cache.
 
 ## Dependencies, Likely Areas, And Non-Goals
 

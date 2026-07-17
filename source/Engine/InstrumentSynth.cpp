@@ -239,6 +239,7 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     juce::ignoreUnused(midiNoteNumber);
     this->velocityGain = velocity;
     this->sourceSamplePosition = 0.0;
+    this->playbackDelaySamplesRemaining = 0;
     this->envelopeState = EnvelopeState::Playing;
 
     if (this->useOneShotDecayEnvelope) {
@@ -265,6 +266,16 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
         this->pitchRatio = 1.0;
 
     this->pitchRatio *= this->pitchRatioMultiplier;
+
+    if (sound->playbackOffsetMs > 0.0f && this->currentSampleRate > 0.0) {
+        this->playbackDelaySamplesRemaining = juce::jmax(0, juce::roundToInt(static_cast<double>(sound->playbackOffsetMs) * this->currentSampleRate / 1000.0));
+        this->cachedEstimatedDb = -100.0f;
+    } else if (sound->playbackOffsetMs < 0.0f && sound->sampleRate > 0.0) {
+        int sampleLength = sound->sampleLengthSamples;
+        if (sampleLength <= 0 && sound->buffer != nullptr) sampleLength = sound->buffer->getNumSamples();
+        const double advanceSamples = static_cast<double>(-sound->playbackOffsetMs) * sound->sampleRate / 1000.0;
+        this->sourceSamplePosition = juce::jlimit(0.0, static_cast<double>(juce::jmax(0, sampleLength)), advanceSamples);
+    }
 }
 
 void InstrumentSynthVoice::requestFadeOut(float durationSec) {
@@ -300,6 +311,10 @@ float InstrumentSynthVoice::getEstimatedCurrentDb() const {
 
 void InstrumentSynthVoice::updateEstimatedDb() {
     if (!this->isVoiceActive()) {
+        this->cachedEstimatedDb = -100.0f;
+        return;
+    }
+    if (this->playbackDelaySamplesRemaining > 0) {
         this->cachedEstimatedDb = -100.0f;
         return;
     }
@@ -351,6 +366,15 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     SampledSound* s = this->getCurrentlyPlayingSound();
     if (s == nullptr || !s->buffer)
         return;
+
+    if (this->playbackDelaySamplesRemaining > 0) {
+        const int delayedSamples = juce::jmin(numSamples, this->playbackDelaySamplesRemaining);
+        this->playbackDelaySamplesRemaining -= delayedSamples;
+        startSample += delayedSamples;
+        numSamples -= delayedSamples;
+        this->cachedEstimatedDb = -100.0f;
+        if (numSamples <= 0) return;
+    }
 
     auto& buf = *s->buffer;
     const int srcChannels = buf.getNumChannels();

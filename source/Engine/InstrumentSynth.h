@@ -40,6 +40,7 @@ public:
     juce::String routedMicCode;
     StringsDictSingleton::Id routedMicCodeId = StringsDictSingleton::EMPTY;
     std::atomic<float> cachedMicBleedGain { 1.0f };
+    float playbackOffsetMs = 0.0f;
     bool useDirectBalance = false;
     int balance = 0;
     KitLib::DecayEnvelope decayEnvelope;
@@ -120,6 +121,7 @@ public:
         this->artRuntimeIdx = -1;
         this->midiVelocity = 0;
         this->envelopeState = EnvelopeState::Idle;
+        this->playbackDelaySamplesRemaining = 0;
     }
 
     void setTailShorteningFactor(float factor, float minClamp) {
@@ -184,6 +186,7 @@ public:
     float cachedEstimatedDb = -100.0f;
     uint8_t dbUpdateCounter = 0; // throttle updateEstimatedDb to every N-th render call
     int hitGroupId = -1;
+    int playbackDelaySamplesRemaining = 0;
 
 public:
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
