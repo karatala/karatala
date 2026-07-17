@@ -21,6 +21,7 @@
 - Pad-popup layer controls update only their own articulation layer. Removing an unmapped empty row must not reapply the instrument map.
 - The Conf panel General section owns the sample-library path, sample-cache limit, and machine-wide default kit and mic layout controls. Changing the library path reloads the library; layout defaults affect future plugin instances.
 - The shared source picker is a centered modal using 80% of its host content area, with a dark click-to-dismiss outside overlay and no internal close button. It supports `-word` exclusions, OR-based multi-select base-articulation filters, arrow-key preview, and Enter to use.
+- Text editors have no normal, focused, or shadow outline.
 - The pad popup is bottom-docked at 90% of the tab-content height and uses the full tab-content width. Its uncovered top strip is dark and contains the only close control: a large white `×` aligned left. The popup keeps rounded top corners, square bottom corners, and no outline border.
 
 # Work Guidance

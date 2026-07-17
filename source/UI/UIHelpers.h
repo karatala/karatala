@@ -45,6 +45,8 @@ void configureMonoTextEditor(juce::TextEditor& editor,
                              juce::Colour textColour = UITheme::Colours::textPrimary,
                              bool multiline = true);
 
+void configureBorderlessTextEditor(juce::TextEditor& editor);
+
 juce::String sentinelValueText(double value);
 
 juce::String getMidiControllerItemText(int controllerNumber);

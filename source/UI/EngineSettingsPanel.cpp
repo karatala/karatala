@@ -18,6 +18,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     UIHelpers::configureCaptionLabel(this->libraryPathLabel, juce::Justification::centredLeft);
     this->contentComponent.addAndMakeVisible(this->libraryPathLabel);
     UIHelpers::configureMonoTextEditor(this->libraryPathEditor, UITheme::Colours::textSecondary, false);
+    UIHelpers::configureBorderlessTextEditor(this->libraryPathEditor);
     this->libraryPathEditor.setReadOnly(true);
     this->libraryPathEditor.setScrollbarsShown(false);
     this->contentComponent.addAndMakeVisible(this->libraryPathEditor);

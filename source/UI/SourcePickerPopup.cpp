@@ -9,6 +9,7 @@
 SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& instrumentCatalog)
     : allItems(items)
     , catalog(instrumentCatalog) {
+    UIHelpers::configureBorderlessTextEditor(this->filterField);
     this->filterField.setFont(UITheme::Fonts::comboBox().withHeight(14.0f));
     this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
     this->filterField.onTextChange = [this] { this->queueRebuildFiltered(); };

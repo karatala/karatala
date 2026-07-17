@@ -92,6 +92,12 @@ void configureMonoTextEditor(juce::TextEditor& editor,
     editor.setColour(juce::TextEditor::textColourId, textColour);
 }
 
+void configureBorderlessTextEditor(juce::TextEditor& editor) {
+    editor.setColour(juce::TextEditor::outlineColourId, UITheme::Colours::transparent);
+    editor.setColour(juce::TextEditor::focusedOutlineColourId, UITheme::Colours::transparent);
+    editor.setColour(juce::TextEditor::shadowColourId, UITheme::Colours::transparent);
+}
+
 juce::String sentinelValueText(double value) {
     return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
 }

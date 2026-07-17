@@ -58,6 +58,7 @@ TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
     this->addAndMakeVisible(this->reloadLibraryButton);
 
     UIHelpers::configureMonoTextEditor(this->importantLogsEditor, UITheme::Colours::textSecondary, true);
+    UIHelpers::configureBorderlessTextEditor(this->importantLogsEditor);
     this->importantLogsEditor.setReadOnly(true);
     this->importantLogsEditor.setCaretVisible(false);
     this->importantLogsEditor.setTextToShowWhenEmpty("No error, warning, or notice lines in this session.", UITheme::Colours::textMuted);

@@ -340,6 +340,7 @@ void PluginEditor::setupRawMode() {
     this->instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
 
     UIHelpers::configureMonoTextEditor(this->instrumentMapEditor, UITheme::Colours::textPrimary, true);
+    UIHelpers::configureBorderlessTextEditor(this->instrumentMapEditor);
     this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
     this->instrumentMapEditor.setTextToShowWhenEmpty("kick1/center:MyKit/kick-24/center\nsnare1/center:MyKit/snare-14/center:tuning=-20;attack=25;decay=250", UITheme::Colours::textMuted);
     auto instrumentMapText = this->processorRef.getValueTreeState().state["instrument_map"].toString();
