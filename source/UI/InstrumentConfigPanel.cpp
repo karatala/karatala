@@ -14,6 +14,7 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
     };
     setupHeader(this->headerSlot, "Slot");
     setupHeader(this->headerInstrument, "Instrument");
+    setupHeader(this->headerResponse, "Response");
     setupHeader(this->headerTuning, "Tuning");
     setupHeader(this->headerAttack, "Attack");
     setupHeader(this->headerDecay, "Decay");
@@ -46,6 +47,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->contentComponent.removeAllChildren();
     this->contentComponent.addAndMakeVisible(this->headerSlot);
     this->contentComponent.addAndMakeVisible(this->headerInstrument);
+    this->contentComponent.addAndMakeVisible(this->headerResponse);
     this->contentComponent.addAndMakeVisible(this->headerTuning);
     this->contentComponent.addAndMakeVisible(this->headerAttack);
     this->contentComponent.addAndMakeVisible(this->headerDecay);
@@ -113,7 +115,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                     int decay = entry->decayTimeMs.value_or(-1);
                     float volume = entry->volumeDb.value_or(0.0f);
                     int pan = entry->pan.value_or(0);
-                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay, volume, pan, entry->flipLR, entry->flipLRExplicit, entry->flipPhase);
+                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay, volume, pan, entry->flipLR, entry->flipLRExplicit, entry->flipPhase, -1, entry->velocityResponse, entry->micBleedLevels, entry->micRouteOverrides);
                 }
             }
         }
@@ -126,7 +128,10 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
 void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::String& artName,
                                     KitLib::InstrumentSpec::Type slotType,
                                     const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                                    float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex) {
+                                    float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex,
+                                    const std::optional<juce::String>& velocityResponse,
+                                    const std::unordered_map<juce::String, float>& micBleedLevels,
+                                    const std::unordered_map<juce::String, juce::String>& micRouteOverrides) {
     auto* row = new TableRow();
     if (insertionIndex >= 0 && insertionIndex < this->tableRows.size())
         this->tableRows.insert(insertionIndex, row);
@@ -137,6 +142,9 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->artName = artName;
     row->slotType = slotType;
     row->sourcePathHint = sourceFullPath;
+    row->velocityResponse = velocityResponse;
+    row->micBleedLevels = micBleedLevels;
+    row->micRouteOverrides = micRouteOverrides;
 
     // Slot label
     row->slotLabel = std::make_unique<juce::Label>();
@@ -160,6 +168,14 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     this->contentComponent.addAndMakeVisible(*row->sourceButton);
     row->sourceButton->onClick = [this, row] { this->showPickerPopup(row); };
     this->updateSourceButtonDisplay(row);
+
+    row->velocityResponseStatus = std::make_unique<juce::Label>();
+    row->velocityResponseStatus->setText(row->velocityResponse.has_value() ? "Custom" : "Global", juce::dontSendNotification);
+    row->velocityResponseStatus->setFont(UITheme::Fonts::small());
+    row->velocityResponseStatus->setJustificationType(juce::Justification::centred);
+    row->velocityResponseStatus->setColour(juce::Label::textColourId, row->velocityResponse.has_value() ? UITheme::Colours::textAccent : UITheme::Colours::textMuted);
+    row->velocityResponseStatus->setTooltip(row->velocityResponse.value_or("Uses the global velocity response"));
+    this->contentComponent.addAndMakeVisible(*row->velocityResponseStatus);
 
     auto configureCompactControl = [this, row](CompactParameterControl& control) {
         control.setLabelVisible(false);
@@ -278,6 +294,8 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
         row->sourcePathHint = sourceIndex >= 0
             ? this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath()
             : juce::String();
+        row->micBleedLevels.clear();
+        row->micRouteOverrides.clear();
         this->updateSourceButtonDisplay(row);
         juce::MessageManager::callAsync([this, row] {
             this->dismissPopup();
@@ -348,14 +366,15 @@ void InstrumentConfigPanel::layoutContent() {
     const int headerH = UITheme::Spacing::rowCompact;
     const int totalHeight = headerH + totalRows * rowHeight + 4;
 
-    this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 820), totalHeight);
+    this->contentComponent.setBounds(0, 0, juce::jmax(contentWidth, 880), totalHeight);
 
     const int width = this->contentComponent.getWidth();
     const int slotCol = 70;
     const int artCol = 58;
     const int btnsCol = 44;
     const int flipCol = 40;
-    const int availableCol = width - slotCol - artCol - btnsCol;
+    const int responseCol = 62;
+    const int availableCol = width - slotCol - artCol - btnsCol - responseCol;
     const int sourceCol = juce::jmax(150, availableCol * 34 / 100);
     const int parameterArea = juce::jmax(260, availableCol - sourceCol - flipCol * 2);
     const int parameterCol = parameterArea / 5;
@@ -369,6 +388,7 @@ void InstrumentConfigPanel::layoutContent() {
     this->headerSlot.setBounds(xPos, 0, slotCol, headerH); xPos += slotCol;
     xPos += artCol;
     this->headerInstrument.setBounds(xPos, 0, sourceCol, headerH); xPos += sourceCol;
+    this->headerResponse.setBounds(xPos, 0, responseCol, headerH); xPos += responseCol;
     this->headerTuning.setBounds(xPos, 0, tuningCol, headerH); xPos += tuningCol;
     this->headerAttack.setBounds(xPos, 0, attackCol, headerH); xPos += attackCol;
     this->headerDecay.setBounds(xPos, 0, decayCol, headerH); xPos += decayCol;
@@ -396,6 +416,9 @@ void InstrumentConfigPanel::layoutContent() {
 
         row->sourceButton->setBounds(xPos, yPos + 1, sourceCol - 2, rowHeight - 2);
         xPos += sourceCol;
+
+        row->velocityResponseStatus->setBounds(xPos, yPos + 1, responseCol - 2, rowHeight - 2);
+        xPos += responseCol;
 
         row->tuningControl->setBounds(xPos, yPos + 1, tuningCol - 2, rowHeight - 2);
         xPos += tuningCol;
@@ -428,57 +451,43 @@ void InstrumentConfigPanel::layoutContent() {
     }
 }
 juce::String InstrumentConfigPanel::generateMapText() const {
-    juce::StringArray lines;
+    DrumKitEngine::InstrumentMap instrumentMap;
 
     for (const auto* row : this->tableRows) {
         if (row->selectedSourceIndex < 0)
             continue;
 
         const auto& srcItem = this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)];
+        DrumKitEngine::InstrumentMapEntry entry;
+        entry.slotId = row->slotId;
+        if (row->artName != "(default)") entry.slotArticulationFilter.push_back(row->artName);
+        entry.kitRef = srcItem.kitCodeRaw;
+        entry.instCode = srcItem.instCode;
+        if (srcItem.artCode.isNotEmpty()) entry.articulationFilter.push_back(srcItem.artCode);
 
-        juce::String slotRef = row->slotId;
-        if (row->artName != "(default)")
-            slotRef += "/" + row->artName;
-
-        juce::String targetRef = srcItem.kitCodeRaw;
-        if (srcItem.instCode.isNotEmpty())
-            targetRef += "/" + srcItem.instCode;
-        if (srcItem.artCode.isNotEmpty())
-            targetRef += "/" + srcItem.artCode;
-
-        juce::StringArray params;
         int tuning = static_cast<int>(row->tuningControl->getValue());
-        if (tuning != 0)
-            params.add("tuning=" + juce::String(tuning));
+        if (tuning != 0) entry.tuningCents = tuning;
 
         double attackVal = row->attackControl->getValue();
-        if (attackVal >= 0.0)
-            params.add("attack=" + juce::String(static_cast<int>(attackVal)));
+        if (attackVal >= 0.0) entry.attackTimeMs = static_cast<int>(attackVal);
 
         double decayVal = row->decayControl->getValue();
-        if (decayVal >= 0.0)
-            params.add("decay=" + juce::String(static_cast<int>(decayVal)));
+        if (decayVal >= 0.0) entry.decayTimeMs = static_cast<int>(decayVal);
 
         double volVal = row->gainControl->getValue();
-        if (volVal <= -0.01 || volVal >= 0.01)
-            params.add("vol=" + juce::String(volVal, 1));
+        if (volVal <= -0.01 || volVal >= 0.01) entry.volumeDb = static_cast<float>(volVal);
 
         int panValue = static_cast<int>(row->panControl->getValue());
-        if (panValue != 0)
-            params.add("pan=" + juce::String(panValue));
-
-        if (row->flipLRButton->getToggleState() || row->flipLRExplicit)
-            params.add("flipLR=" + juce::String(row->flipLRButton->getToggleState() ? "1" : "0"));
-        if (row->flipPhaseButton->getToggleState())
-            params.add("flipPhase=1");
-
-        juce::String line = slotRef + ":" + targetRef;
-        if (!params.isEmpty())
-            line += ":" + params.joinIntoString(";");
-
-        lines.add(line);
+        if (panValue != 0) entry.pan = panValue;
+        entry.velocityResponse = row->velocityResponse;
+        entry.flipLR = row->flipLRButton->getToggleState();
+        entry.flipLRExplicit = entry.flipLR || row->flipLRExplicit;
+        entry.flipPhase = row->flipPhaseButton->getToggleState();
+        entry.micBleedLevels = row->micBleedLevels;
+        entry.micRouteOverrides = row->micRouteOverrides;
+        instrumentMap.entries.push_back(std::move(entry));
     }
-    return this->engine.normalizeInstrumentMapText(lines.joinIntoString("\n"));
+    return this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(instrumentMap));
 }
 
 int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const {

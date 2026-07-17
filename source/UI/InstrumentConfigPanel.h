@@ -36,10 +36,14 @@ private:
         KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
         juce::String sourcePathHint;
         int selectedSourceIndex = -1;
+        std::optional<juce::String> velocityResponse;
+        std::unordered_map<juce::String, float> micBleedLevels;
+        std::unordered_map<juce::String, juce::String> micRouteOverrides;
 
         std::unique_ptr<juce::Label> slotLabel;
         std::unique_ptr<juce::Label> artLabel;
         std::unique_ptr<juce::TextButton> sourceButton;
+        std::unique_ptr<juce::Label> velocityResponseStatus;
         std::unique_ptr<CompactParameterControl> tuningControl;
         std::unique_ptr<CompactParameterControl> attackControl;
         std::unique_ptr<CompactParameterControl> decayControl;
@@ -54,7 +58,7 @@ private:
 
     juce::OwnedArray<TableRow> tableRows;
 
-    juce::Label headerSlot, headerInstrument, headerTuning, headerAttack, headerDecay, headerGain, headerPan, headerLR, headerPhase;
+    juce::Label headerSlot, headerInstrument, headerResponse, headerTuning, headerAttack, headerDecay, headerGain, headerPan, headerLR, headerPhase;
 
     // Popup management
     std::unique_ptr<DismissOverlay> popupOverlay;
@@ -72,7 +76,10 @@ private:
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,
                 const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex = -1);
+                float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex = -1,
+                const std::optional<juce::String>& velocityResponse = std::nullopt,
+                const std::unordered_map<juce::String, float>& micBleedLevels = {},
+                const std::unordered_map<juce::String, juce::String>& micRouteOverrides = {});
     int findSourceIndex(const juce::String& fullPath) const;
     void updateRemoveButtonVisibility();
     void queueMapTextFlush();

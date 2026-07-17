@@ -99,7 +99,7 @@ void PadContextPopup::addArticulationGroup(const juce::String& articulationName)
     group->addLayerButton.getProperties().set("compactText", true);
     group->addLayerButton.setTooltip("Add layer to " + articulationName);
     group->addLayerButton.onClick = [this, group] {
-        this->addLayerRow(group->artName, "", 0, -1, -1, 0.0f, 0, false, false, false, {}, {}, -1);
+        this->addLayerRow(group->artName, "", 0, -1, -1, 0.0f, 0, false, false, false, std::nullopt, {}, {}, -1);
         this->updateRemoveButtonVisibility();
         this->resized();
     };
@@ -218,7 +218,7 @@ void PadContextPopup::populateLayers() {
             const int attack = entry.attackTimeMs.value_or(-1);
             const int decay = entry.decayTimeMs.value_or(-1);
             const float volume = entry.volumeDb.value_or(0.0f);
-            this->addLayerRow(group->artName, sourceFullPath, tuning, attack, decay, volume, entry.pan.value_or(0), entry.flipLR, entry.flipLRExplicit, entry.flipPhase, entry.micBleedLevels, entry.micRouteOverrides, mappedLayerIndex);
+            this->addLayerRow(group->artName, sourceFullPath, tuning, attack, decay, volume, entry.pan.value_or(0), entry.flipLR, entry.flipLRExplicit, entry.flipPhase, entry.velocityResponse, entry.micBleedLevels, entry.micRouteOverrides, mappedLayerIndex);
             ++mappedLayerIndex;
         }
     }
@@ -685,12 +685,13 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
     }
 }
 
-void PadContextPopup::addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
+void PadContextPopup::addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::optional<juce::String>& velocityResponse, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
     auto* layer = this->layerRows.add(new LayerRow());
     layer->artName = articulationName;
     layer->sourcePathHint = sourceFullPath;
     layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
     layer->mappedLayerIndex = mappedLayerIndex;
+    layer->velocityResponse = velocityResponse;
 
     // Source button (opens picker)
     layer->sourceButton = std::make_unique<juce::TextButton>();
@@ -706,6 +707,30 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
     layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
     this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
+
+    layer->velocityResponseMode = std::make_unique<juce::ComboBox>();
+    layer->velocityResponseMode->addItem("Global", 1);
+    layer->velocityResponseMode->addItem("Custom", 2);
+    layer->velocityResponseMode->setSelectedId(layer->velocityResponse.has_value() ? 2 : 1, juce::dontSendNotification);
+    layer->velocityResponseMode->setTooltip("Use the global velocity response or a custom response for this layer");
+    this->layerContent.addAndMakeVisible(*layer->velocityResponseMode);
+
+    layer->velocityResponseEditor = std::make_unique<juce::TextEditor>();
+    layer->velocityResponseEditor->setMultiLine(false);
+    layer->velocityResponseEditor->setText(layer->velocityResponse.value_or(this->engine.getVelocityResponse().getDefinition()), false);
+    layer->velocityResponseEditor->setTooltip("Example: 1:-48,64:-12,127:0");
+    layer->velocityResponseEditor->setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgControl);
+    layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
+    layer->velocityResponseEditor->setColour(juce::TextEditor::outlineColourId, UITheme::Colours::transparent);
+    layer->velocityResponseEditor->setColour(juce::TextEditor::focusedOutlineColourId, UITheme::Colours::transparent);
+    layer->velocityResponseEditor->setVisible(layer->velocityResponse.has_value());
+    this->layerContent.addAndMakeVisible(*layer->velocityResponseEditor);
+    layer->velocityResponseMode->onChange = [this, layer] { this->commitVelocityResponse(layer); };
+    layer->velocityResponseEditor->onReturnKey = [this, layer] {
+        this->commitVelocityResponse(layer);
+        layer->velocityResponseEditor->giveAwayKeyboardFocus();
+    };
+    layer->velocityResponseEditor->onFocusLost = [this, layer] { this->commitVelocityResponse(layer); };
 
     this->updateSourceDisplay(layer);
 
@@ -879,6 +904,35 @@ int PadContextPopup::getSourceOccurrenceIndex(const LayerRow* layer) const {
 
     return -1;
 }
+
+void PadContextPopup::commitVelocityResponse(LayerRow* layer) {
+    if (layer == nullptr || layer->velocityResponseMode == nullptr || layer->velocityResponseEditor == nullptr) return;
+    const bool useCustomResponse = layer->velocityResponseMode->getSelectedId() == 2;
+    layer->velocityResponseEditor->setVisible(useCustomResponse);
+    if (!useCustomResponse) {
+        layer->velocityResponse.reset();
+        layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
+        layer->velocityResponseEditor->setTooltip("Example: 1:-48,64:-12,127:0");
+        this->applyLayerParametersFast(layer);
+        this->resized();
+        return;
+    }
+
+    auto parsedResponse = VelocityResponse::fromDefinition(layer->velocityResponseEditor->getText());
+    if (!parsedResponse.ok()) {
+        layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::accentWarning);
+        layer->velocityResponseEditor->setTooltip(parsedResponse.error());
+        return;
+    }
+
+    layer->velocityResponse = parsedResponse.value.getDefinition();
+    layer->velocityResponseEditor->setText(*layer->velocityResponse, false);
+    layer->velocityResponseEditor->setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
+    layer->velocityResponseEditor->setTooltip("Example: 1:-48,64:-12,127:0");
+    this->applyLayerParametersFast(layer);
+    this->resized();
+}
+
 void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
     if (layer == nullptr)
         return;
@@ -897,6 +951,11 @@ void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
     update.pan = static_cast<int>(layer->panPot->getValue());
     update.flipLR = layer->flipLRButton->getToggleState();
     update.flipPhase = layer->flipPhaseButton->getToggleState();
+    update.updateVelocityResponse = true;
+    if (layer->velocityResponse.has_value()) {
+        auto parsedResponse = VelocityResponse::fromDefinition(*layer->velocityResponse);
+        if (parsedResponse.ok()) update.velocityResponse = std::move(parsedResponse.value);
+    }
 
     std::unordered_map<juce::String, float> bleedLevels;
     for (const auto& bleedCtrl : layer->micBleeds) {
@@ -973,6 +1032,7 @@ juce::String PadContextPopup::generateFullMapText() const {
         entry.flipLR = layer->flipLRButton->getToggleState();
         entry.flipLRExplicit = entry.flipLR || layer->flipLRExplicit;
         entry.flipPhase = layer->flipPhaseButton->getToggleState();
+        entry.velocityResponse = layer->velocityResponse;
 
         for (const auto& bleedCtrl : layer->micBleeds) {
             if (bleedCtrl == nullptr || bleedCtrl->micCode.isEmpty()) continue;
@@ -1174,7 +1234,8 @@ void PadContextPopup::resized() {
     const int sourceW = UITheme::Sizes::sourceCardWidth;
     const int routingComboH = 14;
     const int bleedControlH = potH + routingComboH + 2;
-    const int layerRowH = juce::jmax(potH, bleedControlH) + 4;
+    const int sourceControlH = 68;
+    const int layerRowH = juce::jmax(sourceControlH, juce::jmax(potH, bleedControlH)) + 4;
     const int layerGap = 2;
     const int bleedPotW = 50;
     const int groupGap = 6;
@@ -1208,7 +1269,11 @@ void PadContextPopup::resized() {
             auto srcArea = rowArea.removeFromLeft(sourceW);
             layer->sourceButton->setBounds(srcArea);
             auto sourceInner = srcArea.reduced(6, 2).withTrimmedRight(compactButtonSize + UITheme::Spacing::sm);
+            auto velocityResponseArea = sourceInner.removeFromBottom(18);
             layer->sourceDetailLabel->setBounds(sourceInner);
+            layer->velocityResponseMode->setBounds(velocityResponseArea.removeFromLeft(62).reduced(0, 1));
+            velocityResponseArea.removeFromLeft(3);
+            layer->velocityResponseEditor->setBounds(velocityResponseArea.reduced(0, 1));
             auto removeButtonArea = srcArea.reduced(UITheme::Spacing::xs);
             auto removeButtonRow = removeButtonArea.removeFromBottom(compactButtonSize);
             layer->removeButton->setBounds(removeButtonRow.removeFromRight(compactButtonSize));

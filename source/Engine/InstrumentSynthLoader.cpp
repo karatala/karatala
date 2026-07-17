@@ -21,6 +21,7 @@ void InstrumentSynth::ArticulationRuntime::buildVelocityMapping(const VelocityRe
     }
     if (this->layers.empty()) return;
 
+    const VelocityResponse& effectiveVelocityResponse = this->parameters.velocityResponse.has_value() ? *this->parameters.velocityResponse : velocityResponse;
     for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
         VelLayerIdx chosenLayerIdx = static_cast<VelLayerIdx>(this->layers.size() - 1);
         for (size_t layerIdx = 0; layerIdx < this->layers.size(); ++layerIdx) {
@@ -30,12 +31,8 @@ void InstrumentSynth::ArticulationRuntime::buildVelocityMapping(const VelocityRe
             }
         }
         this->velocityToLayer[static_cast<size_t>(velocity)] = chosenLayerIdx;
-        if (this->calibrated) {
-            this->selectionTargetDb[static_cast<size_t>(velocity)] = *this->layers[static_cast<size_t>(chosenLayerIdx)].fittedSourceDb;
-            this->velocityGain[static_cast<size_t>(velocity)] = velocityResponse.getGain(static_cast<juce::uint8>(velocity)) * juce::Decibels::decibelsToGain(this->residualOutputDb[static_cast<size_t>(velocity)], -100.0f);
-        } else {
-            this->velocityGain[static_cast<size_t>(velocity)] = static_cast<float>(velocity) / 127.0f;
-        }
+        if (this->calibrated) this->selectionTargetDb[static_cast<size_t>(velocity)] = *this->layers[static_cast<size_t>(chosenLayerIdx)].fittedSourceDb;
+        this->velocityGain[static_cast<size_t>(velocity)] = effectiveVelocityResponse.getGain(static_cast<juce::uint8>(velocity));
     }
 }
 
@@ -298,6 +295,10 @@ void InstrumentSynth::applyParameterUpdate(ArticulationRuntime& art, const Layer
     if (update.pan.has_value()) art.parameters.pan = juce::jlimit(-127, 127, *update.pan);
     if (update.flipLR.has_value()) art.parameters.flipLR = *update.flipLR;
     if (update.flipPhase.has_value()) art.parameters.flipPhase = *update.flipPhase;
+    if (update.updateVelocityResponse) {
+        art.parameters.velocityResponse = update.velocityResponse;
+        if (this->parent != nullptr) art.buildVelocityMapping(this->parent->getVelocityResponse());
+    }
     if (!update.micBleedLevels.has_value()) return;
 
     std::unordered_map<StringsDictSingleton::Id, float> levelsByMicId;

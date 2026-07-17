@@ -285,6 +285,8 @@ public:
         std::optional<bool> flipLR;
         std::optional<bool> flipPhase;
         std::optional<std::unordered_map<juce::String, float>> micBleedLevels;
+        bool updateVelocityResponse = false;
+        std::optional<VelocityResponse> velocityResponse;
     };
 
     struct LayerParameters {
@@ -295,6 +297,7 @@ public:
         int pan = 0;
         bool flipLR = false;
         bool flipPhase = false;
+        std::optional<VelocityResponse> velocityResponse;
     };
 
     struct ArticulationRuntime {

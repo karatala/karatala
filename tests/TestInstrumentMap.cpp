@@ -210,7 +210,7 @@ TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[I
 
 TEST_CASE("InstrumentMap serializer preserves parsed assignments and parameters", "[InstrumentMap]") {
     const juce::String original =
-        "snare1/rim:MixedKit/snare-14/sidestick:tuning=-25;attack=12;decay=450;vol=-3.5;flipLR=1;flipPhase=1;bleed=oh:0.25,room:0.5";
+        "snare1/rim:MixedKit/snare-14/sidestick:tuning=-25;attack=12;decay=450;vol=-3.5;velocityResponse=1:-48,64:-12,127:0;flipLR=1;flipPhase=1;bleed=oh:0.25,room:0.5";
 
     auto parsed = DrumKitEngine::parseInstrumentMapText(original);
     REQUIRE(parsed.ok());
@@ -232,10 +232,35 @@ TEST_CASE("InstrumentMap serializer preserves parsed assignments and parameters"
     CHECK(entry.attackTimeMs == 12);
     CHECK(entry.decayTimeMs == 450);
     CHECK(entry.volumeDb == -3.5f);
+    REQUIRE(entry.velocityResponse.has_value());
+    CHECK(*entry.velocityResponse == "1:-48,64:-12,127:0");
     CHECK(entry.flipLR);
     CHECK(entry.flipPhase);
     CHECK(entry.micBleedLevels.at("oh") == 0.25f);
     CHECK(entry.micBleedLevels.at("room") == 0.5f);
+}
+
+TEST_CASE("InstrumentMap parser rejects an invalid layer velocity response", "[InstrumentMap][VelocityResponse]") {
+    const auto parsed = DrumKitEngine::parseInstrumentMapText("snare1/center:MyKit/snare-14/center:velocityResponse=1:-12,127:-1");
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 1);
+    CHECK_FALSE(parsed.value.entries.front().velocityResponse.has_value());
+    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("invalid value for 'velocityResponse'"));
+}
+
+TEST_CASE("InstrumentMap velocity response changes without changing an existing custom layer shape", "[InstrumentMap][VelocityResponse]") {
+    DrumKitEngine::InstrumentMapEntry first;
+    first.slotId = "snare1";
+    first.kitRef = "MyKit";
+    first.instCode = "snare-14";
+    first.velocityResponse = "1:-48,64:-12,127:0";
+
+    auto second = first;
+    second.velocityResponse = "1:-36,64:-9,127:0";
+
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(second));
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(first) == DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(second));
 }
 
 TEST_CASE("InstrumentMap serializer omits entries without slot or kit", "[InstrumentMap]") {

@@ -236,6 +236,8 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
     fingerprint += "|";
     fingerprint += entry.pan.has_value() ? juce::String(*entry.pan) : "_";
     fingerprint += "|";
+    fingerprint += entry.velocityResponse.has_value() ? *entry.velocityResponse : "_";
+    fingerprint += "|";
     fingerprint += entry.flipLR ? "1" : "0";
     fingerprint += entry.flipLRExplicit ? "e" : "a";
     fingerprint += "|";
@@ -249,7 +251,7 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
 }
 
 juce::String makeInstrumentMapEntryReloadFingerprint(const DrumKitEngine::InstrumentMapEntry& entry) {
-    const bool changesSynthShape = entry.tuningCents.has_value() || entry.attackTimeMs.has_value() || entry.decayTimeMs.has_value() || entry.volumeDb.has_value() || entry.pan.has_value() || entry.flipLR || entry.flipPhase || !entry.micBleedLevels.empty();
+    const bool changesSynthShape = entry.tuningCents.has_value() || entry.attackTimeMs.has_value() || entry.decayTimeMs.has_value() || entry.volumeDb.has_value() || entry.pan.has_value() || entry.velocityResponse.has_value() || entry.flipLR || entry.flipPhase || !entry.micBleedLevels.empty();
     juce::String fingerprint;
     fingerprint += entry.slotId.trim().toLowerCase() + "|";
     fingerprint += entry.kitRef.trim().toLowerCase() + "|";

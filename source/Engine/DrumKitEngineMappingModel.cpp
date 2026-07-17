@@ -160,6 +160,10 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                         entry.volumeDb = trimmed.getFloatValue();
                 } else if (key == "pan") {
                     parseInt(value, key, result, idx + 1, entry.pan);
+                } else if (key == "velocityResponse") {
+                    auto parsedResponse = VelocityResponse::fromDefinition(value);
+                    if (!parsedResponse.ok()) result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'velocityResponse': " + parsedResponse.error());
+                    else entry.velocityResponse = parsedResponse.value.getDefinition();
                 } else if (key == "flipLR") {
                     entry.flipLR = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
                     entry.flipLRExplicit = true;

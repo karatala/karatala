@@ -50,3 +50,26 @@ TEST_CASE("Calibrated runtime keeps named velocity layer boundaries", "[Velocity
     REQUIRE(articulation.selectionTargetDb[100] == Catch::Approx(fittedLevelsDb[3]));
     REQUIRE(articulation.velocityGain[100] == Catch::Approx(100.0f / 127.0f));
 }
+
+TEST_CASE("Layer velocity response changes gain without changing named velocity selection", "[VelocityResponse]") {
+    InstrumentSynth::ArticulationRuntime articulation(1, 0);
+    InstrumentSynth::VelocityLayerRuntime softLayer;
+    softLayer.velocity = 64;
+    softLayer.fittedSourceDb = -40.0f;
+    softLayer.calibrationTrimDb = 0.0f;
+    articulation.layers.push_back(std::move(softLayer));
+    InstrumentSynth::VelocityLayerRuntime hardLayer;
+    hardLayer.velocity = 127;
+    hardLayer.fittedSourceDb = -30.0f;
+    hardLayer.calibrationTrimDb = 0.0f;
+    articulation.layers.push_back(std::move(hardLayer));
+
+    auto customResponse = VelocityResponse::fromDefinition("1:-48,64:-12,127:0");
+    REQUIRE(customResponse.ok());
+    articulation.parameters.velocityResponse = customResponse.value;
+    articulation.buildVelocityMapping(VelocityResponse::linear());
+
+    REQUIRE(articulation.velocityToLayer[64] == 0);
+    REQUIRE(articulation.velocityToLayer[65] == 1);
+    REQUIRE(articulation.velocityGain[64] == Catch::Approx(juce::Decibels::decibelsToGain(-12.0f)));
+}

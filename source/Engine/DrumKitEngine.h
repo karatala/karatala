@@ -32,6 +32,7 @@ public:
         std::optional<int> decayTimeMs;
         std::optional<float> volumeDb;    // -60 to +12 dB
         std::optional<int> pan;           // -127 left to +127 right
+        std::optional<juce::String> velocityResponse;
         bool flipLR = false;
         bool flipLRExplicit = false;
         bool flipPhase = false;

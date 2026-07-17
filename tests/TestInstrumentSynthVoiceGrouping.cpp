@@ -310,10 +310,10 @@ struct ControllerTransitionFixture {
         this->tightSound.loaded.store(true);
         this->openSound.loaded.store(true);
         this->pedalSound.loaded.store(true);
-        articulations[0].layers[0].samples.push_back({ &this->tightSound, 1 });
+        articulations[0].layers[0].samples.push_back({ &this->tightSound, 1, {} });
         if (includeOpenTarget)
-            articulations[1].layers[0].samples.push_back({ &this->openSound, 1 });
-        articulations[2].layers[0].samples.push_back({ &this->pedalSound, 1 });
+            articulations[1].layers[0].samples.push_back({ &this->openSound, 1, {} });
+        articulations[2].layers[0].samples.push_back({ &this->pedalSound, 1, {} });
         for (auto& articulation : articulations) {
             auto& layer = articulation.layers[0];
             if (layer.samples.empty()) continue;
@@ -1132,8 +1132,8 @@ TEST_CASE("InstrumentSynth - layer parameters update only the target articulatio
     KitLib::SampleVariantSpec variant(nullptr, {}, 'a', sourceMic.value);
     SampledSound bellSound(nullptr, &variant);
     SampledSound bowSound(nullptr, &variant);
-    articulations[0].layers[0].samples.push_back({ &bellSound, 1 });
-    articulations[1].layers[0].samples.push_back({ &bowSound, 1 });
+    articulations[0].layers[0].samples.push_back({ &bellSound, 1, {} });
+    articulations[1].layers[0].samples.push_back({ &bowSound, 1, {} });
 
     InstrumentSynth::LayerParameterUpdate update;
     update.tuningCents = 120;

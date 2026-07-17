@@ -337,6 +337,7 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
         if (entry.decayTimeMs.has_value()) params.add("decay=" + juce::String(*entry.decayTimeMs));
         if (entry.volumeDb.has_value()) params.add("vol=" + juce::String(*entry.volumeDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
         if (entry.pan.has_value()) params.add("pan=" + juce::String(*entry.pan));
+        if (entry.velocityResponse.has_value()) params.add("velocityResponse=" + *entry.velocityResponse);
         if (entry.flipLR || entry.flipLRExplicit) params.add("flipLR=" + juce::String(entry.flipLR ? "1" : "0"));
         if (entry.flipPhase) params.add("flipPhase=1");
         if (!entry.micBleedLevels.empty()) {
@@ -1819,7 +1820,12 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         }
         return remap;
     };
-    auto applyOverrides = [](InstrumentSynth& synth, const InstrumentMapEntry& entry) {
+    auto resolveVelocityResponseOverride = [](const InstrumentMapEntry& entry) -> std::optional<VelocityResponse> {
+        if (!entry.velocityResponse.has_value()) return std::nullopt;
+        auto parsedResponse = VelocityResponse::fromDefinition(*entry.velocityResponse);
+        return parsedResponse.ok() ? std::optional<VelocityResponse>(std::move(parsedResponse.value)) : std::nullopt;
+    };
+    auto applyOverrides = [&resolveVelocityResponseOverride](InstrumentSynth& synth, const InstrumentMapEntry& entry) {
         synth.setTuningOffsetCents(entry.tuningCents.value_or(0));
         synth.setAttackOverrideMs(entry.attackTimeMs.value_or(-1));
         synth.setDecayOverrideMs(entry.decayTimeMs.value_or(-1));
@@ -1828,9 +1834,13 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         synth.setFlipLR(entry.flipLR);
         synth.setFlipPhase(entry.flipPhase);
         synth.setMicBleedLevels(entry.micBleedLevels);
+        LayerParameterUpdate velocityResponseUpdate;
+        velocityResponseUpdate.updateVelocityResponse = true;
+        velocityResponseUpdate.velocityResponse = resolveVelocityResponseOverride(entry);
+        synth.updateArticulationParameters({}, velocityResponseUpdate);
     };
 
-    auto makeParameterUpdate = [](const InstrumentMapEntry& entry) {
+    auto makeParameterUpdate = [&resolveVelocityResponseOverride](const InstrumentMapEntry& entry) {
         LayerParameterUpdate update;
         update.tuningCents = entry.tuningCents.value_or(0);
         update.attackMs = entry.attackTimeMs.value_or(-1);
@@ -1840,6 +1850,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         update.flipLR = entry.flipLR;
         update.flipPhase = entry.flipPhase;
         update.micBleedLevels = entry.micBleedLevels;
+        update.updateVelocityResponse = true;
+        update.velocityResponse = resolveVelocityResponseOverride(entry);
         return update;
     };
 
@@ -2090,6 +2102,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                                             || resolved.entry->decayTimeMs.has_value()
                                             || resolved.entry->volumeDb.has_value()
                                             || resolved.entry->pan.has_value()
+                                            || resolved.entry->velocityResponse.has_value()
                                             || resolved.entry->flipLR
                                             || resolved.entry->flipPhase
                                             || !resolved.entry->micBleedLevels.empty()

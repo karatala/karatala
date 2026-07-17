@@ -77,8 +77,11 @@ private:
         juce::String sourcePathHint;
         int selectedSourceIndex = -1;
         int mappedLayerIndex = -1;
+        std::optional<juce::String> velocityResponse;
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel;
+        std::unique_ptr<juce::ComboBox> velocityResponseMode;
+        std::unique_ptr<juce::TextEditor> velocityResponseEditor;
         std::unique_ptr<CompactParameterControl> tuningPot;
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
@@ -108,11 +111,13 @@ private:
     void addArticulationGroup(const juce::String& articulationName);
     void addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
                      float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
+                     const std::optional<juce::String>& velocityResponse,
                      const std::unordered_map<juce::String, float>& micBleedLevels,
                      const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
     int getSourceOccurrenceIndex(const LayerRow* layer) const;
+    void commitVelocityResponse(LayerRow* layer);
     void applyLayerParametersFast(LayerRow* layer);
     void updateRemoveButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
