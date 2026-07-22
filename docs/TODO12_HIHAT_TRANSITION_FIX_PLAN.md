@@ -524,6 +524,16 @@ Listening gate:
 - foot-splash and tight-to-open behavior were confirmed fixed;
 - future group-coherent transition work requires a separate listening comparison before replacing this path.
 
+### ✅ Post-Completion Silent Multi-Mic Closing Fallback
+
+Added on July 22, 2026 without replacing the accepted per-voice path:
+
+- each mic first uses its own decay-matched target offset;
+- when that target region is silent during closing, the mic tries the Direct offset, then the Overhead offset;
+- each reference offset is accepted only when the current target mic has audible content there;
+- when the own, Direct, and Overhead regions are all silent, the old open mic voice receives the normal short closing fade instead of continuing to ring;
+- focused tests cover Direct fallback for Overhead and Room, Overhead fallback when Direct is absent, and the final fade fallback.
+
 ## Tests to Add
 
 Suggested files:

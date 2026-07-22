@@ -756,6 +756,8 @@ private:
     int getVoicePedalOpenCloseValue(const InstrumentSynthVoice& voice) const;
     ArtRtIdx selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const;
     bool controllerCanTransitionExistingVoices(int controllerNumber) const;
+    bool isHiHatTransitionTargetAudible(const SampledSound& targetSound, double offsetSamples, float expectedTargetDb, float silenceFloorDb) const;
+    std::optional<float> findHiHatReferenceOffsetMs(const InstrumentSynthVoice& sourceVoice, ArtRtIdx sourceArtIdx, const ArticulationRuntime& targetArt, int targetLayerIdx, uint8_t targetVariant, const SampledSound& replacementTargetSound, KitLib::MicSpec::Type& referenceMicType) const;
 
     LogicalHitRuntime* chooseLogicalHit(VelocityLayerRuntime& layer);
     bool hasReadyLogicalHit(const VelocityLayerRuntime& layer) const;

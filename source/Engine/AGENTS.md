@@ -20,7 +20,7 @@
 - Velocity-response UI reads copied source-articulation measurements on the message thread. User curve presets store only a validated response definition under `velocity_response_presets`; applying one copies the definition into the layer map.
 - Normal note selection returns one complete ready logical hit. Reserve voices for all active linked mic entries before starting any of them; never mix mic entries from different velocity or round-robin hits.
 - `SampleLoader` cache identity is source content identity plus one resolved typed preprocessing recipe. Preview and progressive playback must use the same recipe path, and audio-changing recipe values must be part of the cache key.
-- Hi-hat CC tail transitions use the listening-approved per-voice replacement path. Do not reintroduce shared event IDs, atomic all-mic commits, canonical reference-mic offsets, or complementary target ramps without a separate listening comparison.
+- Hi-hat CC tail transitions use the listening-approved per-voice replacement path. Each mic keeps its own decay-matched offset first. If that target region is silent, a closing transition may try the validated Direct offset and then the Overhead offset; if both reference regions are silent, fade that old mic voice. Do not replace this fallback with unconditional canonical offsets, shared event IDs, atomic all-mic commits, or complementary target ramps without a separate listening comparison.
 - Entirely skipped hi-hat transitions caused by the attack guard or temporary voice pressure retry at the existing controller-smoothing interval, even when no newer CC message arrives.
 - Entering the most-closed mapped hi-hat controller state may trigger the layout's `pedal` note only when the closure gesture contains an audible open/half tail. Its velocity follows that tail's remaining estimated loudness; silence and equal-POC tight-only playback do not generate an implicit pedal event.
 - Instrument-map synth ownership comes from exact destination routes. `noteToArticulation` is only the final MIDI lookup table and must not be used to decide which synth owns a destination articulation.
@@ -38,7 +38,7 @@
 
 - Keep bounded fixed-size lookup tables for MIDI domains (`0..127`) when they improve hot-path predictability.
 - Avoid strings, logging preparation, heap allocation, locks with message-thread contention, and sample-window scans in realtime paths.
-- The existing bounded 1024-sample hi-hat target validation scan is known performance debt retained to preserve accepted sound; do not expand it.
+- The bounded 1024-sample hi-hat target validation scan is known performance debt retained to preserve accepted sound. Reference-offset validation may repeat it only after the mic-specific region is silent; do not increase the window or run reference scans on the normal successful path.
 - Add focused tests for parsers and pure transition-selection math before wiring behavior into voices.
 
 # Verification

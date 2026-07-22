@@ -242,6 +242,20 @@ KitLib::MicSpec makeDirectMic() {
     return micSpec;
 }
 
+KitLib::MicSpec makeOverheadMic() {
+    KitLib::MicSpec micSpec;
+    micSpec.type = KitLib::MicSpec::Type::Overhead;
+    micSpec.channels = 2;
+    return micSpec;
+}
+
+KitLib::MicSpec makeRoomMic() {
+    KitLib::MicSpec micSpec;
+    micSpec.type = KitLib::MicSpec::Type::Room;
+    micSpec.channels = 2;
+    return micSpec;
+}
+
 KitLib::DecayEnvelope makeTransitionEnvelope() {
     KitLib::DecayEnvelope envelope;
     envelope.peakDb = -20.0f;
@@ -346,6 +360,134 @@ struct ControllerTransitionFixture {
         InstrumentSynthTestAccess::setVoiceArticulation(*this->tightVoice, this->tightSpec);
         this->tightVoice->sourceSamplePosition = 4410.0;
         this->tightVoice->cachedEstimatedDb = -24.0f;
+    }
+};
+
+struct MultiMicClosingTransitionFixture {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot = makeHiHatSlot();
+    InstrumentSynth synth { &this->engine, this->slot };
+    KitLib::InstrumentSpec::MetaInfo instrumentMeta = makeInstrumentMeta();
+    KitLib::InstrumentSpec instrumentSpec { nullptr, this->instrumentMeta };
+    KitLib::ArticulationSpec tightSpec { &this->instrumentSpec, "bow[tight]" };
+    KitLib::ArticulationSpec openSpec { &this->instrumentSpec, "bow[open]" };
+    KitLib::VelocityLayerSpec tightLayerSpec { &this->tightSpec, 127 };
+    KitLib::VelocityLayerSpec openLayerSpec { &this->openSpec, 127 };
+    KitLib::MicSpec directMic = makeDirectMic();
+    KitLib::MicSpec overheadMic = makeOverheadMic();
+    KitLib::MicSpec roomMic = makeRoomMic();
+    KitLib::SampleVariantSpec tightDirectVariant { &this->tightLayerSpec, {}, 'a', this->directMic };
+    KitLib::SampleVariantSpec openDirectVariant { &this->openLayerSpec, {}, 'a', this->directMic };
+    KitLib::SampleVariantSpec tightOverheadVariant { &this->tightLayerSpec, {}, 'a', this->overheadMic };
+    KitLib::SampleVariantSpec openOverheadVariant { &this->openLayerSpec, {}, 'a', this->overheadMic };
+    KitLib::SampleVariantSpec tightRoomVariant { &this->tightLayerSpec, {}, 'a', this->roomMic };
+    KitLib::SampleVariantSpec openRoomVariant { &this->openLayerSpec, {}, 'a', this->roomMic };
+    SampledSound tightDirectSound { nullptr, &this->tightDirectVariant };
+    SampledSound openDirectSound { nullptr, &this->openDirectVariant };
+    SampledSound tightOverheadSound { nullptr, &this->tightOverheadVariant };
+    SampledSound openOverheadSound { nullptr, &this->openOverheadVariant };
+    SampledSound tightRoomSound { nullptr, &this->tightRoomVariant };
+    SampledSound openRoomSound { nullptr, &this->openRoomVariant };
+    InstrumentSynthVoice* sourceDirectVoice = nullptr;
+    InstrumentSynthVoice* sourceOverheadVoice = nullptr;
+    InstrumentSynthVoice* sourceRoomVoice = nullptr;
+    std::vector<InstrumentSynthVoice*> replacementVoices;
+
+    explicit MultiMicClosingTransitionFixture(bool includeDirectReference = true, bool roomReferenceRegionAudible = true) {
+        this->engine.engineSettings.hihatControllerSmoothingSec.store(0.0f);
+        this->engine.engineSettings.hihatCloseCrossfadeSec.store(0.020f);
+        this->engine.engineSettings.hihatTransitionAttackGuardSec.store(0.0f);
+        this->engine.engineSettings.hihatTransitionMinRemainingSec.store(0.01f);
+        this->engine.engineSettings.hihatTransitionSilenceFloorDb.store(-90.0f);
+        this->engine.engineSettings.hihatTailMatchAmount.store(1.0f);
+        this->engine.engineSettings.hihatTailMatchBiasDb.store(0.0f);
+        this->engine.engineSettings.hihatFootSampleMode.store(HiHatFootSampleMode::Off);
+        this->synth.setCurrentPlaybackSampleRate(44100.0);
+
+        auto& articulations = InstrumentSynthTestAccess::articulations(this->synth);
+        articulations.emplace_back(this->tightSpec.nameId, this->tightSpec.exprId);
+        articulations.back().pedalOpenCloseValue = 90;
+        articulations.back().layers.emplace_back();
+        articulations.back().velocityToLayer.fill(0);
+        articulations.emplace_back(this->openSpec.nameId, this->openSpec.exprId);
+        articulations.back().pedalOpenCloseValue = 10;
+        articulations.back().layers.emplace_back();
+        articulations.back().velocityToLayer.fill(0);
+        InstrumentSynthTestAccess::mapRuntimeArticulation(this->synth, this->tightSpec, 0);
+        InstrumentSynthTestAccess::mapRuntimeArticulation(this->synth, this->openSpec, 1);
+        InstrumentSynthTestAccess::configureController(this->synth, 4, 1, 0);
+        InstrumentSynthTestAccess::configureCachedController(this->synth, 4, 10, 1);
+
+        this->configureSound(this->tightDirectSound, 0, 1, makeTransitionEnvelope());
+        this->configureSound(this->openDirectSound, 0, 1, makeTransitionEnvelope());
+        this->configureSound(this->tightOverheadSound, 2, 2, makeTransitionEnvelope());
+        this->configureSound(this->openOverheadSound, 2, 2, includeDirectReference ? this->makeLateMatchEnvelope() : makeTransitionEnvelope());
+        this->configureSound(this->tightRoomSound, 14, 2, makeTransitionEnvelope());
+        this->configureSound(this->openRoomSound, 14, 2, this->makeLateMatchEnvelope());
+
+        this->fillWholeBuffer(this->openDirectSound, 0.5f);
+        this->fillWholeBuffer(this->openOverheadSound, 0.5f);
+        this->fillWholeBuffer(this->openRoomSound, 0.5f);
+        this->fillWholeBuffer(this->tightDirectSound, 0.5f);
+        this->fillBufferRange(this->tightOverheadSound, 4200, 5600, 0.5f);
+        if (roomReferenceRegionAudible) this->fillBufferRange(this->tightRoomSound, 4200, 5600, 0.5f);
+
+        auto& targetSamples = articulations[0].layers[0].samples;
+        if (includeDirectReference) targetSamples.push_back({ &this->tightDirectSound, 1, {} });
+        targetSamples.push_back({ &this->tightOverheadSound, 1, {} });
+        targetSamples.push_back({ &this->tightRoomSound, 1, {} });
+
+        if (includeDirectReference) this->sourceDirectVoice = this->addSourceVoice(this->openDirectSound);
+        this->sourceOverheadVoice = this->addSourceVoice(this->openOverheadSound);
+        this->sourceRoomVoice = this->addSourceVoice(this->openRoomSound);
+        for (int voiceIdx = 0; voiceIdx < 3; ++voiceIdx) this->replacementVoices.push_back(this->synth.addVoice(new InstrumentSynthVoice()));
+    }
+
+    InstrumentSynthVoice* findReplacementVoice(const SampledSound& sound) const {
+        for (auto* voice : this->replacementVoices)
+            if (voice != nullptr && voice->getCurrentlyPlayingSound() == &sound) return voice;
+        return nullptr;
+    }
+
+private:
+    static KitLib::DecayEnvelope makeLateMatchEnvelope() {
+        KitLib::DecayEnvelope envelope;
+        envelope.peakDb = -20.0f;
+        envelope.peakMs = 10.0f;
+        envelope.points[0] = 50.0f;
+        envelope.points[1] = 100.0f;
+        envelope.validPoints = 2;
+        return envelope;
+    }
+
+    void configureSound(SampledSound& sound, int micBufferChannelStart, int micBufferChannelCount, const KitLib::DecayEnvelope& envelope) {
+        sound.sampleRate = 44100.0;
+        sound.micBufferChannelStart = micBufferChannelStart;
+        sound.micBufferChannelCount = micBufferChannelCount;
+        sound.decayEnvelope = envelope;
+        sound.buffer = std::make_shared<juce::AudioBuffer<float>>(micBufferChannelCount, 88200);
+        sound.buffer->clear();
+        sound.loaded.store(true);
+    }
+
+    void fillWholeBuffer(SampledSound& sound, float value) {
+        this->fillBufferRange(sound, 0, sound.buffer->getNumSamples(), value);
+    }
+
+    void fillBufferRange(SampledSound& sound, int startSample, int endSample, float value) {
+        for (int channelIdx = 0; channelIdx < sound.buffer->getNumChannels(); ++channelIdx)
+            for (int sampleIdx = startSample; sampleIdx < endSample; ++sampleIdx)
+                sound.buffer->setSample(channelIdx, sampleIdx, value);
+    }
+
+    InstrumentSynthVoice* addSourceVoice(SampledSound& sound) {
+        auto* voice = this->synth.addVoice(new InstrumentSynthVoice());
+        this->synth.startVoice(voice, &sound, 1, 42, 102.0f / 127.0f);
+        InstrumentSynthTestAccess::setVoiceArticulation(*voice, this->openSpec);
+        InstrumentSynthTestAccess::setVoiceRuntimeArticulation(*voice, 1);
+        voice->sourceSamplePosition = 4410.0;
+        voice->cachedEstimatedDb = -26.0f;
+        return voice;
     }
 };
 
@@ -862,6 +1004,57 @@ TEST_CASE("InstrumentSynth - unavailable target leaves the ringing voice unchang
     const auto counters = fixture.synth.getHiHatTransitionCounters();
     REQUIRE(counters.completed == 0);
     REQUIRE(counters.skipped == 1);
+}
+
+TEST_CASE("InstrumentSynth - silent overhead and room targets reuse the direct transition offset", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
+    MultiMicClosingTransitionFixture fixture;
+
+    fixture.synth.handleController(1, 4, 100);
+
+    REQUIRE(fixture.sourceDirectVoice != nullptr);
+    CHECK(fixture.sourceDirectVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    CHECK(fixture.sourceOverheadVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    CHECK(fixture.sourceRoomVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    auto* directReplacement = fixture.findReplacementVoice(fixture.tightDirectSound);
+    auto* overheadReplacement = fixture.findReplacementVoice(fixture.tightOverheadSound);
+    auto* roomReplacement = fixture.findReplacementVoice(fixture.tightRoomSound);
+    REQUIRE(directReplacement != nullptr);
+    REQUIRE(overheadReplacement != nullptr);
+    REQUIRE(roomReplacement != nullptr);
+    CHECK(directReplacement->sourceSamplePosition == Catch::Approx(4410.0).margin(24.0));
+    CHECK(overheadReplacement->sourceSamplePosition == Catch::Approx(directReplacement->sourceSamplePosition).margin(1.0));
+    CHECK(roomReplacement->sourceSamplePosition == Catch::Approx(directReplacement->sourceSamplePosition).margin(1.0));
+    const auto counters = fixture.synth.getHiHatTransitionCounters();
+    CHECK(counters.completed == 1);
+    CHECK(counters.skipped == 0);
+}
+
+TEST_CASE("InstrumentSynth - room target reuses the overhead offset when direct is absent", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
+    MultiMicClosingTransitionFixture fixture(false);
+
+    fixture.synth.handleController(1, 4, 100);
+
+    auto* overheadReplacement = fixture.findReplacementVoice(fixture.tightOverheadSound);
+    auto* roomReplacement = fixture.findReplacementVoice(fixture.tightRoomSound);
+    REQUIRE(overheadReplacement != nullptr);
+    REQUIRE(roomReplacement != nullptr);
+    CHECK(overheadReplacement->sourceSamplePosition == Catch::Approx(4410.0).margin(24.0));
+    CHECK(roomReplacement->sourceSamplePosition == Catch::Approx(overheadReplacement->sourceSamplePosition).margin(1.0));
+    CHECK(fixture.sourceRoomVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+}
+
+TEST_CASE("InstrumentSynth - silent closing target fades the old mic when reference offsets are also silent", "[InstrumentSynth][HiHatTransition][ControllerPath]") {
+    MultiMicClosingTransitionFixture fixture(true, false);
+
+    fixture.synth.handleController(1, 4, 100);
+
+    CHECK(fixture.findReplacementVoice(fixture.tightRoomSound) == nullptr);
+    REQUIRE(fixture.sourceRoomVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    CHECK(fixture.sourceRoomVoice->adsr.getParameters().release == Catch::Approx(0.020f));
+    CHECK(InstrumentSynthTestAccess::cachedArticulation(fixture.synth, 4) == 0);
+    const auto counters = fixture.synth.getHiHatTransitionCounters();
+    CHECK(counters.completed == 1);
+    CHECK(counters.skipped == 0);
 }
 
 TEST_CASE("InstrumentSynth - controller smoothing retains the latest value", "[InstrumentSynth][HiHatTransition][ControllerPath]") {

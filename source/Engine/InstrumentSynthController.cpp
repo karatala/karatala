@@ -181,6 +181,143 @@ void InstrumentSynth::processPendingHiHatControllers() {
     }
 }
 
+bool InstrumentSynth::isHiHatTransitionTargetAudible(const SampledSound& targetSound, double offsetSamples, float expectedTargetDb, float silenceFloorDb) const {
+    if (targetSound.buffer == nullptr) return false;
+
+    const auto& targetBuffer = *targetSound.buffer;
+    const int windowStart = juce::jlimit(0, juce::jmax(0, targetBuffer.getNumSamples() - 1), static_cast<int>(offsetSamples));
+    const int windowSize = juce::jmin(1024, targetBuffer.getNumSamples() - windowStart);
+    if (windowSize <= 0) return false;
+
+    int sourceChannelStart = 0;
+    int sourceChannelCount = targetBuffer.getNumChannels();
+    if (targetSound.sampleVariantSpec != nullptr) {
+        sourceChannelStart = targetSound.sampleVariantSpec->fileChannelStart;
+        if (targetSound.sampleVariantSpec->fileChannelCount > 0) sourceChannelCount = targetSound.sampleVariantSpec->fileChannelCount;
+    }
+
+    double sumSquares = 0.0;
+    int sampleCount = 0;
+    for (int channelIdx = 0; channelIdx < sourceChannelCount; ++channelIdx) {
+        const int sourceChannel = juce::jlimit(0, targetBuffer.getNumChannels() - 1, sourceChannelStart + channelIdx);
+        const float* readPtr = targetBuffer.getReadPointer(sourceChannel, windowStart);
+        for (int sampleIdx = 0; sampleIdx < windowSize; ++sampleIdx) {
+            const float sample = readPtr[sampleIdx];
+            sumSquares += static_cast<double>(sample) * static_cast<double>(sample);
+        }
+        sampleCount += windowSize;
+    }
+
+    const float rms = sampleCount > 0 ? std::sqrt(static_cast<float>(sumSquares / static_cast<double>(sampleCount))) : 0.0f;
+    const float rmsDb = juce::Decibels::gainToDecibels(juce::jmax(0.000001f, rms), -100.0f);
+    const float silenceThreshold = juce::jmax(expectedTargetDb - 24.0f, silenceFloorDb);
+    return rmsDb >= silenceThreshold;
+}
+
+std::optional<float> InstrumentSynth::findHiHatReferenceOffsetMs(const InstrumentSynthVoice& sourceVoice, ArtRtIdx sourceArtIdx, const ArticulationRuntime& targetArt, int targetLayerIdx, uint8_t targetVariant, const SampledSound& replacementTargetSound, KitLib::MicSpec::Type& referenceMicType) const {
+    if (this->parent == nullptr || targetLayerIdx < 0 || targetLayerIdx >= static_cast<int>(targetArt.layers.size())) return std::nullopt;
+
+    const auto* sourceSound = sourceVoice.getCurrentlyPlayingSound();
+    if (sourceSound == nullptr) return std::nullopt;
+    const double sourceRate = sourceSound->sampleRate > 0.0 ? sourceSound->sampleRate : 44100.0;
+    const float sourceElapsedMs = static_cast<float>((sourceVoice.sourceSamplePosition / sourceRate) * 1000.0);
+    const auto& targetLayer = targetArt.layers[static_cast<size_t>(targetLayerIdx)];
+    const auto& settings = this->parent->getEngineSettings();
+
+    auto findReferenceVoice = [this, &sourceVoice, sourceArtIdx, sourceElapsedMs, targetVariant](KitLib::MicSpec::Type micType) -> InstrumentSynthVoice* {
+        InstrumentSynthVoice* bestVoice = nullptr;
+        float bestElapsedDifferenceMs = 25.0f;
+        for (auto* candidateVoice : this->voices) {
+            if (candidateVoice == nullptr || !candidateVoice->isVoiceActive()) continue;
+            if (candidateVoice->getCurrentlyPlayingNote() != sourceVoice.getCurrentlyPlayingNote()) continue;
+            if (candidateVoice->currentPlayingMidiChannel != sourceVoice.currentPlayingMidiChannel) continue;
+            if (candidateVoice->getMidiVelocity() != sourceVoice.getMidiVelocity()) continue;
+            if (this->getVoiceRuntimeArticulationIdx(*candidateVoice) != sourceArtIdx) continue;
+
+            const auto* candidateSound = candidateVoice->getCurrentlyPlayingSound();
+            if (candidateSound == nullptr || candidateSound->sampleVariantSpec == nullptr) continue;
+            if (candidateSound->sampleVariantSpec->micSpec.type != micType) continue;
+            if (KitLib::SampleVariantSpec::letterToIdx(candidateSound->sampleVariantSpec->letter) != targetVariant) continue;
+
+            const double candidateRate = candidateSound->sampleRate > 0.0 ? candidateSound->sampleRate : 44100.0;
+            const float candidateElapsedMs = static_cast<float>((candidateVoice->sourceSamplePosition / candidateRate) * 1000.0);
+            const float elapsedDifferenceMs = std::abs(candidateElapsedMs - sourceElapsedMs);
+            if (elapsedDifferenceMs > bestElapsedDifferenceMs) continue;
+            bestElapsedDifferenceMs = elapsedDifferenceMs;
+            bestVoice = candidateVoice;
+        }
+        return bestVoice;
+    };
+
+    auto findTargetEntry = [&targetLayer, targetVariant](const SampledSound& referenceSound) -> const SampleEntry* {
+        const int referenceMicStart = referenceSound.micBufferChannelStart;
+        const SampleEntry* targetEntry = nullptr;
+        for (const auto& sampleEntry : targetLayer.samples) {
+            if (sampleEntry.variantIdx == targetVariant && sampleEntry.sound != nullptr && sampleEntry.sound->micBufferChannelStart == referenceMicStart) {
+                targetEntry = &sampleEntry;
+                break;
+            }
+        }
+        if (targetEntry != nullptr && targetEntry->sound->loaded.load(std::memory_order_acquire) && targetEntry->sound->buffer != nullptr) return targetEntry;
+        for (const auto& sampleEntry : targetLayer.samples) {
+            if (sampleEntry.sound == nullptr || sampleEntry.sound->micBufferChannelStart != referenceMicStart) continue;
+            if (!sampleEntry.sound->loaded.load(std::memory_order_acquire) || sampleEntry.sound->buffer == nullptr) continue;
+            return &sampleEntry;
+        }
+        return nullptr;
+    };
+
+    const std::array<KitLib::MicSpec::Type, 2> referenceTypes { KitLib::MicSpec::Type::Direct, KitLib::MicSpec::Type::Overhead };
+    for (const auto referenceType : referenceTypes) {
+        auto* referenceVoice = findReferenceVoice(referenceType);
+        if (referenceVoice == nullptr) continue;
+        const auto* referenceSound = referenceVoice->getCurrentlyPlayingSound();
+        if (referenceSound == nullptr) continue;
+        const auto* targetEntry = findTargetEntry(*referenceSound);
+        if (targetEntry == nullptr || targetEntry->sound == nullptr || targetEntry->sound->buffer == nullptr) continue;
+
+        const auto& sourceEnvelope = referenceSound->decayEnvelope;
+        const auto& targetEnvelope = targetEntry->sound->decayEnvelope;
+        const double referenceSourceRate = referenceSound->sampleRate > 0.0 ? referenceSound->sampleRate : 44100.0;
+        const float elapsedMs = static_cast<float>((referenceVoice->sourceSamplePosition / referenceSourceRate) * 1000.0);
+        const float sourceVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, referenceVoice->getVelocityGain()), -100.0f);
+        const float targetVelocityGain = targetArt.velocityGain[static_cast<size_t>(referenceVoice->getMidiVelocity())];
+        const float targetVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, targetVelocityGain), -100.0f);
+        const float currentAudibleDb = sourceEnvelope.isValid() ? sourceEnvelope.getAbsoluteDbAtMs(elapsedMs) + sourceVelocityDb : referenceVoice->getEstimatedCurrentDb();
+        const double targetRate = targetEntry->sound->sampleRate > 0.0 ? targetEntry->sound->sampleRate : 44100.0;
+        const float targetLengthMs = static_cast<float>((static_cast<double>(targetEntry->sound->buffer->getNumSamples()) / targetRate) * 1000.0);
+        const auto offsetResult = HiHatTransitionPolicy::calculateDecayMatchedOffset({
+            &sourceEnvelope,
+            &targetEnvelope,
+            elapsedMs,
+            currentAudibleDb,
+            targetVelocityDb,
+            targetLengthMs,
+            settings.hihatTransitionAttackGuardSec.load() * 1000.0f,
+            settings.hihatTransitionSilenceFloorDb.load(),
+            settings.hihatTailMatchAmount.load(),
+            settings.hihatTailMatchBiasDb.load(),
+            settings.hihatTransitionMinRemainingSec.load() * 1000.0f,
+            settings.hihatMissingDecayPolicy.load(),
+        });
+        if (!offsetResult.succeeded()) continue;
+
+        if (replacementTargetSound.buffer == nullptr) continue;
+        const double replacementTargetRate = replacementTargetSound.sampleRate > 0.0 ? replacementTargetSound.sampleRate : 44100.0;
+        const float replacementTargetLengthMs = static_cast<float>((static_cast<double>(replacementTargetSound.buffer->getNumSamples()) / replacementTargetRate) * 1000.0);
+        if (replacementTargetLengthMs - offsetResult.offsetMs < settings.hihatTransitionMinRemainingSec.load() * 1000.0f) continue;
+        const double offsetSamples = (static_cast<double>(offsetResult.offsetMs) / 1000.0) * replacementTargetRate;
+        const double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(replacementTargetSound.buffer->getNumSamples() - 1)), offsetSamples);
+        const float expectedReplacementDb = replacementTargetSound.decayEnvelope.isValid() ? replacementTargetSound.decayEnvelope.getAbsoluteDbAtMs(offsetResult.offsetMs) : offsetResult.targetRelativeDb;
+        if (!this->isHiHatTransitionTargetAudible(replacementTargetSound, clampedOffset, expectedReplacementDb, settings.hihatTransitionSilenceFloorDb.load())) continue;
+
+        referenceMicType = referenceType;
+        return offsetResult.offsetMs;
+    }
+
+    return std::nullopt;
+}
+
 void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue) {
     this->processedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     const auto controllerIdx = static_cast<size_t>(controllerNumber);
@@ -304,6 +441,8 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     int skippedNoDbMatch = 0;
     int skippedSilentTarget = 0;
     int skippedOther = 0;
+    int referenceOffsetReplacements = 0;
+    int fadedSilentTargets = 0;
     bool encounteredTransientSkip = false;
 
     // For each active voice, if its articulation differs from newArtIdx, crossfade
@@ -435,7 +574,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         const float targetRelativeDb = offsetResult.targetRelativeDb;
         const float clampedMs = offsetResult.offsetMs;
 
-        const double offsetMs = static_cast<double>(clampedMs);
+        double selectedOffsetMs = static_cast<double>(clampedMs);
 
         // For pedal transitions, never steal active voices. If no idle voice exists,
         // keep the old voice ringing instead of risking an abrupt mute.
@@ -455,8 +594,14 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         }
 
         const double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-        const double offsetSamples = (offsetMs / 1000.0) * srcRate;
-        const double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
+        const double offsetSamples = (selectedOffsetMs / 1000.0) * srcRate;
+        double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
+
+        const auto& currentArt = this->runtimeArticulations[static_cast<size_t>(currentArtIdx)];
+        const auto transitionDirection = HiHatTransitionPolicy::getDirection(currentArt.pedalOpenCloseValue, newArt.pedalOpenCloseValue);
+        const float transitionCrossfadeSec = transitionDirection == HiHatTransitionPolicy::Direction::Closing ? closeCrossfadeSec : openCrossfadeSec;
+        bool usedReferenceOffset = false;
+        KitLib::MicSpec::Type referenceMicType = KitLib::MicSpec::Type::Unknown;
 
         // Guard against replacing with an effectively silent region.
         // Use a threshold relative to the expected decay-envelope level. Quiet
@@ -464,55 +609,27 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         // Only skip if measured content is >24dB below the envelope's prediction
         // (indicating corrupt/empty sample), with an absolute floor at -90dB
         // to catch true digital silence.
-        {
-            const int windowStart = juce::jlimit(0, juce::jmax(0, targetBuffer.getNumSamples() - 1), static_cast<int>(clampedOffset));
-            const int windowSize = juce::jmin(1024, targetBuffer.getNumSamples() - windowStart);
-            if (windowSize <= 0) {
+        if (!this->isHiHatTransitionTargetAudible(*targetSe->sound, clampedOffset, targetRelativeDb, silenceFloorDb)) {
+            const auto referenceOffsetMs = this->findHiHatReferenceOffsetMs(*voice, static_cast<ArtRtIdx>(currentArtIdx), newArt, layerIdx, curVariant, *targetSe->sound, referenceMicType);
+            if (referenceOffsetMs.has_value()) {
+                const double referenceOffsetSamples = (static_cast<double>(*referenceOffsetMs) / 1000.0) * srcRate;
+                const double referenceClampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), referenceOffsetSamples);
+                selectedOffsetMs = *referenceOffsetMs;
+                clampedOffset = referenceClampedOffset;
+                usedReferenceOffset = true;
+                ++referenceOffsetReplacements;
+            }
+
+            if (!usedReferenceOffset) {
                 ++skippedSilentTarget;
-                continue;
-            }
-
-            // Only measure the channels this sample variant actually uses
-            int srcStart = 0;
-            int srcCount = targetBuffer.getNumChannels();
-            if (targetSe->sound->sampleVariantSpec != nullptr) {
-                srcStart = targetSe->sound->sampleVariantSpec->fileChannelStart;
-                if (targetSe->sound->sampleVariantSpec->fileChannelCount > 0)
-                    srcCount = targetSe->sound->sampleVariantSpec->fileChannelCount;
-            }
-
-            double sumSquares = 0.0;
-            int sampleCount = 0;
-            for (int sc = 0; sc < srcCount; ++sc) {
-                const int ch = juce::jlimit(0, targetBuffer.getNumChannels() - 1, srcStart + sc);
-                const float* readPtr = targetBuffer.getReadPointer(ch, windowStart);
-                for (int i = 0; i < windowSize; ++i) {
-                    const float sample = readPtr[i];
-                    sumSquares += static_cast<double>(sample) * static_cast<double>(sample);
+                if (transitionDirection == HiHatTransitionPolicy::Direction::Closing) {
+                    voice->requestFadeOut(closeCrossfadeSec);
+                    ++fadedSilentTargets;
                 }
-                sampleCount += windowSize;
-            }
-
-            const float rms = sampleCount > 0
-                ? std::sqrt(static_cast<float>(sumSquares / static_cast<double>(sampleCount)))
-                : 0.0f;
-            const float rmsDb = juce::Decibels::gainToDecibels(juce::jmax(0.000001f, rms), -100.0f);
-
-            // Relative threshold: envelope predicts content at ~targetRelativeDb,
-            // allow 24dB margin for cymbal interference patterns & envelope imprecision.
-            // Absolute floor at -90dB catches true digital silence.
-            const float silenceThreshold = juce::jmax(targetRelativeDb - 24.0f, silenceFloorDb);
-            if (rmsDb < silenceThreshold) {
-                ++skippedSilentTarget;
                 continue;
             }
         }
 
-        const auto& currentArt = this->runtimeArticulations[static_cast<size_t>(currentArtIdx)];
-        const auto transitionDirection = HiHatTransitionPolicy::getDirection(currentArt.pedalOpenCloseValue, newArt.pedalOpenCloseValue);
-        const float transitionCrossfadeSec = transitionDirection == HiHatTransitionPolicy::Direction::Closing
-            ? closeCrossfadeSec
-            : openCrossfadeSec;
         voice->requestFadeOut(transitionCrossfadeSec);
 
         this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), targetVelocityGain);
@@ -548,7 +665,8 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
                 + " toArt=" + newArtCode
                 + " micStart=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelStart : -1)
                 + " micCount=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelCount : 0)
-                + " offsetMs=" + juce::String(offsetMs, 2)
+                + " offsetMs=" + juce::String(selectedOffsetMs, 2)
+                + " offsetSource=" + (usedReferenceOffset ? (referenceMicType == KitLib::MicSpec::Type::Direct ? juce::String("direct") : juce::String("overhead")) : juce::String("own"))
                 + " offsetSamples=" + juce::String(clampedOffset, 2)
                 + " sample=" + sampleName);
         }
@@ -557,11 +675,12 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
 
     // Only cache new articulation once at least one replacement starts, or when
     // there were no active mismatched voices to transition.
-    if (replacementsStarted > 0 || activeMismatchedVoices == 0)
+    const int handledTransitions = replacementsStarted + fadedSilentTargets;
+    if (handledTransitions > 0 || activeMismatchedVoices == 0)
         this->lastCcArticulation[controllerIdx] = static_cast<ArtRtIdx>(newArtIdx);
     this->lastCcValue[controllerIdx] = controllerValue;
 
-    if (replacementsStarted == 0 && activeMismatchedVoices > 0 && encounteredTransientSkip) {
+    if (handledTransitions == 0 && activeMismatchedVoices > 0 && encounteredTransientSkip) {
         this->pendingCcArticulation[controllerIdx] = static_cast<ArtRtIdx>(newArtIdx);
         this->pendingCcTransition[controllerIdx] = true;
     }
@@ -583,12 +702,12 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     if (enteredMostClosedState)
         this->hihatImplicitPedalEligible[controllerIdx] = false;
 
-    if (replacementsStarted > 0)
+    if (handledTransitions > 0)
         this->completedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     else if (activeMismatchedVoices > 0)
         this->skippedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
 
-    if (LOG_ENABLED(Verbose) && activeMismatchedVoices > 0 && replacementsStarted == 0) {
+    if (LOG_ENABLED(Verbose) && activeMismatchedVoices > 0 && handledTransitions == 0) {
         LOG(Verbose, "HiHat pedal transition skipped: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
             + " targetArt=" + juce::String((int)newArtIdx)
@@ -604,11 +723,13 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     }
 
     const int totalSkipped = skippedNoEnvelope + skippedNoTarget + skippedNoVoice + skippedTooLate + skippedNoDbMatch + skippedSilentTarget + skippedOther;
-    if (LOG_ENABLED(Verbose) && replacementsStarted > 0 && totalSkipped > 0) {
+    if (LOG_ENABLED(Verbose) && handledTransitions > 0 && totalSkipped > 0) {
         LOG(Verbose, "HiHat pedal transition partial: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
             + " targetArt=" + juce::String((int)newArtIdx)
             + " started=" + juce::String(replacementsStarted)
+            + " referenceOffsets=" + juce::String(referenceOffsetReplacements)
+            + " fadedSilent=" + juce::String(fadedSilentTargets)
             + " skipped=" + juce::String(totalSkipped)
             + " reasons{noEnv=" + juce::String(skippedNoEnvelope)
             + ", noTarget=" + juce::String(skippedNoTarget)
