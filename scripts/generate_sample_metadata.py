@@ -1,13 +1,52 @@
 import argparse
 import csv
 import hashlib
+import importlib.util
 import math
 import os
+import shlex
 import shutil
+import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+
+REQUIRED_PYTHON_PACKAGES = (
+    ("numpy", "numpy"),
+    ("pyloudnorm", "pyloudnorm"),
+    ("soundfile", "soundfile"),
+    ("scipy", "scipy"),
+)
+
+
+def ensure_required_python_packages() -> None:
+    missing_packages = [package_name for module_name, package_name in REQUIRED_PYTHON_PACKAGES if importlib.util.find_spec(module_name) is None]
+    if not missing_packages:
+        return
+
+    install_command = [sys.executable, "-m", "pip", "install", *missing_packages]
+    command_text = shlex.join(install_command)
+    print("Missing Python modules: " + ", ".join(missing_packages))
+
+    if not sys.stdin.isatty():
+        raise SystemExit("Cannot ask to install modules in non-interactive mode. Install them with:\n  " + command_text)
+
+    answer = input("Install missing modules now? [y/N] ").strip().lower()
+    if answer not in ("y", "yes"):
+        raise SystemExit("Modules were not installed. Install them later with:\n  " + command_text)
+
+    print("Installing with:\n  " + command_text)
+    install_result = subprocess.run(install_command, check=False)
+    if install_result.returncode != 0:
+        raise SystemExit("Module installation failed. Try this command manually:\n  " + command_text)
+
+    os.execv(sys.executable, [sys.executable, *sys.argv])
+
+
+ensure_required_python_packages()
 
 import numpy as np
 import numpy.typing as npt
@@ -17,6 +56,7 @@ from scipy.signal import resample_poly
 
 from sample_metadata_reports import write_phase6_reports
 
+# python3 scripts/generate_sample_metadata.py -i ./sample_library --report-folder ./reports
 
 SUPPORTED_AUDIO_EXTENSIONS = (".wav", ".flac", ".aiff", ".mp3", ".ogg")
 DECAY_LEVELS_DB = (6, 12, 18, 24, 30, 36, 42, 48, 54, 60)

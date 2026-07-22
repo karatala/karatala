@@ -17,6 +17,7 @@
 - C++ defines the required `metadata.csv` columns and their playback meaning.
 - The metadata generator must not rename or modify sample audio files.
 - It may replace only `metadata.csv` and `metadata.csv.bak` inside explicitly selected kit roots, using transient files only for atomic replacement.
+- If required Python modules are missing, the metadata generator may install them with the active Python only after explicit interactive confirmation. Non-interactive runs never install modules.
 - Phase 6 reports are written only under the explicit `--report-folder`; they never update source folders, audio, or runtime metadata.
 - Required CSV rows contain content identity, onset, intensity, true peak, peak and decay, stereo balance, and readable columns from `-6db_ms` through `-60db_ms`.
 
