@@ -389,6 +389,8 @@ public:
     {
         this->lastCcArticulation.fill(-1);
         this->pendingCcArticulation.fill(-1);
+        this->hihatNotePedalOpenCloseValues.fill(-1);
+        this->rebuildHiHatNoteChokeValues();
     }
     ~InstrumentSynth() {}
 
@@ -655,6 +657,7 @@ private:
     // Runtime optimized tables for fast selection (populated by loadInstrument)
     // Map midi note [0..127] -> articulation index in runtimeArticulations (-1 = none)
     std::array<ArtRtIdx, 128> noteToArticulation;
+    std::array<int, 128> hihatNotePedalOpenCloseValues;
     std::unordered_set<uint64_t> destinationRouteKeys;
     std::vector<ResolvedArticulationRoute> resolvedArticulationRoutes;
     // Runtime articulations vector, index-stable after load
@@ -754,6 +757,8 @@ private:
     int getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     ArtRtIdx getVoiceRuntimeArticulationIdx(const InstrumentSynthVoice& voice) const;
     int getVoicePedalOpenCloseValue(const InstrumentSynthVoice& voice) const;
+    int getHiHatNotePedalOpenCloseValue(int midiNoteNumber) const;
+    void rebuildHiHatNoteChokeValues();
     ArtRtIdx selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const;
     bool controllerCanTransitionExistingVoices(int controllerNumber) const;
     bool isHiHatTransitionTargetAudible(const SampledSound& targetSound, double offsetSamples, float expectedTargetDb, float silenceFloorDb) const;

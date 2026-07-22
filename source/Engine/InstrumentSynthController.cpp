@@ -6,6 +6,13 @@
 void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     if (midiMessage.isNoteOn()) {
         const int note = midiMessage.getNoteNumber();
+        if (this->type == KitLib::InstrumentSpec::Type::HiHat) {
+            const int notePedalOpenCloseValue = this->getHiHatNotePedalOpenCloseValue(note);
+            if (notePedalOpenCloseValue >= 0) {
+                const float closeCrossfadeSec = this->parent != nullptr ? this->parent->getEngineSettings().hihatCloseCrossfadeSec.load() : 0.020f;
+                this->chokeHiHatVoicesByPoc(notePedalOpenCloseValue, closeCrossfadeSec);
+            }
+        }
         if (this->noteToArticulation[static_cast<size_t>(note)] == -1) return;
         this->playNote(midiMessage.getChannel(), note, midiMessage.getVelocity());
     }
@@ -117,6 +124,39 @@ int InstrumentSynth::getVoicePedalOpenCloseValue(const InstrumentSynthVoice& voi
     const ArtRtIdx artIdx = this->getVoiceRuntimeArticulationIdx(voice);
     if (artIdx < 0 || static_cast<size_t>(artIdx) >= this->runtimeArticulations.size()) return -1;
     return this->runtimeArticulations[static_cast<size_t>(artIdx)].pedalOpenCloseValue;
+}
+
+int InstrumentSynth::getHiHatNotePedalOpenCloseValue(int midiNoteNumber) const {
+    if (midiNoteNumber < 0 || midiNoteNumber >= static_cast<int>(this->noteToArticulation.size())) return -1;
+
+    int notePedalOpenCloseValue = this->hihatNotePedalOpenCloseValues[static_cast<size_t>(midiNoteNumber)];
+    const ArtRtIdx mappedArtIdx = this->noteToArticulation[static_cast<size_t>(midiNoteNumber)];
+    if (mappedArtIdx >= 0 && static_cast<size_t>(mappedArtIdx) < this->runtimeArticulations.size()) {
+        const int mappedValue = this->runtimeArticulations[static_cast<size_t>(mappedArtIdx)].pedalOpenCloseValue;
+        notePedalOpenCloseValue = juce::jmax(notePedalOpenCloseValue, mappedValue);
+    }
+    return notePedalOpenCloseValue;
+}
+
+void InstrumentSynth::rebuildHiHatNoteChokeValues() {
+    this->hihatNotePedalOpenCloseValues.fill(-1);
+    if (this->type != KitLib::InstrumentSpec::Type::HiHat) return;
+
+    static const juce::String pedalOpenCloseCode = "pdl_opn_cls";
+    const auto defaultPoints = KitLayout::getDefaultExpressionPoints();
+    for (const auto& layoutArticulation : this->instrumentSlot.articulations) {
+        const juce::String expressionLabel = StringsDictSingleton::nameOf(layoutArticulation.exprId != 0 ? layoutArticulation.exprId : layoutArticulation.nameId).trim().toLowerCase();
+        if (expressionLabel.isEmpty()) continue;
+
+        std::optional<uint8_t> expressionValue = KitLayout::getExpressionPoint(this->instrumentSlot.expressionPoints, pedalOpenCloseCode, expressionLabel);
+        if (!expressionValue.has_value() && this->parent != nullptr) {
+            if (const auto* layout = this->parent->getKitLayout()) expressionValue = KitLayout::getExpressionPoint(layout->expressionPoints, pedalOpenCloseCode, expressionLabel);
+        }
+        if (!expressionValue.has_value()) expressionValue = KitLayout::getExpressionPoint(defaultPoints, pedalOpenCloseCode, expressionLabel);
+        if (!expressionValue.has_value()) continue;
+
+        for (const auto note : layoutArticulation.notes) this->hihatNotePedalOpenCloseValues[static_cast<size_t>(note)] = static_cast<int>(*expressionValue);
+    }
 }
 
 bool InstrumentSynth::controllerCanTransitionExistingVoices(int controllerNumber) const {
@@ -1066,7 +1106,7 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float
         // Equal-poc same-articulation retriggers are handled by existing cullMaskedVoices.
         if (newArtPedalOpenCloseValue > voicePedalOpenCloseValue) {
             if (LOG_ENABLED(Verbose))
-                LOG(Verbose, "chokeHiHatVoicesByPoc: choking voice artPoc=" + juce::String(voicePedalOpenCloseValue)
+                LOG(Verbose, "chokeHiHatVoicesByPoc: inst=" + this->getId() + " choking voice artPoc=" + juce::String(voicePedalOpenCloseValue)
                     + " newPoc=" + juce::String(newArtPedalOpenCloseValue)
                     + " note=" + juce::String(voice->getCurrentlyPlayingNote()));
             voice->requestFadeOut(fadeTimeSec);

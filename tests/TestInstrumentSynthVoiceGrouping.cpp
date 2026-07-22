@@ -149,6 +149,25 @@ KitLayout::InstrumentSlot makeHiHatZoneRemapSlot() {
     return slot;
 }
 
+KitLayout::InstrumentSlot makeCrossLayerHiHatSlot() {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "hihat2";
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+
+    KitLayout::InstrumentSlot::ArticulationTrigger bowOpen { "bow[open]" };
+    bowOpen.notes.push_back(10);
+    slot.articulations.push_back(std::move(bowOpen));
+
+    KitLayout::InstrumentSlot::ArticulationTrigger bowTight { "bow[tight]" };
+    bowTight.notes.push_back(6);
+    slot.articulations.push_back(std::move(bowTight));
+
+    KitLayout::InstrumentSlot::ArticulationTrigger pedal { "pedal" };
+    pedal.notes.push_back(8);
+    slot.articulations.push_back(std::move(pedal));
+    return slot;
+}
+
 KitLayout::InstrumentSlot makeImplicitBowEdgeExpressionSlot() {
     KitLayout::InstrumentSlot slot;
     slot.id = "ride1";
@@ -1189,6 +1208,50 @@ TEST_CASE("InstrumentSynth - hihat note choke uses exact runtime articulation wh
         || fixture.pedalVoice->getCurrentlyPlayingSound() == &fixture.pedalSound;
     CHECK(fixture.openVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
     CHECK(startedPedalSound);
+}
+
+TEST_CASE("InstrumentSynth - unrouted tight and pedal notes choke open voices in a sibling hihat layer", "[InstrumentSynth][HiHatTransition][ControllerPath][LayeredMap]") {
+    DrumKitEngine engine;
+    engine.engineSettings.hihatCloseCrossfadeSec.store(0.020f);
+    const auto slot = makeCrossLayerHiHatSlot();
+    InstrumentSynth openLayerSynth { &engine, slot };
+    openLayerSynth.setCurrentPlaybackSampleRate(44100.0);
+    openLayerSynth.rebuildRoutingFromLayout(slot);
+
+    KitLib::InstrumentSpec instrument { nullptr, makeInstrumentMeta() };
+    KitLib::ArticulationSpec openSpec { &instrument, "bow[open]" };
+    KitLib::VelocityLayerSpec openLayerSpec { &openSpec, 127 };
+    const auto directMic = makeDirectMic();
+    KitLib::SampleVariantSpec openVariant { &openLayerSpec, {}, 'a', directMic };
+    SampledSound openSound { nullptr, &openVariant };
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(openLayerSynth);
+    articulations.emplace_back(openSpec.nameId, openSpec.exprId);
+    articulations.back().pedalOpenCloseValue = 24;
+    InstrumentSynthTestAccess::mapRuntimeArticulation(openLayerSynth, openSpec, 0);
+    InstrumentSynthTestAccess::mapNote(openLayerSynth, 10, 0);
+
+    auto* openVoice = openLayerSynth.addVoice(new InstrumentSynthVoice());
+    openLayerSynth.startVoice(openVoice, &openSound, 1, 10, 0.8f);
+    InstrumentSynthTestAccess::setVoiceArticulation(*openVoice, openSpec);
+    InstrumentSynthTestAccess::setVoiceRuntimeArticulation(*openVoice, 0);
+
+    SECTION("tight note") {
+        openLayerSynth.handleMidiEvent(juce::MidiMessage::noteOn(1, 6, static_cast<juce::uint8>(100)));
+        CHECK(openVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+        CHECK(openVoice->adsr.getParameters().release == Catch::Approx(0.020f));
+    }
+
+    SECTION("pedal note") {
+        openLayerSynth.handleMidiEvent(juce::MidiMessage::noteOn(1, 8, static_cast<juce::uint8>(100)));
+        CHECK(openVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+        CHECK(openVoice->adsr.getParameters().release == Catch::Approx(0.020f));
+    }
+
+    SECTION("note outside this hihat slot") {
+        openLayerSynth.handleMidiEvent(juce::MidiMessage::noteOn(1, 18, static_cast<juce::uint8>(100)));
+        CHECK(openVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+    }
 }
 
 TEST_CASE("InstrumentSynth - hihat controller close uses exact runtime articulation when source names repeat", "[InstrumentSynth][HiHatTransition][ControllerPath]") {

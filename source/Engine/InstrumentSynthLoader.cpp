@@ -56,6 +56,7 @@ void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpe
 
 void InstrumentSynth::resetRoutingTables() {
     this->noteToArticulation.fill(-1);
+    this->rebuildHiHatNoteChokeValues();
     this->noteToControllers.clear();
     this->ccToArticulationMask.fill(false);
     this->lastCcArticulation.fill(-1);
