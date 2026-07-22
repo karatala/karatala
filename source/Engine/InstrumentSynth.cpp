@@ -356,6 +356,7 @@ void InstrumentSynthVoice::stopNote(bool allowTailOff) {
 
 void InstrumentSynthVoice::aftertouchChanged(int newValue) {
     // LOG(Debug, "aftertouchChanged " + juce::String(newValue));
+    if (this->currentlyPlayingSound != nullptr && this->currentlyPlayingSound->isAftertouchChokeTarget) return;
     this->chokeProcessor.handlePolyAftertouch(newValue);
 }
 

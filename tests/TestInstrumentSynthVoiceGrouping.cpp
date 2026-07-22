@@ -70,6 +70,14 @@ struct InstrumentSynthTestAccess {
         synth.hihatPedalNote = midiNoteNumber;
     }
 
+    static void loadAftertouchChokeTargets(InstrumentSynth& synth, InstrumentSynth::ResolvedArticulationRoute route) {
+        synth.resolvedArticulationRoutes.clear();
+        synth.resolvedArticulationRoutes.push_back(std::move(route));
+        InstrumentSynth::CcDimensionsMap foundCcDimensions;
+        std::set<juce::String> skippedMicCodes;
+        synth.loadAftertouchChokeTargets(foundCcDimensions, skippedMicCodes);
+    }
+
     static void startVoiceForRender(InstrumentSynthVoice& voice, InstrumentSynth& owner, SampledSound& sound) {
         voice.setOwner(&owner);
         voice.setCurrentPlaybackSampleRate(44100.0);
@@ -1541,4 +1549,162 @@ TEST_CASE("InstrumentSynth - layer parameters update only the target articulatio
     CHECK_FALSE(articulations[1].parameters.flipLR);
     CHECK_FALSE(articulations[1].parameters.flipPhase);
     CHECK(bowSound.cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(1.0f));
+}
+
+TEST_CASE("InstrumentSynth - recorded choke articulation becomes a hidden aftertouch target", "[InstrumentSynth][AftertouchChoke][Loader]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "crash1";
+    slot.type = KitLib::InstrumentSpec::Type::Crash;
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("crash-source", KitLib::InstrumentSpec::Type::Crash) };
+    auto* bowSpec = instrument.getOrAddArticulation("bow");
+    auto* chokeSpec = instrument.getOrAddArticulation("choke");
+    REQUIRE(bowSpec != nullptr);
+    REQUIRE(chokeSpec != nullptr);
+
+    auto sourceSound = std::make_shared<SampledSound>(&instrument, nullptr);
+    auto chokeSound = std::make_shared<SampledSound>(&instrument, nullptr);
+    synth.addSound(sourceSound);
+    synth.addSound(chokeSound);
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(bowSpec->nameId, bowSpec->exprId);
+    articulations.emplace_back(chokeSpec->nameId, chokeSpec->exprId);
+    articulations[1].layers.emplace_back();
+    articulations[1].layers[0].samples.push_back({ chokeSound.get(), 1, chokeSound });
+
+    KitLayout::InstrumentSlot::ArticulationTrigger bowTrigger { "bow" };
+    bowTrigger.notes.push_back(49);
+    InstrumentSynth::ResolvedArticulationRoute bowRoute { bowTrigger };
+    bowRoute.sourceInstrument = &instrument;
+    bowRoute.sourceArticulation = bowSpec;
+    InstrumentSynthTestAccess::loadAftertouchChokeTargets(synth, std::move(bowRoute));
+
+    CHECK(sourceSound->aftertouchChokeArticulationIndex == 1);
+    CHECK_FALSE(sourceSound->isAftertouchChokeTarget);
+    CHECK(chokeSound->isAftertouchChokeTarget);
+    CHECK(chokeSound->aftertouchChokeArticulationIndex < 0);
+}
+
+TEST_CASE("InstrumentSynth - poly aftertouch starts one coherent multi-mic choke sample transition", "[InstrumentSynth][AftertouchChoke][ControllerPath]") {
+    DrumKitEngine engine;
+    engine.engineSettings.chokeMuteTailSec.store(0.015f);
+    engine.engineSettings.hihatTransitionSilenceFloorDb.store(-90.0f);
+    engine.engineSettings.hihatTailMatchAmount.store(1.0f);
+    engine.engineSettings.hihatTailMatchBiasDb.store(-3.0f);
+    engine.engineSettings.hihatTransitionMinRemainingSec.store(0.010f);
+
+    KitLayout::InstrumentSlot slot;
+    slot.id = "crash1";
+    slot.type = KitLib::InstrumentSpec::Type::Crash;
+    InstrumentSynth synth { &engine, slot };
+    synth.setCurrentPlaybackSampleRate(44100.0);
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("crash-source", KitLib::InstrumentSpec::Type::Crash) };
+    KitLib::ArticulationSpec bowSpec { &instrument, "bow" };
+    KitLib::ArticulationSpec chokeSpec { &instrument, "choke" };
+    KitLib::VelocityLayerSpec bowLayerSpec { &bowSpec, 127 };
+    KitLib::VelocityLayerSpec chokeLayerSpec { &chokeSpec, 127 };
+    const auto directMic = makeDirectMic();
+    const auto overheadMic = makeOverheadMic();
+    KitLib::SampleVariantSpec bowDirectVariant { &bowLayerSpec, {}, 'a', directMic };
+    KitLib::SampleVariantSpec bowOverheadVariant { &bowLayerSpec, {}, 'a', overheadMic };
+    KitLib::SampleVariantSpec chokeDirectVariant { &chokeLayerSpec, {}, 'a', directMic };
+    KitLib::SampleVariantSpec chokeOverheadVariant { &chokeLayerSpec, {}, 'a', overheadMic };
+    SampledSound bowDirectSound { &instrument, &bowDirectVariant };
+    SampledSound bowOverheadSound { &instrument, &bowOverheadVariant };
+    SampledSound chokeDirectSound { &instrument, &chokeDirectVariant };
+    SampledSound chokeOverheadSound { &instrument, &chokeOverheadVariant };
+
+    auto prepareSound = [](SampledSound& sound, int channels, int micBufferChannelStart) {
+        sound.sampleRate = 44100.0;
+        sound.decayEnvelope = makeTransitionEnvelope();
+        sound.buffer = std::make_shared<juce::AudioBuffer<float>>(channels, 88200);
+        for (int channelIdx = 0; channelIdx < channels; ++channelIdx)
+            for (int sampleIdx = 0; sampleIdx < sound.buffer->getNumSamples(); ++sampleIdx) sound.buffer->setSample(channelIdx, sampleIdx, 0.5f);
+        sound.micBufferChannelStart = micBufferChannelStart;
+        sound.micBufferChannelCount = channels;
+        sound.loaded.store(true);
+    };
+    prepareSound(bowDirectSound, 1, 0);
+    prepareSound(bowOverheadSound, 2, 2);
+    prepareSound(chokeDirectSound, 1, 0);
+    prepareSound(chokeOverheadSound, 2, 2);
+    bowDirectSound.aftertouchChokeArticulationIndex = 1;
+    bowOverheadSound.aftertouchChokeArticulationIndex = 1;
+    chokeDirectSound.isAftertouchChokeTarget = true;
+    chokeOverheadSound.isAftertouchChokeTarget = true;
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(bowSpec.nameId, bowSpec.exprId);
+    articulations.emplace_back(chokeSpec.nameId, chokeSpec.exprId);
+    articulations[1].layers.emplace_back();
+    articulations[1].velocityToLayer.fill(0);
+    articulations[1].layers[0].samples.push_back({ &chokeDirectSound, 1, {} });
+    articulations[1].layers[0].samples.push_back({ &chokeOverheadSound, 1, {} });
+    InstrumentSynth::LogicalHitRuntime logicalHit;
+    logicalHit.variantIdx = 1;
+    logicalHit.sampleEntryIndexes = { 0, 1 };
+    logicalHit.readiness->requiredEntryCount = 2;
+    logicalHit.readiness->loadedEntryCount.store(2);
+    logicalHit.readiness->ready.store(true);
+    articulations[1].layers[0].logicalHits.push_back(std::move(logicalHit));
+
+    auto* bowDirectVoice = synth.addVoice(new InstrumentSynthVoice());
+    auto* bowOverheadVoice = synth.addVoice(new InstrumentSynthVoice());
+    auto* chokeDirectVoice = synth.addVoice(new InstrumentSynthVoice());
+    auto* chokeOverheadVoice = synth.addVoice(new InstrumentSynthVoice());
+    synth.startVoice(bowDirectVoice, &bowDirectSound, 1, 49, 100.0f / 127.0f);
+    synth.startVoice(bowOverheadVoice, &bowOverheadSound, 1, 49, 100.0f / 127.0f);
+    InstrumentSynthTestAccess::setVoiceArticulation(*bowDirectVoice, bowSpec);
+    InstrumentSynthTestAccess::setVoiceArticulation(*bowOverheadVoice, bowSpec);
+    InstrumentSynthTestAccess::setVoiceRuntimeArticulation(*bowDirectVoice, 0);
+    InstrumentSynthTestAccess::setVoiceRuntimeArticulation(*bowOverheadVoice, 0);
+    bowDirectVoice->setMidiVelocity(100);
+    bowOverheadVoice->setMidiVelocity(100);
+    bowDirectVoice->sourceSamplePosition = 4410.0;
+    bowOverheadVoice->sourceSamplePosition = 4410.0;
+    bowDirectVoice->cachedEstimatedDb = -28.0f;
+    bowOverheadVoice->cachedEstimatedDb = -28.0f;
+
+    synth.handleAftertouch(1, 49, 100);
+
+    CHECK(bowDirectVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    CHECK(bowOverheadVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::FadingOut);
+    REQUIRE(chokeDirectVoice->getCurrentlyPlayingSound() == &chokeDirectSound);
+    REQUIRE(chokeOverheadVoice->getCurrentlyPlayingSound() == &chokeOverheadSound);
+    CHECK(chokeDirectVoice->sourceSamplePosition > chokeDirectSound.decayEnvelope.peakMs * 44.1);
+    CHECK(chokeOverheadVoice->sourceSamplePosition > chokeOverheadSound.decayEnvelope.peakMs * 44.1);
+
+    const auto directEventId = chokeDirectVoice->getEventId();
+    const auto overheadEventId = chokeOverheadVoice->getEventId();
+    synth.handleAftertouch(1, 49, 110);
+    CHECK(chokeDirectVoice->getEventId() == directEventId);
+    CHECK(chokeOverheadVoice->getEventId() == overheadEventId);
+    CHECK(chokeDirectVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+    CHECK(chokeOverheadVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+}
+
+TEST_CASE("InstrumentSynth - unusable choke sample keeps the existing aftertouch fade fallback", "[InstrumentSynth][AftertouchChoke][ControllerPath]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "crash1";
+    slot.type = KitLib::InstrumentSpec::Type::Crash;
+    InstrumentSynth synth { &engine, slot };
+    synth.setCurrentPlaybackSampleRate(44100.0);
+
+    SampledSound sourceSound;
+    sourceSound.aftertouchChokeArticulationIndex = 0;
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(StringsDictSingleton::getId("choke"), 0);
+    auto* sourceVoice = synth.addVoice(new InstrumentSynthVoice());
+    sourceVoice->chokeProcessor.engineSettings = &engine.getEngineSettings();
+    sourceVoice->chokeProcessor.prepare(44100.0);
+    synth.startVoice(sourceVoice, &sourceSound, 1, 49, 0.8f);
+
+    synth.handleAftertouch(1, 49, 100);
+
+    CHECK(sourceVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
+    CHECK(sourceVoice->isVoiceActive());
 }

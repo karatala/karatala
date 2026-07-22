@@ -152,6 +152,7 @@ bool InstrumentSynth::tryGetRuntimeArticulationIdx(const ResolvedArticulationRou
 void InstrumentSynth::unloadInstrument() {
     this->runtimeArticulations.clear();
     this->resetRoutingTables();
+    this->aftertouchChokeTransitionCommitted = {};
     // stop and clear voices before releasing sounds
     this->clearVoices();
     this->clearSounds();
@@ -661,6 +662,8 @@ void InstrumentSynth::applyResolvedRouteList(bool loadSamples, bool createIfMiss
         this->applyResolvedArticulationRoute(route, loadSamples, createIfMissing, foundCcDimensions, skippedMicCodes);
     }
 
+    if (loadSamples) this->loadAftertouchChokeTargets(foundCcDimensions, skippedMicCodes);
+
     if (loadSamples && !skippedMicCodes.empty() && LOG_ENABLED(Notice)) {
         juce::String codes;
         for (const auto& c : skippedMicCodes) {
@@ -670,6 +673,74 @@ void InstrumentSynth::applyResolvedRouteList(bool loadSamples, bool createIfMiss
         LOG(Notice, "    Skipping samples for mic(s) " + codes + " - not present in active mic layout"); //FIXME: missing context, line alone on 'notice' level not informative!
     }
     this->processCcDimensions(foundCcDimensions);
+}
+
+void InstrumentSynth::loadAftertouchChokeTargets(CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes) {
+    const auto chokeNameId = StringsDictSingleton::getId("choke");
+    std::set<KitLib::InstrumentSpec*> sourceInstruments;
+    for (const auto& route : this->resolvedArticulationRoutes) {
+        if (route.isAliasRoute || route.sourceInstrument == nullptr || route.sourceArticulation == nullptr) continue;
+        if (route.sourceArticulation->nameId == chokeNameId) continue;
+        sourceInstruments.insert(route.sourceInstrument);
+    }
+
+    std::set<ArtRtIdx> usedTargetArticulations;
+    for (auto* sourceInstrument : sourceInstruments) {
+        KitLib::ArticulationSpec* chokeSpec = nullptr;
+        for (const auto& artSpec : sourceInstrument->articulationSpecs) {
+            if (artSpec != nullptr && artSpec->nameId == chokeNameId && artSpec->exprId == 0) {
+                chokeSpec = artSpec.get();
+                break;
+            }
+        }
+        if (chokeSpec == nullptr) continue;
+
+        ArtRtIdx chokeArtIdx = -1;
+        for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx) {
+            const auto candidateIdx = static_cast<ArtRtIdx>(artIdx);
+            if (usedTargetArticulations.find(candidateIdx) != usedTargetArticulations.end()) continue;
+            const auto& candidateArt = this->runtimeArticulations[artIdx];
+            if (candidateArt.nameId != chokeSpec->nameId || candidateArt.exprId != chokeSpec->exprId) continue;
+
+            bool candidateUsesSourceInstrument = candidateArt.layers.empty();
+            for (const auto& layer : candidateArt.layers) {
+                for (const auto& sampleEntry : layer.samples) {
+                    if (sampleEntry.sound != nullptr && sampleEntry.sound->instrumentSpec == sourceInstrument) candidateUsesSourceInstrument = true;
+                }
+            }
+            if (candidateUsesSourceInstrument) {
+                chokeArtIdx = candidateIdx;
+                break;
+            }
+        }
+        if (chokeArtIdx < 0) {
+            this->runtimeArticulations.emplace_back(chokeSpec->nameId, chokeSpec->exprId);
+            chokeArtIdx = static_cast<ArtRtIdx>(this->runtimeArticulations.size() - 1);
+        }
+        usedTargetArticulations.insert(chokeArtIdx);
+
+        auto& chokeArt = this->runtimeArticulations[static_cast<size_t>(chokeArtIdx)];
+        if (chokeArt.layers.empty()) {
+            chokeSpec->sortVelocityLayers();
+            LayoutArticulation hiddenChokeArticulation { chokeSpec->codeRaw };
+            this->processArticulationSpec(sourceInstrument, hiddenChokeArticulation, chokeSpec, chokeArt, chokeArtIdx, foundCcDimensions, skippedMicCodes);
+        }
+
+        bool hasTargetSamples = false;
+        for (auto& layer : chokeArt.layers) {
+            for (auto& sampleEntry : layer.samples) {
+                if (sampleEntry.sound == nullptr || sampleEntry.sound->instrumentSpec != sourceInstrument) continue;
+                sampleEntry.sound->isAftertouchChokeTarget = true;
+                hasTargetSamples = true;
+            }
+        }
+        if (!hasTargetSamples) continue;
+
+        for (const auto& sound : this->sampledSoundPtrs) {
+            if (sound == nullptr || sound->instrumentSpec != sourceInstrument || sound->isAftertouchChokeTarget) continue;
+            sound->aftertouchChokeArticulationIndex = chokeArtIdx;
+        }
+    }
 }
 
 void InstrumentSynth::appendAliasArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext) {

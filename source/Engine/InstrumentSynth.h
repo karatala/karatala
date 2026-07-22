@@ -50,6 +50,8 @@ public:
     std::atomic<float> cachedMicBleedGain { 1.0f };
     float playbackOffsetMs = 0.0f;
     int runtimeArticulationIndex = -1;
+    int aftertouchChokeArticulationIndex = -1;
+    bool isAftertouchChokeTarget = false;
     MicPlacementMode micPlacementMode = MicPlacementMode::PreserveChannels;
     int sourceBalance = 0;
     std::atomic<float> cachedPlacementLeftGain { 1.0f };
@@ -450,11 +452,7 @@ public:
             this->completedHiHatTransitions.load(std::memory_order_relaxed),
         };
     }
-    void handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue) {
-        for (auto* voice : voices)
-            if (voice->getCurrentlyPlayingNote() == midiNoteNumber && (midiChannel <= 0 || voice->isPlayingChannel(midiChannel)))
-                voice->aftertouchChanged(aftertouchValue);
-    }
+    void handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue);
     SampledSound* addSound(SampledSound* newSound) {
         const juce::ScopedLock sl(this->lock);
         if (newSound == nullptr) return nullptr;
@@ -681,6 +679,7 @@ private:
     std::array<ArtRtIdx, 128> pendingCcArticulation {};
     std::array<bool, 128> hihatPedalClosedState {};
     std::array<bool, 128> hihatImplicitPedalEligible {};
+    std::array<std::array<bool, 128>, 16> aftertouchChokeTransitionCommitted {};
     std::array<uint64_t, 128> lastCcProcessedSample {};
     std::array<bool, 128> hasProcessedCcTransition {};
     int hihatPedalNote = -1;
@@ -732,6 +731,7 @@ private:
     void appendAliasArticulationRoutes(std::vector<ResolvedArticulationRoute>& routes, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext);
     void applyResolvedArticulationRoute(const ResolvedArticulationRoute& route, bool loadSamples, bool createIfMissing, CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
     void applyResolvedRouteList(bool loadSamples, bool createIfMissing);
+    void loadAftertouchChokeTargets(CcDimensionsMap& foundCcDimensions, std::set<juce::String>& skippedMicCodes);
     void applyResolvedRouting(const std::vector<ResolvedArticulationBinding>& bindings, const KitLayout::InstrumentSlot& layoutSlot, const RoutingContext& routingContext, bool loadSamples, bool createIfMissing);
     std::vector<uint8_t> getEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
     bool hasEffectiveExpressionValues(const KitLib::ArticulationSpec& artSpec, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;
@@ -770,6 +770,8 @@ private:
     void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
     void processPendingHiHatControllers();
     bool triggerHiHatPedalSample(int midiChannel, float sourceAudibleDb);
+    bool triggerAftertouchChokeSample(int midiChannel, int midiNoteNumber);
+    void resetAftertouchChokeGesture(int midiChannel, int midiNoteNumber);
     // Hi-hat only: fade out active voices whose pedalOpenCloseValue is strictly less than newArtPedalOpenCloseValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
     void chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float fadeTimeSec);
