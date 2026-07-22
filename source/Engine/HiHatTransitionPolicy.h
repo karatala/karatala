@@ -49,7 +49,7 @@ struct OffsetResult {
 };
 
 int selectOpennessArticulation(std::span<const uint8_t, 128> articulationByCc,
-                               std::span<const int> pocByArticulation,
+                               std::span<const int> pocByArticulation, //FIXME(style): rename this 'poc' everywhere in the codebase nicer way, so its clear that it is about "hihat pedal closed level (pdl_opn_cls - pedal open>close)" not pirates of caribean or whatever  
                                int controllerValue,
                                int previousControllerValue,
                                int currentArticulation,

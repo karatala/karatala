@@ -533,6 +533,8 @@ Added on July 22, 2026 without replacing the accepted per-voice path:
 - each reference offset is accepted only when the current target mic has audible content there;
 - when the own, Direct, and Overhead regions are all silent, the old open mic voice receives the normal short closing fade instead of continuing to ring;
 - focused tests cover Direct fallback for Overhead and Room, Overhead fallback when Direct is absent, and the final fade fallback.
+- every primary or shadow layer for the same hi-hat slot now observes that slot's tight and pedal note-on ranks before rejecting an unrouted note;
+- a tight or pedal sample in one layer can therefore fade an open voice in another layer, with focused coverage for both note types and an unrelated-note guard.
 
 ## Tests to Add
 
