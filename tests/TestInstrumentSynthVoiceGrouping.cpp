@@ -80,6 +80,15 @@ struct InstrumentSynthTestAccess {
         voice.startNote(60, 1.0f, &sound);
     }
 
+    static bool configureMicPlacement(
+        InstrumentSynth& synth, SampledSound& sound, const juce::String& micCode, int sourceChannelCount,
+        int destinationChannelCount, bool routingAllowsPan, std::optional<int> sourceBalance, int layerPan) {
+        const auto parsedMic = KitLib::MicSpec::parseMicCode(micCode);
+        if (!parsedMic.ok()) return false;
+        synth.configureSoundMicPlacement(sound, parsedMic.value, sourceChannelCount, destinationChannelCount, routingAllowsPan, sourceBalance, layerPan);
+        return true;
+    }
+
 private:
     template <typename Getter>
     static int runtimeExpressionValue(const InstrumentSynth& synth, const juce::String& articulationName, Getter getter) {
@@ -1003,8 +1012,7 @@ TEST_CASE("InstrumentSynthVoice - pans mono direct mic into stereo output", "[In
     sound.sampleRate = 44100.0;
     sound.micBufferChannelStart = 0;
     sound.micBufferChannelCount = 2;
-    sound.useDirectBalance = true;
-    sound.balance = 0;
+    REQUIRE(InstrumentSynthTestAccess::configureMicPlacement(synth, sound, "dtm", 1, 2, true, 0, 0));
 
     InstrumentSynthVoice voice;
     InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
@@ -1066,7 +1074,7 @@ TEST_CASE("InstrumentSynthVoice - positive playback offset delays the source", "
     REQUIRE(output.getSample(0, 2) == Catch::Approx(1.0f).margin(0.0001f));
 }
 
-TEST_CASE("InstrumentSynthVoice - flips stereo direct mic before balance", "[InstrumentSynth][routing]") {
+TEST_CASE("InstrumentSynthVoice - flips stereo direct mic before manual pan", "[InstrumentSynth][routing]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;
     slot.id = "perc1";
@@ -1085,8 +1093,7 @@ TEST_CASE("InstrumentSynthVoice - flips stereo direct mic before balance", "[Ins
     sound.sampleRate = 44100.0;
     sound.micBufferChannelStart = 0;
     sound.micBufferChannelCount = 2;
-    sound.useDirectBalance = true;
-    sound.balance = -127;
+    REQUIRE(InstrumentSynthTestAccess::configureMicPlacement(synth, sound, "dts", 2, 2, true, -127, -127));
 
     InstrumentSynthVoice voice;
     InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
@@ -1097,6 +1104,76 @@ TEST_CASE("InstrumentSynthVoice - flips stereo direct mic before balance", "[Ins
 
     REQUIRE(output.getSample(0, 0) == Catch::Approx(1.0f).margin(0.0001f));
     REQUIRE(output.getSample(1, 0) == Catch::Approx(0.0f).margin(0.0001f));
+}
+
+TEST_CASE("InstrumentSynthVoice - room stereo ignores layer pan", "[InstrumentSynth][routing]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(2, 1);
+    buffer->setSample(0, 0, 0.25f);
+    buffer->setSample(1, 0, 0.75f);
+
+    SampledSound sound;
+    sound.buffer = buffer;
+    sound.sampleRate = 44100.0;
+    sound.micBufferChannelStart = 0;
+    sound.micBufferChannelCount = 2;
+    REQUIRE(InstrumentSynthTestAccess::configureMicPlacement(synth, sound, "rfs", 2, 2, false, 96, 127));
+
+    InstrumentSynthVoice voice;
+    InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
+
+    juce::AudioBuffer<float> output(2, 1);
+    output.clear();
+    voice.renderNextBlock(output, 0, 1);
+
+    REQUIRE(output.getSample(0, 0) == Catch::Approx(0.25f).margin(0.0001f));
+    REQUIRE(output.getSample(1, 0) == Catch::Approx(0.75f).margin(0.0001f));
+}
+
+TEST_CASE("InstrumentSynthVoice - overhead stereo uses only manual pan", "[InstrumentSynth][routing]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(2, 1);
+    buffer->setSample(0, 0, 0.25f);
+    buffer->setSample(1, 0, 0.75f);
+
+    SampledSound sound;
+    sound.buffer = buffer;
+    sound.sampleRate = 44100.0;
+    sound.micBufferChannelStart = 0;
+    sound.micBufferChannelCount = 2;
+    REQUIRE(InstrumentSynthTestAccess::configureMicPlacement(synth, sound, "ons", 2, 2, false, -127, 127));
+
+    InstrumentSynthVoice voice;
+    InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
+
+    juce::AudioBuffer<float> output(2, 1);
+    output.clear();
+    voice.renderNextBlock(output, 0, 1);
+
+    REQUIRE(output.getSample(0, 0) == Catch::Approx(0.0f).margin(0.0001f));
+    REQUIRE(output.getSample(1, 0) == Catch::Approx(0.75f).margin(0.0001f));
+}
+
+TEST_CASE("InstrumentSynthVoice - direct mono output ignores layer pan", "[InstrumentSynth][routing]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    auto buffer = std::make_shared<juce::AudioBuffer<float>>(1, 1);
+    buffer->setSample(0, 0, 0.5f);
+
+    SampledSound sound;
+    sound.buffer = buffer;
+    sound.sampleRate = 44100.0;
+    sound.micBufferChannelStart = 0;
+    sound.micBufferChannelCount = 1;
+    REQUIRE(InstrumentSynthTestAccess::configureMicPlacement(synth, sound, "dtm", 1, 1, false, -96, 127));
+
+    InstrumentSynthVoice voice;
+    InstrumentSynthTestAccess::startVoiceForRender(voice, synth, sound);
+
+    juce::AudioBuffer<float> output(1, 1);
+    output.clear();
+    voice.renderNextBlock(output, 0, 1);
+
+    REQUIRE(output.getSample(0, 0) == Catch::Approx(0.5f).margin(0.0001f));
 }
 
 TEST_CASE("InstrumentSynth - bleed follows source mic after routing to generic output code", "[InstrumentSynth][routing]") {

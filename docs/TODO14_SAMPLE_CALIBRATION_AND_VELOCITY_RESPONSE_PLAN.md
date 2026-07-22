@@ -1,6 +1,6 @@
 # TODO14: Sample Calibration And Velocity Response Plan
 
-Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, and Phase 5B implementation is complete. Phase 4 core implementation and its first listening correction are complete, but clear load-complete status and the remaining fixture, library, C++, UI, and listening verification are pending.
+Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, Phase 5B, and Phase 6 implementation is complete. Phase 4 core implementation and its first listening correction are complete, but clear load-complete status and the remaining fixture, library, C++, UI, and listening verification are pending.
 
 ## Scope And Terminology
 
@@ -530,13 +530,22 @@ velocityResponse: "1:-48,64:-12,127:0"
 
 Verify later: sparse and dense articulations; articulation without metadata; correct recorded velocity columns and dB readouts; Global read-only mode; Make Custom; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; selected-velocity preview; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; resizing, keyboard focus, tooltips, and visual review.
 
-### Phase 6: Add balance and timing reports
+### ✅ Phase 6: Add balance and timing reports (implementation complete, verification pending)
 
-- Add high-confidence overhead balance recommendations and reviewed folder updates.
-- Precompute mic-aware placement modes for overhead and approved mono-to-stereo routes.
-- Add per-mic room-orientation recommendations to the report.
-- Add report-only mic timing analysis that separates stable technical offsets from likely acoustic delay.
-- Define reviewed future CSV fields before any orientation or timing transform becomes runtime input.
+- ✅ Add high-confidence overhead balance recommendations and reviewed folder updates.
+- ✅ Precompute mic-aware placement modes for overhead and approved mono-to-stereo routes.
+- ✅ Add per-mic room-orientation recommendations to the report.
+- ✅ Add report-only mic timing analysis that separates stable technical offsets from likely acoustic delay.
+- ✅ Define reviewed future CSV fields before any orientation or timing transform becomes runtime input.
+
+Implementation result:
+
+- `generate_sample_metadata.py --report-folder <folder>` writes `balance_recommendations.csv`, `room_orientation.csv`, and `mic_timing.csv` under one external subfolder per kit. It still writes only `metadata.csv` and its backup inside the kit.
+- Balance reports use the Phase 1 confidence values. They include current and proposed folder names but never rename a folder.
+- Room orientation compares each stereo room mic with the selected stereo overhead for matching logical hits. Only strong repeated opposite direction produces `recommended_flip_lr = 1`.
+- Timing uses a direct mic as the logical-hit reference when available, then overhead, then the earliest remaining mic. Stable cross-articulation offsets are marked `possible_technical_offset`; changing overhead or room offsets are marked `likely_acoustic_variation`.
+- Runtime mic placement is precomputed outside rendering. Stereo overhead uses only manual layer pan, eligible non-room mono-to-stereo uses source balance plus manual pan, direct mono-to-mono ignores plugin pan, room ignores layer pan, and other stereo routes preserve their image unless routing explicitly permits manual pan.
+- Report proposal fields are `recommended_flip_lr` and `recommended_offset_ms`. Reserved future runtime CSV fields are `mic_flip_lr` and signed `playback_offset_ms`; they are not written to `metadata.csv` or read by the engine in this phase.
 
 Verify later: known left, center, right, mirrored, and delayed fixtures; low-confidence no-change behavior; direct and room routing exclusions; listening check for mic-aware pan.
 

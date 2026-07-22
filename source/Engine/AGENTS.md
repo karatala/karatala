@@ -27,6 +27,7 @@
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
 - Filename playback timing uses `on<ms>` to advance by skipping the source beginning and `op<ms>` to delay output. Optional `_micCode` suffixes limit an offset to selected mics in a multichannel file. Apply these offsets per runtime sound and preview without changing the shared sample-loader cache key.
 - Sample mic identity includes the full mic code, so variants such as `dtm1` and `dtm2` remain separate.
+- Mic placement is precomputed per routed sample. Stereo overhead keeps its recorded image and uses only manual layer pan; eligible non-room mono-to-stereo routes use source balance plus manual pan; direct mono-to-mono and room routes ignore layer pan.
 - Every mic-layout output has a required unique semantic ID, such as `snare1/dtm` or `aux1/**m`. Saved routes use this ID so repeated codes stay distinct across layout reordering.
 - Only mic-layout target output codes may use `*`, independently for type or position. Source mic codes and sample filenames stay concrete. The format remains exact. A present variant is exact, while an omitted variant accepts all variants.
 - Pad-popup layer parameters belong to the destination articulation runtime, even when one `InstrumentSynth` contains several articulations.

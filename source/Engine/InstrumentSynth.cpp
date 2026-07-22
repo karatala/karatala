@@ -437,18 +437,12 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     for (int dc = 0; dc < effectiveDestCount; ++dc)
         destPtrs[dc] = outputBuffer.getWritePointer(destChBase + dc);
 
-    const int layerPan = layerParameters != nullptr ? layerParameters->pan : this->owner != nullptr ? this->owner->getPan() : 0;
-    const bool useBalancedDirectStereo = (s->useDirectBalance || layerPan != 0) && effectiveDestCount >= 2;
-    const int effectiveBalance = (s->useDirectBalance ? s->balance : 0) + layerPan;
-    const float pan = juce::jlimit(-1.0f, 1.0f, static_cast<float>(juce::jlimit(-127, 127, effectiveBalance)) / 127.0f);
-    const float monoPanAngle = (pan + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
-    const float monoLeftGain = std::cos(monoPanAngle);
-    const float monoRightGain = std::sin(monoPanAngle);
-    const float stereoLeftGain = pan > 0.0f ? 1.0f - pan : 1.0f;
-    const float stereoRightGain = pan < 0.0f ? 1.0f + pan : 1.0f;
+    const bool useMonoPlacement = (s->micPlacementMode == MicPlacementMode::MonoCenter || s->micPlacementMode == MicPlacementMode::MonoSourceAndLayerPan) && effectiveSrcCount == 1 && effectiveDestCount >= 2;
+    const bool useStereoPlacement = s->micPlacementMode == MicPlacementMode::StereoLayerPan && effectiveSrcCount >= 2 && effectiveDestCount >= 2;
+    const float placementLeftGain = s->cachedPlacementLeftGain.load(std::memory_order_relaxed);
+    const float placementRightGain = s->cachedPlacementRightGain.load(std::memory_order_relaxed);
 
     for (int i = 0; i < numSamples; ++i) {
-        //TODO: use peak offset for mics (found minimal (for example di) and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) first makke script to smart-parse from samples and save to filename
         // Per-sample choke gain - MUST stay per-sample, not per-block.
         // getNextBlockGain() advances elapsed time by 1/sampleRate each call;
         // calling once per block freezes ducking/muting and breaks aftertouch choke.
@@ -465,21 +459,21 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             this->lastEnvelopeValue = env;
             const float gain = env * this->velocityGain * chokeGain * voiceGain * phaseMultiplier;
 
-            if (useBalancedDirectStereo && effectiveSrcCount == 1) {
+            if (useMonoPlacement) {
                 float v0 = srcPtrs[0][idx];
                 float v1 = (idx + 1 < srcLen) ? srcPtrs[0][idx + 1] : 0.0f;
                 const float sample = static_cast<float>(v0 + (v1 - v0) * frac) * gain;
-                destPtrs[0][startSample + i] += sample * monoLeftGain;
-                destPtrs[1][startSample + i] += sample * monoRightGain;
-            } else if (useBalancedDirectStereo && effectiveSrcCount >= 2) {
+                destPtrs[0][startSample + i] += sample * placementLeftGain;
+                destPtrs[1][startSample + i] += sample * placementRightGain;
+            } else if (useStereoPlacement) {
                 const int leftSrc = flipLR ? 1 : 0;
                 const int rightSrc = flipLR ? 0 : 1;
                 float left0 = srcPtrs[leftSrc][idx];
                 float left1 = (idx + 1 < srcLen) ? srcPtrs[leftSrc][idx + 1] : 0.0f;
                 float right0 = srcPtrs[rightSrc][idx];
                 float right1 = (idx + 1 < srcLen) ? srcPtrs[rightSrc][idx + 1] : 0.0f;
-                destPtrs[0][startSample + i] += static_cast<float>(left0 + (left1 - left0) * frac) * gain * stereoLeftGain;
-                destPtrs[1][startSample + i] += static_cast<float>(right0 + (right1 - right0) * frac) * gain * stereoRightGain;
+                destPtrs[0][startSample + i] += static_cast<float>(left0 + (left1 - left0) * frac) * gain * placementLeftGain;
+                destPtrs[1][startSample + i] += static_cast<float>(right0 + (right1 - right0) * frac) * gain * placementRightGain;
             } else {
                 const int renderCount = juce::jmin(effectiveSrcCount, effectiveDestCount);
                 for (int sc = 0; sc < renderCount; ++sc) {

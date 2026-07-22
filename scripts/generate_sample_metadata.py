@@ -15,6 +15,8 @@ import pyloudnorm as pyln
 import soundfile as sf
 from scipy.signal import resample_poly
 
+from sample_metadata_reports import write_phase6_reports
+
 
 SUPPORTED_AUDIO_EXTENSIONS = (".wav", ".flac", ".aiff", ".mp3", ".ogg")
 DECAY_LEVELS_DB = (6, 12, 18, 24, 30, 36, 42, 48, 54, 60)
@@ -68,6 +70,10 @@ class MicDescriptor:
 class SampleFile:
     path: Path
     relative_path: str
+    instrument_folder: str
+    articulation_folder: str
+    velocity: int
+    round_robin: str
     mic_descriptors: tuple[MicDescriptor, ...]
     parser_warnings: tuple[str, ...]
 
@@ -84,6 +90,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--decay-silence-threshold-db", type=float, default=-72.0, help="Absolute decay-end threshold")
     parser.add_argument("--decay-silence-hold-ms", type=int, default=30, help="Time that must remain below the decay threshold")
     parser.add_argument("--true-peak-oversample-factor", type=int, default=4, help="True-peak oversampling factor")
+    parser.add_argument("--report-folder", help="Optional external folder for Phase 6 balance, room-orientation, and timing CSV reports")
     return parser.parse_args()
 
 
@@ -171,7 +178,7 @@ def parse_sample_file(file_path: Path, kit_root: Path) -> SampleFile:
     warnings.extend(mic_warnings)
     if not mic_descriptors:
         raise ValueError("Filename contains no valid mic codes")
-    return SampleFile(file_path, relative_path.as_posix(), mic_descriptors, tuple(warnings))
+    return SampleFile(file_path, relative_path.as_posix(), relative_path.parts[0], relative_path.parts[1], velocity, round_robin, mic_descriptors, tuple(warnings))
 
 
 def power_to_db(power: float) -> float:
@@ -333,6 +340,10 @@ def measure_sample_file(sample_file: SampleFile, settings: AnalysisSettings) -> 
             "peak_ms": decay["peak_ms"],
             "decay_end_ms": decay["decay_end_ms"],
             "stereo_balance": None if balance is None else round(balance, 4),
+            "_instrument_folder": sample_file.instrument_folder,
+            "_articulation_folder": sample_file.articulation_folder,
+            "_velocity": sample_file.velocity,
+            "_round_robin": sample_file.round_robin,
         }
         for decay_level_db in DECAY_LEVELS_DB:
             row[f"-{decay_level_db}db_ms"] = decay["decay_points"][decay_level_db]
@@ -402,7 +413,7 @@ def write_metadata_csv(kit_root: Path, rows: list[dict[str, object]]) -> None:
         with temporary_path.open("w", newline="", encoding="utf-8") as output_file:
             writer = csv.DictWriter(output_file, fieldnames=CSV_COLUMNS)
             writer.writeheader()
-            writer.writerows({column_name: format_csv_value(value) for column_name, value in row.items()} for row in rows)
+            writer.writerows({column_name: format_csv_value(row.get(column_name, "")) for column_name in CSV_COLUMNS} for row in rows)
             output_file.flush()
             os.fsync(output_file.fileno())
         if metadata_path.is_file():
@@ -414,7 +425,7 @@ def write_metadata_csv(kit_root: Path, rows: list[dict[str, object]]) -> None:
         backup_temporary_path.unlink(missing_ok=True)
 
 
-def generate_kit_metadata(kit_root: Path, settings: AnalysisSettings) -> tuple[int, list[str]]:
+def generate_kit_metadata(kit_root: Path, settings: AnalysisSettings, report_folder: Optional[Path]) -> tuple[int, list[str], list[Path]]:
     audio_files = find_audio_files(kit_root)
     parsed_files = []
     errors = []
@@ -436,17 +447,18 @@ def generate_kit_metadata(kit_root: Path, settings: AnalysisSettings) -> tuple[i
             errors.append(f"{sample_file.relative_path}: {error}")
 
     if errors:
-        return 0, errors
+        return 0, errors, []
     rows.sort(key=lambda row: (str(row["relative_path"]), str(row["mic_code"])))
     if not rows:
-        return 0, ["No metadata rows were generated"]
+        return 0, ["No metadata rows were generated"], []
 
     previous_identities = read_previous_file_identities(kit_root / "metadata.csv")
     change_messages = summarize_identity_changes(previous_identities, rows)
+    report_paths = write_phase6_reports(report_folder, kit_root, rows, settings.onset_frame_ms) if report_folder is not None else []
     write_metadata_csv(kit_root, rows)
     for message in change_messages:
         print(f"  {message}")
-    return len(rows), []
+    return len(rows), [], report_paths
 
 
 def main() -> None:
@@ -468,6 +480,7 @@ def main() -> None:
         if not input_path.is_dir():
             raise ValueError(f"Input folder does not exist: {input_path}")
         kit_roots = discover_kit_roots(input_path)
+        report_folder = Path(arguments.report_folder).expanduser().resolve() if arguments.report_folder else None
     except ValueError as error:
         raise SystemExit(str(error)) from error
 
@@ -476,7 +489,7 @@ def main() -> None:
     total_row_count = 0
     for kit_idx, kit_root in enumerate(kit_roots, start=1):
         print(f"Kit {kit_idx}/{len(kit_roots)}: {kit_root.name}")
-        row_count, errors = generate_kit_metadata(kit_root, settings)
+        row_count, errors, report_paths = generate_kit_metadata(kit_root, settings, report_folder)
         if errors:
             failed_kit_count += 1
             print(f"  Failed; existing metadata files were kept unchanged:")
@@ -485,6 +498,8 @@ def main() -> None:
             continue
         total_row_count += row_count
         print(f"  Wrote {row_count} rows to {kit_root / 'metadata.csv'}")
+        for report_path in report_paths:
+            print(f"  Wrote report {report_path}")
 
     elapsed_seconds = time.perf_counter() - start_time
     print(f"Finished {len(kit_roots) - failed_kit_count}/{len(kit_roots)} kits, {total_row_count} rows, {elapsed_seconds:.2f} seconds")

@@ -3,6 +3,7 @@
 #include "DrumKitEngine.h"
 #include "MicRoutingBuilder.h"
 #include "SampleLoader.h"
+#include <cmath>
 
 const MicLayout* InstrumentSynth::getMicLayout() const { return this->parent ? this->parent->getMicLayout() : nullptr; }
 const MicRoutingPlan* InstrumentSynth::getMicRoutingPlan() const { return this->parent ? this->parent->getMicRoutingPlan() : nullptr; }
@@ -252,10 +253,57 @@ void InstrumentSynth::setVolumeDb(float db) {
     for (auto& art : this->runtimeArticulations) art.parameters.volumeDb = db;
 }
 
+void InstrumentSynth::configureSoundMicPlacement(
+    SampledSound& sound, const KitLib::MicSpec& micSpec, int sourceChannelCount, int destinationChannelCount,
+    bool routingAllowsPan, std::optional<int> sourceBalance, int layerPan) {
+    sound.sourceBalance = sourceBalance.value_or(0);
+    if (destinationChannelCount < 2) {
+        sound.micPlacementMode = MicPlacementMode::PreserveChannels;
+    } else if (micSpec.type == KitLib::MicSpec::Type::Room) {
+        sound.micPlacementMode = sourceChannelCount == 1 ? MicPlacementMode::MonoCenter : MicPlacementMode::PreserveChannels;
+    } else if (sourceChannelCount == 1) {
+        sound.micPlacementMode = MicPlacementMode::MonoSourceAndLayerPan;
+    } else if (micSpec.type == KitLib::MicSpec::Type::Overhead || routingAllowsPan) {
+        sound.micPlacementMode = MicPlacementMode::StereoLayerPan;
+    } else {
+        sound.micPlacementMode = MicPlacementMode::PreserveChannels;
+    }
+    InstrumentSynth::updateSoundMicPlacementGains(sound, layerPan);
+}
+
+void InstrumentSynth::updateSoundMicPlacementGains(SampledSound& sound, int layerPan) {
+    int effectivePan = 0;
+    if (sound.micPlacementMode == MicPlacementMode::MonoSourceAndLayerPan) effectivePan = juce::jlimit(-127, 127, sound.sourceBalance + layerPan);
+    else if (sound.micPlacementMode == MicPlacementMode::StereoLayerPan) effectivePan = juce::jlimit(-127, 127, layerPan);
+
+    const float normalizedPan = static_cast<float>(effectivePan) / 127.0f;
+    float leftGain = 1.0f;
+    float rightGain = 1.0f;
+    if (sound.micPlacementMode == MicPlacementMode::MonoCenter || sound.micPlacementMode == MicPlacementMode::MonoSourceAndLayerPan) {
+        const float panAngle = (normalizedPan + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
+        leftGain = std::cos(panAngle);
+        rightGain = std::sin(panAngle);
+    } else if (sound.micPlacementMode == MicPlacementMode::StereoLayerPan) {
+        leftGain = normalizedPan > 0.0f ? 1.0f - normalizedPan : 1.0f;
+        rightGain = normalizedPan < 0.0f ? 1.0f + normalizedPan : 1.0f;
+    }
+    sound.cachedPlacementLeftGain.store(leftGain, std::memory_order_relaxed);
+    sound.cachedPlacementRightGain.store(rightGain, std::memory_order_relaxed);
+}
+
+void InstrumentSynth::refreshArticulationMicPlacementGains(ArticulationRuntime& art) {
+    for (auto& layer : art.layers)
+        for (auto& sample : layer.samples)
+            if (sample.sound != nullptr) InstrumentSynth::updateSoundMicPlacementGains(*sample.sound, art.parameters.pan);
+}
+
 void InstrumentSynth::setPan(int newPan) {
     const int clampedPan = juce::jlimit(-127, 127, newPan);
     this->pan.store(clampedPan, std::memory_order_relaxed);
-    for (auto& art : this->runtimeArticulations) art.parameters.pan = clampedPan;
+    for (auto& art : this->runtimeArticulations) {
+        art.parameters.pan = clampedPan;
+        this->refreshArticulationMicPlacementGains(art);
+    }
 }
 
 void InstrumentSynth::setFlipLR(bool shouldFlip) {
@@ -292,7 +340,10 @@ void InstrumentSynth::applyParameterUpdate(ArticulationRuntime& art, const Layer
     if (update.attackMs.has_value()) art.parameters.attackMs = *update.attackMs;
     if (update.decayMs.has_value()) art.parameters.decayMs = *update.decayMs;
     if (update.volumeDb.has_value()) art.parameters.volumeDb = *update.volumeDb;
-    if (update.pan.has_value()) art.parameters.pan = juce::jlimit(-127, 127, *update.pan);
+    if (update.pan.has_value()) {
+        art.parameters.pan = juce::jlimit(-127, 127, *update.pan);
+        this->refreshArticulationMicPlacementGains(art);
+    }
     if (update.flipLR.has_value()) art.parameters.flipLR = *update.flipLR;
     if (update.flipPhase.has_value()) art.parameters.flipPhase = *update.flipPhase;
     if (update.updateVelocityResponse) {
@@ -690,7 +741,7 @@ void InstrumentSynth::processArticulationSpec(KitLib::InstrumentSpec* instSpec
 ) {
     MicRoutingBuilder micRouting(this);
 
-    this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, micRouting);
+    this->createVelocityLayers(instSpec, layoutArt.notes, artSpec, artRt, artIdx, micRouting);
     micRouting.mergeSkippedInto(skippedMicCodes);
 
     this->refreshRuntimeExpressionValues(*artSpec, artRt);
@@ -701,6 +752,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
     , const KitLayout::MidiNotes& notes
     , KitLib::ArticulationSpec* artSpec
     , ArticulationRuntime& artRt
+    , ArtRtIdx artIdx
     , MicRoutingBuilder& micRouting
 ) {
     bool articulationCalibrationAvailable = !artSpec->velocityLayerSpecs.empty();
@@ -744,8 +796,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
             sound->cachedMicBleedGain.store(this->getMicBleedLevel(varSpec->micSpec.raw), std::memory_order_relaxed);
             sound->playbackOffsetMs = varSpec->playbackOffsetMs;
-            sound->balance = effectiveBalance.value_or(0);
-            sound->useDirectBalance = assignment.applyBalance && effectiveBalance.has_value() && assignment.channels == 2 && varSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
+            sound->runtimeArticulationIndex = artIdx;
+            InstrumentSynth::configureSoundMicPlacement(*sound, varSpec->micSpec, fileChannelCount, assignment.channels, assignment.applyBalance, effectiveBalance, artRt.parameters.pan);
 
             this->addSound(sound);
             SampleEntry se;
@@ -1055,7 +1107,10 @@ bool InstrumentSynth::updateMicRoute(const juce::String& sourceMicCode, const ju
         sound->micBufferChannelCount = assignment.channels;
         sound->routedMicCode = assignment.micCode;
         sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
-        sound->useDirectBalance = assignment.applyBalance && assignment.channels == 2 && sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
+        const int sourceChannelCount = sound->sampleVariantSpec->fileChannelCount > 0 ? sound->sampleVariantSpec->fileChannelCount : sound->sampleVariantSpec->micSpec.channels;
+        const auto* layerParameters = this->getLayerParameters(static_cast<ArtRtIdx>(sound->runtimeArticulationIndex));
+        const int layerPan = layerParameters != nullptr ? layerParameters->pan : 0;
+        InstrumentSynth::configureSoundMicPlacement(*sound, sound->sampleVariantSpec->micSpec, sourceChannelCount, assignment.channels, assignment.applyBalance, sound->sourceBalance, layerPan);
     }
     return true;
 }

@@ -5,6 +5,7 @@
 # Ownership
 
 - `generate_sample_metadata.py` generates one `metadata.csv` per selected kit.
+- `sample_metadata_reports.py` generates optional external Phase 6 balance, room-orientation, and mic-timing CSV reports from completed metadata rows.
 - `analyze_drum_samples_phase1.py` remains the listening and metric comparison tool.
 - Other `analyze_drum_samples*.py` files are deprecated experiments.
 - `convert-drumgizmo2karatala.py` and conversion helpers generate Karatala library structures.
@@ -16,6 +17,7 @@
 - C++ defines the required `metadata.csv` columns and their playback meaning.
 - The metadata generator must not rename or modify sample audio files.
 - It may replace only `metadata.csv` and `metadata.csv.bak` inside explicitly selected kit roots, using transient files only for atomic replacement.
+- Phase 6 reports are written only under the explicit `--report-folder`; they never update source folders, audio, or runtime metadata.
 - Required CSV rows contain content identity, onset, intensity, true peak, peak and decay, stereo balance, and readable columns from `-6db_ms` through `-60db_ms`.
 
 # Work Guidance

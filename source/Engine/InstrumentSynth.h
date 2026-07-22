@@ -2,6 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <algorithm>
 #include <limits>
@@ -22,6 +23,13 @@ class SampleLoader;
 class InstrumentSynth;
 struct InstrumentSynthTestAccess;
 
+enum class MicPlacementMode : uint8_t {
+    PreserveChannels,
+    MonoCenter,
+    MonoSourceAndLayerPan,
+    StereoLayerPan
+};
+
 class SampledSound {
 public:
     KitLib::InstrumentSpec* instrumentSpec = nullptr;
@@ -41,8 +49,11 @@ public:
     StringsDictSingleton::Id routedMicCodeId = StringsDictSingleton::EMPTY;
     std::atomic<float> cachedMicBleedGain { 1.0f };
     float playbackOffsetMs = 0.0f;
-    bool useDirectBalance = false;
-    int balance = 0;
+    int runtimeArticulationIndex = -1;
+    MicPlacementMode micPlacementMode = MicPlacementMode::PreserveChannels;
+    int sourceBalance = 0;
+    std::atomic<float> cachedPlacementLeftGain { 1.0f };
+    std::atomic<float> cachedPlacementRightGain { 1.0f };
     KitLib::DecayEnvelope decayEnvelope;
 
     SampledSound(KitLib::InstrumentSpec* instSpec = nullptr, KitLib::SampleVariantSpec* sampleVarSpec = nullptr, const juce::File& file = {}, std::vector<uint8_t> midiNotes = {})
@@ -709,6 +720,11 @@ private:
     const LayerParameters* getLayerParameters(ArtRtIdx artIdx) const;
     void applyParameterUpdate(ArticulationRuntime& art, const LayerParameterUpdate& update);
     void refreshSampleMicBleedGains();
+    static void configureSoundMicPlacement(
+        SampledSound& sound, const KitLib::MicSpec& micSpec, int sourceChannelCount, int destinationChannelCount,
+        bool routingAllowsPan, std::optional<int> sourceBalance, int layerPan);
+    static void updateSoundMicPlacementGains(SampledSound& sound, int layerPan);
+    void refreshArticulationMicPlacementGains(ArticulationRuntime& art);
     void storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides = {});
     void resetRoutingTables();
     void rebuildArtLookupCache();
@@ -739,6 +755,7 @@ private:
         , const KitLayout::MidiNotes& notes
         , KitLib::ArticulationSpec* artSpec
         , ArticulationRuntime& artRt
+        , ArtRtIdx artIdx
         , MicRoutingBuilder& micRouting
     );
     void buildCcMappings(const LayoutArticulation& layoutArt, KitLib::ArticulationSpec* artSpec, ArtRtIdx artIdx, CcDimensionsMap& foundCcDimensions);
