@@ -218,6 +218,8 @@ void PadContextPopup::populateLayers() {
             juce::String sourceFullPath = entry.kitRef;
             if (entry.instCode.isNotEmpty()) sourceFullPath += "/" + entry.instCode;
             if (!entry.articulationFilter.empty()) sourceFullPath += "/" + entry.articulationFilter[0];
+            if (this->slotType == KitLib::InstrumentSpec::Type::HiHat && UIHelpers::usesLegacyDestinationExpressionFilter(entry.slotArticulationFilter, group->artName))
+                sourceFullPath = UIHelpers::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, group->artName);
 
             const int tuning = entry.tuningCents.value_or(0);
             const int attack = entry.attackTimeMs.value_or(-1);

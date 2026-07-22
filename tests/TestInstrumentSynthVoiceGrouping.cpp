@@ -224,6 +224,10 @@ bool hasControllerSiblingRoute(const std::vector<InstrumentSynth::ResolvedArticu
     return false;
 }
 
+uint64_t makeRouteKey(uint32_t articulationNameId, uint32_t expressionId) {
+    return (static_cast<uint64_t>(articulationNameId) << 32) | static_cast<uint64_t>(expressionId);
+}
+
 KitLib::InstrumentSpec::MetaInfo makeInstrumentMeta() {
     KitLib::InstrumentSpec::MetaInfo meta;
     meta.codeRaw = "hihat-test";
@@ -525,6 +529,54 @@ TEST_CASE("InstrumentSynth - hihat route list keeps bow edge and pedal rows with
     CHECK(hasNormalRoute(routes, "pedal", "pedal"));
     CHECK(hasControllerSiblingRoute(routes, "bow[open]", "edge[half]"));
     CHECK(ownsDestinationRoute(routes, "edge[tight]"));
+}
+
+TEST_CASE("InstrumentSynth - explicit hihat anchors keep destination expressions and same-family CC siblings", "[InstrumentSynth][InstrumentMap][ExpressionPoints][CurrentRouting]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "hihat1";
+    slot.type = KitLib::InstrumentSpec::Type::HiHat;
+    addSlotArticulation(slot, "bow[open]", 46);
+    addSlotArticulation(slot, "bow[tight]", 42);
+    KitLayout::InstrumentSlot::ContinuousController pedalController { 4, "pdl_opn_cls" };
+    pedalController.notes.push_back(42);
+    pedalController.notes.push_back(46);
+    slot.controllers.push_back(std::move(pedalController));
+    InstrumentSynth synth { &engine, slot };
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("hihat-source", KitLib::InstrumentSpec::Type::HiHat) };
+    auto* edgeOpen = instrument.getOrAddArticulation("edge[open]");
+    instrument.getOrAddArticulation("edge[half]");
+    auto* edgeClose = instrument.getOrAddArticulation("edge[close]");
+    auto* edgeTight = instrument.getOrAddArticulation("edge[tight]");
+    instrument.getOrAddArticulation("bow[half]");
+
+    const auto bowId = StringsDictSingleton::getId("bow");
+    const auto edgeId = StringsDictSingleton::getId("edge");
+    const auto openId = StringsDictSingleton::getId("open");
+    const auto closeId = StringsDictSingleton::getId("close");
+    const auto tightId = StringsDictSingleton::getId("tight");
+    InstrumentSynth::RoutingContext routingContext;
+    routingContext.defaultInstrument = &instrument;
+    routingContext.allowedArticulationFilters = { "bow[open]", "bow[tight]" };
+    routingContext.artExactRemap[makeRouteKey(bowId, openId)] = { edgeId, openId };
+    routingContext.artExactRemap[makeRouteKey(bowId, tightId)] = { edgeId, tightId };
+    routingContext.strictArticulationResolution = true;
+
+    auto routes = synth.buildResolvedRouteList(slot, routingContext);
+    CHECK(hasNormalRoute(routes, "bow[open]", "edge[open]"));
+    CHECK(hasNormalRoute(routes, "bow[tight]", "edge[tight]"));
+    CHECK(hasControllerSiblingRoute(routes, "bow[open]", "edge[half]"));
+    CHECK(hasControllerSiblingRoute(routes, "bow[open]", "edge[close]"));
+    CHECK_FALSE(hasControllerSiblingRoute(routes, "bow[open]", "bow[half]"));
+
+    synth.loadInstrumentWithRouteList(&instrument, routingContext, std::move(routes));
+    CHECK(synth.routesDestinationArticulation(bowId, openId));
+    CHECK(synth.routesDestinationArticulation(bowId, tightId));
+    CHECK_FALSE(synth.routesDestinationArticulation(bowId, closeId));
+    CHECK(synth.routesSourceArticulation(instrument, edgeOpen));
+    CHECK(synth.routesSourceArticulation(instrument, edgeTight));
+    CHECK_FALSE(synth.routesSourceArticulation(instrument, edgeClose));
 }
 
 TEST_CASE("InstrumentSynth - explicit cymbal routes sharing edge source stay separate", "[InstrumentSynth][InstrumentMap][CurrentRouting]") {

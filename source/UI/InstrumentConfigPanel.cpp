@@ -1,4 +1,5 @@
 #include "InstrumentConfigPanel.h"
+#include "../Engine/ArticulationNameHelpers.h"
 #include "UIHelpers.h"
 
 // InstrumentConfigPanel
@@ -63,7 +64,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
             artNames.push_back("(default)");
         } else {
             for (const auto& art : slot.articulations) {
-                auto artName = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
+                const auto artName = slot.type == KitLib::InstrumentSpec::Type::HiHat ? art.codeRaw : art.codeRaw.upToFirstOccurrenceOf("[", false, false);
                 if (!artName.isEmpty() && !vectorContains(artNames, artName)) artNames.push_back(artName);
             }
         }
@@ -76,7 +77,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                 if (!entry.slotArticulationFilter.empty()) {
                     bool found = false;
                     for (const auto& filter : entry.slotArticulationFilter)
-                        if (filter == artName) found = true;
+                        if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, artName)) found = true;
                     if (!found) continue;
                 }
                 matchingEntries.push_back(&entry);
@@ -98,6 +99,8 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                         sourceFullPath += "/" + entry->instCode;
                     if (!entry->articulationFilter.empty())
                         sourceFullPath += "/" + entry->articulationFilter[0];
+                    if (slot.type == KitLib::InstrumentSpec::Type::HiHat && UIHelpers::usesLegacyDestinationExpressionFilter(entry->slotArticulationFilter, artName))
+                        sourceFullPath = UIHelpers::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, artName);
 
                     int tuning = entry->tuningCents.value_or(0);
                     int attack = entry->attackTimeMs.value_or(-1);

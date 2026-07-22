@@ -1083,8 +1083,7 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
                 if (note < 0 || note >= 128)
                     continue;
                 this->trackedPAMask[static_cast<size_t>(note)] = true;
-                if (routesArt && (synth->hasDestinationRoutes() || synth->hasRouteForMidiNote(note)))
-                    this->instrumentSynthsByNote[note].push_back(synth);
+                if (routesArt) this->instrumentSynthsByNote[note].push_back(synth);
             }
         }
     }
@@ -1426,8 +1425,7 @@ void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::Stri
         if (slot.id != slotId)
             continue;
         for (const auto& art : slot.articulations) {
-            auto artCode = art.codeRaw.upToFirstOccurrenceOf("[", false, false);
-            if (artCode == artName || artName == "(default)") {
+            if (ArticulationNameHelpers::mapFilterMatchesArticulation(artName, art.codeRaw) || artName == "(default)") {
                 if (!art.notes.empty()) {
                     midiNote = static_cast<int>(art.notes[0]);
                     break;
@@ -1674,16 +1672,15 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const
     const auto targetInst = sourceParts[1].trim();
     const auto targetArt = sourceParts.size() >= 3 ? sourceParts[2].trim() : juce::String();
 
-    const auto targetNotes = this->getTargetNotesForArticulationFilter(slotId, artName);
     const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
-
-    auto synthMatchesSource = [&targetKit, &targetInst, &targetArt](const InstrumentSynth& synth) {
-        const auto* inst = synth.getLoadedInstrumentSpec();
-        if (inst == nullptr || inst->parent == nullptr) return false;
-        if (inst->parent->meta.codeRaw.compareIgnoreCase(targetKit) != 0) return false;
-        if (inst->meta.codeRaw.compareIgnoreCase(targetInst) != 0) return false;
-        return targetArt.isEmpty() || synth.supportsArticulation(targetArt);
-    };
+    auto librarySnapshot = this->libraryManagerPtr;
+    if (librarySnapshot == nullptr) return false;
+    auto* targetKitSpec = librarySnapshot->findKitById(targetKit);
+    if (targetKitSpec == nullptr) return false;
+    auto* targetInstrumentSpec = targetKitSpec->findInstrumentById(targetInst);
+    if (targetInstrumentSpec == nullptr) return false;
+    const auto* targetArticulationSpec = targetArt.isNotEmpty() ? targetInstrumentSpec->findArticulationById(targetArt) : nullptr;
+    if (targetArt.isNotEmpty() && targetArticulationSpec == nullptr) return false;
 
     const juce::ScopedLock graphLock(this->engineGraphLock);
 
@@ -1691,7 +1688,7 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const
     for (auto& synthPtr : this->instrumentSynthPtrs) {
         if (synthPtr == nullptr) continue;
         if (synthPtr->getId() != slotId) continue;
-        if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes, targetNotes) || !synthMatchesSource(*synthPtr)) continue;
+        if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes) || !synthPtr->routesSourceArticulation(*targetInstrumentSpec, targetArticulationSpec)) continue;
 
         if (currentOccurrence == sourceOccurrenceIndex) {
             return synthPtr->updateArticulationParameters(targetRoutes, update);
@@ -1706,7 +1703,6 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     if (layerIndex < 0)
         return;
 
-    const auto targetNotes = this->getTargetNotesForArticulationFilter(slotId, artName);
     const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
 
     const juce::ScopedLock graphLock(this->engineGraphLock);
@@ -1715,7 +1711,7 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     for (auto& synthPtr : this->instrumentSynthPtrs) {
         if (synthPtr == nullptr) continue;
         if (synthPtr->getId() != slotId) continue;
-        if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes, targetNotes)) continue;
+        if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes)) continue;
 
         if (currentLayerIndex == layerIndex) {
             synthPtr->updateArticulationParameters(targetRoutes, update);
@@ -1732,13 +1728,12 @@ bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::S
         return false;
     }
 
-    const auto targetNotes = this->getTargetNotesForArticulationFilter(slotId, artName);
     const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
     const juce::ScopedLock graphLock(this->engineGraphLock);
 
     int currentLayerIndex = 0;
     for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr == nullptr || synthPtr->getId() != slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes, targetNotes)) continue;
+        if (synthPtr == nullptr || synthPtr->getId() != slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes)) continue;
         if (currentLayerIndex == layerIndex) {
             const bool updated = synthPtr->updateMicRoute(sourceMicCode, outputId);
             this->logMessage("Engine mic route " + juce::String(updated ? "SUCCESS" : "FAILED") + ": slot=" + slotId + " art=" + artName + " layer=" + juce::String(layerIndex + 1) + " source=" + sourceMicCode + " target=" + (outputId.isNotEmpty() ? outputId : juce::String("auto")) + (updated ? "" : " reason=no matching loaded sound or output route"), DebugLevel::Debug);
@@ -1748,24 +1743,6 @@ bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::S
     }
     this->logMessage("Engine mic route FAILED: slot=" + slotId + " art=" + artName + " layer=" + juce::String(layerIndex + 1) + " reason=matching synth layer not found", DebugLevel::Debug);
     return false;
-}
-
-std::vector<int> DrumKitEngine::getTargetNotesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const {
-    std::vector<int> targetNotes;
-    const bool hasArtFilter = artName.trim().isNotEmpty() && artName.trim() != "(default)";
-    if (!hasArtFilter || this->activeKitLayoutPtr == nullptr) return targetNotes;
-
-    for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
-        if (slot.id != slotId) continue;
-        for (const auto& art : slot.articulations) {
-            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(artName, art.codeRaw)) continue;
-            for (const auto note : art.notes) {
-                if (note >= 0 && note < 128) targetNotes.push_back(note);
-            }
-        }
-        break;
-    }
-    return targetNotes;
 }
 
 std::vector<std::pair<uint32_t, uint32_t>> DrumKitEngine::getTargetRoutesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const {
@@ -1785,17 +1762,9 @@ std::vector<std::pair<uint32_t, uint32_t>> DrumKitEngine::getTargetRoutesForArti
     return targetRoutes;
 }
 
-bool DrumKitEngine::synthMatchesTargetNotes(const InstrumentSynth& synth, const std::vector<int>& targetNotes) {
-    if (targetNotes.empty()) return true;
-    for (const auto note : targetNotes) {
-        if (synth.hasRouteForMidiNote(note)) return true;
-    }
-    return false;
-}
-
-bool DrumKitEngine::synthMatchesTargetRoutes(const InstrumentSynth& synth, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes, const std::vector<int>& fallbackTargetNotes) {
-    if (targetRoutes.empty()) return DrumKitEngine::synthMatchesTargetNotes(synth, fallbackTargetNotes);
-    if (!synth.hasDestinationRoutes()) return DrumKitEngine::synthMatchesTargetNotes(synth, fallbackTargetNotes);
+bool DrumKitEngine::synthMatchesTargetRoutes(const InstrumentSynth& synth, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
+    if (targetRoutes.empty()) return true;
+    if (!synth.hasDestinationRoutes()) return false;
 
     for (const auto& route : targetRoutes) {
         if (synth.routesDestinationArticulation(route.first, route.second)) return true;
@@ -1804,8 +1773,7 @@ bool DrumKitEngine::synthMatchesTargetRoutes(const InstrumentSynth& synth, const
 }
 
 bool DrumKitEngine::synthRoutesLayoutArticulation(const InstrumentSynth& synth, const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
-    if (synth.hasDestinationRoutes()) return synth.routesDestinationArticulation(art.nameId, art.exprId);
-    return synth.supportsArticulation(DrumKitEngineMapHelpers::getSlotArticulationName(art));
+    return synth.routesDestinationArticulation(art.nameId, art.exprId);
 }
 
 void DrumKitEngine::applyLayerParameterUpdate(InstrumentSynth& synth, const LayerParameterUpdate& update) {

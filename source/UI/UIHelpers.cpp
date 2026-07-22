@@ -214,6 +214,41 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
     return -1;
 }
 
+bool usesLegacyDestinationExpressionFilter(const std::vector<juce::String>& destinationFilters, const juce::String& destinationArticulation) {
+    if (!destinationArticulation.containsChar('[')) return false;
+    if (destinationFilters.empty()) return true;
+
+    for (const auto& filter : destinationFilters)
+        if (ArticulationNameHelpers::articulationCodeMatches(filter, destinationArticulation)) return false;
+
+    for (const auto& filter : destinationFilters)
+        if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, destinationArticulation)) return true;
+
+    return false;
+}
+
+juce::String resolveLegacyHihatSourcePath(const std::vector<SourceItem>& sourceItems, const juce::String& sourcePath, const juce::String& destinationArticulation) {
+    const int expressionStartIdx = destinationArticulation.indexOfChar('[');
+    const int expressionEndIdx = destinationArticulation.indexOfChar(expressionStartIdx + 1, ']');
+    if (expressionStartIdx < 0 || expressionEndIdx <= expressionStartIdx + 1) return sourcePath;
+
+    juce::StringArray sourceParts;
+    sourceParts.addTokens(sourcePath.trim(), "/", "");
+    sourceParts.removeEmptyStrings();
+    if (sourceParts.size() < 3) return sourcePath;
+
+    const auto sourceArticulation = ArticulationNameHelpers::baseArticulationName(sourceParts[2]);
+    const auto destinationExpression = destinationArticulation.substring(expressionStartIdx + 1, expressionEndIdx).trim();
+    if (sourceArticulation.isEmpty() || destinationExpression.isEmpty()) return sourcePath;
+
+    const auto expressionSourcePath = sourceParts[0] + "/" + sourceParts[1] + "/" + sourceArticulation + "[" + destinationExpression + "]";
+    for (const auto& sourceItem : sourceItems) {
+        if (sourceItem.fullPath().equalsIgnoreCase(expressionSourcePath) || sourceItem.rawFullPath().equalsIgnoreCase(expressionSourcePath)) return sourceItem.fullPath();
+    }
+
+    return sourcePath;
+}
+
 std::unique_ptr<juce::Slider> createParamSlider(
     double minVal, 
     double maxVal, 

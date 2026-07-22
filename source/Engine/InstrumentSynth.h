@@ -572,19 +572,6 @@ public:
         if (art.exprId != 0) artLabel += "[" + StringsDictSingleton::nameOf(art.exprId) + "]";
         return artLabel;
     }
-    bool supportsArticulation(const juce::String& artName) const {
-        const auto normalizedTarget = artName.upToFirstOccurrenceOf("[", false, false).trim();
-        if (normalizedTarget.isEmpty() || normalizedTarget == "(default)")
-            return true;
-
-        for (const auto& art : this->runtimeArticulations) {
-            const auto runtimeArtName = StringsDictSingleton::nameOf(art.nameId).upToFirstOccurrenceOf("[", false, false).trim();
-            if (runtimeArtName.compareIgnoreCase(normalizedTarget) == 0)
-                return true;
-        }
-
-        return false;
-    }
     bool hasDestinationRoutes() const {
         for (const auto& route : this->resolvedArticulationRoutes) {
             if (!route.isControllerSibling) return true;
@@ -604,9 +591,13 @@ public:
         }
         return this->destinationRouteKeys.find(makeDestinationRouteKey(destinationArtNameId, destinationExprId)) != this->destinationRouteKeys.end();
     }
-    bool hasRouteForMidiNote(int note) const {
-        return note >= 0 && note < static_cast<int>(this->noteToArticulation.size())
-            && this->noteToArticulation[static_cast<size_t>(note)] >= 0;
+    bool routesSourceArticulation(const KitLib::InstrumentSpec& sourceInstrument, const KitLib::ArticulationSpec* sourceArticulation) const {
+        for (const auto& route : this->resolvedArticulationRoutes) {
+            if (route.isAliasRoute || route.isControllerSibling) continue;
+            if (route.sourceInstrument != &sourceInstrument) continue;
+            if (sourceArticulation == nullptr || route.sourceArticulation == sourceArticulation) return true;
+        }
+        return sourceArticulation == nullptr && this->resolvedArticulationRoutes.empty() && this->instrumentSpecstPtr == &sourceInstrument;
     }
     ArtRtIdx getOrAddRuntimeArticulationIdx(StringsDictSingleton::Id nameId, StringsDictSingleton::Id exprId) {
         for (size_t artIdx = 0; artIdx < this->runtimeArticulations.size(); ++artIdx)

@@ -147,6 +147,19 @@ static juce::String joinRouteValues(const std::unordered_map<juce::String, juce:
     return out;
 }
 
+static juce::String makeInstrumentMapEntryReloadFingerprint(const DrumKitEngine::InstrumentMapEntry& entry, bool includeParameterLayerShape) {
+    const bool changesSynthShape = includeParameterLayerShape && (entry.tuningCents.has_value() || entry.attackTimeMs.has_value() || entry.decayTimeMs.has_value() || entry.volumeDb.has_value() || entry.pan.has_value() || entry.velocityResponse.has_value() || entry.flipLR || entry.flipPhase || !entry.micBleedLevels.empty());
+    juce::String fingerprint;
+    fingerprint += entry.slotId.trim().toLowerCase() + "|";
+    fingerprint += entry.kitRef.trim().toLowerCase() + "|";
+    fingerprint += entry.instCode.trim().toLowerCase() + "|";
+    fingerprint += joinValues(entry.slotArticulationFilter) + "|";
+    fingerprint += joinValues(entry.articulationFilter) + "|";
+    fingerprint += changesSynthShape ? "layered|" : "shared|";
+    fingerprint += joinRouteValues(entry.micRouteOverrides);
+    return fingerprint;
+}
+
 } // namespace Detail
 
 std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& instrumentSpec, const DrumKitEngine::InstrumentMapEntry& entry) {
@@ -251,16 +264,7 @@ juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMa
 }
 
 juce::String makeInstrumentMapEntryReloadFingerprint(const DrumKitEngine::InstrumentMapEntry& entry) {
-    const bool changesSynthShape = entry.tuningCents.has_value() || entry.attackTimeMs.has_value() || entry.decayTimeMs.has_value() || entry.volumeDb.has_value() || entry.pan.has_value() || entry.velocityResponse.has_value() || entry.flipLR || entry.flipPhase || !entry.micBleedLevels.empty();
-    juce::String fingerprint;
-    fingerprint += entry.slotId.trim().toLowerCase() + "|";
-    fingerprint += entry.kitRef.trim().toLowerCase() + "|";
-    fingerprint += entry.instCode.trim().toLowerCase() + "|";
-    fingerprint += Detail::joinValues(entry.slotArticulationFilter) + "|";
-    fingerprint += Detail::joinValues(entry.articulationFilter) + "|";
-    fingerprint += changesSynthShape ? "layered|" : "shared|";
-    fingerprint += Detail::joinRouteValues(entry.micRouteOverrides);
-    return fingerprint;
+    return Detail::makeInstrumentMapEntryReloadFingerprint(entry, true);
 }
 
 std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap) {
@@ -286,8 +290,10 @@ std::unordered_map<juce::String, juce::String> buildResolvedSlotFingerprintMap(c
 
 std::unordered_map<juce::String, juce::String> buildResolvedSlotReloadFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLib::LibraryManager& libraryManager) {
     std::unordered_map<juce::String, juce::String> result;
+    std::unordered_set<juce::String> seenSlotIds;
     for (const auto& entry : instrumentMap.entries) {
-        result[entry.slotId] += makeInstrumentMapEntryReloadFingerprint(entry) + "\n";
+        const bool isPrimaryEntry = seenSlotIds.insert(entry.slotId).second;
+        result[entry.slotId] += Detail::makeInstrumentMapEntryReloadFingerprint(entry, !isPrimaryEntry) + "\n";
 
         const auto* kitSpec = libraryManager.findKitById(entry.kitRef);
         if (kitSpec == nullptr || entry.instCode.isEmpty()) continue;
@@ -335,13 +341,6 @@ std::unique_ptr<InstrumentSynth> createReplacementSynth(
     Detail::copySynthOverrides(*replacement, source);
     Detail::prepareSynthIfNeeded(*replacement, sampleRate, samplesPerBlock);
     return replacement;
-}
-
-juce::String getSlotArticulationName(const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
-    auto artName = StringsDictSingleton::nameOf(art.nameId);
-    if (artName.isEmpty()) artName = art.codeRaw;
-
-    return artName;
 }
 
 KitLib::InstrumentSpec* findMatchingKitInstrument(

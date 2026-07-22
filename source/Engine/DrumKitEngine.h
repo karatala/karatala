@@ -16,6 +16,8 @@
 #include <unordered_set>
 #include <utility>
 
+struct DrumKitEngineTestAccess;
+
 class DrumKitEngine {
 public:
     // All output buses are mono; stereo mics use two mono buses with L/R suffixes
@@ -201,6 +203,8 @@ public:
     const std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>>& getArticulationFallbackIdMap() const { return this->articulationFallbackIdMap; }
 
 private:
+    friend struct DrumKitEngineTestAccess;
+
     Config globalConfig;
     VelocityResponse velocityResponse = VelocityResponse::linear();
 
@@ -297,10 +301,8 @@ private:
     void clearShadowSynths();
     void rebuildPrimaryInstrumentNoteRouting();
     void addShadowSynthNoteRoutes(InstrumentSynth& shadowSynth, const KitLayout::InstrumentSlot& layoutSlot);
-    std::vector<int> getTargetNotesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const;
     std::vector<std::pair<uint32_t, uint32_t>> getTargetRoutesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const;
-    static bool synthMatchesTargetNotes(const InstrumentSynth& synth, const std::vector<int>& targetNotes);
-    static bool synthMatchesTargetRoutes(const InstrumentSynth& synth, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes, const std::vector<int>& fallbackTargetNotes);
+    static bool synthMatchesTargetRoutes(const InstrumentSynth& synth, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes);
     static bool synthRoutesLayoutArticulation(const InstrumentSynth& synth, const KitLayout::InstrumentSlot::ArticulationTrigger& art);
     static void applyLayerParameterUpdate(InstrumentSynth& synth, const LayerParameterUpdate& update);
     std::string makePreviewTargetCacheKey(const juce::String& kitCodeRaw,

@@ -22,7 +22,6 @@ std::unordered_map<juce::String, juce::String> buildResolvedSlotReloadFingerprin
 bool canReuseSlotWithoutReload(const KitLayout::InstrumentSlot& oldSlot, const KitLayout::InstrumentSlot& newSlot);
 void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int samplesPerBlock);
 std::unique_ptr<InstrumentSynth> createReplacementSynth(DrumKitEngine* owner, const KitLayout::InstrumentSlot& layoutSlot, const InstrumentSynth& source, double sampleRate, int samplesPerBlock);
-juce::String getSlotArticulationName(const KitLayout::InstrumentSlot::ArticulationTrigger& art);
 KitLib::InstrumentSpec* findMatchingKitInstrument(const KitLayout::InstrumentSlot& layoutInstrument, const KitLib::DrumKitSpec& kit, std::unordered_set<KitLib::InstrumentSpec*>& usedInstruments, std::map<KitLib::InstrumentSpec::Type, int>& nextIndexByType);
 
 } // namespace DrumKitEngineMapHelpers

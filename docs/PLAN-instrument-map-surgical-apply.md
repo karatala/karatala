@@ -1,4 +1,4 @@
-# Instrument Map Surgical Apply Plan
+# ✅ COMPLETED: Instrument Map Surgical Apply Plan
 
 ## Problem
 
@@ -248,25 +248,25 @@ Implementation status:
 
 - Started. `InstrumentSynth` now stores explicit destination-route ownership as `(destinationArtNameId, destinationExprId)` pairs.
 - Engine-created primary and shadow synths now get an exact list of pad articulations they are allowed to play.
-- When routing a MIDI note, the engine now asks the synth from that exact list first. Old name guessing is only fallback for older synths that do not have the list.
+- When routing a MIDI note, the engine asks the synth from that exact list.
 - When a synth is replaced after a layout change, the new synth copies the same allowed-to-play list from the old synth.
 - This reduces shadow conflicts where a base-name match such as `bow` could catch `bow[open]` and `bow[tight]` together.
-- Fast parameter-update matching now uses destination-route ownership when available, with old note-route matching only as fallback for older synths without ownership.
+- Fast parameter-update matching uses destination-route ownership instead of MIDI-note guesses.
 - Articulation filters now use map filter matching, so `bow[open]` can stay exact while legacy `bow` can still match the bow family.
 - Explicit articulation-filter/remap loads now use exact source-art resolution. Default full-instrument loads still keep old fallback behavior.
 - Explicit source expressions are now carried in a small exact remap, so `center[muff]` stays `center[muff]` during source-art lookup.
 - Empty-art alias fallback now carries source expression when one is explicit, so alias routes can prefer `center[muff]` over plain `center`.
-- //FIXME: temporarily disabled/commented in code! The synth routing context now keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
+- The synth routing context keeps original articulation filter strings, so exact filters like `edge[open]` stay exact when choosing allowed layout articulations.
 - `InstrumentSynth` now keeps a simple route list. Each row says: these MIDI notes for this pad articulation should play this source instrument/articulation.
 - The instrument-map apply path now builds that route list before loading the synth, then passes the list into `InstrumentSynth`.
-- When the engine asks "does this synth play this pad articulation?", the synth checks that route list first. Old engine-provided route keys remain only as fallback.
+- When the engine asks "does this synth play this pad articulation?", the synth checks route ownership. Engine-provided route keys are retained when a synth is replaced during layout work.
 - Note lookup, sample loading, and hihat pedal/CC choices are now built from that route list.
 - `noteToArticulation` is now just the final MIDI-note lookup table made from the route list. Empty-art fallback also goes through the same route list.
 - Empty-art fallback is skipped when the map already has an explicit route for the same pad articulation. Example: explicit `rim -> center` is not overwritten by fallback.
 - Extra hihat pedal states do not make a synth responsible for a pad note by themselves. Example: `bow[half]` can be available for CC selection after `bow[open]` is routed, but it does not claim the MIDI note alone.
-- Stage 5 code path is complete enough: map apply now decides the simple route list before synth load. Hihat-specific cleanup remains Stage 6, and tests remain Stage 8.
+- Map apply decides the route list before synth load. Hihat-specific persistence and focused coverage are completed in Stages 6-8.
 
-## Stage 6 - Document And Preserve Hihat Expression Routing
+## ✅ Stage 6 - Document And Preserve Hihat Expression Routing
 
 Current hihat model:
 
@@ -296,25 +296,34 @@ Verify:
 - Source exact values like `edge[half]-pdl_opn_cls049` override default `half=52`.
 - Slot/user expression point overrides change CC thresholds when source has only simplified names like `edge[half]`.
 
-## Stage 7 - Reduce Note Routing Conflicts
+Implementation status:
 
-Remaining fragile points:
+- The Instrument table preserves exact hihat destination rows such as `bow[open]` and `bow[tight]` instead of collapsing them to `bow`.
+- Instrument and Pad editors expand a legacy base destination such as `bow -> edge[close]` to matching explicit anchors such as `bow[open] -> edge[open]` and `bow[tight] -> edge[tight]` when those source states exist.
+- A deliberately explicit remap is preserved. Example: `bow[open] -> edge[close]` stays unchanged when the destination filter is already exact.
+- Controller siblings stay inside the resolved source family for `pdl_opn_cls`. A bow-to-edge remap may load `edge[...]` siblings, but it does not also load `bow[...]` siblings.
+- Exact source-folder expression values still take priority over slot, layout, and default points.
+- The bundled default preset now stores explicit hihat destination and source anchors.
+
+## ✅ Stage 7 - Preserve Incremental Apply Safety And Reduce Note Routing Conflicts
+
+Resolved fragile points:
 
 - Older shadow routing used `supportsArticulation()` and could match by runtime/source articulation name instead of destination ownership.
-- Parameter-update matching now prefers destination-route ownership when present, but still has fallback note matching for older synths without ownership.
+- Older parameter-update matching could use `noteToArticulation` as fallback ownership evidence.
 - Aliases can route destination notes to another source runtime art after bindings were already created.
-- A full route-plan object is still needed before `noteToArticulation` becomes only a final lookup table.
+- Controller siblings can contain source articulations that must not claim source-row ownership.
 
 Plan:
 
-1. Add explicit destination route ownership to `InstrumentSynth`. Implemented for engine-created primary and shadow synths.
-2. Replace `supportsArticulation()` use in shadow route setup with a route-ownership query. Implemented when destination ownership exists:
+1. Add explicit destination route ownership to `InstrumentSynth` for engine-created primary and shadow synths.
+2. Replace `supportsArticulation()` use in shadow route setup with a route-ownership query:
 
 ```cpp
 bool InstrumentSynth::routesDestinationArticulation(uint32_t destinationArtNameId, uint32_t destinationExprId) const;
 ```
 
-3. Replace note-route checks that guess from `noteToArticulation` with route-plan checks where possible.
+3. Replace note-route checks that guess from `noteToArticulation` with route-plan checks.
 4. Keep `noteToArticulation` as a runtime lookup table only.
 5. Do not use `noteToArticulation` as proof of who owns an articulation.
 
@@ -325,34 +334,38 @@ Verify:
 
 Implementation status:
 
-- Started through Stage 5. Destination-route ownership exists and is used by primary/shadow engine note routing when available.
-- Parameter-update layer matching now uses destination-route ownership when available. It keeps old note matching only as fallback for synths without ownership.
+- Primary and shadow note routing use exact destination-route ownership.
+- Parameter and mic-route updates use destination-route ownership. The old MIDI-note fallback is removed.
+- Parameter-only changes on the primary entry keep the loaded primary synth. Extra entries still change the reload shape when their parameters make them separate layers.
+- Source-specific parameter updates match the exact source instrument and normal source articulation from the route plan. Controller siblings do not claim source-row ownership.
+- `supportsArticulation()` and the engine ownership checks based on `noteToArticulation` are removed.
 - Explicit source-art fallback is now disabled for explicit articulation-filter/remap loads. Default full-instrument loads still allow fallback.
 - Cross-art remap can now include source expression id, so destination `rim` can resolve to source `center[muff]` instead of plain `center`.
 - Alias fallback now stores source name plus expression target. This keeps old fallback but makes expression-specific aliases less blind.
 - Destination-route ownership for primary synths now uses exact map filters when they exist, instead of only base articulation ids.
-- Implemented for the current map-apply path: "who plays this pad note", final MIDI-note lookup, and empty-art fallback now use the route list. Still open: add tests.
+- `noteToArticulation` remains only the final runtime MIDI-note lookup table.
 
-## Stage 8 - Tests To Add
+## ✅ Stage 8 - Tests Added
 
 Focused tests:
 
-- Same map after seed does not reload slots.
-- One source change reloads only one primary slot.
-- One layered source change rebuilds only that slot shadows.
-- Parameter-only update does not call `loadInstrumentWithSources()`.
-- Explicit destination-to-source art remap wins over source fallback.
-- Empty-art alias works for simple slots.
-- Empty-art alias does not override explicit art route.
-- Hihat controller sibling routes survive the new routing-plan path.
-- Hihat explicit destination family remains stable while CC chooses expression states.
-- Hihat source exact `pdl_opn_cls` values override layout/default expression points.
-- Hihat user expression point overrides apply when source hihat folders do not provide exact values.
+- ✅ Same map after seed does not replace primary synths.
+- ✅ One source change replaces only one primary slot.
+- ✅ One layered source change rebuilds only that slot's shadows.
+- ✅ Parameter-only update keeps the loaded primary synth.
+- ✅ Explicit destination-to-source art remap wins over source fallback.
+- ✅ Empty-art alias works for simple slots.
+- ✅ Empty-art alias does not override explicit art route.
+- ✅ Hihat controller sibling routes survive the route-plan path.
+- ✅ Hihat explicit destination family remains stable while CC chooses expression states.
+- ✅ Hihat source exact `pdl_opn_cls` values override layout/default expression points.
+- ✅ Hihat user expression point overrides apply when source hihat folders do not provide exact values.
+- ✅ Legacy hihat source text is anchored to the matching destination expression instead of the first base-name source item.
 
-Helpful test hook:
+Test hook:
 
-- Add a debug-only or test-only counter for synth reloads and shadow rebuilds.
-- Keep it out of audio hot paths.
+- `DrumKitEngineTestAccess` reads primary and shadow synth pointer identity in tests. It adds no audio-path counter or runtime work.
+- Focused test execution is intentionally pending because repository instructions require an explicit request before running tests.
 
 ## Suggested Implementation Order
 
@@ -384,4 +397,3 @@ Helpful test hook:
 - Simple parameter-only updates should be live when they are already safe: tuning, gain, pan, attack, decay, flip, phase, and bleed. Anything that needs sample reload or expensive rebuild should wait until drag end or explicit apply.
 - Slot changes should let old voices decay after synth swap. A later full rebuild or reset action may stop voices immediately.
 - Missing source-art errors should keep the old slot alive. The failed new route should not replace the old route, and status text should clearly say which slot/art was not applied.
-
