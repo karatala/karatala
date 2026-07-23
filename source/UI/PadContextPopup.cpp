@@ -1189,7 +1189,12 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->dismissSourcePicker();
 
     this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
-    this->activePicker->setFilterType(this->slotType);
+    auto initialFilterType = this->slotType;
+    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
+        const auto assignedType = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].instType;
+        if (assignedType != KitLib::InstrumentSpec::Type::Unknown) initialFilterType = assignedType;
+    }
+    this->activePicker->setFilterType(initialFilterType);
 
     this->activePicker->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;

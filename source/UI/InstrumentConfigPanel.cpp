@@ -271,7 +271,12 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     this->dismissPopup();
 
     this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
-    this->activePopup->setFilterType(row->slotType);
+    auto initialFilterType = row->slotType;
+    if (row->selectedSourceIndex >= 0 && row->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
+        const auto assignedType = this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].instType;
+        if (assignedType != KitLib::InstrumentSpec::Type::Unknown) initialFilterType = assignedType;
+    }
+    this->activePopup->setFilterType(initialFilterType);
 
     this->activePopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
@@ -304,6 +309,7 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     this->addAndMakeVisible(*this->activePopup);
     this->activePopup->toFront(true);
     this->layoutPopup();
+    this->activePopup->setSelectedItem(row->selectedSourceIndex);
     this->activePopup->focusItemList();
 }
 
