@@ -43,6 +43,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->stopTimer();
     this->mapTextDirty = false;
     this->rebuildSourceItems();
+    this->velocityResponsePresets = this->engine.getVelocityResponsePresets();
     this->tableRows.clear();
     this->contentComponent.removeAllChildren();
     this->populated = true;
@@ -160,12 +161,10 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     this->updateSourceButtonDisplay(row);
 
     row->velocityResponseStatus = std::make_unique<juce::Label>();
-    row->velocityResponseStatus->setText(row->velocityResponse.has_value() ? "Custom" : "Global", juce::dontSendNotification);
     row->velocityResponseStatus->setFont(UITheme::Fonts::small());
     row->velocityResponseStatus->setJustificationType(juce::Justification::centred);
-    row->velocityResponseStatus->setColour(juce::Label::textColourId, row->velocityResponse.has_value() ? UITheme::Colours::textAccent : UITheme::Colours::textMuted);
-    row->velocityResponseStatus->setTooltip(row->velocityResponse.value_or("Uses the global velocity response"));
     this->contentComponent.addAndMakeVisible(*row->velocityResponseStatus);
+    this->updateVelocityResponseStatus(row);
 
     auto configureCompactControl = [this, row](CompactParameterControl& control) {
         control.setLabelVisible(false);
@@ -334,6 +333,27 @@ void InstrumentConfigPanel::updateSourceButtonDisplay(TableRow* row) {
     row->sourceButton->setButtonText("Select source");
     row->sourceButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
     row->sourceButton->setTooltip({});
+}
+
+void InstrumentConfigPanel::updateVelocityResponseStatus(TableRow* row) {
+    if (row == nullptr || row->velocityResponseStatus == nullptr) return;
+
+    juce::String statusText = "Use Global";
+    juce::String tooltip = "Uses the global velocity response";
+    if (row->velocityResponse.has_value()) {
+        statusText = "Unnamed*";
+        tooltip = "Saved with this layer, but not saved as a reusable preset: " + *row->velocityResponse;
+        for (const auto& preset : this->velocityResponsePresets) {
+            if (preset.definition != *row->velocityResponse) continue;
+            statusText = preset.name;
+            tooltip = preset.name + (preset.isUser ? "" : " (Built-in)") + ": " + preset.definition;
+            break;
+        }
+    }
+
+    row->velocityResponseStatus->setText(statusText, juce::dontSendNotification);
+    row->velocityResponseStatus->setColour(juce::Label::textColourId, row->velocityResponse.has_value() ? UITheme::Colours::textAccent : UITheme::Colours::textMuted);
+    row->velocityResponseStatus->setTooltip(tooltip);
 }
 
 void InstrumentConfigPanel::dismissPopup() {

@@ -69,7 +69,7 @@ Layer order is the order in the normalized map for that slot/art. UI rows should
 | `decay` | `decay=250` | decay in ms, `-1` means default | live for existing layer |
 | `vol` | `vol=-3.5` | layer gain in dB | live for existing layer |
 | `pan` | `pan=-40` | -127 left to +127 right | live for existing layer |
-| `velocityResponse` | `velocityResponse=1:-48,64:-12,127:0` | custom MIDI velocity to output dB curve | live in the pad popup without reloading samples |
+| `velocityResponse` | `velocityResponse=logarithmic` | per-layer MIDI velocity to output dB override | live in the pad popup without reloading samples |
 | `flipLR` | `flipLR=1` | swap stereo left/right | live for existing layer |
 | `flipPhase` | `flipPhase=1` | invert phase | live for existing layer |
 | `bleed` | `bleed=oh:0.25,room:0.5` | mic gain trims from 0.0 to 1.0 | live for existing layer |
@@ -77,7 +77,15 @@ Layer order is the order in the normalized map for that slot/art. UI rows should
 
 Use `micRoute=dtm1:-` to leave source mic `dtm1` unassigned from every output.
 
-If `velocityResponse` is absent, the layer uses the global response. A custom response can be `linear` or a comma-separated list of increasing `velocity:dB` points. It must start at velocity 1, end at velocity 127 and `0 dB`, never decrease, and never exceed `0 dB`. It changes output gain only. Exact sample selection still follows the sample filename velocity boundaries.
+If `velocityResponse` is absent, the layer uses the global response. A layer override can use the stable built-in code `linear`, `logarithmic`, or `exponential`, or a comma-separated list of increasing `velocity:dB` points. A point list must start at velocity 1, end at velocity 127 and `0 dB`, never decrease, and never exceed `0 dB`. It changes output gain only. Exact sample selection still follows the sample filename velocity boundaries.
+
+Built-in gains use normalized velocity `x = midiVelocity / 127`:
+
+- `linear`: `x`
+- `logarithmic`: `ln(1 + (e - 1) * x)`
+- `exponential`: `(e^x - 1) / (e - 1)`
+
+User preset names are not stored in the instrument map. Applying a user preset copies its validated response definition into `velocityResponse`, so deleting or renaming the preset cannot change an existing session.
 
 ```text
 ride1/bow:KitA/ride-20/bow

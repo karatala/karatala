@@ -44,11 +44,49 @@ VelocityResponse VelocityResponse::linear() {
     return response;
 }
 
+VelocityResponse VelocityResponse::logarithmic() {
+    VelocityResponse response;
+    response.definition = "logarithmic";
+    response.targetDbByVelocity[0] = -100.0f;
+    response.gainByVelocity[0] = 0.0f;
+    const float naturalBase = std::exp(1.0f);
+    for (int velocity = 1; velocity <= 127; ++velocity) {
+        const float normalizedVelocity = static_cast<float>(velocity) / 127.0f;
+        const float gain = std::log1p((naturalBase - 1.0f) * normalizedVelocity);
+        response.targetDbByVelocity[static_cast<size_t>(velocity)] = 20.0f * std::log10(gain);
+        response.gainByVelocity[static_cast<size_t>(velocity)] = gain;
+    }
+    return response;
+}
+
+VelocityResponse VelocityResponse::exponential() {
+    VelocityResponse response;
+    response.definition = "exponential";
+    response.targetDbByVelocity[0] = -100.0f;
+    response.gainByVelocity[0] = 0.0f;
+    const float naturalBase = std::exp(1.0f);
+    for (int velocity = 1; velocity <= 127; ++velocity) {
+        const float normalizedVelocity = static_cast<float>(velocity) / 127.0f;
+        const float gain = (std::exp(normalizedVelocity) - 1.0f) / (naturalBase - 1.0f);
+        response.targetDbByVelocity[static_cast<size_t>(velocity)] = 20.0f * std::log10(gain);
+        response.gainByVelocity[static_cast<size_t>(velocity)] = gain;
+    }
+    return response;
+}
+
 ParseResult<VelocityResponse> VelocityResponse::fromDefinition(const juce::String& definition) {
     ParseResult<VelocityResponse> result;
     const auto trimmedDefinition = definition.trim();
     if (trimmedDefinition.isEmpty() || trimmedDefinition.compareIgnoreCase("linear") == 0) {
         result.value = VelocityResponse::linear();
+        return result;
+    }
+    if (trimmedDefinition.compareIgnoreCase("logarithmic") == 0) {
+        result.value = VelocityResponse::logarithmic();
+        return result;
+    }
+    if (trimmedDefinition.compareIgnoreCase("exponential") == 0) {
+        result.value = VelocityResponse::exponential();
         return result;
     }
 

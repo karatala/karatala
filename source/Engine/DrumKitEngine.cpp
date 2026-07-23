@@ -188,10 +188,9 @@ bool DrumKitEngine::useKitLayout(juce::String name) {
 
 std::vector<DrumKitEngine::VelocityResponsePreset> DrumKitEngine::getVelocityResponsePresets(juce::StringArray* warnings) const {
     std::vector<VelocityResponsePreset> presets;
-    VelocityResponsePreset linearPreset;
-    linearPreset.name = "Linear";
-    linearPreset.definition = "linear";
-    presets.push_back(std::move(linearPreset));
+    presets.push_back({ "Linear", "linear", {}, false });
+    presets.push_back({ "Logarithmic", "logarithmic", {}, false });
+    presets.push_back({ "Exponential", "exponential", {}, false });
 
     const auto directory = this->getUserVelocityResponsePresetsDir();
     if (!directory.isDirectory()) return presets;

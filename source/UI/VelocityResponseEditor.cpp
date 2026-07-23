@@ -200,7 +200,7 @@ void VelocityResponseEditor::setCustom(bool shouldUseCustom, bool notify) {
     if (!this->custom) this->loadDefinition(this->engine.getVelocityResponse().getDefinition(), false, false);
     this->updateControls();
     if (notify) this->notifyResponseChanged(true);
-    this->setStatus(this->custom ? "Custom response" : "Using global response");
+    this->setStatus(this->custom ? "Layer curve active" : "Using global response");
 }
 
 void VelocityResponseEditor::notifyResponseChanged(bool commit) {
@@ -452,7 +452,7 @@ void VelocityResponseEditor::resized() {
     toolbar.removeFromLeft(4);
     this->saveAsButton.setBounds(toolbar.removeFromLeft(62));
     toolbar.removeFromLeft(8);
-    this->makeCustomButton.setBounds(toolbar.removeFromLeft(90));
+    this->makeCustomButton.setBounds(toolbar.removeFromLeft(120));
     this->useGlobalButton.setBounds(toolbar.removeFromLeft(76));
     area.removeFromTop(6);
 

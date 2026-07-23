@@ -187,6 +187,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
 
     // Build source items and populate layers from existing instrument map
     this->rebuildSourceItems();
+    this->refreshVelocityResponseChoices();
     this->populateLayers();
 
 }
@@ -717,19 +718,11 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
 
     layer->velocityResponseMode = std::make_unique<juce::ComboBox>();
     UIHelpers::configureComboBox(*layer->velocityResponseMode);
-    layer->velocityResponseMode->addItem("Global", 1);
-    layer->velocityResponseMode->addItem("Custom", 2);
-    layer->velocityResponseMode->setSelectedId(layer->velocityResponse.has_value() ? 2 : 1, juce::dontSendNotification);
-    layer->velocityResponseMode->setTooltip("Use the global velocity response or a custom response for this layer");
+    layer->velocityResponseMode->getProperties().set("compactRoute", true);
+    layer->velocityResponseMode->getProperties().set("hideArrow", true);
     this->layerContent.addAndMakeVisible(*layer->velocityResponseMode);
-
-    layer->velocityResponseEditButton = std::make_unique<juce::TextButton>("Edit Curve");
-    UIHelpers::configureControlButton(*layer->velocityResponseEditButton);
-    layer->velocityResponseEditButton->getProperties().set("compactText", true);
-    this->layerContent.addAndMakeVisible(*layer->velocityResponseEditButton);
     layer->velocityResponseMode->onChange = [this, layer] { this->commitVelocityResponse(layer); };
-    layer->velocityResponseEditButton->onClick = [this, layer] { this->showVelocityResponseEditor(layer); };
-    this->updateVelocityResponseDisplay(layer);
+    this->rebuildVelocityResponseChoices(layer);
 
     this->updateSourceDisplay(layer);
 
@@ -904,13 +897,51 @@ int PadContextPopup::getSourceOccurrenceIndex(const LayerRow* layer) const {
     return -1;
 }
 
+int PadContextPopup::findVelocityResponsePresetIndex(const std::optional<juce::String>& definition) const {
+    if (!definition.has_value()) return -1;
+    for (int presetIdx = 0; presetIdx < static_cast<int>(this->velocityResponsePresets.size()); ++presetIdx) {
+        if (this->velocityResponsePresets[static_cast<size_t>(presetIdx)].definition == *definition) return presetIdx;
+    }
+    return -1;
+}
+
+void PadContextPopup::rebuildVelocityResponseChoices(LayerRow* layer) {
+    if (layer == nullptr || layer->velocityResponseMode == nullptr) return;
+
+    layer->velocityResponseMode->clear(juce::dontSendNotification);
+    layer->velocityResponseMode->addItem("Use Global", velocityResponseGlobalItemId);
+    layer->velocityResponseMode->addSeparator();
+    for (int presetIdx = 0; presetIdx < static_cast<int>(this->velocityResponsePresets.size()); ++presetIdx) {
+        const auto& preset = this->velocityResponsePresets[static_cast<size_t>(presetIdx)];
+        layer->velocityResponseMode->addItem(preset.name + (preset.isUser ? "" : " (Built-in)"), velocityResponsePresetBaseItemId + presetIdx);
+    }
+    layer->velocityResponseMode->addSeparator();
+    layer->velocityResponseMode->addItem("Edit curve...", velocityResponseEditItemId);
+    this->updateVelocityResponseDisplay(layer);
+}
+
+void PadContextPopup::refreshVelocityResponseChoices() {
+    this->velocityResponsePresets = this->engine.getVelocityResponsePresets();
+    for (auto* layer : this->layerRows) this->rebuildVelocityResponseChoices(layer);
+}
+
 void PadContextPopup::commitVelocityResponse(LayerRow* layer) {
-    if (layer == nullptr || layer->velocityResponseMode == nullptr || layer->velocityResponseEditButton == nullptr) return;
-    const bool useCustomResponse = layer->velocityResponseMode->getSelectedId() == 2;
-    if (!useCustomResponse) {
+    if (layer == nullptr || layer->velocityResponseMode == nullptr) return;
+    const int selectedMode = layer->velocityResponseMode->getSelectedId();
+    if (selectedMode == velocityResponseEditItemId) {
+        this->updateVelocityResponseDisplay(layer);
+        this->showVelocityResponseEditor(layer);
+        return;
+    }
+    if (selectedMode == velocityResponseGlobalItemId) {
         layer->velocityResponse.reset();
-    } else if (!layer->velocityResponse.has_value()) {
-        layer->velocityResponse = this->engine.getVelocityResponse().getDefinition();
+    } else {
+        const int presetIdx = selectedMode - velocityResponsePresetBaseItemId;
+        if (presetIdx < 0 || presetIdx >= static_cast<int>(this->velocityResponsePresets.size())) {
+            this->updateVelocityResponseDisplay(layer);
+            return;
+        }
+        layer->velocityResponse = this->velocityResponsePresets[static_cast<size_t>(presetIdx)].definition;
     }
     this->updateVelocityResponseDisplay(layer);
     this->applyLayerParametersFast(layer);
@@ -919,11 +950,30 @@ void PadContextPopup::commitVelocityResponse(LayerRow* layer) {
 }
 
 void PadContextPopup::updateVelocityResponseDisplay(LayerRow* layer) {
-    if (layer == nullptr || layer->velocityResponseMode == nullptr || layer->velocityResponseEditButton == nullptr) return;
-    const bool customResponse = layer->velocityResponse.has_value();
-    layer->velocityResponseMode->setSelectedId(customResponse ? 2 : 1, juce::dontSendNotification);
-    layer->velocityResponseEditButton->setTooltip(customResponse ? "Custom: " + *layer->velocityResponse : "Global: " + this->engine.getVelocityResponse().getDefinition());
-    layer->velocityResponseEditButton->setColour(juce::TextButton::textColourOffId, customResponse ? UITheme::Colours::textAccent : UITheme::Colours::textSecondary);
+    if (layer == nullptr || layer->velocityResponseMode == nullptr) return;
+    const bool layerOverride = layer->velocityResponse.has_value();
+    int selectedItemId = velocityResponseGlobalItemId;
+    bool unnamedLayerCurve = false;
+    juce::String tooltip = "Use global: " + this->engine.getVelocityResponse().getDefinition();
+    if (layerOverride) {
+        const int presetIdx = this->findVelocityResponsePresetIndex(layer->velocityResponse);
+        if (presetIdx >= 0) {
+            const auto& preset = this->velocityResponsePresets[static_cast<size_t>(presetIdx)];
+            selectedItemId = velocityResponsePresetBaseItemId + presetIdx;
+            tooltip = preset.name + ": " + preset.definition;
+        } else {
+            unnamedLayerCurve = true;
+            tooltip = "Saved with this layer, but not saved as a reusable preset: " + *layer->velocityResponse;
+        }
+    }
+    if (unnamedLayerCurve) {
+        layer->velocityResponseMode->setSelectedId(0, juce::dontSendNotification);
+        layer->velocityResponseMode->setText("Unnamed layer curve*", juce::dontSendNotification);
+    } else {
+        layer->velocityResponseMode->setSelectedId(selectedItemId, juce::dontSendNotification);
+    }
+    layer->velocityResponseMode->setTooltip(tooltip);
+    layer->velocityResponseMode->setColour(juce::ComboBox::textColourId, layerOverride ? UITheme::Colours::textAccent : UITheme::Colours::textSecondary);
 }
 
 void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
@@ -1162,6 +1212,7 @@ void PadContextPopup::showVelocityResponseEditor(LayerRow* layer) {
 }
 
 void PadContextPopup::dismissVelocityResponseEditor() {
+    const bool editorWasOpen = this->activeVelocityResponseEditor != nullptr;
     this->flushMapText();
     if (this->velocityResponseOverlay) {
         this->removeChildComponent(this->velocityResponseOverlay.get());
@@ -1171,6 +1222,7 @@ void PadContextPopup::dismissVelocityResponseEditor() {
         this->removeChildComponent(this->activeVelocityResponseEditor.get());
         this->activeVelocityResponseEditor.reset();
     }
+    if (editorWasOpen) this->refreshVelocityResponseChoices();
 }
 
 void PadContextPopup::layoutVelocityResponseEditor() {
@@ -1292,7 +1344,7 @@ void PadContextPopup::resized() {
     this->layerViewport.setBounds(area);
 
     // Layer rows - single row per layer (compact parameter controls):
-    // [Source Card with hover delete] | [Tuning|Attack|Decay|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
+    // [Source Card with hover delete] | [Tuning|Attack|Decay + Curve|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
     const int potW = 44;
     const int potH = 44;
     const int flipColW = 26;
@@ -1334,11 +1386,7 @@ void PadContextPopup::resized() {
             auto srcArea = rowArea.removeFromLeft(sourceW);
             layer->sourceButton->setBounds(srcArea);
             auto sourceInner = srcArea.reduced(6, 2).withTrimmedRight(compactButtonSize + UITheme::Spacing::sm);
-            auto velocityResponseArea = sourceInner.removeFromBottom(UITheme::Sizes::standardControlHeight);
             layer->sourceDetailLabel->setBounds(sourceInner);
-            layer->velocityResponseMode->setBounds(velocityResponseArea.removeFromLeft(62));
-            velocityResponseArea.removeFromLeft(3);
-            layer->velocityResponseEditButton->setBounds(velocityResponseArea);
             auto removeButtonArea = srcArea.reduced(UITheme::Spacing::xs);
             auto removeButtonRow = removeButtonArea.removeFromBottom(compactButtonSize);
             layer->removeButton->setBounds(removeButtonRow.removeFromRight(compactButtonSize));
@@ -1350,14 +1398,16 @@ void PadContextPopup::resized() {
             auto mainGroupArea = rowArea.removeFromLeft(mainGroupW);
             layer->mainGroupBounds = mainGroupArea;
             auto mainInner = mainGroupArea.reduced(groupPad, 0);
-            layer->tuningPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-            layer->attackPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-            layer->decayPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-            layer->gainPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-            layer->panPot->setBounds(mainInner.removeFromLeft(potW).withHeight(potH));
-            auto flipArea = mainInner.removeFromLeft(flipColW).withHeight(potH);
+            auto mainParameterRow = mainInner.removeFromTop(potH);
+            layer->tuningPot->setBounds(mainParameterRow.removeFromLeft(potW));
+            layer->attackPot->setBounds(mainParameterRow.removeFromLeft(potW));
+            layer->decayPot->setBounds(mainParameterRow.removeFromLeft(potW));
+            layer->gainPot->setBounds(mainParameterRow.removeFromLeft(potW));
+            layer->panPot->setBounds(mainParameterRow.removeFromLeft(potW));
+            auto flipArea = mainParameterRow.removeFromLeft(flipColW);
             layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 1));
             layer->flipPhaseButton->setBounds(flipArea.reduced(2, 1));
+            layer->velocityResponseMode->setBounds(mainInner.removeFromTop(routingComboH).removeFromLeft(potW * 3).reduced(1, 0));
 
             rowArea.removeFromLeft(groupGap);
 

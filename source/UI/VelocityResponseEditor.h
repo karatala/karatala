@@ -54,7 +54,7 @@ private:
     juce::Label statusLabel;
     juce::ComboBox presetCombo;
     juce::TextButton saveAsButton { "Save As" };
-    juce::TextButton makeCustomButton { "Make Custom" };
+    juce::TextButton makeCustomButton { "Create Layer Curve" };
     juce::TextButton useGlobalButton { "Use Global" };
     juce::TextButton previewButton { "Preview" };
     juce::TextButton doneButton { "Done" };

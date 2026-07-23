@@ -32,6 +32,10 @@ public:
     std::function<void(bool)> onMidiLearnStateChanged;
 
 private:
+    static constexpr int velocityResponseGlobalItemId = 1;
+    static constexpr int velocityResponseEditItemId = 3;
+    static constexpr int velocityResponsePresetBaseItemId = 100;
+
     DrumKitEngine& engine;
     juce::String slotId;
     juce::String artName;
@@ -82,7 +86,6 @@ private:
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel;
         std::unique_ptr<juce::ComboBox> velocityResponseMode;
-        std::unique_ptr<juce::TextButton> velocityResponseEditButton;
         std::unique_ptr<CompactParameterControl> tuningPot;
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
@@ -108,6 +111,7 @@ private:
     };
     juce::OwnedArray<ArticulationGroup> articulationGroups;
     juce::OwnedArray<LayerRow> layerRows;
+    std::vector<DrumKitEngine::VelocityResponsePreset> velocityResponsePresets;
 
     void addArticulationGroup(const juce::String& articulationName);
     void addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
@@ -118,6 +122,9 @@ private:
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
     int getSourceOccurrenceIndex(const LayerRow* layer) const;
+    int findVelocityResponsePresetIndex(const std::optional<juce::String>& definition) const;
+    void rebuildVelocityResponseChoices(LayerRow* layer);
+    void refreshVelocityResponseChoices();
     void commitVelocityResponse(LayerRow* layer);
     void updateVelocityResponseDisplay(LayerRow* layer);
     void applyLayerParametersFast(LayerRow* layer);

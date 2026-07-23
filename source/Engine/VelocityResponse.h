@@ -15,6 +15,8 @@ public:
     static ParseResult<VelocityResponse> fromDefinition(const juce::String& definition);
     static ParseResult<VelocityResponse> fromPoints(const std::vector<Point>& points);
     static VelocityResponse linear();
+    static VelocityResponse logarithmic();
+    static VelocityResponse exponential();
 
     float getTargetDb(juce::uint8 velocity) const { return this->targetDbByVelocity[static_cast<size_t>(velocity)]; }
     float getGain(juce::uint8 velocity) const { return this->gainByVelocity[static_cast<size_t>(velocity)]; }

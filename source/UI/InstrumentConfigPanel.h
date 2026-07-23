@@ -27,6 +27,7 @@ private:
     bool populated = false;
 
     std::vector<SourceItem> sourceItems;
+    std::vector<DrumKitEngine::VelocityResponsePreset> velocityResponsePresets;
     void rebuildSourceItems();
 
     // ─── Flat table row (one per articulation/layer) ───
@@ -72,6 +73,7 @@ private:
     void applyRowParametersFast(TableRow* row);
     void timerCallback() override;
     void updateSourceButtonDisplay(TableRow* row);
+    void updateVelocityResponseStatus(TableRow* row);
     int getMappedLayerIndexForRow(const TableRow* row) const;
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,

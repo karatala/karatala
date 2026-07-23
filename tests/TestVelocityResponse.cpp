@@ -1,6 +1,7 @@
 #include "../source/Engine/DrumKitEngine.h"
 #include "../source/Engine/InstrumentSynth.h"
 #include <algorithm>
+#include <cmath>
 #include "catch2/catch_approx.hpp"
 #include "catch2/catch_test_macros.hpp"
 
@@ -12,6 +13,26 @@ TEST_CASE("VelocityResponse - linear keeps the original gain", "[VelocityRespons
     REQUIRE(response.getGain(64) == Catch::Approx(64.0f / 127.0f));
     REQUIRE(response.getGain(127) == Catch::Approx(1.0f));
     REQUIRE(response.getTargetDb(127) == Catch::Approx(0.0f));
+}
+
+TEST_CASE("VelocityResponse - built-in response codes provide stable normalized curves", "[VelocityResponse]") {
+    const auto logarithmic = VelocityResponse::fromDefinition("LOGARITHMIC");
+    const auto exponential = VelocityResponse::fromDefinition("exponential");
+    const float normalizedVelocity = 64.0f / 127.0f;
+    const float naturalBase = std::exp(1.0f);
+
+    REQUIRE(logarithmic.ok());
+    REQUIRE(exponential.ok());
+    REQUIRE(logarithmic.value.getDefinition() == "logarithmic");
+    REQUIRE(exponential.value.getDefinition() == "exponential");
+    REQUIRE(logarithmic.value.getGain(0) == Catch::Approx(0.0f));
+    REQUIRE(exponential.value.getGain(0) == Catch::Approx(0.0f));
+    REQUIRE(logarithmic.value.getGain(64) == Catch::Approx(std::log1p((naturalBase - 1.0f) * normalizedVelocity)));
+    REQUIRE(exponential.value.getGain(64) == Catch::Approx((std::exp(normalizedVelocity) - 1.0f) / (naturalBase - 1.0f)));
+    REQUIRE(logarithmic.value.getGain(64) > normalizedVelocity);
+    REQUIRE(exponential.value.getGain(64) < normalizedVelocity);
+    REQUIRE(logarithmic.value.getGain(127) == Catch::Approx(1.0f));
+    REQUIRE(exponential.value.getGain(127) == Catch::Approx(1.0f));
 }
 
 TEST_CASE("VelocityResponse - custom points interpolate in dB", "[VelocityResponse]") {
@@ -72,6 +93,16 @@ TEST_CASE("VelocityResponse - user curve presets save and load normalized defini
     const auto replaced = engine.saveVelocityResponsePreset("Soft Curve", "1:-40,64:-10,127:0", true);
     REQUIRE(replaced.ok());
     const auto presets = engine.getVelocityResponsePresets();
+    REQUIRE(presets.size() == 4);
+    REQUIRE(presets[0].name == "Linear");
+    REQUIRE(presets[0].definition == "linear");
+    REQUIRE_FALSE(presets[0].isUser);
+    REQUIRE(presets[1].name == "Logarithmic");
+    REQUIRE(presets[1].definition == "logarithmic");
+    REQUIRE_FALSE(presets[1].isUser);
+    REQUIRE(presets[2].name == "Exponential");
+    REQUIRE(presets[2].definition == "exponential");
+    REQUIRE_FALSE(presets[2].isUser);
     const auto presetIt = std::find_if(presets.begin(), presets.end(), [](const auto& preset) { return preset.isUser && preset.name == "Soft Curve"; });
     REQUIRE(presetIt != presets.end());
     REQUIRE(presetIt->definition == "1:-40,64:-10,127:0");

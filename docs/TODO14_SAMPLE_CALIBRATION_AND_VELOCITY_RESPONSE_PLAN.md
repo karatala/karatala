@@ -14,7 +14,7 @@ Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, Phase 5B, and Phase 6 im
 - `source response profile`: the stable monotonic relation between named velocities and their fitted source values for one articulation.
 - `sample calibration trim`: fixed gain derived from one raw velocity median and applied before cache publication.
 - `source preprocessing recipe`: every fixed audio transform resolved before a sample buffer enters the cache.
-- `layer velocity response`: an optional MIDI-velocity-to-output-gain curve saved for one map layer; otherwise the layer uses the global response.
+- `layer velocity response`: an optional MIDI-velocity-to-output-gain override saved for one map layer; otherwise the layer uses the global response.
 - `source balance`: detected recorded position using the existing folder codes `L1..L127`, `C0`, and `R1..R127`.
 - `pan`: the existing manual layer placement offset.
 
@@ -29,7 +29,7 @@ Velocity and loudness calibration are the first release. Pan recommendations and
 For every calibrated source articulation:
 
 - The median response at MIDI velocity 127 reaches that articulation's own hardest measured reference level.
-- Median responses at lower velocities follow the global response or that layer's custom response.
+- Median responses at lower velocities follow the global response or that layer's response override.
 - Incorrect source velocity names do not create large loudness jumps.
 - Recorded soft and hard samples are still selected for their timbre.
 - Selection returns one complete logical hit, not an unrelated velocity and round robin for each mic.
@@ -62,6 +62,7 @@ These choices are part of this plan:
 - Calibrate each source articulation to its own hardest measured level so natural kick, snare, cymbal, and articulation balance is preserved. Add type or type-plus-articulation targets only after a separate listening comparison.
 - Calibrate every mapped layer independently. Do not reduce gain because a pad has several layers.
 - Keep one machine-wide default loudness response, but copy it into plugin instance state so saved sessions remain stable.
+- Keep the built-in response codes stable: `linear`, `logarithmic`, and `exponential`. For normalized velocity `x = midiVelocity / 127`, their gains are `x`, `ln(1 + (e - 1) * x)`, and `(e^x - 1) / (e - 1)` respectively. Convert gain to dB for the response table and keep velocity 127 at `0 dB`.
 - Measure every audio file independently and keep one complete result record per file.
 - Group completed file records only in a second pass for logical-hit intensity, round-robin statistics, raw velocity medians, linked-mic comparisons, folder balance, timing, and confidence.
 - Keep every logical hit's pre-trim intensity. Use the raw velocity median to fit a stable source profile, but never replace or discard the individual hit values or raw median.
@@ -153,7 +154,7 @@ globalTargetDb(midiVelocity)
     = global target output dB, with globalTargetDb(127) = 0 dB
 
 effectiveTargetDb(layer, midiVelocity)
-    = custom layer target dB when present, otherwise globalTargetDb
+    = layer response override target dB when present, otherwise globalTargetDb
 
 selectionTargetDb(layer, midiVelocity)
     = fittedSourceDb of the exact named velocity region
@@ -173,14 +174,14 @@ The selected round robin still differs by `hitIntensityDb - rawMedianDb`. Report
 
 `safeTrim` applies the Phase 1 positive-gain and headroom rules. If the required correction is unsafe, mark the calibration limited or invalid instead of hiding the error.
 
-In simple terms, `calibrationTrimDb` evens the recorded velocity levels inside one articulation, named velocity boundaries choose the recorded timbre in exact mode, and the effective global or custom response controls how MIDI velocity changes note loudness.
+In simple terms, `calibrationTrimDb` evens the recorded velocity levels inside one articulation, named velocity boundaries choose the recorded timbre in exact mode, and the effective global response or layer override controls how MIDI velocity changes note loudness.
 
 ### Playback flow
 
 For every mapped layer:
 
 1. Keep raw MIDI velocity for crosstalk and other MIDI input rules.
-2. Read target relative dB from the layer's custom 128-value table when present, otherwise from the global table.
+2. Read target relative dB from the layer's 128-value response override when present, otherwise from the global table.
 3. Read the precomputed named velocity region for this layer and MIDI velocity.
 4. Let the active selection policy return one ready logical hit, including its named velocity and round-robin variant.
 5. Preflight the complete hit's buffers and reserve all required voice slots. Start none of the hit when the full set cannot start.
@@ -191,7 +192,7 @@ For every mapped layer:
 
 Do not select a velocity layer and then make unrelated round-robin or mic choices. The selection result identifies one logical hit.
 
-Named velocity boundaries control exact timbre selection. The effective global or custom layer response controls output loudness.
+Named velocity boundaries control exact timbre selection. The effective global response or layer override controls output loudness.
 
 Build outside the audio thread:
 
@@ -202,7 +203,7 @@ Build outside the audio thread:
 - immutable logical-hit descriptions with linked sample entries;
 - a thread-safe readiness snapshot for every logical hit;
 - bounded exact-variant eligibility data; TODO15 adds floating candidate windows;
-- one optional custom 128-value velocity-response table for each mapped layer.
+- one optional 128-value velocity-response override for each mapped layer.
 
 Exact mode keeps the current named-velocity behavior, then chooses only a fully ready round robin and returns a logical hit. Do not fall back to a variant when only some of its active mic buffers are ready. TODO15 can replace the exact region with a small precomputed candidate window, while keeping the same logical-hit result contract and group voice reservation.
 
@@ -282,7 +283,7 @@ Keep the current full-file buffer model. One recipe produces one complete multic
 
 Preview, progressive loading, normal playback, and future cache baking must use the same recipe builder. Calibration trim must not be applied again after a processed buffer is returned.
 
-Global and custom layer velocity responses, `Mix Gain`, tuning, envelopes, bleed, pan, routing, choke, aftertouch, and instance effects remain runtime controls. They do not belong in the source recipe.
+Global and per-layer velocity responses, `Mix Gain`, tuning, envelopes, bleed, pan, routing, choke, aftertouch, and instance effects remain runtime controls. They do not belong in the source recipe.
 
 A changed derived velocity-level trim or other audio-changing metadata creates a new RAM-cache identity after `Reload All Kits`. A changed logical-hit intensity, raw velocity median, fitted-profile algorithm, or manual curve rebuilds selection tables but does not change buffer identity when source content and the audio recipe are unchanged. TODO16 consumes the same identity for persistent disk storage, Bake Cache UI, cleanup, and multi-instance safety.
 
@@ -291,10 +292,10 @@ A changed derived velocity-level trim or other audio-changing metadata creates a
 - Store the global response as a small set of monotonic MIDI-to-dB points with velocity 127 fixed at `0 dB` relative.
 - Build the full table outside playback.
 - Add a simple global editor with reset and machine-default actions.
-- A layer uses `Global` response mode when no map override is present.
-- A layer uses `Custom` response mode when its map entry contains `velocityResponse=linear` or a valid point list such as `1:-48,64:-12,127:0`.
-- Custom response changes output gain only. Exact named-velocity sample selection remains unchanged.
-- Reset to `Global` removes the map override.
+- A layer uses `Use Global` response mode when no map override is present.
+- A layer uses its own override when its map entry contains `velocityResponse=linear`, `velocityResponse=logarithmic`, `velocityResponse=exponential`, or a valid point list such as `1:-48,64:-12,127:0`.
+- A layer override changes output gain only. Exact named-velocity sample selection remains unchanged.
+- Reset to `Use Global` removes the map override.
 - Keep `Mix Gain` separate.
 - Manual changes use the parameter-only update path and do not reload samples.
 - Manual changes do not change the fixed source preprocessing recipe.
@@ -461,16 +462,16 @@ For each representative target, load one close logical hit and all its active li
 
 Verify later: deterministic monotonic tables; the `articulationReferenceDb + effectiveTargetDb` median equation within tolerance for non-limited layers; velocity 127 at `0 dB` relative; named velocity boundary selection; group voice reservation; no partial or mixed mic variants; different recipes never share buffers; equivalent recipes do share buffers; calibrated first-playable coverage; every mapped sample eventually loads; clear all-loaded status and counts; hi-hat listening comparison.
 
-### ✅ Phase 5: Add custom per-layer velocity response (implementation complete, verification pending)
+### ✅ Phase 5: Add per-layer velocity response overrides (implementation complete, verification pending)
 
-- ✅ Add optional per-layer `velocityResponse`; absence means `Global`, while a valid definition means `Custom`.
+- ✅ Add optional per-layer `velocityResponse`; absence means `Use Global`, while a valid definition means a layer override.
 - ✅ Extend parser, serializer, fingerprints, and parameter-only runtime updates.
 - ✅ Keep exact named-velocity sample selection unchanged.
-- ✅ Add Global/Custom editing in the pad popup and compact status in the Instrument tab.
+- ✅ Add per-layer response editing in the pad popup and compact named status in the Instrument tab.
 - ✅ Make the Instrument tab use shared map serialization and preserve bleed, mic routes, and velocity response values it does not edit.
 - ✅ Address live changes by destination articulation, source, and layer occurrence.
 
-Verify later: independent primary and shadow edits; two articulations in one slot; no sample reload for live popup changes; raw-map load; save and reload; invalid curve feedback; reset to Global; editor layout and focus behavior.
+Verify later: independent primary and shadow edits; two articulations in one slot; no sample reload for live popup changes; raw-map load; save and reload; invalid curve feedback; reset to `Use Global`; editor layout and focus behavior.
 
 ### ✅ Phase 5B: Replace the temporary text field with a visual velocity-response editor (implementation complete, verification pending)
 
@@ -480,7 +481,7 @@ Use one custom JUCE `Component` that paints the complete chart and handles its o
 
 #### User flow and chart
 
-- ✅ Keep the compact `Global` or `Custom` selector in the layer row and replace the response text field with an `Edit Curve` button.
+- ✅ Use one compact dropdown below Tuning, Attack, and Decay. It contains `Use Global`, built-in and user presets, and `Edit curve...`. An unmatched inline definition is displayed as `Unnamed layer curve*` but is not a selectable preset.
 - ✅ Open the editor as a child overlay inside the plugin window, not as a native desktop window.
 - ✅ Show the current destination articulation and source at the top so the user knows which layer is being edited.
 - ✅ Use MIDI velocity `1..127` on the horizontal axis and relative output dB on the vertical axis.
@@ -492,19 +493,19 @@ Use one custom JUCE `Component` that paints the complete chart and handles its o
 
 #### Editing and validation
 
-- ✅ In `Global` mode the chart is read-only. `Make Custom` copies the current global curve into this layer.
-- ✅ In `Custom` mode, create vertical drag handles at velocity `1`, every recorded sample level, velocity `127`, and any extra points present in the loaded curve or preset.
+- ✅ In `Use Global` mode the chart is read-only. `Create Layer Curve` copies the current global curve into this layer.
+- ✅ For a layer curve, create vertical drag handles at velocity `1`, every recorded sample level, velocity `127`, and any extra points present in the loaded curve or preset.
 - ✅ Keep handle velocities fixed. The user changes only dB, so editing the response cannot change recorded sample selection.
 - ✅ Keep velocity `127` fixed at `0 dB`.
 - ✅ Clamp vertical dragging between the neighbouring handles and at or below `0 dB`, so the curve cannot become decreasing or invalid.
 - ✅ Provide one numeric dB field for the selected handle for exact edits. Validate the final definition with the existing `VelocityResponse` parser and keep the last valid curve when text input is invalid.
 - ✅ Update the existing 128-value runtime table while dragging, without reloading samples. Commit map text once on mouse-up or numeric edit completion.
 - ✅ Provide a `Preview` action that plays the selected MIDI velocity through the existing layer preview path. Do not repeatedly trigger samples for every mouse-move event.
-- ✅ Resetting the layer to `Global` removes the map override exactly as Phase 5 does now.
+- ✅ Resetting the layer to `Use Global` removes the map override exactly as Phase 5 does now.
 
 #### Curve presets
 
-- ✅ Add a preset selector with the built-in `Linear` curve and saved user curves.
+- ✅ Add a preset selector with built-in `Linear`, `Logarithmic`, and `Exponential` curves plus saved user curves.
 - ✅ Add `Save As`. Confirm before replacing a user preset with the same name. Preset delete, rename, import, and export are not required in this phase.
 - ✅ Store user curves in a separate `velocity_response_presets` directory, not in the existing kit-layout preset directory.
 - ✅ Keep each preset file simple:
@@ -515,7 +516,7 @@ velocityResponse: "1:-48,64:-12,127:0"
 ```
 
 - ✅ Do not add a preset schema or version system. Validate the stored definition with the same engine parser.
-- ✅ A preset stores only the response curve, not kit, instrument, articulation, or sample-level data, so it can be loaded for any layer.
+- ✅ A preset stores only the universal MIDI `1..127` response curve, not kit, instrument, articulation, or sample-level data, so it can be loaded for any layer.
 - ✅ When a preset lacks a point at one of the current articulation's sample velocities, calculate that handle from the preset curve. Adding this handle must not change the loaded curve shape.
 - ✅ Applying a preset copies its curve into the layer's map entry. The saved session must not depend on the preset file remaining on disk.
 - ✅ File loading or validation failure leaves the current curve unchanged and shows a short error in the editor.
@@ -528,7 +529,7 @@ velocityResponse: "1:-48,64:-12,127:0"
 - ✅ Keep exact named-velocity selection, calibration preprocessing, cache identity, and `Mix Gain` unchanged.
 - ✅ Keep the component reusable for the later global-response editor, but implement only the pad-popup layer editor in this phase.
 
-Verify later: sparse and dense articulations; articulation without metadata; correct recorded velocity columns and dB readouts; Global read-only mode; Make Custom; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; selected-velocity preview; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; resizing, keyboard focus, tooltips, and visual review.
+Verify later: sparse and dense articulations; articulation without metadata; correct recorded velocity columns and dB readouts; Use Global read-only mode; Create Layer Curve; built-in formulas; unnamed layer-curve status; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; selected-velocity preview; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; resizing, keyboard focus, tooltips, and visual review.
 
 ### ✅ Phase 6: Add balance and timing reports (implementation complete, verification pending)
 
