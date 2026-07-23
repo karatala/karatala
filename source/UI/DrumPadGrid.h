@@ -15,7 +15,7 @@ public:
     void setPadGap(int gap);
     void setClickVelocity(float velocity);
 
-    std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, float velocity)> onPadClicked;
+    std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, const juce::String& previewArticulationCode, bool useDirectPreview, float velocity)> onPadClicked;
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, juce::Point<int> screenPos)> onPadRightClicked;
 
     void flashPad(const juce::String& slotId, float velocity);

@@ -164,6 +164,7 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
     void playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity);
+    void playPreviewArticulation(const juce::String& slotId, const juce::String& articulationCode, juce::uint8 velocity);
 
     /** Play a one-shot preview of a sample file from the library.
      *  Finds the closest velocity sample for the given kit/instrument/articulation

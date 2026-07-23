@@ -1007,16 +1007,34 @@ bool InstrumentSynth::triggerHiHatPedalSample(int midiChannel, float sourceAudib
 }
 
 bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
-    int artIdx = this->resolveArticulation(midiNoteNumber);
-    if (artIdx >= 0 && artIdx < static_cast<int>(this->runtimeArticulations.size())) {
+    const int articulationIdx = this->resolveArticulation(midiNoteNumber);
+    if (articulationIdx >= 0 && articulationIdx < static_cast<int>(this->runtimeArticulations.size())) {
         if (LOG_ENABLED(Verbose))
-            LOG(Verbose, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(artIdx) + " (artIdx=" + juce::String(artIdx) + ")");
+            LOG(Verbose, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(articulationIdx) + " (artIdx=" + juce::String(articulationIdx) + ")");
     } else {
         // LOG(Warning, "InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
     }
-    auto& art = this->runtimeArticulations[static_cast<size_t>(artIdx)];
+    return this->playResolvedArticulation(midiChannel, midiNoteNumber, static_cast<ArtRtIdx>(articulationIdx), velocity);
+}
 
+bool InstrumentSynth::playPreviewArticulation(const int midiChannel, const int midiNoteNumber, const juce::String& destinationArticulationCode, const juce::uint8 velocity) {
+    const LayoutArticulation previewArticulation(destinationArticulationCode);
+    for (const auto& route : this->resolvedArticulationRoutes) {
+        if (!route.isControllerSibling || route.sourceArticulation == nullptr) continue;
+        if (route.destinationArtNameId != previewArticulation.nameId || route.sourceArticulation->exprId != previewArticulation.exprId) continue;
+        if (!vectorContains(route.midiNotes, static_cast<uint8_t>(midiNoteNumber))) continue;
+
+        ArtRtIdx articulationIdx = -1;
+        if (!this->tryGetRuntimeArticulationIdx(route, false, articulationIdx)) continue;
+        if (this->playResolvedArticulation(midiChannel, midiNoteNumber, articulationIdx, velocity)) return true;
+    }
+    return false;
+}
+
+bool InstrumentSynth::playResolvedArticulation(const int midiChannel, const int midiNoteNumber, ArtRtIdx articulationIdx, const juce::uint8 velocity) {
+    if (articulationIdx < 0 || static_cast<size_t>(articulationIdx) >= this->runtimeArticulations.size()) return false;
+    auto& art = this->runtimeArticulations[static_cast<size_t>(articulationIdx)];
     int layerIdx = this->resolveVelocityLayer(art, velocity);
     if (layerIdx < 0)
         return false;
@@ -1028,7 +1046,7 @@ bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, 
     const float velocityGain = art.velocityGain[static_cast<size_t>(velocity)];
     this->lastRequestedVelocity.store(velocityGain);
 
-    bool anyStarted = this->startLayerVoices(art, static_cast<ArtRtIdx>(artIdx), layer, *logicalHit, midiChannel, midiNoteNumber, velocityGain, velocity);
+    bool anyStarted = this->startLayerVoices(art, articulationIdx, layer, *logicalHit, midiChannel, midiNoteNumber, velocityGain, velocity);
     if (!anyStarted) return false;
 
     this->applyAftertouch(midiChannel, midiNoteNumber);

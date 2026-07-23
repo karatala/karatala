@@ -436,6 +436,7 @@ public:
     
     void handleMidiEvent(const juce::MidiMessage& midiMessage);
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);
+    bool playPreviewArticulation(const int midiChannel, const int midiNoteNumber, const juce::String& destinationArticulationCode, const juce::uint8 velocity);
     int resolveArticulation(int midiNoteNumber);
     int resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity);
     bool startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLayerRuntime& layer, LogicalHitRuntime& logicalHit, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity);
@@ -614,6 +615,7 @@ private:
     friend class InstrumentSynthVoice;
     friend struct InstrumentSynthTestAccess;
 
+    bool playResolvedArticulation(const int midiChannel, const int midiNoteNumber, ArtRtIdx articulationIdx, const juce::uint8 velocity);
     DrumKitEngine* parent = nullptr;
     KitLib::InstrumentSpec* instrumentSpecstPtr = nullptr;
     std::shared_ptr<const KitLib::LibraryManager> librarySnapshotPtr;

@@ -146,7 +146,8 @@ std::vector<DrumPad::ArticulationCell> DrumPad::buildArticulationCells(const juc
         const int articulationIdx = this->displayOrder[static_cast<size_t>(displayIdx)];
         const int cellTop = bounds.getY() + bounds.getHeight() * displayIdx / static_cast<int>(this->displayOrder.size());
         const int cellBottom = bounds.getY() + bounds.getHeight() * (displayIdx + 1) / static_cast<int>(this->displayOrder.size());
-        cells.push_back({ juce::Rectangle<int>(bounds.getX(), cellTop, bounds.getWidth(), cellBottom - cellTop), this->slotPtr->articulations[static_cast<size_t>(articulationIdx)].codeRaw, articulationIdx });
+        const auto& articulationCode = this->slotPtr->articulations[static_cast<size_t>(articulationIdx)].codeRaw;
+        cells.push_back({ juce::Rectangle<int>(bounds.getX(), cellTop, bounds.getWidth(), cellBottom - cellTop), articulationCode, articulationCode, articulationIdx, false });
     }
     return cells;
 }
@@ -191,16 +192,26 @@ std::vector<DrumPad::ArticulationCell> DrumPad::buildHiHatCells(const juce::Rect
     for (int zoneIdx = 0; zoneIdx < static_cast<int>(zoneArticulationIndices.size()); ++zoneIdx) {
         const auto& zoneIndices = zoneArticulationIndices[static_cast<size_t>(zoneIdx)];
         if (!std::any_of(zoneIndices.begin(), zoneIndices.end(), [](int articulationIdx) { return articulationIdx >= 0; })) continue;
+        int previewAnchorIdx = zoneIndices[3];
+        if (previewAnchorIdx < 0) {
+            for (const int articulationIdx : zoneIndices) {
+                if (articulationIdx >= 0) {
+                    previewAnchorIdx = articulationIdx;
+                    break;
+                }
+            }
+        }
         const int rowTop = bounds.getY() + mainAreaHeight * rowIdx / juce::jmax(1, mainRowCount);
         const int rowBottom = bounds.getY() + mainAreaHeight * (rowIdx + 1) / juce::jmax(1, mainRowCount);
         for (int stateIdx = 0; stateIdx < static_cast<int>(stateNames.size()); ++stateIdx) {
             const int cellLeft = bounds.getX() + bounds.getWidth() * stateIdx / static_cast<int>(stateNames.size());
             const int cellRight = bounds.getX() + bounds.getWidth() * (stateIdx + 1) / static_cast<int>(stateNames.size());
-            const int articulationIdx = zoneIndices[static_cast<size_t>(stateIdx)];
-            juce::String label;
-            if (stateIdx == 0) label = zoneNames[zoneIdx];
-            if (articulationIdx >= 0) label += (label.isNotEmpty() ? "\n" : "") + stateNames[stateIdx];
-            cells.push_back({ juce::Rectangle<int>(cellLeft, rowTop, cellRight - cellLeft, rowBottom - rowTop), label, articulationIdx });
+            const int mappedArticulationIdx = zoneIndices[static_cast<size_t>(stateIdx)];
+            const bool useDirectPreview = mappedArticulationIdx < 0;
+            const int interactionArticulationIdx = useDirectPreview ? previewAnchorIdx : mappedArticulationIdx;
+            const auto previewArticulationCode = zoneNames[zoneIdx] + "[" + stateNames[stateIdx] + "]";
+            const auto label = stateIdx == 0 ? zoneNames[zoneIdx] + "\n" + stateNames[stateIdx] : stateNames[stateIdx];
+            cells.push_back({ juce::Rectangle<int>(cellLeft, rowTop, cellRight - cellLeft, rowBottom - rowTop), label, previewArticulationCode, interactionArticulationIdx, useDirectPreview });
         }
         ++rowIdx;
     }
@@ -208,36 +219,37 @@ std::vector<DrumPad::ArticulationCell> DrumPad::buildHiHatCells(const juce::Rect
     for (const int articulationIdx : otherArticulationIndices) {
         const int rowTop = bounds.getY() + mainAreaHeight * rowIdx / juce::jmax(1, mainRowCount);
         const int rowBottom = bounds.getY() + mainAreaHeight * (rowIdx + 1) / juce::jmax(1, mainRowCount);
-        cells.push_back({ juce::Rectangle<int>(bounds.getX(), rowTop, bounds.getWidth(), rowBottom - rowTop), this->slotPtr->articulations[static_cast<size_t>(articulationIdx)].codeRaw, articulationIdx });
+        const auto& articulationCode = this->slotPtr->articulations[static_cast<size_t>(articulationIdx)].codeRaw;
+        cells.push_back({ juce::Rectangle<int>(bounds.getX(), rowTop, bounds.getWidth(), rowBottom - rowTop), articulationCode, articulationCode, articulationIdx, false });
         ++rowIdx;
     }
 
-    if (pedalArticulationIdx >= 0) cells.push_back({ juce::Rectangle<int>(bounds.getX(), bounds.getBottom() - juce::jmax(1, pedalHeight), bounds.getWidth(), juce::jmax(1, pedalHeight)), "pedal", pedalArticulationIdx });
+    if (pedalArticulationIdx >= 0) cells.push_back({ juce::Rectangle<int>(bounds.getX(), bounds.getBottom() - juce::jmax(1, pedalHeight), bounds.getWidth(), juce::jmax(1, pedalHeight)), "pedal", "pedal", pedalArticulationIdx, false });
     return cells;
 }
 
-int DrumPad::getZoneIndexAt(juce::Point<int> position) const {
+std::optional<DrumPad::ArticulationCell> DrumPad::getCellAt(juce::Point<int> position) const {
     if (!this->slotPtr || this->slotPtr->articulations.empty() || this->displayOrder.empty())
-        return -1;
+        return std::nullopt;
 
     auto bodyBounds = this->getLocalBounds();
     bodyBounds.removeFromLeft(juce::jmin(UITheme::Sizes::padTitleRailWidth, bodyBounds.getWidth()));
     for (const auto& cell : this->buildArticulationCells(bodyBounds))
-        if (cell.articulationIdx >= 0 && cell.bounds.contains(position)) return cell.articulationIdx;
-    return -1;
+        if (cell.articulationIdx >= 0 && cell.bounds.contains(position)) return cell;
+    return std::nullopt;
 }
 
 void DrumPad::mouseDown(const juce::MouseEvent& event) {
     if (!this->slotPtr)
         return;
-    const int artIdx = this->getZoneIndexAt(event.getPosition());
-    if (artIdx < 0) return;
+    const auto cell = this->getCellAt(event.getPosition());
+    if (!cell.has_value()) return;
 
     if (event.mods.isPopupMenu()) {
-        if (this->onPadRightClicked) this->onPadRightClicked(this->slotPtr, artIdx, event.getScreenPosition());
+        if (this->onPadRightClicked) this->onPadRightClicked(this->slotPtr, cell->articulationIdx, event.getScreenPosition());
         return;
     }
-    if (this->onPadClicked) this->onPadClicked(this->slotPtr, artIdx, this->clickVelocity);
+    if (this->onPadClicked) this->onPadClicked(this->slotPtr, cell->articulationIdx, cell->previewArticulationCode, cell->useDirectPreview, this->clickVelocity);
 }
 
 void DrumPad::resized() {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <optional>
 #include <vector>
 #include "../Engine/LayoutManager.h"
 
@@ -16,7 +17,7 @@ public:
     void setSlot(const KitLayout::InstrumentSlot* slot);
     void flash(float velocity);
 
-    std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, float velocity)> onPadClicked;
+    std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, const juce::String& previewArticulationCode, bool useDirectPreview, float velocity)> onPadClicked;
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, juce::Point<int> screenPos)> onPadRightClicked;
 
     float getClickVelocity() const { return this->clickVelocity; }
@@ -27,7 +28,9 @@ private:
     struct ArticulationCell {
         juce::Rectangle<int> bounds;
         juce::String label;
+        juce::String previewArticulationCode;
         int articulationIdx = -1;
+        bool useDirectPreview = false;
     };
 
     const KitLayout::InstrumentSlot* slotPtr = nullptr;
@@ -43,7 +46,7 @@ private:
     void refreshDisplayOrder();
     std::vector<ArticulationCell> buildArticulationCells(const juce::Rectangle<int>& bounds) const;
     std::vector<ArticulationCell> buildHiHatCells(const juce::Rectangle<int>& bounds) const;
-    int getZoneIndexAt(juce::Point<int> position) const;
+    std::optional<ArticulationCell> getCellAt(juce::Point<int> position) const;
     void timerCallback() override;
 
     static constexpr int flashFadeDurationMs = 240;

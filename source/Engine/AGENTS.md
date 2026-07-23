@@ -27,6 +27,7 @@
 - Entering the most-closed mapped hi-hat controller state may trigger the layout's `pedal` note only when the closure gesture contains an audible open/half tail. Its velocity follows that tail's remaining estimated loudness; silence and equal-POC tight-only playback do not generate an implicit pedal event.
 - Instrument-map synth ownership comes from exact destination routes. `noteToArticulation` is only the final MIDI lookup table and must not be used to decide which synth owns a destination articulation.
 - Explicit hi-hat destination anchors preserve their expression. Pedal-open-close controller siblings stay inside the resolved source family unless the map explicitly remaps that family.
+- Zone-pad preview may start a loaded hi-hat controller sibling directly for a state without its own MIDI note. This preview must not send CC or modify the saved controller state.
 - Publish asynchronously loaded buffers before setting their `loaded` flag with release semantics; audio-thread readers check the flag with acquire semantics first.
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
 - Filename playback timing uses `on<ms>` to advance by skipping the source beginning and `op<ms>` to delay output. Optional `_micCode` suffixes limit an offset to selected mics in a multichannel file. Apply these offsets per runtime sound and preview without changing the shared sample-loader cache key.

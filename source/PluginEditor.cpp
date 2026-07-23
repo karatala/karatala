@@ -117,9 +117,14 @@ void PluginEditor::setupDrumPadGridMode() {
         this->drumPadGrid.setPadGap(settings.padGap.load());
     }
     this->refreshDrumPadGridIfNeeded(true);
-    this->drumPadGrid.onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, float velocity) {
+    this->drumPadGrid.onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, const juce::String& previewArticulationCode, bool useDirectPreview, float velocity) {
         if (!slot || artIdx < 0 || artIdx >= static_cast<int>(slot->articulations.size()))
             return;
+        if (useDirectPreview) {
+            this->flashPadForSlot(slot->id, velocity);
+            this->processorRef.getEngine().playPreviewArticulation(slot->id, previewArticulationCode, static_cast<juce::uint8>(velocity));
+            return;
+        }
         auto& art = slot->articulations[static_cast<size_t>(artIdx)];
         if (art.notes.empty())
             return;

@@ -25,9 +25,9 @@ void DrumPadGrid::populate(const KitLayout* layout) {
             this->padSlotIds.emplace_back();
         }
 
-        pad->onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, float vel) {
+        pad->onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, const juce::String& previewArticulationCode, bool useDirectPreview, float vel) {
             if (this->onPadClicked)
-                this->onPadClicked(slot, artIdx, vel);
+                this->onPadClicked(slot, artIdx, previewArticulationCode, useDirectPreview, vel);
         };
 
         pad->onPadRightClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, juce::Point<int> screenPos) {

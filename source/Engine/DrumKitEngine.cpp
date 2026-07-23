@@ -1449,6 +1449,33 @@ void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::Stri
     }
 }
 
+void DrumKitEngine::playPreviewArticulation(const juce::String& slotId, const juce::String& articulationCode, juce::uint8 velocity) {
+    auto* layout = this->activeKitLayoutPtr.get();
+    if (layout == nullptr) return;
+
+    const KitLayout::InstrumentSlot::ArticulationTrigger previewArticulation(articulationCode);
+    const auto openExpressionId = StringsDictSingleton::getId("open");
+    int midiNote = -1;
+    for (const auto& slot : layout->instrumentSlots) {
+        if (slot.id != slotId) continue;
+        for (const auto& articulation : slot.articulations) {
+            if (articulation.nameId != previewArticulation.nameId || articulation.notes.empty()) continue;
+            if (midiNote < 0) midiNote = static_cast<int>(articulation.notes[0]);
+            if (articulation.exprId == openExpressionId) {
+                midiNote = static_cast<int>(articulation.notes[0]);
+                break;
+            }
+        }
+        break;
+    }
+    if (midiNote < 0) return;
+
+    auto synthsIt = this->instrumentSynthsByNote.find(midiNote);
+    if (synthsIt == this->instrumentSynthsByNote.end()) return;
+    for (auto* synth : synthsIt->second)
+        if (synth != nullptr && synth->getId() == slotId) synth->playPreviewArticulation(1, midiNote, articulationCode, velocity);
+}
+
 juce::ThreadPoolJob::JobStatus DrumKitEngine::PreviewResolveJob::runJob() {
     this->owner.resolveAndLoadPreviewTarget(std::move(this->cacheKey),
                                             this->kitCodeRaw,
