@@ -2,7 +2,7 @@
 
 Date: 2026-07-27
 
-Status: In progress. Runtime editing and persistence are implemented for velocity ranges, source balance, manual gain, and playback offsets. Exact selected file and mic preview no longer changes the performance round-robin history. The C++ `Tests` target builds and all 175 C++ tests pass. Full linked logical-hit preview, conflict recovery actions, visual QA, Python verification, and the offline materialization workflow remain.
+Status: In progress. Runtime editing and persistence are implemented for velocity ranges, source balance, manual gain, and playback offsets. Selected preview starts the complete linked logical hit without changing performance round-robin history. Save failures offer safe retry and saved-file reload actions. The C++ `Tests` target builds and all 177 C++ tests pass. Visual QA, Python verification, and the offline materialization workflow remain.
 
 ## Current Implementation Progress
 
@@ -10,12 +10,13 @@ Status: In progress. Runtime editing and persistence are implemented for velocit
 - ✅ Preserved filename defaults separately and applied saved balance, `manualGainDb`, and playback offsets during normal kit loading.
 - ✅ Added editable exact velocity boundaries with live runtime preview, validation, reset actions, and source-wide persistence.
 - ✅ Added `Source setup...` on exact source-articulation rows in `PadContextPopup`.
-- ✅ Added focused parser, writer, model, and velocity-table tests. The complete C++ suite passes: 175 of 175 tests.
+- ✅ Added focused parser, writer, model, velocity-table, linked-preview, and saved-reload tests. The complete C++ suite passes: 177 of 177 tests.
 - ✅ Added unique content-hash recovery, external-change conflict protection, full source-value snapshots, balance/gain/offset UI, and live runtime update paths.
 - ✅ Added smoothed manual-gain correction, affected-articulation recalculation, targeted recipe loading, safe buffer publication, and pending or failed status display.
-- ✅ Added deterministic selected file and mic preview without changing performance RR history.
+- ✅ Added deterministic complete logical-hit preview, including linked mics, without changing performance RR history.
+- ✅ Added explicit `Retry save` and `Reload saved` recovery actions for persistence failures.
 - ✅ Added the first review-only JSON dry-run planner. Python verification is intentionally deferred until the C++ and UI work is stable.
-- Remaining: full linked logical-hit preview, explicit conflict recovery actions, offline materialization, visual QA, and full verification.
+- Remaining: offline materialization, visual QA, and Python verification.
 
 ## Goal
 
@@ -598,7 +599,7 @@ Likely files:
 
 Reuse small helpers from `VelocityResponseEditor` only when they are truly shared. Do not force horizontal range editing into the existing dB editor class.
 
-### 7. Integrate With Pad Popup And Preview
+### ✅ 7. Integrate With Pad Popup And Preview
 
 - ✅ Add `Source setup...` to exact source-articulation layer rows.
 - ✅ Open the editor with a stable raw source address.
@@ -606,7 +607,7 @@ Reuse small helpers from `VelocityResponseEditor` only when they are truly share
 - ✅ Keep the editor open across live range changes and refresh copied source data after commit.
 - ✅ Preserve all instrument-map fields because this workflow does not rewrite the map.
 - ✅ Preview the selected file and mic without changing normal RR history.
-- Preview the complete linked logical hit without changing normal RR history.
+- ✅ Preview the complete linked logical hit without changing normal RR history.
 
 Likely files:
 

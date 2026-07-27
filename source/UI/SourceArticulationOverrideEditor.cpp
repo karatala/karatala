@@ -66,10 +66,14 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
         this->addAndMakeVisible(*label);
     }
 
-    for (auto* button : { &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton, &this->resetMicOffsetButton, &this->resetSelectedButton, &this->resetAllButton, &this->previewButton, &this->doneButton }) {
+    for (auto* button : { &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton, &this->resetMicOffsetButton, &this->resetSelectedButton, &this->resetAllButton, &this->previewButton, &this->retrySaveButton, &this->reloadSavedButton, &this->doneButton }) {
         UIHelpers::configureControlButton(*button);
         this->addAndMakeVisible(*button);
     }
+    this->retrySaveButton.setVisible(false);
+    this->reloadSavedButton.setVisible(false);
+    this->retrySaveButton.setTooltip("Try the same save again. This does not overwrite a file changed by another program.");
+    this->reloadSavedButton.setTooltip("Discard unsaved editor values and load the current kit-overrides.yml.");
 
     auto configureEditor = [this](juce::TextEditor& editor, int maximumLength, const juce::String& allowedCharacters) {
         editor.setMultiLine(false);
@@ -115,10 +119,23 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
     UIHelpers::configureComboBox(this->sampleSelector);
     this->sampleSelector.setTooltip("Select a source file and mic row. Manual gain is shared by every mic in the same file.");
     this->sampleSelector.onChange = [this] {
+        const int originalSampleIdx = this->selectedSampleIdx;
         const int requestedSampleIdx = this->sampleSelector.getSelectedItemIndex();
         this->commitManualGain();
+        if (this->hasPersistenceFailure()) {
+            this->sampleSelector.setSelectedItemIndex(originalSampleIdx, juce::dontSendNotification);
+            return;
+        }
         this->commitFilePlaybackOffset();
+        if (this->hasPersistenceFailure()) {
+            this->sampleSelector.setSelectedItemIndex(originalSampleIdx, juce::dontSendNotification);
+            return;
+        }
         this->commitMicPlaybackOffset();
+        if (this->hasPersistenceFailure()) {
+            this->sampleSelector.setSelectedItemIndex(originalSampleIdx, juce::dontSendNotification);
+            return;
+        }
         this->selectedSampleIdx = requestedSampleIdx;
         this->sampleSelector.setSelectedItemIndex(requestedSampleIdx, juce::dontSendNotification);
         this->updateSampleControls();
@@ -136,21 +153,32 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
         if (!this->onPreview) return;
         if (this->selectedSampleIdx >= 0 && this->selectedSampleIdx < static_cast<int>(this->rangeInfo.samples.size())) {
             const auto& sample = this->rangeInfo.samples[static_cast<size_t>(this->selectedSampleIdx)];
-            this->onPreview(sample.namedVelocity, sample.relativePath, sample.micCode);
+            this->onPreview(sample.namedVelocity, sample.namedVelocity, sample.roundRobin, sample.relativePath, sample.micCode);
             return;
         }
         if (!this->rangeInfo.levels.empty()) {
             const int previewLevelIdx = this->selectedDividerIdx >= 0 ? this->selectedDividerIdx : 0;
-            this->onPreview(this->rangeInfo.levels[static_cast<size_t>(previewLevelIdx)].effectiveUpperBoundary, {}, {});
+            this->onPreview(this->rangeInfo.levels[static_cast<size_t>(previewLevelIdx)].effectiveUpperBoundary, 0, {}, {}, {});
         }
     };
+    this->retrySaveButton.onClick = [this] {
+        const auto retryAction = this->retrySaveAction;
+        if (retryAction) retryAction();
+    };
+    this->reloadSavedButton.onClick = [this] { this->reloadSavedOverrides(); };
     this->doneButton.onClick = [this] {
         this->commitBoundaryEditor();
+        if (this->hasPersistenceFailure()) return;
         this->commitInstrumentBalance();
+        if (this->hasPersistenceFailure()) return;
         this->commitArticulationBalance();
+        if (this->hasPersistenceFailure()) return;
         this->commitManualGain();
+        if (this->hasPersistenceFailure()) return;
         this->commitFilePlaybackOffset();
+        if (this->hasPersistenceFailure()) return;
         this->commitMicPlaybackOffset();
+        if (this->hasPersistenceFailure()) return;
         if (this->onDone) this->onDone();
     };
 }
@@ -162,6 +190,7 @@ SourceArticulationOverrideEditor::~SourceArticulationOverrideEditor() {
 
 void SourceArticulationOverrideEditor::setSource(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& displayTitle) {
     this->restoreCommittedPreview();
+    this->clearPersistenceFailure();
     this->titleLabel.setText(displayTitle, juce::dontSendNotification);
     this->rangeInfo = this->engine.getSourceVelocityRangeInfo(kitId, instrumentId, articulationId);
     this->committedRangeInfo = this->rangeInfo;
@@ -188,13 +217,21 @@ bool SourceArticulationOverrideEditor::applySelectedBoundary(int upperBoundary, 
     const int namedVelocity = this->rangeInfo.levels[static_cast<size_t>(this->selectedDividerIdx)].namedVelocity;
     auto updateResult = this->engine.setSourceVelocityUpperBoundary(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, namedVelocity, upperBoundary, persist);
     if (!updateResult.ok()) {
-        this->setStatus(updateResult.error(), true);
-        if (persist) this->restoreCommittedPreview();
+        if (persist) {
+            const int dividerIdx = this->selectedDividerIdx;
+            this->showPersistenceFailure(updateResult.error(), [this, dividerIdx, upperBoundary] {
+                this->selectedDividerIdx = dividerIdx;
+                this->applySelectedBoundary(upperBoundary, true);
+            });
+        } else {
+            this->setStatus(updateResult.error(), true);
+        }
         return false;
     }
 
     this->rangeInfo = std::move(updateResult.value);
     if (persist) {
+        this->clearPersistenceFailure();
         this->committedRangeInfo = this->rangeInfo;
         this->previewPending = false;
         this->setStatus("Saved to kit-overrides.yml");
@@ -224,9 +261,10 @@ void SourceArticulationOverrideEditor::resetSelectedBoundary() {
     const int namedVelocity = this->rangeInfo.levels[static_cast<size_t>(this->selectedDividerIdx)].namedVelocity;
     auto resetResult = this->engine.setSourceVelocityUpperBoundary(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, namedVelocity, std::nullopt, true);
     if (!resetResult.ok()) {
-        this->setStatus(resetResult.error(), true);
+        this->showPersistenceFailure(resetResult.error(), [this] { this->resetSelectedBoundary(); });
         return;
     }
+    this->clearPersistenceFailure();
     this->rangeInfo = std::move(resetResult.value);
     this->committedRangeInfo = this->rangeInfo;
     this->setStatus("Selected boundary reset to filename default");
@@ -238,9 +276,10 @@ void SourceArticulationOverrideEditor::resetAllBoundaries() {
     this->restoreCommittedPreview();
     auto resetResult = this->engine.resetSourceVelocityUpperBoundaries(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw);
     if (!resetResult.ok()) {
-        this->setStatus(resetResult.error(), true);
+        this->showPersistenceFailure(resetResult.error(), [this] { this->resetAllBoundaries(); });
         return;
     }
+    this->clearPersistenceFailure();
     this->rangeInfo = std::move(resetResult.value);
     this->committedRangeInfo = this->rangeInfo;
     this->setStatus("All articulation ranges reset to filename defaults");
@@ -383,6 +422,7 @@ void SourceArticulationOverrideEditor::commitInstrumentBalance() {
     const auto text = this->instrumentBalanceEditor.getText().trim();
     const auto parsedBalance = text.isEmpty() ? std::optional<int> {} : parseBalanceValue(text);
     if (text.isNotEmpty() && !parsedBalance.has_value()) {
+        this->clearPersistenceFailure();
         this->setStatus("Instrument balance must be L1..L127, C0, or R1..R127", true);
         this->updateBalanceControls();
         return;
@@ -391,10 +431,10 @@ void SourceArticulationOverrideEditor::commitInstrumentBalance() {
     this->restoreCommittedPreview();
     auto updateResult = this->engine.setSourceInstrumentBalance(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, parsedBalance);
     if (!updateResult.ok()) {
-        this->setStatus(updateResult.error(), true);
-        this->updateBalanceControls();
+        this->showPersistenceFailure(updateResult.error(), [this] { this->commitInstrumentBalance(); });
         return;
     }
+    this->clearPersistenceFailure();
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("Instrument source balance saved. New notes use it now.");
 }
@@ -404,6 +444,7 @@ void SourceArticulationOverrideEditor::commitArticulationBalance() {
     const auto text = this->articulationBalanceEditor.getText().trim();
     const auto parsedBalance = text.isEmpty() ? std::optional<int> {} : parseBalanceValue(text);
     if (text.isNotEmpty() && !parsedBalance.has_value()) {
+        this->clearPersistenceFailure();
         this->setStatus("Articulation balance must be L1..L127, C0, or R1..R127", true);
         this->updateBalanceControls();
         return;
@@ -412,10 +453,10 @@ void SourceArticulationOverrideEditor::commitArticulationBalance() {
     this->restoreCommittedPreview();
     auto updateResult = this->engine.setSourceArticulationBalance(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, parsedBalance);
     if (!updateResult.ok()) {
-        this->setStatus(updateResult.error(), true);
-        this->updateBalanceControls();
+        this->showPersistenceFailure(updateResult.error(), [this] { this->commitArticulationBalance(); });
         return;
     }
+    this->clearPersistenceFailure();
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("Articulation source balance saved. New notes use it now.");
 }
@@ -426,6 +467,7 @@ void SourceArticulationOverrideEditor::commitManualGain() {
     const auto text = this->manualGainEditor.getText().trim();
     const auto parsedValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
+        this->clearPersistenceFailure();
         this->setStatus("Manual gain must be a valid dB number", true);
         this->updateSampleControls();
         return;
@@ -435,10 +477,10 @@ void SourceArticulationOverrideEditor::commitManualGain() {
     this->restoreCommittedPreview();
     auto updateResult = this->engine.setSourceSampleManualGain(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, relativePath, parsedValue);
     if (!updateResult.ok()) {
-        this->setStatus(updateResult.error(), true);
-        this->updateSampleControls();
+        this->showPersistenceFailure(updateResult.error(), [this] { this->commitManualGain(); });
         return;
     }
+    this->clearPersistenceFailure();
     this->replaceInfo(std::move(updateResult.value));
     const bool pending = std::any_of(this->rangeInfo.samples.begin(), this->rangeInfo.samples.end(), [&relativePath](const auto& sample) {
         return sample.relativePath == relativePath && sample.recipeStatus == SampledSound::SourceRecipeStatus::Pending;
@@ -452,6 +494,7 @@ void SourceArticulationOverrideEditor::commitFilePlaybackOffset() {
     const auto text = this->fileOffsetEditor.getText().trim();
     const auto parsedValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
+        this->clearPersistenceFailure();
         this->setStatus("Playback offset must be a valid millisecond number", true);
         this->updateSampleControls();
         return;
@@ -461,10 +504,10 @@ void SourceArticulationOverrideEditor::commitFilePlaybackOffset() {
     this->restoreCommittedPreview();
     auto updateResult = this->engine.setSourceSamplePlaybackOffset(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, relativePath, std::nullopt, parsedValue);
     if (!updateResult.ok()) {
-        this->setStatus(updateResult.error(), true);
-        this->updateSampleControls();
+        this->showPersistenceFailure(updateResult.error(), [this] { this->commitFilePlaybackOffset(); });
         return;
     }
+    this->clearPersistenceFailure();
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("Whole-file playback offset saved. New notes use it now.");
 }
@@ -475,6 +518,7 @@ void SourceArticulationOverrideEditor::commitMicPlaybackOffset() {
     const auto text = this->micOffsetEditor.getText().trim();
     const auto parsedValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
+        this->clearPersistenceFailure();
         this->setStatus("Mic playback offset must be a valid millisecond number", true);
         this->updateSampleControls();
         return;
@@ -485,12 +529,48 @@ void SourceArticulationOverrideEditor::commitMicPlaybackOffset() {
     this->restoreCommittedPreview();
     auto updateResult = this->engine.setSourceSamplePlaybackOffset(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, relativePath, std::optional<juce::String> { micCode }, parsedValue);
     if (!updateResult.ok()) {
-        this->setStatus(updateResult.error(), true);
-        this->updateSampleControls();
+        this->showPersistenceFailure(updateResult.error(), [this] { this->commitMicPlaybackOffset(); });
         return;
     }
+    this->clearPersistenceFailure();
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("Per-mic playback offset saved. New notes use it now.");
+}
+
+void SourceArticulationOverrideEditor::showPersistenceFailure(const juce::String& errorText, std::function<void()> retryAction) {
+    this->retrySaveAction = std::move(retryAction);
+    this->retrySaveButton.setVisible(true);
+    this->reloadSavedButton.setVisible(true);
+    this->setStatus(errorText, true);
+    this->resized();
+}
+
+void SourceArticulationOverrideEditor::clearPersistenceFailure() {
+    const bool wasVisible = this->retrySaveButton.isVisible() || this->reloadSavedButton.isVisible();
+    this->retrySaveAction = {};
+    this->retrySaveButton.setVisible(false);
+    this->reloadSavedButton.setVisible(false);
+    if (wasVisible) this->resized();
+}
+
+bool SourceArticulationOverrideEditor::hasPersistenceFailure() const {
+    return this->retrySaveButton.isVisible();
+}
+
+void SourceArticulationOverrideEditor::reloadSavedOverrides() {
+    if (!this->rangeInfo.sourceFound) return;
+    const auto kitId = this->rangeInfo.kitCodeRaw;
+    const auto instrumentId = this->rangeInfo.instrumentCodeRaw;
+    const auto articulationId = this->rangeInfo.articulationCodeRaw;
+    this->restoreCommittedPreview();
+    auto reloadResult = this->engine.reloadSourceOverrides(kitId, instrumentId, articulationId);
+    if (!reloadResult.ok()) {
+        this->setStatus(reloadResult.error(), true);
+        return;
+    }
+    this->clearPersistenceFailure();
+    this->replaceInfo(std::move(reloadResult.value));
+    this->setStatus("Reloaded saved values from kit-overrides.yml.");
 }
 
 void SourceArticulationOverrideEditor::replaceInfo(DrumKitEngine::SourceVelocityRangeInfo updatedInfo) {
@@ -623,6 +703,15 @@ void SourceArticulationOverrideEditor::resized() {
     this->resetAllButton.setBounds(footer.removeFromRight(92));
     footer.removeFromRight(4);
     this->resetSelectedButton.setBounds(footer.removeFromRight(102));
+    if (this->reloadSavedButton.isVisible()) {
+        footer.removeFromRight(6);
+        this->reloadSavedButton.setBounds(footer.removeFromRight(88));
+        footer.removeFromRight(4);
+        this->retrySaveButton.setBounds(footer.removeFromRight(72));
+    } else {
+        this->reloadSavedButton.setBounds({});
+        this->retrySaveButton.setBounds({});
+    }
     this->statusLabel.setBounds(footer);
     area.removeFromBottom(6);
 
@@ -706,10 +795,10 @@ bool SourceArticulationOverrideEditor::keyPressed(const juce::KeyPress& key) {
     if (key == juce::KeyPress::returnKey) {
         if (this->onPreview && this->selectedSampleIdx >= 0 && this->selectedSampleIdx < static_cast<int>(this->rangeInfo.samples.size())) {
             const auto& sample = this->rangeInfo.samples[static_cast<size_t>(this->selectedSampleIdx)];
-            this->onPreview(sample.namedVelocity, sample.relativePath, sample.micCode);
+            this->onPreview(sample.namedVelocity, sample.namedVelocity, sample.roundRobin, sample.relativePath, sample.micCode);
         } else if (!this->rangeInfo.levels.empty() && this->onPreview) {
             const int previewLevelIdx = this->selectedDividerIdx >= 0 ? this->selectedDividerIdx : 0;
-            this->onPreview(this->rangeInfo.levels[static_cast<size_t>(previewLevelIdx)].effectiveUpperBoundary, {}, {});
+            this->onPreview(this->rangeInfo.levels[static_cast<size_t>(previewLevelIdx)].effectiveUpperBoundary, 0, {}, {}, {});
         }
         return true;
     }

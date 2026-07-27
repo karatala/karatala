@@ -1032,6 +1032,24 @@ bool InstrumentSynth::playPreviewArticulation(const int midiChannel, const int m
     return false;
 }
 
+bool InstrumentSynth::playSourceLogicalHitPreview(const KitLib::ArticulationSpec& sourceArticulation, int namedVelocity, uint8_t variantIdx, int midiChannel, int midiNoteNumber, juce::uint8 playbackVelocity) {
+    for (size_t articulationIdx = 0; articulationIdx < this->runtimeArticulations.size(); ++articulationIdx) {
+        auto& articulation = this->runtimeArticulations[articulationIdx];
+        for (auto& layer : articulation.layers) {
+            if (layer.sourceVelocityLayer == nullptr || layer.sourceVelocityLayer->parent != &sourceArticulation || layer.sourceVelocityLayer->velocity != namedVelocity) continue;
+            for (auto& logicalHit : layer.logicalHits) {
+                if (logicalHit.variantIdx != variantIdx || !logicalHit.isReady()) continue;
+                const float velocityGain = articulation.velocityGain[static_cast<size_t>(playbackVelocity)];
+                if (!this->startLayerVoices(articulation, static_cast<ArtRtIdx>(articulationIdx), layer, logicalHit, midiChannel, midiNoteNumber, velocityGain, playbackVelocity)) continue;
+                this->lastRequestedVelocity.store(velocityGain);
+                this->applyAftertouch(midiChannel, midiNoteNumber);
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bool InstrumentSynth::playResolvedArticulation(const int midiChannel, const int midiNoteNumber, ArtRtIdx articulationIdx, const juce::uint8 velocity) {
     if (articulationIdx < 0 || static_cast<size_t>(articulationIdx) >= this->runtimeArticulations.size()) return false;
     auto& art = this->runtimeArticulations[static_cast<size_t>(articulationIdx)];

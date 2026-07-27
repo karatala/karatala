@@ -647,6 +647,67 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
     return result;
 }
 
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::reloadSourceOverrides(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) {
+    ParseResult<SourceVelocityRangeInfo> result;
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+
+    juce::File kitRoot;
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const auto* kit = this->libraryManagerPtr->findKitById(kitId);
+        if (kit == nullptr) return result.returnWithError("Source kit was not found");
+        kitRoot = kit->meta.rootDir;
+    }
+
+    KitLib::KitSourceOverrides reloadedOverrides;
+    auto loadResult = reloadedOverrides.loadFromKitRoot(kitRoot);
+    if (!loadResult.ok()) return result.returnWithError(loadResult.error());
+    this->invalidateSourcePreviewCache();
+
+    juce::String resolvedKitId;
+    juce::String resolvedInstrumentId;
+    juce::String resolvedArticulationId;
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        auto* kit = this->libraryManagerPtr->findKitById(kitId);
+        auto* selectedInstrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+        auto* selectedArticulation = selectedInstrument != nullptr ? selectedInstrument->findArticulationById(articulationId) : nullptr;
+        if (kit == nullptr || selectedInstrument == nullptr || selectedArticulation == nullptr) return result.returnWithError("Source articulation was not found");
+
+        kit->sourceOverrides = std::move(reloadedOverrides);
+        for (const auto& [instrumentKey, instrument] : kit->instrumentSpecsMap) {
+            juce::ignoreUnused(instrumentKey);
+            if (instrument != nullptr) instrument->applySourceOverrides();
+        }
+        for (const auto& synth : this->instrumentSynthPtrs) {
+            if (synth == nullptr) continue;
+            for (const auto& [instrumentKey, instrument] : kit->instrumentSpecsMap) {
+                juce::ignoreUnused(instrumentKey);
+                if (instrument == nullptr) continue;
+                synth->refreshSourceBalance(*instrument);
+                for (const auto& articulation : instrument->articulationSpecs) {
+                    if (articulation == nullptr) continue;
+                    synth->refreshSourceVelocityBoundaries(*articulation);
+                    synth->refreshSourceCalibrationAndReload(*articulation);
+                    for (const auto& velocityLayer : articulation->velocityLayerSpecs) {
+                        if (velocityLayer == nullptr) continue;
+                        for (const auto& sample : velocityLayer->sampleVariantSpecs)
+                            if (sample != nullptr) synth->refreshSourcePlaybackOffset(*sample);
+                    }
+                }
+            }
+        }
+        resolvedKitId = kit->meta.codeRaw;
+        resolvedInstrumentId = selectedInstrument->meta.codeRaw;
+        resolvedArticulationId = selectedArticulation->codeRaw;
+    }
+
+    result.value = this->getSourceVelocityRangeInfo(resolvedKitId, resolvedInstrumentId, resolvedArticulationId);
+    for (const auto& warning : loadResult.errors) result.addWarning(warning);
+    return result;
+}
+
 bool DrumKitEngine::publishSourceRecipeReload(const std::shared_ptr<SampledSound>& sound, uint64_t revision, float fixedGainDb, std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
     if (sound == nullptr) return false;
     const juce::ScopedLock graphLock(this->engineGraphLock);
@@ -1866,6 +1927,38 @@ void DrumKitEngine::playPreviewArticulation(const juce::String& slotId, const ju
     if (synthsIt == this->instrumentSynthsByNote.end()) return;
     for (auto* synth : synthsIt->second)
         if (synth != nullptr && synth->getId() == slotId) synth->playPreviewArticulation(1, midiNote, articulationCode, velocity);
+}
+
+bool DrumKitEngine::playSourceLogicalHitPreview(const juce::String& slotId, const juce::String& destinationArticulation, const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, int namedVelocity, const juce::String& roundRobin, juce::uint8 playbackVelocity) {
+    if (this->libraryManagerPtr == nullptr || this->activeKitLayoutPtr == nullptr) return false;
+    const juce::ScopedLock sourceLock(this->sourceModelLock);
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    auto* sourceArticulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (sourceArticulation == nullptr) return false;
+
+    int midiNote = -1;
+    for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
+        if (slot.id != slotId) continue;
+        for (const auto& articulation : slot.articulations) {
+            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(destinationArticulation, articulation.codeRaw) || articulation.notes.empty()) continue;
+            midiNote = static_cast<int>(articulation.notes.front());
+            break;
+        }
+        if (midiNote < 0 && !slot.articulations.empty() && !slot.articulations.front().notes.empty()) midiNote = static_cast<int>(slot.articulations.front().notes.front());
+        break;
+    }
+    if (midiNote < 0) return false;
+
+    const auto synthsIt = this->instrumentSynthsByNote.find(midiNote);
+    if (synthsIt == this->instrumentSynthsByNote.end()) return false;
+    const auto variantIdx = roundRobin == "-" || roundRobin.isEmpty() ? uint8_t { 0 } : KitLib::SampleVariantSpec::letterToIdx(roundRobin);
+    for (auto* synth : synthsIt->second) {
+        if (synth == nullptr || synth->getId() != slotId) continue;
+        if (synth->playSourceLogicalHitPreview(*sourceArticulation, namedVelocity, variantIdx, 1, midiNote, playbackVelocity)) return true;
+    }
+    return false;
 }
 
 juce::ThreadPoolJob::JobStatus DrumKitEngine::PreviewResolveJob::runJob() {

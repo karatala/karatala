@@ -1708,3 +1708,61 @@ TEST_CASE("InstrumentSynth - unusable choke sample keeps the existing aftertouch
     CHECK(sourceVoice->getEnvelopeState() == InstrumentSynthVoice::EnvelopeState::Playing);
     CHECK(sourceVoice->isVoiceActive());
 }
+
+TEST_CASE("InstrumentSynth - source logical hit preview starts all linked mics without advancing round robin", "[InstrumentSynth][SourceOverridePreview]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.type = KitLib::InstrumentSpec::Type::Snare;
+    InstrumentSynth synth { &engine, slot };
+    synth.setCurrentPlaybackSampleRate(44100.0);
+
+    KitLib::InstrumentSpec instrument { nullptr, makeRouteInstrumentMeta("snare-source", KitLib::InstrumentSpec::Type::Snare) };
+    KitLib::ArticulationSpec sourceArticulation { &instrument, "center" };
+    KitLib::VelocityLayerSpec sourceLayer { &sourceArticulation, 96 };
+    auto directMic = makeDirectMic();
+    directMic.raw = "dtm";
+    auto overheadMic = makeOverheadMic();
+    overheadMic.raw = "ons";
+    KitLib::SampleVariantSpec directVariant { &sourceLayer, {}, 'a', directMic };
+    KitLib::SampleVariantSpec overheadVariant { &sourceLayer, {}, 'a', overheadMic };
+    auto directSound = std::make_shared<SampledSound>(&instrument, &directVariant);
+    auto overheadSound = std::make_shared<SampledSound>(&instrument, &overheadVariant);
+    directSound->sampleRate = 44100.0;
+    directSound->buffer = std::make_shared<juce::AudioBuffer<float>>(1, 128);
+    directSound->micBufferChannelStart = 0;
+    directSound->micBufferChannelCount = 1;
+    directSound->loaded.store(true);
+    overheadSound->sampleRate = 44100.0;
+    overheadSound->buffer = std::make_shared<juce::AudioBuffer<float>>(2, 128);
+    overheadSound->micBufferChannelStart = 2;
+    overheadSound->micBufferChannelCount = 2;
+    overheadSound->loaded.store(true);
+    synth.addSound(directSound);
+    synth.addSound(overheadSound);
+
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(sourceArticulation.nameId, sourceArticulation.exprId);
+    articulations[0].layers.emplace_back();
+    auto& runtimeLayer = articulations[0].layers[0];
+    runtimeLayer.velocity = 96;
+    runtimeLayer.sourceVelocityLayer = &sourceLayer;
+    runtimeLayer.samples.push_back({ directSound.get(), 1, directSound });
+    runtimeLayer.samples.push_back({ overheadSound.get(), 1, overheadSound });
+    InstrumentSynth::LogicalHitRuntime logicalHit;
+    logicalHit.variantIdx = 1;
+    logicalHit.sampleEntryIndexes = { 0, 1 };
+    logicalHit.readiness->requiredEntryCount = 2;
+    logicalHit.readiness->loadedEntryCount.store(2);
+    logicalHit.readiness->ready.store(true);
+    runtimeLayer.logicalHits.push_back(std::move(logicalHit));
+    runtimeLayer.roundRobinCounter->store(7);
+
+    auto* directVoice = synth.addVoice(new InstrumentSynthVoice());
+    auto* overheadVoice = synth.addVoice(new InstrumentSynthVoice());
+
+    REQUIRE(synth.playSourceLogicalHitPreview(sourceArticulation, 96, 1, 1, 38, 100));
+    CHECK(directVoice->getCurrentlyPlayingSound() == directSound.get());
+    CHECK(overheadVoice->getCurrentlyPlayingSound() == overheadSound.get());
+    CHECK(runtimeLayer.roundRobinCounter->load() == 7);
+}

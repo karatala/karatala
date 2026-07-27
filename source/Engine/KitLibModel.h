@@ -522,6 +522,7 @@ public:
 
     int scanInstrumentSamples(ScanStats* stats = nullptr);
     void buildCalibrationProfiles();
+    void applySourceOverrides();
     ParseResult<int> applyVelocityUpperBoundaryOverrides(ArticulationSpec& articulation);
 
     static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);

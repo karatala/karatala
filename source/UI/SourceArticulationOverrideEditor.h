@@ -19,7 +19,7 @@ public:
     void mouseExit(const juce::MouseEvent& event) override;
     bool keyPressed(const juce::KeyPress& key) override;
 
-    std::function<void(int velocity, const juce::String& relativePath, const juce::String& micCode)> onPreview;
+    std::function<void(int velocity, int namedVelocity, const juce::String& roundRobin, const juce::String& relativePath, const juce::String& micCode)> onPreview;
     std::function<void()> onDone;
 
 private:
@@ -56,8 +56,11 @@ private:
     juce::TextButton resetSelectedButton { "Reset selected" };
     juce::TextButton resetAllButton { "Reset ranges" };
     juce::TextButton previewButton { "Preview" };
+    juce::TextButton retrySaveButton { "Retry save" };
+    juce::TextButton reloadSavedButton { "Reload saved" };
     juce::TextButton doneButton { "Done" };
     int selectedSampleIdx = -1;
+    std::function<void()> retrySaveAction;
 
     bool applySelectedBoundary(int upperBoundary, bool persist);
     void commitBoundaryEditor();
@@ -74,6 +77,10 @@ private:
     void commitManualGain();
     void commitFilePlaybackOffset();
     void commitMicPlaybackOffset();
+    void showPersistenceFailure(const juce::String& errorText, std::function<void()> retryAction);
+    void clearPersistenceFailure();
+    bool hasPersistenceFailure() const;
+    void reloadSavedOverrides();
     void replaceInfo(DrumKitEngine::SourceVelocityRangeInfo updatedInfo);
     void timerCallback() override;
     void setStatus(const juce::String& text, bool error = false);

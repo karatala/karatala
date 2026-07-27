@@ -271,3 +271,73 @@ TEST_CASE("Kit source values preserve filename defaults and apply loaded overrid
     REQUIRE(sample->filenamePlaybackOffsetMs == Catch::Approx(-2.0f));
     REQUIRE(sample->playbackOffsetMs == Catch::Approx(0.25f));
 }
+
+TEST_CASE("Kit source values can reload saved overrides into an existing model", "[KitSourceOverrides][KitLib][reload]") {
+    const auto kitRoot = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-kit-override-reload", "", false);
+    REQUIRE(kitRoot.createDirectory());
+
+    struct TempDirectoryCleanup {
+        juce::File directory;
+        ~TempDirectoryCleanup() { this->directory.deleteRecursively(); }
+    } cleanup { kitRoot };
+
+    DrumKitSpec::MetaInfo kitMeta;
+    kitMeta.rootDir = kitRoot;
+    kitMeta.codeRaw = "test-kit";
+    DrumKitSpec kit { kitMeta };
+    InstrumentSpec::MetaInfo instrumentMeta;
+    instrumentMeta.codeRaw = "snare-X1";
+    instrumentMeta.rootDir = kitRoot.getChildFile("snare-X1");
+    instrumentMeta.balance = -4;
+    InstrumentSpec instrument { &kit, instrumentMeta };
+    auto* articulation = instrument.getOrAddArticulation("center");
+    REQUIRE(articulation != nullptr);
+    articulation->filenameBalance = 3;
+    articulation->sourceBalanceResolved = true;
+    auto* velocityLayer = articulation->getOrAddVelocityLayer(64);
+    REQUIRE(velocityLayer != nullptr);
+    velocityLayer->selectionUpperVelocity = 127;
+    KitLib::MicSpec micSpec;
+    micSpec.raw = "dtm";
+    micSpec.channels = 1;
+    const auto sampleFile = kitRoot.getChildFile("snare-X1/center/sample.flac");
+    auto* sample = velocityLayer->getOrAddSampleVariant(sampleFile, 1, micSpec, 0);
+    REQUIRE(sample != nullptr);
+    sample->filenameManualGainDb = 1.0f;
+    sample->manualGainDb = 1.0f;
+    sample->filenamePlaybackOffsetMs = -0.5f;
+    sample->playbackOffsetMs = -0.5f;
+    sample->peakDb = -12.0f;
+
+    KitSourceOverrides savedOverrides;
+    savedOverrides.setInstrumentBalance("snare-X1", 10);
+    savedOverrides.setArticulationBalance("snare-X1", "center", -8);
+    savedOverrides.setSampleManualGain("snare-X1/center/sample.flac", {}, 4.0f);
+    savedOverrides.setMicPlaybackOffset("snare-X1/center/sample.flac", {}, "dtm", 2.5f);
+    REQUIRE(savedOverrides.saveToKitRoot(kitRoot).ok());
+    REQUIRE(kit.sourceOverrides.loadFromKitRoot(kitRoot).ok());
+
+    instrument.applySourceOverrides();
+
+    REQUIRE(instrument.balanceOverride.has_value());
+    CHECK(*instrument.balanceOverride == 10);
+    REQUIRE(articulation->balanceOverride.has_value());
+    CHECK(*articulation->balanceOverride == -8);
+    REQUIRE(sample->manualGainDbOverride.has_value());
+    CHECK(*sample->manualGainDbOverride == Catch::Approx(4.0f));
+    CHECK(sample->manualGainDb == Catch::Approx(4.0f));
+    REQUIRE(sample->playbackOffsetMsOverride.has_value());
+    CHECK(*sample->playbackOffsetMsOverride == Catch::Approx(2.5f));
+    CHECK(sample->playbackOffsetMs == Catch::Approx(2.5f));
+
+    REQUIRE(kitRoot.getChildFile(KitSourceOverrides::FILE_NAME).replaceWithText("version: 1\n"));
+    REQUIRE(kit.sourceOverrides.loadFromKitRoot(kitRoot).ok());
+    instrument.applySourceOverrides();
+
+    CHECK_FALSE(instrument.balanceOverride.has_value());
+    CHECK_FALSE(articulation->balanceOverride.has_value());
+    CHECK_FALSE(sample->manualGainDbOverride.has_value());
+    CHECK(sample->manualGainDb == Catch::Approx(1.0f));
+    CHECK_FALSE(sample->playbackOffsetMsOverride.has_value());
+    CHECK(sample->playbackOffsetMs == Catch::Approx(-0.5f));
+}

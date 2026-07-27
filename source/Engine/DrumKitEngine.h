@@ -167,6 +167,7 @@ public:
     ParseResult<SourceVelocityRangeInfo> setSourceArticulationBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance);
     ParseResult<SourceVelocityRangeInfo> setSourceSampleManualGain(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, std::optional<float> manualGainDb);
     ParseResult<SourceVelocityRangeInfo> setSourceSamplePlaybackOffset(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, const std::optional<juce::String>& micCode, std::optional<float> playbackOffsetMs);
+    ParseResult<SourceVelocityRangeInfo> reloadSourceOverrides(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId);
 
     bool useKitLayout(juce::String name);
     bool setKitLayoutDirect(KitLayout layout, bool reapplyCurrentMap = true) { return this->setKitLayout(std::move(layout), reapplyCurrentMap); }
@@ -223,6 +224,7 @@ public:
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
     void playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity);
     void playPreviewArticulation(const juce::String& slotId, const juce::String& articulationCode, juce::uint8 velocity);
+    bool playSourceLogicalHitPreview(const juce::String& slotId, const juce::String& destinationArticulation, const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, int namedVelocity, const juce::String& roundRobin, juce::uint8 playbackVelocity);
 
     /** Play a one-shot preview of a sample file from the library.
      *  Finds the closest velocity sample for the given kit/instrument/articulation

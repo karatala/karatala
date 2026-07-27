@@ -730,6 +730,42 @@ void InstrumentSpec::buildCalibrationProfiles() {
     }
 }
 
+void InstrumentSpec::applySourceOverrides() {
+    if (this->parent == nullptr) return;
+    const auto* instrumentOverride = this->parent->sourceOverrides.findInstrumentOverride(this->meta.codeRaw);
+    this->balanceOverride = instrumentOverride != nullptr ? instrumentOverride->balance : std::nullopt;
+    for (const auto& articulation : this->articulationSpecs) {
+        if (articulation == nullptr) continue;
+        for (const auto& velocityLayer : articulation->velocityLayerSpecs) {
+            if (velocityLayer == nullptr) continue;
+            for (const auto& sample : velocityLayer->sampleVariantSpecs) {
+                if (sample == nullptr) continue;
+                const auto relativePath = sample->sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
+                const auto overrideMatch = this->parent->sourceOverrides.findSampleOverride(relativePath, sample->metadataContentHash);
+                const auto* sampleOverride = overrideMatch.value;
+                const float previousManualGainDb = sample->manualGainDb;
+                sample->manualGainDbOverride = sampleOverride != nullptr ? sampleOverride->manualGainDb : std::nullopt;
+                sample->manualGainDb = sample->manualGainDbOverride.value_or(sample->filenameManualGainDb);
+                const float manualGainDeltaDb = sample->manualGainDb - previousManualGainDb;
+                sample->peakDb += manualGainDeltaDb;
+                if (sample->decayEnvelope.isValid()) sample->decayEnvelope.peakDb += manualGainDeltaDb;
+
+                sample->playbackOffsetMsOverride.reset();
+                if (sampleOverride != nullptr) {
+                    const auto micOverrideIt = sampleOverride->micOverrides.find(sample->micSpec.raw.trim().toLowerCase());
+                    if (micOverrideIt != sampleOverride->micOverrides.end() && micOverrideIt->second.playbackOffsetMs.has_value())
+                        sample->playbackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
+                    else
+                        sample->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                }
+                sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
+            }
+        }
+    }
+    this->contentFingerprintCache.reset();
+    this->buildCalibrationProfiles();
+}
+
 ParseResult<int> InstrumentSpec::applyVelocityUpperBoundaryOverrides(ArticulationSpec& articulation) {
     ParseResult<int> result;
     articulation.sortVelocityLayers();
