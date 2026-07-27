@@ -6,6 +6,7 @@
 
 - `UITheme.h` and `LookAndFeel*` own shared visual tokens and JUCE drawing behavior.
 - `ThemePlaygroundPanel.*` owns the live component, font, and color inventory used to review theme consistency.
+- `SourceArticulationOverrideEditor*` owns source-global exact velocity-range editing and its copied range display.
 - Reusable controls live in `Parameter*`, `CompactParameterControl`, `HorizontalKnobBrick`, MIDI assignment, popup, and helper classes.
 - Page/panel classes compose controls and translate user actions into engine operations.
 
@@ -21,6 +22,7 @@
 - Pad-popup routing choices use the engine's mic-output matcher, including independent type and position wildcards such as `**m`, `*tm`, and `d*m`.
 - Pad-popup layer controls update only their own articulation layer. Removing an unmapped empty row must not reapply the instrument map.
 - The pad popup edits a layer's velocity response through one compact dropdown below Tuning, Attack, and Decay. The dropdown offers Use Global, built-in Linear, Logarithmic, and Exponential curves, every user preset, and Edit curve. An unmatched inline definition displays as `Unnamed layer curve*` but is not a selectable preset. The editor shows copied source measurements, updates the runtime curve without sample reload, and stores reusable curve-only presets separately from kit-layout presets. The Instrument tab shows Use Global, a matching preset name, or Unnamed status and must preserve velocity response, bleed, and mic-route fields through shared map serialization.
+- Exact pad-popup source rows expose `Source setup...`. Its source-articulation editor changes source-global velocity ranges, shows filename, override, and effective boundaries separately, applies drag movement live to matching runtime tables, and persists only on commit to the source kit's `kit-overrides.yml`. It must not rewrite instrument-map fields.
 - The Conf panel General section owns the sample-library path, sample-cache limit, current-instance global velocity response, and machine-wide default kit and mic layout controls. The global-response dropdown offers built-in and user presets, shows `Unnamed global curve*` for an unmatched stored definition, applies live to layers using `Use Global`, and saves only to plugin instance state. Changing the library path reloads the library; layout defaults affect future plugin instances.
 - The shared source picker is a centered modal using 80% of its host content area, with a dark click-to-dismiss outside overlay and no internal close button. Its panel has 6 px rounded corners, 4 px inner padding, and no outline border. It supports `-word` exclusions, OR-based multi-select base-articulation filters, arrow-key preview, and Enter to use. Opening it for an assigned row filters by the assigned source type before the slot type, then preselects and scrolls to that source without previewing it.
 - Text editors have no normal, focused, or shadow outline.

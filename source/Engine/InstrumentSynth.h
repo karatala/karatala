@@ -274,6 +274,8 @@ public:
 
     struct VelocityLayerRuntime {
         uint8_t velocity = 0; // base velocity for layer
+        uint8_t selectionUpperVelocity = 0;
+        const KitLib::VelocityLayerSpec* sourceVelocityLayer = nullptr;
         std::vector<SampleEntry> samples; // contiguous sample entries
         std::vector<LogicalHitRuntime> logicalHits;
         std::optional<float> fittedSourceDb;
@@ -610,6 +612,8 @@ public:
 
     void applyAdaptiveTailShortening();
     void rebuildVelocityResponseTables();
+    bool refreshSourceVelocityBoundaries(const KitLib::ArticulationSpec& sourceArticulation);
+    bool refreshSourceVelocityBoundaries(const KitLib::ArticulationSpec& sourceArticulation, const std::vector<uint8_t>& upperBoundaries);
 
 private:
     friend class InstrumentSynthVoice;

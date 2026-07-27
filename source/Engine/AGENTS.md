@@ -6,6 +6,7 @@
 
 - `InstrumentSynth*` owns per-instrument runtime tables, voices, note/controller handling, and rendering.
 - `KitLibModel*` owns parsed library metadata, including decay-envelope metadata.
+- `KitSourceOverrides*` owns sparse user-authored source corrections loaded from and saved to each kit's `kit-overrides.yml`.
 - `SampleLoader*` owns asynchronous sample loading and publication.
 - `DrumKitEngine*` coordinates instrument synths, layouts, persistence, and process-block flow.
 - `LayoutManager*` owns kit and mic layout models and parsing.
@@ -15,7 +16,9 @@
 - Code reached from `processBlock`, `renderNextBlock`, `handleMidiEvent`, note-on, controller, or aftertouch paths is realtime code.
 - Realtime settings shared with the message thread must use atomics or an immutable snapshot; do not introduce unsynchronized mutable scalar reads/writes.
 - Precompute routing, articulation, velocity, variant, and envelope lookup data during load/rebuild work where practical.
-- Exact source selection follows named velocity boundaries for both calibrated and uncalibrated articulations. Calibration uses the instance's precomputed 128-value loudness response and preserves each articulation's own hardest measured reference instead of forcing different instruments to one common level.
+- Exact source selection follows resolved named velocity upper boundaries for both calibrated and uncalibrated articulations. Filename velocities remain stable source identity; `kit-overrides.yml` may change only their effective selection ranges. Calibration uses the instance's precomputed 128-value loudness response and preserves each articulation's own hardest measured reference instead of forcing different instruments to one common level.
+- Source override precedence is saved `kit-overrides.yml`, then the filename or folder value, then the existing engine default. Keep filename balance, manual gain, and playback offset available separately from their effective values. Effective manual gain participates in calibration, peak safety, preprocessing, and cache identity exactly once.
+- Source override YAML parsing and atomic file replacement stay outside playback. Live velocity-range dragging rebuilds only matching bounded synth lookup tables under `engineGraphLock`; persistence happens on commit.
 - An optional per-layer `velocityResponse` replaces the global output-gain response for that destination articulation only. Rebuild its bounded 128-value gain table outside playback and do not change exact named-velocity selection.
 - Velocity-response UI reads copied source-articulation measurements on the message thread. Stable built-in definitions are `linear`, `logarithmic`, and `exponential`. User curve presets store only a validated response definition under `velocity_response_presets`; applying one copies the definition into the layer map. Live instance-global changes rebuild loaded velocity tables under `engineGraphLock`; per-layer overrides remain effective.
 - Normal note selection returns one complete ready logical hit. Reserve voices for all active linked mic entries before starting any of them; never mix mic entries from different velocity or round-robin hits.
@@ -47,6 +50,7 @@
 # Verification
 
 - Build `Tests`.
+- Run `[KitSourceOverrides]` tests for source override parsing, persistence, and exact range behavior.
 - Run `[DecayEnvelope]` tests for decay metadata changes.
 - Add or run focused synth/controller tests for MIDI routing and transition-policy changes.
 - Use listening tests for multi-mic hi-hat transitions; unit tests alone cannot validate timbre or phase coherence.

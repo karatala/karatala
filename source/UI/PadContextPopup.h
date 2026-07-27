@@ -7,6 +7,7 @@
 #include "DismissOverlay.h"
 #include "MidiNoteAssignmentControl.h"
 #include "CompactParameterControl.h"
+#include "SourceArticulationOverrideEditor.h"
 #include "VelocityResponseEditor.h"
 
 class PadContextPopup : public juce::Component {
@@ -86,6 +87,7 @@ private:
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel;
         std::unique_ptr<juce::ComboBox> velocityResponseMode;
+        std::unique_ptr<juce::TextButton> sourceSetupButton;
         std::unique_ptr<CompactParameterControl> tuningPot;
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
@@ -155,6 +157,8 @@ private:
     std::unique_ptr<SourcePickerPopup> activePicker;
     std::unique_ptr<DismissOverlay> velocityResponseOverlay;
     std::unique_ptr<VelocityResponseEditor> activeVelocityResponseEditor;
+    std::unique_ptr<DismissOverlay> sourceOverrideOverlay;
+    std::unique_ptr<SourceArticulationOverrideEditor> activeSourceOverrideEditor;
 
     // ─── Scrollable layer area ───
     struct LayerContentComponent : public juce::Component {
@@ -170,6 +174,9 @@ private:
     void showVelocityResponseEditor(LayerRow* layer);
     void dismissVelocityResponseEditor();
     void layoutVelocityResponseEditor();
+    void showSourceOverrideEditor(LayerRow* layer);
+    void dismissSourceOverrideEditor();
+    void layoutSourceOverrideEditor();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PadContextPopup)
 };

@@ -26,7 +26,9 @@ void InstrumentSynth::ArticulationRuntime::buildVelocityMapping(const VelocityRe
     for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
         VelLayerIdx chosenLayerIdx = static_cast<VelLayerIdx>(this->layers.size() - 1);
         for (size_t layerIdx = 0; layerIdx < this->layers.size(); ++layerIdx) {
-            if (velocity <= this->layers[layerIdx].velocity) {
+            const auto& layer = this->layers[layerIdx];
+            const int upperVelocity = layer.selectionUpperVelocity > 0 ? layer.selectionUpperVelocity : (layerIdx + 1 == this->layers.size() ? MIDI_MAX_VALUE : layer.velocity);
+            if (velocity <= upperVelocity) {
                 chosenLayerIdx = static_cast<VelLayerIdx>(layerIdx);
                 break;
             }
@@ -40,6 +42,34 @@ void InstrumentSynth::ArticulationRuntime::buildVelocityMapping(const VelocityRe
 void InstrumentSynth::rebuildVelocityResponseTables() {
     if (this->parent == nullptr) return;
     for (auto& articulation : this->runtimeArticulations) articulation.buildVelocityMapping(this->parent->getVelocityResponse());
+}
+
+bool InstrumentSynth::refreshSourceVelocityBoundaries(const KitLib::ArticulationSpec& sourceArticulation) {
+    std::vector<uint8_t> upperBoundaries;
+    upperBoundaries.reserve(sourceArticulation.velocityLayerSpecs.size());
+    for (const auto& sourceLayer : sourceArticulation.velocityLayerSpecs) upperBoundaries.push_back(sourceLayer != nullptr ? sourceLayer->selectionUpperVelocity : 0);
+    return this->refreshSourceVelocityBoundaries(sourceArticulation, upperBoundaries);
+}
+
+bool InstrumentSynth::refreshSourceVelocityBoundaries(const KitLib::ArticulationSpec& sourceArticulation, const std::vector<uint8_t>& upperBoundaries) {
+    if (this->parent == nullptr) return false;
+    if (upperBoundaries.size() != sourceArticulation.velocityLayerSpecs.size()) return false;
+    bool changed = false;
+    for (auto& runtimeArticulation : this->runtimeArticulations) {
+        bool articulationChanged = false;
+        for (auto& runtimeLayer : runtimeArticulation.layers) {
+            for (size_t sourceLayerIdx = 0; sourceLayerIdx < sourceArticulation.velocityLayerSpecs.size(); ++sourceLayerIdx) {
+                if (runtimeLayer.sourceVelocityLayer != sourceArticulation.velocityLayerSpecs[sourceLayerIdx].get()) continue;
+                runtimeLayer.selectionUpperVelocity = upperBoundaries[sourceLayerIdx];
+                articulationChanged = true;
+                break;
+            }
+        }
+        if (!articulationChanged) continue;
+        runtimeArticulation.buildVelocityMapping(this->parent->getVelocityResponse());
+        changed = true;
+    }
+    return changed;
 }
 
 void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides) {
@@ -838,6 +868,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
     for (const auto& velSpec : artSpec->velocityLayerSpecs) {
         VelocityLayerRuntime layer;
         layer.velocity = velSpec->velocity;
+        layer.selectionUpperVelocity = velSpec->selectionUpperVelocity;
+        layer.sourceVelocityLayer = velSpec.get();
         layer.fittedSourceDb = velSpec->fittedSourceDb;
         layer.calibrationTrimDb = velSpec->calibrationTrimDb;
         layer.samples.reserve(velSpec->sampleVariantSpecs.size());
@@ -856,7 +888,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             auto sound = std::make_shared<SampledSound>(instSpec, varSpec.get(), varSpec->sampleFile, notes);
             const std::optional<int> effectiveBalance = this->instrumentSlot.balance.has_value()
                 ? this->instrumentSlot.balance
-                : (artSpec->balanceConflict ? std::optional<int> {} : artSpec->balance);
+                : (artSpec->balanceConflict && !artSpec->balanceOverride.has_value() ? std::optional<int> {} : artSpec->getEffectiveBalance());
             sound->decayEnvelope = varSpec->decayEnvelope;
             if (articulationCalibrationAvailable && sound->decayEnvelope.isValid()) sound->decayEnvelope.peakDb += layer.calibrationTrimDb.value_or(0.0f);
             if ((varSpec->hasCsvMetadata || !varSpec->decayCode.isEmpty()) && !sound->decayEnvelope.isValid()) {

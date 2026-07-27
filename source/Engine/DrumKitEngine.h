@@ -68,6 +68,22 @@ public:
         std::vector<VelocityResponseLevelInfo> levels;
     };
 
+    struct SourceVelocityRangeLevelInfo {
+        int namedVelocity = 0;
+        int filenameUpperBoundary = 0;
+        int effectiveUpperBoundary = 0;
+        bool overridden = false;
+    };
+
+    struct SourceVelocityRangeInfo {
+        bool sourceFound = false;
+        bool writable = false;
+        juce::String kitCodeRaw;
+        juce::String instrumentCodeRaw;
+        juce::String articulationCodeRaw;
+        std::vector<SourceVelocityRangeLevelInfo> levels;
+    };
+
     explicit DrumKitEngine() {
         this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
         this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
@@ -109,6 +125,10 @@ public:
     std::vector<VelocityResponsePreset> getVelocityResponsePresets(juce::StringArray* warnings = nullptr) const;
     ParseResult<VelocityResponsePreset> saveVelocityResponsePreset(const juce::String& name, const juce::String& definition, bool replaceExisting) const;
     VelocityResponseSourceInfo getSourceVelocityResponseInfo(const juce::String& sourcePath) const;
+    SourceVelocityRangeInfo getSourceVelocityRangeInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const;
+    ParseResult<SourceVelocityRangeInfo> setSourceVelocityUpperBoundary(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId,
+                                                                       int namedVelocity, std::optional<int> upperBoundary, bool persist = true);
+    ParseResult<SourceVelocityRangeInfo> resetSourceVelocityUpperBoundaries(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId);
 
     bool useKitLayout(juce::String name);
     bool setKitLayoutDirect(KitLayout layout, bool reapplyCurrentMap = true) { return this->setKitLayout(std::move(layout), reapplyCurrentMap); }
@@ -219,6 +239,7 @@ private:
     std::array<int, 128> latestPAValues {};
     std::array<bool, 128> trackedPAMask {};
     mutable juce::CriticalSection engineGraphLock;
+    juce::CriticalSection sourceModelLock;
     MidiCrosstalkProfile crosstalkProfile;
     std::optional<MidiCrosstalkProfile> crosstalkProfileBeforeCalibration;
     MidiCrosstalkFilter crosstalkFilter;

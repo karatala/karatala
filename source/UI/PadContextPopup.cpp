@@ -193,6 +193,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
 }
 
 PadContextPopup::~PadContextPopup() {
+    this->dismissSourceOverrideEditor();
     this->dismissVelocityResponseEditor();
     this->dismissSourcePicker();
 }
@@ -724,6 +725,13 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->velocityResponseMode->onChange = [this, layer] { this->commitVelocityResponse(layer); };
     this->rebuildVelocityResponseChoices(layer);
 
+    layer->sourceSetupButton = std::make_unique<juce::TextButton>("Source setup...");
+    UIHelpers::configureControlButton(*layer->sourceSetupButton);
+    layer->sourceSetupButton->getProperties().set("compactText", true);
+    layer->sourceSetupButton->setTooltip("Edit source velocity ranges for every map using this articulation");
+    layer->sourceSetupButton->onClick = [this, layer] { this->showSourceOverrideEditor(layer); };
+    this->layerContent.addAndMakeVisible(*layer->sourceSetupButton);
+
     this->updateSourceDisplay(layer);
 
     // Tuning pot
@@ -854,6 +862,7 @@ void PadContextPopup::updateSourceDisplay(LayerRow* layer) {
         layer->sourceButton->setTooltip({});
     }
     layer->sourceButton->setButtonText("");
+    if (layer->sourceSetupButton != nullptr) layer->sourceSetupButton->setEnabled(layer->selectedSourceIndex >= 0 && this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].rawArtCode.isNotEmpty());
 }
 
 int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
@@ -1170,6 +1179,7 @@ void PadContextPopup::flushMapText() {
 void PadContextPopup::showVelocityResponseEditor(LayerRow* layer) {
     if (layer == nullptr) return;
     this->dismissSourcePicker();
+    this->dismissSourceOverrideEditor();
     this->dismissVelocityResponseEditor();
 
     juce::String sourcePath = layer->sourcePathHint;
@@ -1234,9 +1244,60 @@ void PadContextPopup::layoutVelocityResponseEditor() {
     }
 }
 
+void PadContextPopup::showSourceOverrideEditor(LayerRow* layer) {
+    if (layer == nullptr || layer->selectedSourceIndex < 0 || layer->selectedSourceIndex >= static_cast<int>(this->sourceItems.size())) return;
+    const auto& source = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
+    if (source.rawArtCode.isEmpty()) return;
+    this->dismissSourcePicker();
+    this->dismissVelocityResponseEditor();
+    this->dismissSourceOverrideEditor();
+
+    this->activeSourceOverrideEditor = std::make_unique<SourceArticulationOverrideEditor>(this->engine);
+    const auto displayTitle = source.kitDisplayName + " / " + source.instCode + " / " + source.artCode;
+    this->activeSourceOverrideEditor->setSource(source.rawKitCode, source.rawInstCode, source.rawArtCode, displayTitle);
+    this->activeSourceOverrideEditor->onPreview = [this, layer](int velocity) {
+        this->engine.playPreviewNote(this->slotId, layer->artName, static_cast<juce::uint8>(juce::jlimit(1, 127, velocity)));
+    };
+    this->activeSourceOverrideEditor->onDone = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourceOverrideEditor(); });
+    };
+
+    this->sourceOverrideOverlay = std::make_unique<DismissOverlay>();
+    this->sourceOverrideOverlay->setDarkened(true);
+    this->sourceOverrideOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourceOverrideEditor(); });
+    };
+    this->addAndMakeVisible(*this->sourceOverrideOverlay);
+    this->sourceOverrideOverlay->toFront(false);
+    this->addAndMakeVisible(*this->activeSourceOverrideEditor);
+    this->activeSourceOverrideEditor->toFront(true);
+    this->layoutSourceOverrideEditor();
+}
+
+void PadContextPopup::dismissSourceOverrideEditor() {
+    if (this->sourceOverrideOverlay) {
+        this->removeChildComponent(this->sourceOverrideOverlay.get());
+        this->sourceOverrideOverlay.reset();
+    }
+    if (this->activeSourceOverrideEditor) {
+        this->removeChildComponent(this->activeSourceOverrideEditor.get());
+        this->activeSourceOverrideEditor.reset();
+    }
+}
+
+void PadContextPopup::layoutSourceOverrideEditor() {
+    if (this->sourceOverrideOverlay) this->sourceOverrideOverlay->setBounds(this->getLocalBounds());
+    if (this->activeSourceOverrideEditor) {
+        const int editorWidth = this->getWidth() * 9 / 10;
+        const int editorHeight = this->getHeight() * 3 / 5;
+        this->activeSourceOverrideEditor->setBounds(this->getLocalBounds().withSizeKeepingCentre(editorWidth, editorHeight));
+    }
+}
+
 // Source picker
 
 void PadContextPopup::showSourcePicker(LayerRow* layer) {
+    this->dismissSourceOverrideEditor();
     this->dismissVelocityResponseEditor();
     this->dismissSourcePicker();
 
@@ -1407,7 +1468,9 @@ void PadContextPopup::resized() {
             auto flipArea = mainParameterRow.removeFromLeft(flipColW);
             layer->flipLRButton->setBounds(flipArea.removeFromTop(potH / 2).reduced(2, 1));
             layer->flipPhaseButton->setBounds(flipArea.reduced(2, 1));
-            layer->velocityResponseMode->setBounds(mainInner.removeFromTop(routingComboH).removeFromLeft(potW * 3).reduced(1, 0));
+            auto secondaryControlRow = mainInner.removeFromTop(routingComboH);
+            layer->velocityResponseMode->setBounds(secondaryControlRow.removeFromLeft(potW * 3).reduced(1, 0));
+            layer->sourceSetupButton->setBounds(secondaryControlRow.reduced(1, 0));
 
             rowArea.removeFromLeft(groupGap);
 
@@ -1434,4 +1497,5 @@ void PadContextPopup::resized() {
     this->layerContent.repaint();
     this->layoutSourcePicker();
     this->layoutVelocityResponseEditor();
+    this->layoutSourceOverrideEditor();
 }

@@ -168,3 +168,33 @@ TEST_CASE("Layer velocity response changes gain without changing named velocity 
     REQUIRE(articulation.velocityToLayer[65] == 1);
     REQUIRE(articulation.velocityGain[64] == Catch::Approx(juce::Decibels::decibelsToGain(-12.0f)));
 }
+
+TEST_CASE("Source velocity upper boundaries change selection without changing output response", "[VelocityResponse][KitSourceOverrides]") {
+    InstrumentSynth::ArticulationRuntime articulation(1, 0);
+    InstrumentSynth::VelocityLayerRuntime softLayer;
+    softLayer.velocity = 43;
+    softLayer.selectionUpperVelocity = 50;
+    softLayer.fittedSourceDb = -40.0f;
+    softLayer.calibrationTrimDb = 0.0f;
+    articulation.layers.push_back(std::move(softLayer));
+    InstrumentSynth::VelocityLayerRuntime mediumLayer;
+    mediumLayer.velocity = 85;
+    mediumLayer.selectionUpperVelocity = 91;
+    mediumLayer.fittedSourceDb = -34.0f;
+    mediumLayer.calibrationTrimDb = 0.0f;
+    articulation.layers.push_back(std::move(mediumLayer));
+    InstrumentSynth::VelocityLayerRuntime hardLayer;
+    hardLayer.velocity = 127;
+    hardLayer.selectionUpperVelocity = 127;
+    hardLayer.fittedSourceDb = -30.0f;
+    hardLayer.calibrationTrimDb = 0.0f;
+    articulation.layers.push_back(std::move(hardLayer));
+
+    articulation.buildVelocityMapping(VelocityResponse::linear());
+
+    REQUIRE(articulation.velocityToLayer[50] == 0);
+    REQUIRE(articulation.velocityToLayer[51] == 1);
+    REQUIRE(articulation.velocityToLayer[91] == 1);
+    REQUIRE(articulation.velocityToLayer[92] == 2);
+    REQUIRE(articulation.velocityGain[50] == Catch::Approx(50.0f / 127.0f));
+}

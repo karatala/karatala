@@ -11,6 +11,12 @@ namespace YamlHelper {
         return i;
     }
 
+    static bool isEscapedCharacter(const String& text, int characterIdx) {
+        int precedingSlashCount = 0;
+        for (int precedingIdx = characterIdx - 1; precedingIdx >= 0 && text[precedingIdx] == '\\'; --precedingIdx) ++precedingSlashCount;
+        return precedingSlashCount % 2 != 0;
+    }
+
     static String removeComment(const String& line) {
         // Remove a comment starting at an unquoted '#' while preserving leading indentation
         bool inQuote = false;
@@ -18,7 +24,7 @@ namespace YamlHelper {
         int pos = -1;
         for (int i = 0; i < line.length(); ++i) {
             juce_wchar c = line[i];
-            if ((c == '"' || c == '\'') && (i == 0 || line[i - 1] != '\\')) {
+            if ((c == '"' || c == '\'') && !isEscapedCharacter(line, i)) {
                 if (!inQuote) {
                     inQuote = true;
                     quoteChar = c;
@@ -57,7 +63,24 @@ namespace YamlHelper {
     }
 
     static bool tryParseKeyValue(const String& line, String& outKey, String& outValue) {
-        auto pos = line.indexOfChar(':');
+        bool inQuote = false;
+        juce_wchar quoteChar = 0;
+        int pos = -1;
+        for (int charIdx = 0; charIdx < line.length(); ++charIdx) {
+            const auto character = line[charIdx];
+            if ((character == '"' || character == '\'') && !isEscapedCharacter(line, charIdx)) {
+                if (!inQuote) {
+                    inQuote = true;
+                    quoteChar = character;
+                } else if (quoteChar == character) {
+                    inQuote = false;
+                    quoteChar = 0;
+                }
+            } else if (character == ':' && !inQuote) {
+                pos = charIdx;
+                break;
+            }
+        }
         if (pos < 0)
             return false;
         outKey = line.substring(0, pos).trim();

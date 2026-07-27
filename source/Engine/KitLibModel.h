@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include "../Config/Helpers.h"
 #include "KitLibConsts.h"
+#include "KitSourceOverrides.h"
 #include "RoutingTypes.h"
 #include "SampleMetadata.h"
 
@@ -145,7 +146,11 @@ public:
     // Number of channels occupied by this mic inside the source file (usually equals micSpec.channels)
     int fileChannelCount = 0;
 
+    float filenameManualGainDb = 0.0f;
+    std::optional<float> manualGainDbOverride;
     float manualGainDb = 0.0f;
+    float filenamePlaybackOffsetMs = 0.0f;
+    std::optional<float> playbackOffsetMsOverride;
     float playbackOffsetMs = 0.0f;
     float peakDb = 0.0f;
     float peakMs = 0.0f;
@@ -201,6 +206,7 @@ public:
 
     ArticulationSpec* parent = nullptr;
     uint8_t velocity;
+    uint8_t selectionUpperVelocity = 0;
     std::vector<std::unique_ptr<SampleVariantSpec>> sampleVariantSpecs;
     std::vector<LogicalHitMeasurement> logicalHitMeasurements;
     std::optional<float> rawVelocityMedianDb;
@@ -270,8 +276,11 @@ public:
     
     juce::String codeRaw;
     InstrumentSpec* parent = nullptr;
+    std::optional<int> filenameBalance;
+    std::optional<int> balanceOverride;
     std::optional<int> balance;
     bool balanceConflict = false;
+    bool sourceBalanceResolved = false;
     StringsDictSingleton::Id nameId = 0;
     StringsDictSingleton::Id exprId = 0;
     std::vector<juce::String> folderCodeRaws; //FIXME: wtf is this naming
@@ -486,12 +495,12 @@ public:
 
     DrumKitSpec* parent = nullptr;
     MetaInfo meta;
+    std::optional<int> filenameBalance;
+    std::optional<int> balanceOverride;
     std::vector<std::unique_ptr<ArticulationSpec>> articulationSpecs;
     mutable std::optional<juce::String> contentFingerprintCache;
 
-    explicit InstrumentSpec(DrumKitSpec* kit, const MetaInfo& metaInfo)
-        : parent(kit), meta(metaInfo) {
-    }
+    explicit InstrumentSpec(DrumKitSpec* kit, const MetaInfo& metaInfo);
 
     static ParseResult<MetaInfo> parseInfo(const juce::String& dirName);
     static std::vector<juce::String> getIdentityCandidates(const MetaInfo& meta);
@@ -513,6 +522,7 @@ public:
 
     int scanInstrumentSamples(ScanStats* stats = nullptr);
     void buildCalibrationProfiles();
+    ParseResult<int> applyVelocityUpperBoundaryOverrides(ArticulationSpec& articulation);
 
     static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);
 
@@ -533,6 +543,7 @@ public:
     const ArticulationSpec* findArticulationById(const juce::String& id) const;
     ArticulationSpec* findArticulationById(const juce::String& id) { return const_cast<ArticulationSpec*>(static_cast<const InstrumentSpec*>(this)->findArticulationById(id)); }
     juce::String getPreferredArticulationId(const ArticulationSpec& articulation) const;
+    std::optional<int> getEffectiveBalance() const { return this->balanceOverride.has_value() ? this->balanceOverride : this->filenameBalance; }
     juce::String getContentFingerprint() const;
 };
 
@@ -565,6 +576,7 @@ public:
 
     MetaInfo meta;
     SampleMetadataTable sampleMetadata;
+    KitSourceOverrides sourceOverrides;
     std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>> instrumentSpecsMap;
     const std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>>& getInstrumentSpecsMap() const { return this->instrumentSpecsMap; }
 };

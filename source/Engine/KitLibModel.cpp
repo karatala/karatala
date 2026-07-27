@@ -416,6 +416,12 @@ ParseResult<std::vector<MicSpec>> MicSpec::parseMicCodesChain(const juce::String
 }
 
 /** Parses an instrument folder name like kick-22 snare-14x6.5 ride-20-R42-Basian OMG Mental  */
+InstrumentSpec::InstrumentSpec(DrumKitSpec* kit, const MetaInfo& metaInfo)
+    : parent(kit), meta(metaInfo), filenameBalance(metaInfo.balance) {
+    const auto* instrumentOverride = this->parent != nullptr ? this->parent->sourceOverrides.findInstrumentOverride(this->meta.codeRaw) : nullptr;
+    if (instrumentOverride != nullptr && instrumentOverride->balance.has_value()) this->balanceOverride = instrumentOverride->balance;
+}
+
 ParseResult<InstrumentSpec::MetaInfo> InstrumentSpec::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
     juce::String processed = dirName.trim();
@@ -480,8 +486,10 @@ std::vector<juce::String> ArticulationSpec::getIdentityCandidates() const {
 }
 
 std::optional<int> ArticulationSpec::getEffectiveBalance() const {
+    if (this->balanceOverride.has_value()) return this->balanceOverride;
+    if (this->filenameBalance.has_value()) return this->filenameBalance;
     if (this->balance.has_value()) return this->balance;
-    if (this->parent != nullptr) return this->parent->meta.balance;
+    if (this->parent != nullptr) return this->parent->getEffectiveBalance();
     return std::nullopt;
 }
 
@@ -587,6 +595,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
             auto* velSpec = artSpec->getOrAddVelocityLayer(parsedInfo.value.velocity);
             const auto kitRelativePath = sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
             const auto sampleFileSize = this->parent->sampleMetadata.isActive() ? sampleFile.getSize() : 0;
+            const auto* sampleOverride = this->parent->sourceOverrides.findSampleOverride(kitRelativePath);
 
             // Add one sample variant per mic chain. Track channel cursor for multi-channel files.
             int channelCursor = 0;
@@ -597,9 +606,22 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
 
                 const auto& micDesc = parsedInfo.value.micDescriptors[i];
                 auto* sv = velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
-                sv->manualGainDb = parsedInfo.value.manualGainDb;
                 const auto micOffsetIt = parsedInfo.value.playbackOffsetMsByMic.find(micDesc.raw.toLowerCase());
-                sv->playbackOffsetMs = micOffsetIt != parsedInfo.value.playbackOffsetMsByMic.end() ? micOffsetIt->second : parsedInfo.value.playbackOffsetMs;
+                sv->filenameManualGainDb = parsedInfo.value.manualGainDb;
+                sv->manualGainDbOverride.reset();
+                if (sampleOverride != nullptr) sv->manualGainDbOverride = sampleOverride->manualGainDb;
+                sv->manualGainDb = sv->manualGainDbOverride.value_or(sv->filenameManualGainDb);
+                sv->filenamePlaybackOffsetMs = micOffsetIt != parsedInfo.value.playbackOffsetMsByMic.end() ? micOffsetIt->second : parsedInfo.value.playbackOffsetMs;
+                if (sampleOverride != nullptr) {
+                    const auto sampleMicOverrideIt = sampleOverride->micOverrides.find(micDesc.raw.toLowerCase());
+                    if (sampleMicOverrideIt != sampleOverride->micOverrides.end() && sampleMicOverrideIt->second.playbackOffsetMs.has_value())
+                        sv->playbackOffsetMsOverride = sampleMicOverrideIt->second.playbackOffsetMs;
+                    else
+                        sv->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                } else {
+                    sv->playbackOffsetMsOverride.reset();
+                }
+                sv->playbackOffsetMs = sv->playbackOffsetMsOverride.value_or(sv->filenamePlaybackOffsetMs);
                 sv->peakDb = parsedInfo.value.peakDb + sv->manualGainDb;
                 sv->peakMs = parsedInfo.value.peakMs;
                 sv->decayMs = parsedInfo.value.decayMs;
@@ -653,11 +675,43 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
 
 void InstrumentSpec::buildCalibrationProfiles() {
     for (const auto& articulation : this->articulationSpecs) {
+        if (!articulation->sourceBalanceResolved) {
+            articulation->filenameBalance = articulation->balance;
+            articulation->sourceBalanceResolved = true;
+        }
+        articulation->balance = articulation->filenameBalance;
+        articulation->balanceOverride.reset();
+        const auto* articulationOverride = this->parent != nullptr ? this->parent->sourceOverrides.findArticulationOverride(this->meta.codeRaw, articulation->codeRaw) : nullptr;
+        if (articulationOverride != nullptr && articulationOverride->balance.has_value()) articulation->balanceOverride = articulationOverride->balance;
         articulation->sortVelocityLayers();
+        const auto boundaryResult = this->applyVelocityUpperBoundaryOverrides(*articulation);
+        for (const auto& boundaryMessage : boundaryResult.errors) LOG(Warning, "Kit source override: " + boundaryMessage);
         for (const auto& velocityLayer : articulation->velocityLayerSpecs) KitLibCalibrationHelpers::buildLogicalHitMeasurements(*velocityLayer);
         KitLibCalibrationHelpers::fitMonotonicSourceProfile(*articulation);
         KitLibCalibrationHelpers::finalizeArticulationCalibration(*articulation);
     }
+}
+
+ParseResult<int> InstrumentSpec::applyVelocityUpperBoundaryOverrides(ArticulationSpec& articulation) {
+    ParseResult<int> result;
+    articulation.sortVelocityLayers();
+    if (articulation.velocityLayerSpecs.empty()) return result;
+
+    std::vector<uint8_t> namedVelocities;
+    namedVelocities.reserve(articulation.velocityLayerSpecs.size());
+    for (const auto& velocityLayer : articulation.velocityLayerSpecs) namedVelocities.push_back(velocityLayer->velocity);
+
+    auto effectiveUpperBoundaries = namedVelocities;
+    effectiveUpperBoundaries.back() = 127;
+    if (this->parent != nullptr) {
+        auto resolved = this->parent->sourceOverrides.resolveVelocityUpperBoundaries(this->meta.codeRaw, articulation.codeRaw, namedVelocities);
+        for (const auto& message : resolved.errors) result.errors.push_back(message);
+        result.isValid = resolved.isValid;
+        if (resolved.ok()) effectiveUpperBoundaries = std::move(resolved.value);
+    }
+    for (size_t layerIdx = 0; layerIdx < articulation.velocityLayerSpecs.size(); ++layerIdx) articulation.velocityLayerSpecs[layerIdx]->selectionUpperVelocity = effectiveUpperBoundaries[layerIdx];
+    result.value = static_cast<int>(effectiveUpperBoundaries.size());
+    return result;
 }
 
 /**  Parses a sample filename <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{sampleVariant}-{micChain}-{otherOptionalParams} */
@@ -952,9 +1006,12 @@ int LibraryManager::scanAll() {
         auto kit = std::make_unique<DrumKitSpec>(parsedInfo.value);
         const double metadataStartTimeMs = juce::Time::getMillisecondCounterHiRes();
         auto metadataResult = kit->sampleMetadata.loadFromKitRoot(kitDir);
+        auto overrideResult = kit->sourceOverrides.loadFromKitRoot(kitDir);
         const double metadataElapsedMs = juce::Time::getMillisecondCounterHiRes() - metadataStartTimeMs;
         for (const auto& metadataMessage : metadataResult.errors) LOG(Warning, "Kit metadata: " + metadataMessage);
+        for (const auto& overrideMessage : overrideResult.errors) LOG(Warning, "Kit source override: " + overrideMessage);
         if (metadataResult.ok() && kit->sampleMetadata.isActive()) LOG(Info, "Loaded " + juce::String(metadataResult.value) + " metadata.csv rows for kit " + kitDir.getFileName() + " in " + juce::String(metadataElapsedMs, 1) + " ms");
+        if (overrideResult.ok() && kit->sourceOverrides.isActive()) LOG(Info, "Loaded " + juce::String(overrideResult.value) + " source override values for kit " + kitDir.getFileName());
         int instrsInKit = kit->scanInstruments();
         int samplesInKit = 0;
 

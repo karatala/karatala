@@ -290,6 +290,143 @@ DrumKitEngine::VelocityResponseSourceInfo DrumKitEngine::getSourceVelocityRespon
     return result;
 }
 
+DrumKitEngine::SourceVelocityRangeInfo DrumKitEngine::getSourceVelocityRangeInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const {
+    SourceVelocityRangeInfo result;
+    if (this->libraryManagerPtr == nullptr) return result;
+    const auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    const auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    const auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result;
+
+    result.sourceFound = true;
+    result.writable = kit->meta.rootDir.hasWriteAccess();
+    result.kitCodeRaw = kit->meta.codeRaw;
+    result.instrumentCodeRaw = instrument->meta.codeRaw;
+    result.articulationCodeRaw = articulation->codeRaw;
+    const auto* articulationOverride = kit->sourceOverrides.findArticulationOverride(instrument->meta.codeRaw, articulation->codeRaw);
+    result.levels.reserve(articulation->velocityLayerSpecs.size());
+    for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) {
+        const auto& layer = articulation->velocityLayerSpecs[layerIdx];
+        if (layer == nullptr) continue;
+        SourceVelocityRangeLevelInfo level;
+        level.namedVelocity = layer->velocity;
+        level.filenameUpperBoundary = layerIdx + 1 == articulation->velocityLayerSpecs.size() ? MIDI_MAX_VALUE : layer->velocity;
+        level.effectiveUpperBoundary = layer->selectionUpperVelocity;
+        level.overridden = articulationOverride != nullptr && articulationOverride->velocityUpperBounds.find(layer->velocity) != articulationOverride->velocityUpperBounds.end();
+        result.levels.push_back(level);
+    }
+    return result;
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelocityUpperBoundary(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId,
+                                                                                                  int namedVelocity, std::optional<int> upperBoundary, bool persist) {
+    ParseResult<SourceVelocityRangeInfo> result;
+    if (namedVelocity < 1 || namedVelocity > MIDI_MAX_VALUE) return result.returnWithError("Named velocity must be 1..127");
+    if (upperBoundary.has_value() && (*upperBoundary < 1 || *upperBoundary >= MIDI_MAX_VALUE)) return result.returnWithError("Upper boundary must be 1..126");
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
+    if (persist && !kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+
+    const auto layerIt = std::find_if(articulation->velocityLayerSpecs.begin(), articulation->velocityLayerSpecs.end(), [namedVelocity](const auto& layer) {
+        return layer != nullptr && layer->velocity == namedVelocity;
+    });
+    if (layerIt == articulation->velocityLayerSpecs.end()) return result.returnWithError("Named velocity was not found in the source articulation");
+    if (layerIt + 1 == articulation->velocityLayerSpecs.end()) return result.returnWithError("The last velocity layer always ends at 127");
+
+    auto candidateOverrides = kit->sourceOverrides;
+    std::optional<uint8_t> typedUpperBoundary;
+    if (upperBoundary.has_value()) typedUpperBoundary = static_cast<uint8_t>(*upperBoundary);
+    candidateOverrides.setVelocityUpperBoundary(instrument->meta.codeRaw, articulation->codeRaw, static_cast<uint8_t>(namedVelocity), typedUpperBoundary);
+
+    std::vector<uint8_t> namedVelocities;
+    namedVelocities.reserve(articulation->velocityLayerSpecs.size());
+    for (const auto& layer : articulation->velocityLayerSpecs) namedVelocities.push_back(layer->velocity);
+    const auto resolved = candidateOverrides.resolveVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw, namedVelocities);
+    if (!resolved.ok()) return result.returnWithError(resolved.error());
+
+    if (!persist) {
+        {
+            const juce::ScopedLock graphLock(this->engineGraphLock);
+            for (auto& synth : this->instrumentSynthPtrs)
+                if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation, resolved.value);
+        }
+        result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+        const auto* candidateArticulationOverride = candidateOverrides.findArticulationOverride(instrument->meta.codeRaw, articulation->codeRaw);
+        for (size_t layerIdx = 0; layerIdx < result.value.levels.size(); ++layerIdx) {
+            auto& level = result.value.levels[layerIdx];
+            level.effectiveUpperBoundary = resolved.value[layerIdx];
+            level.overridden = candidateArticulationOverride != nullptr && candidateArticulationOverride->velocityUpperBounds.find(static_cast<uint8_t>(level.namedVelocity)) != candidateArticulationOverride->velocityUpperBounds.end();
+        }
+        return result;
+    }
+
+    const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
+    if (!saveResult.ok()) return result.returnWithError(saveResult.error());
+    kit->sourceOverrides = std::move(candidateOverrides);
+
+    this->previewResolveThreadPool.removeAllJobs(true, 2000);
+    {
+        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        this->previewTargetCache.clear();
+        this->pendingPreviewTargetKeys.clear();
+    }
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
+        for (auto& synth : this->instrumentSynthPtrs)
+            if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
+    }
+
+    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    for (const auto& warning : resolved.errors) result.addWarning(warning);
+    return result;
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::resetSourceVelocityUpperBoundaries(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) {
+    ParseResult<SourceVelocityRangeInfo> result;
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+
+    auto candidateOverrides = kit->sourceOverrides;
+    candidateOverrides.resetVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw);
+    std::vector<uint8_t> namedVelocities;
+    namedVelocities.reserve(articulation->velocityLayerSpecs.size());
+    for (const auto& layer : articulation->velocityLayerSpecs) namedVelocities.push_back(layer->velocity);
+    const auto resolved = candidateOverrides.resolveVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw, namedVelocities);
+    if (!resolved.ok()) return result.returnWithError(resolved.error());
+
+    const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
+    if (!saveResult.ok()) return result.returnWithError(saveResult.error());
+    kit->sourceOverrides = std::move(candidateOverrides);
+
+    this->previewResolveThreadPool.removeAllJobs(true, 2000);
+    {
+        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        this->previewTargetCache.clear();
+        this->pendingPreviewTargetKeys.clear();
+    }
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
+        for (auto& synth : this->instrumentSynthPtrs)
+            if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
+    }
+
+    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    return result;
+}
+
 bool DrumKitEngine::useMicLayout(juce::String name) {
     const MicLayout* ptr = this->getMicLayoutManager()->getLayoutById(name);
     if (ptr != nullptr) return this->setMicLayout(*ptr);
@@ -1500,6 +1637,7 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
                                                                                  const juce::String& instCode,
                                                                                  const juce::String& artCode,
                                                                                  juce::uint8 velocity) {
+    const juce::ScopedLock sourceLock(this->sourceModelLock);
     auto* libMgr = this->libraryManagerPtr.get();
     if (libMgr == nullptr)
         return std::nullopt;
@@ -1547,7 +1685,7 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
 
     KitLib::VelocityLayerSpec* bestLayer = artSpec->velocityLayerSpecs.back().get();
     for (auto& layer : artSpec->velocityLayerSpecs) {
-        if (velocity <= layer->velocity) {
+        if (velocity <= layer->selectionUpperVelocity) {
             bestLayer = layer.get();
             break;
         }

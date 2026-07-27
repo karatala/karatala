@@ -61,7 +61,7 @@ static std::optional<bool> inferAutomaticFlipLR(
 
     std::optional<int> sourceSide;
     for (const auto* artSpec : articulations) {
-        if (artSpec == nullptr || artSpec->balanceConflict) return std::nullopt;
+        if (artSpec == nullptr || (artSpec->balanceConflict && !artSpec->balanceOverride.has_value())) return std::nullopt;
 
         const int artSide = balanceSide(artSpec->getEffectiveBalance());
         if (artSide == 0) return std::nullopt;
