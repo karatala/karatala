@@ -35,6 +35,21 @@ TEST_CASE("VelocityResponse - built-in response codes provide stable normalized 
     REQUIRE(exponential.value.getGain(127) == Catch::Approx(1.0f));
 }
 
+TEST_CASE("DrumKitEngine - instance global velocity response accepts valid definitions", "[VelocityResponse]") {
+    DrumKitEngine engine;
+
+    REQUIRE(engine.setVelocityResponseDefinition("LOGARITHMIC"));
+    REQUIRE(engine.getVelocityResponse().getDefinition() == "logarithmic");
+    const float logarithmicGain = engine.getVelocityResponse().getGain(64);
+
+    REQUIRE_FALSE(engine.setVelocityResponseDefinition("invalid"));
+    REQUIRE(engine.getVelocityResponse().getDefinition() == "logarithmic");
+    REQUIRE(engine.getVelocityResponse().getGain(64) == Catch::Approx(logarithmicGain));
+
+    REQUIRE(engine.setVelocityResponseDefinition("1:-48.0000,64:-12.0000,127:0"));
+    REQUIRE(engine.getVelocityResponse().getDefinition() == "1:-48,64:-12,127:0");
+}
+
 TEST_CASE("VelocityResponse - custom points interpolate in dB", "[VelocityResponse]") {
     const auto parsed = VelocityResponse::fromDefinition("1:-48,64:-12,127:0");
 

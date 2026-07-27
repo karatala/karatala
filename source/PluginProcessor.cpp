@@ -74,6 +74,12 @@ std::optional<juce::String> PluginProcessor::getNameForMidiNoteNumber(int note, 
     return this->drumKitEnginePtr->getNameForMidiNoteNumber(note, midiChannel);
 }
 
+bool PluginProcessor::setVelocityResponseDefinition(const juce::String& definition) {
+    if (!this->drumKitEnginePtr->setVelocityResponseDefinition(definition)) return false;
+    this->mAudioProcessorValueTreeStatePtr->state.setProperty("velocity_response", this->drumKitEnginePtr->getVelocityResponse().getDefinition(), nullptr);
+    return true;
+}
+
 //==============================================================================
 int PluginProcessor::getNumPrograms() {
     return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,

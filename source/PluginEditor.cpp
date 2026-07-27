@@ -305,6 +305,9 @@ void PluginEditor::setupSettingsMode() {
         this->refreshDrumPadGridIfNeeded();
     };
     this->settingsPanel->onLibraryReloadRequested = [this] { this->reloadLibraryFromTroubleshooting(); };
+    this->settingsPanel->onGlobalVelocityResponseChanged = [this](const juce::String& definition) {
+        return this->processorRef.setVelocityResponseDefinition(definition);
+    };
 }
 
 void PluginEditor::setupTroubleshootingMode() {

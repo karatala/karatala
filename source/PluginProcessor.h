@@ -66,6 +66,7 @@ public:
     const DrumKitEngine& getEngine() const { return *this->drumKitEnginePtr; }
     juce::AudioProcessorValueTreeState& getValueTreeState() { return *this->mAudioProcessorValueTreeStatePtr; }
     const juce::AudioProcessorValueTreeState& getValueTreeState() const { return *this->mAudioProcessorValueTreeStatePtr; }
+    bool setVelocityResponseDefinition(const juce::String& definition);
 
     /** Queue a MIDI message from the UI thread to be processed in the next audio block. */
     void injectMidiFromUI(const juce::MidiMessage& msg);

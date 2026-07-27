@@ -200,6 +200,7 @@ public:
     EngineSettings engineSettings;
     const EngineSettings& getEngineSettings() const { return this->engineSettings; }
     const VelocityResponse& getVelocityResponse() const { return this->velocityResponse; }
+    bool setVelocityResponseDefinition(const juce::String& definition);
 
     const std::unordered_map<StringsDictSingleton::Id, std::vector<StringsDictSingleton::Id>>& getArticulationFallbackIdMap() const { return this->articulationFallbackIdMap; }
 

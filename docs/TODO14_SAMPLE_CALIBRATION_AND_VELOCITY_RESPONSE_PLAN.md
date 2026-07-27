@@ -289,9 +289,10 @@ A changed derived velocity-level trim or other audio-changing metadata creates a
 
 ### Global and layer controls
 
-- Store the global response as a small set of monotonic MIDI-to-dB points with velocity 127 fixed at `0 dB` relative.
+- Store the instance-global response in plugin state as a built-in code or a small set of monotonic MIDI-to-dB points with velocity 127 fixed at `0 dB` relative.
 - Build the full table outside playback.
-- Add a simple global editor with reset and machine-default actions.
+- The Conf General section selects the instance-global response from built-in and user presets. An unmatched stored definition is shown as `Unnamed global curve*`.
+- A visual global editor plus explicit machine-default actions remain a separate follow-up.
 - A layer uses `Use Global` response mode when no map override is present.
 - A layer uses its own override when its map entry contains `velocityResponse=linear`, `velocityResponse=logarithmic`, `velocityResponse=exponential`, or a valid point list such as `1:-48,64:-12,127:0`.
 - A layer override changes output gain only. Exact named-velocity sample selection remains unchanged.
@@ -481,6 +482,7 @@ Use one custom JUCE `Component` that paints the complete chart and handles its o
 
 #### User flow and chart
 
+- ✅ Add a `Global response` dropdown to Conf General with built-in and user presets. Apply it live to every layer using `Use Global`, preserve layer overrides, and save the definition in plugin instance state without changing the machine default.
 - ✅ Use one compact dropdown below Tuning, Attack, and Decay. It contains `Use Global`, built-in and user presets, and `Edit curve...`. An unmatched inline definition is displayed as `Unnamed layer curve*` but is not a selectable preset.
 - ✅ Open the editor as a child overlay inside the plugin window, not as a native desktop window.
 - ✅ Show the current destination articulation and source at the top so the user knows which layer is being edited.
@@ -529,7 +531,7 @@ velocityResponse: "1:-48,64:-12,127:0"
 - ✅ Keep exact named-velocity selection, calibration preprocessing, cache identity, and `Mix Gain` unchanged.
 - ✅ Keep the component reusable for the later global-response editor, but implement only the pad-popup layer editor in this phase.
 
-Verify later: sparse and dense articulations; articulation without metadata; correct recorded velocity columns and dB readouts; Use Global read-only mode; Create Layer Curve; built-in formulas; unnamed layer-curve status; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; selected-velocity preview; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; resizing, keyboard focus, tooltips, and visual review.
+Verify later: Conf global preset selection and project-state round trip; global changes affect only layers using `Use Global`; sparse and dense articulations; articulation without metadata; correct recorded velocity columns and dB readouts; Use Global read-only mode; Create Layer Curve; built-in formulas; unnamed global and layer-curve status; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; selected-velocity preview; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; resizing, keyboard focus, tooltips, and visual review.
 
 ### ✅ Phase 6: Add balance and timing reports (implementation complete, verification pending)
 

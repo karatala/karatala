@@ -26,6 +26,13 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     this->browseLibraryButton.onClick = [this] { this->chooseLibraryPath(); };
     this->contentComponent.addAndMakeVisible(this->browseLibraryButton);
 
+    this->globalVelocityResponseLabel.setText("Global response", juce::dontSendNotification);
+    UIHelpers::configureCaptionLabel(this->globalVelocityResponseLabel, juce::Justification::centredLeft);
+    this->contentComponent.addAndMakeVisible(this->globalVelocityResponseLabel);
+    UIHelpers::configureComboBox(this->globalVelocityResponseCombo);
+    this->globalVelocityResponseCombo.onChange = [this] { this->applyGlobalVelocityResponseChoice(); };
+    this->contentComponent.addAndMakeVisible(this->globalVelocityResponseCombo);
+
     this->kitLayoutLabel.setText("Default kit layout", juce::dontSendNotification);
     UIHelpers::configureCaptionLabel(this->kitLayoutLabel, juce::Justification::centredLeft);
     this->contentComponent.addAndMakeVisible(this->kitLayoutLabel);
@@ -250,7 +257,45 @@ void EngineSettingsPanel::loadFromEngine() {
         entry->comboBox.setSelectedId(entry->loadSelectedId(), juce::dontSendNotification);
     this->libraryPathEditor.setText(this->engine.getGlobalLibraryPath().getFullPathName(), false);
     this->cacheLimitControl->setValue(static_cast<double>(this->engine.getGlobalSampleLoaderCacheLimitMegabytes()), juce::dontSendNotification);
+    this->rebuildGlobalVelocityResponseChoices();
     this->rebuildLayoutChoices();
+}
+
+void EngineSettingsPanel::rebuildGlobalVelocityResponseChoices() {
+    const auto presets = this->engine.getVelocityResponsePresets();
+    this->globalVelocityResponseDefinitions.clear();
+    this->globalVelocityResponseCombo.clear(juce::dontSendNotification);
+
+    int selectedId = 0;
+    const auto currentDefinition = this->engine.getVelocityResponse().getDefinition();
+    for (int presetIdx = 0; presetIdx < static_cast<int>(presets.size()); ++presetIdx) {
+        const auto& preset = presets[static_cast<size_t>(presetIdx)];
+        this->globalVelocityResponseDefinitions.push_back(preset.definition);
+        this->globalVelocityResponseCombo.addItem(preset.name + (preset.isUser ? "" : " (Built-in)"), presetIdx + 1);
+        if (preset.definition == currentDefinition) selectedId = presetIdx + 1;
+    }
+
+    if (selectedId > 0) {
+        this->globalVelocityResponseCombo.setSelectedId(selectedId, juce::dontSendNotification);
+        this->globalVelocityResponseCombo.setTooltip("Global velocity response used by layers set to Use Global: " + currentDefinition);
+    } else {
+        this->globalVelocityResponseCombo.setSelectedId(0, juce::dontSendNotification);
+        this->globalVelocityResponseCombo.setText("Unnamed global curve*", juce::dontSendNotification);
+        this->globalVelocityResponseCombo.setTooltip("Saved with this plugin instance, but not saved as a reusable preset: " + currentDefinition);
+    }
+}
+
+void EngineSettingsPanel::applyGlobalVelocityResponseChoice() {
+    const int responseIdx = this->globalVelocityResponseCombo.getSelectedId() - 1;
+    if (responseIdx < 0 || responseIdx >= static_cast<int>(this->globalVelocityResponseDefinitions.size())) return;
+
+    const auto& definition = this->globalVelocityResponseDefinitions[static_cast<size_t>(responseIdx)];
+    const bool applied = this->onGlobalVelocityResponseChanged ? this->onGlobalVelocityResponseChanged(definition) : this->engine.setVelocityResponseDefinition(definition);
+    if (!applied) {
+        this->rebuildGlobalVelocityResponseChoices();
+        return;
+    }
+    this->rebuildGlobalVelocityResponseChoices();
 }
 
 void EngineSettingsPanel::rebuildLayoutChoices() {
@@ -353,7 +398,7 @@ void EngineSettingsPanel::resized() {
     const int choiceCellW = 150;
     const int choiceCellH = 40;
     const int groupLabelHeight = 22;
-    const int generalContentHeight = 136;
+    const int generalContentHeight = 160;
     const int gap = 4;
 
     const int availableWidth = juce::jmax(contentWidth, 400) - 16; // 8px padding each side
@@ -431,6 +476,11 @@ void EngineSettingsPanel::resized() {
     auto cacheRow = generalArea.removeFromTop(40);
     cacheRow.removeFromLeft(110);
     this->cacheLimitControl->setBounds(cacheRow.removeFromLeft(170));
+    generalArea.removeFromTop(gap);
+
+    auto globalVelocityResponseRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
+    this->globalVelocityResponseLabel.setBounds(globalVelocityResponseRow.removeFromLeft(110));
+    this->globalVelocityResponseCombo.setBounds(globalVelocityResponseRow.removeFromLeft(340));
     generalArea.removeFromTop(gap);
 
     auto kitLayoutRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);

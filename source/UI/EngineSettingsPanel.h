@@ -42,6 +42,8 @@ private:
     juce::Label libraryPathLabel;
     juce::TextEditor libraryPathEditor;
     juce::TextButton browseLibraryButton { "Browse..." };
+    juce::Label globalVelocityResponseLabel;
+    juce::ComboBox globalVelocityResponseCombo;
     juce::Label kitLayoutLabel;
     juce::ComboBox kitLayoutCombo;
     juce::Label micLayoutLabel;
@@ -50,6 +52,7 @@ private:
     juce::Label layoutDefaultsWarningLabel;
     std::unique_ptr<CompactParameterControl> cacheLimitControl;
     std::unique_ptr<juce::FileChooser> libraryChooser;
+    std::vector<juce::String> globalVelocityResponseDefinitions;
     std::vector<KitLayout> kitLayouts;
     std::vector<MicLayout> micLayouts;
 
@@ -98,6 +101,8 @@ private:
     void timerCallback() override;
     void queueSettingsSave();
     void flushPendingSettingsSave();
+    void rebuildGlobalVelocityResponseChoices();
+    void applyGlobalVelocityResponseChoice();
     void rebuildLayoutChoices();
     void chooseLibraryPath();
     void saveLayoutDefaults();
@@ -107,6 +112,7 @@ private:
 public:
     std::function<void()> onGridSizeChanged;
     std::function<void()> onLibraryReloadRequested;
+    std::function<bool(const juce::String&)> onGlobalVelocityResponseChanged;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EngineSettingsPanel)
 };
