@@ -47,25 +47,29 @@ Current sample loading broadly does this on a worker:
 
 1. Read the source audio.
 2. Limit the resolved sample length.
-3. Apply filename `manualGainDb`.
+3. Apply effective whole-file `manualGainDb` plus resolved calibration trim.
 4. Apply the resolved end fade.
 5. Insert the processed buffer into the RAM cache.
 6. Publish it for playback.
 
 This already places fixed filename trim on the correct side of the RAM-cache boundary.
 
-The current problems are:
+TODO14 and TODO18 now provide a typed RAM recipe and targeted live source-gain replacement:
 
-- the RAM-cache key uses path, source size, source modification time, and a free-form `preprocessTag`;
-- trim, resolved read length, and resolved fade are not complete typed key fields even though they change the buffer;
-- queue deduplication uses the same incomplete identity;
-- an incomplete key can return audio processed for another request;
+- source identity uses metadata content hash plus file size when valid, otherwise path, size, and modification time;
+- recipe identity uses an algorithm version plus quantized fixed gain, resolved read length, and resolved fade;
+- queue deduplication and direct preview use that same resolved key;
+- a live source `manualGainDb` edit requests changed recipe keys while existing voices keep their old immutable buffers and a temporary correction;
+- source playback offset remains a runtime start rule and does not change recipe identity;
+
+The remaining problems are:
+
 - the cache is memory-only, so the same work can return after restart or RAM eviction;
 - there is no user action that prepares all current-map derived samples in advance;
 - there is no persistent-cache size limit, cleanup policy, or corruption recovery because no persistent cache exists yet;
 - progressive loading uses raw velocity labels today, while TODO14 and TODO15 need calibrated logical-hit coverage.
 
-TODO14 Phase 4 fixes the RAM recipe and queue identity before this plan starts. They are listed here because persistent data must reuse the corrected identity exactly.
+TODO14 Phase 4 fixed the RAM recipe and queue identity. Persistent data must reuse that identity exactly and extend it only with an owned persistent-format version.
 
 The current shared immutable-buffer model is useful and should remain.
 
@@ -84,7 +88,7 @@ Initial bakeable processing:
 
 - complete source-file decode with its original channel layout;
 - resolved full-file read start and length;
-- fixed filename calibration trim;
+- effective whole-file manual gain plus fixed calibration trim;
 - fixed load-time fade;
 - required sample-format conversion already performed by the loader.
 
@@ -158,6 +162,7 @@ Keep one derived entry for the complete multichannel source file. `SampleEntry` 
 - Old RAM buffers may remain alive while voices still reference them.
 - Old disk entries may remain until background cleanup.
 - A targeted library reload requests new keys only for affected source content.
+- A live TODO18 source-gain change requests only recipe keys whose effective fixed gain changed. Existing voices keep their original buffer and canonical gain until they finish.
 
 This avoids global cache flushes and avoids double correction.
 
@@ -242,7 +247,7 @@ Suggested status:
 - bytes written;
 - cancellation or failure summary.
 
-If the map or a source-recipe input changes during baking, the active job continues from its immutable snapshot or is cancelled by an explicit policy. A changed source recipe creates a different key and cannot corrupt the active job. Global response, manual calibration curves, Mix Gain, and other runtime-only changes do not create new keys.
+If the map or a source-recipe input changes during baking, the active job continues from its immutable snapshot or is cancelled by an explicit policy. A changed source recipe creates a different key and cannot corrupt the active job. Global or layer velocity response, Mix Gain, and other destination runtime controls do not create new keys. A TODO18 source `manualGainDb` override does create a new key.
 
 ## Progressive Loading Integration
 

@@ -32,6 +32,13 @@ enum class MicPlacementMode : uint8_t {
 
 class SampledSound {
 public:
+    enum class SourceRecipeStatus : uint8_t {
+        NotLoaded,
+        Applied,
+        Pending,
+        Failed
+    };
+
     KitLib::InstrumentSpec* instrumentSpec = nullptr;
     KitLib::SampleVariantSpec* sampleVariantSpec = nullptr;
     juce::File sampleFile;
@@ -56,6 +63,12 @@ public:
     int sourceBalance = 0;
     std::atomic<float> cachedPlacementLeftGain { 1.0f };
     std::atomic<float> cachedPlacementRightGain { 1.0f };
+    float canonicalFixedGainDb = 0.0f;
+    float requestedFixedGainDb = 0.0f;
+    std::atomic<float> cachedSourceGainCorrection { 1.0f };
+    std::atomic<uint64_t> sourceRecipeRevision { 0 };
+    std::atomic<SourceRecipeStatus> sourceRecipeStatus { SourceRecipeStatus::NotLoaded };
+    std::atomic<bool> readinessReported { false };
     KitLib::DecayEnvelope decayEnvelope;
 
     SampledSound(KitLib::InstrumentSpec* instSpec = nullptr, KitLib::SampleVariantSpec* sampleVarSpec = nullptr, const juce::File& file = {}, std::vector<uint8_t> midiNotes = {})
@@ -130,6 +143,7 @@ public:
     void clearCurrentNote() {
         this->currentlyPlayingNote = -1;
         this->currentlyPlayingSound = nullptr;
+        this->currentBuffer.reset();
         this->currentPlayingMidiChannel = 0;
         this->artRuntimeIdx = -1;
         this->midiVelocity = 0;
@@ -180,7 +194,7 @@ public:
     void setUseOneShotDecayEnvelope(bool shouldUse) { this->useOneShotDecayEnvelope = shouldUse; }
     void setPitchRatioMultiplier(double multiplier) { this->pitchRatioMultiplier = multiplier; }
     
-    float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain; }
+    float getCurrentAmplitude() const { return this->lastEnvelopeValue * this->velocityGain * this->lastSourceGainCorrection; }
     
     // juce::RangedAudioParameter* gainParam = nullptr; //TODO?
     // juce::RangedAudioParameter* panParam = nullptr; //TODO?
@@ -200,6 +214,15 @@ public:
     uint8_t dbUpdateCounter = 0; // throttle updateEstimatedDb to every N-th render call
     int hitGroupId = -1;
     int playbackDelaySamplesRemaining = 0;
+    std::shared_ptr<juce::AudioBuffer<float>> currentBuffer;
+    float currentCanonicalFixedGainDb = 0.0f;
+    KitLib::DecayEnvelope currentDecayEnvelope;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> sourceGainCorrection { 1.0f };
+    float lastSourceGainCorrection = 1.0f;
+
+    void setSourceGainCorrectionDb(float correctionDb) {
+        this->sourceGainCorrection.setTargetValue(juce::Decibels::decibelsToGain(correctionDb, -100.0f));
+    }
 
 public:
     JUCE_LEAK_DETECTOR(InstrumentSynthVoice)
@@ -614,6 +637,10 @@ public:
     void rebuildVelocityResponseTables();
     bool refreshSourceVelocityBoundaries(const KitLib::ArticulationSpec& sourceArticulation);
     bool refreshSourceVelocityBoundaries(const KitLib::ArticulationSpec& sourceArticulation, const std::vector<uint8_t>& upperBoundaries);
+    bool refreshSourceBalance(const KitLib::InstrumentSpec& sourceInstrument, const KitLib::ArticulationSpec* sourceArticulation = nullptr);
+    bool refreshSourcePlaybackOffset(const KitLib::SampleVariantSpec& sourceSample);
+    bool refreshSourceCalibrationAndReload(const KitLib::ArticulationSpec& sourceArticulation);
+    SampledSound::SourceRecipeStatus getSourceRecipeStatus(const KitLib::SampleVariantSpec& sourceSample) const;
 
 private:
     friend class InstrumentSynthVoice;

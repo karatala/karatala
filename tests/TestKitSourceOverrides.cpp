@@ -120,6 +120,75 @@ TEST_CASE("Kit source overrides save and reload deterministic YAML", "[KitSource
     REQUIRE(kitRoot.getChildFile("kit-overrides.yml.bak").existsAsFile());
 }
 
+TEST_CASE("Kit source override setters remove only reset values", "[KitSourceOverrides][update]") {
+    KitSourceOverrides overrides;
+    const juce::String samplePath = "snare-X1/center/sample.flac";
+    const juce::String contentHash = "0123456789abcdef0123456789abcdef";
+    overrides.setInstrumentBalance("snare-X1", -12);
+    overrides.setArticulationBalance("snare-X1", "center", 20);
+    overrides.setSampleManualGain(samplePath, contentHash, -1.5f);
+    overrides.setSamplePlaybackOffset(samplePath, contentHash, 0.25f);
+    overrides.setMicPlaybackOffset(samplePath, contentHash, "ONS", -0.5f);
+
+    REQUIRE(overrides.findInstrumentOverride("snare-X1")->balance == std::optional<int> { -12 });
+    REQUIRE(overrides.findArticulationOverride("snare-X1", "center")->balance == std::optional<int> { 20 });
+    REQUIRE(overrides.findSampleOverride(samplePath)->manualGainDb == std::optional<float> { -1.5f });
+    REQUIRE(overrides.findSampleOverride(samplePath)->playbackOffsetMs == std::optional<float> { 0.25f });
+    REQUIRE(overrides.findMicOverride(samplePath, "ons")->playbackOffsetMs == std::optional<float> { -0.5f });
+
+    overrides.setArticulationBalance("snare-X1", "center", std::nullopt);
+    overrides.setInstrumentBalance("snare-X1", std::nullopt);
+    overrides.setMicPlaybackOffset(samplePath, contentHash, "ons", std::nullopt);
+    overrides.setSamplePlaybackOffset(samplePath, contentHash, std::nullopt);
+    REQUIRE(overrides.findInstrumentOverride("snare-X1") == nullptr);
+    REQUIRE(overrides.findSampleOverride(samplePath) != nullptr);
+    overrides.setSampleManualGain(samplePath, contentHash, std::nullopt);
+    REQUIRE(overrides.findSampleOverride(samplePath) == nullptr);
+}
+
+TEST_CASE("Kit source overrides recover a moved sample only by unique content hash", "[KitSourceOverrides][hash]") {
+    KitSourceOverrides overrides;
+    const juce::String contentHash = "0123456789abcdef0123456789abcdef";
+    overrides.setSampleManualGain("old/sample.flac", contentHash, -2.0f);
+
+    const auto recovered = overrides.findSampleOverride("new/sample.flac", contentHash);
+    REQUIRE(recovered.value != nullptr);
+    REQUIRE(recovered.storedRelativePath == "old/sample.flac");
+    REQUIRE(recovered.matchedByContentHash);
+    REQUIRE_FALSE(recovered.ambiguousContentHash);
+
+    overrides.setSamplePlaybackOffset("copy/sample.flac", contentHash, 1.0f);
+    const auto ambiguous = overrides.findSampleOverride("third/sample.flac", contentHash);
+    REQUIRE(ambiguous.value == nullptr);
+    REQUIRE(ambiguous.ambiguousContentHash);
+}
+
+TEST_CASE("Kit source override save rejects external file changes", "[KitSourceOverrides][yaml][file][conflict]") {
+    const auto kitRoot = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-kit-overrides-conflict", "", false);
+    REQUIRE(kitRoot.createDirectory());
+
+    struct TempDirectoryCleanup {
+        juce::File directory;
+        ~TempDirectoryCleanup() { this->directory.deleteRecursively(); }
+    } cleanup { kitRoot };
+
+    KitSourceOverrides initial;
+    initial.setInstrumentBalance("snare-X1", 0);
+    REQUIRE(initial.saveToKitRoot(kitRoot).ok());
+
+    KitSourceOverrides editorCopy;
+    REQUIRE(editorCopy.loadFromKitRoot(kitRoot).ok());
+    const auto overrideFile = kitRoot.getChildFile(KitSourceOverrides::FILE_NAME);
+    const juce::String externalText = "version: 1\n\ninstruments:\n  \"ride-R1\":\n    balance: R12\n";
+    REQUIRE(overrideFile.replaceWithText(externalText));
+    const auto externalFileContent = overrideFile.loadFileAsString();
+
+    editorCopy.setInstrumentBalance("snare-X1", -12);
+    const auto saveResult = editorCopy.saveToKitRoot(kitRoot);
+    REQUIRE_FALSE(saveResult.ok());
+    REQUIRE(overrideFile.loadFileAsString() == externalFileContent);
+}
+
 TEST_CASE("Instrument source model applies velocity boundaries without changing named layers", "[KitSourceOverrides][velocity][KitLib]") {
     DrumKitSpec kit { { {}, "KitA", "Kit A", {}, {} } };
     kit.sourceOverrides.setVelocityUpperBoundary("snare-X1", "center", 43, 50);
@@ -141,6 +210,19 @@ TEST_CASE("Instrument source model applies velocity boundaries without changing 
     REQUIRE(articulation->velocityLayerSpecs[1]->selectionUpperVelocity == 91);
     REQUIRE(articulation->velocityLayerSpecs[2]->velocity == 127);
     REQUIRE(articulation->velocityLayerSpecs[2]->selectionUpperVelocity == 127);
+}
+
+TEST_CASE("Instrument content fingerprint includes kit source overrides", "[KitSourceOverrides][fingerprint][KitLib]") {
+    DrumKitSpec defaultKit { { {}, "KitA", "Kit A", {}, {} } };
+    InstrumentSpec::MetaInfo instrumentMeta;
+    instrumentMeta.codeRaw = "snare-X1";
+    InstrumentSpec defaultInstrument(&defaultKit, instrumentMeta);
+
+    DrumKitSpec overriddenKit { { {}, "KitA", "Kit A", {}, {} } };
+    overriddenKit.sourceOverrides.setArticulationBalance("snare-X1", "center", 20);
+    InstrumentSpec overriddenInstrument(&overriddenKit, instrumentMeta);
+
+    REQUIRE(defaultInstrument.getContentFingerprint() != overriddenInstrument.getContentFingerprint());
 }
 
 TEST_CASE("Kit source values preserve filename defaults and apply loaded overrides", "[KitSourceOverrides][KitLib]") {

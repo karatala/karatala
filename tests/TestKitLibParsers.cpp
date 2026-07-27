@@ -505,6 +505,11 @@ TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain
         REQUIRE(parsed.value.playbackOffsetMsByMic.empty());
     }
     {
+        auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-127a-dim_ons-vn1.5.flac");
+        REQUIRE(parsed.ok());
+        REQUIRE(parsed.value.manualGainDb == Catch::Approx(-1.5f));
+    }
+    {
         auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-127a-dim_ons-op2.25_dim-on3_ons.flac");
         REQUIRE(parsed.ok());
         REQUIRE(parsed.value.playbackOffsetMs == Catch::Approx(0.0f));

@@ -241,6 +241,12 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     this->sourceSamplePosition = 0.0;
     this->playbackDelaySamplesRemaining = 0;
     this->envelopeState = EnvelopeState::Playing;
+    this->currentBuffer = sound->buffer;
+    this->currentCanonicalFixedGainDb = sound->canonicalFixedGainDb;
+    this->currentDecayEnvelope = sound->decayEnvelope;
+    this->lastSourceGainCorrection = sound->cachedSourceGainCorrection.load(std::memory_order_relaxed);
+    this->sourceGainCorrection.reset(this->getSampleRate(), 0.012);
+    this->sourceGainCorrection.setCurrentAndTargetValue(this->lastSourceGainCorrection);
 
     if (this->useOneShotDecayEnvelope) {
         // Decay override should shape one-shot loudness over time, even without note-off.
@@ -272,7 +278,7 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
         this->cachedEstimatedDb = -100.0f;
     } else if (sound->playbackOffsetMs < 0.0f && sound->sampleRate > 0.0) {
         int sampleLength = sound->sampleLengthSamples;
-        if (sampleLength <= 0 && sound->buffer != nullptr) sampleLength = sound->buffer->getNumSamples();
+        if (sampleLength <= 0 && this->currentBuffer != nullptr) sampleLength = this->currentBuffer->getNumSamples();
         const double advanceSamples = static_cast<double>(-sound->playbackOffsetMs) * sound->sampleRate / 1000.0;
         this->sourceSamplePosition = juce::jlimit(0.0, static_cast<double>(juce::jmax(0, sampleLength)), advanceSamples);
     }
@@ -343,7 +349,8 @@ void InstrumentSynthVoice::updateEstimatedDb() {
         const float bleedGain = s->cachedMicBleedGain.load(std::memory_order_relaxed);
         layerGainDb = juce::Decibels::gainToDecibels(juce::jmax(0.0001f, layerGain * bleedGain), -100.0f);
     }
-    this->cachedEstimatedDb = s->decayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb + layerGainDb;
+    const float sourceCorrectionDb = juce::Decibels::gainToDecibels(juce::jmax(0.0001f, this->lastSourceGainCorrection), -100.0f);
+    this->cachedEstimatedDb = this->currentDecayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb + layerGainDb + sourceCorrectionDb;
 }
 
 void InstrumentSynthVoice::stopNote(bool allowTailOff) {
@@ -365,7 +372,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         return;
 
     SampledSound* s = this->getCurrentlyPlayingSound();
-    if (s == nullptr || !s->buffer)
+    if (s == nullptr || this->currentBuffer == nullptr)
         return;
 
     if (this->playbackDelaySamplesRemaining > 0) {
@@ -377,7 +384,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         if (numSamples <= 0) return;
     }
 
-    auto& buf = *s->buffer;
+    auto& buf = *this->currentBuffer;
     const int srcChannels = buf.getNumChannels();
     const int srcLen = buf.getNumSamples();
     // Determine source/destination channel mapping based on SampleVariantSpec metadata.
@@ -458,7 +465,8 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         if (idx >= 0 && idx < srcLen) {
             const auto env = this->adsr.getNextSample();
             this->lastEnvelopeValue = env;
-            const float gain = env * this->velocityGain * chokeGain * voiceGain * phaseMultiplier;
+            this->lastSourceGainCorrection = this->sourceGainCorrection.getNextValue();
+            const float gain = env * this->velocityGain * chokeGain * voiceGain * phaseMultiplier * this->lastSourceGainCorrection;
 
             if (useMonoPlacement) {
                 float v0 = srcPtrs[0][idx];
@@ -488,6 +496,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         } else {
             // still advance envelope even if out of source range
             (void) this->adsr.getNextSample();
+            this->lastSourceGainCorrection = this->sourceGainCorrection.getNextValue();
         }
 
         this->sourceSamplePosition += this->pitchRatio;

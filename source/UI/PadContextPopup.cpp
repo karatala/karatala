@@ -728,7 +728,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->sourceSetupButton = std::make_unique<juce::TextButton>("Source setup...");
     UIHelpers::configureControlButton(*layer->sourceSetupButton);
     layer->sourceSetupButton->getProperties().set("compactText", true);
-    layer->sourceSetupButton->setTooltip("Edit source velocity ranges for every map using this articulation");
+    layer->sourceSetupButton->setTooltip("Edit source ranges, balance, gain, and timing for every map using this articulation");
     layer->sourceSetupButton->onClick = [this, layer] { this->showSourceOverrideEditor(layer); };
     this->layerContent.addAndMakeVisible(*layer->sourceSetupButton);
 
@@ -1255,8 +1255,13 @@ void PadContextPopup::showSourceOverrideEditor(LayerRow* layer) {
     this->activeSourceOverrideEditor = std::make_unique<SourceArticulationOverrideEditor>(this->engine);
     const auto displayTitle = source.kitDisplayName + " / " + source.instCode + " / " + source.artCode;
     this->activeSourceOverrideEditor->setSource(source.rawKitCode, source.rawInstCode, source.rawArtCode, displayTitle);
-    this->activeSourceOverrideEditor->onPreview = [this, layer](int velocity) {
-        this->engine.playPreviewNote(this->slotId, layer->artName, static_cast<juce::uint8>(juce::jlimit(1, 127, velocity)));
+    this->activeSourceOverrideEditor->onPreview = [this, layer, source](int velocity, const juce::String& relativePath, const juce::String& micCode) {
+        const auto previewVelocity = static_cast<juce::uint8>(juce::jlimit(1, 127, velocity));
+        if (relativePath.isNotEmpty()) {
+            this->engine.previewSourceItem(source.rawKitCode, source.rawInstCode, source.rawArtCode, previewVelocity, relativePath, micCode);
+            return;
+        }
+        this->engine.playPreviewNote(this->slotId, layer->artName, previewVelocity);
     };
     this->activeSourceOverrideEditor->onDone = [this] {
         juce::MessageManager::callAsync([this] { this->dismissSourceOverrideEditor(); });
@@ -1289,7 +1294,7 @@ void PadContextPopup::layoutSourceOverrideEditor() {
     if (this->sourceOverrideOverlay) this->sourceOverrideOverlay->setBounds(this->getLocalBounds());
     if (this->activeSourceOverrideEditor) {
         const int editorWidth = this->getWidth() * 9 / 10;
-        const int editorHeight = this->getHeight() * 3 / 5;
+        const int editorHeight = this->getHeight() * 17 / 20;
         this->activeSourceOverrideEditor->setBounds(this->getLocalBounds().withSizeKeepingCentre(editorWidth, editorHeight));
     }
 }

@@ -72,6 +72,140 @@ bool InstrumentSynth::refreshSourceVelocityBoundaries(const KitLib::Articulation
     return changed;
 }
 
+bool InstrumentSynth::refreshSourceBalance(const KitLib::InstrumentSpec& sourceInstrument, const KitLib::ArticulationSpec* sourceArticulation) {
+    bool changed = false;
+    for (const auto& sound : this->sampledSoundPtrs) {
+        if (sound == nullptr || sound->instrumentSpec != &sourceInstrument || sound->sampleVariantSpec == nullptr || sound->sampleVariantSpec->parent == nullptr) continue;
+        const auto* soundArticulation = sound->sampleVariantSpec->parent->parent;
+        if (soundArticulation == nullptr || (sourceArticulation != nullptr && soundArticulation != sourceArticulation)) continue;
+        const std::optional<int> effectiveBalance = this->instrumentSlot.balance.has_value()
+            ? this->instrumentSlot.balance
+            : (soundArticulation->balanceConflict && !soundArticulation->balanceOverride.has_value() ? std::optional<int> {} : soundArticulation->getEffectiveBalance());
+        sound->sourceBalance = effectiveBalance.value_or(0);
+        const auto* layerParameters = this->getLayerParameters(static_cast<ArtRtIdx>(sound->runtimeArticulationIndex));
+        InstrumentSynth::updateSoundMicPlacementGains(*sound, layerParameters != nullptr ? layerParameters->pan : 0);
+        changed = true;
+    }
+    return changed;
+}
+
+bool InstrumentSynth::refreshSourcePlaybackOffset(const KitLib::SampleVariantSpec& sourceSample) {
+    bool changed = false;
+    for (const auto& sound : this->sampledSoundPtrs) {
+        if (sound == nullptr || sound->sampleVariantSpec != &sourceSample) continue;
+        sound->playbackOffsetMs = sourceSample.playbackOffsetMs;
+        changed = true;
+    }
+    return changed;
+}
+
+SampledSound::SourceRecipeStatus InstrumentSynth::getSourceRecipeStatus(const KitLib::SampleVariantSpec& sourceSample) const {
+    bool applied = false;
+    for (const auto& sound : this->sampledSoundPtrs) {
+        if (sound == nullptr || sound->sampleVariantSpec != &sourceSample) continue;
+        const auto status = sound->sourceRecipeStatus.load(std::memory_order_acquire);
+        if (status == SampledSound::SourceRecipeStatus::Failed) return status;
+        if (status == SampledSound::SourceRecipeStatus::Pending) return status;
+        if (status == SampledSound::SourceRecipeStatus::Applied) applied = true;
+    }
+    if (applied) return SampledSound::SourceRecipeStatus::Applied;
+    return SampledSound::SourceRecipeStatus::NotLoaded;
+}
+
+bool InstrumentSynth::refreshSourceCalibrationAndReload(const KitLib::ArticulationSpec& sourceArticulation) {
+    if (this->parent == nullptr) return false;
+    auto* loader = this->getSampleLoader();
+    if (loader == nullptr) return false;
+
+    bool changed = false;
+    for (auto& runtimeArticulation : this->runtimeArticulations) {
+        bool articulationChanged = false;
+        for (auto& runtimeLayer : runtimeArticulation.layers) {
+            const KitLib::VelocityLayerSpec* sourceLayer = nullptr;
+            for (const auto& candidateLayer : sourceArticulation.velocityLayerSpecs) {
+                if (candidateLayer.get() == runtimeLayer.sourceVelocityLayer) {
+                    sourceLayer = candidateLayer.get();
+                    break;
+                }
+            }
+            if (sourceLayer == nullptr) continue;
+            runtimeLayer.fittedSourceDb = sourceLayer->fittedSourceDb;
+            runtimeLayer.calibrationTrimDb = sourceLayer->calibrationTrimDb;
+            for (auto& logicalHit : runtimeLayer.logicalHits) {
+                logicalHit.preTrimIntensityDb.reset();
+                for (const auto& measurement : sourceLayer->logicalHitMeasurements) {
+                    if (measurement.variantIdx != logicalHit.variantIdx) continue;
+                    logicalHit.preTrimIntensityDb = measurement.intensityDb;
+                    break;
+                }
+            }
+            articulationChanged = true;
+        }
+        if (articulationChanged) {
+            runtimeArticulation.buildVelocityMapping(this->parent->getVelocityResponse());
+            changed = true;
+        }
+    }
+
+    std::unordered_set<SampledSound*> scheduledSounds;
+    for (auto& runtimeArticulation : this->runtimeArticulations) {
+        for (auto& runtimeLayer : runtimeArticulation.layers) {
+            bool belongsToSourceArticulation = false;
+            for (const auto& sourceLayer : sourceArticulation.velocityLayerSpecs) {
+                if (sourceLayer.get() == runtimeLayer.sourceVelocityLayer) {
+                    belongsToSourceArticulation = true;
+                    break;
+                }
+            }
+            if (!belongsToSourceArticulation) continue;
+            const float calibrationTrimDb = runtimeArticulation.calibrated ? runtimeLayer.calibrationTrimDb.value_or(0.0f) : 0.0f;
+            for (size_t sampleEntryIdx = 0; sampleEntryIdx < runtimeLayer.samples.size(); ++sampleEntryIdx) {
+                auto& sampleEntry = runtimeLayer.samples[sampleEntryIdx];
+                auto* sound = sampleEntry.sound;
+                if (sound == nullptr || sound->sampleVariantSpec == nullptr || !scheduledSounds.insert(sound).second) continue;
+                const float requestedFixedGainDb = sound->sampleVariantSpec->manualGainDb + calibrationTrimDb;
+                sound->decayEnvelope = sound->sampleVariantSpec->decayEnvelope;
+                if (runtimeArticulation.calibrated && sound->decayEnvelope.isValid()) sound->decayEnvelope.peakDb += calibrationTrimDb;
+                sound->requestedFixedGainDb = requestedFixedGainDb;
+                const auto revision = sound->sourceRecipeRevision.fetch_add(1, std::memory_order_acq_rel) + 1;
+                const float correctionDb = requestedFixedGainDb - sound->canonicalFixedGainDb;
+                sound->cachedSourceGainCorrection.store(juce::Decibels::decibelsToGain(correctionDb, -100.0f), std::memory_order_release);
+                for (auto* voice : this->voices) {
+                    if (!voice->isVoiceActive() || voice->getCurrentlyPlayingSound() != sound) continue;
+                    voice->setSourceGainCorrectionDb(requestedFixedGainDb - voice->currentCanonicalFixedGainDb);
+                }
+                if (std::abs(correctionDb) < 0.0005f && sound->buffer != nullptr) {
+                    sound->cachedSourceGainCorrection.store(1.0f, std::memory_order_release);
+                    sound->sourceRecipeStatus.store(SampledSound::SourceRecipeStatus::Applied, std::memory_order_release);
+                    continue;
+                }
+
+                sound->sourceRecipeStatus.store(SampledSound::SourceRecipeStatus::Pending, std::memory_order_release);
+                SampleLoadSpec loadSpec;
+                loadSpec.file = sound->sampleVariantSpec->sampleFile;
+                loadSpec.contentHash = sound->sampleVariantSpec->metadataContentHash;
+                loadSpec.metadataFileSizeBytes = sound->sampleVariantSpec->metadataFileSizeBytes;
+                loadSpec.fixedGainDb = requestedFixedGainDb;
+                const auto weakSound = sampleEntry.weakSound;
+                std::shared_ptr<LogicalHitReadiness> readiness;
+                for (const auto& logicalHit : runtimeLayer.logicalHits) {
+                    if (std::find(logicalHit.sampleEntryIndexes.begin(), logicalHit.sampleEntryIndexes.end(), sampleEntryIdx) != logicalHit.sampleEntryIndexes.end()) {
+                        readiness = logicalHit.readiness;
+                        break;
+                    }
+                }
+                loader->requestAsyncLoad(loadSpec, [this, weakSound, readiness, revision, requestedFixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
+                    auto soundLocked = weakSound.lock();
+                    if (soundLocked == nullptr || this->parent == nullptr) return;
+                    const bool published = this->parent->publishSourceRecipeReload(soundLocked, revision, requestedFixedGainDb, std::move(buffer), loadedSampleRate);
+                    if (readiness != nullptr && soundLocked->sourceRecipeRevision.load(std::memory_order_acquire) == revision && !soundLocked->readinessReported.exchange(true, std::memory_order_acq_rel)) readiness->markLoaded(published);
+                });
+            }
+        }
+    }
+    return changed;
+}
+
 void InstrumentSynth::storeRoutingContext(KitLib::InstrumentSpec* defaultInstSpec, const ArticulationSourceMap& artSources, const std::vector<uint32_t>& allowedArticulationNameIds, const std::vector<juce::String>& allowedArticulationFilters, const ArticulationNameRemap& artNameRemap, const ArticulationExactRemap& artExactRemap, const ArticulationAliasMap& artAliases, bool strictArticulationResolution, const std::unordered_map<juce::String, juce::String>& micRouteOverrides) {
     this->lastRoutingContext.defaultInstrument = defaultInstSpec;
     this->lastRoutingContext.artSources = artSources;
@@ -900,6 +1034,8 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
             sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
             sound->cachedMicBleedGain.store(this->getMicBleedLevel(varSpec->micSpec.raw), std::memory_order_relaxed);
             sound->playbackOffsetMs = varSpec->playbackOffsetMs;
+            sound->canonicalFixedGainDb = varSpec->manualGainDb + (articulationCalibrationAvailable ? layer.calibrationTrimDb.value_or(0.0f) : 0.0f);
+            sound->requestedFixedGainDb = sound->canonicalFixedGainDb;
             sound->runtimeArticulationIndex = artIdx;
             InstrumentSynth::configureSoundMicPlacement(*sound, varSpec->micSpec, fileChannelCount, assignment.channels, assignment.applyBalance, effectiveBalance, artRt.parameters.pan);
 
@@ -986,6 +1122,7 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                     if (sound == nullptr || sound->sampleVariantSpec == nullptr) continue;
                     auto* sampleVariantSpec = sound->sampleVariantSpec;
                     const auto weakSound = layer.samples[sampleEntryIdx].weakSound;
+                    const auto recipeRevision = sound->sourceRecipeRevision.load(std::memory_order_acquire);
 
                     SampleLoadSpec loadSpec;
                     loadSpec.file = sampleVariantSpec->sampleFile;
@@ -1001,36 +1138,11 @@ void InstrumentSynth::createVelocityLayers(KitLib::InstrumentSpec* instSpec
                         layer.velocity,
                         logicalHit.variantIdx,
                         logicalHit.earlyLoad,
-                        [weakSound, readiness](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampRate) {
+                        [this, weakSound, readiness, recipeRevision, fixedGainDb = loadSpec.fixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
                             auto soundLocked = weakSound.lock();
-                            if (!soundLocked) return;
-                            soundLocked->buffer = buffer;
-                            soundLocked->sampleRate = sampRate;
-                            soundLocked->sampleLengthSamples = buffer != nullptr ? buffer->getNumSamples() : 0;
-                            soundLocked->sampleLengthMs = buffer != nullptr && sampRate > 0.0
-                                ? static_cast<float>((static_cast<double>(soundLocked->sampleLengthSamples) / sampRate) * 1000.0)
-                                : 0.0f;
-                            soundLocked->transitionAudioValid = false;
-                            if (buffer != nullptr && buffer->getNumChannels() > 0 && buffer->getNumSamples() > 0) {
-                                int sourceChannelStart = 0;
-                                int sourceChannelCount = buffer->getNumChannels();
-                                if (soundLocked->sampleVariantSpec != nullptr) {
-                                    sourceChannelStart = soundLocked->sampleVariantSpec->fileChannelStart;
-                                    if (soundLocked->sampleVariantSpec->fileChannelCount > 0)
-                                        sourceChannelCount = soundLocked->sampleVariantSpec->fileChannelCount;
-                                }
-                                const int sourceChannelEnd = juce::jmin(
-                                    buffer->getNumChannels(),
-                                    sourceChannelStart + sourceChannelCount);
-                                for (int sourceChannel = juce::jmax(0, sourceChannelStart); sourceChannel < sourceChannelEnd; ++sourceChannel) {
-                                    if (buffer->getMagnitude(sourceChannel, 0, buffer->getNumSamples()) > 0.000001f) {
-                                        soundLocked->transitionAudioValid = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            soundLocked->loaded.store(buffer != nullptr, std::memory_order_release);
-                            readiness->markLoaded(buffer != nullptr);
+                            if (soundLocked == nullptr || this->parent == nullptr) return;
+                            const bool published = this->parent->publishSourceRecipeReload(soundLocked, recipeRevision, fixedGainDb, std::move(buffer), loadedSampleRate);
+                            if (soundLocked->sourceRecipeRevision.load(std::memory_order_acquire) == recipeRevision && !soundLocked->readinessReported.exchange(true, std::memory_order_acq_rel)) readiness->markLoaded(published);
                         }
                     );
                 }

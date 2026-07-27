@@ -2,7 +2,7 @@
 
 Date: 2026-07-27
 
-Status: In progress. The typed override file, load-time source values, exact velocity-range runtime, first range editor, and focused tests are implemented. Tests have not been built or run yet.
+Status: In progress. Runtime editing and persistence are implemented for velocity ranges, source balance, manual gain, and playback offsets. Exact selected file and mic preview no longer changes the performance round-robin history. The C++ `Tests` target builds and all 175 C++ tests pass. Full linked logical-hit preview, conflict recovery actions, visual QA, Python verification, and the offline materialization workflow remain.
 
 ## Current Implementation Progress
 
@@ -10,8 +10,12 @@ Status: In progress. The typed override file, load-time source values, exact vel
 - ✅ Preserved filename defaults separately and applied saved balance, `manualGainDb`, and playback offsets during normal kit loading.
 - ✅ Added editable exact velocity boundaries with live runtime preview, validation, reset actions, and source-wide persistence.
 - ✅ Added `Source setup...` on exact source-articulation rows in `PadContextPopup`.
-- ✅ Added focused parser, writer, model, and velocity-table tests. They are written but not executed by request.
-- Remaining: content-hash recovery, external-change conflict protection, the balance/gain/offset UI and live update paths, targeted gain reload, fuller status snapshots, the offline correction planner, and full verification.
+- ✅ Added focused parser, writer, model, and velocity-table tests. The complete C++ suite passes: 175 of 175 tests.
+- ✅ Added unique content-hash recovery, external-change conflict protection, full source-value snapshots, balance/gain/offset UI, and live runtime update paths.
+- ✅ Added smoothed manual-gain correction, affected-articulation recalculation, targeted recipe loading, safe buffer publication, and pending or failed status display.
+- ✅ Added deterministic selected file and mic preview without changing performance RR history.
+- ✅ Added the first review-only JSON dry-run planner. Python verification is intentionally deferred until the C++ and UI work is stable.
+- Remaining: full linked logical-hit preview, explicit conflict recovery actions, offline materialization, visual QA, and full verification.
 
 ## Goal
 
@@ -77,7 +81,7 @@ This plan edits source-library behavior. It does not replace mapped layer parame
 - `manualGainDb` participates in source preprocessing and calibration.
 - `playbackOffsetMs` is applied by runtime voices and preview without changing the shared sample-loader cache key.
 - `InstrumentMapEntry` owns destination-layer controls. Source correction data does not belong in the instrument map because the same source may be used by many maps.
-- The first source-override writer and live source-range editor now exist. Balance, manual gain, and playback offset apply on normal kit load, but their live UI and targeted update paths are still open.
+- The source editor now applies balance and playback offsets to following notes without sample reload. Manual gain uses a smoothed temporary correction while changed preprocessing recipes load in the background.
 - There is still no safe workflow that turns reviewed overrides into file corrections.
 
 The main problem is that file and folder names currently serve two different jobs:
@@ -488,14 +492,14 @@ Do not overwrite original audio without a recoverable backup. Do not bake balanc
 
 ## Implementation Plan
 
-### 1. Add Typed Override Model And YAML Parser
+### ✅ 1. Add Typed Override Model And YAML Parser
 
 - ✅ Add `KitSourceOverrides.h/.cpp` under `source/Engine`.
 - ✅ Define typed instrument, articulation, sample, and mic overrides.
 - ✅ Parse `kit-overrides.yml` during the existing kit scan.
 - ✅ Add strict known-field validation and full-address warnings.
 - ✅ Add exact path lookup.
-- Add unique content-hash recovery.
+- ✅ Add unique content-hash recovery.
 - ✅ Keep invalid overrides isolated from valid siblings.
 
 Likely files:
@@ -505,15 +509,15 @@ Likely files:
 - [`source/Engine/KitLibModel.h`](../source/Engine/KitLibModel.h)
 - [`source/Engine/KitLibModel.cpp`](../source/Engine/KitLibModel.cpp)
 
-### 2. Add Deterministic Safe Writer
+### ✅ 2. Add Deterministic Safe Writer
 
 - ✅ Serialize only explicit overrides.
 - ✅ Normalize paths, key ordering, floats, balance tokens, and named-velocity keys.
 - ✅ Validate the generated YAML before atomic replacement.
 - ✅ Add atomic replacement, one backup, and read-only save rejection.
-- Add external-change conflict handling.
+- ✅ Add external-change conflict handling.
 - ✅ Expose focused add, update, reset, and reset-scope operations for velocity boundaries.
-- Add equivalent update and reset operations for the remaining source values.
+- ✅ Add equivalent update and reset operations for the remaining source values.
 
 Likely files:
 
@@ -521,7 +525,7 @@ Likely files:
 - [`source/Engine/DrumKitEngine.h`](../source/Engine/DrumKitEngine.h)
 - [`source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp)
 
-### 3. Resolve Effective Source Values
+### ✅ 3. Resolve Effective Source Values
 
 - ✅ Keep parsed filename and folder defaults available for UI display.
 - ✅ Resolve override values without overwriting their defaults.
@@ -556,15 +560,15 @@ Likely files:
 - [`source/Engine/DrumKitEngine.h`](../source/Engine/DrumKitEngine.h)
 - [`source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp)
 
-### 5. Add Source Override Snapshot And Update API
+### ✅ 5. Add Source Override Snapshot And Update API
 
 - ✅ Return copied velocity-range display data for one exact source articulation.
-- Include filename defaults, explicit overrides, effective values, measurement status, RR grouping, and writable state.
+- ✅ Include filename defaults, explicit overrides, effective values, measurement status, RR grouping, and writable state.
 - ✅ Include filename, explicit override, effective range, and writable state for velocity boundaries.
 - ✅ Add value-addressed velocity updates instead of exposing model or synth pointers.
 - ✅ Apply live velocity changes outside playback and publish bounded runtime data safely.
-- Add targeted source recipe reload for manual gain.
-- Keep one status path for applied, pending reload, save failed, and stale address.
+- ✅ Add targeted source recipe reload for manual gain.
+- ✅ Keep one status path for applied, pending reload, save failed, and stale address.
 
 Likely files:
 
@@ -573,16 +577,16 @@ Likely files:
 - [`source/Engine/InstrumentSynth.h`](../source/Engine/InstrumentSynth.h)
 - [`source/Engine/InstrumentSynthLoader.cpp`](../source/Engine/InstrumentSynthLoader.cpp)
 
-### 6. Build `SourceArticulationOverrideEditor`
+### ✅ 6. Build `SourceArticulationOverrideEditor`
 
 - ✅ Reuse the existing modal visual language and commit pattern.
 - ✅ Add horizontal velocity-layer blocks and draggable dividers.
 - ✅ Add precise numeric editing, reset actions, keyboard control, and preview.
-- Add instrument and articulation balance controls.
-- Add logical-hit, file, mic, measurement, manual-gain, and playback-offset rows.
+- ✅ Add instrument and articulation balance controls.
+- ✅ Add logical-hit, file, mic, measurement, manual-gain, and playback-offset rows.
 - ✅ Make filename, override, and effective velocity boundaries visually distinct.
 - ✅ Show source-global scope, read-only state, and persistence errors for range editing.
-- Show pending targeted reload state for live manual-gain editing.
+- ✅ Show pending targeted reload state for live manual-gain editing.
 
 Likely files:
 
@@ -601,7 +605,8 @@ Reuse small helpers from `VelocityResponseEditor` only when they are truly share
 - ✅ Disable the action for unresolved or ambiguous source articulations.
 - ✅ Keep the editor open across live range changes and refresh copied source data after commit.
 - ✅ Preserve all instrument-map fields because this workflow does not rewrite the map.
-- Preview selected velocity and logical hit without changing normal RR history.
+- ✅ Preview the selected file and mic without changing normal RR history.
+- Preview the complete linked logical hit without changing normal RR history.
 
 Likely files:
 
@@ -612,8 +617,8 @@ Likely files:
 
 ### 8. Add Offline Correction Planner
 
-- Add deterministic dry-run output first.
-- Parse filenames through rules matching `KitLibModel`.
+- ✅ Add deterministic dry-run output first.
+- ✅ Parse filenames through rules matching `KitLibModel`.
 - Validate all operations before any write.
 - Add explicit rename-token materialization.
 - Add optional audio materialization only after rename-only behavior is verified.
@@ -634,8 +639,8 @@ After implementation:
 - ✅ Document `kit-overrides.yml` ownership in `source/Engine/AGENTS.md`.
 - ✅ Document the source editor and its global source scope in `source/UI/AGENTS.md`.
 - Document the offline correction tool and safety rules in `scripts/AGENTS.md`.
-- Update TODO14 metadata ownership so generated measurements and user overrides remain clearly separate.
-- Update TODO16 cache rules for effective manual gain and live targeted replacement.
+- ✅ Update TODO14 metadata ownership so generated measurements and user overrides remain clearly separate.
+- ✅ Update TODO16 cache rules for effective manual gain and live targeted replacement.
 - ✅ Mark completed sections in this plan with `✅`.
 - When implementation and all required verification are complete, change the main heading to start with `# ✅ COMPLETED:`.
 

@@ -64,6 +64,32 @@ static juce::String fileMetadataFingerprint(const juce::File& rootDir, const juc
 
 namespace KitLibSampleMetadataHelpers {
 
+static std::optional<float> parseSignedGainDb(const juce::String& value) {
+    if (value.length() < 2) return std::nullopt;
+    const auto direction = value[0];
+    if (direction != 'n' && direction != 'p') return std::nullopt;
+
+    const auto numberText = value.substring(1);
+    bool hasDigit = false;
+    bool hasDecimalPoint = false;
+    for (int idx = 0; idx < numberText.length(); ++idx) {
+        const auto character = numberText[idx];
+        if (juce::CharacterFunctions::isDigit(character)) {
+            hasDigit = true;
+            continue;
+        }
+        if (character == '.' && !hasDecimalPoint) {
+            hasDecimalPoint = true;
+            continue;
+        }
+        return std::nullopt;
+    }
+    if (!hasDigit) return std::nullopt;
+
+    const float magnitudeDb = std::abs(static_cast<float>(numberText.getDoubleValue()));
+    return direction == 'n' ? -magnitudeDb : magnitudeDb;
+}
+
 static std::optional<float> parseSignedOffsetMs(const juce::String& value) {
     if (value.length() < 2) return std::nullopt;
     const auto direction = value[0];
@@ -497,6 +523,7 @@ juce::String InstrumentSpec::getContentFingerprint() const {
     if (this->contentFingerprintCache.has_value()) return this->contentFingerprintCache.value();
     std::vector<juce::String> records;
     records.push_back("instrument|" + this->meta.codeRaw + "|" + this->meta.rootDir.getFullPathName());
+    if (this->parent != nullptr) records.push_back("kit-source-overrides|" + this->parent->sourceOverrides.toYaml());
 
     if (this->meta.rootDir.isDirectory()) {
         const auto childDirs = this->meta.rootDir.findChildFiles(juce::File::findDirectories, true, "*");
@@ -595,7 +622,18 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
             auto* velSpec = artSpec->getOrAddVelocityLayer(parsedInfo.value.velocity);
             const auto kitRelativePath = sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
             const auto sampleFileSize = this->parent->sampleMetadata.isActive() ? sampleFile.getSize() : 0;
-            const auto* sampleOverride = this->parent->sourceOverrides.findSampleOverride(kitRelativePath);
+            juce::String sampleContentHash;
+            if (this->parent->sampleMetadata.isActive()) {
+                for (const auto& micDescriptor : parsedInfo.value.micDescriptors) {
+                    const auto* metadataRow = this->parent->sampleMetadata.find(kitRelativePath, micDescriptor.raw);
+                    if (metadataRow == nullptr || metadataRow->fileSizeBytes <= 0 || metadataRow->fileSizeBytes != sampleFileSize || metadataRow->contentHash.isEmpty()) continue;
+                    sampleContentHash = metadataRow->contentHash;
+                    break;
+                }
+            }
+            const auto sampleOverrideMatch = this->parent->sourceOverrides.findSampleOverride(kitRelativePath, sampleContentHash);
+            const auto* sampleOverride = sampleOverrideMatch.value;
+            if (sampleOverrideMatch.ambiguousContentHash) LOG(Warning, "Ambiguous kit source override contentHash for sample '" + kitRelativePath + "'; moved-file recovery was ignored");
 
             // Add one sample variant per mic chain. Track channel cursor for multi-channel files.
             int channelCursor = 0;
@@ -772,13 +810,9 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
             
             switch (paramType) {
                 case 'v': { // manual gain, dB (negative or positive)
-                    if (paramValue.startsWith("n")) {
-                        result.value.manualGainDb = -static_cast<float>(paramValue.substring(1).getIntValue());
-                    } else if (paramValue.startsWith("p")) {
-                        result.value.manualGainDb = static_cast<float>(paramValue.substring(1).getIntValue());
-                    } else {
-                        result.addWarning("Unknown volume trim format: " + paramValue);
-                    }
+                    const auto parsedGainDb = KitLibSampleMetadataHelpers::parseSignedGainDb(paramValue.toLowerCase());
+                    if (parsedGainDb.has_value()) result.value.manualGainDb = *parsedGainDb;
+                    else result.addWarning("Unknown volume trim format: " + paramValue + "; expected vn<dB> or vp<dB>");
                     break;
                 }
                 case 'o': { // playback offset in ms: negative advances, positive delays

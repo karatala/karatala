@@ -4,7 +4,7 @@
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class SourceArticulationOverrideEditor : public juce::Component, public juce::SettableTooltipClient {
+class SourceArticulationOverrideEditor : public juce::Component, public juce::SettableTooltipClient, private juce::Timer {
 public:
     explicit SourceArticulationOverrideEditor(DrumKitEngine& engine);
     ~SourceArticulationOverrideEditor() override;
@@ -19,7 +19,7 @@ public:
     void mouseExit(const juce::MouseEvent& event) override;
     bool keyPressed(const juce::KeyPress& key) override;
 
-    std::function<void(int velocity)> onPreview;
+    std::function<void(int velocity, const juce::String& relativePath, const juce::String& micCode)> onPreview;
     std::function<void()> onDone;
 
 private:
@@ -35,11 +35,29 @@ private:
     juce::Label scopeLabel;
     juce::Label readoutLabel;
     juce::Label statusLabel;
+    juce::Label instrumentBalanceLabel;
+    juce::Label articulationBalanceLabel;
+    juce::Label sampleInfoLabel;
+    juce::Label manualGainLabel;
+    juce::Label fileOffsetLabel;
+    juce::Label micOffsetLabel;
     juce::TextEditor boundaryEditor;
+    juce::TextEditor instrumentBalanceEditor;
+    juce::TextEditor articulationBalanceEditor;
+    juce::TextEditor manualGainEditor;
+    juce::TextEditor fileOffsetEditor;
+    juce::TextEditor micOffsetEditor;
+    juce::ComboBox sampleSelector;
+    juce::TextButton resetInstrumentBalanceButton { "Reset" };
+    juce::TextButton resetArticulationBalanceButton { "Reset" };
+    juce::TextButton resetManualGainButton { "Reset" };
+    juce::TextButton resetFileOffsetButton { "Reset" };
+    juce::TextButton resetMicOffsetButton { "Reset" };
     juce::TextButton resetSelectedButton { "Reset selected" };
     juce::TextButton resetAllButton { "Reset ranges" };
     juce::TextButton previewButton { "Preview" };
     juce::TextButton doneButton { "Done" };
+    int selectedSampleIdx = -1;
 
     bool applySelectedBoundary(int upperBoundary, bool persist);
     void commitBoundaryEditor();
@@ -48,6 +66,16 @@ private:
     void restoreCommittedPreview();
     void updateControls();
     void updateReadout();
+    void updateBalanceControls();
+    void rebuildSampleChoices(const juce::String& preferredPath = {}, const juce::String& preferredMicCode = {});
+    void updateSampleControls();
+    void commitInstrumentBalance();
+    void commitArticulationBalance();
+    void commitManualGain();
+    void commitFilePlaybackOffset();
+    void commitMicPlaybackOffset();
+    void replaceInfo(DrumKitEngine::SourceVelocityRangeInfo updatedInfo);
+    void timerCallback() override;
     void setStatus(const juce::String& text, bool error = false);
     int findNearestDivider(float xPosition, float maximumDistance) const;
     int boundaryForX(float xPosition) const;

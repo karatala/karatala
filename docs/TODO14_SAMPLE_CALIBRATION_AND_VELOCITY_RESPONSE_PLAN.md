@@ -20,7 +20,7 @@ Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, Phase 5B, and Phase 6 im
 
 Do not use one generic curve for both sample selection and output loudness. They are separate problems.
 
-This plan owns analysis, per-kit `metadata.csv`, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, per-layer overrides, and report-only balance and timing work. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense, low-round-robin libraries. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct.
+This plan owns analysis, per-kit `metadata.csv`, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, per-layer overrides, and analysis reports. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense, low-round-robin libraries. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct. [TODO18](TODO18_SOURCE_ARTICULATION_AND_SAMPLE_OVERRIDES_PLAN.md) owns reviewed user-authored source balance, manual gain, playback offset, and exact range overrides in `kit-overrides.yml`.
 
 Velocity and loudness calibration are the first release. Pan recommendations and timing reports follow after the core works. Runtime timing correction and source audio rewriting need a later plan after listening review.
 
@@ -241,8 +241,9 @@ Core runtime ownership:
 
 | Location | Data |
 | --- | --- |
-| Sample filename | sample identity plus optional explicit `v` manual gain |
+| Sample filename | sample identity plus optional explicit `v` manual-gain default |
 | Per-kit `metadata.csv` | generated per-file and per-mic measurements required by C++ |
+| Per-kit `kit-overrides.yml` | sparse user-authored source corrections owned by TODO18 |
 | Instrument or articulation folder | aggregate existing `L/C/R` source balance |
 | Instrument map | manual override for one mapped layer |
 | C++ runtime | logical hits, raw velocity medians, fitted source profiles, calibration trims, decay envelopes, and pan decisions |
@@ -251,7 +252,7 @@ Rows are identified by kit-relative sample path plus mic code. The initial CSV c
 
 `onset_ms` also provides the timing evidence needed to compare linked mic entries, so a separate timing column is not required initially. Phase 3 C++ derives relative mic timing, logical-hit intensity, velocity medians, calibration trim, and decay envelopes from the measured CSV rows. Phase 6 will use `stereo_balance` for pan decisions.
 
-The readable peak and decay fields replace the runtime use of legacy `p`, `d`, and compressed base62 `c` filename values. Existing `a`, `p`, `d`, and `c` tokens may be ignored when CSV metadata is active. The `v` token remains supported as explicit per-file `manualGainDb` for correcting recording or mic-balance problems. Automatic decimal `calibrationTrimDb` is derived separately by C++. Manual gain is included when calculating effective intensity and true peak, and the final preprocessing gain combines `manualGainDb` with `calibrationTrimDb`.
+The readable peak and decay fields replace the runtime use of legacy `p`, `d`, and compressed base62 `c` filename values. Existing `a`, `p`, `d`, and `c` tokens may be ignored when CSV metadata is active. The `v` token remains the per-file `manualGainDb` default. TODO18 may replace it with a saved whole-file source override. Automatic decimal `calibrationTrimDb` is derived separately by C++. Effective manual gain is included when calculating intensity and true peak, and the final preprocessing gain combines effective `manualGainDb` with `calibrationTrimDb`.
 
 `content_hash` is a BLAKE2b-128 hash of the complete raw sample file. It detects modified files and can match files that were renamed or moved. `file_size_bytes` provides a quick additional check. Hashes stay in `metadata.csv` and are never added to sample filenames.
 
@@ -285,7 +286,7 @@ Preview, progressive loading, normal playback, and future cache baking must use 
 
 Global and per-layer velocity responses, `Mix Gain`, tuning, envelopes, bleed, pan, routing, choke, aftertouch, and instance effects remain runtime controls. They do not belong in the source recipe.
 
-A changed derived velocity-level trim or other audio-changing metadata creates a new RAM-cache identity after `Reload All Kits`. A changed logical-hit intensity, raw velocity median, fitted-profile algorithm, or manual curve rebuilds selection tables but does not change buffer identity when source content and the audio recipe are unchanged. TODO16 consumes the same identity for persistent disk storage, Bake Cache UI, cleanup, and multi-instance safety.
+A changed derived velocity-level trim or other audio-changing metadata creates a new RAM-cache identity after `Reload All Kits`. A live TODO18 manual-gain override also creates changed recipe keys for the affected articulation; the engine uses a temporary smoothed correction while those recipes load and keeps old immutable buffers alive for existing voices. A changed logical-hit intensity, raw velocity median, fitted-profile algorithm, or velocity-response curve rebuilds selection tables but does not change buffer identity when source content and the audio recipe are unchanged. TODO16 consumes the same identity for persistent disk storage, Bake Cache UI, cleanup, and multi-instance safety.
 
 ### Global and layer controls
 
@@ -298,8 +299,8 @@ A changed derived velocity-level trim or other audio-changing metadata creates a
 - A layer override changes output gain only. Exact named-velocity sample selection remains unchanged.
 - Reset to `Use Global` removes the map override.
 - Keep `Mix Gain` separate.
-- Manual changes use the parameter-only update path and do not reload samples.
-- Manual changes do not change the fixed source preprocessing recipe.
+- Manual destination-layer response changes use the parameter-only update path and do not reload samples.
+- Destination velocity response and `Mix Gain` do not change the fixed source preprocessing recipe. TODO18 source `manualGainDb` is a separate audio-changing source value and does change the recipe.
 
 Both layer editors must share map-entry serialization or preserve fields they do not show. Primary and shadow synths each own their effective tables.
 

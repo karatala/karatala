@@ -122,6 +122,42 @@ static juce::String safePresetName(const juce::String& name) {
 
 } // namespace DrumKitEngineVelocityResponseHelpers
 
+namespace DrumKitEngineSourceOverrideHelpers {
+
+static juce::String relativeSamplePath(const KitLib::DrumKitSpec& kit, const juce::File& sampleFile) {
+    return sampleFile.getRelativePathFrom(kit.meta.rootDir).replaceCharacter('\\', '/');
+}
+
+static int recipeStatusPriority(SampledSound::SourceRecipeStatus status) {
+    switch (status) {
+        case SampledSound::SourceRecipeStatus::Failed: return 3;
+        case SampledSound::SourceRecipeStatus::Pending: return 2;
+        case SampledSound::SourceRecipeStatus::Applied: return 1;
+        case SampledSound::SourceRecipeStatus::NotLoaded: return 0;
+    }
+    return 0;
+}
+
+static std::vector<KitLib::SampleVariantSpec*> findSamplesByRelativePath(KitLib::DrumKitSpec& kit, KitLib::ArticulationSpec& articulation, const juce::String& relativePath) {
+    std::vector<KitLib::SampleVariantSpec*> matches;
+    const auto normalizedPath = relativePath.trim().replaceCharacter('\\', '/');
+    for (const auto& layer : articulation.velocityLayerSpecs) {
+        if (layer == nullptr) continue;
+        for (const auto& sample : layer->sampleVariantSpecs) {
+            if (sample != nullptr && relativeSamplePath(kit, sample->sampleFile) == normalizedPath) matches.push_back(sample.get());
+        }
+    }
+    return matches;
+}
+
+static juce::String firstContentHash(const std::vector<KitLib::SampleVariantSpec*>& samples) {
+    for (const auto* sample : samples)
+        if (sample != nullptr && sample->metadataContentHash.isNotEmpty()) return sample->metadataContentHash;
+    return {};
+}
+
+} // namespace DrumKitEngineSourceOverrideHelpers
+
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
     const auto defaultDataPath = DrumKitEngine().defaultDataPath;
@@ -293,6 +329,8 @@ DrumKitEngine::VelocityResponseSourceInfo DrumKitEngine::getSourceVelocityRespon
 DrumKitEngine::SourceVelocityRangeInfo DrumKitEngine::getSourceVelocityRangeInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const {
     SourceVelocityRangeInfo result;
     if (this->libraryManagerPtr == nullptr) return result;
+    const juce::ScopedLock sourceLock(this->sourceModelLock);
+    const juce::ScopedLock graphLock(this->engineGraphLock);
     const auto* kit = this->libraryManagerPtr->findKitById(kitId);
     const auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     const auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
@@ -303,6 +341,13 @@ DrumKitEngine::SourceVelocityRangeInfo DrumKitEngine::getSourceVelocityRangeInfo
     result.kitCodeRaw = kit->meta.codeRaw;
     result.instrumentCodeRaw = instrument->meta.codeRaw;
     result.articulationCodeRaw = articulation->codeRaw;
+    result.instrumentBalance.filenameValue = instrument->filenameBalance;
+    result.instrumentBalance.overrideValue = instrument->balanceOverride;
+    result.instrumentBalance.effectiveValue = instrument->getEffectiveBalance();
+    result.articulationBalance.filenameValue = articulation->filenameBalance;
+    result.articulationBalance.overrideValue = articulation->balanceOverride;
+    result.articulationBalance.effectiveValue = articulation->getEffectiveBalance();
+    result.articulationBalance.filenameConflict = articulation->balanceConflict;
     const auto* articulationOverride = kit->sourceOverrides.findArticulationOverride(instrument->meta.codeRaw, articulation->codeRaw);
     result.levels.reserve(articulation->velocityLayerSpecs.size());
     for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) {
@@ -314,6 +359,43 @@ DrumKitEngine::SourceVelocityRangeInfo DrumKitEngine::getSourceVelocityRangeInfo
         level.effectiveUpperBoundary = layer->selectionUpperVelocity;
         level.overridden = articulationOverride != nullptr && articulationOverride->velocityUpperBounds.find(layer->velocity) != articulationOverride->velocityUpperBounds.end();
         result.levels.push_back(level);
+
+        for (const auto& sample : layer->sampleVariantSpecs) {
+            if (sample == nullptr) continue;
+            SourceSampleOverrideInfo sampleInfo;
+            sampleInfo.namedVelocity = layer->velocity;
+            sampleInfo.roundRobin = sample->letter == '\0' ? "-" : juce::String::charToString(sample->letter);
+            sampleInfo.relativePath = DrumKitEngineSourceOverrideHelpers::relativeSamplePath(*kit, sample->sampleFile);
+            sampleInfo.fileName = sample->sampleFileName;
+            sampleInfo.micCode = sample->micSpec.raw.trim().toLowerCase();
+            sampleInfo.contentHash = sample->metadataContentHash;
+            sampleInfo.filenameManualGainDb = sample->filenameManualGainDb;
+            sampleInfo.effectiveManualGainDb = sample->manualGainDb;
+            sampleInfo.filenamePlaybackOffsetMs = sample->filenamePlaybackOffsetMs;
+            sampleInfo.effectivePlaybackOffsetMs = sample->playbackOffsetMs;
+            sampleInfo.hasMetadata = sample->hasCsvMetadata;
+            sampleInfo.onsetMs = sample->onsetMs;
+            sampleInfo.intensityDb = sample->intensityDb;
+            sampleInfo.truePeakDb = sample->truePeakDb;
+            const auto sampleOverrideMatch = kit->sourceOverrides.findSampleOverride(sampleInfo.relativePath, sampleInfo.contentHash);
+            const auto* sampleOverride = sampleOverrideMatch.value;
+            sampleInfo.overrideStoredRelativePath = sampleOverrideMatch.storedRelativePath;
+            sampleInfo.overrideMatchedByContentHash = sampleOverrideMatch.matchedByContentHash;
+            sampleInfo.overrideContentHashAmbiguous = sampleOverrideMatch.ambiguousContentHash;
+            if (sampleOverride != nullptr) {
+                sampleInfo.manualGainDbOverride = sampleOverride->manualGainDb;
+                sampleInfo.filePlaybackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                const auto micOverrideIt = sampleOverride->micOverrides.find(sampleInfo.micCode);
+                if (micOverrideIt != sampleOverride->micOverrides.end()) sampleInfo.micPlaybackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
+            }
+            for (const auto& synth : this->instrumentSynthPtrs) {
+                if (synth == nullptr) continue;
+                const auto synthStatus = synth->getSourceRecipeStatus(*sample);
+                if (DrumKitEngineSourceOverrideHelpers::recipeStatusPriority(synthStatus) > DrumKitEngineSourceOverrideHelpers::recipeStatusPriority(sampleInfo.recipeStatus))
+                    sampleInfo.recipeStatus = synthStatus;
+            }
+            result.samples.push_back(std::move(sampleInfo));
+        }
     }
     return result;
 }
@@ -366,17 +448,12 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelo
 
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
-    kit->sourceOverrides = std::move(candidateOverrides);
 
-    this->previewResolveThreadPool.removeAllJobs(true, 2000);
-    {
-        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
-        this->previewTargetCache.clear();
-        this->pendingPreviewTargetKeys.clear();
-    }
+    this->invalidateSourcePreviewCache();
     {
         const juce::ScopedLock sourceLock(this->sourceModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
+        kit->sourceOverrides = std::move(candidateOverrides);
         for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
         for (auto& synth : this->instrumentSynthPtrs)
             if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
@@ -407,17 +484,12 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::resetSourceVe
 
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
-    kit->sourceOverrides = std::move(candidateOverrides);
 
-    this->previewResolveThreadPool.removeAllJobs(true, 2000);
-    {
-        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
-        this->previewTargetCache.clear();
-        this->pendingPreviewTargetKeys.clear();
-    }
+    this->invalidateSourcePreviewCache();
     {
         const juce::ScopedLock sourceLock(this->sourceModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
+        kit->sourceOverrides = std::move(candidateOverrides);
         for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
         for (auto& synth : this->instrumentSynthPtrs)
             if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
@@ -425,6 +497,190 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::resetSourceVe
 
     result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
     return result;
+}
+
+void DrumKitEngine::invalidateSourcePreviewCache() {
+    this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel);
+    this->previewResolveThreadPool.removeAllJobs(true, 2000);
+    const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+    this->previewTargetCache.clear();
+    this->pendingPreviewTargetKeys.clear();
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceInstrumentBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance) {
+    return this->setSourceBalance(kitId, instrumentId, articulationId, balance, false);
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceArticulationBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance) {
+    return this->setSourceBalance(kitId, instrumentId, articulationId, balance, true);
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance, bool articulationScope) {
+    ParseResult<SourceVelocityRangeInfo> result;
+    if (balance.has_value() && (*balance < -127 || *balance > 127)) return result.returnWithError("Source balance must be L1..L127, C0, or R1..R127");
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+
+    auto candidateOverrides = kit->sourceOverrides;
+    if (articulationScope) candidateOverrides.setArticulationBalance(instrument->meta.codeRaw, articulation->codeRaw, balance);
+    else candidateOverrides.setInstrumentBalance(instrument->meta.codeRaw, balance);
+    const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
+    if (!saveResult.ok()) return result.returnWithError(saveResult.error());
+    this->invalidateSourcePreviewCache();
+
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        kit->sourceOverrides = std::move(candidateOverrides);
+        if (articulationScope) articulation->balanceOverride = balance;
+        else instrument->balanceOverride = balance;
+        for (const auto& synth : this->instrumentSynthPtrs) {
+            if (synth == nullptr) continue;
+            synth->refreshSourceBalance(*instrument, articulationScope ? articulation : nullptr);
+        }
+    }
+    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    return result;
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSampleManualGain(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, std::optional<float> manualGainDb) {
+    ParseResult<SourceVelocityRangeInfo> result;
+    if (manualGainDb.has_value() && !std::isfinite(*manualGainDb)) return result.returnWithError("Manual gain must be a finite dB value");
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+
+    const auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, relativePath);
+    if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation");
+    const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
+    const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(relativePath, contentHash);
+    if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
+    const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : relativePath;
+    auto candidateOverrides = kit->sourceOverrides;
+    candidateOverrides.setSampleManualGain(overridePath, contentHash, manualGainDb);
+    const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
+    if (!saveResult.ok()) return result.returnWithError(saveResult.error());
+    this->invalidateSourcePreviewCache();
+
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        kit->sourceOverrides = std::move(candidateOverrides);
+        const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(overridePath);
+        const std::optional<float> effectiveOverride = sampleOverride != nullptr ? sampleOverride->manualGainDb : std::nullopt;
+        for (auto* sample : matchingSamples) {
+            const float previousGainDb = sample->manualGainDb;
+            sample->manualGainDbOverride = effectiveOverride;
+            sample->manualGainDb = sample->manualGainDbOverride.value_or(sample->filenameManualGainDb);
+            const float gainDeltaDb = sample->manualGainDb - previousGainDb;
+            sample->peakDb += gainDeltaDb;
+            if (sample->decayEnvelope.isValid()) sample->decayEnvelope.peakDb += gainDeltaDb;
+        }
+        instrument->buildCalibrationProfiles();
+        for (const auto& synth : this->instrumentSynthPtrs)
+            if (synth != nullptr) synth->refreshSourceCalibrationAndReload(*articulation);
+    }
+
+    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    return result;
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamplePlaybackOffset(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, const std::optional<juce::String>& micCode, std::optional<float> playbackOffsetMs) {
+    ParseResult<SourceVelocityRangeInfo> result;
+    if (playbackOffsetMs.has_value() && !std::isfinite(*playbackOffsetMs)) return result.returnWithError("Playback offset must be a finite millisecond value");
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+
+    const auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, relativePath);
+    if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation");
+    const auto normalizedMicCode = micCode.has_value() ? micCode->trim().toLowerCase() : juce::String();
+    if (micCode.has_value() && normalizedMicCode.isEmpty()) return result.returnWithError("Source mic code is empty");
+    if (micCode.has_value() && std::none_of(matchingSamples.begin(), matchingSamples.end(), [&normalizedMicCode](const auto* sample) {
+        return sample != nullptr && sample->micSpec.raw.trim().toLowerCase() == normalizedMicCode;
+    })) return result.returnWithError("Source mic was not found in this sample file");
+
+    auto candidateOverrides = kit->sourceOverrides;
+    const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
+    const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(relativePath, contentHash);
+    if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
+    const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : relativePath;
+    if (micCode.has_value()) candidateOverrides.setMicPlaybackOffset(overridePath, contentHash, normalizedMicCode, playbackOffsetMs);
+    else candidateOverrides.setSamplePlaybackOffset(overridePath, contentHash, playbackOffsetMs);
+    const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
+    if (!saveResult.ok()) return result.returnWithError(saveResult.error());
+    this->invalidateSourcePreviewCache();
+
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        kit->sourceOverrides = std::move(candidateOverrides);
+        const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(overridePath);
+        for (auto* sample : matchingSamples) {
+            const auto sampleMicCode = sample->micSpec.raw.trim().toLowerCase();
+            if (sampleOverride != nullptr) {
+                const auto micOverrideIt = sampleOverride->micOverrides.find(sampleMicCode);
+                if (micOverrideIt != sampleOverride->micOverrides.end() && micOverrideIt->second.playbackOffsetMs.has_value())
+                    sample->playbackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
+                else
+                    sample->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+            } else {
+                sample->playbackOffsetMsOverride.reset();
+            }
+            sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
+            for (const auto& synth : this->instrumentSynthPtrs)
+                if (synth != nullptr) synth->refreshSourcePlaybackOffset(*sample);
+        }
+    }
+
+    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    return result;
+}
+
+bool DrumKitEngine::publishSourceRecipeReload(const std::shared_ptr<SampledSound>& sound, uint64_t revision, float fixedGainDb, std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+    if (sound == nullptr) return false;
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+    if (sound->sourceRecipeRevision.load(std::memory_order_acquire) != revision) return false;
+    if (buffer == nullptr) {
+        sound->sourceRecipeStatus.store(SampledSound::SourceRecipeStatus::Failed, std::memory_order_release);
+        return false;
+    }
+
+    sound->buffer = std::move(buffer);
+    sound->sampleRate = sampleRate;
+    sound->sampleLengthSamples = sound->buffer->getNumSamples();
+    sound->sampleLengthMs = sampleRate > 0.0 ? static_cast<float>((static_cast<double>(sound->sampleLengthSamples) / sampleRate) * 1000.0) : 0.0f;
+    sound->transitionAudioValid = false;
+    if (sound->buffer->getNumChannels() > 0 && sound->buffer->getNumSamples() > 0) {
+        int sourceChannelStart = 0;
+        int sourceChannelCount = sound->buffer->getNumChannels();
+        if (sound->sampleVariantSpec != nullptr) {
+            sourceChannelStart = sound->sampleVariantSpec->fileChannelStart;
+            if (sound->sampleVariantSpec->fileChannelCount > 0) sourceChannelCount = sound->sampleVariantSpec->fileChannelCount;
+        }
+        const int sourceChannelEnd = juce::jmin(sound->buffer->getNumChannels(), sourceChannelStart + sourceChannelCount);
+        for (int sourceChannel = juce::jmax(0, sourceChannelStart); sourceChannel < sourceChannelEnd; ++sourceChannel) {
+            if (sound->buffer->getMagnitude(sourceChannel, 0, sound->buffer->getNumSamples()) <= 0.000001f) continue;
+            sound->transitionAudioValid = true;
+            break;
+        }
+    }
+    sound->canonicalFixedGainDb = fixedGainDb;
+    sound->requestedFixedGainDb = fixedGainDb;
+    sound->cachedSourceGainCorrection.store(1.0f, std::memory_order_release);
+    sound->loaded.store(true, std::memory_order_release);
+    sound->sourceRecipeStatus.store(SampledSound::SourceRecipeStatus::Applied, std::memory_order_release);
+    return true;
 }
 
 bool DrumKitEngine::useMicLayout(juce::String name) {
@@ -1617,26 +1873,35 @@ juce::ThreadPoolJob::JobStatus DrumKitEngine::PreviewResolveJob::runJob() {
                                             this->kitCodeRaw,
                                             this->instCode,
                                             this->artCode,
+                                            this->relativePath,
+                                            this->micCode,
                                             this->resolveVelocity,
-                                            this->playbackVelocity);
+                                            this->playbackVelocity,
+                                            this->generation);
     return jobHasFinished;
 }
 
 std::string DrumKitEngine::makePreviewTargetCacheKey(const juce::String& kitCodeRaw,
                                                      const juce::String& instCode,
                                                      const juce::String& artCode,
-                                                     juce::uint8 velocity) const {
+                                                     juce::uint8 velocity,
+                                                     const juce::String& relativePath,
+                                                     const juce::String& micCode) const {
     const auto key = kitCodeRaw.trim().toLowerCase()
                    + "|" + instCode.trim().toLowerCase()
                    + "|" + artCode.trim().toLowerCase()
-                   + "|" + juce::String(DrumKitEnginePreviewHelpers::getPreviewVelocityBucket(velocity));
+                   + "|" + juce::String(DrumKitEnginePreviewHelpers::getPreviewVelocityBucket(velocity))
+                   + "|" + relativePath.trim().replaceCharacter('\\', '/').toLowerCase()
+                   + "|" + micCode.trim().toLowerCase();
     return key.toStdString();
 }
 
 std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(const juce::String& kitCodeRaw,
                                                                                  const juce::String& instCode,
                                                                                  const juce::String& artCode,
-                                                                                 juce::uint8 velocity) {
+                                                                                 juce::uint8 velocity,
+                                                                                 const juce::String& relativePath,
+                                                                                 const juce::String& micCode) {
     const juce::ScopedLock sourceLock(this->sourceModelLock);
     auto* libMgr = this->libraryManagerPtr.get();
     if (libMgr == nullptr)
@@ -1683,26 +1948,42 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
         }
     }
 
-    KitLib::VelocityLayerSpec* bestLayer = artSpec->velocityLayerSpecs.back().get();
-    for (auto& layer : artSpec->velocityLayerSpecs) {
-        if (velocity <= layer->selectionUpperVelocity) {
-            bestLayer = layer.get();
-            break;
+    KitLib::VelocityLayerSpec* bestLayer = nullptr;
+    KitLib::SampleVariantSpec* bestVariant = nullptr;
+    const auto normalizedRelativePath = relativePath.trim().replaceCharacter('\\', '/');
+    const auto normalizedMicCode = micCode.trim();
+    if (normalizedRelativePath.isNotEmpty()) {
+        for (auto& layer : artSpec->velocityLayerSpecs) {
+            if (layer == nullptr) continue;
+            for (auto& sampleVariant : layer->sampleVariantSpecs) {
+                if (sampleVariant == nullptr || !sampleVariant->isValid()) continue;
+                const auto candidateRelativePath = sampleVariant->sampleFile.getRelativePathFrom(kit->meta.rootDir).replaceCharacter('\\', '/');
+                if (!candidateRelativePath.equalsIgnoreCase(normalizedRelativePath)) continue;
+                if (normalizedMicCode.isNotEmpty() && !sampleVariant->micSpec.raw.equalsIgnoreCase(normalizedMicCode)) continue;
+                bestLayer = layer.get();
+                bestVariant = sampleVariant.get();
+                break;
+            }
+            if (bestVariant != nullptr) break;
+        }
+    } else {
+        bestLayer = artSpec->velocityLayerSpecs.back().get();
+        for (auto& layer : artSpec->velocityLayerSpecs) {
+            if (velocity <= layer->selectionUpperVelocity) {
+                bestLayer = layer.get();
+                break;
+            }
+        }
+
+        if (bestLayer == nullptr || bestLayer->sampleVariantSpecs.empty()) return std::nullopt;
+
+        for (auto& sampleVariant : bestLayer->sampleVariantSpecs) {
+            if (sampleVariant == nullptr || !sampleVariant->isValid()) continue;
+            if (bestVariant == nullptr || DrumKitEnginePreviewHelpers::isBetterPreviewSampleVariant(*sampleVariant, *bestVariant)) bestVariant = sampleVariant.get();
         }
     }
 
-    if (bestLayer == nullptr || bestLayer->sampleVariantSpecs.empty())
-        return std::nullopt;
-
-    KitLib::SampleVariantSpec* bestVariant = nullptr;
-    for (auto& sampleVariant : bestLayer->sampleVariantSpecs) {
-        if (sampleVariant == nullptr || !sampleVariant->isValid()) continue;
-
-        if (bestVariant == nullptr || DrumKitEnginePreviewHelpers::isBetterPreviewSampleVariant(*sampleVariant, *bestVariant))
-            bestVariant = sampleVariant.get();
-    }
-
-    if (bestVariant == nullptr) return std::nullopt;
+    if (bestLayer == nullptr || bestVariant == nullptr) return std::nullopt;
 
     PreviewTarget target;
     target.sampleFile = bestVariant->sampleFile;
@@ -1763,11 +2044,12 @@ void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::ui
     });
 }
 
-void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey, const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 resolveVelocity, juce::uint8 playbackVelocity) {
-    auto target = this->resolvePreviewTarget(kitCodeRaw, instCode, artCode, resolveVelocity);
+void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey, const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, const juce::String& relativePath, const juce::String& micCode, juce::uint8 resolveVelocity, juce::uint8 playbackVelocity, uint64_t generation) {
+    auto target = this->resolvePreviewTarget(kitCodeRaw, instCode, artCode, resolveVelocity, relativePath, micCode);
 
     {
         const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        if (this->previewTargetGeneration.load(std::memory_order_acquire) != generation) return;
         this->pendingPreviewTargetKeys.erase(cacheKey);
         if (target.has_value())
             this->previewTargetCache[cacheKey] = *target;
@@ -1778,12 +2060,14 @@ void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey, const juce
 }
 
 
-void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity) {
-    const auto cacheKey = this->makePreviewTargetCacheKey(kitCodeRaw, instCode, artCode, velocity);
+void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity, const juce::String& relativePath, const juce::String& micCode) {
+    const auto cacheKey = this->makePreviewTargetCacheKey(kitCodeRaw, instCode, artCode, velocity, relativePath, micCode);
+    uint64_t generation = 0;
     std::optional<PreviewTarget> cachedTarget;
 
     {
         const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        generation = this->previewTargetGeneration.load(std::memory_order_acquire);
         auto it = this->previewTargetCache.find(cacheKey);
         if (it != this->previewTargetCache.end())
             cachedTarget = it->second;
@@ -1797,7 +2081,7 @@ void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce
     }
 
     const auto resolveVelocity = DrumKitEnginePreviewHelpers::getPreviewVelocityForBucket(velocity);
-    this->previewResolveThreadPool.addJob(new PreviewResolveJob(*this, cacheKey, kitCodeRaw, instCode, artCode, resolveVelocity, velocity), true);
+    this->previewResolveThreadPool.addJob(new PreviewResolveJob(*this, cacheKey, kitCodeRaw, instCode, artCode, relativePath, micCode, resolveVelocity, velocity, generation), true);
 }
 
 
