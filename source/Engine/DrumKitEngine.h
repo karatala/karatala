@@ -118,6 +118,11 @@ public:
         std::vector<SourceSampleOverrideInfo> samples;
     };
 
+    struct SourceSamplePlaybackOffsetTarget {
+        juce::String relativePath;
+        std::optional<juce::String> micCode;
+    };
+
     explicit DrumKitEngine() {
         this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
         this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
@@ -166,7 +171,9 @@ public:
     ParseResult<SourceVelocityRangeInfo> setSourceInstrumentBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance);
     ParseResult<SourceVelocityRangeInfo> setSourceArticulationBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance);
     ParseResult<SourceVelocityRangeInfo> setSourceSampleManualGain(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, std::optional<float> manualGainDb);
+    ParseResult<SourceVelocityRangeInfo> setSourceSampleManualGainBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<juce::String>& relativePaths, std::optional<float> manualGainDb);
     ParseResult<SourceVelocityRangeInfo> setSourceSamplePlaybackOffset(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, const std::optional<juce::String>& micCode, std::optional<float> playbackOffsetMs);
+    ParseResult<SourceVelocityRangeInfo> setSourceSamplePlaybackOffsetBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<SourceSamplePlaybackOffsetTarget>& targets, std::optional<float> playbackOffsetMs);
     ParseResult<SourceVelocityRangeInfo> reloadSourceOverrides(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId);
 
     bool useKitLayout(juce::String name);

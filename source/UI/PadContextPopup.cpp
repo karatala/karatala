@@ -1258,6 +1258,10 @@ void PadContextPopup::showSourceOverrideEditor(LayerRow* layer) {
     this->activeSourceOverrideEditor->onPreview = [this, layer, source](int velocity, int namedVelocity, const juce::String& roundRobin, const juce::String& relativePath, const juce::String& micCode) {
         const auto previewVelocity = static_cast<juce::uint8>(juce::jlimit(1, 127, velocity));
         if (relativePath.isNotEmpty()) {
+            if (micCode.isNotEmpty()) {
+                this->engine.previewSourceItem(source.rawKitCode, source.rawInstCode, source.rawArtCode, previewVelocity, relativePath, micCode);
+                return;
+            }
             if (this->engine.playSourceLogicalHitPreview(this->slotId, layer->artName, source.rawKitCode, source.rawInstCode, source.rawArtCode, namedVelocity, roundRobin, previewVelocity)) return;
             this->engine.previewSourceItem(source.rawKitCode, source.rawInstCode, source.rawArtCode, previewVelocity, relativePath, micCode);
             return;

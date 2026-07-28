@@ -548,8 +548,13 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceBala
 }
 
 ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSampleManualGain(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, std::optional<float> manualGainDb) {
+    return this->setSourceSampleManualGainBatch(kitId, instrumentId, articulationId, std::vector<juce::String> { relativePath }, manualGainDb);
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSampleManualGainBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<juce::String>& relativePaths, std::optional<float> manualGainDb) {
     ParseResult<SourceVelocityRangeInfo> result;
     if (manualGainDb.has_value() && !std::isfinite(*manualGainDb)) return result.returnWithError("Manual gain must be a finite dB value");
+    if (relativePaths.empty()) return result.returnWithError("No source sample files were selected");
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
@@ -557,14 +562,26 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
     if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
     if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
 
-    const auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, relativePath);
-    if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation");
-    const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
-    const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(relativePath, contentHash);
-    if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
-    const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : relativePath;
     auto candidateOverrides = kit->sourceOverrides;
-    candidateOverrides.setSampleManualGain(overridePath, contentHash, manualGainDb);
+    struct ResolvedTarget {
+        juce::String overridePath;
+        std::vector<KitLib::SampleVariantSpec*> matchingSamples;
+    };
+    std::vector<ResolvedTarget> resolvedTargets;
+    juce::StringArray uniquePaths;
+    for (const auto& relativePath : relativePaths) {
+        const auto normalizedPath = relativePath.trim().replaceCharacter('\\', '/');
+        if (uniquePaths.contains(normalizedPath)) continue;
+        uniquePaths.add(normalizedPath);
+        auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
+        if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation: " + normalizedPath);
+        const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
+        const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(normalizedPath, contentHash);
+        if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
+        const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : normalizedPath;
+        candidateOverrides.setSampleManualGain(overridePath, contentHash, manualGainDb);
+        resolvedTargets.push_back({ overridePath, std::move(matchingSamples) });
+    }
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
     this->invalidateSourcePreviewCache();
@@ -573,15 +590,17 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
         const juce::ScopedLock sourceLock(this->sourceModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
         kit->sourceOverrides = std::move(candidateOverrides);
-        const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(overridePath);
-        const std::optional<float> effectiveOverride = sampleOverride != nullptr ? sampleOverride->manualGainDb : std::nullopt;
-        for (auto* sample : matchingSamples) {
-            const float previousGainDb = sample->manualGainDb;
-            sample->manualGainDbOverride = effectiveOverride;
-            sample->manualGainDb = sample->manualGainDbOverride.value_or(sample->filenameManualGainDb);
-            const float gainDeltaDb = sample->manualGainDb - previousGainDb;
-            sample->peakDb += gainDeltaDb;
-            if (sample->decayEnvelope.isValid()) sample->decayEnvelope.peakDb += gainDeltaDb;
+        for (const auto& resolvedTarget : resolvedTargets) {
+            const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(resolvedTarget.overridePath);
+            const std::optional<float> effectiveOverride = sampleOverride != nullptr ? sampleOverride->manualGainDb : std::nullopt;
+            for (auto* sample : resolvedTarget.matchingSamples) {
+                const float previousGainDb = sample->manualGainDb;
+                sample->manualGainDbOverride = effectiveOverride;
+                sample->manualGainDb = sample->manualGainDbOverride.value_or(sample->filenameManualGainDb);
+                const float gainDeltaDb = sample->manualGainDb - previousGainDb;
+                sample->peakDb += gainDeltaDb;
+                if (sample->decayEnvelope.isValid()) sample->decayEnvelope.peakDb += gainDeltaDb;
+            }
         }
         instrument->buildCalibrationProfiles();
         for (const auto& synth : this->instrumentSynthPtrs)
@@ -593,8 +612,13 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
 }
 
 ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamplePlaybackOffset(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, const std::optional<juce::String>& micCode, std::optional<float> playbackOffsetMs) {
+    return this->setSourceSamplePlaybackOffsetBatch(kitId, instrumentId, articulationId, std::vector<SourceSamplePlaybackOffsetTarget> { { relativePath, micCode } }, playbackOffsetMs);
+}
+
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamplePlaybackOffsetBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<SourceSamplePlaybackOffsetTarget>& targets, std::optional<float> playbackOffsetMs) {
     ParseResult<SourceVelocityRangeInfo> result;
     if (playbackOffsetMs.has_value() && !std::isfinite(*playbackOffsetMs)) return result.returnWithError("Playback offset must be a finite millisecond value");
+    if (targets.empty()) return result.returnWithError("No source sample files were selected");
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
@@ -602,21 +626,34 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
     if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
     if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
 
-    const auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, relativePath);
-    if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation");
-    const auto normalizedMicCode = micCode.has_value() ? micCode->trim().toLowerCase() : juce::String();
-    if (micCode.has_value() && normalizedMicCode.isEmpty()) return result.returnWithError("Source mic code is empty");
-    if (micCode.has_value() && std::none_of(matchingSamples.begin(), matchingSamples.end(), [&normalizedMicCode](const auto* sample) {
-        return sample != nullptr && sample->micSpec.raw.trim().toLowerCase() == normalizedMicCode;
-    })) return result.returnWithError("Source mic was not found in this sample file");
-
     auto candidateOverrides = kit->sourceOverrides;
-    const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
-    const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(relativePath, contentHash);
-    if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
-    const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : relativePath;
-    if (micCode.has_value()) candidateOverrides.setMicPlaybackOffset(overridePath, contentHash, normalizedMicCode, playbackOffsetMs);
-    else candidateOverrides.setSamplePlaybackOffset(overridePath, contentHash, playbackOffsetMs);
+    struct ResolvedTarget {
+        juce::String overridePath;
+        std::vector<KitLib::SampleVariantSpec*> matchingSamples;
+    };
+    std::vector<ResolvedTarget> resolvedTargets;
+    juce::StringArray uniqueTargets;
+    for (const auto& target : targets) {
+        const auto normalizedPath = target.relativePath.trim().replaceCharacter('\\', '/');
+        const auto normalizedMicCode = target.micCode.has_value() ? target.micCode->trim().toLowerCase() : juce::String();
+        const auto targetKey = normalizedPath + "\n" + normalizedMicCode;
+        if (uniqueTargets.contains(targetKey)) continue;
+        uniqueTargets.add(targetKey);
+        auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
+        if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation: " + normalizedPath);
+        if (target.micCode.has_value() && normalizedMicCode.isEmpty()) return result.returnWithError("Source mic code is empty");
+        if (target.micCode.has_value() && std::none_of(matchingSamples.begin(), matchingSamples.end(), [&normalizedMicCode](const auto* sample) {
+            return sample != nullptr && sample->micSpec.raw.trim().toLowerCase() == normalizedMicCode;
+        })) return result.returnWithError("Source mic was not found in this sample file: " + normalizedMicCode);
+
+        const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
+        const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(normalizedPath, contentHash);
+        if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
+        const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : normalizedPath;
+        if (target.micCode.has_value()) candidateOverrides.setMicPlaybackOffset(overridePath, contentHash, normalizedMicCode, playbackOffsetMs);
+        else candidateOverrides.setSamplePlaybackOffset(overridePath, contentHash, playbackOffsetMs);
+        resolvedTargets.push_back({ overridePath, std::move(matchingSamples) });
+    }
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
     this->invalidateSourcePreviewCache();
@@ -625,21 +662,23 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
         const juce::ScopedLock sourceLock(this->sourceModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
         kit->sourceOverrides = std::move(candidateOverrides);
-        const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(overridePath);
-        for (auto* sample : matchingSamples) {
-            const auto sampleMicCode = sample->micSpec.raw.trim().toLowerCase();
-            if (sampleOverride != nullptr) {
-                const auto micOverrideIt = sampleOverride->micOverrides.find(sampleMicCode);
-                if (micOverrideIt != sampleOverride->micOverrides.end() && micOverrideIt->second.playbackOffsetMs.has_value())
-                    sample->playbackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
-                else
-                    sample->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
-            } else {
-                sample->playbackOffsetMsOverride.reset();
+        for (const auto& resolvedTarget : resolvedTargets) {
+            const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(resolvedTarget.overridePath);
+            for (auto* sample : resolvedTarget.matchingSamples) {
+                const auto sampleMicCode = sample->micSpec.raw.trim().toLowerCase();
+                if (sampleOverride != nullptr) {
+                    const auto micOverrideIt = sampleOverride->micOverrides.find(sampleMicCode);
+                    if (micOverrideIt != sampleOverride->micOverrides.end() && micOverrideIt->second.playbackOffsetMs.has_value())
+                        sample->playbackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
+                    else
+                        sample->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                } else {
+                    sample->playbackOffsetMsOverride.reset();
+                }
+                sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
+                for (const auto& synth : this->instrumentSynthPtrs)
+                    if (synth != nullptr) synth->refreshSourcePlaybackOffset(*sample);
             }
-            sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
-            for (const auto& synth : this->instrumentSynthPtrs)
-                if (synth != nullptr) synth->refreshSourcePlaybackOffset(*sample);
         }
     }
 
