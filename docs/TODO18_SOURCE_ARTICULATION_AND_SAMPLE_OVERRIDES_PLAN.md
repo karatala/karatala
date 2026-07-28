@@ -385,7 +385,9 @@ Do not reuse the vertical dB handles from `VelocityResponseEditor`. Reuse its mo
 
 - Matrix columns are named velocity layers and rows are round-robin variants.
 - Matrix cells select logical hits. Mic buttons below the matrix filter the selected files.
-- Clicking `*` inverts all existing cells, while clicking a velocity heading inverts that column. Header selection itself is silent.
+- The matrix opens without a selected or active logical hit.
+- Clicking `*` inverts all existing cells, clicking an RR letter inverts its row, and clicking a velocity heading inverts its column. These broad selection changes are silent.
+- The header and its header-styled RR column use centred content.
 - The last previewed matrix cell is the active hit and has a separate outline.
 - The right list contains the existing combination of selected hits and selected mics.
 - Hovering a matrix cell previews its complete logical hit. Hovering a mic button previews only that mic for the active hit.
@@ -563,7 +565,7 @@ Likely files:
 - ✅ Add horizontal velocity-layer blocks and draggable dividers.
 - ✅ Show each layer's exact inclusive range in its block and add even distribution, reset, keyboard control, click preview, and release preview.
 - ✅ Add instrument and articulation balance controls.
-- ✅ Add the RR by velocity matrix, whole-table and column inversion, mic filters, selected-file list, wheel editing, and batch manual-gain and playback-offset fields.
+- ✅ Add the RR by velocity matrix, empty initial selection, whole-table, row, and column inversion, mic filters, selected-file list, wheel editing, and batch manual-gain and playback-offset fields.
 - ✅ Keep filename range data and generated sample measurements available through tooltips without verbose permanent rows.
 - ✅ Show source-global scope, read-only state, and persistence errors for range editing.
 - ✅ Show pending targeted reload state for live manual-gain editing.
@@ -715,7 +717,9 @@ Use temporary fixture kits to verify:
 
 ### Other Source Overrides
 
-- Click `*` and velocity headings from empty, mixed, and full selections and confirm only existing cells invert without preview.
+- Confirm the matrix opens with no selected cells or active outline.
+- Click `*`, RR letters, and velocity headings from empty, mixed, and full selections and confirm only existing cells invert without preview.
+- Confirm header labels and RR letters are centred and the RR column matches the header style.
 - Wheel each value field and use Shift-wheel to confirm coarse and fine steps start from the visible or effective value.
 - Select several hits and confirm a saved value previews the complete hit from the final selected-file row, not a previous solo mic.
 - Change instrument balance and articulation balance separately.

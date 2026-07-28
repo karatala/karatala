@@ -30,8 +30,10 @@ Make source overrides easy to understand and adjust live without searching throu
 ## ✅ Selection model
 
 - Matrix cells select logical hits for batch editing.
-- Clicking `*` inverts every existing matrix cell. Clicking a velocity heading inverts every existing cell in that column.
-- Header selection changes stay silent.
+- The matrix opens with no selected cells and no active-hit outline.
+- Clicking `*` inverts every existing matrix cell. Clicking an RR letter inverts its row. Clicking a velocity heading inverts its column.
+- Whole-table, row, and column selection changes stay silent.
+- Header labels and RR letters are centred. The RR column uses the same colours, font, and borders as the header.
 - Mic buttons select which files from those hits are included in the batch.
 - The selected-file list is the existing combination of selected hits and selected mics.
 - The last previewed matrix cell is also the active hit used by mic preview.
@@ -67,7 +69,8 @@ To keep the main form simple, the selected-sample list should show filenames onl
 
 - ✅ The dropdown, boundary editor, verbose readout, and bottom metadata row were removed.
 - ✅ The matrix, mic filters, active-hit outline, selected-file list, and batch fields were added.
-- ✅ Matrix headings invert the whole table or one velocity column without starting preview.
+- ✅ Matrix controls invert the whole table, one RR row, or one velocity column without starting preview.
+- ✅ The matrix opens empty; its header and header-styled RR column use centred content.
 - ✅ Balance and sample overrides use the source override metadata. Each batch field saves all selected targets through one complete operation.
 - ✅ Matrix and velocity previews use a complete logical hit. Mic hover and click use exact solo preview.
 - ✅ Matrix and mic clicks consume the queued hover for the same target, so one click produces one preview.
@@ -77,4 +80,4 @@ To keep the main form simple, the selected-sample list should show filenames onl
 - ✅ Velocity blocks use a compact two-line layout with a smaller range line.
 - ✅ `Even` distributes and saves every range boundary as one complete operation; `Reset` restores filename values.
 - Pending: build and run the C++ tests when requested.
-- Pending: open a large real kit and verify header inversion, input wheel steps, text size, hover timing, layout, and full-hit audio behavior.
+- Pending: open a large real kit and verify table, row, and column inversion, initial empty selection, alignment, input wheel steps, text size, hover timing, layout, and full-hit audio behavior.

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Engine/DrumKitEngine.h"
+#include "LookAndFeel.h"
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
@@ -49,6 +50,11 @@ private:
     public:
         std::function<void(bool increase, bool fine)> onWheelStep;
         void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
+    };
+
+    class SampleMatrixLookAndFeel : public LookAndFeel {
+    public:
+        void drawTableHeaderColumn(juce::Graphics& graphics, juce::TableHeaderComponent& header, const juce::String& columnName, int columnId, int width, int height, bool isMouseOver, bool isMouseDown, int columnFlags) override;
     };
 
     class SampleMatrixModel : public juce::TableListBoxModel {
@@ -129,6 +135,7 @@ private:
     juce::TextButton retrySaveButton { "Retry save" };
     juce::TextButton reloadSavedButton { "Reload saved" };
     juce::TextButton doneButton { "Done" };
+    SampleMatrixLookAndFeel sampleMatrixLookAndFeel;
     SampleMatrixModel sampleMatrixModel;
     SelectedSampleListModel selectedSampleListModel;
     juce::TableListBox sampleMatrix;
@@ -170,7 +177,7 @@ private:
     bool isLogicalHitSelected(const LogicalHitKey& hit) const;
     bool logicalHitsMatch(const LogicalHitKey& first, const LogicalHitKey& second) const;
     void toggleLogicalHitSelection(int levelIdx, int roundRobinIdx);
-    void invertLogicalHitSelection(std::optional<int> levelIdx);
+    void invertLogicalHitSelection(std::optional<int> levelIdx, std::optional<int> roundRobinIdx = std::nullopt);
     void toggleMicSelection(const juce::String& micCode);
     bool isMicSelected(const juce::String& micCode) const;
     const DrumKitEngine::SourceSampleOverrideInfo* findSample(const LogicalHitKey& hit, const juce::String& micCode = {}) const;

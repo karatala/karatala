@@ -64,6 +64,16 @@ void SourceArticulationOverrideEditor::WheelTextEditor::mouseWheelMove(const juc
     this->onWheelStep(wheelAmount > 0.0, event.mods.isShiftDown());
 }
 
+void SourceArticulationOverrideEditor::SampleMatrixLookAndFeel::drawTableHeaderColumn(juce::Graphics& graphics, juce::TableHeaderComponent& header, const juce::String& columnName, int columnId, int width, int height, bool isMouseOver, bool isMouseDown, int columnFlags) {
+    juce::ignoreUnused(columnId, columnFlags);
+    const auto highlightColour = header.findColour(juce::TableHeaderComponent::highlightColourId);
+    if (isMouseDown) graphics.fillAll(highlightColour);
+    else if (isMouseOver) graphics.fillAll(highlightColour.withMultipliedAlpha(0.625f));
+    graphics.setColour(header.findColour(juce::TableHeaderComponent::textColourId));
+    graphics.setFont(UITheme::Fonts::normal().boldened());
+    graphics.drawFittedText(columnName, juce::Rectangle<int>(0, 0, width, height).reduced(2, 0), juce::Justification::centred, 1);
+}
+
 SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine),
       sampleMatrixModel(*this),
@@ -176,7 +186,8 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
     this->sampleMatrix.setRowHeight(24);
     this->sampleMatrix.setOutlineThickness(0);
     this->sampleMatrix.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
-    this->sampleMatrix.setTooltip("Click * heading to invert the table, or click a velocity heading to invert that column.");
+    this->sampleMatrix.getHeader().setLookAndFeel(&this->sampleMatrixLookAndFeel);
+    this->sampleMatrix.setTooltip("Click * to invert the table, an RR letter to invert its row, or a velocity heading to invert its column.");
     this->sampleMatrix.addMouseListener(this, true);
     this->addAndMakeVisible(this->sampleMatrix);
 
@@ -224,6 +235,7 @@ SourceArticulationOverrideEditor::~SourceArticulationOverrideEditor() {
     this->stopTimer();
     this->clearHoverPreview();
     this->restoreCommittedPreview();
+    this->sampleMatrix.getHeader().setLookAndFeel(nullptr);
 }
 
 int SourceArticulationOverrideEditor::SampleMatrixModel::getNumRows() {
@@ -242,8 +254,13 @@ void SourceArticulationOverrideEditor::SampleMatrixModel::paintCell(juce::Graphi
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.roundRobins.size())) return;
     graphics.setFont(UITheme::Fonts::normal());
     if (columnId == SourceArticulationOverrideEditor::roundRobinColumnId) {
-        graphics.setColour(UITheme::Colours::textSecondary);
-        graphics.drawText(this->owner.roundRobins[static_cast<size_t>(rowNumber)], 8, 0, width - 10, height, juce::Justification::centredLeft);
+        auto& header = this->owner.sampleMatrix.getHeader();
+        graphics.setColour(header.findColour(juce::TableHeaderComponent::backgroundColourId));
+        graphics.fillRect(0, 0, width, height);
+        graphics.setColour(header.findColour(juce::TableHeaderComponent::outlineColourId));
+        graphics.fillRect(width - 1, 0, 1, height);
+        graphics.fillRect(0, height - 1, width, 1);
+        this->owner.sampleMatrixLookAndFeel.drawTableHeaderColumn(graphics, header, this->owner.roundRobins[static_cast<size_t>(rowNumber)], columnId, width, height, false, false, juce::TableHeaderComponent::visible);
         return;
     }
 
@@ -271,14 +288,20 @@ void SourceArticulationOverrideEditor::SampleMatrixModel::paintCell(juce::Graphi
 
 void SourceArticulationOverrideEditor::SampleMatrixModel::cellClicked(int rowNumber, int columnId, const juce::MouseEvent& event) {
     juce::ignoreUnused(event);
+    if (columnId == SourceArticulationOverrideEditor::roundRobinColumnId) {
+        this->owner.invertLogicalHitSelection(std::nullopt, rowNumber);
+        return;
+    }
     const int levelIdx = columnId - SourceArticulationOverrideEditor::velocityColumnIdBase;
-    if (columnId == SourceArticulationOverrideEditor::roundRobinColumnId || levelIdx < 0) return;
+    if (levelIdx < 0) return;
     this->owner.toggleLogicalHitSelection(levelIdx, rowNumber);
 }
 
 juce::String SourceArticulationOverrideEditor::SampleMatrixModel::getCellTooltip(int rowNumber, int columnId) {
+    if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.roundRobins.size())) return {};
+    if (columnId == SourceArticulationOverrideEditor::roundRobinColumnId) return "RR " + this->owner.roundRobins[static_cast<size_t>(rowNumber)] + ": click to invert this row";
     const int levelIdx = columnId - SourceArticulationOverrideEditor::velocityColumnIdBase;
-    if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.roundRobins.size()) || levelIdx < 0 || levelIdx >= static_cast<int>(this->owner.rangeInfo.levels.size())) return {};
+    if (levelIdx < 0 || levelIdx >= static_cast<int>(this->owner.rangeInfo.levels.size())) return {};
     if (!this->owner.logicalHitExists(levelIdx, rowNumber)) return {};
     const auto velocity = juce::String(this->owner.rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity).paddedLeft('0', 3);
     return velocity + this->owner.roundRobins[static_cast<size_t>(rowNumber)] + ": hover to preview all mics, click to select";
@@ -477,13 +500,8 @@ void SourceArticulationOverrideEditor::rebuildSampleView(bool initializeSelectio
     if (initializeSelection) {
         this->selectedHits.clear();
         this->selectedMicCodes = this->micCodes;
-        if (!this->rangeInfo.samples.empty()) {
-            this->activeHit = { this->rangeInfo.samples.front().namedVelocity, this->rangeInfo.samples.front().roundRobin };
-            this->hasActiveHit = true;
-            this->selectedHits.push_back(this->activeHit);
-        } else {
-            this->hasActiveHit = false;
-        }
+        this->activeHit = {};
+        this->hasActiveHit = false;
     } else {
         std::erase_if(this->selectedHits, [this](const auto& hit) { return !this->logicalHitExists(hit); });
         std::erase_if(this->selectedMicCodes, [this](const auto& selectedMicCode) {
@@ -505,10 +523,10 @@ void SourceArticulationOverrideEditor::rebuildSampleView(bool initializeSelectio
 void SourceArticulationOverrideEditor::rebuildMatrixColumns() {
     auto& header = this->sampleMatrix.getHeader();
     header.removeAllColumns();
-    header.addColumn("*", roundRobinColumnId, 20, 20, 20, juce::TableHeaderComponent::visible);
+    header.addColumn("*", roundRobinColumnId, 30, 30, 30, juce::TableHeaderComponent::visible);
     for (int levelIdx = 0; levelIdx < static_cast<int>(this->rangeInfo.levels.size()); ++levelIdx) {
         const auto velocityText = juce::String(this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity).paddedLeft('0', 3);
-        header.addColumn(velocityText, velocityColumnIdBase + levelIdx, 48, 48, 48, juce::TableHeaderComponent::visible);
+        header.addColumn(velocityText, velocityColumnIdBase + levelIdx, 30, 30, 30, juce::TableHeaderComponent::visible);
     }
     this->sampleMatrix.updateContent();
 }
@@ -802,16 +820,18 @@ void SourceArticulationOverrideEditor::toggleLogicalHitSelection(int levelIdx, i
     this->previewLogicalHit(hit, hit.namedVelocity);
 }
 
-void SourceArticulationOverrideEditor::invertLogicalHitSelection(std::optional<int> levelIdx) {
+void SourceArticulationOverrideEditor::invertLogicalHitSelection(std::optional<int> levelIdx, std::optional<int> roundRobinIdx) {
     if (!this->commitPendingSampleEditors()) return;
     const int firstLevelIdx = levelIdx.value_or(0);
     const int lastLevelIdx = levelIdx.has_value() ? *levelIdx + 1 : static_cast<int>(this->rangeInfo.levels.size());
-    if (firstLevelIdx < 0 || lastLevelIdx > static_cast<int>(this->rangeInfo.levels.size())) return;
+    const int firstRoundRobinIdx = roundRobinIdx.value_or(0);
+    const int lastRoundRobinIdx = roundRobinIdx.has_value() ? *roundRobinIdx + 1 : static_cast<int>(this->roundRobins.size());
+    if (firstLevelIdx < 0 || lastLevelIdx > static_cast<int>(this->rangeInfo.levels.size()) || firstRoundRobinIdx < 0 || lastRoundRobinIdx > static_cast<int>(this->roundRobins.size())) return;
 
     for (int currentLevelIdx = firstLevelIdx; currentLevelIdx < lastLevelIdx; ++currentLevelIdx) {
-        for (int roundRobinIdx = 0; roundRobinIdx < static_cast<int>(this->roundRobins.size()); ++roundRobinIdx) {
-            if (!this->logicalHitExists(currentLevelIdx, roundRobinIdx)) continue;
-            LogicalHitKey hit { this->rangeInfo.levels[static_cast<size_t>(currentLevelIdx)].namedVelocity, this->roundRobins[static_cast<size_t>(roundRobinIdx)] };
+        for (int currentRoundRobinIdx = firstRoundRobinIdx; currentRoundRobinIdx < lastRoundRobinIdx; ++currentRoundRobinIdx) {
+            if (!this->logicalHitExists(currentLevelIdx, currentRoundRobinIdx)) continue;
+            LogicalHitKey hit { this->rangeInfo.levels[static_cast<size_t>(currentLevelIdx)].namedVelocity, this->roundRobins[static_cast<size_t>(currentRoundRobinIdx)] };
             const auto selectedIt = std::find_if(this->selectedHits.begin(), this->selectedHits.end(), [this, &hit](const auto& selectedHit) { return this->logicalHitsMatch(hit, selectedHit); });
             if (selectedIt == this->selectedHits.end()) this->selectedHits.push_back(hit);
             else this->selectedHits.erase(selectedIt);
