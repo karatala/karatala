@@ -123,6 +123,11 @@ public:
         std::optional<juce::String> micCode;
     };
 
+    struct SourceVelocityUpperBoundaryTarget {
+        int namedVelocity = 0;
+        int upperBoundary = 0;
+    };
+
     explicit DrumKitEngine() {
         this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
         this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
@@ -165,8 +170,8 @@ public:
     ParseResult<VelocityResponsePreset> saveVelocityResponsePreset(const juce::String& name, const juce::String& definition, bool replaceExisting) const;
     VelocityResponseSourceInfo getSourceVelocityResponseInfo(const juce::String& sourcePath) const;
     SourceVelocityRangeInfo getSourceVelocityRangeInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const;
-    ParseResult<SourceVelocityRangeInfo> setSourceVelocityUpperBoundary(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId,
-                                                                       int namedVelocity, std::optional<int> upperBoundary, bool persist = true);
+    ParseResult<SourceVelocityRangeInfo> setSourceVelocityUpperBoundary(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, int namedVelocity, std::optional<int> upperBoundary, bool persist = true);
+    ParseResult<SourceVelocityRangeInfo> setSourceVelocityUpperBoundariesBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<SourceVelocityUpperBoundaryTarget>& targets);
     ParseResult<SourceVelocityRangeInfo> resetSourceVelocityUpperBoundaries(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId);
     ParseResult<SourceVelocityRangeInfo> setSourceInstrumentBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance);
     ParseResult<SourceVelocityRangeInfo> setSourceArticulationBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance);

@@ -2,7 +2,7 @@
 
 Date: 2026-07-27
 
-Status: In progress. Runtime editing and persistence are implemented for velocity ranges, source balance, manual gain, and playback offsets. Selected preview starts the complete linked logical hit without changing performance round-robin history. Save failures offer safe retry and saved-file reload actions. The C++ `Tests` target builds and all 177 C++ tests pass. Visual QA, Python verification, and the offline materialization workflow remain.
+Status: In progress. Runtime editing and persistence are implemented for velocity ranges, source balance, manual gain, and playback offsets. The source editor now uses an RR by velocity matrix, mic filters, batch editing, full-hit preview, and solo-mic preview. The earlier source-override version passed all 177 C++ tests. The current UX and batch-save changes have not been built or tested yet by request. Visual QA, Python verification, and the offline materialization workflow remain.
 
 ## Current Implementation Progress
 
@@ -10,13 +10,15 @@ Status: In progress. Runtime editing and persistence are implemented for velocit
 - ✅ Preserved filename defaults separately and applied saved balance, `manualGainDb`, and playback offsets during normal kit loading.
 - ✅ Added editable exact velocity boundaries with live runtime preview, validation, reset actions, and source-wide persistence.
 - ✅ Added `Source setup...` on exact source-articulation rows in `PadContextPopup`.
-- ✅ Added focused parser, writer, model, velocity-table, linked-preview, and saved-reload tests. The complete C++ suite passes: 177 of 177 tests.
+- ✅ Added focused parser, writer, model, velocity-table, linked-preview, and saved-reload tests. Before the current editor redesign, the complete C++ suite passed: 177 of 177 tests.
 - ✅ Added unique content-hash recovery, external-change conflict protection, full source-value snapshots, balance/gain/offset UI, and live runtime update paths.
 - ✅ Added smoothed manual-gain correction, affected-articulation recalculation, targeted recipe loading, safe buffer publication, and pending or failed status display.
 - ✅ Added deterministic complete logical-hit preview, including linked mics, without changing performance RR history.
 - ✅ Added explicit `Retry save` and `Reload saved` recovery actions for persistence failures.
+- ✅ Replaced the long sample dropdown with an RR by velocity multi-select matrix, mic filters, a selected-file list, and atomic batch gain and offset editing.
+- ✅ Moved sample measurements to selected-file tooltips and added full-hit, solo-mic, and velocity-block hover or click preview rules.
 - ✅ Added the first review-only JSON dry-run planner. Python verification is intentionally deferred until the C++ and UI work is stable.
-- Remaining: offline materialization, visual QA, and Python verification.
+- Remaining: build and C++ verification of the editor redesign, visual and audio QA, offline materialization, and Python verification.
 
 ## Goal
 
@@ -28,7 +30,7 @@ The editor must let the user:
 - preview the result immediately without renaming sample files;
 - save sparse manual settings in a portable metadata file inside the drum-kit folder;
 - edit source balance, `manualGainDb`, and `playbackOffsetMs` at their correct scopes;
-- see the filename value, saved override, and effective value separately;
+- keep filename and measurement details available without crowding the main editing controls;
 - later use the same saved data to create a reviewed file-rename or audio-processing plan.
 
 The first important result is editable velocity boundaries. Other source overrides must use the same typed model and persistence path instead of creating separate formats.
@@ -354,75 +356,49 @@ Do not flush the complete cache or reload unrelated instruments.
 
 ## Source Override Editor
 
-Create a reusable `SourceArticulationOverrideEditor`.
+The reusable `SourceArticulationOverrideEditor` is available through `Source setup...` on exact pad-popup source rows. Its current UX contract and remaining visual checks are in [`TODO18_SOURCE_OVERRIDE_EDITOR_UX_REDESIGN_PLAN.md`](TODO18_SOURCE_OVERRIDE_EDITOR_UX_REDESIGN_PLAN.md).
 
-The initial entry point is a `Source setup...` action on each exact source-articulation row in `PadContextPopup`, near the existing velocity-response control. The editor must show:
+The editor uses normal text, one balance row, range blocks with exact effective ranges, an RR by velocity multi-select matrix, mic filters, a selected-file list, and three batch fields. The selected-file list shows filenames only. Generated onset, intensity, peak, and recipe status remain available in row tooltips.
 
-```text
-SOURCE KIT OVERRIDE - affects every map using this source
-
-Kit / Instrument / Articulation
-Instrument balance [Filename] [Override] [Effective]
-Articulation balance [Filename] [Override] [Effective]
-
-MIDI velocity  1 --------------------------------------------------------- 127
-               [ 043 ] | [       085       ] | [          127           ]
-                       ^ draggable divider   ^ draggable divider
-
-Selected layer: 085    Effective range: 51..91    Round robins: a, b, c
-
-Sample file / RR / mics / Manual gain / Playback offset / Status
-
-[Reset selected] [Reset articulation ranges] [Preview] [Done]
-```
-
-Later, the planned kit browser may open the same editor directly for any source articulation. Do not create a second editor for that workflow.
+Later, the planned kit browser may open this same editor directly for any source articulation. Do not create a second editor for that workflow.
 
 ### Velocity Range Interaction
 
 - Draw one horizontal block for each named velocity layer.
 - Use block width to show its effective MIDI range.
-- Label each block with original named velocity.
-- Show round-robin count in its tooltip.
+- Label each block with original named velocity and its current inclusive MIDI range.
 - Drag only dividers between adjacent blocks.
 - Clamp a divider so both adjacent layers keep at least one MIDI value.
 - Let left and right arrow keys move the selected divider by one.
 - Let Shift plus arrow move it by five.
-- Provide a numeric upper-bound editor for precise changes.
-- Show filename default, override, and effective boundary in the readout.
-- Preview at the current pointer velocity or selected numeric MIDI velocity.
+- Keep filename range details in the block tooltip instead of a separate numeric editor and readout row.
+- Click a block to preview the MIDI velocity under the pointer.
 - Apply a drag live to the current engine instance.
-- Commit persistence on mouse-up.
-- `Reset selected` removes only the selected boundary override.
-- `Reset articulation ranges` removes all boundary overrides for the articulation.
+- Commit persistence on mouse-up and preview once after release.
+- `Even` distributes MIDI `1-127` across all named layers, saves all resulting boundaries in one operation, and previews once.
+- `Reset` removes all boundary overrides for the articulation.
 - If the source has one named velocity layer, show `Single layer: MIDI 1..127` and no divider.
 
 Do not reuse the vertical dB handles from `VelocityResponseEditor`. Reuse its modal shell, preview behavior, commit callback pattern, theme, keyboard support, and status handling where practical.
 
-### Source Value Table
+### Source Value Selection And Batch Editing
 
-Below the range graph, show source data grouped by named velocity and round robin.
-
-For each selected logical hit:
-
-- show original named velocity and round-robin letter;
-- show every source file and mic code that belongs to the hit;
-- show generated onset, intensity, and true peak as read-only information when available;
-- edit whole-file `manualGainDb` once even when one multichannel file provides several mic rows;
-- edit whole-file and per-mic playback offsets without duplicating the file control;
-- mark inherited values, explicit overrides, stale metadata, and pending reload clearly;
-- preview the selected hit with a predictable round-robin lock local to preview;
-- never change the normal performance round-robin counter during editor preview.
-
-Balance controls stay at instrument and articulation scope above the table. Do not repeat them on every sample row.
+- Matrix columns are named velocity layers and rows are round-robin variants.
+- Matrix cells select logical hits. Mic buttons below the matrix filter the selected files.
+- The last previewed matrix cell is the active hit and has a separate outline.
+- The right list contains the existing combination of selected hits and selected mics.
+- Hovering a matrix cell previews its complete logical hit. Hovering a mic button previews only that mic for the active hit.
+- File gain, file start offset, and mic offset apply to all selected files through one complete save.
+- A field shows one shared override, `Mixed`, or its inherited source placeholder.
+- Generated onset, intensity, peak, content-hash recovery, ambiguity, and recipe status stay in selected-file tooltips.
+- Preview never changes the normal performance round-robin counter.
 
 ### UI Safety
 
-- Show a persistent warning that this is a source-kit change shared by all maps.
+- Show a persistent simple scope note that the source change affects every pad using this instrument.
 - Disable editing when the source address is ambiguous.
 - Disable save, but not preview, for a read-only kit.
 - Keep unsaved live changes visible if persistence fails and provide `Retry save` or `Reload saved`.
-- Confirm only broad resets that remove several overrides.
 - Do not confirm normal divider drags or single-value edits.
 - Use tooltips that explain negative and positive playback offset.
 - Preserve keyboard focus, resizing, and outside-click behavior used by the existing modal editor.
@@ -582,10 +558,10 @@ Likely files:
 
 - ✅ Reuse the existing modal visual language and commit pattern.
 - ✅ Add horizontal velocity-layer blocks and draggable dividers.
-- ✅ Add precise numeric editing, reset actions, keyboard control, and preview.
+- ✅ Show each layer's exact inclusive range in its block and add even distribution, reset, keyboard control, click preview, and release preview.
 - ✅ Add instrument and articulation balance controls.
-- ✅ Add logical-hit, file, mic, measurement, manual-gain, and playback-offset rows.
-- ✅ Make filename, override, and effective velocity boundaries visually distinct.
+- ✅ Add the RR by velocity matrix, mic filters, selected-file list, and batch manual-gain and playback-offset fields.
+- ✅ Keep filename range data and generated sample measurements available through tooltips without verbose permanent rows.
 - ✅ Show source-global scope, read-only state, and persistence errors for range editing.
 - ✅ Show pending targeted reload state for live manual-gain editing.
 

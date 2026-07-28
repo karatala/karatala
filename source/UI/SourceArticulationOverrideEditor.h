@@ -118,6 +118,7 @@ private:
     juce::TextButton resetManualGainButton;
     juce::TextButton resetFileOffsetButton;
     juce::TextButton resetMicOffsetButton;
+    juce::TextButton evenRangesButton { "Even" };
     juce::TextButton resetRangesButton { "Reset" };
     juce::TextButton retrySaveButton { "Retry save" };
     juce::TextButton reloadSavedButton { "Reload saved" };
@@ -133,6 +134,7 @@ private:
     std::function<void()> retrySaveAction;
 
     bool applySelectedBoundary(int upperBoundary, bool persist);
+    void evenlyDistributeRanges();
     void resetAllBoundaries();
     void restoreCommittedPreview();
     void updateControls();

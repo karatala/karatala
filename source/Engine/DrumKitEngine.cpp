@@ -464,6 +464,60 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelo
     return result;
 }
 
+ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelocityUpperBoundariesBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<SourceVelocityUpperBoundaryTarget>& targets) {
+    ParseResult<SourceVelocityRangeInfo> result;
+    if (targets.empty()) return result.returnWithError("No velocity boundaries were selected");
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
+    auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+
+    auto candidateOverrides = kit->sourceOverrides;
+    std::vector<int> updatedNamedVelocities;
+    updatedNamedVelocities.reserve(targets.size());
+    for (const auto& target : targets) {
+        if (target.namedVelocity < 1 || target.namedVelocity > MIDI_MAX_VALUE) return result.returnWithError("Named velocity must be 1..127");
+        if (target.upperBoundary < 1 || target.upperBoundary >= MIDI_MAX_VALUE) return result.returnWithError("Upper boundary must be 1..126");
+        if (std::find(updatedNamedVelocities.begin(), updatedNamedVelocities.end(), target.namedVelocity) != updatedNamedVelocities.end())
+            return result.returnWithError("Named velocity appears more than once");
+
+        const auto layerIt = std::find_if(articulation->velocityLayerSpecs.begin(), articulation->velocityLayerSpecs.end(), [&target](const auto& layer) {
+            return layer != nullptr && layer->velocity == target.namedVelocity;
+        });
+        if (layerIt == articulation->velocityLayerSpecs.end()) return result.returnWithError("Named velocity was not found in the source articulation");
+        if (layerIt + 1 == articulation->velocityLayerSpecs.end()) return result.returnWithError("The last velocity layer always ends at 127");
+
+        updatedNamedVelocities.push_back(target.namedVelocity);
+        candidateOverrides.setVelocityUpperBoundary(instrument->meta.codeRaw, articulation->codeRaw, static_cast<uint8_t>(target.namedVelocity), static_cast<uint8_t>(target.upperBoundary));
+    }
+
+    std::vector<uint8_t> namedVelocities;
+    namedVelocities.reserve(articulation->velocityLayerSpecs.size());
+    for (const auto& layer : articulation->velocityLayerSpecs) namedVelocities.push_back(layer->velocity);
+    const auto resolved = candidateOverrides.resolveVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw, namedVelocities);
+    if (!resolved.ok()) return result.returnWithError(resolved.error());
+
+    const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
+    if (!saveResult.ok()) return result.returnWithError(saveResult.error());
+
+    this->invalidateSourcePreviewCache();
+    {
+        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock graphLock(this->engineGraphLock);
+        kit->sourceOverrides = std::move(candidateOverrides);
+        for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
+        for (auto& synth : this->instrumentSynthPtrs)
+            if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
+    }
+
+    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    for (const auto& warning : resolved.errors) result.addWarning(warning);
+    return result;
+}
+
 ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::resetSourceVelocityUpperBoundaries(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) {
     ParseResult<SourceVelocityRangeInfo> result;
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");

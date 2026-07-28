@@ -103,7 +103,7 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
         this->addAndMakeVisible(*nameLabel);
     }
 
-    for (auto* button : { &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton, &this->resetMicOffsetButton, &this->resetRangesButton, &this->retrySaveButton, &this->reloadSavedButton, &this->doneButton }) {
+    for (auto* button : { &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton, &this->resetMicOffsetButton, &this->evenRangesButton, &this->resetRangesButton, &this->retrySaveButton, &this->reloadSavedButton, &this->doneButton }) {
         UIHelpers::configureControlButton(*button);
         this->addAndMakeVisible(*button);
     }
@@ -161,6 +161,8 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
     this->selectedSampleList.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
     this->addAndMakeVisible(this->selectedSampleList);
 
+    this->evenRangesButton.setTooltip("Make all velocity ranges about the same size.");
+    this->evenRangesButton.onClick = [this] { this->evenlyDistributeRanges(); };
     this->resetRangesButton.onClick = [this] { this->resetAllBoundaries(); };
     this->resetInstrumentBalanceButton.onClick = [this] { this->instrumentBalanceEditor.setText({}, false); this->commitInstrumentBalance(); };
     this->resetArticulationBalanceButton.onClick = [this] { this->articulationBalanceEditor.setText({}, false); this->commitArticulationBalance(); };
@@ -365,6 +367,29 @@ void SourceArticulationOverrideEditor::resetAllBoundaries() {
     this->replayLastPreview();
 }
 
+void SourceArticulationOverrideEditor::evenlyDistributeRanges() {
+    if (!this->rangeInfo.writable || !this->rangeInfo.sourceFound || this->rangeInfo.levels.size() < 2) return;
+    this->restoreCommittedPreview();
+
+    const int levelCount = static_cast<int>(this->rangeInfo.levels.size());
+    std::vector<DrumKitEngine::SourceVelocityUpperBoundaryTarget> targets;
+    targets.reserve(this->rangeInfo.levels.size() - 1);
+    for (int levelIdx = 0; levelIdx + 1 < levelCount; ++levelIdx) {
+        const int upperBoundary = juce::roundToInt(127.0f * static_cast<float>(levelIdx + 1) / static_cast<float>(levelCount));
+        targets.push_back({ this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity, upperBoundary });
+    }
+
+    auto updateResult = this->engine.setSourceVelocityUpperBoundariesBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, targets);
+    if (!updateResult.ok()) {
+        this->showPersistenceFailure(updateResult.error(), [this] { this->evenlyDistributeRanges(); });
+        return;
+    }
+    this->clearPersistenceFailure();
+    this->replaceInfo(std::move(updateResult.value));
+    this->setStatus("Velocity ranges distributed evenly.");
+    this->replayLastPreview();
+}
+
 void SourceArticulationOverrideEditor::restoreCommittedPreview() {
     if (!this->previewPending || this->selectedDividerIdx < 0 || this->selectedDividerIdx >= static_cast<int>(this->committedRangeInfo.levels.size())) return;
     const auto& committedLevel = this->committedRangeInfo.levels[static_cast<size_t>(this->selectedDividerIdx)];
@@ -377,6 +402,7 @@ void SourceArticulationOverrideEditor::restoreCommittedPreview() {
 }
 
 void SourceArticulationOverrideEditor::updateControls() {
+    this->evenRangesButton.setEnabled(this->rangeInfo.sourceFound && this->rangeInfo.writable && this->rangeInfo.levels.size() > 1);
     this->resetRangesButton.setEnabled(this->rangeInfo.sourceFound && this->rangeInfo.writable && std::any_of(this->rangeInfo.levels.begin(), this->rangeInfo.levels.end(), [](const auto& level) {
         return level.overridden;
     }));
@@ -1104,6 +1130,8 @@ void SourceArticulationOverrideEditor::resized() {
 
     auto rangeHeader = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->resetRangesButton.setBounds(rangeHeader.removeFromRight(58));
+    rangeHeader.removeFromRight(6);
+    this->evenRangesButton.setBounds(rangeHeader.removeFromRight(52));
     rangeHeader.removeFromRight(6);
     this->velocityRangesLabel.setBounds(rangeHeader);
     area.removeFromTop(3);
