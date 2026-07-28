@@ -23,6 +23,8 @@ public:
     std::function<void()> onDismiss;
     /** Fires whenever this popup changes the instrument map text. */
     std::function<void(const juce::String&)> onMapTextChanged;
+    std::function<void(const juce::String&)> onStatusMessage;
+    std::function<void()> onInstrumentChanged;
     /** Fires when MIDI mapping changes (note combos edited). */
     std::function<void()> onMidiMappingChanged;
 
@@ -33,6 +35,18 @@ public:
     std::function<void(bool)> onMidiLearnStateChanged;
 
 private:
+    enum class EditableLayerParameter {
+        Tuning,
+        Attack,
+        Decay,
+        Gain,
+        Pan,
+        FlipLR,
+        FlipPhase,
+        Bleed,
+        VelocityResponse,
+    };
+
     static constexpr int velocityResponseGlobalItemId = 1;
     static constexpr int velocityResponseEditItemId = 3;
     static constexpr int velocityResponsePresetBaseItemId = 100;
@@ -46,6 +60,9 @@ private:
 
     // ─── Header ───
     juce::Label slotLabel;
+    juce::TextButton linkArtsButton { "LINK ARTS" };
+    juce::TextButton linkTomBleedButton { "LINK TOM BLEED" };
+    juce::TextButton setInstrumentButton { "SET INSTRUMENT" };
 
     // ─── MIDI map (inline in header) ───
     juce::Label     midiHeaderLabel;
@@ -123,19 +140,19 @@ private:
                      const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
-    int getSourceOccurrenceIndex(const LayerRow* layer) const;
     int findVelocityResponsePresetIndex(const std::optional<juce::String>& definition) const;
     void rebuildVelocityResponseChoices(LayerRow* layer);
     void refreshVelocityResponseChoices();
     void commitVelocityResponse(LayerRow* layer);
     void updateVelocityResponseDisplay(LayerRow* layer);
-    void applyLayerParametersFast(LayerRow* layer);
+    void applyLayerParameterChange(LayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode = {});
     void updateRemoveButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
     void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
     void applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl);
     bool applyToEngine();
     void refreshLayerMappings();
+    void rebuildLayerRows();
     juce::String generateFullMapText() const;
     void populateLayers();
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
@@ -152,6 +169,7 @@ private:
     std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode) const;
     void updateRoutingComboDisplay(LayerRow::MicBleedControl& bleedCtrl) const;
     bool mapTextDirty = false;
+    bool suppressParameterCallbacks = false;
 
     std::unique_ptr<DismissOverlay> pickerOverlay;
     std::unique_ptr<SourcePickerPopup> activePicker;
@@ -169,6 +187,7 @@ private:
     juce::Viewport layerViewport;
 
     void showSourcePicker(LayerRow* layer);
+    void showInstrumentPicker();
     void dismissSourcePicker();
     void layoutSourcePicker();
     void showVelocityResponseEditor(LayerRow* layer);

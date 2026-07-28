@@ -1,4 +1,5 @@
 #include "../source/Engine/DrumKitEngine.h"
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 
 struct DrumKitEngineTestAccess {
@@ -109,6 +110,39 @@ TEST_CASE("InstrumentMap apply reloads only the changed primary slot", "[Instrum
     REQUIRE(fixture.engine.applyInstrumentMapSlotChange(changedMap, "kick1"));
     CHECK(DrumKitEngineTestAccess::primarySynth(fixture.engine, "kick1") != kickBefore);
     CHECK(DrumKitEngineTestAccess::primarySynth(fixture.engine, "snare1") == snareBefore);
+}
+
+TEST_CASE("InstrumentMap whole-instrument assignment replaces one slot with an instrument-level entry", "[InstrumentMap][assignment]") {
+    InstrumentMapApplyFixture fixture;
+    const juce::String currentMap = "kick1/center:KitA/kick-22/center:vol=-3\nkick1/edge:KitC/kick-26/center\nsnare1:KitA/snare-14:tuning=20";
+
+    const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument(currentMap, "kick1", "KitB", "kick-24");
+
+    REQUIRE(updatedMap.ok());
+    const auto parsed = DrumKitEngine::parseInstrumentMapText(updatedMap.value);
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 2);
+    const auto kickIterator = std::find_if(parsed.value.entries.begin(), parsed.value.entries.end(), [](const auto& entry) { return entry.slotId == "kick1"; });
+    const auto snareIterator = std::find_if(parsed.value.entries.begin(), parsed.value.entries.end(), [](const auto& entry) { return entry.slotId == "snare1"; });
+    REQUIRE(kickIterator != parsed.value.entries.end());
+    REQUIRE(snareIterator != parsed.value.entries.end());
+    CHECK(kickIterator->kitRef == "KitB");
+    CHECK(kickIterator->instCode == "kick-24");
+    CHECK(kickIterator->slotArticulationFilter.empty());
+    CHECK(kickIterator->articulationFilter.empty());
+    CHECK_FALSE(kickIterator->volumeDb.has_value());
+    CHECK(snareIterator->kitRef == "KitA");
+    CHECK(snareIterator->instCode == "snare-14");
+    CHECK(snareIterator->tuningCents == 20);
+}
+
+TEST_CASE("InstrumentMap whole-instrument assignment rejects an incompatible slot", "[InstrumentMap][assignment]") {
+    InstrumentMapApplyFixture fixture;
+
+    const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument("kick1:KitA/kick-22", "kick1", "KitB", "snare-13");
+
+    CHECK_FALSE(updatedMap.ok());
+    CHECK(updatedMap.error().containsIgnoreCase("does not match"));
 }
 
 TEST_CASE("InstrumentMap apply rebuilds shadows only for the changed layered slot", "[InstrumentMap][IncrementalApply]") {

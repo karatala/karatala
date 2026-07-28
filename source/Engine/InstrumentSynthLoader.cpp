@@ -516,6 +516,17 @@ void InstrumentSynth::applyParameterUpdate(ArticulationRuntime& art, const Layer
         art.parameters.velocityResponse = update.velocityResponse;
         if (this->parent != nullptr) art.buildVelocityMapping(this->parent->getVelocityResponse());
     }
+    if (update.micBleedLevel.has_value()) {
+        const auto targetMicCodeId = StringsDictSingleton::getId(update.micBleedLevel->first.trim().toLowerCase());
+        const float targetLevel = juce::jlimit(0.0f, 1.0f, update.micBleedLevel->second);
+        for (const auto& layer : art.layers) {
+            for (const auto& sample : layer.samples) {
+                if (sample.sound == nullptr || sample.sound->sampleVariantSpec == nullptr) continue;
+                const auto micCodeId = StringsDictSingleton::getId(sample.sound->sampleVariantSpec->micSpec.raw.trim().toLowerCase());
+                if (micCodeId == targetMicCodeId) sample.sound->cachedMicBleedGain.store(targetLevel, std::memory_order_relaxed);
+            }
+        }
+    }
     if (!update.micBleedLevels.has_value()) return;
 
     std::unordered_map<StringsDictSingleton::Id, float> levelsByMicId;

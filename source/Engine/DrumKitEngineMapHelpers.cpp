@@ -407,4 +407,120 @@ KitLib::InstrumentSpec* findMatchingKitInstrument(
     return matched;
 }
 
+DrumKitEngine::InstrumentMapEntry buildInstrumentLevelEntry(const KitLayout::InstrumentSlot& slot, const KitLib::DrumKitSpec& kit, const KitLib::InstrumentSpec& instrument, const juce::String& preferredKitId) {
+    DrumKitEngine::InstrumentMapEntry entry;
+    entry.slotId = slot.id;
+    entry.kitRef = preferredKitId;
+    entry.instCode = kit.getPreferredInstrumentId(instrument);
+    if (const auto inferredFlip = inferAutomaticFlipLR(slot, instrument, entry)) entry.flipLR = *inferredFlip;
+    return entry;
+}
+
+void replaceSlotEntries(DrumKitEngine::InstrumentMap& instrumentMap, DrumKitEngine::InstrumentMapEntry replacement) {
+    const auto slotId = replacement.slotId;
+    std::erase_if(instrumentMap.entries, [&slotId](const auto& entry) {
+        return entry.slotId.compareIgnoreCase(slotId) == 0;
+    });
+    instrumentMap.entries.push_back(std::move(replacement));
+}
+
+std::vector<InstrumentMapLayerProjection> projectDestinationLayers(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout& layout) {
+    std::vector<InstrumentMapLayerProjection> result;
+    for (const auto& slot : layout.instrumentSlots) {
+        std::vector<juce::String> articulationNames;
+        if (slot.articulations.empty()) articulationNames.push_back("(default)");
+        else {
+            articulationNames.reserve(slot.articulations.size());
+            for (const auto& articulation : slot.articulations) articulationNames.push_back(articulation.codeRaw);
+        }
+
+        for (const auto& articulationName : articulationNames) {
+            int layerIndex = 0;
+            for (size_t entryIndex = 0; entryIndex < instrumentMap.entries.size(); ++entryIndex) {
+                const auto& entry = instrumentMap.entries[entryIndex];
+                if (entry.slotId.compareIgnoreCase(slot.id) != 0) continue;
+
+                const auto destinationFilters = effectiveArticulationFilter(entry);
+                bool matchesArticulation = destinationFilters.empty();
+                for (const auto& filter : destinationFilters) {
+                    if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, articulationName)) {
+                        matchesArticulation = true;
+                        break;
+                    }
+                }
+                if (!matchesArticulation) continue;
+
+                result.push_back({ entryIndex, slot.id, articulationName, layerIndex, slot.type });
+                ++layerIndex;
+            }
+        }
+    }
+    return result;
+}
+
+std::vector<InstrumentMapLayerProjection> collectLinkedParameterTargets(const std::vector<InstrumentMapLayerProjection>& projections, const juce::String& sourceSlotId, const juce::String& sourceArticulation, int sourceLayerIndex, bool linkArticulations, bool linkAllTomBleed) {
+    std::vector<InstrumentMapLayerProjection> result;
+    std::unordered_set<std::string> targetKeys;
+    for (const auto& projection : projections) {
+        const bool isSource = projection.slotId.compareIgnoreCase(sourceSlotId) == 0 && projection.articulationName.compareIgnoreCase(sourceArticulation) == 0 && projection.layerIndex == sourceLayerIndex;
+        const bool isLinkedArticulation = linkArticulations && projection.slotId.compareIgnoreCase(sourceSlotId) == 0 && projection.layerIndex == sourceLayerIndex;
+        const bool isLinkedTomBleed = linkAllTomBleed && projection.slotType == KitLib::InstrumentSpec::Type::Tom;
+        if (!isSource && !isLinkedArticulation && !isLinkedTomBleed) continue;
+
+        const auto key = (projection.slotId + "\n" + projection.articulationName + "\n" + juce::String(projection.layerIndex)).toStdString();
+        if (targetKeys.insert(key).second) result.push_back(projection);
+    }
+    return result;
+}
+
+juce::String sourceArticulationForDestination(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& destinationArticulation) {
+    for (size_t filterIndex = 0; filterIndex < entry.slotArticulationFilter.size(); ++filterIndex) {
+        if (!ArticulationNameHelpers::mapFilterMatchesArticulation(entry.slotArticulationFilter[filterIndex], destinationArticulation)) continue;
+        if (filterIndex < entry.articulationFilter.size()) return entry.articulationFilter[filterIndex];
+        return {};
+    }
+    if (entry.slotArticulationFilter.empty()) {
+        for (const auto& sourceArticulation : entry.articulationFilter)
+            if (ArticulationNameHelpers::mapFilterMatchesArticulation(sourceArticulation, destinationArticulation)) return sourceArticulation;
+    }
+    if (entry.articulationFilter.size() == 1) return entry.articulationFilter.front();
+    return {};
+}
+
+size_t isolateEntryForDestinationArticulation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout::InstrumentSlot& slot, size_t entryIndex, const juce::String& articulationName) {
+    if (entryIndex >= instrumentMap.entries.size() || slot.articulations.size() < 2) return entryIndex;
+    const auto originalEntry = instrumentMap.entries[entryIndex];
+
+    std::vector<DrumKitEngine::InstrumentMapEntry> replacements;
+    size_t selectedReplacementIndex = 0;
+    const auto destinationFilters = effectiveArticulationFilter(originalEntry);
+    for (const auto& articulation : slot.articulations) {
+        bool matchesArticulation = destinationFilters.empty();
+        for (const auto& filter : destinationFilters) {
+            if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, articulation.codeRaw)) {
+                matchesArticulation = true;
+                break;
+            }
+        }
+        if (!matchesArticulation) continue;
+
+        auto replacement = originalEntry;
+        replacement.slotArticulationFilter = { articulation.codeRaw };
+        const auto sourceArticulation = sourceArticulationForDestination(originalEntry, articulation.codeRaw);
+        if (!originalEntry.slotArticulationFilter.empty()) {
+            replacement.articulationFilter.clear();
+            if (sourceArticulation.isNotEmpty()) replacement.articulationFilter.push_back(sourceArticulation);
+        } else if (sourceArticulation.isNotEmpty()) {
+            replacement.articulationFilter = { sourceArticulation };
+        }
+        replacements.push_back(std::move(replacement));
+        if (ArticulationNameHelpers::articulationCodeMatches(articulation.codeRaw, articulationName)) selectedReplacementIndex = replacements.size() - 1;
+    }
+    if (replacements.size() < 2) return entryIndex;
+
+    instrumentMap.entries.erase(instrumentMap.entries.begin() + static_cast<std::ptrdiff_t>(entryIndex));
+    instrumentMap.entries.insert(instrumentMap.entries.begin() + static_cast<std::ptrdiff_t>(entryIndex), replacements.begin(), replacements.end());
+    return entryIndex + selectedReplacementIndex;
+}
+
 } // namespace DrumKitEngineMapHelpers

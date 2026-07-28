@@ -1551,6 +1551,35 @@ TEST_CASE("InstrumentSynth - layer parameters update only the target articulatio
     CHECK(bowSound.cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(1.0f));
 }
 
+TEST_CASE("InstrumentSynth - one bleed mic update preserves other mic levels", "[InstrumentSynth][InstrumentMap][linked-edit]") {
+    InstrumentSynth synth(nullptr, KitLayout::InstrumentSlot {});
+    const auto centerId = StringsDictSingleton::getId("center");
+    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    articulations.emplace_back(centerId, 0);
+    articulations.back().routeDestinationNameId = centerId;
+    articulations.back().layers.emplace_back();
+
+    const auto directMic = KitLib::MicSpec::parseMicCode("dtm");
+    const auto overheadMic = KitLib::MicSpec::parseMicCode("ons");
+    REQUIRE(directMic.ok());
+    REQUIRE(overheadMic.ok());
+    KitLib::SampleVariantSpec directVariant(nullptr, {}, 'a', directMic.value);
+    KitLib::SampleVariantSpec overheadVariant(nullptr, {}, 'a', overheadMic.value);
+    SampledSound directSound(nullptr, &directVariant);
+    SampledSound overheadSound(nullptr, &overheadVariant);
+    directSound.cachedMicBleedGain.store(0.4f, std::memory_order_relaxed);
+    overheadSound.cachedMicBleedGain.store(0.6f, std::memory_order_relaxed);
+    articulations[0].layers[0].samples.push_back({ &directSound, 1, {} });
+    articulations[0].layers[0].samples.push_back({ &overheadSound, 1, {} });
+
+    InstrumentSynth::LayerParameterUpdate update;
+    update.micBleedLevel = std::make_pair(juce::String("dtm"), 0.2f);
+
+    REQUIRE(synth.updateArticulationParameters({ { centerId, 0 } }, update));
+    CHECK(directSound.cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(0.2f));
+    CHECK(overheadSound.cachedMicBleedGain.load(std::memory_order_relaxed) == Catch::Approx(0.6f));
+}
+
 TEST_CASE("InstrumentSynth - recorded choke articulation becomes a hidden aftertouch target", "[InstrumentSynth][AftertouchChoke][Loader]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;

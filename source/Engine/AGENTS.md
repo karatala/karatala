@@ -42,6 +42,8 @@
 - Every mic-layout output has a required unique semantic ID, such as `snare1/dtm` or `aux1/**m`. Saved routes use this ID so repeated codes stay distinct across layout reordering.
 - Only mic-layout target output codes may use `*`, independently for type or position. Source mic codes and sample filenames stay concrete. The format remains exact. A present variant is exact, while an omitted variant accepts all variants.
 - Pad-popup layer parameters belong to the destination articulation runtime, even when one `InstrumentSynth` contains several articulations.
+- Whole-instrument slot replacement removes every existing entry for one destination slot, creates one preferred-ID instrument-level entry without a source-articulation filter, applies automatic L/R orientation, and preserves every other slot.
+- Linked pad-popup parameter edits resolve destination articulation layers before locking, then apply all runtime targets under one `engineGraphLock`. A single-mic bleed update changes only that stable source mic code and preserves every other mic level.
 
 # Work Guidance
 

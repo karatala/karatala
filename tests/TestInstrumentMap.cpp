@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <algorithm>
+#include <vector>
 
 #include "../source/Engine/DrumKitEngine.h"
 #include "../source/Engine/DrumKitEngineMapHelpers.h"
@@ -147,6 +149,160 @@ TEST_CASE("InstrumentMap reload fingerprint changes when an entry becomes a para
     parameterLayer.volumeDb = -3.0f;
 
     CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(sharedEntry) != DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(parameterLayer));
+}
+
+TEST_CASE("InstrumentMap slot replacement removes every old layer and preserves other slots", "[InstrumentMap][assignment]") {
+    DrumKitEngine::InstrumentMap map;
+
+    DrumKitEngine::InstrumentMapEntry kickCenter;
+    kickCenter.slotId = "kick1";
+    kickCenter.slotArticulationFilter = { "center" };
+    kickCenter.kitRef = "KitA";
+    kickCenter.instCode = "kick-22";
+    map.entries.push_back(kickCenter);
+
+    auto kickEdge = kickCenter;
+    kickEdge.slotArticulationFilter = { "edge" };
+    kickEdge.volumeDb = -3.0f;
+    map.entries.push_back(kickEdge);
+
+    DrumKitEngine::InstrumentMapEntry snare;
+    snare.slotId = "snare1";
+    snare.kitRef = "KitA";
+    snare.instCode = "snare-14";
+    snare.tuningCents = 20;
+    map.entries.push_back(snare);
+
+    DrumKitEngine::InstrumentMapEntry replacement;
+    replacement.slotId = "kick1";
+    replacement.kitRef = "KitB";
+    replacement.instCode = "kick-24";
+    DrumKitEngineMapHelpers::replaceSlotEntries(map, replacement);
+
+    REQUIRE(map.entries.size() == 2);
+    CHECK(map.entries[0].slotId == "snare1");
+    CHECK(map.entries[0].tuningCents == 20);
+    CHECK(map.entries[1].slotId == "kick1");
+    CHECK(map.entries[1].kitRef == "KitB");
+    CHECK(map.entries[1].instCode == "kick-24");
+    CHECK(map.entries[1].slotArticulationFilter.empty());
+    CHECK(map.entries[1].articulationFilter.empty());
+}
+
+TEST_CASE("InstrumentMap destination projections match layer numbers inside each articulation", "[InstrumentMap][linked-edit]") {
+    KitLayout layout;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.type = KitLib::InstrumentSpec::Type::Snare;
+    slot.articulations.emplace_back("center");
+    slot.articulations.emplace_back("rim");
+    layout.instrumentSlots.push_back(slot);
+
+    DrumKitEngine::InstrumentMap map;
+    DrumKitEngine::InstrumentMapEntry wildcard;
+    wildcard.slotId = "snare1";
+    wildcard.kitRef = "KitA";
+    wildcard.instCode = "snare-14";
+    map.entries.push_back(wildcard);
+
+    auto centerLayer = wildcard;
+    centerLayer.slotArticulationFilter = { "center" };
+    centerLayer.articulationFilter = { "edge" };
+    map.entries.push_back(centerLayer);
+
+    auto rimLayer = wildcard;
+    rimLayer.slotArticulationFilter = { "rim" };
+    rimLayer.articulationFilter = { "rimshot" };
+    map.entries.push_back(rimLayer);
+
+    const auto projections = DrumKitEngineMapHelpers::projectDestinationLayers(map, layout);
+    REQUIRE(projections.size() == 4);
+    CHECK(projections[0].articulationName == "center");
+    CHECK(projections[0].entryIndex == 0);
+    CHECK(projections[0].layerIndex == 0);
+    CHECK(projections[1].articulationName == "center");
+    CHECK(projections[1].entryIndex == 1);
+    CHECK(projections[1].layerIndex == 1);
+    CHECK(projections[2].articulationName == "rim");
+    CHECK(projections[2].entryIndex == 0);
+    CHECK(projections[2].layerIndex == 0);
+    CHECK(projections[3].articulationName == "rim");
+    CHECK(projections[3].entryIndex == 2);
+    CHECK(projections[3].layerIndex == 1);
+}
+
+TEST_CASE("InstrumentMap destination projections respect a source-only articulation filter", "[InstrumentMap][linked-edit]") {
+    KitLayout layout;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.articulations.emplace_back("center");
+    slot.articulations.emplace_back("rim");
+    layout.instrumentSlots.push_back(slot);
+
+    DrumKitEngine::InstrumentMap map;
+    DrumKitEngine::InstrumentMapEntry centerOnly;
+    centerOnly.slotId = "snare1";
+    centerOnly.kitRef = "KitA";
+    centerOnly.instCode = "snare-14";
+    centerOnly.articulationFilter = { "center" };
+    map.entries.push_back(centerOnly);
+
+    const auto projections = DrumKitEngineMapHelpers::projectDestinationLayers(map, layout);
+    REQUIRE(projections.size() == 1);
+    CHECK(projections[0].articulationName == "center");
+    CHECK(DrumKitEngineMapHelpers::sourceArticulationForDestination(map.entries[0], "center") == "center");
+}
+
+TEST_CASE("InstrumentMap isolates a wildcard entry before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.type = KitLib::InstrumentSpec::Type::Snare;
+    slot.articulations.emplace_back("center");
+    slot.articulations.emplace_back("rim");
+
+    DrumKitEngine::InstrumentMap map;
+    DrumKitEngine::InstrumentMapEntry wildcard;
+    wildcard.slotId = "snare1";
+    wildcard.kitRef = "KitA";
+    wildcard.instCode = "snare-14";
+    wildcard.volumeDb = -2.0f;
+    map.entries.push_back(wildcard);
+
+    const auto centerIndex = DrumKitEngineMapHelpers::isolateEntryForDestinationArticulation(map, slot, 0, "center");
+
+    REQUIRE(map.entries.size() == 2);
+    CHECK(centerIndex == 0);
+    CHECK(map.entries[0].slotArticulationFilter == std::vector<juce::String> { "center" });
+    CHECK(map.entries[1].slotArticulationFilter == std::vector<juce::String> { "rim" });
+    CHECK(map.entries[0].volumeDb == -2.0f);
+    CHECK(map.entries[1].volumeDb == -2.0f);
+}
+
+TEST_CASE("InstrumentMap linked targets use same articulation layer and deduplicate both link modes", "[InstrumentMap][linked-edit]") {
+    using Projection = DrumKitEngineMapHelpers::InstrumentMapLayerProjection;
+    const std::vector<Projection> projections {
+        { 0, "tom1", "center", 0, KitLib::InstrumentSpec::Type::Tom },
+        { 1, "tom1", "center", 1, KitLib::InstrumentSpec::Type::Tom },
+        { 0, "tom1", "rim", 0, KitLib::InstrumentSpec::Type::Tom },
+        { 2, "tom2", "center", 0, KitLib::InstrumentSpec::Type::Tom },
+        { 3, "snare1", "center", 0, KitLib::InstrumentSpec::Type::Snare },
+    };
+
+    const auto sourceOnly = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, false, false);
+    REQUIRE(sourceOnly.size() == 1);
+    CHECK(sourceOnly[0].slotId == "tom1");
+    CHECK(sourceOnly[0].articulationName == "center");
+
+    const auto linkedArticulations = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, true, false);
+    REQUIRE(linkedArticulations.size() == 2);
+    CHECK(std::none_of(linkedArticulations.begin(), linkedArticulations.end(), [](const auto& projection) { return projection.layerIndex == 1; }));
+
+    const auto linkedTomBleed = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, false, true);
+    REQUIRE(linkedTomBleed.size() == 4);
+    CHECK(std::none_of(linkedTomBleed.begin(), linkedTomBleed.end(), [](const auto& projection) { return projection.slotType != KitLib::InstrumentSpec::Type::Tom; }));
+
+    const auto bothLinks = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, true, true);
+    CHECK(bothLinks.size() == linkedTomBleed.size());
 }
 
 TEST_CASE("MicRoutingPlan resolves explicit mic route override by output id", "[InstrumentMap][routing]") {

@@ -89,8 +89,9 @@ void LookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, i
 }
 
 void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, const juce::Colour& backgroundColour, bool isMouseOverButton, bool isButtonDown) {
+    const bool broadEditActive = static_cast<bool>(button.getProperties().getWithDefault("broadEditMode", false)) && button.getToggleState();
     const auto baseColour = backgroundColour
-                                .withMultipliedAlpha(button.isEnabled() ? 0.75f : 0.3f);
+                                .withMultipliedAlpha(button.isEnabled() ? (broadEditActive ? 1.0f : 0.75f) : 0.3f);
 
     const auto btnWidth = float(button.getWidth());
     const auto btnHeight = float(button.getHeight());
@@ -119,6 +120,11 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, 
 
         g.setColour(juce::Colours::black.withAlpha(outlineAlpha));
         g.strokePath(outlinePath, juce::PathStrokeType(1.f), juce::AffineTransform::translation(0.f, 1.f).scaled(1.f, (btnHeight + 2.f) / btnHeight));
+
+        if (broadEditActive) {
+            g.setColour(UITheme::Colours::textPrimary);
+            g.strokePath(outlinePath, juce::PathStrokeType(2.0f));
+        }
     }
 }
 

@@ -1,7 +1,10 @@
 run it from the project root with:
 
 ```bash
-python3 scripts/analyze_drum_samples_phase1.py --input-folder sample_library --output-json build/todo14_phase1_reference_v5-onset_frame_10ms.json --listening-folder build/todo14_phase1_listening_v5
+PYTHONPATH=/tmp/karatala-phase1-deps ~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/analyze_drum_samples_phase1.py -i ./sample_library --output-json build/todo14_phase1_reference_v5-onset_frame_10ms.json --listening-folder build/todo14_phase1_listening_v5
+
+PYTHONPATH=/tmp/karatala-phase1-deps ~/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 scripts/generate_sample_metadata.py -i ./sample_library
+
 ```
 
 Use new `v5`, `v6`, etc. names so you do not overwrite earlier results.

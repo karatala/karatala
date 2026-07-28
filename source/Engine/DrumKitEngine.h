@@ -191,6 +191,7 @@ public:
     static juce::String serializeInstrumentMap(const InstrumentMap& instrumentMap);
     juce::String normalizeInstrumentMapText(const juce::String& text) const;
     juce::String buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& kit) const;
+    ParseResult<juce::String> buildInstrumentMapWithSlotInstrument(const juce::String& currentMapText, const juce::String& slotId, const juce::String& kitId, const juce::String& instrumentId) const;
 
     void mapDefaultKit();
     void mapKit(const KitLib::DrumKitSpec& kit);
@@ -256,8 +257,15 @@ public:
     int getCrosstalkProfileEntryCount() const { return this->crosstalkProfile.getEntryCount(); }
     juce::String buildCrosstalkProfileText() const;
     using LayerParameterUpdate = InstrumentSynth::LayerParameterUpdate;
+    struct LayerParameterTarget {
+        juce::String slotId;
+        juce::String articulationName;
+        int layerIndex = -1;
+        LayerParameterUpdate update;
+    };
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, std::optional<int> tuningCents, std::optional<int> attackMs, std::optional<int> decayMs);
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, const LayerParameterUpdate& update);
+    bool updateSlotParametersBatch(const std::vector<LayerParameterTarget>& targets);
     bool updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update);
     bool updateSlotMicRoute(const juce::String& slotId, const juce::String& artName, int layerIndex, const juce::String& sourceMicCode, const juce::String& outputId);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);

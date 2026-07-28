@@ -30,6 +30,7 @@ namespace Colours {
     inline const juce::Colour accent = juce::Colour(0xffcc4444);
     inline const juce::Colour accentSoft = juce::Colour(0xff88aacc);
     inline const juce::Colour accentWarning = juce::Colour(0xff883333);
+    inline const juce::Colour broadEditDanger = juce::Colour(0xffff2020);
     inline const juce::Colour midiLearnIdle = juce::Colour(0xffEEEE00);
     inline const juce::Colour midiLearnActive = juce::Colour(0xffFFFF00);
     inline const juce::Colour separator = juce::Colour(0xff111111);

@@ -940,18 +940,45 @@ juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, co
     for (const auto& slot : layout.instrumentSlots) {
         auto* matched = DrumKitEngineMapHelpers::findMatchingKitInstrument(slot, kit, usedInstruments, nextIndexByType);
         if (matched == nullptr) continue;
-        InstrumentMapEntry entry;
-        entry.slotId = slot.id;
-        entry.kitRef = this->libraryManagerPtr != nullptr
+        const auto preferredKitId = this->libraryManagerPtr != nullptr
             ? this->libraryManagerPtr->getPreferredKitId(kit)
             : DrumKitEngineIdentityMapHelpers::firstCandidateOrRaw(KitLib::DrumKitSpec::getIdentityCandidates(kit.meta), kit.meta.codeRaw);
-        entry.instCode = kit.getPreferredInstrumentId(*matched);
-        if (const auto inferredFlip = DrumKitEngineMapHelpers::inferAutomaticFlipLR(slot, *matched, entry))
-            entry.flipLR = *inferredFlip;
-        result.entries.push_back(std::move(entry));
+        result.entries.push_back(DrumKitEngineMapHelpers::buildInstrumentLevelEntry(slot, kit, *matched, preferredKitId));
     }
 
     return serializeInstrumentMap(result);
+}
+
+ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(const juce::String& currentMapText, const juce::String& slotId, const juce::String& kitId, const juce::String& instrumentId) const {
+    ParseResult<juce::String> result;
+    if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
+    if (this->activeKitLayoutPtr == nullptr) return result.returnWithError("Kit layout is not loaded");
+
+    const auto slotIterator = std::find_if(this->activeKitLayoutPtr->instrumentSlots.begin(), this->activeKitLayoutPtr->instrumentSlots.end(), [&slotId](const auto& slot) {
+        return slot.id.compareIgnoreCase(slotId) == 0;
+    });
+    if (slotIterator == this->activeKitLayoutPtr->instrumentSlots.end()) return result.returnWithError("Destination slot was not found: " + slotId);
+
+    auto* kit = this->libraryManagerPtr->findKitById(kitId);
+    if (kit == nullptr) return result.returnWithError("Source kit was not found: " + kitId);
+    auto* instrument = kit->findInstrumentById(instrumentId);
+    if (instrument == nullptr) return result.returnWithError("Source instrument was not found: " + instrumentId);
+    if (slotIterator->type != KitLib::InstrumentSpec::Type::Unknown && instrument->meta.type != slotIterator->type) {
+        return result.returnWithError("The selected instrument type does not match slot " + slotIterator->id);
+    }
+
+    InstrumentMap map;
+    if (currentMapText.trim().isNotEmpty()) {
+        auto parsedMap = DrumKitEngine::parseInstrumentMapText(currentMapText);
+        if (!parsedMap.ok()) return result.returnWithError(parsedMap.error());
+        map = std::move(parsedMap.value);
+    }
+
+    const auto preferredKitId = this->libraryManagerPtr->getPreferredKitId(*kit);
+    auto replacement = DrumKitEngineMapHelpers::buildInstrumentLevelEntry(*slotIterator, *kit, *instrument, preferredKitId);
+    DrumKitEngineMapHelpers::replaceSlotEntries(map, std::move(replacement));
+    result.value = DrumKitEngine::serializeInstrumentMap(map);
+    return result;
 }
 
 /** Writes instrument map text in normalized slot/layer order with semicolon-separated params. */
@@ -2354,6 +2381,36 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
 
         ++currentLayerIndex;
     }
+}
+
+bool DrumKitEngine::updateSlotParametersBatch(const std::vector<LayerParameterTarget>& targets) {
+    struct PreparedTarget {
+        const LayerParameterTarget* target = nullptr;
+        std::vector<std::pair<uint32_t, uint32_t>> routes;
+    };
+
+    std::vector<PreparedTarget> preparedTargets;
+    preparedTargets.reserve(targets.size());
+    for (const auto& target : targets) {
+        if (target.layerIndex < 0 || target.slotId.trim().isEmpty()) continue;
+        preparedTargets.push_back({ &target, this->getTargetRoutesForArticulationFilter(target.slotId, target.articulationName) });
+    }
+    if (preparedTargets.empty()) return false;
+
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+    bool updated = false;
+    for (const auto& preparedTarget : preparedTargets) {
+        int currentLayerIndex = 0;
+        for (auto& synthPtr : this->instrumentSynthPtrs) {
+            if (synthPtr == nullptr || synthPtr->getId() != preparedTarget.target->slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, preparedTarget.routes)) continue;
+            if (currentLayerIndex == preparedTarget.target->layerIndex) {
+                updated = synthPtr->updateArticulationParameters(preparedTarget.routes, preparedTarget.target->update) || updated;
+                break;
+            }
+            ++currentLayerIndex;
+        }
+    }
+    return updated;
 }
 
 bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::String& artName, int layerIndex, const juce::String& sourceMicCode, const juce::String& outputId) {

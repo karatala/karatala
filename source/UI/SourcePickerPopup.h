@@ -13,7 +13,17 @@
 class SourcePickerPopup : public juce::Component,
                           private juce::Timer {
 public:
-    explicit SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& catalog);
+    enum class SelectionMode {
+        Articulation,
+        WholeInstrument,
+    };
+
+    struct InstrumentSelection {
+        juce::String kitId;
+        juce::String instrumentId;
+    };
+
+    explicit SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& catalog, SelectionMode mode = SelectionMode::Articulation);
     ~SourcePickerPopup() override = default;
 
     void resized() override;
@@ -25,6 +35,9 @@ public:
 
     /** Fires when an item is confirmed via the select button. */
     std::function<void(int)> onItemSelected;
+
+    /** Fires in whole-instrument mode. The selected articulation is used only for preview. */
+    std::function<void(const InstrumentSelection&)> onInstrumentSelected;
     
     /** Fires on preview click with velocity. */
     std::function<void(int, juce::uint8)> onPreview;
@@ -43,6 +56,7 @@ private:
 
     const std::vector<SourceItem>& allItems;
     const InstrumentCatalog& catalog;
+    SelectionMode selectionMode = SelectionMode::Articulation;
     KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;
     KitLib::InstrumentSpec::Type selectedKind = KitLib::InstrumentSpec::Type::Unknown;
     Category selectedCategory = Category::All;
@@ -76,11 +90,13 @@ private:
     void rebuildArticulationEntries();
     void rebuildFiltered();
     bool matchesCategory(KitLib::InstrumentSpec::Type type) const;
+    bool matchesRequiredType(KitLib::InstrumentSpec::Type type) const;
     bool matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const;
     Category categoryForType(KitLib::InstrumentSpec::Type type) const;
     static std::optional<InstrumentFamily> familyForCategory(Category category);
     static juce::String kindLabel(KitLib::InstrumentSpec::Type type);
     void updateCategoryButtons();
+    void confirmItem(int originalIndex);
     void timerCallback() override;
     void queueRebuildFiltered();
 

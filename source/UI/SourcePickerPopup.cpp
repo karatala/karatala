@@ -6,9 +6,10 @@
 #include <algorithm>
 #include <set>
 
-SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& instrumentCatalog)
+SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& instrumentCatalog, SelectionMode mode)
     : allItems(items)
-    , catalog(instrumentCatalog) {
+    , catalog(instrumentCatalog)
+    , selectionMode(mode) {
     UIHelpers::configureBorderlessTextEditor(this->filterField);
     this->filterField.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
@@ -158,6 +159,10 @@ bool SourcePickerPopup::matchesCategory(KitLib::InstrumentSpec::Type type) const
     return this->catalog.familyFor(type) == *categoryFamily;
 }
 
+bool SourcePickerPopup::matchesRequiredType(KitLib::InstrumentSpec::Type type) const {
+    return this->selectionMode != SelectionMode::WholeInstrument || this->filterType == KitLib::InstrumentSpec::Type::Unknown || type == this->filterType;
+}
+
 juce::String SourcePickerPopup::kindLabel(KitLib::InstrumentSpec::Type type) {
     return KitLib::InstrumentSpec::typeToString(type).replaceCharacter('_', ' ');
 }
@@ -165,6 +170,8 @@ juce::String SourcePickerPopup::kindLabel(KitLib::InstrumentSpec::Type type) {
 void SourcePickerPopup::rebuildKindEntries() {
     std::set<KitLib::InstrumentSpec::Type> seenKinds;
     for (const auto& item : this->allItems) {
+        if (!this->matchesRequiredType(item.instType))
+            continue;
         if (item.instType == KitLib::InstrumentSpec::Type::Unknown)
             continue;
         if (!this->matchesCategory(item.instType))
@@ -193,6 +200,7 @@ void SourcePickerPopup::rebuildKindEntries() {
 void SourcePickerPopup::rebuildArticulationEntries() {
     std::set<juce::String> availableArticulations;
     for (const auto& item : this->allItems) {
+        if (!this->matchesRequiredType(item.instType)) continue;
         if (!this->matchesCategory(item.instType)) continue;
         if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && item.instType != this->selectedKind) continue;
         const auto articulationName = ArticulationNameHelpers::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
@@ -217,6 +225,8 @@ void SourcePickerPopup::rebuildArticulationEntries() {
 }
 
 bool SourcePickerPopup::matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const {
+    if (!this->matchesRequiredType(item.instType))
+        return false;
     if (!this->matchesCategory(item.instType))
         return false;
     if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && item.instType != this->selectedKind)
@@ -270,6 +280,21 @@ void SourcePickerPopup::updateCategoryButtons() {
     apply(this->drumsCategoryButton, Category::Drums);
     apply(this->cymbalsCategoryButton, Category::Cymbals);
     apply(this->otherCategoryButton, Category::Other);
+}
+
+void SourcePickerPopup::confirmItem(int originalIndex) {
+    if (originalIndex < 0 || originalIndex >= static_cast<int>(this->allItems.size())) return;
+    if (this->selectionMode == SelectionMode::Articulation) {
+        if (this->onItemSelected) this->onItemSelected(originalIndex);
+        return;
+    }
+
+    const auto& item = this->allItems[static_cast<size_t>(originalIndex)];
+    if (!this->onInstrumentSelected) return;
+    InstrumentSelection selection;
+    selection.kitId = item.kitCodeRaw;
+    selection.instrumentId = item.instCode;
+    this->onInstrumentSelected(selection);
 }
 
 void SourcePickerPopup::timerCallback() {
@@ -424,7 +449,7 @@ void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::Mouse
     const int clickX = event.getPosition().getX();
 
     if (clickX >= textWidth + prevW) {
-        if (this->owner.onItemSelected) this->owner.onItemSelected(originalIdx);
+        this->owner.confirmItem(originalIdx);
     } else if (clickX >= textWidth) {
         if (this->owner.onPreview) {
             const float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(clickX - textWidth) / static_cast<float>(juce::jmax(1, prevW)));
@@ -459,5 +484,5 @@ void SourcePickerPopup::ListModel::selectedRowsChanged(int lastRowSelected) {
 void SourcePickerPopup::ListModel::returnKeyPressed(int lastRowSelected) {
     if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.filteredEntries.size())) return;
     const int originalIdx = this->owner.filteredEntries[static_cast<size_t>(lastRowSelected)].originalIndex;
-    if (this->owner.onItemSelected) this->owner.onItemSelected(originalIdx);
+    this->owner.confirmItem(originalIdx);
 }

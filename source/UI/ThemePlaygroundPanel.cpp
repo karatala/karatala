@@ -171,6 +171,7 @@ public:
             { "accent", UITheme::Colours::accent, "Knob or slider fill, active marks, and destructive remove text" },
             { "accentSoft", UITheme::Colours::accentSoft, "Source picker action indicator" },
             { "accentWarning", UITheme::Colours::accentWarning, "Active toggles, invalid sources, and routing warnings" },
+            { "broadEditDanger", UITheme::Colours::broadEditDanger, "Active LINK ARTS and LINK TOM BLEED controls" },
             { "midiLearnIdle", UITheme::Colours::midiLearnIdle, "Inactive MIDI learn symbol" },
             { "midiLearnActive", UITheme::Colours::midiLearnActive, "Active MIDI learn button background" },
             { "separator", UITheme::Colours::separator, "DrumPad cell and outer separators" },

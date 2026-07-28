@@ -1,5 +1,6 @@
 #include "PadContextPopup.h"
 #include "../Engine/ArticulationNameHelpers.h"
+#include "../Engine/DrumKitEngineMapHelpers.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 
@@ -149,6 +150,26 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
     this->slotLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     addAndMakeVisible(this->slotLabel);
 
+    UIHelpers::configureToggleButton(this->linkArtsButton);
+    this->linkArtsButton.setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::broadEditDanger);
+    this->linkArtsButton.setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
+    this->linkArtsButton.getProperties().set("broadEditMode", true);
+    this->linkArtsButton.setTooltip("Apply supported parameter changes to the same layer across all articulations in this slot");
+    this->addAndMakeVisible(this->linkArtsButton);
+
+    UIHelpers::configureToggleButton(this->linkTomBleedButton);
+    this->linkTomBleedButton.setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::broadEditDanger);
+    this->linkTomBleedButton.setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
+    this->linkTomBleedButton.getProperties().set("broadEditMode", true);
+    this->linkTomBleedButton.setTooltip("Apply the changed bleed mic level to every mapped layer in every Tom slot");
+    this->linkTomBleedButton.setVisible(this->slotType == KitLib::InstrumentSpec::Type::Tom);
+    this->addAndMakeVisible(this->linkTomBleedButton);
+
+    UIHelpers::configureControlButton(this->setInstrumentButton);
+    this->setInstrumentButton.setTooltip("Replace every layer in this slot with one complete source instrument");
+    this->setInstrumentButton.onClick = [this] { this->showInstrumentPicker(); };
+    this->addAndMakeVisible(this->setInstrumentButton);
+
     // MIDI inline
     this->midiHeaderLabel.setText("MIDI:", juce::dontSendNotification);
     this->midiHeaderLabel.setFont(UITheme::Fonts::small());
@@ -208,8 +229,9 @@ void PadContextPopup::populateLayers() {
         for (const auto& entry : existingEntries) {
             if (entry.slotId != this->slotId) continue;
 
-            bool matchesArticulation = entry.slotArticulationFilter.empty();
-            for (const auto& filter : entry.slotArticulationFilter) {
+            const auto destinationFilters = DrumKitEngineMapHelpers::effectiveArticulationFilter(entry);
+            bool matchesArticulation = destinationFilters.empty();
+            for (const auto& filter : destinationFilters) {
                 if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, group->artName)) {
                     matchesArticulation = true;
                     break;
@@ -219,7 +241,8 @@ void PadContextPopup::populateLayers() {
 
             juce::String sourceFullPath = entry.kitRef;
             if (entry.instCode.isNotEmpty()) sourceFullPath += "/" + entry.instCode;
-            if (!entry.articulationFilter.empty()) sourceFullPath += "/" + entry.articulationFilter[0];
+            const auto sourceArticulation = DrumKitEngineMapHelpers::sourceArticulationForDestination(entry, group->artName);
+            if (sourceArticulation.isNotEmpty()) sourceFullPath += "/" + sourceArticulation;
             if (this->slotType == KitLib::InstrumentSpec::Type::HiHat && UIHelpers::usesLegacyDestinationExpressionFilter(entry.slotArticulationFilter, group->artName))
                 sourceFullPath = UIHelpers::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, group->artName);
 
@@ -657,8 +680,9 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         bleedCtrl->bleedPot->setTooltip(micName);
         bleedCtrl->bleedPot->setInteraction(100.0, 1.0);
         this->layerContent.addAndMakeVisible(*bleedCtrl->bleedPot);
-        bleedCtrl->bleedPot->onValueChange = [this, layer] {
-            this->applyLayerParametersFast(layer);
+        auto* bleedCtrlPtr = bleedCtrl.get();
+        bleedCtrl->bleedPot->onValueChange = [this, layer, bleedCtrlPtr] {
+            this->applyLayerParameterChange(layer, EditableLayerParameter::Bleed, bleedCtrlPtr->micCode);
         };
         bleedCtrl->bleedPot->onDragEnd = [this, layer] {
             this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
@@ -684,7 +708,6 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
             const auto& selectedChoice = bleedCtrl->routingChoices[static_cast<size_t>(selectedIndex)];
             bleedCtrl->selectedOutputId = selectedChoice.usesAutomaticRouting ? juce::String() : selectedChoice.outputId;
         }
-        auto* bleedCtrlPtr = bleedCtrl.get();
         bleedCtrl->routingCombo->onChange = [this, layer, bleedCtrlPtr] {
             this->applyRoutingComboChange(layer, bleedCtrlPtr);
         };
@@ -738,7 +761,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->tuningPot = std::make_unique<CompactParameterControl>("Tuning", -2400.0, 2400.0, 1.0, static_cast<double>(tuningCents));
     layer->tuningPot->setInteraction(0.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->tuningPot);
-    layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Tuning); };
     layer->tuningPot->onDragEnd = [this, layer] {
         this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
@@ -747,7 +770,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->attackPot = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
     layer->attackPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
-    layer->attackPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->attackPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Attack); };
     layer->attackPot->onDragEnd = [this, layer] {
         this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
@@ -756,7 +779,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->decayPot = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
     layer->decayPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
-    layer->decayPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->decayPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Decay); };
     layer->decayPot->onDragEnd = [this, layer] {
         this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
@@ -769,7 +792,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
         });
     layer->gainPot->setInteraction(0.0, 0.5, 0.1);
     this->layerContent.addAndMakeVisible(*layer->gainPot);
-    layer->gainPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->gainPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Gain); };
     layer->gainPot->onDragEnd = [this, layer] {
         this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
@@ -782,7 +805,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     });
     layer->panPot->setInteraction(0.0, 4.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->panPot);
-    layer->panPot->onValueChange = [this, layer] { this->applyLayerParametersFast(layer); };
+    layer->panPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Pan); };
     layer->panPot->onDragEnd = [this, layer] {
         this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
     };
@@ -796,7 +819,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     this->layerContent.addAndMakeVisible(*layer->flipLRButton);
     layer->flipLRButton->onClick = [this, layer] {
         layer->flipLRExplicit = true;
-        this->applyLayerParametersFast(layer);
+        this->applyLayerParameterChange(layer, EditableLayerParameter::FlipLR);
     };
 
     // Flip Phase button (toggle)
@@ -805,7 +828,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
     this->layerContent.addAndMakeVisible(*layer->flipPhaseButton);
     layer->flipPhaseButton->onClick = [this, layer] {
-        this->applyLayerParametersFast(layer);
+        this->applyLayerParameterChange(layer, EditableLayerParameter::FlipPhase);
     };
 
     // Per-mic bleed controls
@@ -881,31 +904,6 @@ int PadContextPopup::getLayerIndex(const LayerRow* layer) const {
     return -1;
 }
 
-int PadContextPopup::getSourceOccurrenceIndex(const LayerRow* layer) const {
-    if (layer == nullptr || layer->selectedSourceIndex < 0)
-        return -1;
-
-    const auto& target = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].fullPath();
-    int occurrence = 0;
-    for (int idx = 0; idx < this->layerRows.size(); ++idx) {
-        const auto* currentLayer = this->layerRows[idx];
-        if (currentLayer == nullptr || currentLayer->selectedSourceIndex < 0)
-            continue;
-        if (currentLayer->artName != layer->artName)
-            continue;
-
-        const auto& current = this->sourceItems[static_cast<size_t>(currentLayer->selectedSourceIndex)].fullPath();
-        if (current.compareIgnoreCase(target) != 0)
-            continue;
-
-        if (currentLayer == layer)
-            return occurrence;
-        ++occurrence;
-    }
-
-    return -1;
-}
-
 int PadContextPopup::findVelocityResponsePresetIndex(const std::optional<juce::String>& definition) const {
     if (!definition.has_value()) return -1;
     for (int presetIdx = 0; presetIdx < static_cast<int>(this->velocityResponsePresets.size()); ++presetIdx) {
@@ -953,7 +951,7 @@ void PadContextPopup::commitVelocityResponse(LayerRow* layer) {
         layer->velocityResponse = this->velocityResponsePresets[static_cast<size_t>(presetIdx)].definition;
     }
     this->updateVelocityResponseDisplay(layer);
-    this->applyLayerParametersFast(layer);
+    this->applyLayerParameterChange(layer, EditableLayerParameter::VelocityResponse);
     this->flushMapText();
     this->resized();
 }
@@ -985,70 +983,200 @@ void PadContextPopup::updateVelocityResponseDisplay(LayerRow* layer) {
     layer->velocityResponseMode->setColour(juce::ComboBox::textColourId, layerOverride ? UITheme::Colours::textAccent : UITheme::Colours::textSecondary);
 }
 
-void PadContextPopup::applyLayerParametersFast(LayerRow* layer) {
-    if (layer == nullptr)
-        return;
-
-    const int layerIndex = layer->mappedLayerIndex >= 0 ? layer->mappedLayerIndex : this->getLayerIndex(layer);
-    if (layerIndex < 0) {
+void PadContextPopup::applyLayerParameterChange(LayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode) {
+    if (this->suppressParameterCallbacks || layer == nullptr) return;
+    if (layer->mappedLayerIndex < 0 || layer->selectedSourceIndex < 0) {
         this->mapTextDirty = true;
         return;
     }
 
-    DrumKitEngine::LayerParameterUpdate update;
-    update.tuningCents = static_cast<int>(layer->tuningPot->getValue());
-    update.attackMs = static_cast<int>(layer->attackPot->getValue());
-    update.decayMs = static_cast<int>(layer->decayPot->getValue());
-    update.volumeDb = static_cast<float>(layer->gainPot->getValue());
-    update.pan = static_cast<int>(layer->panPot->getValue());
-    update.flipLR = layer->flipLRButton->getToggleState();
-    update.flipPhase = layer->flipPhaseButton->getToggleState();
-    update.updateVelocityResponse = true;
-    if (layer->velocityResponse.has_value()) {
-        auto parsedResponse = VelocityResponse::fromDefinition(*layer->velocityResponse);
-        if (parsedResponse.ok()) update.velocityResponse = std::move(parsedResponse.value);
+    const auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
+    auto parsedMap = DrumKitEngine::parseInstrumentMapText(currentMapText);
+    const auto* layout = this->engine.getKitLayout();
+    if (!parsedMap.ok() || layout == nullptr) return;
+
+    auto projections = DrumKitEngineMapHelpers::projectDestinationLayers(parsedMap.value, *layout);
+    auto findSourceProjection = [this, layer](const auto& candidateProjections) -> const DrumKitEngineMapHelpers::InstrumentMapLayerProjection* {
+        for (const auto& projection : candidateProjections) {
+            if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationName.compareIgnoreCase(layer->artName) != 0 || projection.layerIndex != layer->mappedLayerIndex) continue;
+            return &projection;
+        }
+        return nullptr;
+    };
+
+    const auto* sourceProjection = findSourceProjection(projections);
+    if (sourceProjection == nullptr) return;
+
+    const bool linkArts = this->linkArtsButton.getToggleState() && parameter != EditableLayerParameter::VelocityResponse;
+    const bool linkTomBleed = parameter == EditableLayerParameter::Bleed && this->linkTomBleedButton.isVisible() && this->linkTomBleedButton.getToggleState();
+    if (!linkArts && !linkTomBleed) {
+        const auto slotIterator = std::find_if(layout->instrumentSlots.begin(), layout->instrumentSlots.end(), [this](const auto& slot) {
+            return slot.id.compareIgnoreCase(this->slotId) == 0;
+        });
+        if (slotIterator != layout->instrumentSlots.end()) {
+            DrumKitEngineMapHelpers::isolateEntryForDestinationArticulation(parsedMap.value, *slotIterator, sourceProjection->entryIndex, layer->artName);
+            projections = DrumKitEngineMapHelpers::projectDestinationLayers(parsedMap.value, *layout);
+            sourceProjection = findSourceProjection(projections);
+            if (sourceProjection == nullptr) return;
+        }
     }
 
-    std::unordered_map<juce::String, float> bleedLevels;
-    for (const auto& bleedCtrl : layer->micBleeds) {
-        if (bleedCtrl == nullptr || bleedCtrl->bleedPot == nullptr || bleedCtrl->micCode.isEmpty()) continue;
-        bleedLevels[bleedCtrl->micCode] = static_cast<float>(bleedCtrl->bleedPot->getValue() / 100.0);
+    auto targetProjections = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, this->slotId, layer->artName, layer->mappedLayerIndex, linkArts, linkTomBleed);
+
+    int integerValue = 0;
+    float floatValue = 0.0f;
+    bool boolValue = false;
+    float bleedValue = 1.0f;
+    DrumKitEngine::LayerParameterUpdate runtimeUpdate;
+    switch (parameter) {
+        case EditableLayerParameter::Tuning:
+            integerValue = static_cast<int>(layer->tuningPot->getValue());
+            runtimeUpdate.tuningCents = integerValue;
+            break;
+        case EditableLayerParameter::Attack:
+            integerValue = static_cast<int>(layer->attackPot->getValue());
+            runtimeUpdate.attackMs = integerValue;
+            break;
+        case EditableLayerParameter::Decay:
+            integerValue = static_cast<int>(layer->decayPot->getValue());
+            runtimeUpdate.decayMs = integerValue;
+            break;
+        case EditableLayerParameter::Gain:
+            floatValue = static_cast<float>(layer->gainPot->getValue());
+            runtimeUpdate.volumeDb = floatValue;
+            break;
+        case EditableLayerParameter::Pan:
+            integerValue = static_cast<int>(layer->panPot->getValue());
+            runtimeUpdate.pan = integerValue;
+            break;
+        case EditableLayerParameter::FlipLR:
+            boolValue = layer->flipLRButton->getToggleState();
+            runtimeUpdate.flipLR = boolValue;
+            break;
+        case EditableLayerParameter::FlipPhase:
+            boolValue = layer->flipPhaseButton->getToggleState();
+            runtimeUpdate.flipPhase = boolValue;
+            break;
+        case EditableLayerParameter::Bleed:
+            for (const auto& bleedControl : layer->micBleeds) {
+                if (bleedControl == nullptr || bleedControl->micCode.compareIgnoreCase(micCode) != 0) continue;
+                bleedValue = static_cast<float>(bleedControl->bleedPot->getValue() / 100.0);
+                break;
+            }
+            runtimeUpdate.micBleedLevel = std::make_pair(micCode, bleedValue);
+            break;
+        case EditableLayerParameter::VelocityResponse:
+            runtimeUpdate.updateVelocityResponse = true;
+            if (layer->velocityResponse.has_value()) {
+                auto parsedResponse = VelocityResponse::fromDefinition(*layer->velocityResponse);
+                if (parsedResponse.ok()) runtimeUpdate.velocityResponse = std::move(parsedResponse.value);
+            }
+            break;
     }
-    update.micBleedLevels = std::move(bleedLevels);
 
-    juce::String sourceText = layer->sourcePathHint;
-    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size()))
-        sourceText = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].fullPath();
-
-    juce::StringArray bleedParts;
-    std::vector<juce::String> bleedKeys;
-    bleedKeys.reserve(update.micBleedLevels->size());
-    for (const auto& [micCode, level] : *update.micBleedLevels) {
-        juce::ignoreUnused(level);
-        bleedKeys.push_back(micCode);
+    if (parameter == EditableLayerParameter::Bleed) {
+        std::erase_if(targetProjections, [this, &parsedMap, &micCode](const auto& projection) {
+            if (projection.entryIndex >= parsedMap.value.entries.size()) return true;
+            const auto& entry = parsedMap.value.entries[projection.entryIndex];
+            juce::String sourcePath = entry.kitRef;
+            if (entry.instCode.isNotEmpty()) sourcePath += "/" + entry.instCode;
+            auto sourceArticulation = DrumKitEngineMapHelpers::sourceArticulationForDestination(entry, projection.articulationName);
+            if (sourceArticulation.isEmpty() && projection.articulationName != "(default)") sourceArticulation = projection.articulationName;
+            if (sourceArticulation.isNotEmpty()) sourcePath += "/" + sourceArticulation;
+            const auto relevantMics = this->getRelevantMicsForSourcePath(sourcePath);
+            return std::none_of(relevantMics.begin(), relevantMics.end(), [&micCode](const auto& mic) {
+                return mic.first.compareIgnoreCase(micCode) == 0;
+            });
+        });
     }
-    std::sort(bleedKeys.begin(), bleedKeys.end(), [](const juce::String& left, const juce::String& right) {
-        return left.compareIgnoreCase(right) < 0;
-    });
-    for (const auto& micCode : bleedKeys)
-        bleedParts.add(micCode + ":" + juce::String(update.micBleedLevels->at(micCode), 3));
+    if (targetProjections.empty()) return;
 
-    this->engine.logMessage("Pad popup: slot=" + this->slotId
-        + " art=" + layer->artName
-        + " layer=" + juce::String(layerIndex + 1)
-        + " source=" + sourceText
-        + " tuning=" + juce::String(*update.tuningCents)
-        + " attack=" + juce::String(*update.attackMs)
-        + " decay=" + juce::String(*update.decayMs)
-        + " gain=" + juce::String(*update.volumeDb, 2)
-        + " pan=" + juce::String(*update.pan)
-        + " flipLR=" + juce::String(*update.flipLR ? "1" : "0")
-        + " flipPhase=" + juce::String(*update.flipPhase ? "1" : "0")
-        + " bleed=[" + bleedParts.joinIntoString(",") + "]", DebugLevel::Debug);
-    const int sourceOccurrenceIndex = this->getSourceOccurrenceIndex(layer);
-    if (!this->engine.updateSlotSourceParameters(this->slotId, layer->artName, sourceText, sourceOccurrenceIndex, update))
-        this->engine.updateSlotParameters(this->slotId, layer->artName, layerIndex, update);
-    this->mapTextDirty = true;
+    std::unordered_set<size_t> updatedEntryIndexes;
+    for (const auto& projection : targetProjections) {
+        if (projection.entryIndex >= parsedMap.value.entries.size() || !updatedEntryIndexes.insert(projection.entryIndex).second) continue;
+        auto& entry = parsedMap.value.entries[projection.entryIndex];
+        switch (parameter) {
+            case EditableLayerParameter::Tuning:
+                if (integerValue == 0) entry.tuningCents.reset();
+                else entry.tuningCents = integerValue;
+                break;
+            case EditableLayerParameter::Attack:
+                if (integerValue < 0) entry.attackTimeMs.reset();
+                else entry.attackTimeMs = integerValue;
+                break;
+            case EditableLayerParameter::Decay:
+                if (integerValue < 0) entry.decayTimeMs.reset();
+                else entry.decayTimeMs = integerValue;
+                break;
+            case EditableLayerParameter::Gain:
+                if (std::abs(floatValue) <= 0.01f) entry.volumeDb.reset();
+                else entry.volumeDb = floatValue;
+                break;
+            case EditableLayerParameter::Pan:
+                if (integerValue == 0) entry.pan.reset();
+                else entry.pan = integerValue;
+                break;
+            case EditableLayerParameter::FlipLR:
+                entry.flipLR = boolValue;
+                entry.flipLRExplicit = true;
+                break;
+            case EditableLayerParameter::FlipPhase:
+                entry.flipPhase = boolValue;
+                break;
+            case EditableLayerParameter::Bleed: {
+                for (auto levelIterator = entry.micBleedLevels.begin(); levelIterator != entry.micBleedLevels.end();) {
+                    if (levelIterator->first.compareIgnoreCase(micCode) == 0) levelIterator = entry.micBleedLevels.erase(levelIterator);
+                    else ++levelIterator;
+                }
+                if (bleedValue < 0.99f) entry.micBleedLevels[micCode] = bleedValue;
+                break;
+            }
+            case EditableLayerParameter::VelocityResponse:
+                entry.velocityResponse = layer->velocityResponse;
+                break;
+        }
+    }
+
+    this->suppressParameterCallbacks = true;
+    for (const auto& projection : targetProjections) {
+        if (projection.slotId.compareIgnoreCase(this->slotId) != 0) continue;
+        auto* targetLayer = static_cast<LayerRow*>(nullptr);
+        for (auto* candidateLayer : this->layerRows) {
+            if (candidateLayer != nullptr && candidateLayer->artName.compareIgnoreCase(projection.articulationName) == 0 && candidateLayer->mappedLayerIndex == projection.layerIndex) {
+                targetLayer = candidateLayer;
+                break;
+            }
+        }
+        if (targetLayer == nullptr) continue;
+        switch (parameter) {
+            case EditableLayerParameter::Tuning: targetLayer->tuningPot->setValue(integerValue, juce::dontSendNotification); break;
+            case EditableLayerParameter::Attack: targetLayer->attackPot->setValue(integerValue, juce::dontSendNotification); break;
+            case EditableLayerParameter::Decay: targetLayer->decayPot->setValue(integerValue, juce::dontSendNotification); break;
+            case EditableLayerParameter::Gain: targetLayer->gainPot->setValue(floatValue, juce::dontSendNotification); break;
+            case EditableLayerParameter::Pan: targetLayer->panPot->setValue(integerValue, juce::dontSendNotification); break;
+            case EditableLayerParameter::FlipLR:
+                targetLayer->flipLRButton->setToggleState(boolValue, juce::dontSendNotification);
+                targetLayer->flipLRExplicit = true;
+                break;
+            case EditableLayerParameter::FlipPhase: targetLayer->flipPhaseButton->setToggleState(boolValue, juce::dontSendNotification); break;
+            case EditableLayerParameter::Bleed:
+                for (const auto& bleedControl : targetLayer->micBleeds)
+                    if (bleedControl != nullptr && bleedControl->micCode.compareIgnoreCase(micCode) == 0) bleedControl->bleedPot->setValue(bleedValue * 100.0f, juce::dontSendNotification);
+                break;
+            case EditableLayerParameter::VelocityResponse: break;
+        }
+    }
+    this->suppressParameterCallbacks = false;
+
+    std::vector<DrumKitEngine::LayerParameterTarget> runtimeTargets;
+    runtimeTargets.reserve(targetProjections.size());
+    for (const auto& projection : targetProjections) runtimeTargets.push_back({ projection.slotId, projection.articulationName, projection.layerIndex, runtimeUpdate });
+    this->engine.updateSlotParametersBatch(runtimeTargets);
+
+    this->savedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(parsedMap.value);
+    this->mapTextDirty = false;
+    this->refreshLayerMappings();
+    if (this->onMapTextChanged) this->onMapTextChanged(this->savedInstrumentMapText);
 }
 // Generate map text: rebuilds this slot while preserving every other slot.
 
@@ -1150,18 +1278,35 @@ bool PadContextPopup::applyToEngine() {
 }
 
 void PadContextPopup::refreshLayerMappings() {
+    for (auto* layer : this->layerRows) {
+        if (layer == nullptr) continue;
+        layer->mappedLayerIndex = -1;
+    }
+
+    const auto* layout = this->engine.getKitLayout();
+    if (layout == nullptr) return;
+    auto parsedMap = DrumKitEngine::parseInstrumentMapText(this->savedInstrumentMapText);
+    if (!parsedMap.ok()) return;
+    const auto projections = DrumKitEngineMapHelpers::projectDestinationLayers(parsedMap.value, *layout);
+
     for (const auto* group : this->articulationGroups) {
-        int mappedLayerIndex = 0;
-        for (auto* layer : this->layerRows) {
-            if (layer == nullptr || layer->artName != group->artName) continue;
-            if (layer->selectedSourceIndex < 0) {
-                layer->mappedLayerIndex = -1;
-                continue;
-            }
-            layer->mappedLayerIndex = mappedLayerIndex;
-            ++mappedLayerIndex;
+        std::vector<LayerRow*> mappedRows;
+        for (auto* layer : this->layerRows)
+            if (layer != nullptr && layer->artName.compareIgnoreCase(group->artName) == 0 && layer->selectedSourceIndex >= 0) mappedRows.push_back(layer);
+
+        for (const auto& projection : projections) {
+            if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationName.compareIgnoreCase(group->artName) != 0) continue;
+            if (projection.layerIndex < 0 || projection.layerIndex >= static_cast<int>(mappedRows.size())) continue;
+            auto* mappedRow = mappedRows[static_cast<size_t>(projection.layerIndex)];
+            mappedRow->mappedLayerIndex = projection.layerIndex;
         }
     }
+}
+
+void PadContextPopup::rebuildLayerRows() {
+    this->layerRows.clear(true);
+    this->populateLayers();
+    this->resized();
 }
 
 void PadContextPopup::flushMapText() {
@@ -1199,7 +1344,7 @@ void PadContextPopup::showVelocityResponseEditor(LayerRow* layer) {
     this->activeVelocityResponseEditor->onResponseChanged = [this, layer](const std::optional<juce::String>& definition, bool commit) {
         layer->velocityResponse = definition;
         this->updateVelocityResponseDisplay(layer);
-        this->applyLayerParametersFast(layer);
+        this->applyLayerParameterChange(layer, EditableLayerParameter::VelocityResponse);
         if (commit) this->flushMapText();
     };
     this->activeVelocityResponseEditor->onPreview = [this, layer](int velocity) {
@@ -1354,6 +1499,64 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->activePicker->focusItemList();
 }
 
+void PadContextPopup::showInstrumentPicker() {
+    this->dismissSourceOverrideEditor();
+    this->dismissVelocityResponseEditor();
+    this->dismissSourcePicker();
+
+    this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog(), SourcePickerPopup::SelectionMode::WholeInstrument);
+    this->activePicker->setFilterType(this->slotType);
+    this->activePicker->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
+        if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
+        const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
+        this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
+    };
+    this->activePicker->onInstrumentSelected = [this](const SourcePickerPopup::InstrumentSelection& selection) {
+        juce::MessageManager::callAsync([this, selection] {
+            const auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
+            auto updatedMap = this->engine.buildInstrumentMapWithSlotInstrument(currentMapText, this->slotId, selection.kitId, selection.instrumentId);
+            if (!updatedMap.ok()) {
+                if (this->onStatusMessage) this->onStatusMessage(updatedMap.error());
+                return;
+            }
+            const bool mapChanged = updatedMap.value != this->engine.normalizeInstrumentMapText(currentMapText);
+            if (mapChanged && !this->engine.applyInstrumentMapSlotChange(updatedMap.value, this->slotId)) {
+                if (this->onStatusMessage) this->onStatusMessage(this->engine.getLastInstrumentMapStatus());
+                return;
+            }
+
+            this->savedInstrumentMapText = updatedMap.value;
+            this->mapTextDirty = false;
+            this->dismissSourcePicker();
+            this->rebuildLayerRows();
+            if (this->onMapTextChanged) this->onMapTextChanged(this->savedInstrumentMapText);
+            if (this->onInstrumentChanged) this->onInstrumentChanged();
+            if (this->onStatusMessage) this->onStatusMessage("Instrument replaced in " + this->slotId);
+            this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
+        });
+    };
+
+    this->pickerOverlay = std::make_unique<DismissOverlay>();
+    this->pickerOverlay->setDarkened(true);
+    this->pickerOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    };
+    this->addAndMakeVisible(*this->pickerOverlay);
+    this->pickerOverlay->toFront(false);
+    this->addAndMakeVisible(*this->activePicker);
+    this->activePicker->toFront(true);
+    this->layoutSourcePicker();
+
+    int initialSourceIndex = -1;
+    for (const auto* layer : this->layerRows) {
+        if (layer == nullptr || layer->selectedSourceIndex < 0) continue;
+        initialSourceIndex = layer->selectedSourceIndex;
+        if (ArticulationNameHelpers::articulationCodeMatches(layer->artName, this->artName)) break;
+    }
+    this->activePicker->setSelectedItem(initialSourceIndex);
+    this->activePicker->focusItemList();
+}
+
 void PadContextPopup::dismissSourcePicker() {
     if (this->pickerOverlay) {
         this->removeChildComponent(this->pickerOverlay.get());
@@ -1398,7 +1601,7 @@ void PadContextPopup::paint(juce::Graphics& g) {
 void PadContextPopup::resized() {
     auto area = getLocalBounds().reduced(8);
 
-    // Header row: "Kick" | MIDI controls
+    // Header row: slot | link controls | set instrument | MIDI controls
     auto headerRow = area.removeFromTop(24);
 
     // MIDI: right-aligned in header
@@ -1406,6 +1609,15 @@ void PadContextPopup::resized() {
     if (this->midiAssignmentControl) this->midiAssignmentControl->setBounds(headerRow.removeFromRight(midiControlW).reduced(0, 2));
     headerRow.removeFromRight(4);
     this->midiHeaderLabel.setBounds(headerRow.removeFromRight(32).reduced(0, 2));
+    headerRow.removeFromRight(6);
+    this->setInstrumentButton.setBounds(headerRow.removeFromRight(104).reduced(1, 2));
+    headerRow.removeFromRight(4);
+    if (this->linkTomBleedButton.isVisible()) {
+        this->linkTomBleedButton.setBounds(headerRow.removeFromRight(112).reduced(1, 2));
+        headerRow.removeFromRight(4);
+    }
+    this->linkArtsButton.setBounds(headerRow.removeFromRight(78).reduced(1, 2));
+    headerRow.removeFromRight(6);
 
     // Slot label fills remaining left
     this->slotLabel.setBounds(headerRow);

@@ -322,6 +322,7 @@ public:
         std::optional<int> pan;
         std::optional<bool> flipLR;
         std::optional<bool> flipPhase;
+        std::optional<std::pair<juce::String, float>> micBleedLevel;
         std::optional<std::unordered_map<juce::String, float>> micBleedLevels;
         bool updateVelocityResponse = false;
         std::optional<VelocityResponse> velocityResponse;

@@ -800,6 +800,14 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
         this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
         this->markInstrumentConfigDirty();
     };
+    this->padContextPopup->onStatusMessage = [this](const juce::String& message) {
+        this->statusBar.setStatusText(message);
+    };
+    this->padContextPopup->onInstrumentChanged = [this] {
+        this->markDrumPadGridDirty();
+        this->markInstrumentConfigDirty();
+        this->refreshDrumPadGridIfNeeded();
+    };
     this->padContextPopup->onMidiMappingChanged = [this] {
         auto* layout = this->processorRef.getEngine().getKitLayout();
         if (layout) {
