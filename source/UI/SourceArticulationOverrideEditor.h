@@ -45,6 +45,12 @@ private:
         std::optional<float> value;
     };
 
+    class WheelTextEditor : public juce::TextEditor {
+    public:
+        std::function<void(bool increase, bool fine)> onWheelStep;
+        void mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) override;
+    };
+
     class SampleMatrixModel : public juce::TableListBoxModel {
     public:
         explicit SampleMatrixModel(SourceArticulationOverrideEditor& editorOwner) : owner(editorOwner) {}
@@ -108,11 +114,11 @@ private:
     juce::Label manualGainLabel;
     juce::Label fileOffsetLabel;
     juce::Label micOffsetLabel;
-    juce::TextEditor instrumentBalanceEditor;
-    juce::TextEditor articulationBalanceEditor;
-    juce::TextEditor manualGainEditor;
-    juce::TextEditor fileOffsetEditor;
-    juce::TextEditor micOffsetEditor;
+    WheelTextEditor instrumentBalanceEditor;
+    WheelTextEditor articulationBalanceEditor;
+    WheelTextEditor manualGainEditor;
+    WheelTextEditor fileOffsetEditor;
+    WheelTextEditor micOffsetEditor;
     juce::TextButton resetInstrumentBalanceButton;
     juce::TextButton resetArticulationBalanceButton;
     juce::TextButton resetManualGainButton;
@@ -164,6 +170,7 @@ private:
     bool isLogicalHitSelected(const LogicalHitKey& hit) const;
     bool logicalHitsMatch(const LogicalHitKey& first, const LogicalHitKey& second) const;
     void toggleLogicalHitSelection(int levelIdx, int roundRobinIdx);
+    void invertLogicalHitSelection(std::optional<int> levelIdx);
     void toggleMicSelection(const juce::String& micCode);
     bool isMicSelected(const juce::String& micCode) const;
     const DrumKitEngine::SourceSampleOverrideInfo* findSample(const LogicalHitKey& hit, const juce::String& micCode = {}) const;
@@ -175,6 +182,7 @@ private:
     void previewLogicalHit(const LogicalHitKey& hit, int playbackVelocity);
     void previewMic(const LogicalHitKey& hit, const juce::String& micCode, int playbackVelocity);
     void previewVelocityAt(float xPosition);
+    void previewChangedValues();
     void replayLastPreview();
     void queueLogicalHitHover(const LogicalHitKey& hit);
     void queueMicHover(const juce::String& micCode);
@@ -189,6 +197,9 @@ private:
     int getSelectedMinimum() const;
     int getSelectedMaximum() const;
     int getLevelIndexForVelocity(int velocity) const;
+    float getBatchWheelBaseValue(BatchField field) const;
+    void stepBalanceEditor(WheelTextEditor& editor, const DrumKitEngine::SourceBalanceInfo& balanceInfo, bool increase, bool fine);
+    void stepBatchEditor(WheelTextEditor& editor, BatchField field, bool increase, bool fine);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourceArticulationOverrideEditor)
 };

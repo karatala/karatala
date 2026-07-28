@@ -52,6 +52,18 @@ static juce::String micHoverKey(int namedVelocity, const juce::String& roundRobi
 
 } // namespace SourceArticulationOverrideEditorHelpers
 
+void SourceArticulationOverrideEditor::WheelTextEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
+    if (!this->isEnabled() || event.mods.isAnyMouseButtonDown() || !this->onWheelStep) {
+        juce::TextEditor::mouseWheelMove(event, wheel);
+        return;
+    }
+
+    double wheelAmount = std::abs(wheel.deltaX) > std::abs(wheel.deltaY) ? -static_cast<double>(wheel.deltaX) : static_cast<double>(wheel.deltaY);
+    if (wheel.isReversed) wheelAmount = -wheelAmount;
+    if (juce::approximatelyEqual(wheelAmount, 0.0)) return;
+    this->onWheelStep(wheelAmount > 0.0, event.mods.isShiftDown());
+}
+
 SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine),
       sampleMatrixModel(*this),
@@ -132,9 +144,9 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
     configureEditor(this->fileOffsetEditor, 12, "-+.0123456789");
     configureEditor(this->micOffsetEditor, 12, "-+.0123456789");
 
-    this->manualGainEditor.setTooltip("Replaces the gain correction stored in each selected filename.");
-    this->fileOffsetEditor.setTooltip("Negative milliseconds skip the start. Positive milliseconds delay playback.");
-    this->micOffsetEditor.setTooltip("Overrides the file offset for each selected mic.");
+    this->manualGainEditor.setTooltip("Replaces the gain correction stored in each selected filename. Wheel: 0.5 dB. Shift-wheel: 0.1 dB.");
+    this->fileOffsetEditor.setTooltip("Negative milliseconds skip the start. Positive milliseconds delay playback. Wheel: 10 ms. Shift-wheel: 1 ms.");
+    this->micOffsetEditor.setTooltip("Overrides the file offset for each selected mic. Wheel: 10 ms. Shift-wheel: 1 ms.");
     this->instrumentBalanceEditor.onReturnKey = [this] { this->commitInstrumentBalance(); this->instrumentBalanceEditor.giveAwayKeyboardFocus(); };
     this->articulationBalanceEditor.onReturnKey = [this] { this->commitArticulationBalance(); this->articulationBalanceEditor.giveAwayKeyboardFocus(); };
     this->manualGainEditor.onReturnKey = [this] { this->commitManualGain(); this->manualGainEditor.giveAwayKeyboardFocus(); };
@@ -148,11 +160,23 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
     this->manualGainEditor.onTextChange = [this] { this->manualGainDirty = true; };
     this->fileOffsetEditor.onTextChange = [this] { this->fileOffsetDirty = true; };
     this->micOffsetEditor.onTextChange = [this] { this->micOffsetDirty = true; };
+    this->instrumentBalanceEditor.onWheelStep = [this](bool increase, bool fine) {
+        this->stepBalanceEditor(this->instrumentBalanceEditor, this->rangeInfo.instrumentBalance, increase, fine);
+        this->commitInstrumentBalance();
+    };
+    this->articulationBalanceEditor.onWheelStep = [this](bool increase, bool fine) {
+        this->stepBalanceEditor(this->articulationBalanceEditor, this->rangeInfo.articulationBalance, increase, fine);
+        this->commitArticulationBalance();
+    };
+    this->manualGainEditor.onWheelStep = [this](bool increase, bool fine) { this->stepBatchEditor(this->manualGainEditor, BatchField::ManualGain, increase, fine); };
+    this->fileOffsetEditor.onWheelStep = [this](bool increase, bool fine) { this->stepBatchEditor(this->fileOffsetEditor, BatchField::FileOffset, increase, fine); };
+    this->micOffsetEditor.onWheelStep = [this](bool increase, bool fine) { this->stepBatchEditor(this->micOffsetEditor, BatchField::MicOffset, increase, fine); };
 
     this->sampleMatrix.setHeaderHeight(24);
     this->sampleMatrix.setRowHeight(24);
     this->sampleMatrix.setOutlineThickness(0);
     this->sampleMatrix.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
+    this->sampleMatrix.getHeader().setTooltip("Click to invert the table, or click a velocity heading to invert that column.");
     this->sampleMatrix.addMouseListener(this, true);
     this->addAndMakeVisible(this->sampleMatrix);
 
@@ -312,7 +336,7 @@ void SourceArticulationOverrideEditor::setSource(const juce::String& kitId, cons
     if (!this->rangeInfo.sourceFound) this->setStatus("Source articulation was not found.", true);
     else if (!this->rangeInfo.writable) this->setStatus("Preview is available, but this kit is read-only.", true);
     else if (this->rangeInfo.levels.size() == 1) this->setStatus("Single velocity layer: MIDI 1-127. Click it to preview.");
-    else this->setStatus("Hover to preview. Click cells and mics to select files.");
+    else this->setStatus("Hover to preview. Click cells, headers, and mics to select files.");
 }
 
 bool SourceArticulationOverrideEditor::applySelectedBoundary(int upperBoundary, bool persist) {
@@ -435,8 +459,8 @@ void SourceArticulationOverrideEditor::updateBalanceControls() {
 
     const auto instrumentFilename = SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.instrumentBalance.filenameValue, "none");
     const auto articulationFilename = this->rangeInfo.articulationBalance.filenameConflict ? juce::String("conflict") : SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.articulationBalance.filenameValue, "inherit instrument");
-    this->instrumentBalanceEditor.setTooltip("Folder: " + instrumentFilename + ". Current: " + instrumentEffective + ".");
-    this->articulationBalanceEditor.setTooltip("Folder: " + articulationFilename + ". Current: " + articulationEffective + ".");
+    this->instrumentBalanceEditor.setTooltip("Folder: " + instrumentFilename + ". Current: " + instrumentEffective + ". Wheel: 4. Shift-wheel: 1.");
+    this->articulationBalanceEditor.setTooltip("Folder: " + articulationFilename + ". Current: " + articulationEffective + ". Wheel: 4. Shift-wheel: 1.");
 }
 
 void SourceArticulationOverrideEditor::rebuildSampleView(bool initializeSelection) {
@@ -481,7 +505,7 @@ void SourceArticulationOverrideEditor::rebuildSampleView(bool initializeSelectio
 void SourceArticulationOverrideEditor::rebuildMatrixColumns() {
     auto& header = this->sampleMatrix.getHeader();
     header.removeAllColumns();
-    header.addColumn("RR\\velo", roundRobinColumnId, 70, 70, 70, juce::TableHeaderComponent::visible);
+    header.addColumn("", roundRobinColumnId, 20, 20, 20, juce::TableHeaderComponent::visible);
     for (int levelIdx = 0; levelIdx < static_cast<int>(this->rangeInfo.levels.size()); ++levelIdx) {
         const auto velocityText = juce::String(this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity).paddedLeft('0', 3);
         header.addColumn(velocityText, velocityColumnIdBase + levelIdx, 48, 48, 48, juce::TableHeaderComponent::visible);
@@ -575,7 +599,7 @@ void SourceArticulationOverrideEditor::commitInstrumentBalance() {
     this->clearPersistenceFailure();
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("Instrument balance saved.");
-    this->replayLastPreview();
+    this->previewChangedValues();
 }
 
 void SourceArticulationOverrideEditor::commitArticulationBalance() {
@@ -598,7 +622,7 @@ void SourceArticulationOverrideEditor::commitArticulationBalance() {
     this->clearPersistenceFailure();
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("Articulation balance saved.");
-    this->replayLastPreview();
+    this->previewChangedValues();
 }
 
 void SourceArticulationOverrideEditor::commitManualGain() {
@@ -624,7 +648,7 @@ void SourceArticulationOverrideEditor::commitManualGain() {
         return sampleIdx >= 0 && sampleIdx < static_cast<int>(this->rangeInfo.samples.size()) && this->rangeInfo.samples[static_cast<size_t>(sampleIdx)].recipeStatus == SampledSound::SourceRecipeStatus::Pending;
     });
     this->setStatus(pending ? "Gain saved. Updating selected audio..." : "Gain saved and applied.");
-    this->replayLastPreview();
+    this->previewChangedValues();
 }
 
 void SourceArticulationOverrideEditor::commitFilePlaybackOffset() {
@@ -647,7 +671,7 @@ void SourceArticulationOverrideEditor::commitFilePlaybackOffset() {
     this->fileOffsetDirty = false;
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("File start offset saved.");
-    this->replayLastPreview();
+    this->previewChangedValues();
 }
 
 void SourceArticulationOverrideEditor::commitMicPlaybackOffset() {
@@ -670,7 +694,7 @@ void SourceArticulationOverrideEditor::commitMicPlaybackOffset() {
     this->micOffsetDirty = false;
     this->replaceInfo(std::move(updateResult.value));
     this->setStatus("Mic offset saved.");
-    this->replayLastPreview();
+    this->previewChangedValues();
 }
 
 bool SourceArticulationOverrideEditor::commitPendingSampleEditors() {
@@ -776,6 +800,24 @@ void SourceArticulationOverrideEditor::toggleLogicalHitSelection(int levelIdx, i
     ++this->hoverPreviewGeneration;
     this->updateSelectedSamples();
     this->previewLogicalHit(hit, hit.namedVelocity);
+}
+
+void SourceArticulationOverrideEditor::invertLogicalHitSelection(std::optional<int> levelIdx) {
+    if (!this->commitPendingSampleEditors()) return;
+    const int firstLevelIdx = levelIdx.value_or(0);
+    const int lastLevelIdx = levelIdx.has_value() ? *levelIdx + 1 : static_cast<int>(this->rangeInfo.levels.size());
+    if (firstLevelIdx < 0 || lastLevelIdx > static_cast<int>(this->rangeInfo.levels.size())) return;
+
+    for (int currentLevelIdx = firstLevelIdx; currentLevelIdx < lastLevelIdx; ++currentLevelIdx) {
+        for (int roundRobinIdx = 0; roundRobinIdx < static_cast<int>(this->roundRobins.size()); ++roundRobinIdx) {
+            if (!this->logicalHitExists(currentLevelIdx, roundRobinIdx)) continue;
+            LogicalHitKey hit { this->rangeInfo.levels[static_cast<size_t>(currentLevelIdx)].namedVelocity, this->roundRobins[static_cast<size_t>(roundRobinIdx)] };
+            const auto selectedIt = std::find_if(this->selectedHits.begin(), this->selectedHits.end(), [this, &hit](const auto& selectedHit) { return this->logicalHitsMatch(hit, selectedHit); });
+            if (selectedIt == this->selectedHits.end()) this->selectedHits.push_back(hit);
+            else this->selectedHits.erase(selectedIt);
+        }
+    }
+    this->updateSelectedSamples();
 }
 
 void SourceArticulationOverrideEditor::toggleMicSelection(const juce::String& micCode) {
@@ -906,6 +948,24 @@ void SourceArticulationOverrideEditor::previewVelocityAt(float xPosition) {
     this->previewLogicalHit(hit, velocity);
 }
 
+void SourceArticulationOverrideEditor::previewChangedValues() {
+    if (!this->selectedSampleIndices.empty()) {
+        const int sampleIdx = this->selectedSampleIndices.back();
+        if (sampleIdx >= 0 && sampleIdx < static_cast<int>(this->rangeInfo.samples.size())) {
+            const auto& sample = this->rangeInfo.samples[static_cast<size_t>(sampleIdx)];
+            this->previewLogicalHit({ sample.namedVelocity, sample.roundRobin }, sample.namedVelocity);
+            return;
+        }
+    }
+    if (!this->selectedHits.empty()) {
+        const auto& hit = this->selectedHits.back();
+        this->previewLogicalHit(hit, hit.namedVelocity);
+        return;
+    }
+    if (this->hasActiveHit) this->previewLogicalHit(this->activeHit, this->activeHit.namedVelocity);
+    else if (this->hasLastPreview) this->previewLogicalHit(this->lastPreviewHit, this->lastPreviewVelocity);
+}
+
 void SourceArticulationOverrideEditor::replayLastPreview() {
     if (!this->hasLastPreview) return;
     if (this->lastPreviewWasMicSolo) this->previewMic(this->lastPreviewHit, this->lastPreviewMicCode, this->lastPreviewVelocity);
@@ -1016,6 +1076,42 @@ int SourceArticulationOverrideEditor::getLevelIndexForVelocity(int velocity) con
     for (int levelIdx = 0; levelIdx < static_cast<int>(this->rangeInfo.levels.size()); ++levelIdx)
         if (velocity <= this->rangeInfo.levels[static_cast<size_t>(levelIdx)].effectiveUpperBoundary) return levelIdx;
     return this->rangeInfo.levels.empty() ? -1 : static_cast<int>(this->rangeInfo.levels.size()) - 1;
+}
+
+float SourceArticulationOverrideEditor::getBatchWheelBaseValue(BatchField field) const {
+    if (this->selectedSampleIndices.empty()) return 0.0f;
+    const int sampleIdx = this->selectedSampleIndices.back();
+    if (sampleIdx < 0 || sampleIdx >= static_cast<int>(this->rangeInfo.samples.size())) return 0.0f;
+    const auto& sample = this->rangeInfo.samples[static_cast<size_t>(sampleIdx)];
+    if (field == BatchField::ManualGain) return sample.effectiveManualGainDb;
+    if (field == BatchField::FileOffset) return sample.filePlaybackOffsetMsOverride.value_or(sample.filenamePlaybackOffsetMs);
+    return sample.effectivePlaybackOffsetMs;
+}
+
+void SourceArticulationOverrideEditor::stepBalanceEditor(WheelTextEditor& editor, const DrumKitEngine::SourceBalanceInfo& balanceInfo, bool increase, bool fine) {
+    const auto editorValue = parseBalanceValue(editor.getText().trim());
+    const int currentValue = editorValue.value_or(balanceInfo.effectiveValue.value_or(0));
+    const int step = fine ? 1 : 4;
+    editor.setText(balanceValueToString(juce::jlimit(-127, 127, currentValue + (increase ? step : -step))), false);
+}
+
+void SourceArticulationOverrideEditor::stepBatchEditor(WheelTextEditor& editor, BatchField field, bool increase, bool fine) {
+    const auto editorValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(editor.getText().trim());
+    const float currentValue = editorValue.value_or(this->getBatchWheelBaseValue(field));
+    const float coarseStep = field == BatchField::ManualGain ? 0.5f : 10.0f;
+    const float fineStep = field == BatchField::ManualGain ? 0.1f : 1.0f;
+    const float step = fine ? fineStep : coarseStep;
+    editor.setText(SourceArticulationOverrideEditorHelpers::floatText(currentValue + (increase ? step : -step)), false);
+    if (field == BatchField::ManualGain) {
+        this->manualGainDirty = true;
+        this->commitManualGain();
+    } else if (field == BatchField::FileOffset) {
+        this->fileOffsetDirty = true;
+        this->commitFilePlaybackOffset();
+    } else {
+        this->micOffsetDirty = true;
+        this->commitMicPlaybackOffset();
+    }
 }
 
 void SourceArticulationOverrideEditor::paint(juce::Graphics& graphics) {
@@ -1165,6 +1261,15 @@ void SourceArticulationOverrideEditor::resized() {
 }
 
 void SourceArticulationOverrideEditor::mouseDown(const juce::MouseEvent& event) {
+    auto& matrixHeader = this->sampleMatrix.getHeader();
+    if (event.eventComponent == &matrixHeader || matrixHeader.isParentOf(event.eventComponent)) {
+        const auto headerPosition = matrixHeader.getLocalPoint(event.eventComponent, event.getPosition());
+        const int columnId = matrixHeader.getColumnIdAtX(headerPosition.x);
+        if (columnId == roundRobinColumnId) this->invertLogicalHitSelection(std::nullopt);
+        else if (columnId >= velocityColumnIdBase) this->invertLogicalHitSelection(columnId - velocityColumnIdBase);
+        return;
+    }
+
     const auto localPosition = event.getEventRelativeTo(this).position;
     if (!this->rangeBounds.expanded(10.0f, 4.0f).contains(localPosition)) return;
     const int dividerIdx = this->findNearestDivider(localPosition.x, 12.0f);
