@@ -176,7 +176,7 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
     this->sampleMatrix.setRowHeight(24);
     this->sampleMatrix.setOutlineThickness(0);
     this->sampleMatrix.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
-    this->sampleMatrix.getHeader().setTooltip("Click to invert the table, or click a velocity heading to invert that column.");
+    this->sampleMatrix.setTooltip("Click * heading to invert the table, or click a velocity heading to invert that column.");
     this->sampleMatrix.addMouseListener(this, true);
     this->addAndMakeVisible(this->sampleMatrix);
 
@@ -505,7 +505,7 @@ void SourceArticulationOverrideEditor::rebuildSampleView(bool initializeSelectio
 void SourceArticulationOverrideEditor::rebuildMatrixColumns() {
     auto& header = this->sampleMatrix.getHeader();
     header.removeAllColumns();
-    header.addColumn("", roundRobinColumnId, 20, 20, 20, juce::TableHeaderComponent::visible);
+    header.addColumn("*", roundRobinColumnId, 20, 20, 20, juce::TableHeaderComponent::visible);
     for (int levelIdx = 0; levelIdx < static_cast<int>(this->rangeInfo.levels.size()); ++levelIdx) {
         const auto velocityText = juce::String(this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity).paddedLeft('0', 3);
         header.addColumn(velocityText, velocityColumnIdBase + levelIdx, 48, 48, 48, juce::TableHeaderComponent::visible);

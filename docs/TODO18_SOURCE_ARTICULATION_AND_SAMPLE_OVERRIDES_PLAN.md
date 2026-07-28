@@ -385,11 +385,14 @@ Do not reuse the vertical dB handles from `VelocityResponseEditor`. Reuse its mo
 
 - Matrix columns are named velocity layers and rows are round-robin variants.
 - Matrix cells select logical hits. Mic buttons below the matrix filter the selected files.
+- Clicking `*` inverts all existing cells, while clicking a velocity heading inverts that column. Header selection itself is silent.
 - The last previewed matrix cell is the active hit and has a separate outline.
 - The right list contains the existing combination of selected hits and selected mics.
 - Hovering a matrix cell previews its complete logical hit. Hovering a mic button previews only that mic for the active hit.
 - File gain, file start offset, and mic offset apply to all selected files through one complete save.
 - A field shows one shared override, `Mixed`, or its inherited source placeholder.
+- Every value field supports coarse wheel and fine Shift-wheel changes without removing exact typed editing.
+- A successful value-field change previews the complete logical hit from the final selected-file row, with selected-hit and active-hit fallbacks when that row is unavailable.
 - Generated onset, intensity, peak, content-hash recovery, ambiguity, and recipe status stay in selected-file tooltips.
 - Preview never changes the normal performance round-robin counter.
 
@@ -560,7 +563,7 @@ Likely files:
 - ✅ Add horizontal velocity-layer blocks and draggable dividers.
 - ✅ Show each layer's exact inclusive range in its block and add even distribution, reset, keyboard control, click preview, and release preview.
 - ✅ Add instrument and articulation balance controls.
-- ✅ Add the RR by velocity matrix, mic filters, selected-file list, and batch manual-gain and playback-offset fields.
+- ✅ Add the RR by velocity matrix, whole-table and column inversion, mic filters, selected-file list, wheel editing, and batch manual-gain and playback-offset fields.
 - ✅ Keep filename range data and generated sample measurements available through tooltips without verbose permanent rows.
 - ✅ Show source-global scope, read-only state, and persistence errors for range editing.
 - ✅ Show pending targeted reload state for live manual-gain editing.
@@ -712,6 +715,9 @@ Use temporary fixture kits to verify:
 
 ### Other Source Overrides
 
+- Click `*` and velocity headings from empty, mixed, and full selections and confirm only existing cells invert without preview.
+- Wheel each value field and use Shift-wheel to confirm coarse and fine steps start from the visible or effective value.
+- Select several hits and confirm a saved value previews the complete hit from the final selected-file row, not a previous solo mic.
 - Change instrument balance and articulation balance separately.
 - Confirm articulation balance wins and reset restores inherited behavior.
 - Change manual gain while a sample is sounding and confirm smoothing has no click.

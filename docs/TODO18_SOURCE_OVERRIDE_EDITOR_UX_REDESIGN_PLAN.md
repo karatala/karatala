@@ -30,6 +30,8 @@ Make source overrides easy to understand and adjust live without searching throu
 ## ✅ Selection model
 
 - Matrix cells select logical hits for batch editing.
+- Clicking `*` inverts every existing matrix cell. Clicking a velocity heading inverts every existing cell in that column.
+- Header selection changes stay silent.
 - Mic buttons select which files from those hits are included in the batch.
 - The selected-file list is the existing combination of selected hits and selected mics.
 - The last previewed matrix cell is also the active hit used by mic preview.
@@ -45,9 +47,11 @@ Make source overrides easy to understand and adjust live without searching throu
 - A click cancels the queued hover for the same target. That target cannot schedule another hover until the pointer leaves it.
 - Clicking inside a velocity-range block previews the velocity under the pointer using the current ranges.
 - Dragging a range boundary is silent. Releasing it previews the velocity under the pointer once.
-- Typing in a balance or override field is silent. Enter, focus loss, or `×` saves the value and replays the last preview target once.
-- Automatic replay uses the same target as the last manual preview: the full hit or one solo mic.
-- If no hit has been previewed yet, the value is saved without automatic audio.
+- Typing in a balance or override field is silent. Enter, focus loss, or `×` saves the value and previews one complete logical hit.
+- All five value editors support wheel changes. Balance uses `4`, gain uses `0.5 dB`, and offsets use `10 ms`; Shift-wheel uses `1`, `0.1 dB`, and `1 ms`.
+- An empty or `Mixed` field starts wheel editing from the effective value of the last selected-file row.
+- Value-editor preview uses the complete logical hit from the last selected-file row, normally the highest selected velocity. It never keeps a previous solo-mic target.
+- If there is no selected-file row, value-editor preview falls back to the last selected or active logical hit. If no hit exists, the value is saved without audio.
 
 ## ✅ Sample measurements
 
@@ -63,11 +67,14 @@ To keep the main form simple, the selected-sample list should show filenames onl
 
 - ✅ The dropdown, boundary editor, verbose readout, and bottom metadata row were removed.
 - ✅ The matrix, mic filters, active-hit outline, selected-file list, and batch fields were added.
+- ✅ Matrix headings invert the whole table or one velocity column without starting preview.
 - ✅ Balance and sample overrides use the source override metadata. Each batch field saves all selected targets through one complete operation.
 - ✅ Matrix and velocity previews use a complete logical hit. Mic hover and click use exact solo preview.
 - ✅ Matrix and mic clicks consume the queued hover for the same target, so one click produces one preview.
 - ✅ All five value editors use the standard 20 px control and 14 px text style with vertically centred text.
+- ✅ All five value editors support coarse wheel and fine Shift-wheel changes while preserving typing, inherited values, and `Mixed`.
+- ✅ Successful value-editor changes preview one complete selected logical hit instead of replaying a previous solo mic.
 - ✅ Velocity blocks use a compact two-line layout with a smaller range line.
 - ✅ `Even` distributes and saves every range boundary as one complete operation; `Reset` restores filename values.
 - Pending: build and run the C++ tests when requested.
-- Pending: open a large real kit and verify scrolling, text size, hover timing, layout, and audio behavior.
+- Pending: open a large real kit and verify header inversion, input wheel steps, text size, hover timing, layout, and full-hit audio behavior.
