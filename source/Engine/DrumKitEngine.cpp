@@ -2019,6 +2019,38 @@ void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::Stri
     }
 }
 
+void DrumKitEngine::playLayerPreview(const juce::String& slotId, const juce::String& artName, int layerIndex, juce::uint8 velocity) {
+    if (layerIndex < 0) return;
+    auto* layout = this->activeKitLayoutPtr.get();
+    if (layout == nullptr) return;
+
+    int midiNote = -1;
+    for (const auto& slot : layout->instrumentSlots) {
+        if (slot.id != slotId) continue;
+        for (const auto& articulation : slot.articulations) {
+            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(artName, articulation.codeRaw) && artName != "(default)") continue;
+            if (!articulation.notes.empty()) {
+                midiNote = static_cast<int>(articulation.notes[0]);
+                break;
+            }
+        }
+        if (midiNote < 0 && !slot.articulations.empty() && !slot.articulations[0].notes.empty()) midiNote = static_cast<int>(slot.articulations[0].notes[0]);
+        break;
+    }
+    if (midiNote < 0) return;
+
+    const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
+    int currentLayerIndex = 0;
+    for (auto& synthPtr : this->instrumentSynthPtrs) {
+        if (synthPtr == nullptr || synthPtr->getId() != slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes)) continue;
+        if (currentLayerIndex == layerIndex) {
+            synthPtr->playNote(1, midiNote, velocity);
+            return;
+        }
+        ++currentLayerIndex;
+    }
+}
+
 void DrumKitEngine::playPreviewArticulation(const juce::String& slotId, const juce::String& articulationCode, juce::uint8 velocity) {
     auto* layout = this->activeKitLayoutPtr.get();
     if (layout == nullptr) return;

@@ -100,9 +100,10 @@ void PadContextPopup::addArticulationGroup(const juce::String& articulationName)
     group->addLayerButton.getProperties().set("compactText", true);
     group->addLayerButton.setTooltip("Add layer to " + articulationName);
     group->addLayerButton.onClick = [this, group] {
-        this->addLayerRow(group->artName, "", 0, -1, -1, 0.0f, 0, false, false, false, std::nullopt, {}, {}, -1);
+        auto* newLayer = this->addLayerRow(group->artName, "", 0, -1, -1, 0.0f, 0, false, false, false, std::nullopt, {}, {}, -1);
         this->updateSourceCardButtonVisibility();
         this->resized();
+        this->showSourcePicker(newLayer);
     };
     this->layerContent.addAndMakeVisible(group->addLayerButton);
 }
@@ -729,7 +730,7 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
     }
 }
 
-void PadContextPopup::addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::optional<juce::String>& velocityResponse, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
+PadContextPopup::LayerRow* PadContextPopup::addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::optional<juce::String>& velocityResponse, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
     auto* layer = this->layerRows.add(new LayerRow());
     layer->artName = articulationName;
     layer->sourcePathHint = sourceFullPath;
@@ -764,7 +765,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     UIHelpers::configureSettingsButton(*layer->sourceSetupButton);
     layer->sourceSetupButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
     layer->sourceSetupButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textSecondary);
-    layer->sourceSetupButton->setTooltip("Edit source ranges, balance, gain, and timing for every map using this articulation");
+    layer->sourceSetupButton->setTooltip("Edit library-wide overrides for velocity ranges, balance, gain, and timing of this instrument articulation");
     layer->sourceSetupButton->onClick = [this, layer] { this->showSourceOverrideEditor(layer); };
     this->layerContent.addAndMakeVisible(*layer->sourceSetupButton);
 
@@ -867,6 +868,7 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
             if (removedMappedLayer) this->applyToEngine();
         });
     };
+    return layer;
 }
 
 void PadContextPopup::updateSourceCardButtonVisibility() {
@@ -933,7 +935,7 @@ void PadContextPopup::rebuildVelocityResponseChoices(LayerRow* layer) {
     if (layer == nullptr || layer->velocityResponseMode == nullptr) return;
 
     layer->velocityResponseMode->clear(juce::dontSendNotification);
-    layer->velocityResponseMode->addItem("Use Global", velocityResponseGlobalItemId);
+    layer->velocityResponseMode->addItem("Global Vel-to-dB curve", velocityResponseGlobalItemId);
     layer->velocityResponseMode->addSeparator();
     for (int presetIdx = 0; presetIdx < static_cast<int>(this->velocityResponsePresets.size()); ++presetIdx) {
         const auto& preset = this->velocityResponsePresets[static_cast<size_t>(presetIdx)];
@@ -978,7 +980,7 @@ void PadContextPopup::updateVelocityResponseDisplay(LayerRow* layer) {
     const bool layerOverride = layer->velocityResponse.has_value();
     int selectedItemId = velocityResponseGlobalItemId;
     bool unnamedLayerCurve = false;
-    juce::String tooltip = "Use global: " + this->engine.getVelocityResponse().getDefinition();
+    juce::String tooltip = "Uses the Global Velocity-to-dB Curve selected in Conf: " + this->engine.getVelocityResponse().getDefinition();
     if (layerOverride) {
         const int presetIdx = this->findVelocityResponsePresetIndex(layer->velocityResponse);
         if (presetIdx >= 0) {
@@ -992,7 +994,7 @@ void PadContextPopup::updateVelocityResponseDisplay(LayerRow* layer) {
     }
     if (unnamedLayerCurve) {
         layer->velocityResponseMode->setSelectedId(0, juce::dontSendNotification);
-        layer->velocityResponseMode->setText("Unnamed layer curve*", juce::dontSendNotification);
+        layer->velocityResponseMode->setText("Edited Layer Curve*", juce::dontSendNotification);
     } else {
         layer->velocityResponseMode->setSelectedId(selectedItemId, juce::dontSendNotification);
     }
@@ -1445,17 +1447,29 @@ void PadContextPopup::showVelocityResponseEditor(LayerRow* layer) {
     this->dismissSourceOverrideEditor();
     this->dismissVelocityResponseEditor();
 
+    int layerNumber = 0;
+    for (const auto* candidateLayer : this->layerRows) {
+        if (candidateLayer == nullptr || candidateLayer->artName.compareIgnoreCase(layer->artName) != 0) continue;
+        ++layerNumber;
+        if (candidateLayer == layer) break;
+    }
+    if (layerNumber < 1) layerNumber = 1;
+
     juce::String sourcePath = layer->sourcePathHint;
-    juce::String sourceDisplay = sourcePath.isNotEmpty() ? sourcePath : juce::String("No source selected");
+    juce::String sourceDisplay = sourcePath.isNotEmpty() ? sourcePath.replace("/", " / ") : juce::String("No source selected");
     if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
         const auto& source = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
         sourcePath = source.fullPath();
-        sourceDisplay = source.displayText();
+        sourceDisplay = source.kitDisplayName;
+        if (source.instCode.isNotEmpty()) sourceDisplay += " / " + source.instCode;
+        if (source.artCode.isNotEmpty()) sourceDisplay += " / " + source.artCode;
     }
 
     this->activeVelocityResponseEditor = std::make_unique<VelocityResponseEditor>(this->engine);
     VelocityResponseEditor::LayerData data;
-    data.title = layer->artName + " | " + sourceDisplay;
+    data.title = this->slotLabel.getText() + " / " + layer->artName;
+    if (layerNumber > 1) data.title += " (layer " + juce::String(layerNumber) + ")";
+    data.title += "\n" + sourceDisplay;
     data.customDefinition = layer->velocityResponse;
     data.sourceInfo = this->engine.getSourceVelocityResponseInfo(sourcePath);
     this->activeVelocityResponseEditor->setLayerData(std::move(data));
@@ -1466,7 +1480,7 @@ void PadContextPopup::showVelocityResponseEditor(LayerRow* layer) {
         if (commit) this->flushMapText();
     };
     this->activeVelocityResponseEditor->onPreview = [this, layer](int velocity) {
-        this->engine.playPreviewNote(this->slotId, layer->artName, static_cast<juce::uint8>(juce::jlimit(1, 127, velocity)));
+        this->engine.playLayerPreview(this->slotId, layer->artName, layer->mappedLayerIndex, static_cast<juce::uint8>(juce::jlimit(1, 127, velocity)));
     };
     this->activeVelocityResponseEditor->onDone = [this] {
         juce::MessageManager::callAsync([this] { this->dismissVelocityResponseEditor(); });

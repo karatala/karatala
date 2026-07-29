@@ -18,6 +18,12 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->titleLabel.setJustificationType(juce::Justification::centredLeft);
     this->addAndMakeVisible(this->titleLabel);
 
+    this->descriptionLabel.setText("Controls how MIDI velocity changes this layer's output gain. It does not change sample selection.", juce::dontSendNotification);
+    this->descriptionLabel.setFont(UITheme::Fonts::normal());
+    this->descriptionLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+    this->descriptionLabel.setJustificationType(juce::Justification::centredLeft);
+    this->addAndMakeVisible(this->descriptionLabel);
+
     this->readoutLabel.setFont(UITheme::Fonts::normal());
     this->readoutLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     this->readoutLabel.setJustificationType(juce::Justification::centredLeft);
@@ -29,14 +35,12 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->addAndMakeVisible(this->statusLabel);
 
     UIHelpers::configureComboBox(this->presetCombo);
-    this->presetCombo.setTextWhenNothingSelected("Unsaved curve");
+    this->presetCombo.setTextWhenNothingSelected("Edited Layer Curve*");
     this->presetCombo.onChange = [this] { this->selectPreset(); };
     this->addAndMakeVisible(this->presetCombo);
 
-    for (auto* button : { &this->saveAsButton, &this->makeCustomButton, &this->useGlobalButton, &this->previewButton }) {
-        UIHelpers::configureControlButton(*button);
-        this->addAndMakeVisible(*button);
-    }
+    UIHelpers::configureControlButton(this->saveAsButton);
+    this->addAndMakeVisible(this->saveAsButton);
     UIHelpers::configureDialogCloseButton(this->doneButton);
     this->addAndMakeVisible(this->doneButton);
 
@@ -53,16 +57,11 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->dbEditor.onFocusLost = [this] { this->commitDbEditor(); };
     this->addAndMakeVisible(this->dbEditor);
 
-    this->makeCustomButton.onClick = [this] { this->setCustom(true, true); };
-    this->useGlobalButton.onClick = [this] { this->setCustom(false, true); };
-    this->previewButton.onClick = [this] {
-        if (this->selectedHandleIdx < 0 || this->selectedHandleIdx >= static_cast<int>(this->handles.size())) return;
-        if (this->onPreview) this->onPreview(this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity);
-    };
     this->saveAsButton.onClick = [this] { this->showSaveAsDialog(); };
     this->doneButton.onClick = [this] {
         if (this->onDone) this->onDone();
     };
+    this->setStatus({});
 }
 
 void VelocityResponseEditor::setLayerData(LayerData data) {
@@ -136,10 +135,8 @@ void VelocityResponseEditor::updateViewMinimum() {
 }
 
 void VelocityResponseEditor::updateControls() {
-    this->makeCustomButton.setVisible(!this->custom);
-    this->useGlobalButton.setVisible(this->custom);
-    this->dbEditor.setVisible(this->custom);
     this->saveAsButton.setEnabled(this->custom);
+    this->updatePresetSelection();
     this->updateReadout();
     this->resized();
     this->repaint();
@@ -147,62 +144,93 @@ void VelocityResponseEditor::updateControls() {
 
 void VelocityResponseEditor::updateReadout() {
     if (this->selectedHandleIdx < 0 || this->selectedHandleIdx >= static_cast<int>(this->handles.size())) {
-        this->readoutLabel.setText("No velocity levels", juce::dontSendNotification);
+        this->readoutLabel.setText("No velocity points", juce::dontSendNotification);
+        this->readoutLabel.setTooltip({});
         this->dbEditor.setEnabled(false);
-        this->previewButton.setEnabled(false);
+        this->dbEditor.setTooltip({});
         return;
     }
 
     const auto& handle = this->handles[static_cast<size_t>(this->selectedHandleIdx)];
-    juce::String text = "Velocity " + juce::String(handle.velocity) + " | Curve " + VelocityResponseEditor::formatDb(this->currentResponse.getTargetDb(static_cast<juce::uint8>(handle.velocity)));
-    const auto* level = this->findLevel(handle.velocity);
-    text += level != nullptr && level->fittedRelativeDb.has_value() ? " | Sample " + VelocityResponseEditor::formatDb(*level->fittedRelativeDb) : " | Sample unavailable";
-    text += level != nullptr && level->calibrationTrimDb.has_value() ? " | Trim " + VelocityResponseEditor::formatDb(*level->calibrationTrimDb) : " | Trim unavailable";
+    juce::String text = "MIDI velocity " + juce::String(handle.velocity) + " -> output gain " + VelocityResponseEditor::formatDb(this->currentResponse.getTargetDb(static_cast<juce::uint8>(handle.velocity)));
+    if (handle.velocity == 127) text += " (fixed)";
+    const auto tooltip = this->tooltipForVelocity(handle.velocity);
     this->readoutLabel.setText(text, juce::dontSendNotification);
+    this->readoutLabel.setTooltip(tooltip);
     if (!this->dbEditor.hasKeyboardFocus(true)) this->dbEditor.setText(juce::String(handle.targetDb, 1), false);
-    this->dbEditor.setEnabled(this->custom && handle.velocity != 127);
-    this->previewButton.setEnabled(true);
+    this->dbEditor.setEnabled(handle.velocity != 127);
+    this->dbEditor.setTooltip(tooltip);
 }
 
 void VelocityResponseEditor::updatePresetSelection() {
+    if (!this->custom) {
+        this->presetCombo.setSelectedId(this->globalCurveItemId, juce::dontSendNotification);
+        return;
+    }
+
     int selectedId = 0;
     for (int presetIdx = 0; presetIdx < static_cast<int>(this->presets.size()); ++presetIdx) {
         if (this->presets[static_cast<size_t>(presetIdx)].definition == this->currentDefinition) {
-            selectedId = presetIdx + 1;
+            selectedId = this->presetItemBaseId + presetIdx;
             break;
         }
     }
     this->presetCombo.setSelectedId(selectedId, juce::dontSendNotification);
+    if (selectedId == 0) this->presetCombo.setText("Edited Layer Curve*", juce::dontSendNotification);
 }
 
 void VelocityResponseEditor::refreshPresets() {
     juce::StringArray warnings;
     this->presets = this->engine.getVelocityResponsePresets(&warnings);
     this->presetCombo.clear(juce::dontSendNotification);
+    juce::String globalLabel = "Global - Edited*";
+    const auto globalDefinition = this->engine.getVelocityResponse().getDefinition();
+    for (const auto& preset : this->presets) {
+        if (preset.definition != globalDefinition) continue;
+        globalLabel = "Global - " + preset.name;
+        break;
+    }
+    this->presetCombo.addItem(globalLabel, this->globalCurveItemId);
+    this->presetCombo.addSeparator();
     for (int presetIdx = 0; presetIdx < static_cast<int>(this->presets.size()); ++presetIdx) {
         const auto& preset = this->presets[static_cast<size_t>(presetIdx)];
-        this->presetCombo.addItem(preset.name + (preset.isUser ? "" : " (Built-in)"), presetIdx + 1);
+        this->presetCombo.addItem(preset.name + (preset.isUser ? "" : " (Built-in)"), this->presetItemBaseId + presetIdx);
     }
     this->updatePresetSelection();
     if (!warnings.isEmpty()) this->setStatus(warnings.joinIntoString("; "), true);
 }
 
 void VelocityResponseEditor::selectPreset() {
-    const int presetIdx = this->presetCombo.getSelectedId() - 1;
+    const int selectedId = this->presetCombo.getSelectedId();
+    if (selectedId == this->globalCurveItemId) {
+        const bool changedResponse = this->custom || this->currentDefinition != this->engine.getVelocityResponse().getDefinition();
+        this->setCustom(false, true);
+        if (changedResponse) this->previewSelectedVelocity();
+        return;
+    }
+
+    const int presetIdx = selectedId - this->presetItemBaseId;
     if (presetIdx < 0 || presetIdx >= static_cast<int>(this->presets.size())) return;
     this->custom = true;
     this->loadDefinition(this->presets[static_cast<size_t>(presetIdx)].definition, true, true);
     this->updateControls();
     this->setStatus("Loaded preset: " + this->presets[static_cast<size_t>(presetIdx)].name);
+    this->previewSelectedVelocity();
 }
 
 void VelocityResponseEditor::setCustom(bool shouldUseCustom, bool notify) {
-    if (this->custom == shouldUseCustom) return;
+    const auto globalDefinition = this->engine.getVelocityResponse().getDefinition();
+    if (this->custom == shouldUseCustom && (shouldUseCustom || this->currentDefinition == globalDefinition)) return;
     this->custom = shouldUseCustom;
-    if (!this->custom) this->loadDefinition(this->engine.getVelocityResponse().getDefinition(), false, false);
+    if (!this->custom) this->loadDefinition(globalDefinition, false, false);
     this->updateControls();
     if (notify) this->notifyResponseChanged(true);
-    this->setStatus(this->custom ? "Layer curve active" : "Using global response");
+    this->setStatus({});
+}
+
+void VelocityResponseEditor::previewSelectedVelocity() {
+    if (this->selectedHandleIdx < 0 || this->selectedHandleIdx >= static_cast<int>(this->handles.size())) return;
+    if (this->onPreview) this->onPreview(this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity);
 }
 
 void VelocityResponseEditor::notifyResponseChanged(bool commit) {
@@ -224,6 +252,11 @@ bool VelocityResponseEditor::applySelectedDb(float targetDb, bool clampValue, bo
 
     const float previousTargetDb = selected.targetDb;
     selected.targetDb = clampValue ? juce::jlimit(minimumDb, juce::jmin(0.0f, maximumDb), targetDb) : targetDb;
+    if (juce::approximatelyEqual(selected.targetDb, previousTargetDb)) {
+        selected.targetDb = previousTargetDb;
+        this->updateReadout();
+        return false;
+    }
     std::vector<VelocityResponse::Point> points;
     points.reserve(this->handles.size());
     for (const auto& handle : this->handles) points.push_back({ handle.velocity, handle.targetDb });
@@ -248,19 +281,36 @@ bool VelocityResponseEditor::applySelectedDb(float targetDb, bool clampValue, bo
 }
 
 void VelocityResponseEditor::commitDbEditor() {
-    if (!this->custom || !this->dbEditor.isEnabled()) return;
+    if (!this->dbEditor.isEnabled() || this->selectedHandleIdx < 0 || this->selectedHandleIdx >= static_cast<int>(this->handles.size())) return;
     const auto targetDb = VelocityResponseEditor::parseDb(this->dbEditor.getText());
     if (!targetDb.has_value()) {
         this->setStatus("Enter a valid dB number", true);
         this->updateReadout();
         return;
     }
-    this->applySelectedDb(*targetDb, false, true);
+    if (juce::approximatelyEqual(*targetDb, this->handles[static_cast<size_t>(this->selectedHandleIdx)].targetDb)) {
+        this->updateReadout();
+        return;
+    }
+
+    const bool hadLayerCurve = this->custom;
+    if (!this->custom) {
+        this->custom = true;
+        this->updateControls();
+    }
+    if (this->applySelectedDb(*targetDb, false, true)) {
+        this->previewSelectedVelocity();
+        return;
+    }
+    if (!hadLayerCurve) {
+        this->custom = false;
+        this->updateControls();
+    }
 }
 
 void VelocityResponseEditor::showSaveAsDialog() {
     if (!this->custom) return;
-    auto* dialog = new juce::AlertWindow("Save Velocity-Response Preset", "Enter a preset name:", juce::MessageBoxIconType::QuestionIcon);
+    auto* dialog = new juce::AlertWindow("Save Velocity-to-dB Curve Preset", "Enter a preset name:", juce::MessageBoxIconType::QuestionIcon);
     dialog->addTextEditor("name", "My Curve", "Name:");
     dialog->addButton("Save", 1);
     dialog->addButton("Cancel", 0);
@@ -283,7 +333,7 @@ void VelocityResponseEditor::savePreset(const juce::String& name, bool replaceEx
         juce::AlertWindow::showAsync(
             juce::MessageBoxOptions()
                 .withIconType(juce::MessageBoxIconType::WarningIcon)
-                .withTitle("Replace Velocity-Response Preset")
+                .withTitle("Replace Velocity-to-dB Curve Preset")
                 .withMessage("Replace the existing preset?")
                 .withButton("Replace")
                 .withButton("Cancel"),
@@ -296,7 +346,8 @@ void VelocityResponseEditor::savePreset(const juce::String& name, bool replaceEx
 }
 
 void VelocityResponseEditor::setStatus(const juce::String& text, bool error) {
-    this->statusLabel.setText(text, juce::dontSendNotification);
+    const auto displayText = text.isNotEmpty() ? text : juce::String("Drag a point vertically. Release to hear the result.");
+    this->statusLabel.setText(displayText, juce::dontSendNotification);
     this->statusLabel.setColour(juce::Label::textColourId, error ? UITheme::Colours::accentWarning : UITheme::Colours::textMuted);
 }
 
@@ -333,13 +384,13 @@ float VelocityResponseEditor::yToDb(float yPosition) const {
 }
 
 juce::String VelocityResponseEditor::tooltipForVelocity(int velocity) const {
-    juce::String text = "Velocity " + juce::String(velocity) + "\nCurve: " + VelocityResponseEditor::formatDb(this->currentResponse.getTargetDb(static_cast<juce::uint8>(velocity)));
+    juce::String text = "MIDI velocity " + juce::String(velocity) + "\nOutput gain: " + VelocityResponseEditor::formatDb(this->currentResponse.getTargetDb(static_cast<juce::uint8>(velocity)));
     const auto* level = this->findLevel(velocity);
-    if (level == nullptr) return text + "\nNo recorded sample at this velocity";
-    text += level->fittedRelativeDb.has_value() ? "\nFitted sample: " + VelocityResponseEditor::formatDb(*level->fittedRelativeDb) : "\nFitted sample: unavailable";
-    text += level->rawMedianRelativeDb.has_value() ? "\nRaw median: " + VelocityResponseEditor::formatDb(*level->rawMedianRelativeDb) : "\nRaw median: unavailable";
-    text += level->calibrationTrimDb.has_value() ? "\nCalibration trim: " + VelocityResponseEditor::formatDb(*level->calibrationTrimDb) : "\nCalibration trim: unavailable";
-    if (level->calibrationLimited) text += "\nCalibration is limited";
+    if (level == nullptr) return text + "\nNo recorded sample at this exact velocity";
+    text += level->fittedRelativeDb.has_value() ? "\nRecorded sample reference: " + VelocityResponseEditor::formatDb(*level->fittedRelativeDb) : "\nRecorded sample reference: unavailable";
+    text += level->rawMedianRelativeDb.has_value() ? "\nRaw measured sample level: " + VelocityResponseEditor::formatDb(*level->rawMedianRelativeDb) : "\nRaw measured sample level: unavailable";
+    text += level->calibrationTrimDb.has_value() ? "\nCalibration correction: " + VelocityResponseEditor::formatDb(*level->calibrationTrimDb) : "\nCalibration correction: unavailable";
+    if (level->calibrationLimited) text += "\nCalibration correction is limited";
     return text;
 }
 
@@ -413,7 +464,7 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
         if (velocity == 1) curve.startNewSubPath(xPosition, yPosition);
         else curve.lineTo(xPosition, yPosition);
     }
-    graphics.setColour(this->custom ? UITheme::Colours::selectionStrong : UITheme::Colours::textMuted);
+    graphics.setColour(UITheme::Colours::selectionStrong);
     graphics.strokePath(curve, juce::PathStrokeType(2.0f));
 
     float lastLabelRight = -1000.0f;
@@ -421,7 +472,7 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
         const auto& handle = this->handles[static_cast<size_t>(handleIdx)];
         const float xPosition = this->velocityToX(handle.velocity);
         const float yPosition = this->dbToY(handle.targetDb);
-        graphics.setColour((handle.recordedLevel ? UITheme::Colours::textAccentSoft : UITheme::Colours::borderStrong).withAlpha(this->custom ? 0.65f : 0.28f));
+        graphics.setColour((handle.recordedLevel ? UITheme::Colours::textAccentSoft : UITheme::Colours::borderStrong).withAlpha(0.65f));
         graphics.drawLine(xPosition, yPosition, xPosition, this->plotBounds.getBottom(), handleIdx == this->selectedHandleIdx ? 2.0f : 1.0f);
         graphics.setColour(handleIdx == this->selectedHandleIdx ? UITheme::Colours::selectionStrong : handle.recordedLevel ? UITheme::Colours::textAccent : UITheme::Colours::textSecondary);
         graphics.fillEllipse(xPosition - 4.0f, yPosition - 4.0f, 8.0f, 8.0f);
@@ -443,24 +494,22 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
 
 void VelocityResponseEditor::resized() {
     auto area = this->getLocalBounds().reduced(12);
-    auto header = area.removeFromTop(UITheme::Sizes::standardControlHeight);
-    this->doneButton.setBounds(header.removeFromRight(UITheme::Sizes::standardControlHeight));
+    auto header = area.removeFromTop(36);
+    auto closeButtonArea = header.removeFromRight(UITheme::Sizes::standardControlHeight);
+    this->doneButton.setBounds(closeButtonArea.removeFromTop(UITheme::Sizes::standardControlHeight));
     header.removeFromRight(6);
     this->titleLabel.setBounds(header);
+    area.removeFromTop(4);
+    this->descriptionLabel.setBounds(area.removeFromTop(UITheme::Sizes::standardControlHeight));
     area.removeFromTop(6);
 
     auto toolbar = area.removeFromTop(UITheme::Sizes::standardControlHeight);
-    this->presetCombo.setBounds(toolbar.removeFromLeft(190));
+    this->presetCombo.setBounds(toolbar.removeFromLeft(220));
     toolbar.removeFromLeft(4);
-    this->saveAsButton.setBounds(toolbar.removeFromLeft(62));
-    toolbar.removeFromLeft(8);
-    this->makeCustomButton.setBounds(toolbar.removeFromLeft(120));
-    this->useGlobalButton.setBounds(toolbar.removeFromLeft(76));
+    this->saveAsButton.setBounds(toolbar.removeFromLeft(128));
     area.removeFromTop(6);
 
     auto readout = area.removeFromTop(UITheme::Sizes::standardControlHeight);
-    this->previewButton.setBounds(readout.removeFromRight(64));
-    readout.removeFromRight(4);
     this->dbEditor.setBounds(readout.removeFromRight(58));
     readout.removeFromRight(6);
     this->readoutLabel.setBounds(readout);
@@ -477,20 +526,32 @@ void VelocityResponseEditor::mouseDown(const juce::MouseEvent& event) {
     this->selectedHandleIdx = this->findNearestHandle(event.position.x);
     this->updateReadout();
     this->repaint();
-    if (!this->custom || this->selectedHandleIdx < 0 || this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity == 127) return;
+    if (this->selectedHandleIdx < 0 || this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity == 127) return;
     this->draggingHandle = true;
-    this->applySelectedDb(this->yToDb(event.position.y), true, false);
+    this->dragStartedWithLayerCurve = this->custom;
+    this->dragChangedCurve = false;
+    this->dragStartDefinition = this->currentDefinition;
 }
 
 void VelocityResponseEditor::mouseDrag(const juce::MouseEvent& event) {
     if (!this->draggingHandle) return;
-    this->applySelectedDb(this->yToDb(event.position.y), true, false);
+    if (!this->custom) {
+        this->custom = true;
+        this->updateControls();
+    }
+    const auto previousDefinition = this->currentDefinition;
+    if (this->applySelectedDb(this->yToDb(event.position.y), true, false) && this->currentDefinition != previousDefinition) this->dragChangedCurve = true;
 }
 
 void VelocityResponseEditor::mouseUp(const juce::MouseEvent&) {
     if (!this->draggingHandle) return;
     this->draggingHandle = false;
+    if (!this->dragChangedCurve || this->currentDefinition == this->dragStartDefinition) {
+        if (!this->dragStartedWithLayerCurve && this->custom) this->setCustom(false, this->dragChangedCurve);
+        return;
+    }
     this->notifyResponseChanged(true);
+    this->previewSelectedVelocity();
 }
 
 void VelocityResponseEditor::mouseMove(const juce::MouseEvent& event) {
@@ -516,13 +577,22 @@ bool VelocityResponseEditor::keyPressed(const juce::KeyPress& key) {
         return true;
     }
     if (key == juce::KeyPress::upKey || key == juce::KeyPress::downKey) {
-        if (!this->custom || this->selectedHandleIdx < 0) return true;
+        if (this->selectedHandleIdx < 0 || this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity == 127) return true;
         const float step = key.getModifiers().isShiftDown() ? 1.0f : 0.1f;
         const float direction = key == juce::KeyPress::upKey ? 1.0f : -1.0f;
-        return this->applySelectedDb(this->handles[static_cast<size_t>(this->selectedHandleIdx)].targetDb + direction * step, true, true);
-    }
-    if (key == juce::KeyPress::returnKey) {
-        if (this->onPreview && this->selectedHandleIdx >= 0) this->onPreview(this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity);
+        const bool hadLayerCurve = this->custom;
+        if (!this->custom) {
+            this->custom = true;
+            this->updateControls();
+        }
+        if (this->applySelectedDb(this->handles[static_cast<size_t>(this->selectedHandleIdx)].targetDb + direction * step, true, true)) {
+            this->previewSelectedVelocity();
+            return true;
+        }
+        if (!hadLayerCurve) {
+            this->custom = false;
+            this->updateControls();
+        }
         return true;
     }
     if (key == juce::KeyPress::escapeKey) {

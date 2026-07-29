@@ -359,8 +359,8 @@ void InstrumentConfigPanel::updateSourceButtonDisplay(TableRow* row) {
 void InstrumentConfigPanel::updateVelocityResponseStatus(TableRow* row) {
     if (row == nullptr || row->velocityResponseStatus == nullptr) return;
 
-    juce::String statusText = "Use Global";
-    juce::String tooltip = "Uses the global velocity response";
+    juce::String statusText = "Global";
+    juce::String tooltip = "Uses the Global Velocity-to-dB Curve selected in Conf";
     if (row->velocityResponse.has_value()) {
         statusText = "Unnamed*";
         tooltip = "Saved with this layer, but not saved as a reusable preset: " + *row->velocityResponse;

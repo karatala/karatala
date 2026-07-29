@@ -31,6 +31,9 @@ public:
     std::function<void()> onDone;
 
 private:
+    static constexpr int globalCurveItemId = 1;
+    static constexpr int presetItemBaseId = 100;
+
     struct Handle {
         int velocity = 0;
         float targetDb = 0.0f;
@@ -46,17 +49,18 @@ private:
     std::vector<DrumKitEngine::VelocityResponsePreset> presets;
     int selectedHandleIdx = -1;
     bool draggingHandle = false;
+    bool dragStartedWithLayerCurve = false;
+    bool dragChangedCurve = false;
+    juce::String dragStartDefinition;
     float viewMinimumDb = -48.0f;
     juce::Rectangle<float> plotBounds;
 
     juce::Label titleLabel;
+    juce::Label descriptionLabel;
     juce::Label readoutLabel;
     juce::Label statusLabel;
     juce::ComboBox presetCombo;
-    juce::TextButton saveAsButton { "Save As" };
-    juce::TextButton makeCustomButton { "Create Layer Curve" };
-    juce::TextButton useGlobalButton { "Use Global" };
-    juce::TextButton previewButton { "Preview" };
+    juce::TextButton saveAsButton { "Save as Preset..." };
     juce::TextButton doneButton;
     juce::TextEditor dbEditor;
 
@@ -69,6 +73,7 @@ private:
     void refreshPresets();
     void selectPreset();
     void setCustom(bool shouldUseCustom, bool notify);
+    void previewSelectedVelocity();
     void notifyResponseChanged(bool commit);
     bool applySelectedDb(float targetDb, bool clampValue, bool commit);
     void commitDbEditor();

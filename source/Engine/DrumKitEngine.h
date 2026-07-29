@@ -236,6 +236,7 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock);
     void processBlock(juce::AudioBuffer<float>& outputBuffer, juce::MidiBuffer& midiMessages);
     void playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity);
+    void playLayerPreview(const juce::String& slotId, const juce::String& artName, int layerIndex, juce::uint8 velocity);
     void playPreviewArticulation(const juce::String& slotId, const juce::String& articulationCode, juce::uint8 velocity);
     bool playSourceLogicalHitPreview(const juce::String& slotId, const juce::String& destinationArticulation, const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, int namedVelocity, const juce::String& roundRobin, juce::uint8 playbackVelocity);
 

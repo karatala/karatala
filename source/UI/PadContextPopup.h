@@ -134,11 +134,11 @@ private:
     std::vector<DrumKitEngine::VelocityResponsePreset> velocityResponsePresets;
 
     void addArticulationGroup(const juce::String& articulationName);
-    void addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
-                     float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
-                     const std::optional<juce::String>& velocityResponse,
-                     const std::unordered_map<juce::String, float>& micBleedLevels,
-                     const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
+    LayerRow* addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+                          float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
+                          const std::optional<juce::String>& velocityResponse,
+                          const std::unordered_map<juce::String, float>& micBleedLevels,
+                          const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
     juce::uint8 getPreviewVelocity() const;
     int getLayerIndex(const LayerRow* layer) const;
     int findVelocityResponsePresetIndex(const std::optional<juce::String>& definition) const;

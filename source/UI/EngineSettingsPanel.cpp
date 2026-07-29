@@ -26,7 +26,7 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     this->browseLibraryButton.onClick = [this] { this->chooseLibraryPath(); };
     this->contentComponent.addAndMakeVisible(this->browseLibraryButton);
 
-    this->globalVelocityResponseLabel.setText("Global response", juce::dontSendNotification);
+    this->globalVelocityResponseLabel.setText("Global Velocity-to-dB Curve", juce::dontSendNotification);
     UIHelpers::configureCaptionLabel(this->globalVelocityResponseLabel, juce::Justification::centredLeft);
     this->contentComponent.addAndMakeVisible(this->globalVelocityResponseLabel);
     UIHelpers::configureComboBox(this->globalVelocityResponseCombo);
@@ -277,7 +277,7 @@ void EngineSettingsPanel::rebuildGlobalVelocityResponseChoices() {
 
     if (selectedId > 0) {
         this->globalVelocityResponseCombo.setSelectedId(selectedId, juce::dontSendNotification);
-        this->globalVelocityResponseCombo.setTooltip("Global velocity response used by layers set to Use Global: " + currentDefinition);
+        this->globalVelocityResponseCombo.setTooltip("Controls how MIDI velocity changes output gain for layers using the Global Velocity-to-dB Curve: " + currentDefinition);
     } else {
         this->globalVelocityResponseCombo.setSelectedId(0, juce::dontSendNotification);
         this->globalVelocityResponseCombo.setText("Unnamed global curve*", juce::dontSendNotification);
@@ -479,8 +479,8 @@ void EngineSettingsPanel::resized() {
     generalArea.removeFromTop(gap);
 
     auto globalVelocityResponseRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
-    this->globalVelocityResponseLabel.setBounds(globalVelocityResponseRow.removeFromLeft(110));
-    this->globalVelocityResponseCombo.setBounds(globalVelocityResponseRow.removeFromLeft(340));
+    this->globalVelocityResponseLabel.setBounds(globalVelocityResponseRow.removeFromLeft(160));
+    this->globalVelocityResponseCombo.setBounds(globalVelocityResponseRow.removeFromLeft(290));
     generalArea.removeFromTop(gap);
 
     auto kitLayoutRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
