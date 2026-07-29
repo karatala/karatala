@@ -18,7 +18,7 @@ CrosstalkCalibrationPopup::CrosstalkCalibrationPopup(DrumKitEngine& drumKitEngin
     UIHelpers::configureControlButton(this->startSkipButton);
     UIHelpers::configureControlButton(this->stopButton);
     UIHelpers::configureControlButton(this->clearButton);
-    UIHelpers::configureControlButton(this->closeButton);
+    UIHelpers::configureDialogCloseButton(this->closeButton);
     this->startSkipButton.onClick = [this] {
         if (this->calibrationRunning)
             this->skipTarget();

@@ -59,6 +59,13 @@ void configureControlButton(juce::TextButton& button, int connectedEdges) {
     button.setConnectedEdges(connectedEdges);
 }
 
+void configureDialogCloseButton(juce::TextButton& button) {
+    UIHelpers::configureControlButton(button);
+    button.setButtonText(UITheme::Symbols::times);
+    button.getProperties().set("dialogCloseButton", true);
+    button.setTooltip("Close");
+}
+
 void configureCategoryButton(juce::TextButton& button) {
     button.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     button.setColour(juce::TextButton::textColourOffId, UITheme::Colours::textSecondary);

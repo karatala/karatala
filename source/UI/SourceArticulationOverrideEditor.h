@@ -134,7 +134,7 @@ private:
     juce::TextButton resetRangesButton { "Reset" };
     juce::TextButton retrySaveButton { "Retry save" };
     juce::TextButton reloadSavedButton { "Reload saved" };
-    juce::TextButton doneButton { "Done" };
+    juce::TextButton doneButton;
     SampleMatrixLookAndFeel sampleMatrixLookAndFeel;
     SampleMatrixModel sampleMatrixModel;
     SelectedSampleListModel selectedSampleListModel;

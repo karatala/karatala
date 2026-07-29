@@ -18,6 +18,7 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     void flushMapText();
+    bool dismissActiveDialog();
     void setPreviewVelocityProvider(std::function<int()> provider) { this->previewVelocityProvider = std::move(provider); }
 
     std::function<void()> onDismiss;

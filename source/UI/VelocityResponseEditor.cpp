@@ -33,10 +33,12 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->presetCombo.onChange = [this] { this->selectPreset(); };
     this->addAndMakeVisible(this->presetCombo);
 
-    for (auto* button : { &this->saveAsButton, &this->makeCustomButton, &this->useGlobalButton, &this->previewButton, &this->doneButton }) {
+    for (auto* button : { &this->saveAsButton, &this->makeCustomButton, &this->useGlobalButton, &this->previewButton }) {
         UIHelpers::configureControlButton(*button);
         this->addAndMakeVisible(*button);
     }
+    UIHelpers::configureDialogCloseButton(this->doneButton);
+    this->addAndMakeVisible(this->doneButton);
 
     this->dbEditor.setMultiLine(false);
     this->dbEditor.setJustification(juce::Justification::centred);
@@ -442,7 +444,7 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
 void VelocityResponseEditor::resized() {
     auto area = this->getLocalBounds().reduced(12);
     auto header = area.removeFromTop(UITheme::Sizes::standardControlHeight);
-    this->doneButton.setBounds(header.removeFromRight(54));
+    this->doneButton.setBounds(header.removeFromRight(UITheme::Sizes::standardControlHeight));
     header.removeFromRight(6);
     this->titleLabel.setBounds(header);
     area.removeFromTop(6);

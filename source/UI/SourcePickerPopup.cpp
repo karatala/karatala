@@ -16,10 +16,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->titleLabel.setMinimumHorizontalScale(0.75f);
     this->addAndMakeVisible(this->titleLabel);
 
-    this->closeButton.setButtonText(UITheme::Symbols::times);
-    UIHelpers::configureControlButton(this->closeButton);
-    this->closeButton.getProperties().set("compactText", true);
-    this->closeButton.setTooltip("Close");
+    UIHelpers::configureDialogCloseButton(this->closeButton);
     this->closeButton.onClick = [this] {
         if (this->onDismiss) this->onDismiss();
     };
@@ -119,7 +116,7 @@ void SourcePickerPopup::focusItemList() {
 void SourcePickerPopup::resized() {
     auto area = this->getLocalBounds().reduced(4);
     auto titleRow = area.removeFromTop(22);
-    this->closeButton.setBounds(titleRow.removeFromRight(22).reduced(1));
+    this->closeButton.setBounds(titleRow.removeFromRight(22).withSizeKeepingCentre(UITheme::Sizes::standardControlHeight, UITheme::Sizes::standardControlHeight));
     titleRow.removeFromRight(4);
     this->titleLabel.setBounds(titleRow);
     area.removeFromTop(2);

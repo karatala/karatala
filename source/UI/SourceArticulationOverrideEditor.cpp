@@ -125,10 +125,15 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
         this->addAndMakeVisible(*nameLabel);
     }
 
-    for (auto* button : { &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton, &this->resetMicOffsetButton, &this->evenRangesButton, &this->resetRangesButton, &this->retrySaveButton, &this->reloadSavedButton, &this->doneButton }) {
+    for (auto* button : {
+        &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton,
+        &this->resetMicOffsetButton, &this->evenRangesButton, &this->resetRangesButton, &this->retrySaveButton, &this->reloadSavedButton,
+    }) {
         UIHelpers::configureControlButton(*button);
         this->addAndMakeVisible(*button);
     }
+    UIHelpers::configureDialogCloseButton(this->doneButton);
+    this->addAndMakeVisible(this->doneButton);
     for (auto* resetButton : { &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton, &this->resetMicOffsetButton })
         resetButton->setButtonText(UITheme::Symbols::times);
     this->retrySaveButton.setVisible(false);
@@ -1187,7 +1192,7 @@ void SourceArticulationOverrideEditor::paint(juce::Graphics& graphics) {
 void SourceArticulationOverrideEditor::resized() {
     auto area = this->getLocalBounds().reduced(12);
     auto header = area.removeFromTop(UITheme::Sizes::standardControlHeight);
-    this->doneButton.setBounds(header.removeFromRight(56));
+    this->doneButton.setBounds(header.removeFromRight(UITheme::Sizes::standardControlHeight));
     header.removeFromRight(6);
     this->titleLabel.setBounds(header);
     area.removeFromTop(2);

@@ -29,11 +29,12 @@ void CompactParameterControl::paint(juce::Graphics& graphics) {
     }
 
     auto lineArea = area.removeFromBottom(4).reduced(3, 1);
-    auto valueArea = area.reduced(1, 1);
+    constexpr int valueAreaHeight = 16;
+    auto valueArea = area.withSizeKeepingCentre(area.getWidth(), juce::jmin(valueAreaHeight, area.getHeight())).reduced(1, 0);
 
     graphics.setColour(this->isEnabled() ? UITheme::Colours::textSecondary : UITheme::Colours::textMuted);
     graphics.setFont(UITheme::Fonts::labelBoldMedium());
-    graphics.drawFittedText(this->getTextFromValue(this->getValue()), valueArea, juce::Justification::centred, 1);
+    graphics.drawText(this->getTextFromValue(this->getValue()), valueArea, juce::Justification::centred, false);
 
     const float lineHeight = 2.0f;
     auto track = lineArea.withHeight(static_cast<int>(lineHeight)).withCentre(lineArea.getCentre()).toFloat();

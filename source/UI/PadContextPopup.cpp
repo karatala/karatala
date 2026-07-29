@@ -1706,6 +1706,22 @@ void PadContextPopup::layoutSourcePicker() {
     }
 }
 
+bool PadContextPopup::dismissActiveDialog() {
+    if (this->activePicker) {
+        this->dismissSourcePicker();
+        return true;
+    }
+    if (this->activeVelocityResponseEditor) {
+        this->dismissVelocityResponseEditor();
+        return true;
+    }
+    if (this->activeSourceOverrideEditor) {
+        this->dismissSourceOverrideEditor();
+        return true;
+    }
+    return false;
+}
+
 // Paint / Layout
 
 void PadContextPopup::LayerContentComponent::paint(juce::Graphics& g) {
@@ -1759,12 +1775,11 @@ void PadContextPopup::resized() {
     // [Source Card with hover delete] | [Tuning|Attack|Decay + Curve|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
     const int potW = 44;
     const int potH = 44;
-    const int flipColW = 26;
+    const int flipColW = 36;
     const int sourceW = UITheme::Sizes::sourceCardWidth;
     const int routingComboH = 14;
-    const int bleedControlH = potH + routingComboH + 2;
-    const int sourceControlH = 68;
-    const int layerRowH = juce::jmax(sourceControlH, juce::jmax(potH, bleedControlH)) + 4;
+    const int layerControlH = potH + routingComboH;
+    const int layerRowH = layerControlH + 4;
     const int layerGap = 2;
     const int bleedPotW = 50;
     const int groupGap = 6;

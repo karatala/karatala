@@ -31,9 +31,13 @@
 - Text editors have no normal, focused, or shadow outline.
 - Standard buttons, toggles, dropdowns, and menu text use the shared 20 px control height with normal 14 px text.
   The pad-popup source picker card and compact mic-routing dropdown keep their purpose-specific sizes.
+- Dialog headers use the shared icon-only `×` close-button style. Edit Curve, Source setup, source picker, and other dialogs must not use a text `Done` button.
+- `CompactParameterControl` keeps its existing value font and uses a compact 16 px centred value area.
 - Instrument and Map tables use fixed 18 px headers, 22 px rows, shared 90/100 px instrument and articulation columns, and normal 12 px name text.
 - Pad-popup instrument and articulation headings use the same normal 12 px name text.
 - The pad popup is bottom-docked at 90% of the tab-content height and uses the full tab-content width. Its uncovered top strip is dark, closes the popup when clicked, and contains a large white `×` aligned left. Switching tabs also closes the popup. The popup keeps rounded top corners, square bottom corners, and no outline border.
+- Pad-popup layer group backgrounds end at the bottom of `Use Global`, `Source setup...`, and mic-routing controls without extra bottom padding. The `L/R` button must show its full text.
+- When a PadPopup child dialog is open, an outside click in either the dialog overlay or the uncovered top strip closes only that dialog. A later outside click can close the PadPopup.
 - The pad-popup header order is slot title, `LINK ARTS`, conditional `LINK TOM BLEED`, `SET INSTRUMENT`, and right-aligned MIDI controls. `SET INSTRUMENT` removes every layer for the current slot and installs one complete source instrument through the surgical slot-change path.
 - `LINK ARTS` applies tuning, attack, decay, gain, pan, L/R flip, phase flip, one changed bleed mic level, or one changed mic route to the same layer number across the current slot's articulations. Missing layers and missing source mic codes are skipped.
 - `LINK TOM BLEED` is available only on Tom slots and applies the changed source mic code's level or route to every mapped layer and articulation in every Tom slot. Routing copies `Auto`, `Unassigned`, or the selected stable output ID; targets without that compatible output choice are skipped. When both links are active, target destination layers are deduplicated.

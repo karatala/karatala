@@ -834,6 +834,7 @@ void PluginEditor::showPadContextPopup(const KitLayout::InstrumentSlot* slot, in
     this->padPopupOverlay->setDismissOnBackgroundClick(true);
     this->padPopupOverlay->onClick = [this] {
         juce::MessageManager::callAsync([this] {
+            if (this->padContextPopup && this->padContextPopup->dismissActiveDialog()) return;
             if (this->padContextPopup) {
                 this->padContextPopup->flushMapText();
                 if (this->padContextPopup->onDismiss) {

@@ -57,7 +57,7 @@ private:
     juce::TextButton makeCustomButton { "Create Layer Curve" };
     juce::TextButton useGlobalButton { "Use Global" };
     juce::TextButton previewButton { "Preview" };
-    juce::TextButton doneButton { "Done" };
+    juce::TextButton doneButton;
     juce::TextEditor dbEditor;
 
     void loadDefinition(const juce::String& definition, bool notify, bool commit);
