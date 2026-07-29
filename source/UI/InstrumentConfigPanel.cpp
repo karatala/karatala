@@ -270,6 +270,27 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     this->dismissPopup();
 
     this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
+    juce::String slotTitle = row->slotId;
+    if (const auto* layout = this->engine.getKitLayout()) {
+        for (const auto& slot : layout->instrumentSlots) {
+            if (slot.id.compareIgnoreCase(row->slotId) != 0) continue;
+            if (slot.display.isNotEmpty()) slotTitle = slot.display;
+            break;
+        }
+    }
+    int layerNumber = 0;
+    for (const auto* candidateRow : this->tableRows) {
+        if (candidateRow == nullptr || candidateRow->slotId.compareIgnoreCase(row->slotId) != 0 || candidateRow->artName.compareIgnoreCase(row->artName) != 0) continue;
+        ++layerNumber;
+        if (candidateRow == row) break;
+    }
+    if (layerNumber < 1) layerNumber = 1;
+    auto pickerTitle = slotTitle + " / " + row->artName;
+    if (layerNumber > 1) pickerTitle += " (layer " + juce::String(layerNumber) + ")";
+    this->activePopup->setTitle(pickerTitle);
+    this->activePopup->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissPopup(); });
+    };
     auto initialFilterType = row->slotType;
     if (row->selectedSourceIndex >= 0 && row->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
         const auto assignedType = this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].instType;

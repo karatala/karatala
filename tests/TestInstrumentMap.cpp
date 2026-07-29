@@ -253,6 +253,17 @@ TEST_CASE("InstrumentMap destination projections respect a source-only articulat
     CHECK(DrumKitEngineMapHelpers::sourceArticulationForDestination(map.entries[0], "center") == "center");
 }
 
+TEST_CASE("InstrumentMap linked mic edits resolve the source articulation path", "[InstrumentMap][linked-edit][routing]") {
+    DrumKitEngine::InstrumentMapEntry wholeInstrument;
+    wholeInstrument.kitRef = "KitA";
+    wholeInstrument.instCode = "snare-14";
+    CHECK(DrumKitEngineMapHelpers::sourcePathForDestination(wholeInstrument, "rim") == "KitA/snare-14/rim");
+
+    wholeInstrument.slotArticulationFilter = { "rim" };
+    wholeInstrument.articulationFilter = { "rimshot" };
+    CHECK(DrumKitEngineMapHelpers::sourcePathForDestination(wholeInstrument, "rim") == "KitA/snare-14/rimshot");
+}
+
 TEST_CASE("InstrumentMap isolates a wildcard entry before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
     KitLayout::InstrumentSlot slot;
     slot.id = "snare1";

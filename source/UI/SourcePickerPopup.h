@@ -31,6 +31,7 @@ public:
 
     void setFilterType(KitLib::InstrumentSpec::Type type);
     void setSelectedItem(int originalIndex);
+    void setTitle(const juce::String& title);
     void focusItemList();
 
     /** Fires when an item is confirmed via the select button. */
@@ -41,6 +42,8 @@ public:
     
     /** Fires on preview click with velocity. */
     std::function<void(int, juce::uint8)> onPreview;
+
+    std::function<void()> onDismiss;
 
 private:
     static constexpr int selectButtonWidth = 22;
@@ -57,10 +60,11 @@ private:
     const std::vector<SourceItem>& allItems;
     const InstrumentCatalog& catalog;
     SelectionMode selectionMode = SelectionMode::Articulation;
-    KitLib::InstrumentSpec::Type filterType = KitLib::InstrumentSpec::Type::Unknown;
     KitLib::InstrumentSpec::Type selectedKind = KitLib::InstrumentSpec::Type::Unknown;
     Category selectedCategory = Category::All;
     
+    juce::Label titleLabel;
+    juce::TextButton closeButton;
     juce::TextEditor filterField;
     juce::TextButton allCategoryButton { "all" };
     juce::TextButton drumsCategoryButton { "drums" };
@@ -82,19 +86,22 @@ private:
     bool suppressSelectionPreview = false;
     std::vector<KitLib::InstrumentSpec::Type> kindEntries;
     std::vector<juce::String> articulationEntries;
+    std::vector<int> articulationSourceIndexes;
     std::set<juce::String> selectedArticulations;
     std::vector<juce::String> cachedLowerDisplayText;
+    int selectedWholeInstrumentItemIndex = -1;
 
     void setCategory(Category category);
     void rebuildKindEntries();
     void rebuildArticulationEntries();
     void rebuildFiltered();
     bool matchesCategory(KitLib::InstrumentSpec::Type type) const;
-    bool matchesRequiredType(KitLib::InstrumentSpec::Type type) const;
     bool matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const;
     Category categoryForType(KitLib::InstrumentSpec::Type type) const;
     static std::optional<InstrumentFamily> familyForCategory(Category category);
     static juce::String kindLabel(KitLib::InstrumentSpec::Type type);
+    static juce::String wholeInstrumentKey(const SourceItem& item);
+    static juce::String wholeInstrumentDisplayText(const SourceItem& item);
     void updateCategoryButtons();
     void confirmItem(int originalIndex);
     void timerCallback() override;

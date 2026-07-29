@@ -263,11 +263,18 @@ public:
         int layerIndex = -1;
         LayerParameterUpdate update;
     };
+    struct MicRouteTarget {
+        juce::String slotId;
+        juce::String articulationName;
+        int layerIndex = -1;
+        juce::String sourceMicCode;
+        juce::String outputId;
+    };
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, std::optional<int> tuningCents, std::optional<int> attackMs, std::optional<int> decayMs);
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, const LayerParameterUpdate& update);
     bool updateSlotParametersBatch(const std::vector<LayerParameterTarget>& targets);
     bool updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update);
-    bool updateSlotMicRoute(const juce::String& slotId, const juce::String& artName, int layerIndex, const juce::String& sourceMicCode, const juce::String& outputId);
+    bool updateSlotMicRoutesBatch(const std::vector<MicRouteTarget>& targets);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
     
     void logMessage(const juce::String& msg, DebugLevel debugLevel) {

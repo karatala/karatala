@@ -487,6 +487,15 @@ juce::String sourceArticulationForDestination(const DrumKitEngine::InstrumentMap
     return {};
 }
 
+juce::String sourcePathForDestination(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& destinationArticulation) {
+    juce::String sourcePath = entry.kitRef;
+    if (entry.instCode.isNotEmpty()) sourcePath += "/" + entry.instCode;
+    auto sourceArticulation = sourceArticulationForDestination(entry, destinationArticulation);
+    if (sourceArticulation.isEmpty() && destinationArticulation != "(default)") sourceArticulation = destinationArticulation;
+    if (sourceArticulation.isNotEmpty()) sourcePath += "/" + sourceArticulation;
+    return sourcePath;
+}
+
 size_t isolateEntryForDestinationArticulation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout::InstrumentSlot& slot, size_t entryIndex, const juce::String& articulationName) {
     if (entryIndex >= instrumentMap.entries.size() || slot.articulations.size() < 2) return entryIndex;
     const auto originalEntry = instrumentMap.entries[entryIndex];

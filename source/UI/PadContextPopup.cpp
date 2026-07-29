@@ -154,14 +154,14 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
     this->linkArtsButton.setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::broadEditDanger);
     this->linkArtsButton.setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     this->linkArtsButton.getProperties().set("broadEditMode", true);
-    this->linkArtsButton.setTooltip("Apply supported parameter changes to the same layer across all articulations in this slot");
+    this->linkArtsButton.setTooltip("Apply supported parameter and mic routing changes to the same layer across all articulations in this slot");
     this->addAndMakeVisible(this->linkArtsButton);
 
     UIHelpers::configureToggleButton(this->linkTomBleedButton);
     this->linkTomBleedButton.setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::broadEditDanger);
     this->linkTomBleedButton.setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     this->linkTomBleedButton.getProperties().set("broadEditMode", true);
-    this->linkTomBleedButton.setTooltip("Apply the changed bleed mic level to every mapped layer in every Tom slot");
+    this->linkTomBleedButton.setTooltip("Apply the changed bleed mic level or route to every mapped layer in every Tom slot");
     this->linkTomBleedButton.setVisible(this->slotType == KitLib::InstrumentSpec::Type::Tom);
     this->addAndMakeVisible(this->linkTomBleedButton);
 
@@ -322,7 +322,7 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
     return result;
 }
 
-const MicLayout::Mic* PadContextPopup::findLayoutMicForSlot(const juce::String& micCode) const {
+const MicLayout::Mic* PadContextPopup::findLayoutMicForSlot(const KitLayout::InstrumentSlot& slot, const juce::String& micCode) const {
     const auto* micLayout = this->engine.getMicLayout();
     if (micLayout == nullptr) return nullptr;
 
@@ -331,7 +331,7 @@ const MicLayout::Mic* PadContextPopup::findLayoutMicForSlot(const juce::String& 
     for (const auto& mic : micLayout->mics) {
         if (mic.code.compareIgnoreCase(micCode) != 0) continue;
         const auto selector = parseMicInstrumentSelector(mic.instrument, this->engine.getInstrumentCatalog());
-        const int priority = static_cast<int>(matchMicInstrumentSelector(selector, this->slotId, this->slotType, this->engine.getInstrumentCatalog()));
+        const int priority = static_cast<int>(matchMicInstrumentSelector(selector, slot.id, slot.type, this->engine.getInstrumentCatalog()));
         if (priority > bestPriority) {
             bestMic = &mic;
             bestPriority = priority;
@@ -401,7 +401,7 @@ std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForSourcePath(con
     return result;
 }
 
-PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode) const {
+PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const {
     MicRoutingDisplay display;
     const auto* kitLayout = this->engine.getKitLayout();
     const auto* micLayout = this->engine.getMicLayout();
@@ -414,19 +414,19 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
 
     const KitLayout::InstrumentSlot* slot = nullptr;
     for (const auto& candidate : kitLayout->instrumentSlots) {
-        if (candidate.id == this->slotId) {
+        if (candidate.id.compareIgnoreCase(targetSlotId) == 0) {
             slot = &candidate;
             break;
         }
     }
     if (slot == nullptr) {
         display.routeText = "No route";
-        display.tooltip = "Slot not found: " + this->slotId;
+        display.tooltip = "Slot not found: " + targetSlotId;
         display.hasProblem = true;
         return display;
     }
 
-    const auto* layoutMic = this->findLayoutMicForSlot(micCode);
+    const auto* layoutMic = this->findLayoutMicForSlot(*slot, micCode);
     const auto parsedSourceMic = KitLib::MicSpec::parseMicCode(micCode);
 
     const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
@@ -486,10 +486,10 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
     return display;
 }
 
-std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode) const {
+std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const {
     std::vector<MicRoutingChoice> choices;
 
-    const auto currentDisplay = this->buildMicRoutingDisplay(sourcePath, micCode);
+    const auto currentDisplay = this->buildMicRoutingDisplay(sourcePath, micCode, targetSlotId);
     choices.push_back({ "-", "Unassigned from output", "-", -1, false, false });
 
     const auto* kitLayout = this->engine.getKitLayout();
@@ -501,17 +501,17 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
 
     const KitLayout::InstrumentSlot* slot = nullptr;
     for (const auto& candidate : kitLayout->instrumentSlots) {
-        if (candidate.id == this->slotId) {
+        if (candidate.id.compareIgnoreCase(targetSlotId) == 0) {
             slot = &candidate;
             break;
         }
     }
     if (slot == nullptr) {
-        choices.push_back({ "No route", "Slot not found: " + this->slotId, {}, 0, true, true, true });
+        choices.push_back({ "No route", "Slot not found: " + targetSlotId, {}, 0, true, true, true });
         return choices;
     }
 
-    const auto* layoutMic = this->findLayoutMicForSlot(micCode);
+    const auto* layoutMic = this->findLayoutMicForSlot(*slot, micCode);
     const auto parsedSourceMic = KitLib::MicSpec::parseMicCode(micCode);
 
     std::optional<KitLib::MicSpec> sourceDirectSpec;
@@ -615,6 +615,16 @@ void PadContextPopup::updateRoutingComboDisplay(LayerRow::MicBleedControl& bleed
     bleedCtrl.routingCombo->repaint();
 }
 
+int PadContextPopup::findRoutingChoiceIndex(const std::vector<MicRoutingChoice>& choices, const juce::String& outputId) {
+    for (int choiceIndex = 0; choiceIndex < static_cast<int>(choices.size()); ++choiceIndex) {
+        const auto& choice = choices[static_cast<size_t>(choiceIndex)];
+        if (choice.hasProblem) continue;
+        if (outputId.isEmpty() && choice.usesAutomaticRouting) return choiceIndex;
+        if (outputId.isNotEmpty() && choice.outputId.compareIgnoreCase(outputId) == 0) return choiceIndex;
+    }
+    return -1;
+}
+
 std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourceIndex(int sourceIndex) const {
     if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return {};
     return this->getRelevantMicsForSourcePath(this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath());
@@ -688,11 +698,12 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
             this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
         };
 
-        bleedCtrl->routingChoices = this->buildMicRoutingChoices(sourcePath, micCode);
+        bleedCtrl->routingChoices = this->buildMicRoutingChoices(sourcePath, micCode, this->slotId);
         bleedCtrl->routingCombo = std::make_unique<juce::ComboBox>();
         UIHelpers::configureComboBox(*bleedCtrl->routingCombo);
         bleedCtrl->routingCombo->getProperties().set("compactRoute", true);
         bleedCtrl->routingCombo->getProperties().set("hideArrow", true);
+        const auto requestedOutputId = bleedCtrl->selectedOutputId;
         int selectedItemId = 0;
         for (int choiceIdx = 0; choiceIdx < static_cast<int>(bleedCtrl->routingChoices.size()); ++choiceIdx) {
             const auto& choice = bleedCtrl->routingChoices[static_cast<size_t>(choiceIdx)];
@@ -706,7 +717,8 @@ void PadContextPopup::rebuildBleedControls(LayerRow* layer, const std::unordered
         const int selectedIndex = selectedItemId - 1;
         if (selectedIndex >= 0 && selectedIndex < static_cast<int>(bleedCtrl->routingChoices.size())) {
             const auto& selectedChoice = bleedCtrl->routingChoices[static_cast<size_t>(selectedIndex)];
-            bleedCtrl->selectedOutputId = selectedChoice.usesAutomaticRouting ? juce::String() : selectedChoice.outputId;
+            const bool selectedRequestedOutput = requestedOutputId.isNotEmpty() && selectedChoice.outputId.compareIgnoreCase(requestedOutputId) == 0;
+            bleedCtrl->selectedOutputId = selectedRequestedOutput ? requestedOutputId : (selectedChoice.usesAutomaticRouting ? juce::String() : selectedChoice.outputId);
         }
         bleedCtrl->routingCombo->onChange = [this, layer, bleedCtrlPtr] {
             this->applyRoutingComboChange(layer, bleedCtrlPtr);
@@ -1078,11 +1090,7 @@ void PadContextPopup::applyLayerParameterChange(LayerRow* layer, EditableLayerPa
         std::erase_if(targetProjections, [this, &parsedMap, &micCode](const auto& projection) {
             if (projection.entryIndex >= parsedMap.value.entries.size()) return true;
             const auto& entry = parsedMap.value.entries[projection.entryIndex];
-            juce::String sourcePath = entry.kitRef;
-            if (entry.instCode.isNotEmpty()) sourcePath += "/" + entry.instCode;
-            auto sourceArticulation = DrumKitEngineMapHelpers::sourceArticulationForDestination(entry, projection.articulationName);
-            if (sourceArticulation.isEmpty() && projection.articulationName != "(default)") sourceArticulation = projection.articulationName;
-            if (sourceArticulation.isNotEmpty()) sourcePath += "/" + sourceArticulation;
+            const auto sourcePath = DrumKitEngineMapHelpers::sourcePathForDestination(entry, projection.articulationName);
             const auto relevantMics = this->getRelevantMicsForSourcePath(sourcePath);
             return std::none_of(relevantMics.begin(), relevantMics.end(), [&micCode](const auto& mic) {
                 return mic.first.compareIgnoreCase(micCode) == 0;
@@ -1227,7 +1235,7 @@ juce::String PadContextPopup::generateFullMapText() const {
 }
 
 void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl) {
-    if (layer == nullptr || bleedCtrl == nullptr || bleedCtrl->routingCombo == nullptr) return;
+    if (this->suppressParameterCallbacks || layer == nullptr || bleedCtrl == nullptr || bleedCtrl->routingCombo == nullptr) return;
 
     const auto oldRoute = bleedCtrl->selectedOutputId;
     const int selectedIndex = bleedCtrl->routingCombo->getSelectedId() - 1;
@@ -1241,22 +1249,127 @@ void PadContextPopup::applyRoutingComboChange(LayerRow* layer, LayerRow::MicBlee
     this->updateRoutingComboDisplay(*bleedCtrl);
     if (oldRoute == newRoute) return;
 
+    auto restoreCurrentRoute = [this, bleedCtrl, &oldRoute] {
+        bleedCtrl->selectedOutputId = oldRoute;
+        const int oldChoiceIndex = PadContextPopup::findRoutingChoiceIndex(bleedCtrl->routingChoices, oldRoute);
+        if (oldChoiceIndex >= 0) bleedCtrl->routingCombo->setSelectedId(oldChoiceIndex + 1, juce::dontSendNotification);
+        this->updateRoutingComboDisplay(*bleedCtrl);
+    };
+
     const int layerIndex = layer->mappedLayerIndex >= 0 ? layer->mappedLayerIndex : this->getLayerIndex(layer);
-    this->engine.logMessage("Pad popup route: slot=" + this->slotId
-        + " art=" + layer->artName
-        + " layer=" + juce::String(layerIndex + 1)
-        + " sourceMic=" + bleedCtrl->micCode
-        + " old=" + (oldRoute.isNotEmpty() ? oldRoute : juce::String("auto"))
-        + " new=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")), DebugLevel::Debug);
-    if (this->engine.updateSlotMicRoute(this->slotId, layer->artName, layerIndex, bleedCtrl->micCode, newRoute)) {
-        this->engine.logMessage("Mic route change SUCCESS: slot=" + this->slotId + " art=" + layer->artName + " source=" + bleedCtrl->micCode + " target=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")) + " mode=live", DebugLevel::Debug);
-        this->mapTextDirty = true;
-        this->flushMapText();
+    if (layerIndex < 0) {
+        restoreCurrentRoute();
         return;
     }
-    this->engine.logMessage("Mic route live update FAILED: slot=" + this->slotId + " art=" + layer->artName + " source=" + bleedCtrl->micCode + " target=" + (newRoute.isNotEmpty() ? newRoute : juce::String("auto")) + " fallback=full apply", DebugLevel::Debug);
-    const bool fallbackApplied = this->applyToEngine();
-    this->engine.logMessage("Mic route fallback " + juce::String(fallbackApplied ? "SUCCESS" : "FAILED") + ": slot=" + this->slotId + " art=" + layer->artName + " source=" + bleedCtrl->micCode, DebugLevel::Debug);
+
+    const auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
+    auto parsedMap = DrumKitEngine::parseInstrumentMapText(currentMapText);
+    const auto* layout = this->engine.getKitLayout();
+    if (!parsedMap.ok() || layout == nullptr) {
+        restoreCurrentRoute();
+        return;
+    }
+
+    auto projections = DrumKitEngineMapHelpers::projectDestinationLayers(parsedMap.value, *layout);
+    auto findSourceProjection = [this, layer, layerIndex](const auto& candidateProjections) -> const DrumKitEngineMapHelpers::InstrumentMapLayerProjection* {
+        for (const auto& projection : candidateProjections) {
+            if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationName.compareIgnoreCase(layer->artName) != 0 || projection.layerIndex != layerIndex) continue;
+            return &projection;
+        }
+        return nullptr;
+    };
+
+    const auto* sourceProjection = findSourceProjection(projections);
+    if (sourceProjection == nullptr) {
+        restoreCurrentRoute();
+        return;
+    }
+
+    const bool linkArts = this->linkArtsButton.getToggleState();
+    const bool linkTomBleed = this->linkTomBleedButton.isVisible() && this->linkTomBleedButton.getToggleState();
+    if (!linkArts && !linkTomBleed) {
+        const auto slotIterator = std::find_if(layout->instrumentSlots.begin(), layout->instrumentSlots.end(), [this](const auto& slot) {
+            return slot.id.compareIgnoreCase(this->slotId) == 0;
+        });
+        if (slotIterator != layout->instrumentSlots.end()) {
+            DrumKitEngineMapHelpers::isolateEntryForDestinationArticulation(parsedMap.value, *slotIterator, sourceProjection->entryIndex, layer->artName);
+            projections = DrumKitEngineMapHelpers::projectDestinationLayers(parsedMap.value, *layout);
+            sourceProjection = findSourceProjection(projections);
+            if (sourceProjection == nullptr) {
+                restoreCurrentRoute();
+                return;
+            }
+        }
+    }
+
+    auto targetProjections = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, this->slotId, layer->artName, layerIndex, linkArts, linkTomBleed);
+    std::erase_if(targetProjections, [this, &parsedMap, bleedCtrl, &newRoute](const auto& projection) {
+        if (projection.entryIndex >= parsedMap.value.entries.size()) return true;
+        const auto& entry = parsedMap.value.entries[projection.entryIndex];
+        const auto sourcePath = DrumKitEngineMapHelpers::sourcePathForDestination(entry, projection.articulationName);
+        const auto relevantMics = this->getRelevantMicsForSourcePath(sourcePath);
+        const bool hasSourceMic = std::any_of(relevantMics.begin(), relevantMics.end(), [bleedCtrl](const auto& mic) {
+            return mic.first.compareIgnoreCase(bleedCtrl->micCode) == 0;
+        });
+        if (!hasSourceMic) return true;
+        const auto choices = this->buildMicRoutingChoices(sourcePath, bleedCtrl->micCode, projection.slotId);
+        return PadContextPopup::findRoutingChoiceIndex(choices, newRoute) < 0;
+    });
+    if (targetProjections.empty()) {
+        restoreCurrentRoute();
+        return;
+    }
+
+    std::unordered_set<size_t> updatedEntryIndexes;
+    for (const auto& projection : targetProjections) {
+        if (projection.entryIndex >= parsedMap.value.entries.size() || !updatedEntryIndexes.insert(projection.entryIndex).second) continue;
+        auto& routeOverrides = parsedMap.value.entries[projection.entryIndex].micRouteOverrides;
+        for (auto routeIterator = routeOverrides.begin(); routeIterator != routeOverrides.end();) {
+            if (routeIterator->first.compareIgnoreCase(bleedCtrl->micCode) == 0) routeIterator = routeOverrides.erase(routeIterator);
+            else ++routeIterator;
+        }
+        if (newRoute.isNotEmpty()) routeOverrides[bleedCtrl->micCode] = newRoute;
+    }
+
+    this->suppressParameterCallbacks = true;
+    for (const auto& projection : targetProjections) {
+        if (projection.slotId.compareIgnoreCase(this->slotId) != 0) continue;
+        LayerRow* targetLayer = nullptr;
+        for (auto* candidateLayer : this->layerRows) {
+            if (candidateLayer != nullptr && candidateLayer->artName.compareIgnoreCase(projection.articulationName) == 0 && candidateLayer->mappedLayerIndex == projection.layerIndex) {
+                targetLayer = candidateLayer;
+                break;
+            }
+        }
+        if (targetLayer == nullptr) continue;
+        for (const auto& targetBleedControl : targetLayer->micBleeds) {
+            if (targetBleedControl == nullptr || targetBleedControl->micCode.compareIgnoreCase(bleedCtrl->micCode) != 0) continue;
+            const int targetChoiceIndex = PadContextPopup::findRoutingChoiceIndex(targetBleedControl->routingChoices, newRoute);
+            if (targetChoiceIndex < 0) continue;
+            targetBleedControl->selectedOutputId = newRoute;
+            targetBleedControl->routingCombo->setSelectedId(targetChoiceIndex + 1, juce::dontSendNotification);
+            this->updateRoutingComboDisplay(*targetBleedControl);
+        }
+    }
+    this->suppressParameterCallbacks = false;
+
+    std::vector<DrumKitEngine::MicRouteTarget> runtimeTargets;
+    std::unordered_set<size_t> runtimeEntryIndexes;
+    runtimeTargets.reserve(updatedEntryIndexes.size());
+    for (const auto& projection : targetProjections) {
+        if (!runtimeEntryIndexes.insert(projection.entryIndex).second) continue;
+        runtimeTargets.push_back({ projection.slotId, projection.articulationName, projection.layerIndex, bleedCtrl->micCode, newRoute });
+    }
+    const bool runtimeUpdated = this->engine.updateSlotMicRoutesBatch(runtimeTargets);
+    const auto routeTargetName = newRoute.isNotEmpty() ? newRoute : juce::String("auto");
+    const auto routeStatus = "Linked mic route " + juce::String(runtimeUpdated ? "SUCCESS" : "FAILED") + ": source=" + bleedCtrl->micCode
+        + " target=" + routeTargetName + " layers=" + juce::String(static_cast<int>(runtimeTargets.size()));
+    this->engine.logMessage(routeStatus, DebugLevel::Debug);
+
+    this->savedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(parsedMap.value);
+    this->mapTextDirty = false;
+    this->refreshLayerMappings();
+    if (this->onMapTextChanged) this->onMapTextChanged(this->savedInstrumentMapText);
 }
 
 bool PadContextPopup::applyToEngine() {
@@ -1457,6 +1570,19 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
     this->dismissSourcePicker();
 
     this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
+    int layerNumber = 0;
+    for (const auto* candidateLayer : this->layerRows) {
+        if (candidateLayer == nullptr || candidateLayer->artName.compareIgnoreCase(layer->artName) != 0) continue;
+        ++layerNumber;
+        if (candidateLayer == layer) break;
+    }
+    if (layerNumber < 1) layerNumber = 1;
+    auto pickerTitle = this->slotLabel.getText() + " / " + layer->artName;
+    if (layerNumber > 1) pickerTitle += " (layer " + juce::String(layerNumber) + ")";
+    this->activePicker->setTitle(pickerTitle);
+    this->activePicker->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    };
     auto initialFilterType = this->slotType;
     if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
         const auto assignedType = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].instType;
@@ -1505,7 +1631,10 @@ void PadContextPopup::showInstrumentPicker() {
     this->dismissSourcePicker();
 
     this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog(), SourcePickerPopup::SelectionMode::WholeInstrument);
-    this->activePicker->setFilterType(this->slotType);
+    this->activePicker->setTitle(this->slotLabel.getText());
+    this->activePicker->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    };
     this->activePicker->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
         if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
         const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];

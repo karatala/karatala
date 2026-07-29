@@ -38,5 +38,6 @@ std::vector<InstrumentMapLayerProjection> projectDestinationLayers(const DrumKit
 std::vector<InstrumentMapLayerProjection> collectLinkedParameterTargets(const std::vector<InstrumentMapLayerProjection>& projections, const juce::String& sourceSlotId, const juce::String& sourceArticulation, int sourceLayerIndex, bool linkArticulations, bool linkAllTomBleed);
 size_t isolateEntryForDestinationArticulation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout::InstrumentSlot& slot, size_t entryIndex, const juce::String& articulationName);
 juce::String sourceArticulationForDestination(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& destinationArticulation);
+juce::String sourcePathForDestination(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& destinationArticulation);
 
 } // namespace DrumKitEngineMapHelpers

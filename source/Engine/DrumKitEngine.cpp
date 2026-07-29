@@ -963,9 +963,6 @@ ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(co
     if (kit == nullptr) return result.returnWithError("Source kit was not found: " + kitId);
     auto* instrument = kit->findInstrumentById(instrumentId);
     if (instrument == nullptr) return result.returnWithError("Source instrument was not found: " + instrumentId);
-    if (slotIterator->type != KitLib::InstrumentSpec::Type::Unknown && instrument->meta.type != slotIterator->type) {
-        return result.returnWithError("The selected instrument type does not match slot " + slotIterator->id);
-    }
 
     InstrumentMap map;
     if (currentMapText.trim().isNotEmpty()) {
@@ -2413,27 +2410,34 @@ bool DrumKitEngine::updateSlotParametersBatch(const std::vector<LayerParameterTa
     return updated;
 }
 
-bool DrumKitEngine::updateSlotMicRoute(const juce::String& slotId, const juce::String& artName, int layerIndex, const juce::String& sourceMicCode, const juce::String& outputId) {
-    if (layerIndex < 0) {
-        this->logMessage("Engine mic route FAILED: slot=" + slotId + " art=" + artName + " reason=invalid layer index", DebugLevel::Debug);
-        return false;
-    }
+bool DrumKitEngine::updateSlotMicRoutesBatch(const std::vector<MicRouteTarget>& targets) {
+    struct PreparedTarget {
+        const MicRouteTarget* target = nullptr;
+        std::vector<std::pair<uint32_t, uint32_t>> routes;
+    };
 
-    const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
+    std::vector<PreparedTarget> preparedTargets;
+    preparedTargets.reserve(targets.size());
+    for (const auto& target : targets) {
+        if (target.layerIndex < 0 || target.slotId.trim().isEmpty() || target.sourceMicCode.trim().isEmpty()) continue;
+        preparedTargets.push_back({ &target, this->getTargetRoutesForArticulationFilter(target.slotId, target.articulationName) });
+    }
+    if (preparedTargets.empty()) return false;
+
     const juce::ScopedLock graphLock(this->engineGraphLock);
-
-    int currentLayerIndex = 0;
-    for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr == nullptr || synthPtr->getId() != slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes)) continue;
-        if (currentLayerIndex == layerIndex) {
-            const bool updated = synthPtr->updateMicRoute(sourceMicCode, outputId);
-            this->logMessage("Engine mic route " + juce::String(updated ? "SUCCESS" : "FAILED") + ": slot=" + slotId + " art=" + artName + " layer=" + juce::String(layerIndex + 1) + " source=" + sourceMicCode + " target=" + (outputId.isNotEmpty() ? outputId : juce::String("auto")) + (updated ? "" : " reason=no matching loaded sound or output route"), DebugLevel::Debug);
-            return updated;
+    bool updated = false;
+    for (const auto& preparedTarget : preparedTargets) {
+        int currentLayerIndex = 0;
+        for (auto& synthPtr : this->instrumentSynthPtrs) {
+            if (synthPtr == nullptr || synthPtr->getId() != preparedTarget.target->slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, preparedTarget.routes)) continue;
+            if (currentLayerIndex == preparedTarget.target->layerIndex) {
+                updated = synthPtr->updateMicRoute(preparedTarget.target->sourceMicCode, preparedTarget.target->outputId) || updated;
+                break;
+            }
+            ++currentLayerIndex;
         }
-        ++currentLayerIndex;
     }
-    this->logMessage("Engine mic route FAILED: slot=" + slotId + " art=" + artName + " layer=" + juce::String(layerIndex + 1) + " reason=matching synth layer not found", DebugLevel::Debug);
-    return false;
+    return updated;
 }
 
 std::vector<std::pair<uint32_t, uint32_t>> DrumKitEngine::getTargetRoutesForArticulationFilter(const juce::String& slotId, const juce::String& artName) const {

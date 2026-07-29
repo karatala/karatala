@@ -15,7 +15,7 @@ The original paragraph above and the latest user decisions override the older im
 1. ✅ Phase 1 implementation:
    - Add whole-instrument replacement from the pad popup.
    - Add temporary `LINK ARTS` and `LINK TOM BLEED` editing.
-   - Keep updates parameter-only and persist the instrument map immediately.
+   - Keep parameter and mic-routing updates field-specific and persist the instrument map immediately.
    - Build and manual verification are still pending because they were not requested.
 2. Phase 2:
    - Add a separate browser mode for complete library kits and saved instrument-map presets.
@@ -44,7 +44,8 @@ Add three connected workflows:
 - Selecting a kit or preview pad never changes the loaded instrument map.
 - `Load full kit` and `Assign to slot` are explicit actions. Each action applies its change immediately after its button is clicked.
 - Kit README content is shown as read-only plain Markdown text with its original line breaks. A full Markdown renderer is not required.
-- `Set instrument` reuses the shared large source picker in a whole-instrument mode. Preview still works per articulation, but `Use` applies the parent instrument.
+- `Set instrument` reuses the shared large source picker in a whole-instrument mode. The main list contains one row per instrument; a separate preview list contains that instrument's articulations. `Use` applies the parent instrument.
+- `Set instrument` has no hidden destination-slot type filter. All available instruments are shown; category and Types controls are optional manual filters.
 - Link switches are temporary editing modes. They reset to off when the pad popup closes and are not saved in plugin state.
 - Active link switches use a steady bright-red background and white text. They do not blink, because constant motion would distract from the parameter controls.
 - Saved combined presets contain only instrument-map text with its layers and layer settings. They do not contain kit-layout or MIDI-note data.
@@ -54,7 +55,7 @@ Add three connected workflows:
 - [`KitHomePanel`](../source/UI/KitHomePanel.h) has a small `Start from library kit` combo and builds a complete draft map with `DrumKitEngine::buildInstrumentMapForKit()`.
 - `KitLib::DrumKitSpec::MetaInfo` already contains `name`, `author`, `license`, and the kit root directory.
 - The library scan does not currently keep the kit's `README.md` content.
-- [`SourcePickerPopup`](../source/UI/SourcePickerPopup.h) supports source filtering, per-articulation preview, articulation-specific `Use`, and the phase 1 whole-instrument confirmation mode.
+- [`SourcePickerPopup`](../source/UI/SourcePickerPopup.h) supports contextual titles, a right-side `×` close button, source filtering, per-articulation preview, articulation-specific `Use`, and a whole-instrument mode with one main-list row per instrument and a separate articulation preview list.
 - [`PadContextPopup`](../source/UI/PadContextPopup.h) has all articulation groups for the current destination slot and updates tuning, attack, decay, gain, pan, phase, L/R, and bleed without reloading samples.
 - The pad-popup header contains the slot title, phase 1 link controls, `SET INSTRUMENT`, and MIDI-note controls.
 - `DrumKitEngine::applyInstrumentMapSlotChange()` replaces one destination slot without reloading unrelated slots, while `updateSlotParametersBatch()` applies linked parameter targets under one graph lock.
@@ -164,10 +165,14 @@ Use this left-to-right order:
 
 Add a whole-instrument selection mode to `SourcePickerPopup`:
 
-- Keep the existing 80-percent modal size, dark outside overlay, filtering, articulation filters, preview, arrow keys, Enter, and outside-click dismissal.
-- Keep articulation rows available so the user can preview the exact sounds before choosing.
-- In whole-instrument mode, `Use` returns the selected item's kit and parent instrument. Its articulation is used only for preview.
-- The normal layer-source picker mode remains articulation-specific and keeps its current behavior.
+- Keep the existing 80-percent modal size, dark outside overlay, text/category/type filtering, preview, arrow keys, Enter, and outside-click dismissal.
+- Add a fixed title row with a `×` close button on the right.
+- Use only the slot display name for whole-instrument selection, such as `Tom 1`.
+- Use `Kick / center` for articulation selection and append ` (layer X)` only for layer 2 and higher.
+- Show each available parent instrument once in the main list, regardless of the destination slot type.
+- Show the selected instrument's articulations in a separate preview-only list.
+- In whole-instrument mode, `Use` returns the selected item's kit and parent instrument. Preview-articulation selection never changes which instrument `Use` returns.
+- The normal layer-source picker mode remains articulation-specific and keeps its multi-select articulation filters and current behavior.
 
 When `Set instrument` is confirmed:
 
@@ -185,8 +190,8 @@ This action intentionally replaces previous layers and their per-layer parameter
 
 | Switch | Available on | Changed values | Targets |
 | --- | --- | --- | --- |
-| `Link arts` | Every slot | Tuning, attack, decay, gain, pan, L/R flip, phase flip, and bleed level | The same layer number across every articulation of the current destination slot |
-| `Link tom bleed` | Tom slots only | The changed bleed mic code and level only | Every mapped layer and articulation in every destination slot whose kit-layout type is `Tom` |
+| `Link arts` | Every slot | Tuning, attack, decay, gain, pan, L/R flip, phase flip, bleed level, and mic routing | The same layer number across every articulation of the current destination slot |
+| `Link tom bleed` | Tom slots only | The changed bleed mic code and level or routing destination | Every mapped layer and articulation in every destination slot whose kit-layout type is `Tom` |
 
 Additional rules:
 
@@ -195,9 +200,10 @@ Additional rules:
 - A wildcard instrument-level map entry is updated once, even when it serves several destination articulations.
 - Bleed linking matches the stable source mic code, not the display name or output name.
 - A target source without that mic code is skipped.
+- Linked routing copies `Auto`, `Unassigned`, or the selected stable output ID. A target without that compatible output choice is skipped.
 - If both switches are active, use the union of their targets and update each map entry only once.
 - Apply only the parameter that the user changed. For example, moving tuning must not copy attack, gain, or bleed from the source row.
-- Source selection, layer add/remove actions, MIDI notes, and mic-routing destination combos are not linked.
+- Source selection, layer add/remove actions, and MIDI notes are not linked.
 - Every linked change is audible immediately and is also written to the saved instrument-map text.
 
 ### Active Appearance
@@ -216,11 +222,11 @@ For each edit:
 
 1. Resolve the source map entry and the linked target entries.
 2. Update the matching visible controls without firing their callbacks again.
-3. Apply a batch of `LayerParameterUpdate` values under one engine graph lock.
+3. Apply a batch of `LayerParameterUpdate` values or mic-route updates under one engine graph lock.
 4. Serialize the changed full map once.
 5. Notify the editor once so plugin state is persisted.
 
-The linked path must remain parameter-only. It must not reload sample files or rebuild unrelated synths.
+The linked path must remain field-specific. It must not reload sample files or rebuild unrelated synths.
 
 ## Implementation Plan
 
@@ -284,11 +290,12 @@ Files:
 - Add an explicit picker selection mode rather than inferring behavior from which panel opened it.
 - Keep the normal articulation-selection callback.
 - Add a whole-instrument callback that returns kit and instrument identity.
+- Show one main-list row per instrument and a separate preview-only articulation list.
+- Show the destination context in a fixed title row with a right-side `×` close button.
 - Keep one preview implementation for both modes.
 
 Files:
 
-- [`source/UI/SourceItem.h`](../source/UI/SourceItem.h)
 - [`source/UI/SourcePickerPopup.h`](../source/UI/SourcePickerPopup.h)
 - [`source/UI/SourcePickerPopup.cpp`](../source/UI/SourcePickerPopup.cpp)
 
@@ -308,9 +315,10 @@ Files:
 
 - Introduce a small parameter-field enum for the popup's editable layer values.
 - Resolve linked targets by destination slot, articulation, layer number, and map-entry identity.
-- Add a batch engine update API that accepts resolved parameter-only updates and locks the graph once.
+- Add batch engine update APIs that accept resolved parameter or mic-routing updates and lock the graph once per user edit.
 - Update only the changed optional field in each target.
 - For bleed, update only the changed mic code while preserving every other bleed level.
+- For routing, copy only `Auto`, `Unassigned`, or one compatible stable output ID for the changed mic code.
 - Serialize and notify once per user edit.
 
 Files:
@@ -336,7 +344,7 @@ Mark each completed section in this plan with `✅`. When all work and verificat
 
 ## Automated Verification
 
-Phase 1 focused test cases have been added for whole-slot replacement, destination-layer projection, wildcard isolation, linked target deduplication, compatibility rejection, and single-mic bleed preservation. They have not been run yet.
+Phase 1 focused test cases have been added for whole-slot replacement, cross-type assignment, destination-layer projection, wildcard isolation, linked target deduplication, routing source-path resolution, and single-mic bleed preservation. They have not been run yet.
 
 Extend [`tests/TestKitLibParsers.cpp`](../tests/TestKitLibParsers.cpp):
 
@@ -375,12 +383,15 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 
 - Confirm the header order is link switches, `Set instrument`, MIDI label, and MIDI buttons.
 - Confirm `Link tom bleed` appears only for Tom slots.
-- Use `Set instrument`, preview several articulations, and apply the parent instrument.
+- Use `Set instrument`, confirm each instrument appears once, preview several articulations from the separate preview list, and apply the parent instrument.
+- Confirm a Kick slot can show and accept a Snare, Tom, or any other available instrument type.
+- Confirm whole-instrument and articulation pickers show the correct short context title and close from the right-side `×` button.
 - Confirm the picker closes and all articulation rows now use the new instrument.
 - Turn on `Link arts` and change each supported parameter.
 - Confirm only the same layer number changes in other articulations.
 - Turn on `Link tom bleed` and change direct, overhead, and room bleed values.
 - Confirm matching mic codes change across all Tom slots and no other instrument type changes.
+- Change `Auto`, `Unassigned`, shared, and slot-specific mic routes with each link mode. Confirm compatible stable output IDs propagate and incompatible targets are skipped.
 - Confirm active link switches are immediately visible in bright red and stop being active when the popup is reopened.
 - Save and reload plugin state and confirm every linked parameter edit persists.
 
@@ -390,8 +401,8 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 - Any articulation in the selected kit can be previewed without changing the current map.
 - The selected kit can replace the complete current kit explicitly.
 - Any selected source instrument can replace one compatible destination slot without changing other slots.
-- The pad popup can replace its whole instrument through the shared picker.
-- `Link arts` updates the defined parameter set across matching articulation layers.
-- `Link tom bleed` updates matching bleed mic codes across all Tom slots.
-- Linked edits are immediate, persisted, parameter-only, and do not reload samples.
+- The pad popup can replace its whole instrument through the shared picker without a hidden destination-type restriction.
+- `Link arts` updates the defined parameter and routing set across matching articulation layers.
+- `Link tom bleed` updates matching bleed mic codes and compatible routing across all Tom slots.
+- Linked edits are immediate, persisted, field-specific, and do not reload samples.
 - Active link modes are highly visible without blinking.

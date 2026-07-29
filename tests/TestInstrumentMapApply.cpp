@@ -136,13 +136,18 @@ TEST_CASE("InstrumentMap whole-instrument assignment replaces one slot with an i
     CHECK(snareIterator->tuningCents == 20);
 }
 
-TEST_CASE("InstrumentMap whole-instrument assignment rejects an incompatible slot", "[InstrumentMap][assignment]") {
+TEST_CASE("InstrumentMap whole-instrument assignment allows a different instrument type", "[InstrumentMap][assignment]") {
     InstrumentMapApplyFixture fixture;
 
     const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument("kick1:KitA/kick-22", "kick1", "KitB", "snare-13");
 
-    CHECK_FALSE(updatedMap.ok());
-    CHECK(updatedMap.error().containsIgnoreCase("does not match"));
+    REQUIRE(updatedMap.ok());
+    const auto parsed = DrumKitEngine::parseInstrumentMapText(updatedMap.value);
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.entries.size() == 1);
+    CHECK(parsed.value.entries.front().slotId == "kick1");
+    CHECK(parsed.value.entries.front().kitRef == "KitB");
+    CHECK(parsed.value.entries.front().instCode == "snare-13");
 }
 
 TEST_CASE("InstrumentMap apply rebuilds shadows only for the changed layered slot", "[InstrumentMap][IncrementalApply]") {

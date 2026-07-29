@@ -158,15 +158,16 @@ private:
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourceIndex(int sourceIndex) const;
     std::vector<KitLib::MicSpec> getDirectMicSpecsForSourcePath(const juce::String& sourcePath) const;
-    const MicLayout::Mic* findLayoutMicForSlot(const juce::String& micCode) const;
+    const MicLayout::Mic* findLayoutMicForSlot(const KitLayout::InstrumentSlot& slot, const juce::String& micCode) const;
     struct MicRoutingDisplay {
         juce::String routeText;
         juce::String tooltip;
         juce::String outputId;
         bool hasProblem = false;
     };
-    MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode) const;
-    std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode) const;
+    MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const;
+    std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const;
+    static int findRoutingChoiceIndex(const std::vector<MicRoutingChoice>& choices, const juce::String& outputId);
     void updateRoutingComboDisplay(LayerRow::MicBleedControl& bleedCtrl) const;
     bool mapTextDirty = false;
     bool suppressParameterCallbacks = false;
