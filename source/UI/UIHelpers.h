@@ -35,6 +35,8 @@ void configureControlButton(juce::TextButton& button, int connectedEdges = 0);
 
 void configureDialogCloseButton(juce::TextButton& button);
 
+void configureSettingsButton(juce::TextButton& button);
+
 void configureCategoryButton(juce::TextButton& button);
 
 void configureToggleButton(juce::TextButton& button, int connectedEdges = 0);

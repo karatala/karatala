@@ -147,7 +147,7 @@ private:
     void commitVelocityResponse(LayerRow* layer);
     void updateVelocityResponseDisplay(LayerRow* layer);
     void applyLayerParameterChange(LayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode = {});
-    void updateRemoveButtonVisibility();
+    void updateSourceCardButtonVisibility();
     void updateSourceDisplay(LayerRow* layer);
     void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
     void applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl);

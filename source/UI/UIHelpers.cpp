@@ -66,6 +66,12 @@ void configureDialogCloseButton(juce::TextButton& button) {
     button.setTooltip("Close");
 }
 
+void configureSettingsButton(juce::TextButton& button) {
+    UIHelpers::configureControlButton(button);
+    button.setButtonText(juce::String());
+    button.getProperties().set("settingsButton", true);
+}
+
 void configureCategoryButton(juce::TextButton& button) {
     button.setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
     button.setColour(juce::TextButton::textColourOffId, UITheme::Colours::textSecondary);

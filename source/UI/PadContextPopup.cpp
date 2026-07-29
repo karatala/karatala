@@ -101,7 +101,7 @@ void PadContextPopup::addArticulationGroup(const juce::String& articulationName)
     group->addLayerButton.setTooltip("Add layer to " + articulationName);
     group->addLayerButton.onClick = [this, group] {
         this->addLayerRow(group->artName, "", 0, -1, -1, 0.0f, 0, false, false, false, std::nullopt, {}, {}, -1);
-        this->updateRemoveButtonVisibility();
+        this->updateSourceCardButtonVisibility();
         this->resized();
     };
     this->layerContent.addAndMakeVisible(group->addLayerButton);
@@ -255,7 +255,7 @@ void PadContextPopup::populateLayers() {
         }
     }
 
-    this->updateRemoveButtonVisibility();
+    this->updateSourceCardButtonVisibility();
 }
 
 std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourcePath(const juce::String& sourcePath) const {
@@ -760,9 +760,10 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     layer->velocityResponseMode->onChange = [this, layer] { this->commitVelocityResponse(layer); };
     this->rebuildVelocityResponseChoices(layer);
 
-    layer->sourceSetupButton = std::make_unique<juce::TextButton>("Source setup...");
-    UIHelpers::configureControlButton(*layer->sourceSetupButton);
-    layer->sourceSetupButton->getProperties().set("compactText", true);
+    layer->sourceSetupButton = std::make_unique<juce::TextButton>();
+    UIHelpers::configureSettingsButton(*layer->sourceSetupButton);
+    layer->sourceSetupButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
+    layer->sourceSetupButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textSecondary);
     layer->sourceSetupButton->setTooltip("Edit source ranges, balance, gain, and timing for every map using this articulation");
     layer->sourceSetupButton->onClick = [this, layer] { this->showSourceOverrideEditor(layer); };
     this->layerContent.addAndMakeVisible(*layer->sourceSetupButton);
@@ -847,20 +848,20 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     this->rebuildBleedControls(layer, micBleedLevels, micRouteOverrides);
 
     // Remove button
-    layer->removeButton = std::make_unique<juce::TextButton>(UITheme::Symbols::times); // remove
+    layer->removeButton = std::make_unique<juce::TextButton>();
+    UIHelpers::configureDialogCloseButton(*layer->removeButton);
     layer->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
     layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accent);
-    layer->removeButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    layer->removeButton->getProperties().set("compactText", true);
     layer->removeButton->setTooltip("Remove layer");
     this->layerContent.addAndMakeVisible(*layer->removeButton);
-    layer->sourceButton->onStateChange = [this] { this->updateRemoveButtonVisibility(); };
-    layer->removeButton->onStateChange = [this] { this->updateRemoveButtonVisibility(); };
+    layer->sourceButton->onStateChange = [this] { this->updateSourceCardButtonVisibility(); };
+    layer->sourceSetupButton->onStateChange = [this] { this->updateSourceCardButtonVisibility(); };
+    layer->removeButton->onStateChange = [this] { this->updateSourceCardButtonVisibility(); };
     layer->removeButton->onClick = [this, layer] {
         juce::MessageManager::callAsync([this, layer] {
             const bool removedMappedLayer = layer->selectedSourceIndex >= 0;
             this->layerRows.removeObject(layer);
-            this->updateRemoveButtonVisibility();
+            this->updateSourceCardButtonVisibility();
             this->resized();
             this->refreshLayerMappings();
             if (removedMappedLayer) this->applyToEngine();
@@ -868,14 +869,18 @@ void PadContextPopup::addLayerRow(const juce::String& articulationName, const ju
     };
 }
 
-void PadContextPopup::updateRemoveButtonVisibility() {
+void PadContextPopup::updateSourceCardButtonVisibility() {
     for (auto* layer : this->layerRows) {
         int articulationLayerCount = 0;
         for (const auto* candidate : this->layerRows)
             if (candidate->artName == layer->artName) ++articulationLayerCount;
         const bool canRemove = articulationLayerCount > 1;
+        const bool canOpenSourceSetup = layer->sourceSetupButton->isEnabled();
+        const bool sourceCardHovered = layer->sourceButton->isMouseOver() || layer->sourceSetupButton->isMouseOver() || layer->removeButton->isMouseOver();
         layer->removeButton->setVisible(canRemove);
-        layer->removeButton->setAlpha(canRemove && (layer->sourceButton->isMouseOver() || layer->removeButton->isMouseOver()) ? 1.0f : 0.0f);
+        layer->removeButton->setAlpha(canRemove && sourceCardHovered ? 1.0f : 0.0f);
+        layer->sourceSetupButton->setVisible(canOpenSourceSetup);
+        layer->sourceSetupButton->setAlpha(canOpenSourceSetup && sourceCardHovered ? 1.0f : 0.0f);
     }
 }
 
@@ -1602,6 +1607,7 @@ void PadContextPopup::showSourcePicker(LayerRow* layer) {
         layer->selectedSourceIndex = sourceIndex;
         layer->sourcePathHint = selectedItem.fullPath();
         this->updateSourceDisplay(layer);
+        this->updateSourceCardButtonVisibility();
         this->rebuildBleedControls(layer);
         this->resized();
         juce::MessageManager::callAsync([this, layer] {
@@ -1772,9 +1778,9 @@ void PadContextPopup::resized() {
     this->layerViewport.setBounds(area);
 
     // Layer rows - single row per layer (compact parameter controls):
-    // [Source Card with hover delete] | [Tuning|Attack|Decay + Curve|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
+    // [Source Card with hover setup/delete] | [Tuning|Attack|Decay + Curve|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
     const int potW = 44;
-    const int potH = 44;
+    const int potH = 32;
     const int flipColW = 36;
     const int sourceW = UITheme::Sizes::sourceCardWidth;
     const int routingComboH = 14;
@@ -1814,8 +1820,10 @@ void PadContextPopup::resized() {
             layer->sourceButton->setBounds(srcArea);
             auto sourceInner = srcArea.reduced(6, 2).withTrimmedRight(compactButtonSize + UITheme::Spacing::sm);
             layer->sourceDetailLabel->setBounds(sourceInner);
-            auto removeButtonArea = srcArea.reduced(UITheme::Spacing::xs);
-            auto removeButtonRow = removeButtonArea.removeFromBottom(compactButtonSize);
+            auto sourceCardButtonArea = srcArea.reduced(UITheme::Spacing::xs);
+            auto sourceSetupButtonRow = sourceCardButtonArea.removeFromTop(compactButtonSize);
+            layer->sourceSetupButton->setBounds(sourceSetupButtonRow.removeFromRight(compactButtonSize));
+            auto removeButtonRow = sourceCardButtonArea.removeFromBottom(compactButtonSize);
             layer->removeButton->setBounds(removeButtonRow.removeFromRight(compactButtonSize));
 
             rowArea.removeFromLeft(groupGap);
@@ -1836,7 +1844,6 @@ void PadContextPopup::resized() {
             layer->flipPhaseButton->setBounds(flipArea.reduced(2, 1));
             auto secondaryControlRow = mainInner.removeFromTop(routingComboH);
             layer->velocityResponseMode->setBounds(secondaryControlRow.removeFromLeft(potW * 3).reduced(1, 0));
-            layer->sourceSetupButton->setBounds(secondaryControlRow.reduced(1, 0));
 
             rowArea.removeFromLeft(groupGap);
 

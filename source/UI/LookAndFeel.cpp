@@ -130,13 +130,26 @@ void LookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button, 
 
 void LookAndFeel::drawButtonText(juce::Graphics& g, juce::TextButton& button, bool isMouseOverButton, bool isButtonDown) {
     const bool dialogCloseButton = button.getProperties().getWithDefault("dialogCloseButton", false);
-    if (dialogCloseButton) {
+    const bool settingsButton = button.getProperties().getWithDefault("settingsButton", false);
+    if (dialogCloseButton || settingsButton) {
         const auto textColour = button.findColour(button.getToggleState() ? juce::TextButton::textColourOnId : juce::TextButton::textColourOffId).withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f);
-        const float iconSize = static_cast<float>(juce::jmin(button.getWidth(), button.getHeight())) * 0.4f;
-        const auto iconBounds = juce::Rectangle<float>(iconSize, iconSize).withCentre(button.getLocalBounds().toFloat().getCentre());
+        const auto buttonCentre = button.getLocalBounds().toFloat().getCentre();
         g.setColour(textColour);
-        g.drawLine(iconBounds.getX(), iconBounds.getY(), iconBounds.getRight(), iconBounds.getBottom(), 1.5f);
-        g.drawLine(iconBounds.getRight(), iconBounds.getY(), iconBounds.getX(), iconBounds.getBottom(), 1.5f);
+        if (dialogCloseButton) {
+            const float iconSize = static_cast<float>(juce::jmin(button.getWidth(), button.getHeight())) * 0.4f;
+            const auto iconBounds = juce::Rectangle<float>(iconSize, iconSize).withCentre(buttonCentre);
+            g.drawLine(iconBounds.getX(), iconBounds.getY(), iconBounds.getRight(), iconBounds.getBottom(), 1.5f);
+            g.drawLine(iconBounds.getRight(), iconBounds.getY(), iconBounds.getX(), iconBounds.getBottom(), 1.5f);
+            return;
+        }
+
+        const float outerRadius = static_cast<float>(juce::jmin(button.getWidth(), button.getHeight())) * 0.29f;
+        juce::Path settingsIcon;
+        settingsIcon.setUsingNonZeroWinding(false);
+        settingsIcon.addStar(buttonCentre, 8, outerRadius * 0.72f, outerRadius, 0.0f);
+        const float holeRadius = outerRadius * 0.28f;
+        settingsIcon.addEllipse(juce::Rectangle<float>(holeRadius * 2.0f, holeRadius * 2.0f).withCentre(buttonCentre));
+        g.fillPath(settingsIcon);
         return;
     }
 
