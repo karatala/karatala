@@ -14,7 +14,7 @@ The original paragraph above and the latest user decisions override the older im
 
 1. ✅ Phase 1 implementation:
    - Add whole-instrument replacement from the pad popup.
-   - Add temporary `LINK ARTS` and `LINK TOM BLEED` editing.
+   - Add temporary `LINK ARTS` and `LINK TOMS BLEED` editing.
    - Keep parameter and mic-routing updates field-specific and persist the instrument map immediately.
    - Build and manual verification are still pending because they were not requested.
 2. Phase 2:
@@ -153,10 +153,10 @@ The full-kit and single-instrument actions must use shared map-building helpers.
 Use this left-to-right order:
 
 ```text
-[Slot title]  [Link arts]  [Link tom bleed]  [Set instrument]  [MIDI:] [note buttons]
+[Slot title]  [Link arts]  [LINK TOMS BLEED]  [Set instrument]  [MIDI:] [note buttons]
 ```
 
-- `Link tom bleed` is visible only when the destination slot type is `Tom`.
+- `LINK TOMS BLEED` is visible only when the destination slot type is `Tom`.
 - Keep the MIDI-note controls right-aligned when enough width is available.
 - On a narrow popup, reduce the slot-title width before hiding or clipping action controls.
 - Add concise tooltips for both link switches.
@@ -191,7 +191,7 @@ This action intentionally replaces previous layers and their per-layer parameter
 | Switch | Available on | Changed values | Targets |
 | --- | --- | --- | --- |
 | `Link arts` | Every slot | Tuning, attack, decay, gain, pan, L/R flip, phase flip, bleed level, and mic routing | The same layer number across every articulation of the current destination slot |
-| `Link tom bleed` | Tom slots only | The changed bleed mic code and level or routing destination | Every mapped layer and articulation in every destination slot whose kit-layout type is `Tom` |
+| `LINK TOMS BLEED` | Tom slots only | The changed bleed mic code and level or routing destination | Every mapped layer and articulation in every destination slot whose kit-layout type is `Tom` |
 
 Additional rules:
 
@@ -211,7 +211,7 @@ Additional rules:
 - Add a shared bright-red semantic colour for dangerous or broad linked-edit modes.
 - Active state uses bright red fill, white text, and a clear on-state border.
 - Inactive state uses the normal dark toggle style.
-- Use explicit labels such as `LINK ARTS` and `LINK TOM BLEED`.
+- Use explicit labels such as `LINK ARTS` and `LINK TOMS BLEED`.
 - Do not use animation or blinking.
 
 ### Safe Update Path
@@ -301,7 +301,7 @@ Files:
 
 ### ✅ 6. Add Pad-Popup Header Actions
 
-- Add `Link arts`, conditional `Link tom bleed`, and `Set instrument` controls.
+- Add `Link arts`, conditional `LINK TOMS BLEED`, and `Set instrument` controls.
 - Lay them out directly to the left of the MIDI label and note buttons.
 - Open the shared picker in whole-instrument mode.
 - Replace and refresh only the current slot after selection.
@@ -362,7 +362,7 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 - `Link arts` updates the same layer number across destination articulations.
 - Missing linked layers are skipped.
 - A wildcard entry is not duplicated.
-- `Link tom bleed` updates only Tom slots and only the selected mic code.
+- `LINK TOMS BLEED` updates only Tom slots and only the selected mic code.
 - Non-Tom slots and unrelated layer parameters remain unchanged.
 - Both link switches together deduplicate their target entries.
 
@@ -382,14 +382,14 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 ### Pad Popup
 
 - Confirm the header order is link switches, `Set instrument`, MIDI label, and MIDI buttons.
-- Confirm `Link tom bleed` appears only for Tom slots.
+- Confirm `LINK TOMS BLEED` appears only for Tom slots.
 - Use `Set instrument`, confirm each instrument appears once, preview several articulations from the separate preview list, and apply the parent instrument.
 - Confirm a Kick slot can show and accept a Snare, Tom, or any other available instrument type.
 - Confirm whole-instrument and articulation pickers show the correct short context title and close from the right-side `×` button.
 - Confirm the picker closes and all articulation rows now use the new instrument.
 - Turn on `Link arts` and change each supported parameter.
 - Confirm only the same layer number changes in other articulations.
-- Turn on `Link tom bleed` and change direct, overhead, and room bleed values.
+- Turn on `LINK TOMS BLEED` and change direct, overhead, and room bleed values.
 - Confirm matching mic codes change across all Tom slots and no other instrument type changes.
 - Change `Auto`, `Unassigned`, shared, and slot-specific mic routes with each link mode. Confirm compatible stable output IDs propagate and incompatible targets are skipped.
 - Confirm active link switches are immediately visible in bright red and stop being active when the popup is reopened.
@@ -403,6 +403,6 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 - Any selected source instrument can replace one compatible destination slot without changing other slots.
 - The pad popup can replace its whole instrument through the shared picker without a hidden destination-type restriction.
 - `Link arts` updates the defined parameter and routing set across matching articulation layers.
-- `Link tom bleed` updates matching bleed mic codes and compatible routing across all Tom slots.
+- `LINK TOMS BLEED` updates matching bleed mic codes and compatible routing across all Tom slots.
 - Linked edits are immediate, persisted, field-specific, and do not reload samples.
 - Active link modes are highly visible without blinking.

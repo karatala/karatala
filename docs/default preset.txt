@@ -1,5 +1,5 @@
 china1/bow:AasiMonster2/china-18/edge:pan=30;flipLR=1
-china1/edge:NakedDrums/china-X2/edge:flipLR=0
+china1/edge:NakedDrums/china-X2/edge:
 china2/edge:NakedDrums/china-X1/edge
 china2/edge:CrocellKit/china-14/edge:flipLR=1
 crash1/bow:AasiMonster2/ride-X1/bow:tuning=249;attack=7;decay=939;flipLR=1;micRoute=dtm:-
@@ -25,9 +25,9 @@ octoban2/center:AasiMonster/tom-X1/center:tuning=960
 ride1/bell:NakedDrums/ride-X1/bell:decay=2359
 ride1/bow:NakedDrums/ride-X1/bow:decay=3749;vol=-1.2
 ride1/edge:TchackpoumDG1.3/ride-20/edge:decay=2920;vol=8.2
-ride2/bell:Salamander/ride-20-R1-2-Paiste-pst5-medium-or-Stagg-SH-medium/bell:vol=-11.5
-ride2/bow:Salamander/ride-20-R1-2-Paiste-pst5-medium-or-Stagg-SH-medium/bow:vol=-13.4
-ride2/edge:MuldjordKit3/crash-L1/edge:vol=-7.2
+ride2/bell:Salamander/ride-20-R1-2-Paiste-pst5-medium-or-Stagg-SH-medium/bell:tuning=17;pan=-52;flipLR=1
+ride2/bow:Salamander/ride-20-R1-2-Paiste-pst5-medium-or-Stagg-SH-medium/bow:pan=-52;flipLR=1
+ride2/edge:MuldjordKit3/crash-L1/edge:
 snare1/center:NakedDrums/snare-X1/center:tuning=20
 snare1/rim:NakedDrums/snare-X1/center
 snare1/rim:NakedDrums/snare-X2/center:tuning=60
@@ -40,11 +40,11 @@ splash1/edge:NakedDrums/splash-X1/edge:tuning=154
 splash2/bow:AasiMonster2/china-10/edge
 splash2/edge:NakedDrums/splash-X2/edge
 stax1/bow:Salamander/hihat-14/edge[half]:tuning=402;attack=13;decay=559;vol=-9.3
-stax1/bow:AasiMonster2/china-10/edge:tuning=-115;attack=17;decay=619;vol=1.1;flipLR=0
+stax1/bow:AasiMonster2/china-10/edge:tuning=-115;attack=17;decay=619;vol=1.1;
 stax1/edge:NakedDrums/splash-X1/edge:tuning=-213;decay=379
 stax1/edge:AasiMonster/china-X1/edge:tuning=-346;decay=559
-tom1/center:NakedDrums/tom-10/center:tuning=463;flipLR=0
-tom1/rim:AasiMonster2/tom-X1/center:tuning=78
+tom1/center:NakedDrums/tom-10/center:tuning=463;
+tom1/rim:AasiMonster2/tom-X1/center:tuning=78;flipLR=1
 tom2/center:NakedDrums/tom-12/center:tuning=110
 tom2/rim:AasiMonster/tom-X2/center
 tom3/center:NakedDrums/tom-13/center:tuning=60

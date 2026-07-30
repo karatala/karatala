@@ -484,13 +484,12 @@ Use one custom JUCE `Component` that paints the complete chart and handles its o
 #### User flow and chart
 
 - ✅ Add a `Global Velocity-to-dB Curve` dropdown to Conf General with built-in and user presets. Apply it live to every layer without an override, preserve layer overrides, and save the definition in plugin instance state without changing the machine default.
-- ✅ Use one compact dropdown below Tuning, Attack, and Decay. It contains `Global Velocity-to-dB Curve`, built-in and user presets, and `Edit Velocity-to-dB Curve...`. An unmatched inline definition is displayed as `Edited Layer Curve*` but is not a selectable preset.
-- ✅ Open the editor as a child overlay inside the plugin window, not as a native desktop window.
+- ✅ Use one compact dropdown below Tuning, Attack, and Decay. It contains `Global Vel-to-dB curve`, built-in and user presets, and `Edit curve...`. An unmatched inline definition is displayed as `Edited Layer Curve*` but is not a selectable preset.
+- ✅ Open the editor as a child overlay inside the plugin window, not as a native desktop window. Use about 60% of the host width, 55% of its height, and two equal columns: graph only on the left, all context and controls on the right.
 - ✅ Show a standard two-line title: `Slot / articulation` above `Kit / instrument / articulation`. Add ` (layer N)` to the first line only when `N` is greater than 1.
-- ✅ Use MIDI velocity `1..127` on the horizontal axis and relative output dB on the vertical axis.
-- ✅ Draw a labelled column for every recorded sample velocity available in this source articulation. Lightly show the MIDI range that selects each sample level in exact mode.
-- ✅ Draw the effective 128-value response as the main line.
-- ✅ At each recorded level, show a fixed marker for the fitted sample level relative to the articulation's hardest fitted level.
+- ✅ Use MIDI velocity `1..127` horizontally and linear output gain vertically so the Linear built-in appears straight. Keep editing, serialization, tooltips, and readouts in dB. Do not draw X or Y axis labels.
+- ✅ Lightly show the MIDI range that selects each sample level in exact mode. Do not draw vertical sample guides or fitted-level markers.
+- ✅ Draw the effective 128-value response as a 3 px main line and show a thin horizontal guide at the cursor.
 - ✅ Show the selected mapping as `MIDI velocity 64 -> output gain -12.0 dB`. Keep the recorded sample reference, raw median, calibration correction, and calibration status in the tooltip instead of adding more permanent chart lines.
 - ✅ When calibration metadata is missing, still show and edit the response, but label sample dB and trim as unavailable.
 
@@ -499,11 +498,12 @@ Use one custom JUCE `Component` that paints the complete chart and handles its o
 - ✅ Keep the chart editable while it shows the global curve. The first real graph or numeric value change copies the global curve into a layer override. Selecting a point without changing its value does not create an override.
 - ✅ For a layer curve, create vertical drag handles at velocity `1`, every recorded sample level, velocity `127`, and any extra points present in the loaded curve or preset.
 - ✅ Keep handle velocities fixed. The user changes only dB, so editing the response cannot change recorded sample selection.
+- ✅ Preserve every user control point and use smooth monotone cubic interpolation in dB between points. Do not permit overshoot or a decreasing segment.
 - ✅ Keep velocity `127` fixed at `0 dB`.
 - ✅ Clamp vertical dragging between the neighbouring handles and at or below `0 dB`, so the curve cannot become decreasing or invalid.
 - ✅ Provide one numeric dB field for the selected handle for exact edits. Validate the final definition with the existing `VelocityResponse` parser and keep the last valid curve when text input is invalid.
 - ✅ Update the existing 128-value runtime table while dragging, without reloading samples. Commit map text once on mouse-up or numeric edit completion.
-- ✅ Automatically preview the exact edited destination layer once after mouse-up, numeric edit completion, or preset selection. Do not show a manual Preview button and do not trigger samples for every mouse-move event.
+- ✅ Automatically preview the exact destination layer after a 120 ms hover anywhere in the graph. Convert cursor Y to dB and find the nearest velocity on the current response. Also preview after a simple click, after mouse-up for a changed drag, after numeric edit completion, or after preset selection. Stationary hover previews once, and a recent matching hover suppresses a duplicate mouse-up preview. Do not show a manual Preview button and do not trigger samples for every mouse-move event.
 - ✅ Selecting `Global - <preset>` in the editor or `Global Velocity-to-dB Curve` in the layer dropdown removes the map override exactly as Phase 5 does now.
 
 #### Curve presets
@@ -532,7 +532,7 @@ velocityResponse: "1:-48,64:-12,127:0"
 - ✅ Keep exact named-velocity selection, calibration preprocessing, cache identity, and `Mix Gain` unchanged.
 - ✅ Keep the component reusable for the later global-response editor, but implement only the pad-popup layer editor in this phase.
 
-Verify later: Conf global preset selection and project-state round trip; global changes affect only layers without overrides; sparse and dense articulations; articulation without metadata; correct recorded velocity columns and dB readouts; automatic layer-override creation on the first real edit; global selection without an override; built-in formulas; unnamed global and edited layer-curve status; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; exact selected-layer preview after committed changes; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; resizing, keyboard focus, tooltips, and visual review.
+Verify later: Conf global preset selection and project-state round trip; global changes affect only layers without overrides; sparse and dense articulations; articulation without metadata; correct dB readouts and subtle sample-range backgrounds; automatic layer-override creation on the first real edit; global selection without an override; distinct built-in shapes on the linear-gain display; smooth monotone point interpolation without overshoot; unnamed global and edited layer-curve status; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; delayed Y-based hover preview anywhere in the graph without repeats; click preview without movement or duplicate mouse-up playback; exact selected-layer preview after committed changes; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; wider and shorter two-column resizing without axis labels, keyboard focus, tooltips, and visual review.
 
 ### ✅ Phase 6: Add balance and timing reports (implementation complete, verification pending)
 

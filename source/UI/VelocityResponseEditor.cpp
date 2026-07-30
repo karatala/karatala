@@ -1,4 +1,5 @@
 #include "VelocityResponseEditor.h"
+#include "CompactModalDialog.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 
@@ -18,10 +19,11 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->titleLabel.setJustificationType(juce::Justification::centredLeft);
     this->addAndMakeVisible(this->titleLabel);
 
-    this->descriptionLabel.setText("Controls how MIDI velocity changes this layer's output gain. It does not change sample selection.", juce::dontSendNotification);
-    this->descriptionLabel.setFont(UITheme::Fonts::normal());
+    this->descriptionLabel.setText("MIDI velocity changes output gain, not sample selection.", juce::dontSendNotification);
+    this->descriptionLabel.setFont(UITheme::Fonts::small());
     this->descriptionLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     this->descriptionLabel.setJustificationType(juce::Justification::centredLeft);
+    this->descriptionLabel.setTooltip("This curve changes output gain. Recorded sample selection uses the source velocity ranges.");
     this->addAndMakeVisible(this->descriptionLabel);
 
     this->readoutLabel.setFont(UITheme::Fonts::normal());
@@ -78,6 +80,7 @@ void VelocityResponseEditor::setLayerData(LayerData data) {
 }
 
 void VelocityResponseEditor::loadDefinition(const juce::String& definition, bool notify, bool commit) {
+    this->clearHoverPreview(true);
     auto parsed = VelocityResponse::fromDefinition(definition);
     if (!parsed.ok()) {
         this->setStatus(parsed.error(), true);
@@ -152,7 +155,7 @@ void VelocityResponseEditor::updateReadout() {
     }
 
     const auto& handle = this->handles[static_cast<size_t>(this->selectedHandleIdx)];
-    juce::String text = "MIDI velocity " + juce::String(handle.velocity) + " -> output gain " + VelocityResponseEditor::formatDb(this->currentResponse.getTargetDb(static_cast<juce::uint8>(handle.velocity)));
+    juce::String text = "MIDI " + juce::String(handle.velocity) + " -> gain";
     if (handle.velocity == 127) text += " (fixed)";
     const auto tooltip = this->tooltipForVelocity(handle.velocity);
     this->readoutLabel.setText(text, juce::dontSendNotification);
@@ -228,9 +231,52 @@ void VelocityResponseEditor::setCustom(bool shouldUseCustom, bool notify) {
     this->setStatus({});
 }
 
+void VelocityResponseEditor::previewVelocity(int velocity) {
+    if (this->onPreview) this->onPreview(juce::jlimit(1, 127, velocity));
+}
+
+void VelocityResponseEditor::previewPointerVelocity(int velocity) {
+    if (velocity < 1 || velocity > 127) return;
+    this->lastPointerPreviewVelocity = velocity;
+    this->lastPointerPreviewTimeMs = juce::Time::getMillisecondCounterHiRes();
+    this->previewVelocity(velocity);
+}
+
 void VelocityResponseEditor::previewSelectedVelocity() {
     if (this->selectedHandleIdx < 0 || this->selectedHandleIdx >= static_cast<int>(this->handles.size())) return;
-    if (this->onPreview) this->onPreview(this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity);
+    this->previewVelocity(this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity);
+}
+
+void VelocityResponseEditor::queueHoverPreview(int velocity) {
+    if (velocity < 1 || velocity > 127) {
+        this->clearHoverPreview(true);
+        return;
+    }
+    this->hoverPreviewVelocity = velocity;
+    const int previewGeneration = ++this->hoverPreviewGeneration;
+    this->repaint();
+    juce::Component::SafePointer<VelocityResponseEditor> safeEditor(this);
+    juce::Timer::callAfterDelay(this->hoverPreviewDelayMs, [safeEditor, previewGeneration, velocity] {
+        if (safeEditor == nullptr || safeEditor->hoverPreviewGeneration != previewGeneration || safeEditor->draggingHandle || safeEditor->hoverPreviewVelocity != velocity || safeEditor->lastPointerPreviewVelocity == velocity) return;
+        safeEditor->previewPointerVelocity(velocity);
+    });
+}
+
+void VelocityResponseEditor::clearHoverPreview(bool resetLastPreview) {
+    const bool needsRepaint = this->hoverGuideY >= 0.0f;
+    this->hoverPreviewVelocity = -1;
+    this->hoverGuideY = -1.0f;
+    ++this->hoverPreviewGeneration;
+    if (resetLastPreview) {
+        this->lastPointerPreviewVelocity = -1;
+        this->lastPointerPreviewTimeMs = 0.0;
+    }
+    if (needsRepaint) this->repaint();
+}
+
+bool VelocityResponseEditor::recentPointerPreviewMatches(int velocity) const {
+    if (velocity < 1 || this->lastPointerPreviewVelocity != velocity) return false;
+    return juce::Time::getMillisecondCounterHiRes() - this->lastPointerPreviewTimeMs <= this->clickPreviewDedupWindowMs;
 }
 
 void VelocityResponseEditor::notifyResponseChanged(bool commit) {
@@ -310,15 +356,33 @@ void VelocityResponseEditor::commitDbEditor() {
 
 void VelocityResponseEditor::showSaveAsDialog() {
     if (!this->custom) return;
-    auto* dialog = new juce::AlertWindow("Save Velocity-to-dB Curve Preset", "Enter a preset name:", juce::MessageBoxIconType::QuestionIcon);
-    dialog->addTextEditor("name", "My Curve", "Name:");
-    dialog->addButton("Save", 1);
-    dialog->addButton("Cancel", 0);
+
+    CompactModalDialog::Options options;
+    options.title = "Save Velocity-to-dB Curve Preset";
+    options.message = "Enter a preset name.";
+    options.confirmText = "Save";
+    options.fields.push_back({ "name", "Name", "My Curve", 0, {} });
     juce::Component::SafePointer<VelocityResponseEditor> safeThis(this);
-    dialog->enterModalState(true, juce::ModalCallbackFunction::create([safeThis, dialog](int result) {
-        if (result != 1 || safeThis == nullptr) return;
-        safeThis->savePreset(dialog->getTextEditorContents("name"), false);
-    }), true);
+    CompactModalDialog::show(*this, std::move(options), [safeThis](const CompactModalDialog& dialog) {
+        if (safeThis == nullptr) return juce::String();
+        const auto name = dialog.getFieldText("name").trim();
+        if (name.isEmpty()) return juce::String("Enter a preset name.");
+        safeThis->savePreset(name, false);
+        return juce::String();
+    });
+}
+
+void VelocityResponseEditor::showReplacePresetDialog(const juce::String& name) {
+    CompactModalDialog::Options options;
+    options.title = "Replace Velocity-to-dB Curve Preset";
+    options.message = "Replace the existing preset?";
+    options.confirmText = "Replace";
+    options.destructive = true;
+    juce::Component::SafePointer<VelocityResponseEditor> safeThis(this);
+    CompactModalDialog::show(*this, std::move(options), [safeThis, name](const CompactModalDialog&) {
+        if (safeThis != nullptr) safeThis->savePreset(name, true);
+        return juce::String();
+    });
 }
 
 void VelocityResponseEditor::savePreset(const juce::String& name, bool replaceExisting) {
@@ -330,23 +394,16 @@ void VelocityResponseEditor::savePreset(const juce::String& name, bool replaceEx
     }
     if (!replaceExisting && saved.error().containsIgnoreCase("already exists")) {
         juce::Component::SafePointer<VelocityResponseEditor> safeThis(this);
-        juce::AlertWindow::showAsync(
-            juce::MessageBoxOptions()
-                .withIconType(juce::MessageBoxIconType::WarningIcon)
-                .withTitle("Replace Velocity-to-dB Curve Preset")
-                .withMessage("Replace the existing preset?")
-                .withButton("Replace")
-                .withButton("Cancel"),
-            [safeThis, name](int result) {
-                if (result == 1 && safeThis != nullptr) safeThis->savePreset(name, true);
-            });
+        juce::MessageManager::callAsync([safeThis, name] {
+            if (safeThis != nullptr) safeThis->showReplacePresetDialog(name);
+        });
         return;
     }
     this->setStatus(saved.error(), true);
 }
 
 void VelocityResponseEditor::setStatus(const juce::String& text, bool error) {
-    const auto displayText = text.isNotEmpty() ? text : juce::String("Drag a point vertically. Release to hear the result.");
+    const auto displayText = text.isNotEmpty() ? text : juce::String("Hover/click: preview. Drag: edit.");
     this->statusLabel.setText(displayText, juce::dontSendNotification);
     this->statusLabel.setColour(juce::Label::textColourId, error ? UITheme::Colours::accentWarning : UITheme::Colours::textMuted);
 }
@@ -376,11 +433,15 @@ float VelocityResponseEditor::velocityToX(int velocity) const {
 }
 
 float VelocityResponseEditor::dbToY(float targetDb) const {
-    return juce::jmap(juce::jlimit(this->viewMinimumDb, 0.0f, targetDb), 0.0f, this->viewMinimumDb, this->plotBounds.getY(), this->plotBounds.getBottom());
+    const float minimumGain = juce::Decibels::decibelsToGain(this->viewMinimumDb, -100.0f);
+    const float gain = juce::Decibels::decibelsToGain(juce::jlimit(this->viewMinimumDb, 0.0f, targetDb), -100.0f);
+    return juce::jmap(gain, 1.0f, minimumGain, this->plotBounds.getY(), this->plotBounds.getBottom());
 }
 
 float VelocityResponseEditor::yToDb(float yPosition) const {
-    return juce::jmap(juce::jlimit(this->plotBounds.getY(), this->plotBounds.getBottom(), yPosition), this->plotBounds.getY(), this->plotBounds.getBottom(), 0.0f, this->viewMinimumDb);
+    const float minimumGain = juce::Decibels::decibelsToGain(this->viewMinimumDb, -100.0f);
+    const float gain = juce::jmap(juce::jlimit(this->plotBounds.getY(), this->plotBounds.getBottom(), yPosition), this->plotBounds.getY(), this->plotBounds.getBottom(), 1.0f, minimumGain);
+    return juce::Decibels::gainToDecibels(gain, this->viewMinimumDb);
 }
 
 juce::String VelocityResponseEditor::tooltipForVelocity(int velocity) const {
@@ -432,29 +493,16 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
     }
 
     const int gridLineCount = 4;
-    graphics.setFont(UITheme::Fonts::small());
     for (int gridIdx = 0; gridIdx <= gridLineCount; ++gridIdx) {
         const float proportion = static_cast<float>(gridIdx) / static_cast<float>(gridLineCount);
-        const float targetDb = proportion * this->viewMinimumDb;
-        const float yPosition = this->dbToY(targetDb);
+        const float yPosition = juce::jmap(proportion, 0.0f, 1.0f, this->plotBounds.getY(), this->plotBounds.getBottom());
         graphics.setColour(UITheme::Colours::borderSubtle);
         graphics.drawHorizontalLine(juce::roundToInt(yPosition), this->plotBounds.getX(), this->plotBounds.getRight());
-        graphics.setColour(UITheme::Colours::textMuted);
-        graphics.drawText(juce::String(targetDb, 0), 4, juce::roundToInt(yPosition) - 7, juce::roundToInt(this->plotBounds.getX()) - 8, 14, juce::Justification::centredRight);
     }
 
-    for (const auto& level : this->layerData.sourceInfo.levels) {
-        const float xPosition = this->velocityToX(level.velocity);
-        graphics.setColour(UITheme::Colours::textAccentSoft.withAlpha(0.32f));
-        graphics.drawVerticalLine(juce::roundToInt(xPosition), this->plotBounds.getY(), this->plotBounds.getBottom());
-        if (level.fittedRelativeDb.has_value()) {
-            const float markerY = this->dbToY(*level.fittedRelativeDb);
-            juce::Path marker;
-            marker.addTriangle(xPosition, markerY - 4.0f, xPosition + 4.0f, markerY, xPosition, markerY + 4.0f);
-            marker.addTriangle(xPosition, markerY - 4.0f, xPosition - 4.0f, markerY, xPosition, markerY + 4.0f);
-            graphics.setColour(level.calibrationLimited ? UITheme::Colours::accentWarning : UITheme::Colours::textAccent);
-            graphics.fillPath(marker);
-        }
+    if (this->hoverGuideY >= this->plotBounds.getY() && this->hoverGuideY <= this->plotBounds.getBottom()) {
+        graphics.setColour(UITheme::Colours::textAccentSoft.withAlpha(0.55f));
+        graphics.drawHorizontalLine(juce::roundToInt(this->hoverGuideY), this->plotBounds.getX(), this->plotBounds.getRight());
     }
 
     juce::Path curve;
@@ -465,24 +513,14 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
         else curve.lineTo(xPosition, yPosition);
     }
     graphics.setColour(UITheme::Colours::selectionStrong);
-    graphics.strokePath(curve, juce::PathStrokeType(2.0f));
+    graphics.strokePath(curve, juce::PathStrokeType(3.0f));
 
-    float lastLabelRight = -1000.0f;
     for (int handleIdx = 0; handleIdx < static_cast<int>(this->handles.size()); ++handleIdx) {
         const auto& handle = this->handles[static_cast<size_t>(handleIdx)];
         const float xPosition = this->velocityToX(handle.velocity);
         const float yPosition = this->dbToY(handle.targetDb);
-        graphics.setColour((handle.recordedLevel ? UITheme::Colours::textAccentSoft : UITheme::Colours::borderStrong).withAlpha(0.65f));
-        graphics.drawLine(xPosition, yPosition, xPosition, this->plotBounds.getBottom(), handleIdx == this->selectedHandleIdx ? 2.0f : 1.0f);
         graphics.setColour(handleIdx == this->selectedHandleIdx ? UITheme::Colours::selectionStrong : handle.recordedLevel ? UITheme::Colours::textAccent : UITheme::Colours::textSecondary);
         graphics.fillEllipse(xPosition - 4.0f, yPosition - 4.0f, 8.0f, 8.0f);
-
-        const bool drawVelocityLabel = handleIdx == this->selectedHandleIdx || xPosition - lastLabelRight >= 18.0f || handleIdx + 1 == static_cast<int>(this->handles.size());
-        if (drawVelocityLabel) {
-            graphics.setColour(handleIdx == this->selectedHandleIdx ? UITheme::Colours::textPrimary : UITheme::Colours::textMuted);
-            graphics.drawText(juce::String(handle.velocity), juce::roundToInt(xPosition) - 14, juce::roundToInt(this->plotBounds.getBottom()) + 3, 28, 14, juce::Justification::centred);
-            lastLabelRight = xPosition + 14.0f;
-        }
     }
 
     if (this->layerData.sourceInfo.levels.empty()) {
@@ -493,20 +531,24 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
 }
 
 void VelocityResponseEditor::resized() {
-    auto area = this->getLocalBounds().reduced(12);
+    auto area = this->getLocalBounds().reduced(8);
+    auto graphArea = area.removeFromLeft((area.getWidth() - 8) / 2);
+    area.removeFromLeft(8);
+    this->plotBounds = graphArea.toFloat().reduced(6.0f);
+
     auto header = area.removeFromTop(36);
     auto closeButtonArea = header.removeFromRight(UITheme::Sizes::standardControlHeight);
     this->doneButton.setBounds(closeButtonArea.removeFromTop(UITheme::Sizes::standardControlHeight));
     header.removeFromRight(6);
     this->titleLabel.setBounds(header);
     area.removeFromTop(4);
-    this->descriptionLabel.setBounds(area.removeFromTop(UITheme::Sizes::standardControlHeight));
-    area.removeFromTop(6);
+    this->descriptionLabel.setBounds(area.removeFromTop(30));
+    area.removeFromTop(4);
 
     auto toolbar = area.removeFromTop(UITheme::Sizes::standardControlHeight);
-    this->presetCombo.setBounds(toolbar.removeFromLeft(220));
-    toolbar.removeFromLeft(4);
-    this->saveAsButton.setBounds(toolbar.removeFromLeft(128));
+    this->presetCombo.setBounds(toolbar);
+    area.removeFromTop(4);
+    this->saveAsButton.setBounds(area.removeFromTop(UITheme::Sizes::standardControlHeight));
     area.removeFromTop(6);
 
     auto readout = area.removeFromTop(UITheme::Sizes::standardControlHeight);
@@ -515,13 +557,14 @@ void VelocityResponseEditor::resized() {
     this->readoutLabel.setBounds(readout);
     area.removeFromTop(2);
     this->statusLabel.setBounds(area.removeFromTop(16));
-    area.removeFromTop(4);
-
-    this->plotBounds = area.toFloat().withTrimmedLeft(38.0f).withTrimmedRight(8.0f).withTrimmedBottom(20.0f).reduced(0.0f, 4.0f);
 }
 
 void VelocityResponseEditor::mouseDown(const juce::MouseEvent& event) {
+    this->clickPreviewVelocity = -1;
     if (!this->plotBounds.contains(event.position)) return;
+    this->clearHoverPreview(false);
+    this->hoverGuideY = juce::jlimit(this->plotBounds.getY(), this->plotBounds.getBottom(), event.position.y);
+    this->clickPreviewVelocity = static_cast<int>(this->currentResponse.findClosestVelocityForTargetDb(this->yToDb(this->hoverGuideY)));
     this->grabKeyboardFocus();
     this->selectedHandleIdx = this->findNearestHandle(event.position.x);
     this->updateReadout();
@@ -535,6 +578,8 @@ void VelocityResponseEditor::mouseDown(const juce::MouseEvent& event) {
 
 void VelocityResponseEditor::mouseDrag(const juce::MouseEvent& event) {
     if (!this->draggingHandle) return;
+    this->hoverGuideY = juce::jlimit(this->plotBounds.getY(), this->plotBounds.getBottom(), event.position.y);
+    this->repaint();
     if (!this->custom) {
         this->custom = true;
         this->updateControls();
@@ -544,27 +589,38 @@ void VelocityResponseEditor::mouseDrag(const juce::MouseEvent& event) {
 }
 
 void VelocityResponseEditor::mouseUp(const juce::MouseEvent&) {
-    if (!this->draggingHandle) return;
+    const int releasePreviewVelocity = this->clickPreviewVelocity;
+    this->clickPreviewVelocity = -1;
+    if (!this->draggingHandle) {
+        if (!this->recentPointerPreviewMatches(releasePreviewVelocity)) this->previewPointerVelocity(releasePreviewVelocity);
+        return;
+    }
     this->draggingHandle = false;
     if (!this->dragChangedCurve || this->currentDefinition == this->dragStartDefinition) {
+        const bool skipPreview = this->recentPointerPreviewMatches(releasePreviewVelocity);
         if (!this->dragStartedWithLayerCurve && this->custom) this->setCustom(false, this->dragChangedCurve);
+        if (!skipPreview) this->previewPointerVelocity(releasePreviewVelocity);
         return;
     }
     this->notifyResponseChanged(true);
-    this->previewSelectedVelocity();
+    if (this->selectedHandleIdx >= 0 && this->selectedHandleIdx < static_cast<int>(this->handles.size())) this->previewPointerVelocity(this->handles[static_cast<size_t>(this->selectedHandleIdx)].velocity);
 }
 
 void VelocityResponseEditor::mouseMove(const juce::MouseEvent& event) {
     if (!this->plotBounds.contains(event.position)) {
         this->setTooltip({});
+        this->clearHoverPreview(true);
         return;
     }
-    const int handleIdx = this->findNearestHandle(event.position.x);
-    if (handleIdx >= 0) this->setTooltip(this->tooltipForVelocity(this->handles[static_cast<size_t>(handleIdx)].velocity));
+    this->hoverGuideY = juce::jlimit(this->plotBounds.getY(), this->plotBounds.getBottom(), event.position.y);
+    const int previewVelocity = static_cast<int>(this->currentResponse.findClosestVelocityForTargetDb(this->yToDb(this->hoverGuideY)));
+    this->setTooltip(this->tooltipForVelocity(previewVelocity));
+    this->queueHoverPreview(previewVelocity);
 }
 
 void VelocityResponseEditor::mouseExit(const juce::MouseEvent&) {
     this->setTooltip({});
+    this->clearHoverPreview(true);
 }
 
 bool VelocityResponseEditor::keyPressed(const juce::KeyPress& key) {

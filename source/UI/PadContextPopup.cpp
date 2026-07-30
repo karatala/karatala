@@ -1515,8 +1515,8 @@ void PadContextPopup::dismissVelocityResponseEditor() {
 void PadContextPopup::layoutVelocityResponseEditor() {
     if (this->velocityResponseOverlay) this->velocityResponseOverlay->setBounds(this->getLocalBounds());
     if (this->activeVelocityResponseEditor) {
-        const int editorWidth = this->getWidth() * 9 / 10;
-        const int editorHeight = this->getHeight() * 17 / 20;
+        const int editorWidth = juce::jmin(this->getWidth() - 16, juce::jmax(520, this->getWidth() * 3 / 5));
+        const int editorHeight = juce::jmin(this->getHeight() - 16, juce::jmax(260, this->getHeight() * 11 / 20));
         this->activeVelocityResponseEditor->setBounds(this->getLocalBounds().withSizeKeepingCentre(editorWidth, editorHeight));
     }
 }

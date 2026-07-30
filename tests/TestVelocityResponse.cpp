@@ -50,7 +50,7 @@ TEST_CASE("DrumKitEngine - instance global velocity response accepts valid defin
     REQUIRE(engine.getVelocityResponse().getDefinition() == "1:-48,64:-12,127:0");
 }
 
-TEST_CASE("VelocityResponse - custom points interpolate in dB", "[VelocityResponse]") {
+TEST_CASE("VelocityResponse - custom points use smooth monotone dB interpolation", "[VelocityResponse]") {
     const auto parsed = VelocityResponse::fromDefinition("1:-48,64:-12,127:0");
 
     REQUIRE(parsed.ok());
@@ -58,6 +58,15 @@ TEST_CASE("VelocityResponse - custom points interpolate in dB", "[VelocityRespon
     REQUIRE(parsed.value.getTargetDb(64) == Catch::Approx(-12.0f));
     REQUIRE(parsed.value.getTargetDb(127) == Catch::Approx(0.0f));
     REQUIRE(parsed.value.getGain(64) == Catch::Approx(juce::Decibels::decibelsToGain(-12.0f)));
+    const float linearDbAtVelocity32 = -48.0f + static_cast<float>(32 - 1) * 36.0f / static_cast<float>(64 - 1);
+    REQUIRE(std::abs(parsed.value.getTargetDb(32) - linearDbAtVelocity32) > 0.1f);
+    float previousTargetDb = parsed.value.getTargetDb(1);
+    for (int velocity = 2; velocity <= 127; ++velocity) {
+        const float targetDb = parsed.value.getTargetDb(static_cast<juce::uint8>(velocity));
+        REQUIRE(targetDb + 0.0001f >= previousTargetDb);
+        REQUIRE(targetDb <= 0.0001f);
+        previousTargetDb = targetDb;
+    }
     REQUIRE(parsed.value.findClosestVelocityForTargetDb(-12.0f) == 64);
     REQUIRE(parsed.value.getPoints().size() == 3);
     REQUIRE(parsed.value.getPoints()[1].velocity == 64);

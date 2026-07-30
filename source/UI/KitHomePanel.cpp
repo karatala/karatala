@@ -1,5 +1,6 @@
 #include "KitHomePanel.h"
 
+#include "CompactModalDialog.h"
 #include "KitHomePanelHelpers.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
@@ -451,26 +452,27 @@ void KitHomePanel::savePreset(bool forceNewName) {
         return;
     }
 
-    auto* dialog = new juce::AlertWindow("Save Instrument-Map Preset", "Enter a preset name:", juce::MessageBoxIconType::QuestionIcon);
-    dialog->addTextEditor("name", "My Kit", "Name:");
-    dialog->addButton("Save", 1);
-    dialog->addButton("Cancel", 0);
-    dialog->enterModalState(true, juce::ModalCallbackFunction::create([this, dialog](int result) {
-        if (result != 1)
-            return;
-        const auto name = KitHomePanelHelpers::safePresetFileName(dialog->getTextEditorContents("name"));
-        if (name.isEmpty())
-            return;
-        auto directory = this->getUserPresetDirectory();
+    CompactModalDialog::Options options;
+    options.title = "Save Instrument-Map Preset";
+    options.message = "Enter a preset name.";
+    options.confirmText = "Save";
+    options.fields.push_back({ "name", "Name", "My Kit", 0, {} });
+    juce::Component::SafePointer<KitHomePanel> safeThis(this);
+    CompactModalDialog::show(*this, std::move(options), [safeThis](const CompactModalDialog& dialog) {
+        if (safeThis == nullptr) return juce::String();
+        const auto name = KitHomePanelHelpers::safePresetFileName(dialog.getFieldText("name"));
+        if (name.isEmpty()) return juce::String("Enter a preset name.");
+        auto directory = safeThis->getUserPresetDirectory();
         directory.createDirectory();
-        this->draftMapText = this->engine.normalizeInstrumentMapText(this->draftMapText);
-        if (directory.getChildFile(name + ".map").replaceWithText(this->draftMapText)) {
-            this->rebuildPresetEntries();
-            this->reportStatus("Saved preset: " + name);
-        } else {
-            this->reportStatus("Could not save preset: " + name);
+        safeThis->draftMapText = safeThis->engine.normalizeInstrumentMapText(safeThis->draftMapText);
+        if (!directory.getChildFile(name + ".map").replaceWithText(safeThis->draftMapText)) {
+            safeThis->reportStatus("Could not save preset: " + name);
+            return juce::String("Could not save this preset.");
         }
-    }), true);
+        safeThis->rebuildPresetEntries();
+        safeThis->reportStatus("Saved preset: " + name);
+        return juce::String();
+    });
 }
 
 void KitHomePanel::deleteSelectedPreset() {
@@ -481,19 +483,19 @@ void KitHomePanel::deleteSelectedPreset() {
     if (!entry.isUser)
         return;
 
-    juce::AlertWindow::showAsync(
-        juce::MessageBoxOptions()
-            .withIconType(juce::MessageBoxIconType::WarningIcon)
-            .withTitle("Delete Instrument-Map Preset")
-            .withMessage("Delete \"" + entry.name + "\"?")
-            .withButton("Delete")
-            .withButton("Cancel"),
-        [this, entry](int result) {
-            if (result == 1 && entry.file.deleteFile()) {
-                this->rebuildPresetEntries();
-                this->reportStatus("Preset deleted");
-            }
-        });
+    CompactModalDialog::Options options;
+    options.title = "Delete Instrument-Map Preset";
+    options.message = "Delete \"" + entry.name + "\"?";
+    options.confirmText = "Delete";
+    options.destructive = true;
+    juce::Component::SafePointer<KitHomePanel> safeThis(this);
+    CompactModalDialog::show(*this, std::move(options), [safeThis, entry](const CompactModalDialog&) {
+        if (safeThis == nullptr) return juce::String();
+        if (!entry.file.deleteFile()) return juce::String("Could not delete this preset.");
+        safeThis->rebuildPresetEntries();
+        safeThis->reportStatus("Preset deleted");
+        return juce::String();
+    });
 }
 
 void KitHomePanel::updatePresetButtons() {

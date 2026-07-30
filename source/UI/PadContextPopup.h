@@ -62,7 +62,7 @@ private:
     // ─── Header ───
     juce::Label slotLabel;
     juce::TextButton linkArtsButton { "LINK ARTS" };
-    juce::TextButton linkTomBleedButton { "LINK TOM BLEED" };
+    juce::TextButton linkTomBleedButton { "LINK TOMS BLEED" };
     juce::TextButton setInstrumentButton { "SET INSTRUMENT" };
 
     // ─── MIDI map (inline in header) ───

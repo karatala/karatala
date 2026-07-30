@@ -33,6 +33,8 @@ public:
 private:
     static constexpr int globalCurveItemId = 1;
     static constexpr int presetItemBaseId = 100;
+    static constexpr int hoverPreviewDelayMs = 120;
+    static constexpr double clickPreviewDedupWindowMs = 400.0;
 
     struct Handle {
         int velocity = 0;
@@ -48,11 +50,17 @@ private:
     std::vector<Handle> handles;
     std::vector<DrumKitEngine::VelocityResponsePreset> presets;
     int selectedHandleIdx = -1;
+    int hoverPreviewVelocity = -1;
+    int lastPointerPreviewVelocity = -1;
+    int clickPreviewVelocity = -1;
+    int hoverPreviewGeneration = 0;
+    double lastPointerPreviewTimeMs = 0.0;
     bool draggingHandle = false;
     bool dragStartedWithLayerCurve = false;
     bool dragChangedCurve = false;
     juce::String dragStartDefinition;
     float viewMinimumDb = -48.0f;
+    float hoverGuideY = -1.0f;
     juce::Rectangle<float> plotBounds;
 
     juce::Label titleLabel;
@@ -73,11 +81,17 @@ private:
     void refreshPresets();
     void selectPreset();
     void setCustom(bool shouldUseCustom, bool notify);
+    void previewVelocity(int velocity);
+    void previewPointerVelocity(int velocity);
     void previewSelectedVelocity();
+    void queueHoverPreview(int velocity);
+    void clearHoverPreview(bool resetLastPreview);
+    bool recentPointerPreviewMatches(int velocity) const;
     void notifyResponseChanged(bool commit);
     bool applySelectedDb(float targetDb, bool clampValue, bool commit);
     void commitDbEditor();
     void showSaveAsDialog();
+    void showReplacePresetDialog(const juce::String& name);
     void savePreset(const juce::String& name, bool replaceExisting);
     void setStatus(const juce::String& text, bool error = false);
     int findNearestHandle(float xPosition) const;

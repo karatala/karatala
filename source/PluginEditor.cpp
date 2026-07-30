@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "UI/CompactModalDialog.h"
 #include "UI/UIHelpers.h"
 #include "UI/UITheme.h"
 #include "Engine/LayoutManager.h"
@@ -496,26 +497,28 @@ void PluginEditor::handlePresetSave() {
         this->refreshPresetList();
     } else {
         juce::String defaultName = this->makeUniqueCopyName(layout->name.isNotEmpty() ? layout->name : layout->id);
-        auto* dlg = new juce::AlertWindow("Save As User Preset", "Enter preset name:", juce::MessageBoxIconType::QuestionIcon);
-        dlg->addTextEditor("name", defaultName, "Name:");
-        dlg->addButton("Save", 1);
-        dlg->addButton("Cancel", 0);
+        CompactModalDialog::Options options;
+        options.title = "Save As User Preset";
+        options.message = "Enter a preset name.";
+        options.confirmText = "Save";
+        options.fields.push_back({ "name", "Name", defaultName, 0, {} });
         KitLayout layoutCopy = *layout;
-        dlg->enterModalState(true, juce::ModalCallbackFunction::create([this, dlg, layoutCopy](int result) mutable {
-            if (result == 1) {
-                juce::String name = dlg->getTextEditorContents("name").trim();
-                if (name.isEmpty()) return;
-                juce::String fileName = name.replaceCharacters("\\/:|*?<>\"", "_________");
-                layoutCopy.name = name;
-                layoutCopy.id = fileName;
-                this->saveLayoutToUserPresets(fileName, layoutCopy);
-                this->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
-                this->statusBar.setStatusText("Saved as: " + name);
-                this->markDrumPadGridDirty();
-                this->refreshMidiMapTableIfNeeded(true);
-                this->refreshDrumPadGridIfNeeded();
-            }
-        }), true);
+        juce::Component::SafePointer<PluginEditor> safeThis(this);
+        CompactModalDialog::show(*this, std::move(options), [safeThis, layoutCopy](const CompactModalDialog& dialog) mutable {
+            if (safeThis == nullptr) return juce::String();
+            const auto name = dialog.getFieldText("name").trim();
+            if (name.isEmpty()) return juce::String("Enter a preset name.");
+            const auto fileName = name.replaceCharacters("\\/:|*?<>\"", "_________");
+            layoutCopy.name = name;
+            layoutCopy.id = fileName;
+            safeThis->saveLayoutToUserPresets(fileName, layoutCopy);
+            safeThis->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
+            safeThis->statusBar.setStatusText("Saved as: " + name);
+            safeThis->markDrumPadGridDirty();
+            safeThis->refreshMidiMapTableIfNeeded(true);
+            safeThis->refreshDrumPadGridIfNeeded();
+            return juce::String();
+        });
     }
 }
 
@@ -525,26 +528,28 @@ void PluginEditor::handlePresetClone() {
 
     juce::String baseName = layout->name.isNotEmpty() ? layout->name : layout->id;
     juce::String defaultName = this->makeUniqueCopyName(baseName);
-    auto* dlg = new juce::AlertWindow("Clone Preset", "Enter name for the copy:", juce::MessageBoxIconType::QuestionIcon);
-    dlg->addTextEditor("name", defaultName, "Name:");
-    dlg->addButton("Clone", 1);
-    dlg->addButton("Cancel", 0);
+    CompactModalDialog::Options options;
+    options.title = "Clone Preset";
+    options.message = "Enter a name for the copy.";
+    options.confirmText = "Clone";
+    options.fields.push_back({ "name", "Name", defaultName, 0, {} });
     KitLayout layoutCopy = *layout;
-    dlg->enterModalState(true, juce::ModalCallbackFunction::create([this, dlg, layoutCopy](int result) mutable {
-        if (result == 1) {
-            juce::String name = dlg->getTextEditorContents("name").trim();
-            if (name.isEmpty()) return;
-            juce::String fileName = name.replaceCharacters("\\/:|*?<>\"", "_________");
-            layoutCopy.name = name;
-            layoutCopy.id = fileName;
-            this->saveLayoutToUserPresets(fileName, layoutCopy);
-            this->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
-            this->statusBar.setStatusText("Cloned as: " + name);
-            this->markDrumPadGridDirty();
-            this->refreshMidiMapTableIfNeeded(true);
-            this->refreshDrumPadGridIfNeeded();
-        }
-    }), true);
+    juce::Component::SafePointer<PluginEditor> safeThis(this);
+    CompactModalDialog::show(*this, std::move(options), [safeThis, layoutCopy](const CompactModalDialog& dialog) mutable {
+        if (safeThis == nullptr) return juce::String();
+        const auto name = dialog.getFieldText("name").trim();
+        if (name.isEmpty()) return juce::String("Enter a preset name.");
+        const auto fileName = name.replaceCharacters("\\/:|*?<>\"", "_________");
+        layoutCopy.name = name;
+        layoutCopy.id = fileName;
+        safeThis->saveLayoutToUserPresets(fileName, layoutCopy);
+        safeThis->processorRef.getEngine().setKitLayoutDirect(layoutCopy);
+        safeThis->statusBar.setStatusText("Cloned as: " + name);
+        safeThis->markDrumPadGridDirty();
+        safeThis->refreshMidiMapTableIfNeeded(true);
+        safeThis->refreshDrumPadGridIfNeeded();
+        return juce::String();
+    });
 }
 
 void PluginEditor::handlePresetDelete() {
@@ -557,20 +562,19 @@ void PluginEditor::handlePresetDelete() {
     if (!file.exists()) return;
 
     juce::String presetName = layout->name.isNotEmpty() ? layout->name : layout->id;
-    juce::AlertWindow::showAsync(
-        juce::MessageBoxOptions()
-            .withIconType(juce::MessageBoxIconType::WarningIcon)
-            .withTitle("Delete Preset")
-            .withMessage("Delete \"" + presetName + "\"? This cannot be undone.")
-            .withButton("Delete")
-            .withButton("Cancel"),
-        [this, file](int result) {
-            if (result == 1) {
-                file.deleteFile();
-                this->statusBar.setStatusText("Preset deleted");
-                this->refreshPresetList();
-            }
-        });
+    CompactModalDialog::Options options;
+    options.title = "Delete Preset";
+    options.message = "Delete \"" + presetName + "\"? This cannot be undone.";
+    options.confirmText = "Delete";
+    options.destructive = true;
+    juce::Component::SafePointer<PluginEditor> safeThis(this);
+    CompactModalDialog::show(*this, std::move(options), [safeThis, file](const CompactModalDialog&) {
+        if (safeThis == nullptr) return juce::String();
+        if (!file.deleteFile()) return juce::String("Could not delete this preset.");
+        safeThis->statusBar.setStatusText("Preset deleted");
+        safeThis->refreshPresetList();
+        return juce::String();
+    });
 }
 
 void PluginEditor::setViewMode(ViewMode mode) {

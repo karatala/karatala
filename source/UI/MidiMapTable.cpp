@@ -1,6 +1,7 @@
 #include "MidiMapTable.h"
-#include "UITheme.h"
+#include "CompactModalDialog.h"
 #include "UIHelpers.h"
+#include "UITheme.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <map>
 #include <optional>
@@ -274,43 +275,34 @@ void MidiMapTable::showExpressionCurvePopup(MapRow& row) {
     if (labels.empty())
         return;
 
-    auto* dlg = new juce::AlertWindow("Expression curve points", row.instrumentId + " / " + code, juce::MessageBoxIconType::NoIcon);
-    for (const auto& label : labels)
-        dlg->addTextEditor(label, juce::String(this->getEffectiveExpressionPointValue(*row.slotPtr, code, label)), label + ":");
-    dlg->addButton("Apply", 1);
-    dlg->addButton("Cancel", 0);
-
+    CompactModalDialog::Options options;
+    options.title = "Expression Curve Points";
+    options.message = row.instrumentId + " / " + code;
+    options.confirmText = "Apply";
+    for (const auto& label : labels) options.fields.push_back({ label, label, juce::String(this->getEffectiveExpressionPointValue(*row.slotPtr, code, label)), 3, "0123456789" });
     const auto slotId = row.instrumentId;
-    dlg->enterModalState(true, juce::ModalCallbackFunction::create([this, dlg, slotId, code, labels](int result) {
-        if (result != 1 || this->layoutPtr == nullptr)
-            return;
+    juce::Component::SafePointer<MidiMapTable> safeThis(this);
+    CompactModalDialog::show(*this, std::move(options), [safeThis, slotId, code, labels](const CompactModalDialog& dialog) {
+        if (safeThis == nullptr || safeThis->layoutPtr == nullptr) return juce::String();
 
         KitLayout::InstrumentSlot* targetSlot = nullptr;
-        for (auto& slot : this->layoutPtr->instrumentSlots) {
+        for (auto& slot : safeThis->layoutPtr->instrumentSlots) {
             if (slot.id == slotId) {
                 targetSlot = &slot;
                 break;
             }
         }
-        if (targetSlot == nullptr)
-            return;
+        if (targetSlot == nullptr) return juce::String();
 
         std::map<juce::String, int> parsedValues;
         std::map<juce::String, int> previousEffectiveValues;
         std::map<juce::String, bool> hadSlotOverrides;
         for (const auto& label : labels) {
-            const auto editorText = dlg->getTextEditorContents(label);
-            const auto parsed = parseExpressionPointEditorValue(editorText);
-            if (!parsed.has_value()) {
-                juce::AlertWindow::showMessageBoxAsync(
-                    juce::MessageBoxIconType::WarningIcon,
-                    "Invalid expression curve point",
-                    "'" + label + "' must be an integer from 0 to 127.");
-                return;
-            }
+            const auto parsed = parseExpressionPointEditorValue(dialog.getFieldText(label));
+            if (!parsed.has_value()) return "'" + label + "' must be an integer from 0 to 127.";
 
             parsedValues[label] = *parsed;
-            previousEffectiveValues[label] = this->getEffectiveExpressionPointValue(*targetSlot, code, label);
+            previousEffectiveValues[label] = safeThis->getEffectiveExpressionPointValue(*targetSlot, code, label);
             hadSlotOverrides[label] = KitLayout::getExpressionPoint(targetSlot->expressionPoints, code, label).has_value();
         }
 
@@ -320,11 +312,12 @@ void MidiMapTable::showExpressionCurvePopup(MapRow& row) {
                 targetSlot->expressionPoints[code][label] = static_cast<uint8_t>(value);
         }
 
-        if (this->onLayoutReapplyRequested)
-            this->onLayoutReapplyRequested();
-        else if (this->onMappingChanged)
-            this->onMappingChanged();
-    }), true);
+        if (safeThis->onLayoutReapplyRequested)
+            safeThis->onLayoutReapplyRequested();
+        else if (safeThis->onMappingChanged)
+            safeThis->onMappingChanged();
+        return juce::String();
+    });
 }
 void MidiMapTable::startMidiLearn(int rowIdx, int slotIdx) {
     // Toggle off if already learning this slot

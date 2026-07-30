@@ -144,9 +144,6 @@ public:
             { "sectionTitle() at 18 px", UITheme::Fonts::sectionTitle().withHeight(18.0f), "Kit page title" },
             { "Graphics default", juce::Font(juce::FontOptions(14.0f)), "Large rotary-control tick labels when enough space is available" },
             { "TooltipWindow default", juce::Font(juce::FontOptions(13.0f).withStyle("Bold")), "TooltipWindow text inherited from JUCE LookAndFeel_V4" },
-            { "AlertWindow title", juce::Font(juce::FontOptions(18.0f).withStyle("Bold")), "AlertWindow titles inherited from JUCE LookAndFeel_V4" },
-            { "AlertWindow message", juce::Font(juce::FontOptions(16.0f)), "AlertWindow messages inherited from JUCE LookAndFeel_V4" },
-            { "AlertWindow field", juce::Font(juce::FontOptions(14.0f)), "Other AlertWindow text inherited from JUCE LookAndFeel_V4" },
         };
 
         this->themeColours = {
@@ -171,7 +168,7 @@ public:
             { "accent", UITheme::Colours::accent, "Knob or slider fill, active marks, and destructive remove text" },
             { "accentSoft", UITheme::Colours::accentSoft, "Source picker action indicator" },
             { "accentWarning", UITheme::Colours::accentWarning, "Active toggles, invalid sources, and routing warnings" },
-            { "broadEditDanger", UITheme::Colours::broadEditDanger, "Active LINK ARTS and LINK TOM BLEED controls" },
+            { "broadEditDanger", UITheme::Colours::broadEditDanger, "Active LINK ARTS and LINK TOMS BLEED controls" },
             { "midiLearnIdle", UITheme::Colours::midiLearnIdle, "Inactive MIDI learn symbol" },
             { "midiLearnActive", UITheme::Colours::midiLearnActive, "Active MIDI learn button background" },
             { "separator", UITheme::Colours::separator, "DrumPad cell and outer separators" },
@@ -245,6 +242,7 @@ public:
             { "PadContextPopup::LayerContentComponent", "Internal layer container inside PadContextPopup" },
             { "CrosstalkCalibrationPopup", "Calibration popup. Requires MIDI capture and engine state" },
             { "SourcePickerPopup", "Source list popup shared by instrument and pad editors" },
+            { "CompactModalDialog", "Editor-contained preset, confirmation, and small value-entry dialogs" },
             { "DismissOverlay", "Transparent click-capture layer behind popups" },
             { "ScrollablePanel", "Shared Viewport container used by long panels" },
             { "ParameterSlider", "Live shared slider example above" },
@@ -272,8 +270,7 @@ public:
             { "juce::Viewport", "ScrollablePanel, popup layers, tables, and this audit page" },
             { "juce::ScrollBar", "Created by Viewport and styled by LookAndFeel" },
             { "juce::PopupMenu", "Preset actions and ComboBox menus" },
-            { "juce::CallOutBox", "MidiNotePicker and expression-curve popups" },
-            { "juce::AlertWindow", "Preset save and delete dialogs" },
+            { "juce::CallOutBox", "MidiNotePicker popups" },
             { "juce::TooltipWindow", "Editor-wide delayed tooltips" },
             { "juce::TabbedComponent / TabBarButton", "LookAndFeel style hook exists, but no direct instance was found" },
             { "juce::GroupComponent", "LookAndFeel color hook exists, but no direct instance was found" },

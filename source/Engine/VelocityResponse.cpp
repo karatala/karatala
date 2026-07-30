@@ -29,6 +29,59 @@ static juce::String serializePoints(const std::vector<VelocityResponse::Point>& 
     return tokens.joinIntoString(",");
 }
 
+static float limitEndpointTangent(float tangent, float intervalSlope) {
+    if (tangent <= 0.0f || intervalSlope <= 0.0f) return 0.0f;
+    return juce::jmin(tangent, 3.0f * intervalSlope);
+}
+
+static std::vector<float> buildMonotoneTangents(const std::vector<VelocityResponse::Point>& points) {
+    std::vector<float> intervalWidths(points.size() - 1);
+    std::vector<float> intervalSlopes(points.size() - 1);
+    for (size_t intervalIdx = 0; intervalIdx + 1 < points.size(); ++intervalIdx) {
+        intervalWidths[intervalIdx] = static_cast<float>(points[intervalIdx + 1].velocity - points[intervalIdx].velocity);
+        intervalSlopes[intervalIdx] = (points[intervalIdx + 1].targetDb - points[intervalIdx].targetDb) / intervalWidths[intervalIdx];
+    }
+
+    std::vector<float> tangents(points.size(), 0.0f);
+    if (points.size() == 2) {
+        tangents.front() = intervalSlopes.front();
+        tangents.back() = intervalSlopes.front();
+        return tangents;
+    }
+
+    for (size_t pointIdx = 1; pointIdx + 1 < points.size(); ++pointIdx) {
+        const float previousSlope = intervalSlopes[pointIdx - 1];
+        const float nextSlope = intervalSlopes[pointIdx];
+        if (previousSlope <= 0.0f || nextSlope <= 0.0f) continue;
+        const float previousWeight = 2.0f * intervalWidths[pointIdx] + intervalWidths[pointIdx - 1];
+        const float nextWeight = intervalWidths[pointIdx] + 2.0f * intervalWidths[pointIdx - 1];
+        tangents[pointIdx] = (previousWeight + nextWeight) / (previousWeight / previousSlope + nextWeight / nextSlope);
+    }
+
+    const float firstTangent = ((2.0f * intervalWidths[0] + intervalWidths[1]) * intervalSlopes[0] - intervalWidths[0] * intervalSlopes[1]) / (intervalWidths[0] + intervalWidths[1]);
+    tangents.front() = VelocityResponseHelpers::limitEndpointTangent(firstTangent, intervalSlopes.front());
+    const size_t lastIntervalIdx = intervalSlopes.size() - 1;
+    const float lastIntervalWidth = intervalWidths[lastIntervalIdx];
+    const float previousIntervalWidth = intervalWidths[lastIntervalIdx - 1];
+    const float lastTangent = ((2.0f * lastIntervalWidth + previousIntervalWidth) * intervalSlopes[lastIntervalIdx] - lastIntervalWidth * intervalSlopes[lastIntervalIdx - 1]) / (lastIntervalWidth + previousIntervalWidth);
+    tangents.back() = VelocityResponseHelpers::limitEndpointTangent(lastTangent, intervalSlopes.back());
+    return tangents;
+}
+
+static float interpolateMonotoneDb(const VelocityResponse::Point& leftPoint, const VelocityResponse::Point& rightPoint, float leftTangent, float rightTangent, int velocity) {
+    const float intervalWidth = static_cast<float>(rightPoint.velocity - leftPoint.velocity);
+    if (intervalWidth <= 0.0f) return leftPoint.targetDb;
+    const float position = juce::jlimit(0.0f, 1.0f, static_cast<float>(velocity - leftPoint.velocity) / intervalWidth);
+    const float positionSquared = position * position;
+    const float positionCubed = positionSquared * position;
+    const float leftValueWeight = 2.0f * positionCubed - 3.0f * positionSquared + 1.0f;
+    const float leftTangentWeight = positionCubed - 2.0f * positionSquared + position;
+    const float rightValueWeight = -2.0f * positionCubed + 3.0f * positionSquared;
+    const float rightTangentWeight = positionCubed - positionSquared;
+    const float targetDb = leftValueWeight * leftPoint.targetDb + leftTangentWeight * intervalWidth * leftTangent + rightValueWeight * rightPoint.targetDb + rightTangentWeight * intervalWidth * rightTangent;
+    return juce::jlimit(leftPoint.targetDb, rightPoint.targetDb, targetDb);
+}
+
 } // namespace VelocityResponseHelpers
 
 VelocityResponse VelocityResponse::linear() {
@@ -115,14 +168,14 @@ ParseResult<VelocityResponse> VelocityResponse::fromDefinition(const juce::Strin
     response.points = points;
     response.targetDbByVelocity[0] = -100.0f;
     response.gainByVelocity[0] = 0.0f;
+    const auto tangents = VelocityResponseHelpers::buildMonotoneTangents(points);
     size_t pointIdx = 0;
     for (int velocity = 1; velocity <= 127; ++velocity) {
         while (pointIdx + 1 < points.size() && velocity > points[pointIdx + 1].velocity) ++pointIdx;
+        const size_t rightPointIdx = juce::jmin(pointIdx + 1, points.size() - 1);
         const auto& leftPoint = points[pointIdx];
-        const auto& rightPoint = points[juce::jmin(pointIdx + 1, points.size() - 1)];
-        const float span = static_cast<float>(juce::jmax(1, rightPoint.velocity - leftPoint.velocity));
-        const float position = juce::jlimit(0.0f, 1.0f, static_cast<float>(velocity - leftPoint.velocity) / span);
-        const float targetDb = leftPoint.targetDb + position * (rightPoint.targetDb - leftPoint.targetDb);
+        const auto& rightPoint = points[rightPointIdx];
+        const float targetDb = VelocityResponseHelpers::interpolateMonotoneDb(leftPoint, rightPoint, tangents[pointIdx], tangents[rightPointIdx], velocity);
         response.targetDbByVelocity[static_cast<size_t>(velocity)] = targetDb;
         response.gainByVelocity[static_cast<size_t>(velocity)] = juce::Decibels::decibelsToGain(targetDb, -100.0f);
     }
