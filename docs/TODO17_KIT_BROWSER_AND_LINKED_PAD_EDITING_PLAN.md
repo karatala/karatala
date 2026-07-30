@@ -2,7 +2,7 @@
 
 Date: 2026-07-17
 
-Status: In progress - phase 1 implementation complete, build and manual verification pending
+Status: In progress - phases 1 and 2 implementation complete, build and manual verification pending
 
 md plan for next features: new similar to instrument picker component for kit list+preview where we can see more kit info (its Title, Author [license] and readme.md content) and easily preview any instrument with articulations using some tiny pad-grid, pads dont have to be square but just color grouped by instrument, all on single page with ability to fully load selected kit or assign any instrument to some coresponding slot of our kit layout.
 then in pad popup need to add 'set instrument' button on left of midi note buttons that opens new instrument picker
@@ -17,60 +17,61 @@ The original paragraph above and the latest user decisions override the older im
    - Add temporary `LINK ARTS` and `LINK TOMS BLEED` editing.
    - Keep parameter and mic-routing updates field-specific and persist the instrument map immediately.
    - Build and manual verification are still pending because they were not requested.
-2. Phase 2:
+2. ✅ Phase 2 implementation:
    - Add a separate browser mode for complete library kits and saved instrument-map presets.
    - Preview instruments and articulations before loading.
    - Load, save, save as, and delete user instrument-map presets.
    - A saved preset contains only the instrument map, including layers and layer settings. It does not contain the kit layout or MIDI notes.
-   - Handling preset entries for destination slots missing from the active layout is deferred.
+   - Preset entries for destination slots missing from the active layout are skipped and reported. Automatic remapping remains deferred.
 3. Phase 3:
    - Review the experimental Kit tab and decide which existing elements should be reused, replaced, or removed.
 
-The embedded Kit-tab browser described later in this document is deferred to phases 2 and 3. It is not part of phase 1.
+The browser is implemented as a separate page in phase 2. Review of the older embedded Kit-tab controls remains phase 3.
 
 ## Goal
 
 Add three connected workflows:
 
-1. A kit browser modal component that shows each kit's title, author, license, README content, instruments, and articulations.
+1. A separate kit and preset browser page that shows kit metadata, README content, instruments, articulations, and saved instrument maps.
 2. A `Set instrument` action in the pad popup that replaces the whole instrument assigned to that kit-layout slot.
 3. Temporary link switches in the pad popup for editing all articulations of the current instrument and the bleed levels of all toms together.
 
 ## Decisions and Assumptions
 
 - The instrument-selection mode is opened from a known destination slot and never offers full-kit loading.
-- The complete-kit and instrument-map preset mode is a separate later workflow. Its final placement is not decided.
-- The experimental Kit tab is not changed during phase 1. Reuse of its layout, preset, assignment, and mic-layout controls is deferred.
+- The complete-kit and instrument-map preset workflow is the separate `Browse` sidebar mode.
+- The experimental Kit tab is unchanged during phases 1 and 2. Reuse of its layout, preset, assignment, and mic-layout controls is deferred to phase 3.
 - Selecting a kit or preview pad never changes the loaded instrument map.
-- `Load full kit` and `Assign to slot` are explicit actions. Each action applies its change immediately after its button is clicked.
+- `Load kit`, `Load preset`, and `Set instrument` are explicit actions. Each action applies its change immediately after its button is clicked.
 - Kit README content is shown as read-only plain Markdown text with its original line breaks. A full Markdown renderer is not required.
 - `Set instrument` reuses the shared large source picker in a whole-instrument mode. The main list contains one row per instrument; a separate preview list contains that instrument's articulations. `Use` applies the parent instrument.
 - `Set instrument` has no hidden destination-slot type filter. All available instruments are shown; category and Types controls are optional manual filters.
 - Link switches are temporary editing modes. They reset to off when the pad popup closes and are not saved in plugin state.
 - Active link switches use a steady bright-red background and white text. They do not blink, because constant motion would distract from the parameter controls.
 - Saved combined presets contain only instrument-map text with its layers and layer settings. They do not contain kit-layout or MIDI-note data.
+- Loading from Browse replaces the complete current instrument map. It preserves the active kit layout and MIDI notes.
 
 ## Current State
 
 - [`KitHomePanel`](../source/UI/KitHomePanel.h) has a small `Start from library kit` combo and builds a complete draft map with `DrumKitEngine::buildInstrumentMapForKit()`.
 - `KitLib::DrumKitSpec::MetaInfo` already contains `name`, `author`, `license`, and the kit root directory.
-- The library scan does not currently keep the kit's `README.md` content.
+- `KitLib::DrumKitSpec::readmeMarkdown` stores `README.md` or fallback `readme.md` content loaded during library scanning.
+- [`KitBrowserComponent`](../source/UI/KitBrowserComponent.h) is the separate Browse page for library kits and instrument-map presets.
+- [`KitPreviewGrid`](../source/UI/KitPreviewGrid.h) shows grouped rectangular articulation pads and previews without changing the map.
 - [`SourcePickerPopup`](../source/UI/SourcePickerPopup.h) supports contextual titles, a right-side `×` close button, source filtering, per-articulation preview, articulation-specific `Use`, and a whole-instrument mode with one main-list row per instrument and a separate articulation preview list.
 - [`PadContextPopup`](../source/UI/PadContextPopup.h) has all articulation groups for the current destination slot and updates tuning, attack, decay, gain, pan, phase, L/R, and bleed without reloading samples.
 - The pad-popup header contains the slot title, phase 1 link controls, `SET INSTRUMENT`, and MIDI-note controls.
 - `DrumKitEngine::applyInstrumentMapSlotChange()` replaces one destination slot without reloading unrelated slots, while `updateSlotParametersBatch()` applies linked parameter targets under one graph lock.
 
-## Deferred Target Kit and Preset Browser
+## ✅ Phase 2 Kit and Preset Browser
 
-This section is an older design draft. Review it against the clarified delivery order before implementing phases 2 or 3. In particular, embedding it directly in `KitHomePanel` is no longer decided.
+The browser is a separate `Browse` sidebar mode. The experimental `KitHomePanel` is unchanged and will be reviewed in phase 3.
 
 ### Page Layout
 
-Keep the browser and actions visible in the same scrollable Kit tab:
+Keep the browser and actions visible on one Browse page:
 
 ```text
-Kit layout and default controls
-
 ┌ Kit list ───────┬ Kit information ─────────┬ Instrument preview ─────────────┐
 │ Search          │ Title                    │ Kick  [center] [edge]           │
 │ Kit A           │ Author [License]         │ Snare [center] [rim] [side]     │
@@ -79,16 +80,14 @@ Kit layout and default controls
 │                 │                          │                                 │
 └─────────────────┴──────────────────────────┴─────────────────────────────────┘
 
-[Load full kit]       Selected instrument: [Assign to: compatible slot] [Assign]
-
-Existing preset, slot-assignment, and mic-layout controls
+[Load kit]                              [Save] [Save as] [Delete]
 ```
 
 - Give the kit list about 25 percent of the browser width.
 - Give the metadata and README area about 30 percent.
 - Give the instrument preview area the remaining width.
 - Use local scrolling for long kit lists, long README files, and large instrument collections.
-- Keep the component usable when the main Kit tab viewport is narrow. Columns may stack vertically below a practical minimum width.
+- Keep the component usable when the Browse page is narrow.
 
 ### Kit List and Information
 
@@ -115,7 +114,6 @@ Create a source-kit preview grid instead of reusing `DrumPadGrid`, because `Drum
 - Clicking an articulation pad calls `DrumKitEngine::previewSourceItem()`.
 - Use horizontal click position for preview velocity, matching the shared source picker.
 - Flash only the clicked pad while its preview starts.
-- Selecting any articulation pad also selects its parent instrument for the `Assign to slot` action.
 
 ### Full-Kit Load
 
@@ -125,26 +123,24 @@ Create a source-kit preview grid instead of reusing `DrumPadGrid`, because `Drum
 2. Build the complete map with `DrumKitEngine::buildInstrumentMapForKit()`.
 3. Replace the current instrument assignments only after the explicit button click.
 4. Apply the complete map once.
-5. Refresh the draft map, slot-assignment rows, Instrument tab, and pad grid.
+5. Refresh plugin state, Raw map text, the Instrument tab, and the pad grid.
 6. Report skipped layout slots when the selected kit has no compatible instrument.
 
 Keep current automatic matching rules, preferred library identities, and automatic L/R orientation.
 
-### Assign One Source Instrument
+### Instrument-Map Presets
 
-For the instrument selected in the preview grid:
+- Show factory and user presets in a separate mode.
+- Show the preset map as read-only text and resolve its instruments and articulations into the same preview grid.
+- `Load preset` replaces the complete current instrument map.
+- `Save` replaces the selected user preset with the current map.
+- `Save as` creates a new user preset and rejects an existing name.
+- `Delete` is available only for user presets and requires confirmation.
+- Preserve the active kit layout and MIDI notes for every preset action.
 
-- Show destination slots whose type matches the source instrument type.
-- Allow every slot when the destination type is `Unknown`.
-- Show all matching choices when a layout has several slots of the same type, such as `tom1`, `tom2`, and `tom3`.
-- Disable `Assign` and show a short reason when no compatible slot exists.
-- Replace all existing map entries for the chosen destination slot.
-- Add one instrument-level entry with no source-articulation filter, so the engine can use all compatible articulations from that source instrument.
-- Preserve every other destination slot and the active kit layout.
-- Apply only the changed slot through the surgical slot-change path.
-- Refresh the browser selection, assignment table, Instrument tab, and pad grid after success.
+### Superseded Browser Assignment Draft
 
-The full-kit and single-instrument actions must use shared map-building helpers. Do not duplicate identity or automatic-orientation logic in UI code.
+Single-slot replacement is handled by `Set instrument` from the pad popup. It is intentionally not part of the complete-kit and preset browser.
 
 ## Pad Popup: Set Instrument
 
@@ -230,7 +226,7 @@ The linked path must remain field-specific. It must not reload sample files or r
 
 ## Implementation Plan
 
-### Deferred 1. Load Kit README Metadata
+### ✅ 1. Load Kit README Metadata
 
 - Add a `readmeMarkdown` field to `KitLib::DrumKitSpec`.
 - During the existing library scan, load `README.md`, with `readme.md` as a fallback.
@@ -242,14 +238,14 @@ Files:
 - [`source/Engine/KitLibModel.h`](../source/Engine/KitLibModel.h)
 - [`source/Engine/KitLibModel.cpp`](../source/Engine/KitLibModel.cpp)
 
-### 2. Add Shared Instrument-Assignment Helpers
+### ✅ 2. Add Shared Instrument-Assignment Helpers
 
 - Add focused helpers in `DrumKitEngineMapHelpers.*` for:
   - ✅ Building one preferred-ID instrument-level map entry.
   - ✅ Applying automatic orientation for that entry.
   - ✅ Replacing one destination slot while preserving all other entries.
-  - Listing compatible destination slots from the active kit layout.
-- Reuse these helpers from both `KitHomePanel` and `PadContextPopup`.
+  - Compatible destination-slot listing was removed from this phase because Browse does not assign one instrument.
+- Reuse the slot replacement helpers from the engine and `PadContextPopup`.
 
 Files:
 
@@ -258,7 +254,7 @@ Files:
 - [`source/Engine/DrumKitEngine.h`](../source/Engine/DrumKitEngine.h)
 - [`source/Engine/DrumKitEngine.cpp`](../source/Engine/DrumKitEngine.cpp)
 
-### Deferred 3. Build the Kit and Preset Browser
+### ✅ 3. Build the Kit and Preset Browser
 
 - Add `KitBrowserComponent` for kit selection, metadata, README display, and actions.
 - Add a small source-kit preview component that groups rectangular articulation pads by instrument.
@@ -267,21 +263,21 @@ Files:
 
 Files:
 
-- New `source/UI/KitBrowserComponent.h/.cpp`
-- New `source/UI/KitPreviewGrid.h/.cpp`
+- [`source/UI/KitBrowserComponent.h`](../source/UI/KitBrowserComponent.h) and [`source/UI/KitBrowserComponent.cpp`](../source/UI/KitBrowserComponent.cpp)
+- [`source/UI/KitPreviewGrid.h`](../source/UI/KitPreviewGrid.h) and [`source/UI/KitPreviewGrid.cpp`](../source/UI/KitPreviewGrid.cpp)
 - [`source/UI/UITheme.h`](../source/UI/UITheme.h)
 
-### Deferred 4. Decide Kit-Tab Integration
+### ✅ 4. Add Separate Browse Integration
 
-- Replace the small library-kit combo with the embedded browser.
-- Keep existing layout, preset, assignment, and mic-layout sections.
-- Route full-kit load and one-slot assignment through `KitHomePanel` callbacks so editor state and status messages remain consistent.
-- Remove the old combo-only draft-generation path after the browser actions cover it.
+- Add a separate `Browse` sidebar mode without changing the experimental Kit tab.
+- Apply complete kit and preset maps through `PluginEditor`, with processing suspended and plugin state updated once.
+- Keep the active kit layout and MIDI notes unchanged.
+- Skip and report preset entries for slots absent from the active layout. Do not remap them automatically.
 
 Files:
 
-- [`source/UI/KitHomePanel.h`](../source/UI/KitHomePanel.h)
-- [`source/UI/KitHomePanel.cpp`](../source/UI/KitHomePanel.cpp)
+- [`source/UI/Sidebar.h`](../source/UI/Sidebar.h)
+- [`source/UI/Sidebar.cpp`](../source/UI/Sidebar.cpp)
 - [`source/PluginEditor.h`](../source/PluginEditor.h)
 - [`source/PluginEditor.cpp`](../source/PluginEditor.cpp)
 
@@ -337,14 +333,26 @@ After implementation, update [`source/UI/AGENTS.md`](../source/UI/AGENTS.md) wit
 - Whole-instrument picker mode.
 - Exact linked-edit scope.
 - The non-blinking bright-red active state.
+- Browse ownership, loading scope, preview behavior, and preset contents.
 
-Kit-browser ownership remains deferred with the browser itself.
+### ✅ 9. Move Developer Actions to the Status Bar
+
+- Remove `UI` and the debug-only `?` inspector action from the sidebar.
+- Place both actions at the right side of the status bar.
+- Keep Browse and normal work modes in the sidebar.
+
+Files:
+
+- [`source/UI/Sidebar.h`](../source/UI/Sidebar.h)
+- [`source/UI/Sidebar.cpp`](../source/UI/Sidebar.cpp)
+- [`source/UI/StatusBar.h`](../source/UI/StatusBar.h)
+- [`source/UI/StatusBar.cpp`](../source/UI/StatusBar.cpp)
 
 Mark each completed section in this plan with `✅`. When all work and verification are complete, change the main heading to start with `# ✅ COMPLETED:`.
 
 ## Automated Verification
 
-Phase 1 focused test cases have been added for whole-slot replacement, cross-type assignment, destination-layer projection, wildcard isolation, linked target deduplication, routing source-path resolution, and single-mic bleed preservation. They have not been run yet.
+Phase 1 focused test cases have been added for whole-slot replacement, cross-type assignment, destination-layer projection, wildcard isolation, linked target deduplication, routing source-path resolution, and single-mic bleed preservation. A Phase 2 test verifies library README loading. They have not been run yet.
 
 Extend [`tests/TestKitLibParsers.cpp`](../tests/TestKitLibParsers.cpp):
 
@@ -357,7 +365,6 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 - Full-kit mapping keeps current matching and automatic-orientation behavior.
 - Assigning one instrument replaces only the chosen destination slot.
 - Other slots and their parameters remain unchanged.
-- Compatible-slot listing handles several tom slots and `Unknown` slot types.
 - Whole-instrument assignment writes no source-articulation filter.
 - `Link arts` updates the same layer number across destination articulations.
 - Missing linked layers are skipped.
@@ -375,9 +382,11 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 - Preview every visible articulation at low and high click velocities.
 - Confirm pads are grouped clearly by instrument even without relying only on colour.
 - Load a complete kit and confirm the active layout is preserved.
-- Assign different toms from one or several kits to `tom1`, `tom2`, and `tom3`.
-- Confirm single-instrument assignment does not reload or change unrelated slots.
-- Reload the sample library while the Kit tab is open and confirm browser selection remains safe.
+- Load, save, save as, and delete user instrument-map presets.
+- Confirm preset loading replaces the instrument map but keeps the active kit layout and MIDI notes.
+- Confirm missing destination slots are skipped and reported.
+- Reload the sample library while Browse is open and confirm browser selection remains safe.
+- Confirm `UI` and the debug-only `?` action are at the right side of the status bar and are absent from the sidebar.
 
 ### Pad Popup
 
@@ -397,10 +406,10 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 
 ## Completion Criteria
 
-- The Kit tab shows a searchable kit list, title, author, license, README content, and grouped articulation preview pads on one page.
+- The separate Browse page shows a searchable kit list, title, author, license, README content, and grouped articulation preview pads on one page.
 - Any articulation in the selected kit can be previewed without changing the current map.
 - The selected kit can replace the complete current kit explicitly.
-- Any selected source instrument can replace one compatible destination slot without changing other slots.
+- Instrument-map presets can be loaded, saved, saved as, and deleted without changing the kit layout or MIDI notes.
 - The pad popup can replace its whole instrument through the shared picker without a hidden destination-type restriction.
 - `Link arts` updates the defined parameter and routing set across matching articulation layers.
 - `LINK TOMS BLEED` updates matching bleed mic codes and compatible routing across all Tom slots.

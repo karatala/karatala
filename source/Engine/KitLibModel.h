@@ -576,6 +576,7 @@ public:
     std::vector<InstrumentSpec*> getInstrumentsByType(InstrumentSpec::Type type) const;
 
     MetaInfo meta;
+    juce::String readmeMarkdown;
     SampleMetadataTable sampleMetadata;
     KitSourceOverrides sourceOverrides;
     std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>> instrumentSpecsMap;

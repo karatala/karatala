@@ -13,6 +13,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     this->setupSidebarAndStatusBar();
     this->setupKitMode();
+    this->setupBrowseMode();
     this->setupDrumPadGridMode();
     this->setupSidebarKnobs();
     this->setupRawMode();
@@ -85,13 +86,28 @@ void PluginEditor::setupKitMode() {
     this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 }
 
+void PluginEditor::setupBrowseMode() {
+    this->kitBrowserComponent = std::make_unique<KitBrowserComponent>(this->processorRef.getEngine());
+    this->addChildComponent(*this->kitBrowserComponent);
+    this->kitBrowserComponent->onStatusMessage = [this](const juce::String& message) {
+        this->statusBar.setStatusText(message);
+    };
+    this->kitBrowserComponent->onMapLoadRequested = [this](const juce::String& mapText, const juce::String& statusText) {
+        return this->applyBrowserInstrumentMap(mapText, statusText);
+    };
+    this->kitBrowserComponent->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+}
+
 void PluginEditor::setupSidebarAndStatusBar() {
     // Sidebar
     this->addAndMakeVisible(this->sidebar);
     this->sidebar.onModeChanged = [this](ViewMode mode) {
         this->setViewMode(mode);
     };
-    this->sidebar.inspectButton.onClick = [this] {
+    this->statusBar.onUiRequested = [this] {
+        this->setViewMode(ViewMode::Playground);
+    };
+    this->statusBar.onInspectRequested = [this] {
         if (!this->inspector) {
             this->inspector = std::make_unique<melatonin::Inspector>(*this);
             this->inspector->onClose = [this]() { this->inspector.reset(); };
@@ -227,6 +243,40 @@ void PluginEditor::applyInstrumentMapFromEditor() {
     this->refreshMidiMapTableIfNeeded();
 }
 
+bool PluginEditor::applyBrowserInstrumentMap(const juce::String& mapText, const juce::String& statusText) {
+    struct ProcessingSuspendGuard {
+        PluginProcessor& processor;
+        explicit ProcessingSuspendGuard(PluginProcessor& pluginProcessor)
+            : processor(pluginProcessor) {
+            this->processor.suspendProcessing(true);
+        }
+        ~ProcessingSuspendGuard() {
+            this->processor.suspendProcessing(false);
+        }
+    } processingSuspendGuard(this->processorRef);
+
+    const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
+    auto& engine = this->processorRef.getEngine();
+    const auto normalizedMapText = engine.normalizeInstrumentMapText(mapText);
+    const auto currentMapText = engine.normalizeInstrumentMapText(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+    if (normalizedMapText == currentMapText) {
+        this->statusBar.setStatusText(statusText + " | instrument map was already active");
+        return true;
+    }
+    if (!engine.useInstrumentMap(normalizedMapText)) {
+        this->statusBar.setStatusText(engine.getLastInstrumentMapStatus());
+        return false;
+    }
+
+    this->processorRef.getValueTreeState().state.setProperty("instrument_map", normalizedMapText, nullptr);
+    this->instrumentMapEditor.setText(normalizedMapText, false);
+    this->markDrumPadGridDirty();
+    this->markMidiMapTableDirty();
+    this->markInstrumentConfigDirty();
+    this->statusBar.setStatusText(statusText);
+    return true;
+}
+
 void PluginEditor::setupMapMode() {
     // Map mode - MIDI note assignment table
     this->addChildComponent(this->midiMapTable);
@@ -345,6 +395,8 @@ void PluginEditor::reloadLibraryFromTroubleshooting() {
     this->refreshInstrumentConfigIfNeeded(true);
     if (this->kitHomePanel)
         this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+    if (this->kitBrowserComponent)
+        this->kitBrowserComponent->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
     if (this->troubleshootingPanel)
         this->troubleshootingPanel->refresh();
     this->statusBar.setStatusText("Library reloaded. " + engine.getLastInstrumentMapStatus());
@@ -598,6 +650,9 @@ void PluginEditor::setViewMode(ViewMode mode) {
     if (mode == ViewMode::Kit)
         this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 
+    if (mode == ViewMode::Browse)
+        this->kitBrowserComponent->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+
     if (mode == ViewMode::Zone) {
         this->refreshDrumPadGridIfNeeded();
     }
@@ -609,6 +664,7 @@ void PluginEditor::setViewMode(ViewMode mode) {
         this->refreshInstrumentConfigIfNeeded();
 
     this->resized();
+    this->statusBar.setUiActive(mode == ViewMode::Playground);
 }
 
 void PluginEditor::showCrosstalkPopup() {
@@ -665,6 +721,7 @@ void PluginEditor::dismissCrosstalkPopup() {
 
 void PluginEditor::showComponentsForMode(ViewMode mode) {
     this->kitHomePanel->setVisible(mode == ViewMode::Kit);
+    this->kitBrowserComponent->setVisible(mode == ViewMode::Browse);
 
     // Drum pad grid - visible for Zone
     this->drumPadGrid.setVisible(mode == ViewMode::Zone);
@@ -710,6 +767,10 @@ void PluginEditor::resized() {
     switch (this->activeMode) {
         case ViewMode::Kit:
             this->kitHomePanel->setBounds(mainArea);
+            break;
+
+        case ViewMode::Browse:
+            this->kitBrowserComponent->setBounds(mainArea);
             break;
 
         case ViewMode::Zone:

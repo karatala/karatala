@@ -6,6 +6,7 @@
 
 enum class ViewMode {
     Kit = 0,
+    Browse,
     Map,
     Zone,
     Instrument,
@@ -31,7 +32,6 @@ public:
     ParameterSlider velocityKnob;
     ParameterSlider hihatKnob;
     ParameterSlider rrLockKnob;
-    juce::TextButton inspectButton { "?" };
 
 private:
     static constexpr int buttonSize = UITheme::Sizes::modeButton;

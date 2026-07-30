@@ -148,6 +148,32 @@ TEST_CASE("KitLib - LibraryManager resolves shortest unique kit identity", "[Dru
     CHECK(manager.getPreferredKitId(*mit) == "SameName by SameAuthor [MIT]");
 }
 
+TEST_CASE("KitLib - LibraryManager loads kit README text", "[DrumKitSpec][metadata]") {
+    auto root = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-kit-readme", "", false);
+    REQUIRE(root.createDirectory());
+
+    struct TempDirCleanup {
+        juce::File file;
+        ~TempDirCleanup() { this->file.deleteRecursively(); }
+    } cleanup { root };
+
+    auto kitDirectory = root.getChildFile("README Kit by Author [MIT]");
+    REQUIRE(kitDirectory.createDirectory());
+    REQUIRE(kitDirectory.getChildFile("README.md").replaceWithText("# Kit title\n\nPreview notes.\n"));
+    auto fallbackKitDirectory = root.getChildFile("Fallback Kit");
+    REQUIRE(fallbackKitDirectory.createDirectory());
+    REQUIRE(fallbackKitDirectory.getChildFile("readme.md").replaceWithText("Fallback README\n"));
+
+    LibraryManager manager(root);
+    REQUIRE(manager.scanAll() == 2);
+    const auto* readmeKit = manager.findKitById("README Kit");
+    const auto* fallbackKit = manager.findKitById("Fallback Kit");
+    REQUIRE(readmeKit != nullptr);
+    REQUIRE(fallbackKit != nullptr);
+    CHECK(readmeKit->readmeMarkdown == "# Kit title\n\nPreview notes.\n");
+    CHECK(fallbackKit->readmeMarkdown == "Fallback README\n");
+}
+
 TEST_CASE("KitLayout - parser reads slot routing metadata", "[KitLayout][yaml][routing]") {
     const juce::String yaml = R"yaml(
 id: routing

@@ -1074,6 +1074,9 @@ int LibraryManager::scanAll() {
         }
 
         auto kit = std::make_unique<DrumKitSpec>(parsedInfo.value);
+        auto readmeFile = kitDir.getChildFile("README.md");
+        if (!readmeFile.existsAsFile()) readmeFile = kitDir.getChildFile("readme.md");
+        if (readmeFile.existsAsFile()) kit->readmeMarkdown = readmeFile.loadFileAsString();
         const double metadataStartTimeMs = juce::Time::getMillisecondCounterHiRes();
         auto metadataResult = kit->sampleMetadata.loadFromKitRoot(kitDir);
         auto overrideResult = kit->sourceOverrides.loadFromKitRoot(kitDir);

@@ -4,13 +4,13 @@
 
 Sidebar::Sidebar() {
     this->modeButtons.add(new ModeButton(ViewMode::Kit, "Kit"));
+    this->modeButtons.add(new ModeButton(ViewMode::Browse, "Browse"));
     this->modeButtons.add(new ModeButton(ViewMode::Instrument, "Inst"));
     this->modeButtons.add(new ModeButton(ViewMode::Zone, "Zone"));
     this->modeButtons.add(new ModeButton(ViewMode::Map, "Map"));
     this->modeButtons.add(new ModeButton(ViewMode::Raw, "Raw"));
     this->modeButtons.add(new ModeButton(ViewMode::Settings, "Conf"));
     this->modeButtons.add(new ModeButton(ViewMode::Fix, "Fix"));
-    this->modeButtons.add(new ModeButton(ViewMode::Playground, "UI"));
 
     for (auto* btn : this->modeButtons) {
         btn->onClick = [this, btn] {
@@ -53,10 +53,6 @@ Sidebar::Sidebar() {
     this->rrLockKnob.setValue(0.0, juce::dontSendNotification);
     this->rrLockKnob.onValueChange = [this] { this->updateKnobLabels(); };
     addAndMakeVisible(this->rrLockKnob);
-
-#if JUCE_DEBUG
-    addAndMakeVisible(this->inspectButton);
-#endif
 
     this->updateKnobLabels();
 
@@ -112,11 +108,6 @@ void Sidebar::resized() {
     this->hihatLabel.setBounds(hhArea.removeFromTop(14));
     this->hihatKnob.setBounds(hhArea.withSizeKeepingCentre(knobSize, knobSize));
 
-#if JUCE_DEBUG
-    bottomArea.removeFromBottom(4);
-    auto inspectArea = bottomArea.removeFromBottom(24);
-    this->inspectButton.setBounds(inspectArea.reduced(4, 0));
-#endif
 }
 
 void Sidebar::updateKnobLabels() {

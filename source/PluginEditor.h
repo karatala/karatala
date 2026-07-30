@@ -11,6 +11,7 @@
 #include "UI/CrosstalkCalibrationPopup.h"
 #include "UI/MidiMapTable.h"
 #include "UI/InstrumentConfigPanel.h"
+#include "UI/KitBrowserComponent.h"
 #include "UI/KitHomePanel.h"
 #include "UI/PadContextPopup.h"
 #include "UI/TroubleshootingPanel.h"
@@ -39,6 +40,9 @@ private:
 
     // Mode: Kit - first-run setup and instrument-map presets
     std::unique_ptr<KitHomePanel> kitHomePanel;
+
+    // Mode: Browse - library kits and instrument-map presets
+    std::unique_ptr<KitBrowserComponent> kitBrowserComponent;
 
     // Mode: Zone - drum pad grid
     DrumPadGrid drumPadGrid;
@@ -82,6 +86,7 @@ private:
     void refreshInstrumentConfigIfNeeded(bool force = false);
     void setupSidebarAndStatusBar();
     void setupKitMode();
+    void setupBrowseMode();
     void setupDrumPadGridMode();
     void setupRawMode();
     void setupMapMode();
@@ -92,6 +97,7 @@ private:
     void reloadLibraryFromTroubleshooting();
     void setupSidebarKnobs();
     void applyInstrumentMapFromEditor();
+    bool applyBrowserInstrumentMap(const juce::String& mapText, const juce::String& statusText);
 
         void refreshPresetList();
         void handlePresetSave();

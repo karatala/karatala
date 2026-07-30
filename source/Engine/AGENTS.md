@@ -5,7 +5,7 @@
 # Ownership
 
 - `InstrumentSynth*` owns per-instrument runtime tables, voices, note/controller handling, and rendering.
-- `KitLibModel*` owns parsed library metadata, including decay-envelope metadata.
+- `KitLibModel*` owns parsed library metadata, including decay-envelope metadata and kit README text loaded during library scanning.
 - `KitSourceOverrides*` owns sparse user-authored source corrections loaded from and saved to each kit's `kit-overrides.yml`.
 - `SampleLoader*` owns asynchronous sample loading and publication.
 - `DrumKitEngine*` coordinates instrument synths, layouts, persistence, and process-block flow.
