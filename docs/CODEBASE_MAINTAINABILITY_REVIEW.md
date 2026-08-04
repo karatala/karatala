@@ -295,7 +295,7 @@ Start with physical moves of existing member functions. Do not change behavior d
 | Current file | First physical split | Later logic split |
 | --- | --- | --- |
 | [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | ✅ `DrumKitEngineLibraryKitOverrides.cpp`, `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, and `DrumKitEngineMapApply.cpp` | ✅ `InstrumentMapApplyPlan` now carries prepared replacements, value-based parameter updates, fingerprints, and note routes into `commitInstrumentMapApply()`. Parsed map-layer pointers and velocity-response parsing stay outside the locked commit. |
-| [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | ✅ `InstrumentPlayerHiHat.cpp`, `InstrumentPlayerAftertouch.cpp`, and `InstrumentPlayerNotePlayback.cpp` | Divide the roughly 423-line hi-hat transition into bounded, allocation-free steps. Preserve voice order and accepted sound behavior. |
+| [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | ✅ `InstrumentPlayerHiHat.cpp`, `InstrumentPlayerAftertouch.cpp`, and `InstrumentPlayerNotePlayback.cpp` | ✅ Hi-hat selection, ordered per-voice transition, and finalization now use scalar state/stat records. Aftertouch choke uses a fixed 64-voice preparation plan and commits only after every target mic passes validation. |
 | [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | ✅ `PadContextPopupMapLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` | Add one owned linked-edit context for parsed map and projected targets. Never return pointers into temporary projection data. |
 | [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | ✅ `InstrumentPlayerLibraryUpdates.cpp`, `InstrumentPlayerParameters.cpp`, and `InstrumentPlayerRouting.cpp`; sample loading stays in the narrowed original file | Divide `createVelocityLevels()` into sound creation, logical-hit grouping, early-load selection, and queue submission. |
 | `KitLibModel.cpp` (removed) | ✅ `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` | Keep calibration with the instrument implementation unless it grows into a substantial independent module. Split `KitLibModel.h` later, starting with independent enums and small records. Parent pointers make an immediate full header split risky. |
@@ -491,7 +491,7 @@ benchmarks/
 ### Phase 5: Divide large workflows
 
 1. ✅ Divide instrument-map preparation from its locked commit.
-2. Divide hi-hat and aftertouch workflows into bounded realtime-safe steps.
+2. ✅ Divide hi-hat and aftertouch workflows into bounded realtime-safe steps.
 3. Add owned linked-edit state to `PadContextPopup`.
 4. Divide velocity-level construction into named phases.
 

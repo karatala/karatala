@@ -4,6 +4,44 @@
 #include "HiHatTransitionPolicy.h"
 #include <cmath>
 
+struct InstrumentPlayer::HiHatTransitionSettings {
+    float openCrossfadeSec = 0.0f;
+    float closeCrossfadeSec = 0.0f;
+    float tailMatchAmount = 0.0f;
+    float tailMatchBiasDb = 0.0f;
+    float attackGuardSec = 0.0f;
+    float minRemainingSec = 0.0f;
+    float silenceFloorDb = -100.0f;
+    HiHatMissingDecayPolicy missingDecayPolicy = HiHatMissingDecayPolicy::KeepTail;
+};
+
+struct InstrumentPlayer::HiHatControllerTransitionState {
+    size_t controllerIdx = 0;
+    int cachedArtIdx = -1;
+    uint8_t newArtIdx = 0;
+    bool enteredMostClosedState = false;
+    bool hasAudibleLowerPocVoice = false;
+    float loudestLowerPocDb = -100.0f;
+};
+
+struct InstrumentPlayer::HiHatTransitionStats {
+    int activeMismatchedVoices = 0;
+    int replacementsStarted = 0;
+    int skippedNoEnvelope = 0;
+    int skippedNoTarget = 0;
+    int skippedNoVoice = 0;
+    int skippedTooLate = 0;
+    int skippedNoDbMatch = 0;
+    int skippedSilentTarget = 0;
+    int skippedOther = 0;
+    int referenceOffsetReplacements = 0;
+    int fadedSilentTargets = 0;
+    bool encounteredTransientSkip = false;
+
+    int handledTransitions() const { return this->replacementsStarted + this->fadedSilentTargets; }
+    int totalSkipped() const { return this->skippedNoEnvelope + this->skippedNoTarget + this->skippedNoVoice + this->skippedTooLate + this->skippedNoDbMatch + this->skippedSilentTarget + this->skippedOther; }
+};
+
 int InstrumentPlayer::getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
     switch (dimensionType) {
         case KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose: return art.pedalOpenCloseValue;
@@ -321,19 +359,205 @@ std::optional<float> InstrumentPlayer::findHiHatReferenceOffsetMs(const Instrume
     return std::nullopt;
 }
 
+void InstrumentPlayer::transitionHiHatVoices(int midiChannel, const HiHatControllerTransitionState& transitionState, const HiHatTransitionSettings& transitionSettings, HiHatTransitionStats& stats) {
+    const uint8_t newArtIdx = transitionState.newArtIdx;
+    const float openCrossfadeSec = transitionSettings.openCrossfadeSec;
+    const float closeCrossfadeSec = transitionSettings.closeCrossfadeSec;
+    const float tailMatchAmount = transitionSettings.tailMatchAmount;
+    const float tailMatchBiasDb = transitionSettings.tailMatchBiasDb;
+    const float attackGuardSec = transitionSettings.attackGuardSec;
+    const float minRemainingSec = transitionSettings.minRemainingSec;
+    const float silenceFloorDb = transitionSettings.silenceFloorDb;
+    const auto missingDecayPolicy = transitionSettings.missingDecayPolicy;
+
+    for (auto* voice : this->voices) {
+        if (voice == nullptr || !voice->isVoiceActive()) continue;
+
+        auto* currentSound = voice->getCurrentlyPlayingSound();
+        if (currentSound == nullptr || currentSound->sampleSpec == nullptr) continue;
+
+        const int currentArtIdx = this->getVoiceRuntimeArticulationIdx(*voice);
+        if (currentArtIdx < 0 || currentArtIdx == static_cast<int>(newArtIdx)) continue;
+        ++stats.activeMismatchedVoices;
+
+        const auto& newArt = this->runtimeArticulations[static_cast<size_t>(newArtIdx)];
+        const juce::uint8 midiVelocity = voice->getMidiVelocity();
+        const int velocityLevelIdx = newArt.velocityToLevel[static_cast<size_t>(midiVelocity)];
+        if (velocityLevelIdx < 0 || velocityLevelIdx >= static_cast<int>(newArt.velocityLevels.size())) continue;
+        const auto& velocityLevel = newArt.velocityLevels[static_cast<size_t>(velocityLevelIdx)];
+
+        uint8_t currentRoundRobinId = 0;
+        if (currentSound->sampleSpec->parent != nullptr) currentRoundRobinId = currentSound->sampleSpec->parent->roundRobinId;
+
+        const int voiceMicStart = currentSound->micBufferChannelStart;
+        const InstrumentPlayer::SampleEntry* targetEntry = nullptr;
+        for (const auto& sampleEntry : velocityLevel.samples) {
+            if (sampleEntry.roundRobinId == currentRoundRobinId && sampleEntry.sound != nullptr && sampleEntry.sound->micBufferChannelStart == voiceMicStart) {
+                targetEntry = &sampleEntry;
+                break;
+            }
+        }
+        if (targetEntry == nullptr) {
+            for (const auto& sampleEntry : velocityLevel.samples) {
+                if (sampleEntry.roundRobinId == currentRoundRobinId) {
+                    targetEntry = &sampleEntry;
+                    break;
+                }
+            }
+        }
+        if (targetEntry == nullptr && !velocityLevel.samples.empty()) targetEntry = &velocityLevel.samples.front();
+        if (targetEntry == nullptr || targetEntry->sound == nullptr) {
+            ++stats.skippedNoTarget;
+            continue;
+        }
+
+        if (!targetEntry->sound->loaded.load(std::memory_order_acquire) || targetEntry->sound->buffer == nullptr) {
+            for (const auto& sampleEntry : velocityLevel.samples) {
+                if (sampleEntry.sound == nullptr || sampleEntry.sound->micBufferChannelStart != voiceMicStart || !sampleEntry.sound->loaded.load(std::memory_order_acquire) || sampleEntry.sound->buffer == nullptr) continue;
+                targetEntry = &sampleEntry;
+                break;
+            }
+            if (!targetEntry->sound->loaded.load(std::memory_order_acquire) || targetEntry->sound->buffer == nullptr) {
+                ++stats.skippedNoTarget;
+                continue;
+            }
+        }
+
+        const auto& oldEnvelope = currentSound->decayEnvelope;
+        const auto& newEnvelope = targetEntry->sound->decayEnvelope;
+        const double oldSampleRate = currentSound->sampleRate > 0.0 ? currentSound->sampleRate : 44100.0;
+        const float elapsedMs = static_cast<float>((voice->sourceSamplePosition / oldSampleRate) * 1000.0);
+        const float oldVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
+        const float targetVelocityGain = newArt.velocityGain[static_cast<size_t>(midiVelocity)];
+        const float targetVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, targetVelocityGain), -100.0f);
+        const float currentAudibleDb = oldEnvelope.isValid() ? oldEnvelope.getAbsoluteDbAtMs(elapsedMs) + oldVelocityDb : voice->getEstimatedCurrentDb();
+
+        const auto& targetBuffer = *targetEntry->sound->buffer;
+        const double targetSampleRate = targetEntry->sound->sampleRate > 0.0 ? targetEntry->sound->sampleRate : 44100.0;
+        const float sampleLengthMs = targetSampleRate > 0.0 ? static_cast<float>((static_cast<double>(targetBuffer.getNumSamples()) / targetSampleRate) * 1000.0) : 0.0f;
+        const HiHatTransitionPolicy::OffsetResult offsetResult = HiHatTransitionPolicy::calculateDecayMatchedOffset({
+            &oldEnvelope,
+            &newEnvelope,
+            elapsedMs,
+            currentAudibleDb,
+            targetVelocityDb,
+            sampleLengthMs,
+            attackGuardSec * 1000.0f,
+            silenceFloorDb,
+            tailMatchAmount,
+            tailMatchBiasDb,
+            minRemainingSec * 1000.0f,
+            missingDecayPolicy,
+        });
+        if (!offsetResult.succeeded()) {
+            switch (offsetResult.status) {
+                case HiHatTransitionPolicy::OffsetStatus::MissingEnvelope: ++stats.skippedNoEnvelope; break;
+                case HiHatTransitionPolicy::OffsetStatus::NoDecayMatch: ++stats.skippedNoDbMatch; break;
+                case HiHatTransitionPolicy::OffsetStatus::TooLittleRemaining: ++stats.skippedTooLate; break;
+                case HiHatTransitionPolicy::OffsetStatus::InvalidSampleLength: ++stats.skippedNoTarget; break;
+                case HiHatTransitionPolicy::OffsetStatus::AttackGuard:
+                    stats.encounteredTransientSkip = true;
+                    ++stats.skippedOther;
+                    break;
+                case HiHatTransitionPolicy::OffsetStatus::BelowSilenceFloor: ++stats.skippedOther; break;
+                case HiHatTransitionPolicy::OffsetStatus::Success: break;
+            }
+            continue;
+        }
+
+        double selectedOffsetMs = static_cast<double>(offsetResult.offsetMs);
+        InstrumentPlayerVoice* newVoice = nullptr;
+        for (auto* candidateVoice : this->voices) {
+            if (candidateVoice == nullptr || candidateVoice == voice) continue;
+            if (!candidateVoice->isVoiceActive()) {
+                newVoice = candidateVoice;
+                break;
+            }
+        }
+        if (newVoice == nullptr) {
+            ++stats.skippedNoVoice;
+            stats.encounteredTransientSkip = true;
+            continue;
+        }
+
+        const double targetSourceRate = targetEntry->sound->sampleRate > 0.0 ? targetEntry->sound->sampleRate : 44100.0;
+        const double offsetSamples = (selectedOffsetMs / 1000.0) * targetSourceRate;
+        double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
+        const auto& currentArt = this->runtimeArticulations[static_cast<size_t>(currentArtIdx)];
+        const auto transitionDirection = HiHatTransitionPolicy::getDirection(currentArt.pedalOpenCloseValue, newArt.pedalOpenCloseValue);
+        const float transitionCrossfadeSec = transitionDirection == HiHatTransitionPolicy::Direction::Closing ? closeCrossfadeSec : openCrossfadeSec;
+        bool usedReferenceOffset = false;
+        KitLib::MicSpec::Type referenceMicType = KitLib::MicSpec::Type::Unknown;
+
+        if (!this->isHiHatTransitionTargetAudible(*targetEntry->sound, clampedOffset, offsetResult.targetRelativeDb, silenceFloorDb)) {
+            const auto referenceOffsetMs = this->findHiHatReferenceOffsetMs(*voice, static_cast<ArtRtIdx>(currentArtIdx), newArt, velocityLevelIdx, currentRoundRobinId, *targetEntry->sound, referenceMicType);
+            if (referenceOffsetMs.has_value()) {
+                const double referenceOffsetSamples = (static_cast<double>(*referenceOffsetMs) / 1000.0) * targetSourceRate;
+                selectedOffsetMs = *referenceOffsetMs;
+                clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), referenceOffsetSamples);
+                usedReferenceOffset = true;
+                ++stats.referenceOffsetReplacements;
+            }
+
+            if (!usedReferenceOffset) {
+                ++stats.skippedSilentTarget;
+                if (transitionDirection == HiHatTransitionPolicy::Direction::Closing) {
+                    voice->requestFadeOut(closeCrossfadeSec);
+                    ++stats.fadedSilentTargets;
+                }
+                continue;
+            }
+        }
+
+        voice->requestFadeOut(transitionCrossfadeSec);
+        this->startVoice(newVoice, targetEntry->sound, midiChannel, voice->getCurrentlyPlayingNote(), targetVelocityGain);
+        newVoice->hitGroupId = targetEntry->sound->micBufferChannelStart;
+        newVoice->artNameId = newArt.nameId;
+        newVoice->artExprId = newArt.exprId;
+        newVoice->artRuntimeIdx = static_cast<ArtRtIdx>(newArtIdx);
+        newVoice->sourceSamplePosition = clampedOffset;
+        newVoice->setVelocityGain(targetVelocityGain);
+        newVoice->setMidiVelocity(midiVelocity);
+        ++stats.replacementsStarted;
+
+        if (LOG_ENABLED(Verbose)) {
+            juce::String oldArtCode = "unknown";
+            if (currentSound->sampleSpec != nullptr && currentSound->sampleSpec->parent != nullptr && currentSound->sampleSpec->parent->parent != nullptr && currentSound->sampleSpec->parent->parent->parent != nullptr) oldArtCode = currentSound->sampleSpec->parent->parent->parent->codeRaw;
+
+            juce::String newArtCode = "unknown";
+            if (targetEntry->sound->sampleSpec != nullptr && targetEntry->sound->sampleSpec->parent != nullptr && targetEntry->sound->sampleSpec->parent->parent != nullptr && targetEntry->sound->sampleSpec->parent->parent->parent != nullptr) newArtCode = targetEntry->sound->sampleSpec->parent->parent->parent->codeRaw;
+
+            const juce::String sampleName = targetEntry->sound->sampleSpec != nullptr ? targetEntry->sound->sampleSpec->sampleFile.getFileName() : juce::String("unknown");
+            LOG(Verbose, "PedalVoiceStart inst=" + this->getId()
+                + " ch=" + juce::String(midiChannel)
+                + " note=" + juce::String(voice->getCurrentlyPlayingNote())
+                + " vel=" + juce::String(targetVelocityGain, 3)
+                + " fromArt=" + oldArtCode
+                + " toArt=" + newArtCode
+                + " micStart=" + juce::String(targetEntry->sound->micBufferChannelStart)
+                + " micCount=" + juce::String(targetEntry->sound->micBufferChannelCount)
+                + " offsetMs=" + juce::String(selectedOffsetMs, 2)
+                + " offsetSource=" + (usedReferenceOffset ? (referenceMicType == KitLib::MicSpec::Type::Direct ? juce::String("direct") : juce::String("overhead")) : juce::String("own"))
+                + " offsetSamples=" + juce::String(clampedOffset, 2)
+                + " sample=" + sampleName);
+        }
+    }
+}
+
 void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue) {
     this->processedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     const auto controllerIdx = static_cast<size_t>(controllerNumber);
     const auto& settings = this->parent->getEngineSettings();
-    const float openCrossfadeSec = settings.hihatOpenCrossfadeSec.load();
-    const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
+    HiHatTransitionSettings transitionSettings;
+    transitionSettings.openCrossfadeSec = settings.hihatOpenCrossfadeSec.load();
+    transitionSettings.closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
+    transitionSettings.tailMatchAmount = settings.hihatTailMatchAmount.load();
+    transitionSettings.tailMatchBiasDb = settings.hihatTailMatchBiasDb.load();
+    transitionSettings.attackGuardSec = settings.hihatTransitionAttackGuardSec.load();
+    transitionSettings.minRemainingSec = settings.hihatTransitionMinRemainingSec.load();
+    transitionSettings.silenceFloorDb = settings.hihatTransitionSilenceFloorDb.load();
+    transitionSettings.missingDecayPolicy = settings.hihatMissingDecayPolicy.load();
     const int boundaryHysteresisCc = settings.hihatBoundaryHysteresisCc.load();
-    const float tailMatchAmount = settings.hihatTailMatchAmount.load();
-    const float tailMatchBiasDb = settings.hihatTailMatchBiasDb.load();
-    const float attackGuardSec = settings.hihatTransitionAttackGuardSec.load();
-    const float minRemainingSec = settings.hihatTransitionMinRemainingSec.load();
-    const float silenceFloorDb = settings.hihatTransitionSilenceFloorDb.load();
-    const auto missingDecayPolicy = settings.hihatMissingDecayPolicy.load();
 
     // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
     // so new more open sample plays from offset based on rms level, for example we have analyzed data
@@ -413,7 +637,7 @@ void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int con
             continue;
 
         const float voiceAudibleDb = voice->getEstimatedCurrentDb();
-        if (voiceAudibleDb < silenceFloorDb)
+        if (voiceAudibleDb < transitionSettings.silenceFloorDb)
             continue;
         hasAudibleLowerPocVoice = true;
         loudestLowerPocDb = juce::jmax(loudestLowerPocDb, voiceAudibleDb);
@@ -435,313 +659,79 @@ void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int con
     if (LOG_ENABLED(Verbose))
         LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 
-    int activeMismatchedVoices = 0;
-    int replacementsStarted = 0;
-    int skippedNoEnvelope = 0;
-    int skippedNoTarget = 0;
-    int skippedNoVoice = 0;
-    int skippedTooLate = 0;
-    int skippedNoDbMatch = 0;
-    int skippedSilentTarget = 0;
-    int skippedOther = 0;
-    int referenceOffsetReplacements = 0;
-    int fadedSilentTargets = 0;
-    bool encounteredTransientSkip = false;
+    HiHatControllerTransitionState transitionState;
+    transitionState.controllerIdx = controllerIdx;
+    transitionState.cachedArtIdx = cachedArtIdx;
+    transitionState.newArtIdx = newArtIdx;
+    transitionState.enteredMostClosedState = enteredMostClosedState;
+    transitionState.hasAudibleLowerPocVoice = hasAudibleLowerPocVoice;
+    transitionState.loudestLowerPocDb = loudestLowerPocDb;
+    HiHatTransitionStats stats;
+    this->transitionHiHatVoices(midiChannel, transitionState, transitionSettings, stats);
+    this->finalizeHiHatControllerTransition(midiChannel, controllerNumber, controllerValue, transitionState, stats, settings);
+}
 
-    // For each active voice, if its articulation differs from newArtIdx, crossfade
-    for (auto* voice : this->voices) {
-        if (voice == nullptr) continue;
-        if (!voice->isVoiceActive()) continue;
+void InstrumentPlayer::finalizeHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue, const HiHatControllerTransitionState& transitionState, const HiHatTransitionStats& stats, const EngineSettings& settings) {
+    const int handledTransitions = stats.handledTransitions();
+    if (handledTransitions > 0 || stats.activeMismatchedVoices == 0) this->lastCcArticulation[transitionState.controllerIdx] = static_cast<ArtRtIdx>(transitionState.newArtIdx);
+    this->lastCcValue[transitionState.controllerIdx] = controllerValue;
 
-        auto* ss = voice->getCurrentlyPlayingSound();
-        if (ss == nullptr || ss->sampleSpec == nullptr) continue;
-
-        const int currentArtIdx = this->getVoiceRuntimeArticulationIdx(*voice);
-        if (currentArtIdx < 0) continue;
-
-        if (currentArtIdx == static_cast<int>(newArtIdx)) continue; // already correct
-        ++activeMismatchedVoices;
-
-        // Now prepare to start a replacement voice from new articulation
-        const auto& newArt = this->runtimeArticulations[static_cast<size_t>(newArtIdx)];
-        // Choose the target velocityLevel from the original MIDI velocity, not from the calibrated output gain.
-        const juce::uint8 midiVelocity = voice->getMidiVelocity();
-        int velocityLevelIdx = newArt.velocityToLevel[static_cast<size_t>(midiVelocity)];
-        if (velocityLevelIdx < 0 || velocityLevelIdx >= static_cast<int>(newArt.velocityLevels.size())) continue;
-        const auto& velocityLevel = newArt.velocityLevels[static_cast<size_t>(velocityLevelIdx)];
-
-        // Find the round-robin ID of the current voice.
-        uint8_t currentRoundRobinId = 0;
-        if (ss->sampleSpec->parent != nullptr) currentRoundRobinId = ss->sampleSpec->parent->roundRobinId;
-
-        // Find the sample entry in the target velocity level with the same round-robin ID and mic channel,
-        // so each replacement voice writes to the same mic buffer channel as the
-        // voice it replaces (overhead stays overhead, room stays room, etc.).
-        const int voiceMicStart = ss->micBufferChannelStart;
-        const InstrumentPlayer::SampleEntry* targetSe = nullptr;
-        for (const auto& se : velocityLevel.samples) {
-            if (se.roundRobinId == currentRoundRobinId && se.sound != nullptr
-                && se.sound->micBufferChannelStart == voiceMicStart) {
-                targetSe = &se;
-                break;
-            }
-        }
-        // Fallback: match only the round-robin ID when articulations have different mic layouts.
-        if (targetSe == nullptr) {
-            for (const auto& se : velocityLevel.samples) {
-                if (se.roundRobinId == currentRoundRobinId) { targetSe = &se; break; }
-            }
-        }
-        if (targetSe == nullptr && !velocityLevel.samples.empty()) targetSe = &velocityLevel.samples.front();
-        if (targetSe == nullptr || targetSe->sound == nullptr) {
-            ++skippedNoTarget;
-            continue;
-        }
-
-        if (!targetSe->sound->loaded.load(std::memory_order_acquire) || targetSe->sound->buffer == nullptr) {
-            for (const auto& se : velocityLevel.samples) {
-                if (se.sound == nullptr) continue;
-                if (se.sound->micBufferChannelStart != voiceMicStart) continue;
-                if (!se.sound->loaded.load(std::memory_order_acquire)) continue;
-                if (se.sound->buffer == nullptr) continue;
-                targetSe = &se;
-                break;
-            }
-            if (!targetSe->sound->loaded.load(std::memory_order_acquire) || targetSe->sound->buffer == nullptr) {
-                ++skippedNoTarget;
-                continue;
-            }
-        }
-
-        // Compute the offset independently from this voice's mic-specific decay
-        // envelopes. Sharing one offset puts room replacements in pre-peak or
-        // near-silent regions because direct and room mics decay differently.
-        const auto& oldEnv = ss->decayEnvelope;
-        const auto& newEnv = targetSe->sound->decayEnvelope;
-        const double oldSrcRate = ss->sampleRate > 0.0 ? ss->sampleRate : 44100.0;
-        const float elapsedMs = static_cast<float>((voice->sourceSamplePosition / oldSrcRate) * 1000.0);
-
-        const float oldVelDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, voice->getVelocityGain()), -100.0f);
-        const float targetVelocityGain = newArt.velocityGain[static_cast<size_t>(midiVelocity)];
-        const float targetVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, targetVelocityGain), -100.0f);
-        const float currentAudibleDb = oldEnv.isValid()
-            ? oldEnv.getAbsoluteDbAtMs(elapsedMs) + oldVelDb
-            : voice->getEstimatedCurrentDb();
-
-        const auto& targetBuffer = *targetSe->sound->buffer;
-        const double targetSrcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-        const float sampleLengthMs = targetSrcRate > 0.0
-            ? static_cast<float>((static_cast<double>(targetBuffer.getNumSamples()) / targetSrcRate) * 1000.0)
-            : 0.0f;
-        const HiHatTransitionPolicy::OffsetResult offsetResult = HiHatTransitionPolicy::calculateDecayMatchedOffset({
-            &oldEnv,
-            &newEnv,
-            elapsedMs,
-            currentAudibleDb,
-            targetVelocityDb,
-            sampleLengthMs,
-            attackGuardSec * 1000.0f,
-            silenceFloorDb,
-            tailMatchAmount,
-            tailMatchBiasDb,
-            minRemainingSec * 1000.0f,
-            missingDecayPolicy,
-        });
-        if (!offsetResult.succeeded()) {
-            switch (offsetResult.status) {
-                case HiHatTransitionPolicy::OffsetStatus::MissingEnvelope:
-                    ++skippedNoEnvelope;
-                    break;
-                case HiHatTransitionPolicy::OffsetStatus::NoDecayMatch:
-                    ++skippedNoDbMatch;
-                    break;
-                case HiHatTransitionPolicy::OffsetStatus::TooLittleRemaining:
-                    ++skippedTooLate;
-                    break;
-                case HiHatTransitionPolicy::OffsetStatus::InvalidSampleLength:
-                    ++skippedNoTarget;
-                    break;
-                case HiHatTransitionPolicy::OffsetStatus::AttackGuard:
-                    encounteredTransientSkip = true;
-                    ++skippedOther;
-                    break;
-                case HiHatTransitionPolicy::OffsetStatus::BelowSilenceFloor:
-                    ++skippedOther;
-                    break;
-                case HiHatTransitionPolicy::OffsetStatus::Success:
-                    break;
-            }
-            continue;
-        }
-
-        const float targetRelativeDb = offsetResult.targetRelativeDb;
-        const float clampedMs = offsetResult.offsetMs;
-
-        double selectedOffsetMs = static_cast<double>(clampedMs);
-
-        // For pedal transitions, never steal active voices. If no idle voice exists,
-        // keep the old voice ringing instead of risking an abrupt mute.
-        InstrumentPlayerVoice* newVoice = nullptr;
-        for (auto* candidate : this->voices) {
-            if (candidate == nullptr || candidate == voice) continue;
-            if (!candidate->isVoiceActive()) {
-                newVoice = candidate;
-                break;
-            }
-        }
-
-        if (newVoice == nullptr) {
-            ++skippedNoVoice;
-            encounteredTransientSkip = true;
-            continue;
-        }
-
-        const double srcRate = targetSe->sound->sampleRate > 0.0 ? targetSe->sound->sampleRate : 44100.0;
-        const double offsetSamples = (selectedOffsetMs / 1000.0) * srcRate;
-        double clampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), offsetSamples);
-
-        const auto& currentArt = this->runtimeArticulations[static_cast<size_t>(currentArtIdx)];
-        const auto transitionDirection = HiHatTransitionPolicy::getDirection(currentArt.pedalOpenCloseValue, newArt.pedalOpenCloseValue);
-        const float transitionCrossfadeSec = transitionDirection == HiHatTransitionPolicy::Direction::Closing ? closeCrossfadeSec : openCrossfadeSec;
-        bool usedReferenceOffset = false;
-        KitLib::MicSpec::Type referenceMicType = KitLib::MicSpec::Type::Unknown;
-
-        // Guard against replacing with an effectively silent region.
-        // Use a threshold relative to the expected decay-envelope level. Quiet
-        // overhead and room content at -60 to -80 dB can still be legitimate.
-        // Only skip if measured content is >24dB below the envelope's prediction
-        // (indicating corrupt/empty sample), with an absolute floor at -90dB
-        // to catch true digital silence.
-        if (!this->isHiHatTransitionTargetAudible(*targetSe->sound, clampedOffset, targetRelativeDb, silenceFloorDb)) {
-            const auto referenceOffsetMs = this->findHiHatReferenceOffsetMs(*voice, static_cast<ArtRtIdx>(currentArtIdx), newArt, velocityLevelIdx, currentRoundRobinId, *targetSe->sound, referenceMicType);
-            if (referenceOffsetMs.has_value()) {
-                const double referenceOffsetSamples = (static_cast<double>(*referenceOffsetMs) / 1000.0) * srcRate;
-                const double referenceClampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), referenceOffsetSamples);
-                selectedOffsetMs = *referenceOffsetMs;
-                clampedOffset = referenceClampedOffset;
-                usedReferenceOffset = true;
-                ++referenceOffsetReplacements;
-            }
-
-            if (!usedReferenceOffset) {
-                ++skippedSilentTarget;
-                if (transitionDirection == HiHatTransitionPolicy::Direction::Closing) {
-                    voice->requestFadeOut(closeCrossfadeSec);
-                    ++fadedSilentTargets;
-                }
-                continue;
-            }
-        }
-
-        voice->requestFadeOut(transitionCrossfadeSec);
-
-        this->startVoice(newVoice, targetSe->sound, midiChannel, voice->getCurrentlyPlayingNote(), targetVelocityGain);
-        newVoice->hitGroupId = targetSe->sound->micBufferChannelStart;
-        newVoice->artNameId = newArt.nameId;
-        newVoice->artExprId = newArt.exprId;
-        newVoice->artRuntimeIdx = static_cast<ArtRtIdx>(newArtIdx);
-        newVoice->sourceSamplePosition = clampedOffset;
-        newVoice->setVelocityGain(targetVelocityGain);
-        newVoice->setMidiVelocity(midiVelocity);
-        ++replacementsStarted;
-
-        if (LOG_ENABLED(Verbose)) {
-            juce::String oldArtCode = "unknown";
-            if (ss->sampleSpec != nullptr && ss->sampleSpec->parent != nullptr && ss->sampleSpec->parent->parent != nullptr && ss->sampleSpec->parent->parent->parent != nullptr)
-                oldArtCode = ss->sampleSpec->parent->parent->parent->codeRaw;
-
-            juce::String newArtCode = "unknown";
-            if (targetSe->sound != nullptr && targetSe->sound->sampleSpec != nullptr
-                && targetSe->sound->sampleSpec->parent != nullptr
-                && targetSe->sound->sampleSpec->parent->parent != nullptr
-                && targetSe->sound->sampleSpec->parent->parent->parent != nullptr)
-                newArtCode = targetSe->sound->sampleSpec->parent->parent->parent->codeRaw;
-
-            juce::String sampleName = "unknown";
-            if (targetSe->sound != nullptr && targetSe->sound->sampleSpec != nullptr)
-                sampleName = targetSe->sound->sampleSpec->sampleFile.getFileName();
-
-            LOG(Verbose, "PedalVoiceStart inst=" + this->getId()
-                + " ch=" + juce::String(midiChannel)
-                + " note=" + juce::String(voice->getCurrentlyPlayingNote())
-                + " vel=" + juce::String(targetVelocityGain, 3)
-                + " fromArt=" + oldArtCode
-                + " toArt=" + newArtCode
-                + " micStart=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelStart : -1)
-                + " micCount=" + juce::String(targetSe->sound ? targetSe->sound->micBufferChannelCount : 0)
-                + " offsetMs=" + juce::String(selectedOffsetMs, 2)
-                + " offsetSource=" + (usedReferenceOffset ? (referenceMicType == KitLib::MicSpec::Type::Direct ? juce::String("direct") : juce::String("overhead")) : juce::String("own"))
-                + " offsetSamples=" + juce::String(clampedOffset, 2)
-                + " sample=" + sampleName);
-        }
-
-    }
-
-    // Only cache new articulation once at least one replacement starts, or when
-    // there were no active mismatched voices to transition.
-    const int handledTransitions = replacementsStarted + fadedSilentTargets;
-    if (handledTransitions > 0 || activeMismatchedVoices == 0)
-        this->lastCcArticulation[controllerIdx] = static_cast<ArtRtIdx>(newArtIdx);
-    this->lastCcValue[controllerIdx] = controllerValue;
-
-    if (handledTransitions == 0 && activeMismatchedVoices > 0 && encounteredTransientSkip) {
-        this->pendingCcArticulation[controllerIdx] = static_cast<ArtRtIdx>(newArtIdx);
-        this->pendingCcTransition[controllerIdx] = true;
+    if (handledTransitions == 0 && stats.activeMismatchedVoices > 0 && stats.encounteredTransientSkip) {
+        this->pendingCcArticulation[transitionState.controllerIdx] = static_cast<ArtRtIdx>(transitionState.newArtIdx);
+        this->pendingCcTransition[transitionState.controllerIdx] = true;
     }
 
     const auto footSampleMode = settings.hihatFootSampleMode.load();
-    const auto controllerDirection = cachedArtIdx >= 0 && cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())
+    const auto controllerDirection = transitionState.cachedArtIdx >= 0 && transitionState.cachedArtIdx < static_cast<int>(this->runtimeArticulations.size())
         ? HiHatTransitionPolicy::getDirection(
-            this->runtimeArticulations[static_cast<size_t>(cachedArtIdx)].pedalOpenCloseValue,
-            this->runtimeArticulations[static_cast<size_t>(newArtIdx)].pedalOpenCloseValue)
+            this->runtimeArticulations[static_cast<size_t>(transitionState.cachedArtIdx)].pedalOpenCloseValue,
+            this->runtimeArticulations[static_cast<size_t>(transitionState.newArtIdx)].pedalOpenCloseValue)
         : HiHatTransitionPolicy::Direction::Unknown;
     const bool isClosingTransition = controllerDirection == HiHatTransitionPolicy::Direction::Closing;
     const bool shouldTriggerPedal = footSampleMode != HiHatFootSampleMode::Off
         && isClosingTransition
-        && enteredMostClosedState
-        && this->hihatImplicitPedalEligible[controllerIdx]
-        && hasAudibleLowerPocVoice;
-    if (shouldTriggerPedal)
-        this->triggerHiHatPedalSample(midiChannel, loudestLowerPocDb);
-    if (enteredMostClosedState)
-        this->hihatImplicitPedalEligible[controllerIdx] = false;
+        && transitionState.enteredMostClosedState
+        && this->hihatImplicitPedalEligible[transitionState.controllerIdx]
+        && transitionState.hasAudibleLowerPocVoice;
+    if (shouldTriggerPedal) this->triggerHiHatPedalSample(midiChannel, transitionState.loudestLowerPocDb);
+    if (transitionState.enteredMostClosedState) this->hihatImplicitPedalEligible[transitionState.controllerIdx] = false;
 
     if (handledTransitions > 0)
         this->completedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
-    else if (activeMismatchedVoices > 0)
+    else if (stats.activeMismatchedVoices > 0)
         this->skippedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
 
-    if (LOG_ENABLED(Verbose) && activeMismatchedVoices > 0 && handledTransitions == 0) {
+    if (LOG_ENABLED(Verbose) && stats.activeMismatchedVoices > 0 && handledTransitions == 0) {
         LOG(Verbose, "HiHat pedal transition skipped: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
-            + " targetArt=" + juce::String((int)newArtIdx)
-            + " activeMismatchedVoices=" + juce::String(activeMismatchedVoices)
-            + " reasons{noEnv=" + juce::String(skippedNoEnvelope)
-            + ", noTarget=" + juce::String(skippedNoTarget)
-            + ", noVoice=" + juce::String(skippedNoVoice)
-            + ", tooLate=" + juce::String(skippedTooLate)
-            + ", noDbMatch=" + juce::String(skippedNoDbMatch)
-            + ", silentTarget=" + juce::String(skippedSilentTarget)
-            + ", other=" + juce::String(skippedOther) + "}"
+            + " targetArt=" + juce::String(static_cast<int>(transitionState.newArtIdx))
+            + " activeMismatchedVoices=" + juce::String(stats.activeMismatchedVoices)
+            + " reasons{noEnv=" + juce::String(stats.skippedNoEnvelope)
+            + ", noTarget=" + juce::String(stats.skippedNoTarget)
+            + ", noVoice=" + juce::String(stats.skippedNoVoice)
+            + ", tooLate=" + juce::String(stats.skippedTooLate)
+            + ", noDbMatch=" + juce::String(stats.skippedNoDbMatch)
+            + ", silentTarget=" + juce::String(stats.skippedSilentTarget)
+            + ", other=" + juce::String(stats.skippedOther) + "}"
         );
     }
 
-    const int totalSkipped = skippedNoEnvelope + skippedNoTarget + skippedNoVoice + skippedTooLate + skippedNoDbMatch + skippedSilentTarget + skippedOther;
+    const int totalSkipped = stats.totalSkipped();
     if (LOG_ENABLED(Verbose) && handledTransitions > 0 && totalSkipped > 0) {
         LOG(Verbose, "HiHat pedal transition partial: cc=" + juce::String(controllerNumber)
             + " value=" + juce::String(controllerValue)
-            + " targetArt=" + juce::String((int)newArtIdx)
-            + " started=" + juce::String(replacementsStarted)
-            + " referenceOffsets=" + juce::String(referenceOffsetReplacements)
-            + " fadedSilent=" + juce::String(fadedSilentTargets)
+            + " targetArt=" + juce::String(static_cast<int>(transitionState.newArtIdx))
+            + " started=" + juce::String(stats.replacementsStarted)
+            + " referenceOffsets=" + juce::String(stats.referenceOffsetReplacements)
+            + " fadedSilent=" + juce::String(stats.fadedSilentTargets)
             + " skipped=" + juce::String(totalSkipped)
-            + " reasons{noEnv=" + juce::String(skippedNoEnvelope)
-            + ", noTarget=" + juce::String(skippedNoTarget)
-            + ", noVoice=" + juce::String(skippedNoVoice)
-            + ", tooLate=" + juce::String(skippedTooLate)
-            + ", noDbMatch=" + juce::String(skippedNoDbMatch)
-            + ", silentTarget=" + juce::String(skippedSilentTarget)
-            + ", other=" + juce::String(skippedOther) + "}"
+            + " reasons{noEnv=" + juce::String(stats.skippedNoEnvelope)
+            + ", noTarget=" + juce::String(stats.skippedNoTarget)
+            + ", noVoice=" + juce::String(stats.skippedNoVoice)
+            + ", tooLate=" + juce::String(stats.skippedTooLate)
+            + ", noDbMatch=" + juce::String(stats.skippedNoDbMatch)
+            + ", silentTarget=" + juce::String(stats.skippedSilentTarget)
+            + ", other=" + juce::String(stats.skippedOther) + "}"
         );
     }
 }

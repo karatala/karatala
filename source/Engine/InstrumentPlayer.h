@@ -738,10 +738,20 @@ private:
     LogicalHitRuntime* chooseLogicalHit(VelocityLevelRuntime& velocityLevel);
     bool hasReadyLogicalHit(const VelocityLevelRuntime& velocityLevel) const;
     void cullMaskedVoices(const VelocityLevelRuntime& velocityLevel, uint8_t chosenRoundRobinId, int midiChannel, int midiNoteNumber, float newVelocity);
+    struct HiHatTransitionSettings;
+    struct HiHatControllerTransitionState;
+    struct HiHatTransitionStats;
     void processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue);
+    void transitionHiHatVoices(int midiChannel, const HiHatControllerTransitionState& transitionState, const HiHatTransitionSettings& transitionSettings, HiHatTransitionStats& stats);
+    void finalizeHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue, const HiHatControllerTransitionState& transitionState, const HiHatTransitionStats& stats, const EngineSettings& settings);
     void processPendingHiHatControllers();
     bool triggerHiHatPedalSample(int midiChannel, float sourceAudibleDb);
+    struct AftertouchChokePlan;
     bool triggerAftertouchChokeSample(int midiChannel, int midiNoteNumber);
+    bool prepareAftertouchChokePlan(int midiChannel, int midiNoteNumber, AftertouchChokePlan& plan);
+    void commitAftertouchChokePlan(int midiChannel, int midiNoteNumber, const AftertouchChokePlan& plan);
+    InstrumentPlayerVoice* findAftertouchChokeSourceVoice(const SampledSound& referenceSound, int midiChannel, int midiNoteNumber, int micBufferChannelStart, KitLib::MicSpec::Type fallbackMicType) const;
+    std::optional<double> calculateAftertouchChokeTargetOffset(const InstrumentPlayerVoice& sourceVoice, const SampledSound& targetSound, float targetVelocityDb, const EngineSettings& settings) const;
     void resetAftertouchChokeGesture(int midiChannel, int midiNoteNumber);
     // Hi-hat only: fade out active voices whose pedalOpenCloseValue is strictly less than newArtPedalOpenCloseValue,
     // implementing the rule: tighter/more-closed articulations choke more-open ringing voices.
