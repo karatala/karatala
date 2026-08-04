@@ -6,7 +6,8 @@
 
 - `UITheme.h` and `LookAndFeel*` own shared visual tokens and JUCE drawing behavior.
 - `ThemePlaygroundPanel.*` owns the live component, font, and color inventory used to review theme consistency.
-- `LibraryArticulationEditor.*` currently owns library kit corrections, previews, copied measurements, and live recipe status.
+- `LibraryArticulationEditor.cpp` owns the main component and view. `LibraryArticulationEditorState.cpp` owns model, selection, persistence, and edit state. `LibraryArticulationEditorPreview.cpp` owns preview interaction.
+- `PadContextPopup.cpp` owns the main popup and layout. `PadContextPopupMapLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` own their named UI workflows.
 - `KitPage.*` owns complete library-kit loading, preview, and instrument-map preset actions.
 - `CompactModalDialog` owns small editor-contained value-entry and confirmation dialogs.
 - Reusable controls live in `Parameter*`, `CompactParameterControl`, `HorizontalKnobBrick`, MIDI assignment, popup, and helper classes.

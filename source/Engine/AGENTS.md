@@ -4,16 +4,16 @@
 
 # Ownership
 
-- `InstrumentPlayer*` owns per-instrument runtime tables, voices, note/controller handling, and rendering.
+- `InstrumentPlayer*` owns per-instrument runtime tables, voices, loading, routing, parameters, note/controller handling, and rendering. `InstrumentPlayerHiHat.cpp`, `InstrumentPlayerAftertouch.cpp`, and `InstrumentPlayerNotePlayback.cpp` own their named realtime workflows.
 - `ArticulationNames.h` owns shared articulation-name normalization and matching.
 - `InstrumentType*` owns the narrow shared instrument type and its text conversions.
 - `InstrumentCatalog*` owns instrument families, aliases, and mic selector matching.
 - `InstrumentMap/` owns instrument-map data, text parsing, normalized serialization, and shared identity matching.
 - `ArticulationSlotFallbackRules.h` owns built-in and user-overridden articulation-slot fallback order for whole-instrument map generation.
-- `KitLibModel*` owns parsed library metadata, including decay-envelope metadata and kit README text loaded during library scanning.
+- `KitLibModel.h` declares parsed library metadata. `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` own value types, instrument/sample parsing, and kit/library scanning.
 - `LibraryKitOverrides*` owns sparse user-authored library kit corrections loaded from and saved to each kit's `kit-overrides.yml`.
 - `SampleLoader*` owns asynchronous sample loading and publication.
-- `DrumKitEngine*` coordinates instrument players, layouts, persistence, and process-block flow.
+- `DrumKitEngine.cpp` owns core lifecycle and process-block coordination. `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, `DrumKitEngineLibraryKitOverrides.cpp`, and `DrumKitEngineMapApply.cpp` own their named workflows.
 - `LayoutManager*` owns kit and mic layout models plus generic layout discovery. `LayoutYaml.cpp` owns YAML parsing, validation, and serialization.
 - `MicRoutingPlan*` owns resolved output allocation and mic-route lookup.
 

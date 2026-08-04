@@ -5,7 +5,7 @@
 # Ownership
 
 - `PluginProcessor.*` owns the audio-processor entry point and state integration.
-- `PluginEditor.*` owns the top-level editor composition.
+- `PluginEditor.cpp` owns top-level editor composition, page coordination, and layout. `PluginEditorPresetsAndPopups.cpp` owns editor preset actions and popup lifecycle.
 - `Types.h` owns plugin-wide shared types.
 - Domain-specific behavior belongs in the indexed child folders.
 

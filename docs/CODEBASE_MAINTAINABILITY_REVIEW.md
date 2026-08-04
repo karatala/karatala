@@ -1,6 +1,6 @@
 # Codebase Maintainability Review
 
-Status: static review complete. Project decisions updated on 2026-07-31. Phases 1 and 2 were implemented on 2026-08-04. Completed work is marked with ✅.
+Status: static review complete. Project decisions updated on 2026-07-31. Phases 1 to 3 and the production part of Phase 4 were implemented on 2026-08-04. Completed work is marked with ✅.
 
 ## Scope and limits
 
@@ -51,7 +51,7 @@ Recommended order:
 | [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp) | 1,394 | View, state, persistence, preview, and input are together. |
 | [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | 1,375 | Large realtime controller and aftertouch workflows are together. |
 | [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | 1,343 | Loading, live updates, parameters, and routing are together. |
-| [KitLibModel.cpp](../source/Engine/KitLibModel.cpp) | 1,168 | Model parsing, calibration, sample scanning, and library scanning are together. |
+| `KitLibModel.cpp` (baseline file, now removed) | 1,168 | Model parsing, calibration, sample scanning, and library scanning were together. |
 | [InstrumentPlayer.h](../source/Engine/InstrumentPlayer.h) | 815 | Several public classes, runtime records, and inline logic are in one header. |
 | [KitLibModel.h](../source/Engine/KitLibModel.h) | 608 | Seven linked model types and several shared enums are in one header. |
 | [LayoutManager.h](../source/Engine/LayoutManager.h) | 543 | About 340 lines of YAML parsing, validation, and writing are in a header. |
@@ -172,17 +172,17 @@ The preset file operations remain private in `KitPage.cpp`. Do not extract an `I
 
 ### 2. Consolidate library item resolution
 
-[DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) repeats the library kit, instrument, articulation, and write-access lookup in eight library edit paths around lines 329-769.
+[DrumKitEngineLibraryKitOverrides.cpp](../source/Engine/DrumKitEngineLibraryKitOverrides.cpp) repeats the library kit, instrument, articulation, and write-access lookup in eight library edit paths.
 
 Add one small resolver for this library item chain. Keep lock ownership and pointer lifetime explicit. Keep the write-access decision at the caller.
 
 Do not return pointers that outlive the active library snapshot.
 
-The manual-gain and playback-offset paths also repeat moved-file recovery and ambiguity checks around lines 626-637 and 690-709. Extract the common sample target resolution, but keep mic-specific validation in the playback-offset path.
+The manual-gain and playback-offset paths also repeat moved-file recovery and ambiguity checks. Extract the common sample target resolution, but keep mic-specific validation in the playback-offset path.
 
 ### 3. Consolidate library item lookup in `PadContextPopup`
 
-[PadContextPopup.cpp](../source/UI/PadContextPopup.cpp), lines 262-402, resolves the same library item and articulation set twice. Only the final mic filter differs.
+[PadContextPopupRouting.cpp](../source/UI/PadContextPopupRouting.cpp) resolves the same library item and articulation set twice. Only the final mic filter differs.
 
 Add a private `resolveLibraryArticulationsForPath()` operation. Preserve these current rules:
 
@@ -195,7 +195,7 @@ Good small candidates:
 
 - ✅ [PluginEditor.cpp](../source/PluginEditor.cpp) now creates its processing suspension guard through one local operation. The guard remains before the callback lock at all four call sites.
 - ✅ The cohesive [Parsing.h](../source/Config/Parsing.h) and [Parsing.cpp](../source/Config/Parsing.cpp) module now owns parse results, wrapped-text parsing, and strict finite-float parsing. The float parser preserves full-input, range, finite-value, and locale behavior.
-- `parseSignedGainDb()` and `parseSignedOffsetMs()` in [KitLibModel.cpp](../source/Engine/KitLibModel.cpp), lines 67-117, can share one signed metadata number parser while retaining clear wrapper names.
+- `parseSignedGainDb()` and `parseSignedOffsetMs()` in [KitLibInstrument.cpp](../source/Engine/KitLibInstrument.cpp) can share one signed metadata number parser while retaining clear wrapper names.
 - Search term syntax is repeated in [KitPage.cpp](../source/UI/KitPage.cpp) and [SourcePickerPopup.cpp](../source/UI/SourcePickerPopup.cpp). Add one UI search matcher.
 - Sample load type groups are repeated in two large switches in [SampleLoader.cpp](../source/Engine/SampleLoader.cpp), lines 53-179. Use one local load-class classifier, but keep the special kick, snare, hi-hat, ride, crash, and tom rules explicit.
 - Data path resolution is repeated in [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp), lines 161-172, and [DrumKitEngineController.cpp](../source/Engine/DrumKitEngineController.cpp), lines 23-30. Use one constructor-independent data-path resolver.
@@ -243,7 +243,7 @@ There are now 8 files with `Helper` or `Helpers` in their name. The count is not
 | [YamlHelper.h](../source/Config/YamlHelper.h) and [YamlHelper.cpp](../source/Config/YamlHelper.cpp) | This is one cohesive YAML module. It can stay in `Config`. Rename it to `YamlParser` only when related code is already being changed. |
 | [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h) and its `.cpp` | ✅ Map data, parsing, serialization, and shared identity matching moved to `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`. The remaining operations no longer include the full engine. |
 | [ArticulationNames.h](../source/Engine/ArticulationNames.h) | ✅ Renamed by responsibility and kept as one cohesive `Engine` header. Create an articulation feature folder only if this module grows to several files. |
-| `DrumKitEnginePreviewHelpers.h` | ✅ Removed. Its one-use private logic is in `DrumKitEngine.cpp` until the planned engine preview file split. |
+| `DrumKitEnginePreviewHelpers.h` | ✅ Removed. Its one-use private logic is now in `DrumKitEnginePreview.cpp`. |
 | [UIHelpers.h](../source/UI/UIHelpers.h) and its `.cpp` | Split by concern. Control styling belongs in `UI/Controls/`. Keep library item building with `LibraryItem`. MIDI display and assignment operations stay with the MIDI controls. |
 | `KitHomePanelHelpers.h` | ✅ Removed with the old Kit page. Its one remaining preset-name operation is private in `KitPage.cpp`. |
 | `DrumPadHelpers.h` | ✅ Removed. Its private operations are in `DrumPad.cpp`. |
@@ -293,13 +293,13 @@ Start with physical moves of existing member functions. Do not change behavior d
 
 | Current file | First physical split | Later logic split |
 | --- | --- | --- |
-| [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | `DrumKitEngineLibraryKitOverrides.cpp`, `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, and `DrumKitEngineMapApply.cpp` | Divide the roughly 706-line `useInstrumentMapInternal()` into preparation without the graph lock and a short locked commit using named plan records. |
-| [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | `InstrumentPlayerHiHat.cpp`, `InstrumentPlayerAftertouch.cpp`, and a note playback implementation file | Divide the roughly 423-line hi-hat transition into bounded, allocation-free steps. Preserve voice order and accepted sound behavior. |
-| [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | `PadContextPopupMapLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` | Add one owned linked-edit context for parsed map and projected targets. Never return pointers into temporary projection data. |
-| [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | Library updates, parameter updates, routing, and sample loading implementation files | Divide `createVelocityLevels()` into sound creation, logical-hit grouping, early-load selection, and queue submission. |
-| [KitLibModel.cpp](../source/Engine/KitLibModel.cpp) | `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` | Keep calibration with the instrument implementation unless it grows into a substantial independent module. Split `KitLibModel.h` later, starting with independent enums and small records. Parent pointers make an immediate full header split risky. |
-| [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp) | Model, state and persistence, preview, and main component implementation files | Consider a separate selection state model only after the low-risk file split. |
-| [PluginEditor.cpp](../source/PluginEditor.cpp) | Preset store and popup implementation files | Keep the editor as the coordinator. Pass directories into stores instead of making stores depend on the full engine. |
+| [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | ✅ `DrumKitEngineLibraryKitOverrides.cpp`, `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, and `DrumKitEngineMapApply.cpp` | Divide the roughly 706-line `useInstrumentMapInternal()` into preparation without the graph lock and a short locked commit using named plan records. |
+| [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | ✅ `InstrumentPlayerHiHat.cpp`, `InstrumentPlayerAftertouch.cpp`, and `InstrumentPlayerNotePlayback.cpp` | Divide the roughly 423-line hi-hat transition into bounded, allocation-free steps. Preserve voice order and accepted sound behavior. |
+| [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | ✅ `PadContextPopupMapLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` | Add one owned linked-edit context for parsed map and projected targets. Never return pointers into temporary projection data. |
+| [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | ✅ `InstrumentPlayerLibraryUpdates.cpp`, `InstrumentPlayerParameters.cpp`, and `InstrumentPlayerRouting.cpp`; sample loading stays in the narrowed original file | Divide `createVelocityLevels()` into sound creation, logical-hit grouping, early-load selection, and queue submission. |
+| `KitLibModel.cpp` (removed) | ✅ `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` | Keep calibration with the instrument implementation unless it grows into a substantial independent module. Split `KitLibModel.h` later, starting with independent enums and small records. Parent pointers make an immediate full header split risky. |
+| [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp) | ✅ Main component, `LibraryArticulationEditorState.cpp`, and `LibraryArticulationEditorPreview.cpp` | Consider a separate selection state model only after the low-risk file split. |
+| [PluginEditor.cpp](../source/PluginEditor.cpp) | ✅ Main coordinator and `PluginEditorPresetsAndPopups.cpp` | Keep the editor as the coordinator. Split presets and popups only when either becomes a substantial independent module. |
 | [TestInstrumentPlayerVoiceGrouping.cpp](../tests/TestInstrumentPlayerVoiceGrouping.cpp) | Shared test support plus routing, hi-hat, rendering, and aftertouch test files | Do this after production boundaries are stable. More test files can make a clean test build slightly slower. |
 
 The file names above describe responsibility boundaries, not a required file-count target. Do not create separate decay, mic, calibration, kit, or manager implementation files when the result is only a small group of closely related functions. Prefer implementation files of roughly 300 to 800 lines, but allow smaller files when they provide a useful public dependency boundary.
@@ -415,10 +415,14 @@ Verification for this phase:
 
 ### Phase 4: Physical file splits
 
-Move existing member function definitions into the responsibility-based `.cpp` files listed above. Keep public interfaces and behavior unchanged.
+1. ✅ Split `DrumKitEngine`, `InstrumentPlayerController`, `InstrumentPlayerLoader`, and the `KitLibModel` implementation by responsibility.
+2. ✅ Split `PadContextPopup` and `LibraryArticulationEditor` by UI responsibility.
+3. ✅ Kept `PluginEditor` as the main coordinator and grouped its smaller preset and popup responsibilities in one secondary implementation file.
+4. Keep `TestInstrumentPlayerVoiceGrouping.cpp` together until the production split compiles and focused tests pass. Then divide it by behavior without changing test logic.
 
 Verification for this phase:
 
+- ✅ CMake source registration uses `GLOB_RECURSE CONFIGURE_DEPENDS`, so the new implementation files are included without a manual source list.
 - Review each move-only diff for accidental logic edits.
 - Run focused tests, then the full test target.
 - Do not add benchmarks for a pure file move.
