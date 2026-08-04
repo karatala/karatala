@@ -123,12 +123,12 @@ namespace KitLibCalibrationHelpers {
 static constexpr float MAX_POSITIVE_TRIM_DB = 36.0f;
 static constexpr float REQUIRED_HEADROOM_DB = 1.0f;
 
-static std::optional<int> referenceMicPriority(const KitLib::SampleVariantSpec& sampleVariant) {
-    if (!sampleVariant.intensityDb.has_value()) return std::nullopt;
-    if (sampleVariant.micSpec.raw.compareIgnoreCase("ons") == 0) return 0;
-    if (sampleVariant.micSpec.type == KitLib::MicSpec::Type::Overhead && sampleVariant.micSpec.position == KitLib::MicSpec::Position::Normal && sampleVariant.micSpec.format == KitLib::MicSpec::Format::Stereo) return 1;
-    if (sampleVariant.micSpec.type == KitLib::MicSpec::Type::Overhead && sampleVariant.micSpec.format == KitLib::MicSpec::Format::Stereo) return 2;
-    if (sampleVariant.micSpec.type == KitLib::MicSpec::Type::Overhead && sampleVariant.micSpec.format == KitLib::MicSpec::Format::MidSide) return 3;
+static std::optional<int> referenceMicPriority(const KitLib::SampleSpec& sample) {
+    if (!sample.intensityDb.has_value()) return std::nullopt;
+    if (sample.micSpec.raw.compareIgnoreCase("ons") == 0) return 0;
+    if (sample.micSpec.type == KitLib::MicSpec::Type::Overhead && sample.micSpec.position == KitLib::MicSpec::Position::Normal && sample.micSpec.format == KitLib::MicSpec::Format::Stereo) return 1;
+    if (sample.micSpec.type == KitLib::MicSpec::Type::Overhead && sample.micSpec.format == KitLib::MicSpec::Format::Stereo) return 2;
+    if (sample.micSpec.type == KitLib::MicSpec::Type::Overhead && sample.micSpec.format == KitLib::MicSpec::Format::MidSide) return 3;
     return std::nullopt;
 }
 
@@ -143,85 +143,78 @@ static float defaultGlobalTargetDb(uint8_t velocity) {
     return 20.0f * std::log10(static_cast<float>(juce::jmax(1, static_cast<int>(velocity))) / 127.0f);
 }
 
-static void buildLogicalHitMeasurements(KitLib::VelocityLayerSpec& velocityLayer) {
-    velocityLayer.logicalHitMeasurements.clear();
-    velocityLayer.rawVelocityMedianDb.reset();
-    velocityLayer.fittedSourceDb.reset();
-    velocityLayer.calibrationTrimDb.reset();
-    velocityLayer.calibrationLimited = false;
+static void buildLogicalHitMeasurements(KitLib::VelocityLevelSpec& velocityLevel) {
+    velocityLevel.rawVelocityMedianDb.reset();
+    velocityLevel.fittedSourceDb.reset();
+    velocityLevel.calibrationTrimDb.reset();
+    velocityLevel.calibrationLimited = false;
 
-    std::map<uint8_t, std::vector<KitLib::SampleVariantSpec*>> samplesByVariant;
-    for (const auto& sampleVariant : velocityLayer.sampleVariantSpecs) {
-        sampleVariant->timingOffsetMs.reset();
-        samplesByVariant[KitLib::SampleVariantSpec::letterToIdx(sampleVariant->letter)].push_back(sampleVariant.get());
+    for (const auto& logicalHit : velocityLevel.logicalHits) {
+        logicalHit->intensityDb.reset();
+        logicalHit->maxTruePeakDb.reset();
+        for (const auto& sample : logicalHit->samples) sample->timingOffsetMs.reset();
     }
 
-    for (auto& [variantIdx, linkedSamples] : samplesByVariant) {
-        for (const auto* sampleVariant : linkedSamples) {
-            if (!sampleVariant->hasCsvMetadata || !sampleVariant->truePeakDb.has_value()) {
-                velocityLayer.logicalHitMeasurements.clear();
-                return;
-            }
+    for (const auto& logicalHit : velocityLevel.logicalHits) {
+        for (const auto& sample : logicalHit->samples) {
+            if (!sample->hasCsvMetadata || !sample->truePeakDb.has_value()) return;
         }
-        KitLib::SampleVariantSpec* referenceSample = nullptr;
+        KitLib::SampleSpec* referenceSample = nullptr;
         int referencePriority = std::numeric_limits<int>::max();
-        for (auto* sampleVariant : linkedSamples) {
-            const auto priority = referenceMicPriority(*sampleVariant);
+        for (const auto& sample : logicalHit->samples) {
+            const auto priority = referenceMicPriority(*sample);
             if (!priority.has_value()) continue;
-            const bool samePriorityEarlierPath = referenceSample != nullptr && *priority == referencePriority && sampleVariant->sampleFile.getFullPathName().compare(referenceSample->sampleFile.getFullPathName()) < 0;
+            const bool samePriorityEarlierPath = referenceSample != nullptr && *priority == referencePriority && sample->sampleFile.getFullPathName().compare(referenceSample->sampleFile.getFullPathName()) < 0;
             if (referenceSample == nullptr || *priority < referencePriority || samePriorityEarlierPath) {
-                referenceSample = sampleVariant;
+                referenceSample = sample.get();
                 referencePriority = *priority;
             }
         }
-        if (referenceSample == nullptr) {
-            velocityLayer.logicalHitMeasurements.clear();
-            return;
-        }
+        if (referenceSample == nullptr) return;
 
-        KitLib::VelocityLayerSpec::LogicalHitMeasurement hitMeasurement;
-        hitMeasurement.variantIdx = variantIdx;
-        hitMeasurement.intensityDb = *referenceSample->intensityDb + referenceSample->manualGainDb;
+        logicalHit->intensityDb = *referenceSample->intensityDb + referenceSample->manualGainDb;
         std::optional<float> maxTruePeakDb;
-        for (auto* sampleVariant : linkedSamples) {
-            if (referenceSample->onsetMs.has_value() && sampleVariant->onsetMs.has_value()) sampleVariant->timingOffsetMs = *sampleVariant->onsetMs - *referenceSample->onsetMs;
-            if (!sampleVariant->truePeakDb.has_value()) continue;
-            const float effectiveTruePeakDb = *sampleVariant->truePeakDb + sampleVariant->manualGainDb;
+        for (const auto& sample : logicalHit->samples) {
+            if (referenceSample->onsetMs.has_value() && sample->onsetMs.has_value()) sample->timingOffsetMs = *sample->onsetMs - *referenceSample->onsetMs;
+            if (!sample->truePeakDb.has_value()) continue;
+            const float effectiveTruePeakDb = *sample->truePeakDb + sample->manualGainDb;
             if (!maxTruePeakDb.has_value() || effectiveTruePeakDb > *maxTruePeakDb) maxTruePeakDb = effectiveTruePeakDb;
         }
-        hitMeasurement.maxTruePeakDb = maxTruePeakDb;
-        velocityLayer.logicalHitMeasurements.push_back(hitMeasurement);
+        logicalHit->maxTruePeakDb = maxTruePeakDb;
     }
 
-    if (velocityLayer.logicalHitMeasurements.empty()) return;
+    if (velocityLevel.logicalHits.empty()) return;
     std::vector<float> hitIntensities;
-    hitIntensities.reserve(velocityLayer.logicalHitMeasurements.size());
-    for (const auto& hitMeasurement : velocityLayer.logicalHitMeasurements) hitIntensities.push_back(hitMeasurement.intensityDb);
-    velocityLayer.rawVelocityMedianDb = median(std::move(hitIntensities));
+    hitIntensities.reserve(velocityLevel.logicalHits.size());
+    for (const auto& logicalHit : velocityLevel.logicalHits) {
+        if (!logicalHit->intensityDb.has_value()) return;
+        hitIntensities.push_back(*logicalHit->intensityDb);
+    }
+    velocityLevel.rawVelocityMedianDb = median(std::move(hitIntensities));
 }
 
 static void fitMonotonicSourceProfile(KitLib::ArticulationSpec& articulation) {
     struct FitBlock {
-        std::vector<KitLib::VelocityLayerSpec*> layers;
+        std::vector<KitLib::VelocityLevelSpec*> velocityLevels;
         double weightedSum = 0.0;
         int weight = 0;
         double mean() const { return this->weight > 0 ? this->weightedSum / static_cast<double>(this->weight) : 0.0; }
     };
 
     std::vector<FitBlock> blocks;
-    for (const auto& velocityLayer : articulation.velocityLayerSpecs) {
-        if (!velocityLayer->rawVelocityMedianDb.has_value()) continue;
-        const int weight = juce::jmax(1, static_cast<int>(velocityLayer->logicalHitMeasurements.size()));
+    for (const auto& velocityLevel : articulation.velocityLevels) {
+        if (!velocityLevel->rawVelocityMedianDb.has_value()) continue;
+        const int weight = juce::jmax(1, static_cast<int>(velocityLevel->logicalHits.size()));
         FitBlock block;
-        block.layers.push_back(velocityLayer.get());
-        block.weightedSum = static_cast<double>(*velocityLayer->rawVelocityMedianDb) * static_cast<double>(weight);
+        block.velocityLevels.push_back(velocityLevel.get());
+        block.weightedSum = static_cast<double>(*velocityLevel->rawVelocityMedianDb) * static_cast<double>(weight);
         block.weight = weight;
         blocks.push_back(std::move(block));
         while (blocks.size() >= 2 && blocks[blocks.size() - 2].mean() > blocks.back().mean()) {
             auto rightBlock = std::move(blocks.back());
             blocks.pop_back();
             auto& leftBlock = blocks.back();
-            leftBlock.layers.insert(leftBlock.layers.end(), rightBlock.layers.begin(), rightBlock.layers.end());
+            leftBlock.velocityLevels.insert(leftBlock.velocityLevels.end(), rightBlock.velocityLevels.begin(), rightBlock.velocityLevels.end());
             leftBlock.weightedSum += rightBlock.weightedSum;
             leftBlock.weight += rightBlock.weight;
         }
@@ -229,32 +222,32 @@ static void fitMonotonicSourceProfile(KitLib::ArticulationSpec& articulation) {
 
     for (const auto& block : blocks) {
         const float fittedValueDb = static_cast<float>(block.mean());
-        for (auto* velocityLayer : block.layers) velocityLayer->fittedSourceDb = fittedValueDb;
+        for (auto* velocityLevel : block.velocityLevels) velocityLevel->fittedSourceDb = fittedValueDb;
     }
 }
 
 static void finalizeArticulationCalibration(KitLib::ArticulationSpec& articulation) {
-    if (articulation.velocityLayerSpecs.empty()) return;
-    for (const auto& velocityLayer : articulation.velocityLayerSpecs)
-        if (!velocityLayer->rawVelocityMedianDb.has_value() || !velocityLayer->fittedSourceDb.has_value() || velocityLayer->logicalHitMeasurements.empty()) return;
+    if (articulation.velocityLevels.empty()) return;
+    for (const auto& velocityLevel : articulation.velocityLevels)
+        if (!velocityLevel->rawVelocityMedianDb.has_value() || !velocityLevel->fittedSourceDb.has_value() || velocityLevel->logicalHits.empty()) return;
 
-    const float articulationReferenceDb = *articulation.velocityLayerSpecs.back()->fittedSourceDb;
-    for (const auto& velocityLayer : articulation.velocityLayerSpecs) {
-        const float requiredTrimDb = articulationReferenceDb - *velocityLayer->rawVelocityMedianDb;
+    const float articulationReferenceDb = *articulation.velocityLevels.back()->fittedSourceDb;
+    for (const auto& velocityLevel : articulation.velocityLevels) {
+        const float requiredTrimDb = articulationReferenceDb - *velocityLevel->rawVelocityMedianDb;
         float safeTrimDb = juce::jmin(requiredTrimDb, MAX_POSITIVE_TRIM_DB);
-        if (safeTrimDb < requiredTrimDb) velocityLayer->calibrationLimited = true;
+        if (safeTrimDb < requiredTrimDb) velocityLevel->calibrationLimited = true;
 
         std::optional<float> maxTruePeakDb;
-        for (const auto& hitMeasurement : velocityLayer->logicalHitMeasurements)
-            if (hitMeasurement.maxTruePeakDb.has_value() && (!maxTruePeakDb.has_value() || *hitMeasurement.maxTruePeakDb > *maxTruePeakDb)) maxTruePeakDb = hitMeasurement.maxTruePeakDb;
+        for (const auto& logicalHit : velocityLevel->logicalHits)
+            if (logicalHit->maxTruePeakDb.has_value() && (!maxTruePeakDb.has_value() || *logicalHit->maxTruePeakDb > *maxTruePeakDb)) maxTruePeakDb = logicalHit->maxTruePeakDb;
         if (maxTruePeakDb.has_value()) {
-            const float peakLimitedTrimDb = -REQUIRED_HEADROOM_DB - defaultGlobalTargetDb(velocityLayer->velocity) - *maxTruePeakDb;
+            const float peakLimitedTrimDb = -REQUIRED_HEADROOM_DB - defaultGlobalTargetDb(velocityLevel->velocity) - *maxTruePeakDb;
             if (safeTrimDb > peakLimitedTrimDb) {
                 safeTrimDb = peakLimitedTrimDb;
-                velocityLayer->calibrationLimited = true;
+                velocityLevel->calibrationLimited = true;
             }
         }
-        velocityLayer->calibrationTrimDb = safeTrimDb;
+        velocityLevel->calibrationTrimDb = safeTrimDb;
     }
 }
 
@@ -444,7 +437,7 @@ ParseResult<std::vector<MicSpec>> MicSpec::parseMicCodesChain(const juce::String
 /** Parses an instrument folder name like kick-22 snare-14x6.5 ride-20-R42-Basian OMG Mental  */
 InstrumentSpec::InstrumentSpec(DrumKitSpec* kit, const MetaInfo& metaInfo)
     : parent(kit), meta(metaInfo), filenameBalance(metaInfo.balance) {
-    const auto* instrumentOverride = this->parent != nullptr ? this->parent->sourceOverrides.findInstrumentOverride(this->meta.codeRaw) : nullptr;
+    const auto* instrumentOverride = this->parent != nullptr ? this->parent->libraryKitOverrides.findInstrumentOverride(this->meta.codeRaw) : nullptr;
     if (instrumentOverride != nullptr && instrumentOverride->balance.has_value()) this->balanceOverride = instrumentOverride->balance;
 }
 
@@ -523,7 +516,7 @@ juce::String InstrumentSpec::getContentFingerprint() const {
     if (this->contentFingerprintCache.has_value()) return this->contentFingerprintCache.value();
     std::vector<juce::String> records;
     records.push_back("instrument|" + this->meta.codeRaw + "|" + this->meta.rootDir.getFullPathName());
-    if (this->parent != nullptr) records.push_back("kit-source-overrides|" + this->parent->sourceOverrides.toYaml());
+    if (this->parent != nullptr) records.push_back("library-kit-overrides|" + this->parent->libraryKitOverrides.toYaml());
 
     if (this->meta.rootDir.isDirectory()) {
         const auto childDirs = this->meta.rootDir.findChildFiles(juce::File::findDirectories, true, "*");
@@ -619,7 +612,9 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 continue;
             }
 
-            auto* velSpec = artSpec->getOrAddVelocityLayer(parsedInfo.value.velocity);
+            auto* velocityLevel = artSpec->getOrAddVelocityLevel(parsedInfo.value.velocity);
+            const uint8_t roundRobinId = roundRobinIdFromText(parsedInfo.value.roundRobinLetter);
+            auto* logicalHit = velocityLevel->getOrAddLogicalHit(roundRobinId);
             const auto kitRelativePath = sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
             const auto sampleFileSize = this->parent->sampleMetadata.isActive() ? sampleFile.getSize() : 0;
             juce::String sampleContentHash;
@@ -631,57 +626,53 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                     break;
                 }
             }
-            const auto sampleOverrideMatch = this->parent->sourceOverrides.findSampleOverride(kitRelativePath, sampleContentHash);
+            const auto sampleOverrideMatch = this->parent->libraryKitOverrides.findSampleOverride(kitRelativePath, sampleContentHash);
             const auto* sampleOverride = sampleOverrideMatch.value;
-            if (sampleOverrideMatch.ambiguousContentHash) LOG(Warning, "Ambiguous kit source override contentHash for sample '" + kitRelativePath + "'; moved-file recovery was ignored");
+            if (sampleOverrideMatch.ambiguousContentHash) LOG(Warning, "Ambiguous library kit override contentHash for sample '" + kitRelativePath + "'; moved-file recovery was ignored");
 
-            // Add one sample variant per mic chain. Track channel cursor for multi-channel files.
+            // Add one sample per mic in the round-robin logical hit. Track the channel cursor for multichannel files.
             int channelCursor = 0;
-            for (size_t i = 0; i < parsedInfo.value.micDescriptors.size(); i++) {
-                uint8_t variantIdx = 0;
-                if (!parsedInfo.value.sampleVariant.isEmpty())
-                    variantIdx = SampleVariantSpec::letterToIdx(parsedInfo.value.sampleVariant[0]);
-
-                const auto& micDesc = parsedInfo.value.micDescriptors[i];
-                auto* sv = velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
+            for (size_t micIdx = 0; micIdx < parsedInfo.value.micDescriptors.size(); ++micIdx) {
+                const auto& micDesc = parsedInfo.value.micDescriptors[micIdx];
+                auto* sample = logicalHit->getOrAddSample(sampleFile, micDesc, channelCursor);
                 const auto micOffsetIt = parsedInfo.value.playbackOffsetMsByMic.find(micDesc.raw.toLowerCase());
-                sv->filenameManualGainDb = parsedInfo.value.manualGainDb;
-                sv->manualGainDbOverride.reset();
-                if (sampleOverride != nullptr) sv->manualGainDbOverride = sampleOverride->manualGainDb;
-                sv->manualGainDb = sv->manualGainDbOverride.value_or(sv->filenameManualGainDb);
-                sv->filenamePlaybackOffsetMs = micOffsetIt != parsedInfo.value.playbackOffsetMsByMic.end() ? micOffsetIt->second : parsedInfo.value.playbackOffsetMs;
+                sample->filenameManualGainDb = parsedInfo.value.manualGainDb;
+                sample->manualGainDbOverride.reset();
+                if (sampleOverride != nullptr) sample->manualGainDbOverride = sampleOverride->manualGainDb;
+                sample->manualGainDb = sample->manualGainDbOverride.value_or(sample->filenameManualGainDb);
+                sample->filenamePlaybackOffsetMs = micOffsetIt != parsedInfo.value.playbackOffsetMsByMic.end() ? micOffsetIt->second : parsedInfo.value.playbackOffsetMs;
                 if (sampleOverride != nullptr) {
                     const auto sampleMicOverrideIt = sampleOverride->micOverrides.find(micDesc.raw.toLowerCase());
                     if (sampleMicOverrideIt != sampleOverride->micOverrides.end() && sampleMicOverrideIt->second.playbackOffsetMs.has_value())
-                        sv->playbackOffsetMsOverride = sampleMicOverrideIt->second.playbackOffsetMs;
+                        sample->playbackOffsetMsOverride = sampleMicOverrideIt->second.playbackOffsetMs;
                     else
-                        sv->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                        sample->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
                 } else {
-                    sv->playbackOffsetMsOverride.reset();
+                    sample->playbackOffsetMsOverride.reset();
                 }
-                sv->playbackOffsetMs = sv->playbackOffsetMsOverride.value_or(sv->filenamePlaybackOffsetMs);
-                sv->peakDb = parsedInfo.value.peakDb + sv->manualGainDb;
-                sv->peakMs = parsedInfo.value.peakMs;
-                sv->decayMs = parsedInfo.value.decayMs;
-                sv->decayCode = parsedInfo.value.decayCode;
-                sv->decayEnvelope = parsedInfo.value.peakDb < 0.0f ? DecayEnvelope::decode(sv->decayCode, sv->peakDb, sv->peakMs) : DecayEnvelope {};
+                sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
+                sample->peakDb = parsedInfo.value.peakDb + sample->manualGainDb;
+                sample->peakMs = parsedInfo.value.peakMs;
+                sample->decayMs = parsedInfo.value.decayMs;
+                sample->decayCode = parsedInfo.value.decayCode;
+                sample->decayEnvelope = parsedInfo.value.peakDb < 0.0f ? DecayEnvelope::decode(sample->decayCode, sample->peakDb, sample->peakMs) : DecayEnvelope {};
                 if (this->parent->sampleMetadata.isActive()) {
                     const auto* metadataRow = this->parent->sampleMetadata.find(kitRelativePath, micDesc.raw);
                     const bool fileSizeMatches = metadataRow != nullptr && metadataRow->fileSizeBytes > 0 && metadataRow->fileSizeBytes == sampleFileSize;
                     if (metadataRow != nullptr && fileSizeMatches) {
-                        sv->hasCsvMetadata = true;
-                        sv->metadataContentHash = metadataRow->contentHash;
-                        sv->metadataFileSizeBytes = metadataRow->fileSizeBytes;
-                        sv->onsetMs = metadataRow->onsetMs;
-                        sv->intensityDb = metadataRow->intensityDb;
-                        sv->truePeakDb = metadataRow->truePeakDb;
-                        sv->stereoBalance = metadataRow->stereoBalance;
-                        sv->peakDb = metadataRow->peakDb.has_value() ? *metadataRow->peakDb + sv->manualGainDb : 0.0f;
-                        sv->peakMs = metadataRow->peakMs.value_or(0.0f);
-                        sv->decayMs = metadataRow->decayEndMs.value_or(0.0f);
-                        sv->decayCode.clear();
-                        sv->decayEnvelope = {};
-                        if (metadataRow->peakDb.has_value() && metadataRow->peakMs.has_value()) sv->decayEnvelope = DecayEnvelope::fromPoints(sv->peakDb, sv->peakMs, metadataRow->decayPointsMs);
+                        sample->hasCsvMetadata = true;
+                        sample->metadataContentHash = metadataRow->contentHash;
+                        sample->metadataFileSizeBytes = metadataRow->fileSizeBytes;
+                        sample->onsetMs = metadataRow->onsetMs;
+                        sample->intensityDb = metadataRow->intensityDb;
+                        sample->truePeakDb = metadataRow->truePeakDb;
+                        sample->stereoBalance = metadataRow->stereoBalance;
+                        sample->peakDb = metadataRow->peakDb.has_value() ? *metadataRow->peakDb + sample->manualGainDb : 0.0f;
+                        sample->peakMs = metadataRow->peakMs.value_or(0.0f);
+                        sample->decayMs = metadataRow->decayEndMs.value_or(0.0f);
+                        sample->decayCode.clear();
+                        sample->decayEnvelope = {};
+                        if (metadataRow->peakDb.has_value() && metadataRow->peakMs.has_value()) sample->decayEnvelope = DecayEnvelope::fromPoints(sample->peakDb, sample->peakMs, metadataRow->decayPointsMs);
                         ++matchedMetadataRowCount;
                     } else if (metadataRow != nullptr) {
                         ++staleMetadataRowCount;
@@ -694,8 +685,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 // update global counters per actual file+mic occurrence (reflects sample files counted per mic)
                 if (stats) {
                     stats->micCodeCounts[micDesc.raw]++;
-                    juce::String variantLetter = parsedInfo.value.sampleVariant.isEmpty() ? juce::String("") : juce::String::charToString(parsedInfo.value.sampleVariant[0]);
-                    stats->sampleVariantCounts[variantLetter]++;
+                    stats->roundRobinCounts[parsedInfo.value.roundRobinLetter]++;
                     stats->velocityCounts[parsedInfo.value.velocity]++;
                 }
 
@@ -713,52 +703,55 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
 
 void InstrumentSpec::buildCalibrationProfiles() {
     for (const auto& articulation : this->articulationSpecs) {
-        if (!articulation->sourceBalanceResolved) {
+        if (!articulation->balanceResolved) {
             articulation->filenameBalance = articulation->balance;
-            articulation->sourceBalanceResolved = true;
+            articulation->balanceResolved = true;
         }
         articulation->balance = articulation->filenameBalance;
         articulation->balanceOverride.reset();
-        const auto* articulationOverride = this->parent != nullptr ? this->parent->sourceOverrides.findArticulationOverride(this->meta.codeRaw, articulation->codeRaw) : nullptr;
+        const auto* articulationOverride = this->parent != nullptr ? this->parent->libraryKitOverrides.findArticulationOverride(this->meta.codeRaw, articulation->codeRaw) : nullptr;
         if (articulationOverride != nullptr && articulationOverride->balance.has_value()) articulation->balanceOverride = articulationOverride->balance;
-        articulation->sortVelocityLayers();
+        articulation->sortVelocityLevels();
         const auto boundaryResult = this->applyVelocityUpperBoundaryOverrides(*articulation);
-        for (const auto& boundaryMessage : boundaryResult.errors) LOG(Warning, "Kit source override: " + boundaryMessage);
-        for (const auto& velocityLayer : articulation->velocityLayerSpecs) KitLibCalibrationHelpers::buildLogicalHitMeasurements(*velocityLayer);
+        for (const auto& boundaryMessage : boundaryResult.errors) LOG(Warning, "Library kit override: " + boundaryMessage);
+        for (const auto& velocityLevel : articulation->velocityLevels) KitLibCalibrationHelpers::buildLogicalHitMeasurements(*velocityLevel);
         KitLibCalibrationHelpers::fitMonotonicSourceProfile(*articulation);
         KitLibCalibrationHelpers::finalizeArticulationCalibration(*articulation);
     }
 }
 
-void InstrumentSpec::applySourceOverrides() {
+void InstrumentSpec::applyLibraryKitOverrides() {
     if (this->parent == nullptr) return;
-    const auto* instrumentOverride = this->parent->sourceOverrides.findInstrumentOverride(this->meta.codeRaw);
+    const auto* instrumentOverride = this->parent->libraryKitOverrides.findInstrumentOverride(this->meta.codeRaw);
     this->balanceOverride = instrumentOverride != nullptr ? instrumentOverride->balance : std::nullopt;
     for (const auto& articulation : this->articulationSpecs) {
         if (articulation == nullptr) continue;
-        for (const auto& velocityLayer : articulation->velocityLayerSpecs) {
-            if (velocityLayer == nullptr) continue;
-            for (const auto& sample : velocityLayer->sampleVariantSpecs) {
-                if (sample == nullptr) continue;
-                const auto relativePath = sample->sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
-                const auto overrideMatch = this->parent->sourceOverrides.findSampleOverride(relativePath, sample->metadataContentHash);
-                const auto* sampleOverride = overrideMatch.value;
-                const float previousManualGainDb = sample->manualGainDb;
-                sample->manualGainDbOverride = sampleOverride != nullptr ? sampleOverride->manualGainDb : std::nullopt;
-                sample->manualGainDb = sample->manualGainDbOverride.value_or(sample->filenameManualGainDb);
-                const float manualGainDeltaDb = sample->manualGainDb - previousManualGainDb;
-                sample->peakDb += manualGainDeltaDb;
-                if (sample->decayEnvelope.isValid()) sample->decayEnvelope.peakDb += manualGainDeltaDb;
+        for (const auto& velocityLevel : articulation->velocityLevels) {
+            if (velocityLevel == nullptr) continue;
+            for (const auto& logicalHit : velocityLevel->logicalHits) {
+                if (logicalHit == nullptr) continue;
+                for (const auto& sample : logicalHit->samples) {
+                    if (sample == nullptr) continue;
+                    const auto relativePath = sample->sampleFile.getRelativePathFrom(this->parent->meta.rootDir).replaceCharacter('\\', '/');
+                    const auto overrideMatch = this->parent->libraryKitOverrides.findSampleOverride(relativePath, sample->metadataContentHash);
+                    const auto* sampleOverride = overrideMatch.value;
+                    const float previousManualGainDb = sample->manualGainDb;
+                    sample->manualGainDbOverride = sampleOverride != nullptr ? sampleOverride->manualGainDb : std::nullopt;
+                    sample->manualGainDb = sample->manualGainDbOverride.value_or(sample->filenameManualGainDb);
+                    const float manualGainDeltaDb = sample->manualGainDb - previousManualGainDb;
+                    sample->peakDb += manualGainDeltaDb;
+                    if (sample->decayEnvelope.isValid()) sample->decayEnvelope.peakDb += manualGainDeltaDb;
 
-                sample->playbackOffsetMsOverride.reset();
-                if (sampleOverride != nullptr) {
-                    const auto micOverrideIt = sampleOverride->micOverrides.find(sample->micSpec.raw.trim().toLowerCase());
-                    if (micOverrideIt != sampleOverride->micOverrides.end() && micOverrideIt->second.playbackOffsetMs.has_value())
-                        sample->playbackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
-                    else
-                        sample->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                    sample->playbackOffsetMsOverride.reset();
+                    if (sampleOverride != nullptr) {
+                        const auto micOverrideIt = sampleOverride->micOverrides.find(sample->micSpec.raw.trim().toLowerCase());
+                        if (micOverrideIt != sampleOverride->micOverrides.end() && micOverrideIt->second.playbackOffsetMs.has_value())
+                            sample->playbackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
+                        else
+                            sample->playbackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                    }
+                    sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
                 }
-                sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
             }
         }
     }
@@ -768,27 +761,27 @@ void InstrumentSpec::applySourceOverrides() {
 
 ParseResult<int> InstrumentSpec::applyVelocityUpperBoundaryOverrides(ArticulationSpec& articulation) {
     ParseResult<int> result;
-    articulation.sortVelocityLayers();
-    if (articulation.velocityLayerSpecs.empty()) return result;
+    articulation.sortVelocityLevels();
+    if (articulation.velocityLevels.empty()) return result;
 
     std::vector<uint8_t> namedVelocities;
-    namedVelocities.reserve(articulation.velocityLayerSpecs.size());
-    for (const auto& velocityLayer : articulation.velocityLayerSpecs) namedVelocities.push_back(velocityLayer->velocity);
+    namedVelocities.reserve(articulation.velocityLevels.size());
+    for (const auto& velocityLevel : articulation.velocityLevels) namedVelocities.push_back(velocityLevel->velocity);
 
     auto effectiveUpperBoundaries = namedVelocities;
     effectiveUpperBoundaries.back() = 127;
     if (this->parent != nullptr) {
-        auto resolved = this->parent->sourceOverrides.resolveVelocityUpperBoundaries(this->meta.codeRaw, articulation.codeRaw, namedVelocities);
+        auto resolved = this->parent->libraryKitOverrides.resolveVelocityUpperBoundaries(this->meta.codeRaw, articulation.codeRaw, namedVelocities);
         for (const auto& message : resolved.errors) result.errors.push_back(message);
         result.isValid = resolved.isValid;
         if (resolved.ok()) effectiveUpperBoundaries = std::move(resolved.value);
     }
-    for (size_t layerIdx = 0; layerIdx < articulation.velocityLayerSpecs.size(); ++layerIdx) articulation.velocityLayerSpecs[layerIdx]->selectionUpperVelocity = effectiveUpperBoundaries[layerIdx];
+    for (size_t velocityLevelIdx = 0; velocityLevelIdx < articulation.velocityLevels.size(); ++velocityLevelIdx) articulation.velocityLevels[velocityLevelIdx]->selectionUpperVelocity = effectiveUpperBoundaries[velocityLevelIdx];
     result.value = static_cast<int>(effectiveUpperBoundaries.size());
     return result;
 }
 
-/**  Parses a sample filename <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{sampleVariant}-{micChain}-{otherOptionalParams} */
+/** Parses a sample filename <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{roundRobinLetter}-{micChain}-{otherOptionalParams}. */
 ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(const juce::String& fileName) {
     ParseResult<InstrumentSpec::SampleFileInfo> result;
     const auto fileNameWithoutExt = fileName.upToLastOccurrenceOf(".", false, false);
@@ -796,33 +789,35 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     nameParts.addTokens(fileNameWithoutExt, "-", "");
 
     if (nameParts.size() < 5) {
-        return result.returnWithError("Filename must be in format <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{sampleVariant}-{micChain}-{otherOptionalParams}: " + fileNameWithoutExt);
+        return result.returnWithError("Filename must be in format <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-{velocity}{roundRobinLetter}-{micChain}-{otherOptionalParams}: " + fileNameWithoutExt);
     }
 
-    juce::String velRRCode = nameParts[3];
+    juce::String velocityAndRoundRobinCode = nameParts[3];
     int splitIndex = 0;
-    while (splitIndex < velRRCode.length() && juce::CharacterFunctions::isDigit(velRRCode[splitIndex])) {
+    while (splitIndex < velocityAndRoundRobinCode.length() && juce::CharacterFunctions::isDigit(velocityAndRoundRobinCode[splitIndex])) {
         splitIndex++;
     }
     if (splitIndex == 0) {
-        return result.returnWithError("velocity+sampleVariant code must start with digits (e.g., '001a', '127b', '005'): " + velRRCode);
+        return result.returnWithError("Velocity and round-robin code must start with digits (for example, '001a', '127b', or '005'): " + velocityAndRoundRobinCode);
     }
 
-    juce::String velocityStr = velRRCode.substring(0, splitIndex);
+    juce::String velocityStr = velocityAndRoundRobinCode.substring(0, splitIndex);
     uint8_t velocity = static_cast<uint8_t>(velocityStr.getIntValue());
     if (velocity <= 0 || velocity > 127) {
         return result.returnWithError("Velocity must be 1-127, got: " + velocityStr);
     }
 
-    juce::String sampleVariant;
-    if (splitIndex < velRRCode.length()) {
-        sampleVariant = velRRCode.substring(splitIndex);
-        if (sampleVariant.length() == 1) {
-            if (sampleVariant[0] < 'a' || sampleVariant[0] > 'z') {
-                result.addWarning("Round-robin letter should be a-z, got: '" + sampleVariant + "'; treating as absent");
+    juce::String roundRobinLetter;
+    if (splitIndex < velocityAndRoundRobinCode.length()) {
+        roundRobinLetter = velocityAndRoundRobinCode.substring(splitIndex);
+        if (roundRobinLetter.length() == 1) {
+            if (roundRobinIdFromLetter(roundRobinLetter[0]) == 0) {
+                result.addWarning("Round-robin letter must be a-z, got: '" + roundRobinLetter + "'; treating as absent");
+                roundRobinLetter.clear();
             }
-        } else if (sampleVariant.length() > 1) {
-            result.addWarning("Round-robin should be single letter, got: '" + sampleVariant + "'; using first letter '" + juce::String(sampleVariant[0]) + "'");
+        } else if (roundRobinLetter.length() > 1) {
+            result.addWarning("Round-robin must be one letter, got: '" + roundRobinLetter + "'; using first letter '" + juce::String(roundRobinLetter[0]) + "'");
+            roundRobinLetter = roundRobinLetter.substring(0, 1);
         }
     }
 
@@ -832,7 +827,7 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
     }
 
     result.value.velocity = velocity;
-    result.value.sampleVariant = sampleVariant;
+    result.value.roundRobinLetter = roundRobinLetter;
     result.value.micDescriptors = parsedMics.value;
 
     // Optional metadata examples: vn4 = -4 dB, on5.5 = advance 5.5 ms, op2_ons_rfs = delay ons and rfs by 2 ms.
@@ -1079,12 +1074,12 @@ int LibraryManager::scanAll() {
         if (readmeFile.existsAsFile()) kit->readmeMarkdown = readmeFile.loadFileAsString();
         const double metadataStartTimeMs = juce::Time::getMillisecondCounterHiRes();
         auto metadataResult = kit->sampleMetadata.loadFromKitRoot(kitDir);
-        auto overrideResult = kit->sourceOverrides.loadFromKitRoot(kitDir);
+        auto overrideResult = kit->libraryKitOverrides.loadFromKitRoot(kitDir);
         const double metadataElapsedMs = juce::Time::getMillisecondCounterHiRes() - metadataStartTimeMs;
-        for (const auto& metadataMessage : metadataResult.errors) LOG(Warning, "Kit metadata: " + metadataMessage);
-        for (const auto& overrideMessage : overrideResult.errors) LOG(Warning, "Kit source override: " + overrideMessage);
+        for (const auto& metadataMessage : metadataResult.errors) LOG(Warning, "Library kit metadata: " + metadataMessage);
+        for (const auto& overrideMessage : overrideResult.errors) LOG(Warning, "Library kit override: " + overrideMessage);
         if (metadataResult.ok() && kit->sampleMetadata.isActive()) LOG(Info, "Loaded " + juce::String(metadataResult.value) + " metadata.csv rows for kit " + kitDir.getFileName() + " in " + juce::String(metadataElapsedMs, 1) + " ms");
-        if (overrideResult.ok() && kit->sourceOverrides.isActive()) LOG(Info, "Loaded " + juce::String(overrideResult.value) + " source override values for kit " + kitDir.getFileName());
+        if (overrideResult.ok() && kit->libraryKitOverrides.isActive()) LOG(Info, "Loaded " + juce::String(overrideResult.value) + " library kit override values for kit " + kitDir.getFileName());
         int instrsInKit = kit->scanInstruments();
         int samplesInKit = 0;
 
@@ -1101,7 +1096,7 @@ int LibraryManager::scanAll() {
 
         for (const auto& [k, v] : stats.dimensionCodeCounts) globalStats.dimensionCodeCounts[k] += v;
         for (const auto& [k, v] : stats.micCodeCounts) globalStats.micCodeCounts[k] += v;
-        for (const auto& [k, v] : stats.sampleVariantCounts) globalStats.sampleVariantCounts[k] += v;
+        for (const auto& [roundRobinLetter, count] : stats.roundRobinCounts) globalStats.roundRobinCounts[roundRobinLetter] += count;
         for (const auto& [k, v] : stats.velocityCounts) globalStats.velocityCounts[k] += v;
         totalKits++;
         const double kitScanElapsedMs = juce::Time::getMillisecondCounterHiRes() - kitScanStartTimeMs;
@@ -1115,8 +1110,8 @@ int LibraryManager::scanAll() {
         LOG(Info, "Mic Code Usage:");
         for (const auto& [key, count] : globalStats.micCodeCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
 
-        LOG(Info, "Sample Variant Usage:");
-        for (const auto& [key, count] : globalStats.sampleVariantCounts) LOG(Info, "  " + key + ": " + juce::String(count) + " sample files");
+        LOG(Info, "Round-robin Usage:");
+        for (const auto& [roundRobinLetter, count] : globalStats.roundRobinCounts) LOG(Info, "  " + roundRobinLetter + ": " + juce::String(count) + " sample files");
 
         LOG(Info, "Velocity Usage:");
         for (const auto& [key, count] : globalStats.velocityCounts) LOG(Info, "  " + juce::String(key) + ": " + juce::String(count) + " sample files");

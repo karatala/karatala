@@ -110,12 +110,14 @@ Initial candidates:
 - `identityKey()` and `candidateMatches()` in `source/Engine/DrumKitEngine.cpp` and `source/Engine/KitLibModel.cpp`.
 - Repeated identity candidate counting and resolving for kits, instruments, and articulations.
 - Repeated normalized string lookup and case-insensitive vector membership.
-- Repeated stable sorting and fingerprint formatting for instrument-map entries.
+- Repeated stable sorting and fingerprint formatting for map layers.
 - Repeated map and route parameter formatting.
 - Repeated MIDI value validation and fixed-domain lookup initialization.
 - Name joining and articulation-filter loops in the instrument-map code.
 
-Before extracting a helper, confirm that the behavior is still required. The joined instrument-map articulation code is a current example: the format requires one destination and one source articulation per line, so obsolete multi-articulation joining should be removed instead of made reusable.
+Before extracting a helper, confirm that the behavior is still required. The current instrument map format uses one articulation slot and one library articulation per line.
+
+Remove obsolete multi-articulation joining instead of making it reusable.
 
 ### Step 2: Design The Shared Operation
 
@@ -136,14 +138,19 @@ Inventory existing `*Helper*` files, free functions, local lambdas, and helper n
 
 Target organization:
 
-- `source/Engine/helpers/` for engine-only identity, instrument-map, routing, MIDI, and model helpers.
-- `source/UI/helpers/` for UI-only formatting, search, and component support.
-- `source/Config/helpers/` for configuration, parsing, and shared configuration primitives.
-- `source/helpers/` only for small source-wide primitives that genuinely have callers in more than one domain.
+- Use feature folders such as `source/Engine/InstrumentMap/` and `source/UI/Controls/` when several files share one responsibility.
+- Use [PROJECT_TERMINOLOGY_REVIEW.md](PROJECT_TERMINOLOGY_REVIEW.md) for project terms and related C++ names. Do not create `source/UI/Source/`.
+- Keep a helper in its owning `.cpp` file when it has one caller.
+- Keep small cross-feature primitives in the narrowest owning domain and give them a responsibility-based name.
+- Do not create one `source/helpers/` folder. It would mix unrelated engine, UI, and configuration code.
+- Do not create `Engine/helpers`, `UI/helpers`, or `Config/helpers` as general dumping grounds.
 
 Organization rules:
 
-- Name files by responsibility, such as `InstrumentMapIdentity.h` or `MicRoutingLookup.h`, not only `Helpers.h`.
+- Name files by responsibility, such as `InstrumentMap.h` or `MicRouting.h`, not only `Helpers.h`.
+- Start a feature with one cohesive `.h` and `.cpp` pair. Add another file only for a separate, substantial responsibility.
+- Prefer feature namespaces such as `InstrumentMap` or `ArticulationNames` over public `FooHelpers` namespaces.
+- Use a named `<Feature>Detail` namespace for private `.cpp` helpers because this project does not use nameless namespaces.
 - Use one clear named namespace that matches the owned domain.
 - Keep helper dependencies one-way. Low-level helpers must not include large owner classes only for convenience.
 - Prefer pure functions with explicit inputs and outputs.
@@ -264,7 +271,7 @@ Plan:
 
 Low-priority candidates:
 
-- `VelocityLayerRuntime::roundRobinCounter` has a separately allocated shared atomic, but it is created during setup. Measure total layer count and memory before adding custom move logic.
+- `VelocityLevelRuntime::roundRobinCounter` has a separately allocated shared atomic, but it is created during setup. Measure total layer count and memory before adding custom move logic.
 - `prepareToPlay()` uses a small unordered map to count variants. Replace it only if an array is shorter and clearer.
 
 Tests:
@@ -281,12 +288,12 @@ Priority: medium after measurement.
 
 Start with high-count or long-lived types:
 
-- `SampledSound` and `InstrumentSynth::SampleEntry`.
-- `KitLib::SampleVariantSpec`.
-- `InstrumentSynth::VelocityLayerRuntime` and `ArticulationRuntime`.
-- `InstrumentSynthVoice`.
+- `SampledSound` and `InstrumentPlayer::SampleEntry`.
+- `KitLib::SampleSpec`.
+- `InstrumentPlayer::VelocityLevelRuntime` and `ArticulationRuntime`.
+- `InstrumentPlayerVoice`.
 - `KitLib::MicSpec`.
-- `DrumKitEngine::InstrumentMapEntry`.
+- `DrumKitEngine::InstrumentMapLayer`.
 
 The report must contain:
 
@@ -317,15 +324,15 @@ Priority: high for reliability, but separate from compactness cleanup.
 Observed risks:
 
 - `DrumKitEngine::processBlock()` clears output when `engineGraphLock` cannot be acquired.
-- `InstrumentSynth::renderNextBlock()` holds `this->lock` while rendering.
-- Note start also takes the synth lock.
+- `InstrumentPlayer::renderNextBlock()` holds `this->lock` while rendering.
+- Note start also takes the instrument-player lock.
 
 Measure before designing a rewrite:
 
 - Failed graph try-lock count.
 - Typical and maximum graph lock hold time during map, layout, and routing changes.
 - Audio blocks cleared during those operations.
-- Threads that can contend for the synth lock.
+- Threads that can contend for the instrument-player lock.
 
 Verification:
 

@@ -39,12 +39,12 @@ Rejected Phase 3 implementation history:
 - assigned one shared event ID to all microphones started by a sampled hit;
 - grouped controller transitions by that event ID and excluded non-playing voices;
 - selected only the configured newest audible hit groups;
-- resolved exact round-robin variant and routed-mic targets for the complete group;
+- resolved the exact round robin ID and routed-mic targets for the complete logical hit;
 - reserved every required idle voice before starting targets or fading sources;
 - selected one canonical direct/overhead/room reference and applied one millisecond offset to every target mic;
 - preserved the event ID and committed the target articulation on every replacement voice;
 - added complementary selectable source/target transition ramps;
-- added synth-level tests proving complete group commit and unchanged sources when one target mic is missing.
+- added instrument-player-level tests proving complete group commit and unchanged sources when one target mic is missing.
 
 Confirmed Phase 3 regressions:
 
@@ -112,14 +112,14 @@ The implementation should:
 
 The relevant runtime path is:
 
-`DrumKitEngine::processBlock()` -> `InstrumentSynth::renderNextBlock()` -> `InstrumentSynth::handleMidiEvent()` -> `InstrumentSynth::handleController()`
+`DrumKitEngine::processBlock()` -> `InstrumentPlayer::renderNextBlock()` -> `InstrumentPlayer::handleMidiEvent()` -> `InstrumentPlayer::handleController()`
 
 Primary files:
 
-- [InstrumentSynthController.cpp](../source/Engine/InstrumentSynthController.cpp)
-- [InstrumentSynth.cpp](../source/Engine/InstrumentSynth.cpp)
-- [InstrumentSynth.h](../source/Engine/InstrumentSynth.h)
-- [InstrumentSynthLoader.cpp](../source/Engine/InstrumentSynthLoader.cpp)
+- [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp)
+- [InstrumentPlayer.cpp](../source/Engine/InstrumentPlayer.cpp)
+- [InstrumentPlayer.h](../source/Engine/InstrumentPlayer.h)
+- [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp)
 - [KitLibModel.cpp](../source/Engine/KitLibModel.cpp)
 - [KitLibModel.h](../source/Engine/KitLibModel.h)
 - [EngineSettings.h](../source/Engine/EngineSettings.h)
@@ -256,7 +256,7 @@ Current work includes:
 
 Required correction:
 
-- precompute target sample lookup by articulation, velocity layer, variant, and routed mic;
+- precompute target sample lookup by articulation, velocity level, variant, and routed mic;
 - precompute sample-validity data during loading;
 - remove target-buffer RMS scans from `handleController()`;
 - guard all diagnostic formatting with `LOG_ENABLED`;
@@ -280,7 +280,7 @@ The proposed settings are defined in [TODO13_HIHAT_TRANSITION_UI_SETTINGS_PLAN.m
 
 ### Continuous State
 
-Each hi-hat synth keeps:
+Each hi-hat instrument player keeps:
 
 - latest raw pedal CC value;
 - smoothed pedal position in `0.0..1.0`;
@@ -333,7 +333,7 @@ This avoids the level dip of two linear closing ramps. Opening uses an immediate
 - Opening: favor a longer morph because the tail gains sustain and spectral complexity.
 - Closing: favor a shorter choke-like transition.
 - A closure may optionally trigger a pedal sample, but that event is independent from tail replacement.
-- Do not synthesize foot-splash behavior from ordinary openness movement without a dedicated velocity/direction policy.
+- Do not instrument playeresize foot-splash behavior from ordinary openness movement without a dedicated velocity/direction policy.
 
 ## Implementation Phases
 
@@ -403,14 +403,14 @@ This phase attempted to restore the musical behavior while retaining shared even
    - Keep a bounded pending request when an eligible group exists but cannot currently transition.
 2. Restore closed-to-open tail transitions.
    - Reproduce the failure with a controller-level test.
-   - Verify the selected source group, target articulation, velocity layer, offset, and voice reservation independently.
+   - Verify the selected source group, target articulation, velocity level, offset, and voice reservation independently.
    - Ensure a skipped early request can retry after the attack guard or smoothing interval.
 3. Preserve the struck zone during openness changes.
    - Morph `edge` tails through `edge` openness articulations and `bow` tails through `bow` openness articulations.
    - Do not redirect a struck tail to `pedal`, chick, or foot-splash articulations.
 4. Add coherent target fallback.
-   - Prefer exact variant and routed-mic matches.
-   - When an exact round-robin variant is unavailable, select one common loaded fallback variant for the complete mic group.
+   - Prefer exact round robin ID and routed-mic matches.
+   - When an exact round robin ID is unavailable, select one common loaded fallback logical hit for the complete mic group.
    - Never fall back independently per microphone or commit a partial group.
 5. Separate foot voices from tail morphing.
    - Exclude pedal, chick, and foot-splash events from struck-tail group selection.
@@ -432,7 +432,7 @@ Exit criteria:
 
 Automated verification:
 
-- focused `[InstrumentSynth][HiHatTransition]`: 11 test cases and 44 assertions passed;
+- focused `[InstrumentPlayer][HiHatTransition]`: 11 test cases and 44 assertions passed;
 - full suite: 64 test cases and 443 assertions passed;
 - focused Debug benchmark remains bounded after the follow-up changes.
 
@@ -458,7 +458,7 @@ Only controller coalescing, guarded logging, bounded scheduling, and counters re
 
 Revalidation:
 
-- focused `[InstrumentSynth][HiHatTransition]`: 11 test cases and 50 assertions passed;
+- focused `[InstrumentPlayer][HiHatTransition]`: 11 test cases and 50 assertions passed;
 - full suite: 64 test cases and 449 assertions passed;
 - Debug 128-value controller sweep: approximately `49.6 us` mean;
 - Debug standalone rebuilt successfully for listening;
@@ -483,7 +483,7 @@ Automated verification:
 
 - all transition values survive YAML serialize/parse round trip;
 - legacy migration, range clamping, and invalid enum fallback remain covered;
-- foot modes `Off`, `Close Only`, and `Always` are covered by policy and synth-level tests;
+- foot modes `Off`, `Close Only`, and `Always` are covered by policy and instrument-player-level tests;
 - UI controls read/write lock-free settings and retain debounced message-thread persistence.
 
 ### Phase 6: Listening and Performance Validation
@@ -533,7 +533,7 @@ Added on July 22, 2026 without replacing the accepted per-voice path:
 - each reference offset is accepted only when the current target mic has audible content there;
 - when the own, Direct, and Overhead regions are all silent, the old open mic voice receives the normal short closing fade instead of continuing to ring;
 - focused tests cover Direct fallback for Overhead and Room, Overhead fallback when Direct is absent, and the final fade fallback.
-- every primary or shadow layer for the same hi-hat slot now observes that slot's tight and pedal note-on ranks before rejecting an unrouted note;
+- every first or additional map layer for the same hi-hat slot now observes that slot's tight and pedal note-on ranks before rejecting an unrouted note;
 - a tight or pedal sample in one layer can therefore fade an open voice in another layer, with focused coverage for both note types and an unrelated-note guard.
 
 ## Tests to Add
@@ -542,7 +542,7 @@ Suggested files:
 
 - `tests/TestDecayEnvelope.cpp`
 - `tests/TestHiHatTransitionPolicy.cpp`
-- `tests/TestInstrumentSynthController.cpp`
+- `tests/TestInstrumentPlayerController.cpp`
 
 Required cases:
 
@@ -579,11 +579,11 @@ Record:
 |---|---|
 | `source/Engine/KitLibModel.cpp` | Correct inverse decay interpolation |
 | `source/Engine/EngineSettings.h` | Thread-safe realtime settings and new transition values |
-| `source/Engine/InstrumentSynth.h` | Hit-group transition state and precomputed lookup structures |
-| `source/Engine/InstrumentSynthLoader.cpp` | Build target lookup and validation metadata |
-| `source/Engine/InstrumentSynthController.cpp` | Coalescing, policy, group transaction, and foot-event separation |
-| `source/Engine/InstrumentSynthHiHatTransition.cpp` | Group transition results, zone-preserving target resolution, coherent fallback, and retry behavior |
-| `source/Engine/InstrumentSynth.cpp` | Transition gain ramp rendering and audible-level cache |
+| `source/Engine/InstrumentPlayer.h` | Hit-group transition state and precomputed lookup structures |
+| `source/Engine/InstrumentPlayerLoader.cpp` | Build target lookup and validation metadata |
+| `source/Engine/InstrumentPlayerController.cpp` | Coalescing, policy, group transaction, and foot-event separation |
+| `source/Engine/InstrumentPlayerHiHatTransition.cpp` | Group transition results, zone-preserving target resolution, coherent fallback, and retry behavior |
+| `source/Engine/InstrumentPlayer.cpp` | Transition gain ramp rendering and audible-level cache |
 | `source/Engine/DrumKitEngine.cpp` | YAML load/save and settings publication |
 | `source/UI/EngineSettingsPanel.cpp` | Live controls through the thread-safe settings API |
 | `tests/` | Decay, policy, controller, and group-coherence tests |

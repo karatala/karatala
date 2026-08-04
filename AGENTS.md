@@ -64,13 +64,14 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
 
+- write in ASD-STE100 Simplified Technical English
 - speak in simplified english please, so even a foreigner without tech background can understand what you mean, without fancy metaphors but using simple practical examples
-- no newlines between params in methods and conditions if line <200 symbols
+- no newlines between params in methods and conditions if line <250 symbols
 - Never use one-letter variable names. Use `idx` for index variables.
 - Use `this` when accessing class members from class methods.
 - never ever use Em dash `—` but use `-` instead
 - never create nameless namespace { ... } in the middle of code, use coresponding helper files
-- first write shorly in simple lang what code changes are you going to do (except .md files changes), then only after approve do.
+- Before you change code or documentation, briefly describe the planned changes. Make changes only after approval.
 - do not build anything and run tests until asked
 - no need for backward compatibility, app is not yet released
 - when implementing tasks from md todo/fixme/plan document, mark completed sections or steps with ✅ emoji, and when the entire doc is completed, make its main header start with "# ✅ COMPLETED: "

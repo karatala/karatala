@@ -2,13 +2,13 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <set>
-#include "InstrumentSynth.h"
+#include "InstrumentPlayer.h"
 #include "DrumKitEngine.h"
 #include "MicRoutingPlan.h"
 
-// Resolves the global host output channel assignment for each sample variant of an instrument.
+// Resolves the global host output channel assignment for each sample of an instrument.
 //
-// Built once per instrument load (constructor), then resolve() is called once per SampleVariantSpec
+// Built once per instrument load (constructor), then resolve() is called once per SampleSpec
 // to obtain its {globalStart, channels} directly.
 //
 // Channel ordering contract: applyMicLayout (DrumKitEngine) builds micOutputMapping by iterating
@@ -23,41 +23,41 @@ public:
         bool applyBalance = false;
     };
 
-    explicit MicRoutingBuilder(InstrumentSynth* instrumentSynth) : synth(instrumentSynth) {
+    explicit MicRoutingBuilder(InstrumentPlayer* player) : instrumentPlayer(player) {
         this->buildMicEntries();
     }
 
-    // Resolve the output channel assignment for a single sample variant spec.
+    // Resolve the output channel assignment for one sample spec.
     // Only exact (type+position+format) matches are accepted.
     // Unmatched specs return {-1, fileChannelCount}; the caller must skip those samples.
     // All unmatched raw codes are accumulated in skippedRawCodes for a single summary log.
     Assignment resolve(const KitLib::MicSpec& micSpec, int fileChannelCount) {
-        if (const auto* plan = this->synth != nullptr ? this->synth->getMicRoutingPlan() : nullptr) {
-            const auto sourceMicCodeId = StringsDictSingleton::getId(micSpec.raw.trim().toLowerCase());
-            const auto& routeOverrideIds = this->synth->getLastRoutingContext().micRouteOverrideIds;
-            const auto planned = plan->resolve(this->synth->getId(), this->synth->getType(), micSpec);
-            auto sourceOutputAlias = planned.outputMicCode;
-            if (sourceOutputAlias.isEmpty()) {
+        if (const auto* plan = this->instrumentPlayer != nullptr ? this->instrumentPlayer->getMicRoutingPlan() : nullptr) {
+            const auto micCodeId = StringsDictSingleton::getId(micSpec.raw.trim().toLowerCase());
+            const auto& routeOverrideIds = this->instrumentPlayer->getLastRoutingContext().micRouteOverrideIds;
+            const auto planned = plan->resolve(this->instrumentPlayer->getId(), this->instrumentPlayer->getType(), micSpec);
+            auto automaticOutputAlias = planned.outputMicCode;
+            if (automaticOutputAlias.isEmpty()) {
                 for (const auto& micEntry : this->micEntries) {
                     if (!micKeyEq(micSpec, micEntry.mic->specs)) continue;
-                    sourceOutputAlias = micEntry.mic->code;
+                    automaticOutputAlias = micEntry.mic->code;
                     break;
                 }
             }
-            auto overrideIt = routeOverrideIds.find(sourceMicCodeId);
+            auto overrideIt = routeOverrideIds.find(micCodeId);
             bool usedOutputAlias = false;
-            if (overrideIt == routeOverrideIds.end() && sourceOutputAlias.isNotEmpty()) {
-                const auto outputAliasId = StringsDictSingleton::getId(sourceOutputAlias.trim().toLowerCase());
+            if (overrideIt == routeOverrideIds.end() && automaticOutputAlias.isNotEmpty()) {
+                const auto outputAliasId = StringsDictSingleton::getId(automaticOutputAlias.trim().toLowerCase());
                 overrideIt = routeOverrideIds.find(outputAliasId);
                 usedOutputAlias = overrideIt != routeOverrideIds.end();
             }
             if (overrideIt != routeOverrideIds.end()) {
                 if (StringsDictSingleton::nameOf(overrideIt->second) == "-") return { -1, fileChannelCount, micSpec.raw, false };
-                const auto overrideAssignment = plan->resolveOverride(this->synth->getId(), micSpec, overrideIt->second, this->synth->getType());
+                const auto overrideAssignment = plan->resolveOverride(this->instrumentPlayer->getId(), micSpec, overrideIt->second, this->instrumentPlayer->getType());
                 if (overrideAssignment.matched()) {
-                    LOG(Debug, "Mic route override: slot=" + this->synth->getId()
-                        + " source=" + micSpec.raw
-                        + (usedOutputAlias ? " alias=" + sourceOutputAlias : "")
+                    LOG(Debug, "Mic route override: slot=" + this->instrumentPlayer->getId()
+                        + " mic=" + micSpec.raw
+                        + (usedOutputAlias ? " alias=" + automaticOutputAlias : "")
                         + " target=" + StringsDictSingleton::nameOf(overrideIt->second)
                         + " hostStart=" + juce::String(overrideAssignment.globalStart)
                         + " channels=" + juce::String(overrideAssignment.channels));
@@ -69,9 +69,9 @@ public:
             if (planned.matched())
                 return { planned.globalStart, planned.channels, planned.micCode, planned.applyBalance };
 
-            // Source direct-code collection is wired into the pure Stage 3 plan builder,
-            // but legacy synth loading still needs direct mics until useInstrumentMap
-            // publishes source-aware requests for every slot.
+            // The pure Stage 3 plan builder collects library direct mics.
+            // Legacy instrument player loading still needs direct mics until useInstrumentMap
+            // publishes library mic requests for every slot.
             if (micSpec.type != KitLib::MicSpec::Type::Direct) {
                 skippedRawCodes.insert(micSpec.raw);
                 return { -1, fileChannelCount, {}, false };
@@ -99,19 +99,19 @@ private:
         Assignment             assignment;
     };
 
-    InstrumentSynth*           synth = nullptr;
+    InstrumentPlayer*           instrumentPlayer = nullptr;
     std::vector<MicEntryInfo>  micEntries;
     std::set<juce::String>     skippedRawCodes;
 
-    static bool micKeyEq(const KitLib::MicSpec& sourceMic, const KitLib::MicSpec& outputMic) {
-        return micSpecsMatchOutput(sourceMic, outputMic);
+    static bool micKeyEq(const KitLib::MicSpec& libraryMic, const KitLib::MicSpec& outputMic) {
+        return micSpecsMatchOutput(libraryMic, outputMic);
     }
 
     void buildMicEntries() {
-        const MicLayout* micLayout = this->synth->getMicLayout();
+        const MicLayout* micLayout = this->instrumentPlayer->getMicLayout();
         if (micLayout == nullptr) return;
 
-        const DrumKitEngine* engine = this->synth->getEngine();
+        const DrumKitEngine* engine = this->instrumentPlayer->getEngine();
 
         // Iterate micLayout->mics in the same order applyMicLayout does, collecting only the
         // mics whose channels were assigned to this instrument. The ordering must match exactly
@@ -123,16 +123,16 @@ private:
         //   instrument NOT in slots → type fallback, goes to all instruments of that type
         //
         // We mirror that here. The sameCode/sameType exclusivity rule:
-        //   if ANY mic in the layout exactly names this synth's id, type-fallback mics are
+        //   if ANY mic in the layout exactly names this instrument player's id, type-fallback mics are
         //   NOT included (they would go to other slots that matched exactly by id).
         bool hasExactCodeMatch = false;
         for (const auto& mic : micLayout->mics)
-            if (mic.instrument == this->synth->getId()) { hasExactCodeMatch = true; break; }
+            if (mic.instrument == this->instrumentPlayer->getId()) { hasExactCodeMatch = true; break; }
 
-        const auto& globalMapping = this->synth->getMicOutputMapping();
+        const auto& globalMapping = this->instrumentPlayer->getMicOutputMapping();
         int localCursor = 0;
 
-        juce::String debug = "    MicLayout entries for '" + this->synth->getId() + "': ";
+        juce::String debug = "    MicLayout entries for '" + this->instrumentPlayer->getId() + "': ";
         bool firstEntry = true;
 
         for (const auto& mic : micLayout->mics) {
@@ -141,7 +141,7 @@ private:
 
             if (mic.instrument.isEmpty()) {
                 includeForThisInst = true;  // common mic
-            } else if (mic.instrument == this->synth->getId()) {
+            } else if (mic.instrument == this->instrumentPlayer->getId()) {
                 includeForThisInst = true;  // exact id match
             } else if (!hasExactCodeMatch) {
                 // Type fallback — only when this mic's instrument field does NOT resolve
@@ -152,7 +152,7 @@ private:
                     while (typeStr.length() > 0 && juce::CharacterFunctions::isDigit(typeStr.getLastCharacter()))
                         typeStr = typeStr.dropLastCharacters(1);
                     auto instType = KitLib::InstrumentSpec::typeFromString(typeStr);
-                    if (instType != KitLib::InstrumentSpec::Type::Unknown && instType == this->synth->getType())
+                    if (instType != KitLib::InstrumentSpec::Type::Unknown && instType == this->instrumentPlayer->getType())
                         includeForThisInst = true;
                 }
             }
@@ -178,7 +178,7 @@ private:
         // Sanity check: localCursor should equal the instrument's assigned channel count.
         const int assigned = static_cast<int>(globalMapping.size());
         if (assigned > 0 && localCursor != assigned)
-            LOG(Warning, "MicRoutingBuilder: instrument '" + this->synth->getId()
+            LOG(Warning, "MicRoutingBuilder: instrument '" + this->instrumentPlayer->getId()
                 + "' cursor mismatch: walked " + juce::String(localCursor)
                 + " channels but micOutputMapping has " + juce::String(assigned)
                 + " - check mic layout and slot id matching.");

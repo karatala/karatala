@@ -1,9 +1,9 @@
-#include "InstrumentSynth.h"
+#include "InstrumentPlayer.h"
 #include "DrumKitEngine.h"
 #include "HiHatTransitionPolicy.h"
 #include <cmath>
 
-void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
+void InstrumentPlayer::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     if (midiMessage.isNoteOn()) {
         const int note = midiMessage.getNoteNumber();
         this->resetAftertouchChokeGesture(midiMessage.getChannel(), note);
@@ -40,12 +40,12 @@ void InstrumentSynth::handleMidiEvent(const juce::MidiMessage& midiMessage) {
     
 }
 
-void InstrumentSynth::applyAftertouch(int midiChannel, int midiNoteNumber) {
+void InstrumentPlayer::applyAftertouch(int midiChannel, int midiNoteNumber) {
     const auto& paVal = this->parent->getLatestPolyphonicAftertouchValue(midiNoteNumber);
     if (paVal > 0) this->handleAftertouch(midiChannel, midiNoteNumber, paVal);
 }
 
-void InstrumentSynth::resetAftertouchChokeGesture(int midiChannel, int midiNoteNumber) {
+void InstrumentPlayer::resetAftertouchChokeGesture(int midiChannel, int midiNoteNumber) {
     const int firstChannelIdx = midiChannel > 0 ? juce::jlimit(0, 15, midiChannel - 1) : 0;
     const int lastChannelIdx = midiChannel > 0 ? firstChannelIdx : 15;
     for (int channelIdx = firstChannelIdx; channelIdx <= lastChannelIdx; ++channelIdx) {
@@ -54,7 +54,7 @@ void InstrumentSynth::resetAftertouchChokeGesture(int midiChannel, int midiNoteN
     }
 }
 
-void InstrumentSynth::handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue) {
+void InstrumentPlayer::handleAftertouch(int midiChannel, int midiNoteNumber, int aftertouchValue) {
     if (midiNoteNumber < 0 || midiNoteNumber >= 128) return;
     const int pressureThreshold = this->parent != nullptr ? this->parent->getEngineSettings().polyAftertouchMinPressure.load() : 10;
     const int channelIdx = midiChannel > 0 ? juce::jlimit(0, 15, midiChannel - 1) : 0;
@@ -79,21 +79,21 @@ void InstrumentSynth::handleAftertouch(int midiChannel, int midiNoteNumber, int 
     }
 }
 
-bool InstrumentSynth::triggerAftertouchChokeSample(int midiChannel, int midiNoteNumber) {
+bool InstrumentPlayer::triggerAftertouchChokeSample(int midiChannel, int midiNoteNumber) {
     if (this->parent == nullptr) return false;
     static constexpr size_t MAX_CHOKE_VOICES = 64;
 
-    InstrumentSynthVoice* referenceVoice = nullptr;
+    InstrumentPlayerVoice* referenceVoice = nullptr;
     bool referenceIsDirect = false;
     float referenceDb = -100.0f;
     for (auto* voice : this->voices) {
-        if (voice == nullptr || !voice->isVoiceActive() || voice->getEnvelopeState() != InstrumentSynthVoice::EnvelopeState::Playing) continue;
+        if (voice == nullptr || !voice->isVoiceActive() || voice->getEnvelopeState() != InstrumentPlayerVoice::EnvelopeState::Playing) continue;
         if (voice->getCurrentlyPlayingNote() != midiNoteNumber || (midiChannel > 0 && !voice->isPlayingChannel(midiChannel))) continue;
         auto* sound = voice->getCurrentlyPlayingSound();
         if (sound == nullptr || sound->isAftertouchChokeTarget || sound->aftertouchChokeArticulationIndex < 0) continue;
         if (static_cast<size_t>(sound->aftertouchChokeArticulationIndex) >= this->runtimeArticulations.size()) continue;
 
-        const bool isDirect = sound->sampleVariantSpec != nullptr && sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
+        const bool isDirect = sound->sampleSpec != nullptr && sound->sampleSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
         const float currentDb = voice->getEstimatedCurrentDb();
         if (referenceVoice == nullptr || (isDirect && !referenceIsDirect) || (isDirect == referenceIsDirect && currentDb > referenceDb)) {
             referenceVoice = voice;
@@ -108,28 +108,28 @@ bool InstrumentSynth::triggerAftertouchChokeSample(int midiChannel, int midiNote
     const auto chokeArtIdx = static_cast<ArtRtIdx>(referenceSound->aftertouchChokeArticulationIndex);
     auto& chokeArt = this->runtimeArticulations[static_cast<size_t>(chokeArtIdx)];
     const juce::uint8 midiVelocity = referenceVoice->getMidiVelocity();
-    const int targetLayerIdx = this->resolveVelocityLayer(chokeArt, midiVelocity);
-    if (targetLayerIdx < 0 || targetLayerIdx >= static_cast<int>(chokeArt.layers.size())) return false;
-    auto& targetLayer = chokeArt.layers[static_cast<size_t>(targetLayerIdx)];
-    auto* logicalHit = this->chooseLogicalHit(targetLayer);
+    const int targetVelocityLevelIdx = this->resolveVelocityLevel(chokeArt, midiVelocity);
+    if (targetVelocityLevelIdx < 0 || targetVelocityLevelIdx >= static_cast<int>(chokeArt.velocityLevels.size())) return false;
+    auto& targetVelocityLevel = chokeArt.velocityLevels[static_cast<size_t>(targetVelocityLevelIdx)];
+    auto* logicalHit = this->chooseLogicalHit(targetVelocityLevel);
     if (logicalHit == nullptr || logicalHit->sampleEntryIndexes.empty() || logicalHit->sampleEntryIndexes.size() > MAX_CHOKE_VOICES) return false;
 
     const auto& settings = this->parent->getEngineSettings();
     const float targetVelocityGain = referenceVoice->getVelocityGain();
     const float targetVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, targetVelocityGain), -100.0f);
     std::array<double, MAX_CHOKE_VOICES> targetOffsets {};
-    std::array<InstrumentSynthVoice*, MAX_CHOKE_VOICES> reservedVoices {};
+    std::array<InstrumentPlayerVoice*, MAX_CHOKE_VOICES> reservedVoices {};
 
-    auto findSourceVoice = [this, referenceSound, midiChannel, midiNoteNumber](int micBufferChannelStart, KitLib::MicSpec::Type fallbackMicType) -> InstrumentSynthVoice* {
-        InstrumentSynthVoice* bestVoice = nullptr;
+    auto findSourceVoice = [this, referenceSound, midiChannel, midiNoteNumber](int micBufferChannelStart, KitLib::MicSpec::Type fallbackMicType) -> InstrumentPlayerVoice* {
+        InstrumentPlayerVoice* bestVoice = nullptr;
         float bestDb = -100.0f;
         for (auto* candidateVoice : this->voices) {
-            if (candidateVoice == nullptr || !candidateVoice->isVoiceActive() || candidateVoice->getEnvelopeState() != InstrumentSynthVoice::EnvelopeState::Playing) continue;
+            if (candidateVoice == nullptr || !candidateVoice->isVoiceActive() || candidateVoice->getEnvelopeState() != InstrumentPlayerVoice::EnvelopeState::Playing) continue;
             if (candidateVoice->getCurrentlyPlayingNote() != midiNoteNumber || (midiChannel > 0 && !candidateVoice->isPlayingChannel(midiChannel))) continue;
             auto* candidateSound = candidateVoice->getCurrentlyPlayingSound();
             if (candidateSound == nullptr || candidateSound->isAftertouchChokeTarget || candidateSound->instrumentSpec != referenceSound->instrumentSpec) continue;
             const bool exactMic = micBufferChannelStart >= 0 && candidateSound->micBufferChannelStart == micBufferChannelStart;
-            const bool fallbackMic = micBufferChannelStart < 0 && candidateSound->sampleVariantSpec != nullptr && candidateSound->sampleVariantSpec->micSpec.type == fallbackMicType;
+            const bool fallbackMic = micBufferChannelStart < 0 && candidateSound->sampleSpec != nullptr && candidateSound->sampleSpec->micSpec.type == fallbackMicType;
             if (!exactMic && !fallbackMic) continue;
             const float candidateDb = candidateVoice->getEstimatedCurrentDb();
             if (bestVoice == nullptr || candidateDb > bestDb) {
@@ -140,7 +140,7 @@ bool InstrumentSynth::triggerAftertouchChokeSample(int midiChannel, int midiNote
         return bestVoice;
     };
 
-    auto calculateTargetOffset = [this, &settings, targetVelocityDb](const InstrumentSynthVoice& sourceVoice, const SampledSound& targetSound) -> std::optional<double> {
+    auto calculateTargetOffset = [this, &settings, targetVelocityDb](const InstrumentPlayerVoice& sourceVoice, const SampledSound& targetSound) -> std::optional<double> {
         const auto* sourceSound = sourceVoice.getCurrentlyPlayingSound();
         if (sourceSound == nullptr || targetSound.buffer == nullptr) return std::nullopt;
         const double sourceRate = sourceSound->sampleRate > 0.0 ? sourceSound->sampleRate : 44100.0;
@@ -173,8 +173,8 @@ bool InstrumentSynth::triggerAftertouchChokeSample(int midiChannel, int midiNote
 
     for (size_t logicalEntryIdx = 0; logicalEntryIdx < logicalHit->sampleEntryIndexes.size(); ++logicalEntryIdx) {
         const size_t sampleEntryIdx = logicalHit->sampleEntryIndexes[logicalEntryIdx];
-        if (sampleEntryIdx >= targetLayer.samples.size()) return false;
-        auto* targetSound = targetLayer.samples[sampleEntryIdx].sound;
+        if (sampleEntryIdx >= targetVelocityLevel.samples.size()) return false;
+        auto* targetSound = targetVelocityLevel.samples[sampleEntryIdx].sound;
         if (targetSound == nullptr || !targetSound->loaded.load(std::memory_order_acquire) || targetSound->buffer == nullptr) return false;
 
         std::optional<double> selectedOffset;
@@ -208,7 +208,7 @@ bool InstrumentSynth::triggerAftertouchChokeSample(int midiChannel, int midiNote
     const ArtRtIdx sourceArtIdx = this->getVoiceRuntimeArticulationIdx(*referenceVoice);
     const auto& voiceParameters = sourceArtIdx >= 0 && static_cast<size_t>(sourceArtIdx) < this->runtimeArticulations.size() ? this->runtimeArticulations[static_cast<size_t>(sourceArtIdx)].parameters : chokeArt.parameters;
     for (size_t logicalEntryIdx = 0; logicalEntryIdx < logicalHit->sampleEntryIndexes.size(); ++logicalEntryIdx) {
-        const auto& targetEntry = targetLayer.samples[logicalHit->sampleEntryIndexes[logicalEntryIdx]];
+        const auto& targetEntry = targetVelocityLevel.samples[logicalHit->sampleEntryIndexes[logicalEntryIdx]];
         auto* targetSound = targetEntry.sound;
         auto* targetVoice = reservedVoices[logicalEntryIdx];
         this->updateSoundMicPlacementGains(*targetSound, voiceParameters.pan);
@@ -238,7 +238,7 @@ bool InstrumentSynth::triggerAftertouchChokeSample(int midiChannel, int midiNote
     return true;
 }
 
-int InstrumentSynth::getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
+int InstrumentPlayer::getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const {
     switch (dimensionType) {
         case KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose: return art.pedalOpenCloseValue;
         case KitLib::ArticulationSpec::ExpressionDimension::Type::ZoneCenterRim: return art.zoneCenterRimValue;
@@ -250,7 +250,7 @@ int InstrumentSynth::getRuntimeExpressionValue(const ArticulationRuntime& art, K
     return -1;
 }
 
-InstrumentSynth::ArtRtIdx InstrumentSynth::selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const {
+InstrumentPlayer::ArtRtIdx InstrumentPlayer::selectArticulationForController(ArtRtIdx baseArtIdx, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType, int controllerValue) const {
     if (baseArtIdx < 0 || static_cast<int>(baseArtIdx) >= static_cast<int>(this->runtimeArticulations.size()))
         return baseArtIdx;
 
@@ -296,12 +296,12 @@ InstrumentSynth::ArtRtIdx InstrumentSynth::selectArticulationForController(ArtRt
     return baseArtIdx;
 }
 
-InstrumentSynth::ArtRtIdx InstrumentSynth::getVoiceRuntimeArticulationIdx(const InstrumentSynthVoice& voice) const {
+InstrumentPlayer::ArtRtIdx InstrumentPlayer::getVoiceRuntimeArticulationIdx(const InstrumentPlayerVoice& voice) const {
     if (voice.artRuntimeIdx >= 0 && static_cast<size_t>(voice.artRuntimeIdx) < this->runtimeArticulations.size()) return voice.artRuntimeIdx;
 
-    if (const auto* sound = voice.getCurrentlyPlayingSound(); sound != nullptr && sound->sampleVariantSpec != nullptr) {
-        const auto* velocityLayer = sound->sampleVariantSpec->parent;
-        const auto* artSpec = velocityLayer != nullptr ? velocityLayer->parent : nullptr;
+    if (const auto* sound = voice.getCurrentlyPlayingSound(); sound != nullptr && sound->sampleSpec != nullptr) {
+        const auto* velocityLevel = sound->sampleSpec->parent != nullptr ? sound->sampleSpec->parent->parent : nullptr;
+        const auto* artSpec = velocityLevel != nullptr ? velocityLevel->parent : nullptr;
         if (artSpec != nullptr) {
             const uint64_t artKey = (static_cast<uint64_t>(artSpec->nameId) << 32) | static_cast<uint64_t>(artSpec->exprId);
             const auto artCacheIt = this->artIdByNameExprId.find(artKey);
@@ -317,13 +317,13 @@ InstrumentSynth::ArtRtIdx InstrumentSynth::getVoiceRuntimeArticulationIdx(const 
     return -1;
 }
 
-int InstrumentSynth::getVoicePedalOpenCloseValue(const InstrumentSynthVoice& voice) const {
+int InstrumentPlayer::getVoicePedalOpenCloseValue(const InstrumentPlayerVoice& voice) const {
     const ArtRtIdx artIdx = this->getVoiceRuntimeArticulationIdx(voice);
     if (artIdx < 0 || static_cast<size_t>(artIdx) >= this->runtimeArticulations.size()) return -1;
     return this->runtimeArticulations[static_cast<size_t>(artIdx)].pedalOpenCloseValue;
 }
 
-int InstrumentSynth::getHiHatNotePedalOpenCloseValue(int midiNoteNumber) const {
+int InstrumentPlayer::getHiHatNotePedalOpenCloseValue(int midiNoteNumber) const {
     if (midiNoteNumber < 0 || midiNoteNumber >= static_cast<int>(this->noteToArticulation.size())) return -1;
 
     int notePedalOpenCloseValue = this->hihatNotePedalOpenCloseValues[static_cast<size_t>(midiNoteNumber)];
@@ -335,14 +335,14 @@ int InstrumentSynth::getHiHatNotePedalOpenCloseValue(int midiNoteNumber) const {
     return notePedalOpenCloseValue;
 }
 
-void InstrumentSynth::rebuildHiHatNoteChokeValues() {
+void InstrumentPlayer::rebuildHiHatNoteChokeValues() {
     this->hihatNotePedalOpenCloseValues.fill(-1);
     if (this->type != KitLib::InstrumentSpec::Type::HiHat) return;
 
     static const juce::String pedalOpenCloseCode = "pdl_opn_cls";
     const auto defaultPoints = KitLayout::getDefaultExpressionPoints();
-    for (const auto& layoutArticulation : this->instrumentSlot.articulations) {
-        const juce::String expressionLabel = StringsDictSingleton::nameOf(layoutArticulation.exprId != 0 ? layoutArticulation.exprId : layoutArticulation.nameId).trim().toLowerCase();
+    for (const auto& articulationSlot : this->instrumentSlot.articulations) {
+        const juce::String expressionLabel = StringsDictSingleton::nameOf(articulationSlot.exprId != 0 ? articulationSlot.exprId : articulationSlot.nameId).trim().toLowerCase();
         if (expressionLabel.isEmpty()) continue;
 
         std::optional<uint8_t> expressionValue = KitLayout::getExpressionPoint(this->instrumentSlot.expressionPoints, pedalOpenCloseCode, expressionLabel);
@@ -352,11 +352,11 @@ void InstrumentSynth::rebuildHiHatNoteChokeValues() {
         if (!expressionValue.has_value()) expressionValue = KitLayout::getExpressionPoint(defaultPoints, pedalOpenCloseCode, expressionLabel);
         if (!expressionValue.has_value()) continue;
 
-        for (const auto note : layoutArticulation.notes) this->hihatNotePedalOpenCloseValues[static_cast<size_t>(note)] = static_cast<int>(*expressionValue);
+        for (const auto note : articulationSlot.notes) this->hihatNotePedalOpenCloseValues[static_cast<size_t>(note)] = static_cast<int>(*expressionValue);
     }
 }
 
-bool InstrumentSynth::controllerCanTransitionExistingVoices(int controllerNumber) const {
+bool InstrumentPlayer::controllerCanTransitionExistingVoices(int controllerNumber) const {
     for (const auto& controller : this->instrumentSlot.controllers) {
         if (controller.number == controllerNumber)
             return controller.codeIdx == KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose;
@@ -364,7 +364,7 @@ bool InstrumentSynth::controllerCanTransitionExistingVoices(int controllerNumber
     return false;
 }
 
-void InstrumentSynth::handleController(int midiChannel, int controllerNumber, int controllerValue) {
+void InstrumentPlayer::handleController(int midiChannel, int controllerNumber, int controllerValue) {
     if (this->parent == nullptr
         || this->getType() != KitLib::InstrumentSpec::Type::HiHat
         || controllerNumber < 0
@@ -401,7 +401,7 @@ void InstrumentSynth::handleController(int midiChannel, int controllerNumber, in
     this->coalescedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
 }
 
-void InstrumentSynth::processPendingHiHatControllers() {
+void InstrumentPlayer::processPendingHiHatControllers() {
     if (this->getType() != KitLib::InstrumentSpec::Type::HiHat || this->parent == nullptr)
         return;
 
@@ -418,7 +418,7 @@ void InstrumentSynth::processPendingHiHatControllers() {
     }
 }
 
-bool InstrumentSynth::isHiHatTransitionTargetAudible(const SampledSound& targetSound, double offsetSamples, float expectedTargetDb, float silenceFloorDb) const {
+bool InstrumentPlayer::isHiHatTransitionTargetAudible(const SampledSound& targetSound, double offsetSamples, float expectedTargetDb, float silenceFloorDb) const {
     if (targetSound.buffer == nullptr) return false;
 
     const auto& targetBuffer = *targetSound.buffer;
@@ -428,9 +428,9 @@ bool InstrumentSynth::isHiHatTransitionTargetAudible(const SampledSound& targetS
 
     int sourceChannelStart = 0;
     int sourceChannelCount = targetBuffer.getNumChannels();
-    if (targetSound.sampleVariantSpec != nullptr) {
-        sourceChannelStart = targetSound.sampleVariantSpec->fileChannelStart;
-        if (targetSound.sampleVariantSpec->fileChannelCount > 0) sourceChannelCount = targetSound.sampleVariantSpec->fileChannelCount;
+    if (targetSound.sampleSpec != nullptr) {
+        sourceChannelStart = targetSound.sampleSpec->fileChannelStart;
+        if (targetSound.sampleSpec->fileChannelCount > 0) sourceChannelCount = targetSound.sampleSpec->fileChannelCount;
     }
 
     double sumSquares = 0.0;
@@ -451,18 +451,18 @@ bool InstrumentSynth::isHiHatTransitionTargetAudible(const SampledSound& targetS
     return rmsDb >= silenceThreshold;
 }
 
-std::optional<float> InstrumentSynth::findHiHatReferenceOffsetMs(const InstrumentSynthVoice& sourceVoice, ArtRtIdx sourceArtIdx, const ArticulationRuntime& targetArt, int targetLayerIdx, uint8_t targetVariant, const SampledSound& replacementTargetSound, KitLib::MicSpec::Type& referenceMicType) const {
-    if (this->parent == nullptr || targetLayerIdx < 0 || targetLayerIdx >= static_cast<int>(targetArt.layers.size())) return std::nullopt;
+std::optional<float> InstrumentPlayer::findHiHatReferenceOffsetMs(const InstrumentPlayerVoice& sourceVoice, ArtRtIdx sourceArtIdx, const ArticulationRuntime& targetArt, int targetVelocityLevelIdx, uint8_t targetRoundRobinId, const SampledSound& replacementTargetSound, KitLib::MicSpec::Type& referenceMicType) const {
+    if (this->parent == nullptr || targetVelocityLevelIdx < 0 || targetVelocityLevelIdx >= static_cast<int>(targetArt.velocityLevels.size())) return std::nullopt;
 
     const auto* sourceSound = sourceVoice.getCurrentlyPlayingSound();
     if (sourceSound == nullptr) return std::nullopt;
     const double sourceRate = sourceSound->sampleRate > 0.0 ? sourceSound->sampleRate : 44100.0;
     const float sourceElapsedMs = static_cast<float>((sourceVoice.sourceSamplePosition / sourceRate) * 1000.0);
-    const auto& targetLayer = targetArt.layers[static_cast<size_t>(targetLayerIdx)];
+    const auto& targetVelocityLevel = targetArt.velocityLevels[static_cast<size_t>(targetVelocityLevelIdx)];
     const auto& settings = this->parent->getEngineSettings();
 
-    auto findReferenceVoice = [this, &sourceVoice, sourceArtIdx, sourceElapsedMs, targetVariant](KitLib::MicSpec::Type micType) -> InstrumentSynthVoice* {
-        InstrumentSynthVoice* bestVoice = nullptr;
+    auto findReferenceVoice = [this, &sourceVoice, sourceArtIdx, sourceElapsedMs, targetRoundRobinId](KitLib::MicSpec::Type micType) -> InstrumentPlayerVoice* {
+        InstrumentPlayerVoice* bestVoice = nullptr;
         float bestElapsedDifferenceMs = 25.0f;
         for (auto* candidateVoice : this->voices) {
             if (candidateVoice == nullptr || !candidateVoice->isVoiceActive()) continue;
@@ -472,9 +472,9 @@ std::optional<float> InstrumentSynth::findHiHatReferenceOffsetMs(const Instrumen
             if (this->getVoiceRuntimeArticulationIdx(*candidateVoice) != sourceArtIdx) continue;
 
             const auto* candidateSound = candidateVoice->getCurrentlyPlayingSound();
-            if (candidateSound == nullptr || candidateSound->sampleVariantSpec == nullptr) continue;
-            if (candidateSound->sampleVariantSpec->micSpec.type != micType) continue;
-            if (KitLib::SampleVariantSpec::letterToIdx(candidateSound->sampleVariantSpec->letter) != targetVariant) continue;
+            if (candidateSound == nullptr || candidateSound->sampleSpec == nullptr) continue;
+            if (candidateSound->sampleSpec->micSpec.type != micType) continue;
+            if (candidateSound->sampleSpec->parent == nullptr || candidateSound->sampleSpec->parent->roundRobinId != targetRoundRobinId) continue;
 
             const double candidateRate = candidateSound->sampleRate > 0.0 ? candidateSound->sampleRate : 44100.0;
             const float candidateElapsedMs = static_cast<float>((candidateVoice->sourceSamplePosition / candidateRate) * 1000.0);
@@ -486,17 +486,17 @@ std::optional<float> InstrumentSynth::findHiHatReferenceOffsetMs(const Instrumen
         return bestVoice;
     };
 
-    auto findTargetEntry = [&targetLayer, targetVariant](const SampledSound& referenceSound) -> const SampleEntry* {
+    auto findTargetEntry = [&targetVelocityLevel, targetRoundRobinId](const SampledSound& referenceSound) -> const SampleEntry* {
         const int referenceMicStart = referenceSound.micBufferChannelStart;
         const SampleEntry* targetEntry = nullptr;
-        for (const auto& sampleEntry : targetLayer.samples) {
-            if (sampleEntry.variantIdx == targetVariant && sampleEntry.sound != nullptr && sampleEntry.sound->micBufferChannelStart == referenceMicStart) {
+        for (const auto& sampleEntry : targetVelocityLevel.samples) {
+            if (sampleEntry.roundRobinId == targetRoundRobinId && sampleEntry.sound != nullptr && sampleEntry.sound->micBufferChannelStart == referenceMicStart) {
                 targetEntry = &sampleEntry;
                 break;
             }
         }
         if (targetEntry != nullptr && targetEntry->sound->loaded.load(std::memory_order_acquire) && targetEntry->sound->buffer != nullptr) return targetEntry;
-        for (const auto& sampleEntry : targetLayer.samples) {
+        for (const auto& sampleEntry : targetVelocityLevel.samples) {
             if (sampleEntry.sound == nullptr || sampleEntry.sound->micBufferChannelStart != referenceMicStart) continue;
             if (!sampleEntry.sound->loaded.load(std::memory_order_acquire) || sampleEntry.sound->buffer == nullptr) continue;
             return &sampleEntry;
@@ -555,7 +555,7 @@ std::optional<float> InstrumentSynth::findHiHatReferenceOffsetMs(const Instrumen
     return std::nullopt;
 }
 
-void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue) {
+void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int controllerNumber, int controllerValue) {
     this->processedHiHatTransitions.fetch_add(1, std::memory_order_relaxed);
     const auto controllerIdx = static_cast<size_t>(controllerNumber);
     const auto& settings = this->parent->getEngineSettings();
@@ -637,7 +637,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     bool hasAudibleLowerPocVoice = false;
     bool hasAudibleOpenHalfVoice = false;
     for (auto* voice : this->voices) {
-        if (voice == nullptr || !voice->isVoiceActive() || voice->getEnvelopeState() != InstrumentSynthVoice::EnvelopeState::Playing)
+        if (voice == nullptr || !voice->isVoiceActive() || voice->getEnvelopeState() != InstrumentPlayerVoice::EnvelopeState::Playing)
             continue;
         if (midiChannel > 0 && !voice->isPlayingChannel(midiChannel))
             continue;
@@ -688,7 +688,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         if (!voice->isVoiceActive()) continue;
 
         auto* ss = voice->getCurrentlyPlayingSound();
-        if (ss == nullptr || ss->sampleVariantSpec == nullptr) continue;
+        if (ss == nullptr || ss->sampleSpec == nullptr) continue;
 
         const int currentArtIdx = this->getVoiceRuntimeArticulationIdx(*voice);
         if (currentArtIdx < 0) continue;
@@ -698,42 +698,42 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
 
         // Now prepare to start a replacement voice from new articulation
         const auto& newArt = this->runtimeArticulations[static_cast<size_t>(newArtIdx)];
-        // Choose the target layer from the original MIDI velocity, not from the calibrated output gain.
+        // Choose the target velocityLevel from the original MIDI velocity, not from the calibrated output gain.
         const juce::uint8 midiVelocity = voice->getMidiVelocity();
-        int layerIdx = newArt.velocityToLayer[static_cast<size_t>(midiVelocity)];
-        if (layerIdx < 0 || layerIdx >= static_cast<int>(newArt.layers.size())) continue;
-        const auto& layer = newArt.layers[static_cast<size_t>(layerIdx)];
+        int velocityLevelIdx = newArt.velocityToLevel[static_cast<size_t>(midiVelocity)];
+        if (velocityLevelIdx < 0 || velocityLevelIdx >= static_cast<int>(newArt.velocityLevels.size())) continue;
+        const auto& velocityLevel = newArt.velocityLevels[static_cast<size_t>(velocityLevelIdx)];
 
-        // find variant index of current voice
-        uint8_t curVariant = 0;
-        if (ss->sampleVariantSpec) curVariant = KitLib::SampleVariantSpec::letterToIdx(ss->sampleVariantSpec->letter);
+        // Find the round-robin ID of the current voice.
+        uint8_t currentRoundRobinId = 0;
+        if (ss->sampleSpec->parent != nullptr) currentRoundRobinId = ss->sampleSpec->parent->roundRobinId;
 
-        // find sample entry in target layer matching variant AND mic channel,
+        // Find the sample entry in the target velocity level with the same round-robin ID and mic channel,
         // so each replacement voice writes to the same mic buffer channel as the
         // voice it replaces (overhead stays overhead, room stays room, etc.).
         const int voiceMicStart = ss->micBufferChannelStart;
-        const InstrumentSynth::SampleEntry* targetSe = nullptr;
-        for (const auto& se : layer.samples) {
-            if (se.variantIdx == curVariant && se.sound != nullptr
+        const InstrumentPlayer::SampleEntry* targetSe = nullptr;
+        for (const auto& se : velocityLevel.samples) {
+            if (se.roundRobinId == currentRoundRobinId && se.sound != nullptr
                 && se.sound->micBufferChannelStart == voiceMicStart) {
                 targetSe = &se;
                 break;
             }
         }
-        // fallback: match variant only (different mic layout between articulations)
+        // Fallback: match only the round-robin ID when articulations have different mic layouts.
         if (targetSe == nullptr) {
-            for (const auto& se : layer.samples) {
-                if (se.variantIdx == curVariant) { targetSe = &se; break; }
+            for (const auto& se : velocityLevel.samples) {
+                if (se.roundRobinId == currentRoundRobinId) { targetSe = &se; break; }
             }
         }
-        if (targetSe == nullptr && !layer.samples.empty()) targetSe = &layer.samples.front();
+        if (targetSe == nullptr && !velocityLevel.samples.empty()) targetSe = &velocityLevel.samples.front();
         if (targetSe == nullptr || targetSe->sound == nullptr) {
             ++skippedNoTarget;
             continue;
         }
 
         if (!targetSe->sound->loaded.load(std::memory_order_acquire) || targetSe->sound->buffer == nullptr) {
-            for (const auto& se : layer.samples) {
+            for (const auto& se : velocityLevel.samples) {
                 if (se.sound == nullptr) continue;
                 if (se.sound->micBufferChannelStart != voiceMicStart) continue;
                 if (!se.sound->loaded.load(std::memory_order_acquire)) continue;
@@ -815,7 +815,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
 
         // For pedal transitions, never steal active voices. If no idle voice exists,
         // keep the old voice ringing instead of risking an abrupt mute.
-        InstrumentSynthVoice* newVoice = nullptr;
+        InstrumentPlayerVoice* newVoice = nullptr;
         for (auto* candidate : this->voices) {
             if (candidate == nullptr || candidate == voice) continue;
             if (!candidate->isVoiceActive()) {
@@ -847,7 +847,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
         // (indicating corrupt/empty sample), with an absolute floor at -90dB
         // to catch true digital silence.
         if (!this->isHiHatTransitionTargetAudible(*targetSe->sound, clampedOffset, targetRelativeDb, silenceFloorDb)) {
-            const auto referenceOffsetMs = this->findHiHatReferenceOffsetMs(*voice, static_cast<ArtRtIdx>(currentArtIdx), newArt, layerIdx, curVariant, *targetSe->sound, referenceMicType);
+            const auto referenceOffsetMs = this->findHiHatReferenceOffsetMs(*voice, static_cast<ArtRtIdx>(currentArtIdx), newArt, velocityLevelIdx, currentRoundRobinId, *targetSe->sound, referenceMicType);
             if (referenceOffsetMs.has_value()) {
                 const double referenceOffsetSamples = (static_cast<double>(*referenceOffsetMs) / 1000.0) * srcRate;
                 const double referenceClampedOffset = juce::jlimit(0.0, juce::jmax(0.0, static_cast<double>(targetBuffer.getNumSamples() - 1)), referenceOffsetSamples);
@@ -881,18 +881,19 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
 
         if (LOG_ENABLED(Verbose)) {
             juce::String oldArtCode = "unknown";
-            if (ss->sampleVariantSpec != nullptr && ss->sampleVariantSpec->parent != nullptr && ss->sampleVariantSpec->parent->parent != nullptr)
-                oldArtCode = ss->sampleVariantSpec->parent->parent->codeRaw;
+            if (ss->sampleSpec != nullptr && ss->sampleSpec->parent != nullptr && ss->sampleSpec->parent->parent != nullptr && ss->sampleSpec->parent->parent->parent != nullptr)
+                oldArtCode = ss->sampleSpec->parent->parent->parent->codeRaw;
 
             juce::String newArtCode = "unknown";
-            if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr
-                && targetSe->sound->sampleVariantSpec->parent != nullptr
-                && targetSe->sound->sampleVariantSpec->parent->parent != nullptr)
-                newArtCode = targetSe->sound->sampleVariantSpec->parent->parent->codeRaw;
+            if (targetSe->sound != nullptr && targetSe->sound->sampleSpec != nullptr
+                && targetSe->sound->sampleSpec->parent != nullptr
+                && targetSe->sound->sampleSpec->parent->parent != nullptr
+                && targetSe->sound->sampleSpec->parent->parent->parent != nullptr)
+                newArtCode = targetSe->sound->sampleSpec->parent->parent->parent->codeRaw;
 
             juce::String sampleName = "unknown";
-            if (targetSe->sound != nullptr && targetSe->sound->sampleVariantSpec != nullptr)
-                sampleName = targetSe->sound->sampleVariantSpec->sampleFile.getFileName();
+            if (targetSe->sound != nullptr && targetSe->sound->sampleSpec != nullptr)
+                sampleName = targetSe->sound->sampleSpec->sampleFile.getFileName();
 
             LOG(Verbose, "PedalVoiceStart inst=" + this->getId()
                 + " ch=" + juce::String(midiChannel)
@@ -979,7 +980,7 @@ void InstrumentSynth::processHiHatControllerTransition(int midiChannel, int cont
     }
 }
 
-bool InstrumentSynth::triggerHiHatPedalSample(int midiChannel, float sourceAudibleDb) {
+bool InstrumentPlayer::triggerHiHatPedalSample(int midiChannel, float sourceAudibleDb) {
     if (this->hihatPedalNote < 0)
         return false;
 
@@ -988,8 +989,8 @@ bool InstrumentSynth::triggerHiHatPedalSample(int midiChannel, float sourceAudib
         return false;
 
     float pedalPeakDb = -100.0f;
-    for (const auto& layer : this->runtimeArticulations[static_cast<size_t>(pedalArtIdx)].layers) {
-        for (const auto& sampleEntry : layer.samples) {
+    for (const auto& velocityLevel : this->runtimeArticulations[static_cast<size_t>(pedalArtIdx)].velocityLevels) {
+        for (const auto& sampleEntry : velocityLevel.samples) {
             if (sampleEntry.sound == nullptr || !sampleEntry.sound->decayEnvelope.isValid())
                 continue;
             pedalPeakDb = juce::jmax(pedalPeakDb, sampleEntry.sound->decayEnvelope.peakDb);
@@ -1006,41 +1007,41 @@ bool InstrumentSynth::triggerHiHatPedalSample(int midiChannel, float sourceAudib
     return this->playNote(midiChannel, this->hihatPedalNote, static_cast<juce::uint8>(velocity));
 }
 
-bool InstrumentSynth::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
+bool InstrumentPlayer::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
     const int articulationIdx = this->resolveArticulation(midiNoteNumber);
     if (articulationIdx >= 0 && articulationIdx < static_cast<int>(this->runtimeArticulations.size())) {
         if (LOG_ENABLED(Verbose))
-            LOG(Verbose, "InstrumentSynth::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(articulationIdx) + " (artIdx=" + juce::String(articulationIdx) + ")");
+            LOG(Verbose, "InstrumentPlayer::playNote: note " + juce::String(midiNoteNumber) + " maps to expression " + this->getArtName(articulationIdx) + " (artIdx=" + juce::String(articulationIdx) + ")");
     } else {
-        // LOG(Warning, "InstrumentSynth::playNote - no articulation available for note " + juce::String(midiNoteNumber));
+        // LOG(Warning, "InstrumentPlayer::playNote - no articulation available for note " + juce::String(midiNoteNumber));
         return false;
     }
     return this->playResolvedArticulation(midiChannel, midiNoteNumber, static_cast<ArtRtIdx>(articulationIdx), velocity);
 }
 
-bool InstrumentSynth::playPreviewArticulation(const int midiChannel, const int midiNoteNumber, const juce::String& destinationArticulationCode, const juce::uint8 velocity) {
-    const LayoutArticulation previewArticulation(destinationArticulationCode);
-    for (const auto& route : this->resolvedArticulationRoutes) {
-        if (!route.isControllerSibling || route.sourceArticulation == nullptr) continue;
-        if (route.destinationArtNameId != previewArticulation.nameId || route.sourceArticulation->exprId != previewArticulation.exprId) continue;
-        if (!vectorContains(route.midiNotes, static_cast<uint8_t>(midiNoteNumber))) continue;
+bool InstrumentPlayer::playPreviewArticulation(const int midiChannel, const int midiNoteNumber, const juce::String& articulationSlotCode, const juce::uint8 velocity) {
+    const ArticulationSlot previewArticulationSlot(articulationSlotCode);
+    for (const auto& playbackEntry : this->articulationPlaybackEntries) {
+        if (!playbackEntry.isControllerSibling || playbackEntry.libraryArticulation == nullptr) continue;
+        if (playbackEntry.articulationSlotNameId != previewArticulationSlot.nameId || playbackEntry.libraryArticulation->exprId != previewArticulationSlot.exprId) continue;
+        if (!vectorContains(playbackEntry.midiNotes, static_cast<uint8_t>(midiNoteNumber))) continue;
 
         ArtRtIdx articulationIdx = -1;
-        if (!this->tryGetRuntimeArticulationIdx(route, false, articulationIdx)) continue;
+        if (!this->tryGetRuntimeArticulationIdx(playbackEntry, false, articulationIdx)) continue;
         if (this->playResolvedArticulation(midiChannel, midiNoteNumber, articulationIdx, velocity)) return true;
     }
     return false;
 }
 
-bool InstrumentSynth::playSourceLogicalHitPreview(const KitLib::ArticulationSpec& sourceArticulation, int namedVelocity, uint8_t variantIdx, int midiChannel, int midiNoteNumber, juce::uint8 playbackVelocity) {
+bool InstrumentPlayer::playLibraryLogicalHitPreview(const KitLib::ArticulationSpec& libraryArticulation, int namedVelocity, uint8_t roundRobinId, int midiChannel, int midiNoteNumber, juce::uint8 playbackVelocity) {
     for (size_t articulationIdx = 0; articulationIdx < this->runtimeArticulations.size(); ++articulationIdx) {
         auto& articulation = this->runtimeArticulations[articulationIdx];
-        for (auto& layer : articulation.layers) {
-            if (layer.sourceVelocityLayer == nullptr || layer.sourceVelocityLayer->parent != &sourceArticulation || layer.sourceVelocityLayer->velocity != namedVelocity) continue;
-            for (auto& logicalHit : layer.logicalHits) {
-                if (logicalHit.variantIdx != variantIdx || !logicalHit.isReady()) continue;
+        for (auto& velocityLevel : articulation.velocityLevels) {
+            if (velocityLevel.velocityLevelSpec == nullptr || velocityLevel.velocityLevelSpec->parent != &libraryArticulation || velocityLevel.velocityLevelSpec->velocity != namedVelocity) continue;
+            for (auto& logicalHit : velocityLevel.logicalHits) {
+                if (logicalHit.roundRobinId != roundRobinId || !logicalHit.isReady()) continue;
                 const float velocityGain = articulation.velocityGain[static_cast<size_t>(playbackVelocity)];
-                if (!this->startLayerVoices(articulation, static_cast<ArtRtIdx>(articulationIdx), layer, logicalHit, midiChannel, midiNoteNumber, velocityGain, playbackVelocity)) continue;
+                if (!this->startVelocityLevelVoices(articulation, static_cast<ArtRtIdx>(articulationIdx), velocityLevel, logicalHit, midiChannel, midiNoteNumber, velocityGain, playbackVelocity)) continue;
                 this->lastRequestedVelocity.store(velocityGain);
                 this->applyAftertouch(midiChannel, midiNoteNumber);
                 return true;
@@ -1050,21 +1051,21 @@ bool InstrumentSynth::playSourceLogicalHitPreview(const KitLib::ArticulationSpec
     return false;
 }
 
-bool InstrumentSynth::playResolvedArticulation(const int midiChannel, const int midiNoteNumber, ArtRtIdx articulationIdx, const juce::uint8 velocity) {
+bool InstrumentPlayer::playResolvedArticulation(const int midiChannel, const int midiNoteNumber, ArtRtIdx articulationIdx, const juce::uint8 velocity) {
     if (articulationIdx < 0 || static_cast<size_t>(articulationIdx) >= this->runtimeArticulations.size()) return false;
     auto& art = this->runtimeArticulations[static_cast<size_t>(articulationIdx)];
-    int layerIdx = this->resolveVelocityLayer(art, velocity);
-    if (layerIdx < 0)
+    int velocityLevelIdx = this->resolveVelocityLevel(art, velocity);
+    if (velocityLevelIdx < 0)
         return false;
 
-    auto& layer = art.layers[static_cast<size_t>(layerIdx)];
-    auto* logicalHit = this->chooseLogicalHit(layer);
+    auto& velocityLevel = art.velocityLevels[static_cast<size_t>(velocityLevelIdx)];
+    auto* logicalHit = this->chooseLogicalHit(velocityLevel);
     if (logicalHit == nullptr) return false;
 
     const float velocityGain = art.velocityGain[static_cast<size_t>(velocity)];
     this->lastRequestedVelocity.store(velocityGain);
 
-    bool anyStarted = this->startLayerVoices(art, articulationIdx, layer, *logicalHit, midiChannel, midiNoteNumber, velocityGain, velocity);
+    bool anyStarted = this->startVelocityLevelVoices(art, articulationIdx, velocityLevel, *logicalHit, midiChannel, midiNoteNumber, velocityGain, velocity);
     if (!anyStarted) return false;
 
     this->applyAftertouch(midiChannel, midiNoteNumber);
@@ -1072,7 +1073,7 @@ bool InstrumentSynth::playResolvedArticulation(const int midiChannel, const int 
     return true;
 }
 
-int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
+int InstrumentPlayer::resolveArticulation(int midiNoteNumber) {
     if (this->runtimeArticulations.empty()) {
         if (!this->instrumentSlot.articulations.empty()) return 0;
         return -1;
@@ -1098,18 +1099,18 @@ int InstrumentSynth::resolveArticulation(int midiNoteNumber) {
     return artIdx;
 }
 
-int InstrumentSynth::resolveVelocityLayer(const ArticulationRuntime& art, juce::uint8 velocity) {
-    int layerIdx = art.velocityToLayer[static_cast<size_t>(velocity)];
-    if (layerIdx >= 0 && layerIdx < (int)art.layers.size()) {
-        if (this->hasReadyLogicalHit(art.layers[static_cast<size_t>(layerIdx)])) return layerIdx;
+int InstrumentPlayer::resolveVelocityLevel(const ArticulationRuntime& art, juce::uint8 velocity) {
+    int velocityLevelIdx = art.velocityToLevel[static_cast<size_t>(velocity)];
+    if (velocityLevelIdx >= 0 && velocityLevelIdx < (int)art.velocityLevels.size()) {
+        if (this->hasReadyLogicalHit(art.velocityLevels[static_cast<size_t>(velocityLevelIdx)])) return velocityLevelIdx;
     }
 
     int bestIdx = -1;
     float bestDistance = std::numeric_limits<float>::max();
-    for (int idx = 0; idx < (int)art.layers.size(); ++idx) {
-        const auto& layer = art.layers[static_cast<size_t>(idx)];
-        if (!this->hasReadyLogicalHit(layer)) continue;
-        const float distance = static_cast<float>(std::abs(static_cast<int>(layer.velocity) - static_cast<int>(velocity)));
+    for (int idx = 0; idx < (int)art.velocityLevels.size(); ++idx) {
+        const auto& velocityLevel = art.velocityLevels[static_cast<size_t>(idx)];
+        if (!this->hasReadyLogicalHit(velocityLevel)) continue;
+        const float distance = static_cast<float>(std::abs(static_cast<int>(velocityLevel.velocity) - static_cast<int>(velocity)));
         if (distance < bestDistance) {
             bestDistance = distance;
             bestIdx = idx;
@@ -1118,32 +1119,32 @@ int InstrumentSynth::resolveVelocityLayer(const ArticulationRuntime& art, juce::
     return bestIdx;
 }
 
-bool InstrumentSynth::hasReadyLogicalHit(const VelocityLayerRuntime& layer) const {
-    for (const auto& logicalHit : layer.logicalHits) {
+bool InstrumentPlayer::hasReadyLogicalHit(const VelocityLevelRuntime& velocityLevel) const {
+    for (const auto& logicalHit : velocityLevel.logicalHits) {
         if (logicalHit.isReady()) return true;
     }
     return false;
 }
 
-InstrumentSynth::LogicalHitRuntime* InstrumentSynth::chooseLogicalHit(VelocityLayerRuntime& layer) {
-    if (layer.logicalHits.empty()) return nullptr;
+InstrumentPlayer::LogicalHitRuntime* InstrumentPlayer::chooseLogicalHit(VelocityLevelRuntime& velocityLevel) {
+    if (velocityLevel.logicalHits.empty()) return nullptr;
 
     const auto& settings = this->parent->getEngineSettings();
     const int roundRobinLock = settings.roundRobinLock.load();
     if (roundRobinLock > 0) {
-        const size_t lockedIdx = static_cast<size_t>(roundRobinLock - 1) % layer.logicalHits.size();
-        return layer.logicalHits[lockedIdx].isReady() ? &layer.logicalHits[lockedIdx] : nullptr;
+        const size_t lockedIdx = static_cast<size_t>(roundRobinLock - 1) % velocityLevel.logicalHits.size();
+        return velocityLevel.logicalHits[lockedIdx].isReady() ? &velocityLevel.logicalHits[lockedIdx] : nullptr;
     }
 
     size_t readyCount = 0;
-    for (const auto& logicalHit : layer.logicalHits) {
+    for (const auto& logicalHit : velocityLevel.logicalHits) {
         if (logicalHit.isReady()) ++readyCount;
     }
     if (readyCount == 0) return nullptr;
 
-    const uint32_t roundRobinValue = layer.roundRobinCounter->fetch_add(1u, std::memory_order_relaxed);
+    const uint32_t roundRobinValue = velocityLevel.roundRobinCounter->fetch_add(1u, std::memory_order_relaxed);
     size_t readyTargetIdx = static_cast<size_t>(roundRobinValue) % readyCount;
-    for (auto& logicalHit : layer.logicalHits) {
+    for (auto& logicalHit : velocityLevel.logicalHits) {
         if (!logicalHit.isReady()) continue;
         if (readyTargetIdx == 0) return &logicalHit;
         --readyTargetIdx;
@@ -1151,21 +1152,21 @@ InstrumentSynth::LogicalHitRuntime* InstrumentSynth::chooseLogicalHit(VelocityLa
     return nullptr;
 }
 
-bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLayerRuntime& layer, LogicalHitRuntime& logicalHit, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity) {
+bool InstrumentPlayer::startVelocityLevelVoices(ArticulationRuntime& art, ArtRtIdx artIdx, VelocityLevelRuntime& velocityLevel, LogicalHitRuntime& logicalHit, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity) {
     const juce::ScopedLock sl(this->lock);
     const auto& settings = this->parent->getEngineSettings();
     const float closeCrossfadeSec = settings.hihatCloseCrossfadeSec.load();
     static constexpr size_t MAX_LOGICAL_HIT_VOICES = 64;
     if (!logicalHit.isReady() || logicalHit.sampleEntryIndexes.empty() || logicalHit.sampleEntryIndexes.size() > MAX_LOGICAL_HIT_VOICES) return false;
 
-    std::array<InstrumentSynthVoice*, MAX_LOGICAL_HIT_VOICES> reservedVoices {};
+    std::array<InstrumentPlayerVoice*, MAX_LOGICAL_HIT_VOICES> reservedVoices {};
     size_t reservedVoiceCount = 0;
     for (const size_t sampleEntryIdx : logicalHit.sampleEntryIndexes) {
-        if (sampleEntryIdx >= layer.samples.size()) return false;
-        const auto& sampleEntry = layer.samples[sampleEntryIdx];
+        if (sampleEntryIdx >= velocityLevel.samples.size()) return false;
+        const auto& sampleEntry = velocityLevel.samples[sampleEntryIdx];
         if (sampleEntry.sound == nullptr || !sampleEntry.sound->loaded.load(std::memory_order_acquire) || sampleEntry.sound->buffer == nullptr) return false;
 
-        InstrumentSynthVoice* reservedVoice = nullptr;
+        InstrumentPlayerVoice* reservedVoice = nullptr;
         for (auto* candidateVoice : this->voices) {
             if (candidateVoice == nullptr || candidateVoice->isVoiceActive()) continue;
             bool alreadyReserved = false;
@@ -1185,7 +1186,7 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx
         reservedVoices[reservedVoiceCount++] = reservedVoice;
     }
 
-    this->cullMaskedVoices(layer, logicalHit.variantIdx, midiChannel, midiNoteNumber, velocityGain);
+    this->cullMaskedVoices(velocityLevel, logicalHit.roundRobinId, midiChannel, midiNoteNumber, velocityGain);
 
     // Hi-hat articulation-order muting: a tighter/more-closed hit (higher poc rank)
     // fades out ringing voices from more-open articulations.
@@ -1193,13 +1194,13 @@ bool InstrumentSynth::startLayerVoices(ArticulationRuntime& art, ArtRtIdx artIdx
         this->chokeHiHatVoicesByPoc(art.pedalOpenCloseValue, closeCrossfadeSec);
 
     for (size_t logicalEntryIdx = 0; logicalEntryIdx < logicalHit.sampleEntryIndexes.size(); ++logicalEntryIdx) {
-        const auto& sampleEntry = layer.samples[logicalHit.sampleEntryIndexes[logicalEntryIdx]];
+        const auto& sampleEntry = velocityLevel.samples[logicalHit.sampleEntryIndexes[logicalEntryIdx]];
         this->startSampleVoice(*reservedVoices[logicalEntryIdx], art, artIdx, sampleEntry, midiChannel, midiNoteNumber, velocityGain, midiVelocity);
     }
     return true;
 }
 
-void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity) {
+void InstrumentPlayer::fadeOutExistingVoices(const ArticulationRuntime& art, int midiChannel, int midiNoteNumber, float newVelocity) {
     const auto& settings = this->parent->getEngineSettings();
     const float polyphonyCrossfadeSec = settings.polyphonyCrossfadeTimeoutSec.load();
     const float crossArtChokeDbMargin = settings.hihatHitChokeDbMargin.load();
@@ -1232,7 +1233,7 @@ void InstrumentSynth::fadeOutExistingVoices(const ArticulationRuntime& art, int 
     }
 }
 
-void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_t chosenVariant, int midiChannel, int midiNoteNumber, float newVelocity) {
+void InstrumentPlayer::cullMaskedVoices(const VelocityLevelRuntime& velocityLevel, uint8_t chosenRoundRobinId, int midiChannel, int midiNoteNumber, float newVelocity) {
     const auto& settings = this->parent->getEngineSettings();
     const float voiceCullThresholdDb = settings.voiceCullThresholdDb.load();
     float newPeakDb = -100.0f;
@@ -1240,14 +1241,14 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     bool hasDirectPeak = false;
     const float newVelocityDb = juce::Decibels::gainToDecibels(juce::jmax(0.001f, newVelocity), -100.0f);
 
-    for (const auto& se : layer.samples) {
-        if (!se.sound || se.variantIdx != chosenVariant) continue;
+    for (const auto& se : velocityLevel.samples) {
+        if (!se.sound || se.roundRobinId != chosenRoundRobinId) continue;
 
         const auto& env = se.sound->decayEnvelope;
         if (!env.isValid()) continue;
 
-        const bool isDirect = se.sound->sampleVariantSpec
-            && se.sound->sampleVariantSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
+        const bool isDirect = se.sound->sampleSpec
+            && se.sound->sampleSpec->micSpec.type == KitLib::MicSpec::Type::Direct;
         const float candidatePeakDb = env.peakDb + newVelocityDb;
 
         if (!hasPeak || (isDirect && !hasDirectPeak) || (isDirect == hasDirectPeak && candidatePeakDb > newPeakDb)) {
@@ -1310,7 +1311,7 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
 
         for (int idx = 0; idx < cullCount; ++idx) {
             if (voice->noteOnTime == cullTimes[idx]) {
-                voice->envelopeState = InstrumentSynthVoice::EnvelopeState::Dying;
+                voice->envelopeState = InstrumentPlayerVoice::EnvelopeState::Dying;
                 voice->killImmediately();
                 break;
             }
@@ -1318,15 +1319,15 @@ void InstrumentSynth::cullMaskedVoices(const VelocityLayerRuntime& layer, uint8_
     }
 }
 
-void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float fadeTimeSec) {
+void InstrumentPlayer::chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float fadeTimeSec) {
     // newArtPedalOpenCloseValue < 0 means the triggering articulation carries no poc rank
     // (e.g. a non-hi-hat-openness hit) — nothing to do.
     if (newArtPedalOpenCloseValue < 0) return;
 
     for (auto* voice : this->voices) {
         if (!voice || !voice->isVoiceActive()) continue;
-        if (voice->envelopeState == InstrumentSynthVoice::EnvelopeState::FadingOut
-            || voice->envelopeState == InstrumentSynthVoice::EnvelopeState::Dying)
+        if (voice->envelopeState == InstrumentPlayerVoice::EnvelopeState::FadingOut
+            || voice->envelopeState == InstrumentPlayerVoice::EnvelopeState::Dying)
             continue;
 
         // Look up the poc rank stored in the matching ArticulationRuntime.
@@ -1347,11 +1348,11 @@ void InstrumentSynth::chokeHiHatVoicesByPoc(int newArtPedalOpenCloseValue, float
     }
 }
 
-void InstrumentSynth::startSampleVoice(InstrumentSynthVoice& voice, ArticulationRuntime& art, ArtRtIdx artIdx, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity) {
+void InstrumentPlayer::startSampleVoice(InstrumentPlayerVoice& voice, ArticulationRuntime& art, ArtRtIdx artIdx, const SampleEntry& se, int midiChannel, int midiNoteNumber, float velocityGain, juce::uint8 midiVelocity) {
     if (LOG_ENABLED(Verbose)) {
-        auto& instCode = se.sound->sampleVariantSpec->parent->parent->parent->meta.codeRaw;
-        auto& artCode = se.sound->sampleVariantSpec->parent->parent->codeRaw;
-        auto& filePath = se.sound->sampleVariantSpec->sampleFile.getFullPathName();
+        auto& instCode = se.sound->sampleSpec->parent->parent->parent->parent->meta.codeRaw;
+        auto& artCode = se.sound->sampleSpec->parent->parent->parent->codeRaw;
+        auto& filePath = se.sound->sampleSpec->sampleFile.getFullPathName();
         LOG(Verbose, "startVoice note " + juce::String(midiNoteNumber) + " vel " + juce::String(static_cast<int>(midiVelocity)) + " inst " + instCode + " art " + artCode + " micBuf(" + juce::String(se.sound->micBufferChannelStart) + "," + juce::String(se.sound->micBufferChannelCount) + ") file=" + filePath);
     }
     // use samples mic index as voice's hitGroupId so we can use it in stealing logic to prefer stealing voices with same mic

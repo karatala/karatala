@@ -38,40 +38,40 @@ private:
     Sidebar sidebar;
     StatusBar statusBar;
 
-    // Mode: Kit - first-run setup and instrument-map presets
+    // Page: Kit - first-run setup and instrument-map presets
     std::unique_ptr<KitHomePanel> kitHomePanel;
 
-    // Mode: Browse - library kits and instrument-map presets
+    // Page: Browse - library kits and instrument-map presets
     std::unique_ptr<KitBrowserComponent> kitBrowserComponent;
 
-    // Mode: Zone - drum pad grid
+    // Page: Zone - drum pad grid
     DrumPadGrid drumPadGrid;
 
-    // Mode: Map - MIDI note assignment table
+    // Page: Map - MIDI note assignment table
     MidiMapTable midiMapTable;
     std::unique_ptr<CrosstalkCalibrationPopup> crosstalkPopup;
     std::unique_ptr<DismissOverlay> crosstalkPopupOverlay;
     void showCrosstalkPopup();
     void dismissCrosstalkPopup();
 
-    // Mode: Raw - existing instrument map editor
+    // Page: Raw - existing instrument map editor
     juce::TextEditor instrumentMapEditor;
     juce::Label instrumentMapLabel;
     juce::TextButton applyButton { "Apply" };
 
-    // Mode: Settings
+    // Page: Settings
     std::unique_ptr<EngineSettingsPanel> settingsPanel;
 
-    // Mode: Fix
+    // Page: Fix
     std::unique_ptr<TroubleshootingPanel> troubleshootingPanel;
 
-    // Mode: UI theme playground
+    // Page: UI theme playground
     std::unique_ptr<ThemePlaygroundPanel> themePlaygroundPanel;
 
-    // Mode: Instrument Config
+    // Page: Instrument Config
     std::unique_ptr<InstrumentConfigPanel> instrumentConfigPanel;
 
-    // Pad context popup (Zone mode right-click)
+    // Pad context popup (Zone page right-click)
     std::unique_ptr<PadContextPopup> padContextPopup;
     std::unique_ptr<DismissOverlay> padPopupOverlay;
     void dismissPadContextPopup();
@@ -85,15 +85,15 @@ private:
     void refreshMidiMapTableIfNeeded(bool force = false);
     void refreshInstrumentConfigIfNeeded(bool force = false);
     void setupSidebarAndStatusBar();
-    void setupKitMode();
-    void setupBrowseMode();
-    void setupDrumPadGridMode();
-    void setupRawMode();
-    void setupMapMode();
-    void setupSettingsMode();
-    void setupTroubleshootingMode();
-    void setupThemePlaygroundMode();
-    void setupInstrumentConfigMode();
+    void setupKitPage();
+    void setupBrowsePage();
+    void setupDrumPadGridPage();
+    void setupRawPage();
+    void setupMapPage();
+    void setupSettingsPage();
+    void setupTroubleshootingPage();
+    void setupThemePlaygroundPage();
+    void setupInstrumentConfigPage();
     void reloadLibraryFromTroubleshooting();
     void setupSidebarKnobs();
     void applyInstrumentMapFromEditor();
@@ -111,9 +111,9 @@ private:
     bool instrumentConfigDirty = true;
     juce::String instrumentConfigSnapshot;
 
-    ViewMode activeMode = ViewMode::Kit;
-    void setViewMode(ViewMode mode);
-    void showComponentsForMode(ViewMode mode);
+    PageId activePageId = PageId::Kit;
+    void setPage(PageId pageId);
+    void showComponentsForPage(PageId pageId);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditor)
 };

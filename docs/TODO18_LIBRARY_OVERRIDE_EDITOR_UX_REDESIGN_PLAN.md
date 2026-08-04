@@ -1,11 +1,11 @@
-# TODO18: Source Override Editor UX Redesign Plan
+# TODO18: Library Articulation Editor UX Redesign Plan
 
 Date: 2026-07-28  
 Status: Implemented in code. Build, tests, and visual QA are pending by request.
 
 ## ✅ Goal
 
-Make source overrides easy to understand and adjust live without searching through a long sample dropdown.
+Make library kit overrides easy to understand and adjust live without searching through a long sample dropdown.
 
 ## ✅ Implemented layout
 
@@ -15,10 +15,10 @@ Make source overrides easy to understand and adjust live without searching throu
   `BALANCE  Instrument [kick-22] [C0] [×]  Articulation [center] [C0] [×]`
 - Show `VELOCITY RANGES` with `Even` and `Reset` actions.
 - Show each compact range as two lines: normal `052` and smaller `28-58`.
-- `Even` divides MIDI `1-127` between all named layers as evenly as integer ranges allow, saves every boundary in one operation, and replays the last preview once.
+- `Even` divides MIDI `1-127` between all velocity levels as evenly as integer ranges allow, saves every boundary in one operation, and replays the last preview once.
 - Remove the separate boundary editor and the verbose effective-range line.
 - Put the lower editor into two columns:
-  - left: `SAMPLE OVERRIDES`, the RR by velocity matrix, and `MIC` buttons directly below it;
+  - left: `SAMPLE OVERRIDES`, the matrix with round robin ID rows and velocity level columns, and `MIC` buttons directly below it;
   - right: a scrollable list headed `SELECTED 6 SAMPLES`.
 - Put the three batch fields below the sample area:
   - `File gain correction, dB`
@@ -31,9 +31,9 @@ Make source overrides easy to understand and adjust live without searching throu
 
 - Matrix cells select logical hits for batch editing.
 - The matrix opens with no selected cells and no active-hit outline.
-- Clicking `*` inverts every existing matrix cell. Clicking an RR letter inverts its row. Clicking a velocity heading inverts its column.
+- Clicking `*` inverts every existing matrix cell. Clicking a round robin ID inverts its row. Clicking a velocity heading inverts its column.
 - Whole-table, row, and column selection changes stay silent.
-- Header labels and RR letters are centred. The RR column uses the same colours, font, and borders as the header.
+- Header labels and round robin IDs are centred. The round robin ID column uses the same colours, font, and borders as the header.
 - Mic buttons select which files from those hits are included in the batch.
 - The selected-file list is the existing combination of selected hits and selected mics.
 - The last previewed matrix cell is also the active hit used by mic preview.
@@ -69,9 +69,9 @@ To keep the main form simple, the selected-sample list should show filenames onl
 
 - ✅ The dropdown, boundary editor, verbose readout, and bottom metadata row were removed.
 - ✅ The matrix, mic filters, active-hit outline, selected-file list, and batch fields were added.
-- ✅ Matrix controls invert the whole table, one RR row, or one velocity column without starting preview.
-- ✅ The matrix opens empty; its header and header-styled RR column use centred content.
-- ✅ Balance and sample overrides use the source override metadata. Each batch field saves all selected targets through one complete operation.
+- ✅ Matrix controls invert the whole table, one round robin ID row, or one velocity level column without starting preview.
+- ✅ The matrix opens empty; its header and round robin ID column use centred content.
+- ✅ Balance and sample overrides use the library kit override metadata. Each batch field saves all selected targets through one complete operation.
 - ✅ Matrix and velocity previews use a complete logical hit. Mic hover and click use exact solo preview.
 - ✅ Matrix and mic clicks consume the queued hover for the same target, so one click produces one preview.
 - ✅ All five value editors use the standard 20 px control and 14 px text style with vertically centred text.

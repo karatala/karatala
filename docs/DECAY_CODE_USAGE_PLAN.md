@@ -16,7 +16,7 @@ This plan outlines how to integrate the new sample metadata (`peakDb`, `peadMs`,
 ### 2.1 Sample File Parsing (KitLibModel.cpp)
 - `InstrumentSpec::parseSampleFile()` → extracts filename metadata into `SampleFileInfo`
 - Result includes: velocity, sampleVariant, micChain, **peakDb**, **peakMs**, **decayMs**, **decayCode**
-- Currently stored but **not yet used** in `SampleVariantSpec`
+- Currently stored but **not yet used** in `SampleSpec`
 
 ### 2.2 SampleLoader Processing
 ```
@@ -33,7 +33,7 @@ File → SampleLoader::LoadJob::runJob()
 - Generic fade-out doesn't respect actual sample envelope
 - No way to query current dB level during playback
 
-### 2.3 InstrumentSynthVoice Playback
+### 2.3 InstrumentPlayerVoice Playback
 ```
 renderNextBlock():
   for each sample:
@@ -82,7 +82,7 @@ Base62 encoding: "1W_4g_2s_..."
 
 ## 4. Proposed Changes
 
-### 4.1 Update `SampledSound` (InstrumentSynth.h)
+### 4.1 Update `SampledSound` (InstrumentPlayer.h)
 
 ```cpp
 class SampledSound {
@@ -221,12 +221,12 @@ float SampledSound::getDecayLevelAtTime(float timeMs) const {
 }
 ```
 
-### 4.4 Query Current Level in `InstrumentSynthVoice` (for articulation transitions)
+### 4.4 Query Current Level in `InstrumentPlayerVoice` (for articulation transitions)
 
-**Add to InstrumentSynthVoice class:**
+**Add to InstrumentPlayerVoice class:**
 
 ```cpp
-class InstrumentSynthVoice {
+class InstrumentPlayerVoice {
 public:
     // ... existing fields ...
     
@@ -262,8 +262,8 @@ public:
 ```cpp
 class ArticulationMutationController {
 public:
-    void startMutation(InstrumentSynthVoice* sourceVoice, 
-                      InstrumentSynthVoice* targetVoice,
+    void startMutation(InstrumentPlayerVoice* sourceVoice,
+                      InstrumentPlayerVoice* targetVoice,
                       float crossfadeDurationMs = 50.0f) {
         if (!sourceVoice || !targetVoice) return;
         
@@ -306,8 +306,8 @@ public:
    - Update cache key logic (already considers both parameters)
 
 3. **Phase 3: Voice Query**
-   - Add `getCurrentSoundingLevelDb()` to `InstrumentSynthVoice`
-   - Integrate with `InstrumentSynthVoice::renderNextBlock()` if needed for monitoring
+   - Add `getCurrentSoundingLevelDb()` to `InstrumentPlayerVoice`
+   - Integrate with `InstrumentPlayerVoice::renderNextBlock()` if needed for monitoring
 
 4. **Phase 4: Articulation Transitions (Optional, Future)**
    - Create `ArticulationMutationController` utility class
@@ -381,5 +381,4 @@ float decayMs = 0.0f;
 - **Current implementation files:**
   - `source/Engine/KitLibModel.h` - `SampleFileInfo` definition
   - `source/Engine/SampleLoader.h/cpp` - sample loading & trimming
-  - `source/Engine/InstrumentSynth.h/cpp` - voice rendering
-
+  - `source/Engine/InstrumentPlayer.h/cpp` - voice rendering

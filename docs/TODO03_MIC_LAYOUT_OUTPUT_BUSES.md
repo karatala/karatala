@@ -63,7 +63,7 @@ This function should:
 3. If a custom layout name is specified, scan `dataPath/mic_layouts/` and find it
 4. Otherwise return `MicLayout::getDefault()`
 
-This duplicates part of `initGlobalSettings()` + `initMicLayouts()` but is intentionally lightweight — it only needs the mic layout, not the full engine init.
+This duplicates part of `initGlobalSettings()` + `initMicLayouts()` but is intentionally lightweight - it only needs the mic layout, not the full engine init.
 
 ### Step 2: Create `buildBusesFromMicLayout()`
 
@@ -122,7 +122,7 @@ PluginProcessor::PluginProcessor()
 
 ### Step 4: Keep `expectedHostChannels = 32` in `applyMicLayout()`
 
-The hardcoded `const int expectedHostChannels = 32` stays — the total host channel count is always 32.
+The hardcoded `const int expectedHostChannels = 32` stays - the total host channel count is always 32.
 No change needed here. The AUX padding happens only on the `BusesProperties` side (`buildBusesFromMicLayout`);
 the engine's mic-mapping loop already stops after iterating `activeMicLayoutPtr->mics`, so AUX channels
 are simply unmapped and receive no audio (silence), which is the desired behavior.
@@ -171,19 +171,19 @@ Or keep it permissive if host compatibility is more important than strictness.
 
 ## Edge Cases & Considerations
 
-1. **Config not found / parse error**: `resolveMicLayoutFromConfig()` falls back to `MicLayout::getDefault()` — same 16-channel default as today.
+1. **Config not found / parse error**: `resolveMicLayoutFromConfig()` falls back to `MicLayout::getDefault()` - same 16-channel default as today.
 
-2. **Mic layout YAML not found**: Same fallback — the default layout uses all 32 channels so no AUX buses are created, matching current behavior.
+2. **Mic layout YAML not found**: Same fallback - the default layout uses all 32 channels so no AUX buses are created, matching current behavior.
 
-3. **Zero mics in layout**: All 32 channels become AUX mono buses. No assert needed — the plugin still works, just with no mic-named outputs.
+3. **Zero mics in layout**: All 32 channels become AUX mono buses. No assert needed - the plugin still works, just with no mic-named outputs.
 
 4. **Layout exceeds 32 channels**: `buildBusesFromMicLayout()` caps at `TOTAL_HOST_CHANNELS` and stops adding mic buses. A log warning should be emitted.
 
-5. **Engine init consistency**: The engine's `applyMicLayout()` must produce the same channel mapping as `buildBusesFromMicLayout()` used at construction. Both derive from the same `MicLayout` data and both use 32 total channels, so they stay in sync. AUX channels are simply unmapped in the engine (no `InstrumentSynth` targets them).
+5. **Engine init consistency**: The engine's `applyMicLayout()` must produce the same channel mapping as `buildBusesFromMicLayout()` used at construction. Both derive from the same `MicLayout` data and both use 32 total channels, so they stay in sync. AUX channels are simply unmapped in the engine (no `InstrumentPlayer` targets them).
 
-6. **Performance**: `resolveMicLayoutFromConfig()` does file I/O (reads config.yaml, scans layout dir) during plugin construction. This is acceptable — plugin construction already performs heavy I/O, and this adds one small YAML parse.
+6. **Performance**: `resolveMicLayoutFromConfig()` does file I/O (reads config.yaml, scans layout dir) during plugin construction. This is acceptable - plugin construction already performs heavy I/O, and this adds one small YAML parse.
 
-7. **Standalone vs VST3**: Both use the same `PluginProcessor` constructor, so both get dynamic buses. Standalone may handle multi-output differently (typically mixes to stereo) — no special handling needed.
+7. **Standalone vs VST3**: Both use the same `PluginProcessor` constructor, so both get dynamic buses. Standalone may handle multi-output differently (typically mixes to stereo) - no special handling needed.
 
 8. **Host bus negotiation**: Some hosts (e.g. REAPER) allow users to disable individual buses. The current `isBusesLayoutSupported` returning `true` already handles this. More restrictive validation is optional.
 

@@ -164,8 +164,8 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
         if (!this->useInstrumentMap(instrumentMap))
             this->mapDefaultKit();
     }
-    for (const auto& synth : this->instrumentSynthPtrs) {
-        if (synth != nullptr) synth->rebuildVelocityResponseTables();
+    for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
+        if (instrumentPlayer != nullptr) instrumentPlayer->rebuildVelocityResponseTables();
     }
 }
 
@@ -175,8 +175,8 @@ bool DrumKitEngine::setVelocityResponseDefinition(const juce::String& definition
 
     const juce::ScopedLock graphLock(this->engineGraphLock);
     this->velocityResponse = std::move(parsedResponse.value);
-    for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr != nullptr) synthPtr->rebuildVelocityResponseTables();
+    for (auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+        if (instrumentPlayerPtr != nullptr) instrumentPlayerPtr->rebuildVelocityResponseTables();
     }
     return true;
 }

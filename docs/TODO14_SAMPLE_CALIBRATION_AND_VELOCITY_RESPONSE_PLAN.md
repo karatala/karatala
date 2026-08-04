@@ -4,40 +4,40 @@ Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, Phase 5B, and Phase 6 im
 
 ## Scope And Terminology
 
-- `layer`: one source instrument articulation, with its own parameters, assigned to a destination pad articulation through the pad popup or Instrument tab.
-- `sample velocity level`: one recorded sample group such as `043a` or `127a`. This is not a mapped layer.
-- `logical hit`: one named velocity and round-robin variant, including every linked mic file or channel range that belongs to that hit.
+- `map layer`: one library articulation, with its own parameters, assigned to an articulation slot through the pad popup or Instrument page.
+- `velocity level`: one recorded velocity group such as `043` or `127` in a library articulation. This is not a map layer.
+- `logical hit`: one recorded hit at one velocity level. It includes every linked mic sample.
 - `logical-hit pre-trim intensity`: the strength of one logical hit in source-intensity dB, measured from the chosen reference mic before calibration gain or other source preprocessing.
-- `raw velocity median`: the robust measured median of the logical-hit pre-trim intensities at one named velocity.
-- `fitted source value`: the monotonic value fitted from raw velocity medians and used for analysis, preload priority, and future floating selection. Exact mode still follows named velocity boundaries.
+- `raw velocity median`: the robust measured median of the logical-hit pre-trim intensities at one velocity level.
+- `fitted source value`: the monotonic value fitted from raw velocity medians and used for analysis, preload priority, and future floating selection. Exact mode still follows velocity-level boundaries.
 - `global loudness response`: the user-controlled target loudness for MIDI velocities 1 to 127.
-- `source response profile`: the stable monotonic relation between named velocities and their fitted source values for one articulation.
+- `source response profile`: the stable monotonic relation between velocity levels and their fitted source values for one library articulation.
 - `sample calibration trim`: fixed gain derived from one raw velocity median and applied before cache publication.
 - `source preprocessing recipe`: every fixed audio transform resolved before a sample buffer enters the cache.
-- `layer velocity response`: an optional MIDI-velocity-to-output-gain override saved for one map layer; otherwise the layer uses the global response.
-- `source balance`: detected recorded position using the existing folder codes `L1..L127`, `C0`, and `R1..R127`.
-- `pan`: the existing manual layer placement offset.
+- `map layer velocity response`: an optional MIDI-velocity-to-output-gain override saved for one map layer; otherwise the map layer uses the global response.
+- `placement balance`: detected recorded position using the existing folder codes `L1..L127`, `C0`, and `R1..R127`.
+- `pan`: the existing manual map layer placement offset.
 
 Do not use one generic curve for both sample selection and output loudness. They are separate problems.
 
-This plan owns analysis, per-kit `metadata.csv`, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, per-layer overrides, and analysis reports. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense, low-round-robin libraries. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct. [TODO18](TODO18_SOURCE_ARTICULATION_AND_SAMPLE_OVERRIDES_PLAN.md) owns reviewed user-authored source balance, manual gain, playback offset, and exact range overrides in `kit-overrides.yml`.
+This plan owns analysis, per-kit `metadata.csv`, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, map layer overrides, and analysis reports. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense libraries with few logical hits per velocity level. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct. [TODO18](TODO18_LIBRARY_ARTICULATION_AND_SAMPLE_OVERRIDES_PLAN.md) owns reviewed user-authored placement balance, manual gain, playback offset, and exact range overrides in `kit-overrides.yml`.
 
 Velocity and loudness calibration are the first release. Pan recommendations and timing reports follow after the core works. Runtime timing correction and source audio rewriting need a later plan after listening review.
 
 ## Goal And Acceptance Criteria
 
-For every calibrated source articulation:
+For every calibrated library articulation:
 
 - The median response at MIDI velocity 127 reaches that articulation's own hardest measured reference level.
-- Median responses at lower velocities follow the global response or that layer's response override.
-- Incorrect source velocity names do not create large loudness jumps.
+- Median responses at lower velocities follow the global response or that map layer's response override.
+- Incorrect filename velocity values do not create large loudness jumps.
 - Recorded soft and hard samples are still selected for their timbre.
 - Selection returns one complete logical hit, not an unrelated velocity and round robin for each mic.
-- All active mic entries for one note use the same named velocity and round-robin variant, or none of that hit starts.
-- Every layer in a layered pad keeps its own automatic calibration and manual override.
-- Existing `vol` remains a creative layer mix control, shown as `Mix Gain` in the UI.
+- All active mic entries for one note use the same logical hit, or none of that hit starts.
+- Every map layer in a layered pad keeps its own automatic calibration and manual override.
+- Existing `vol` remains a creative map layer mix control, shown as `Mix Gain` in the UI.
 
-The articulation reference is measured before `Mix Gain`, bleed, routing, DAW faders, and the sum of several layers. Those later changes can change final output level.
+The articulation reference is measured before `Mix Gain`, bleed, routing, DAW faders, and the sum of several map layers. Those later changes can change final output level.
 
 Success means:
 
@@ -46,7 +46,7 @@ Success means:
 - sample changes reduce level steps to the agreed tolerance;
 - the generator backs up the old per-kit `metadata.csv` and replaces it only after the complete new file is ready;
 - the generator never renames or modifies sample audio files;
-- manual changes affect only the chosen primary or shadow layer;
+- manual changes affect only the chosen primary or additional map layer;
 - manual response changes rebuild lookup tables without reloading sample audio;
 - `Reload All Kits` rereads per-kit metadata and rebuilds the affected runtime data;
 - two different source preprocessing recipes never share one cached buffer;
@@ -59,8 +59,8 @@ Phase 1 approved the initial metric, common reference experiment, trim limits, h
 
 These choices are part of this plan:
 
-- Calibrate each source articulation to its own hardest measured level so natural kick, snare, cymbal, and articulation balance is preserved. Add type or type-plus-articulation targets only after a separate listening comparison.
-- Calibrate every mapped layer independently. Do not reduce gain because a pad has several layers.
+- Calibrate each library articulation to its own hardest measured level so natural kick, snare, cymbal, and articulation balance is preserved. Add type or type-plus-articulation targets only after a separate listening comparison.
+- Calibrate every map layer independently. Do not reduce gain because a pad has several map layers.
 - Keep one machine-wide default loudness response, but copy it into plugin instance state so saved sessions remain stable.
 - Keep the built-in response codes stable: `linear`, `logarithmic`, and `exponential`. For normalized velocity `x = midiVelocity / 127`, their gains are `x`, `ln(1 + (e - 1) * x)`, and `(e^x - 1) / (e - 1)` respectively. Convert gain to dB for the response table and keep velocity 127 at `0 dB`.
 - Measure every audio file independently and keep one complete result record per file.
@@ -69,11 +69,11 @@ These choices are part of this plan:
 - Write measured sample and mic data into one generated `metadata.csv` in each kit root.
 - Let C++ define the required columns and derive logical hits, raw velocity medians, fitted source profiles, and calibration trims when the kit loads.
 - Keep sample filenames for identity plus optional explicit `v` manual gain. Do not add generated analysis suffixes, hashes, checksums, or version fields.
-- Keep existing `L/C/R` source balance in instrument or articulation folder names.
+- Keep existing `L/C/R` placement balance in instrument or articulation folder names.
 - Use overhead stereo as the source-balance reference.
 - Apply fixed source preprocessing once, in a defined order, before an immutable buffer is published to the RAM cache.
 - Require cache identity to use source identity plus the complete typed preprocessing recipe.
-- Prioritize preload work by calibrated logical-hit coverage, not only raw named velocities and variant letters.
+- Prioritize preload work by calibrated logical-hit coverage, not only filename velocity values and round robin IDs.
 - Timing and possible room orientation analysis are report-only in this plan.
 - Do not modify source audio files in this plan.
 
@@ -91,25 +91,25 @@ The Phase 1 reference pass below provides approved answers for:
 ## Baseline Facts And Constraints
 
 - `../source/Engine/KitLibModel.cpp` reads sample velocity from filenames.
-- `../source/Engine/InstrumentSynth.h` builds a 128-value table that selects the first recorded velocity greater than or equal to raw MIDI velocity.
-- Current note selection resolves a velocity layer first and chooses a round-robin variant inside that layer later.
-- One logical hit is identified by velocity layer and variant index, but there is no explicit runtime object that owns all linked mic entries for that hit.
-- Normal round robin prefers a fully loaded variant, but the current no-ready and RR-lock paths can return an incomplete variant and start only its loaded entries.
+- `../source/Engine/InstrumentPlayer.h` builds a 128-value table that selects the first recorded velocity greater than or equal to raw MIDI velocity.
+- Current note selection resolves a velocity level first and then chooses one logical hit by round robin ID.
+- `LogicalHitRuntime` owns all sample entries for one logical hit.
+- Normal round robin selects only a complete ready logical hit. Round robin lock also requires the selected logical hit to be ready.
 - Playback gain is currently raw MIDI velocity divided by 127.
 - Preview, voice loudness estimates, voice removal, and hi-hat transitions also depend on this linear gain in several paths.
-- One `InstrumentMapEntry` is one layer. Extra matching entries use shadow `InstrumentSynth` objects.
-- Current layer params are `tuning`, `attack`, `decay`, `vol`, `pan`, `flipLR`, `flipPhase`, `bleed`, and `micRoute`.
+- One `InstrumentMapLayer` is one map layer. Extra matching map layers use additional `InstrumentPlayer` objects.
+- Current map layer parameters are `tuning`, `attack`, `decay`, `vol`, `pan`, `flipLR`, `flipPhase`, `bleed`, and `micRoute`.
 - Sample filenames still contain explicit whole-dB `v` manual gain plus legacy `p`, `d`, and `c` peak and decay data. New generated analysis moves to `metadata.csv`.
 - Gain trim is applied while loading audio, before the processed buffer enters the RAM cache.
 - Effective peak and decay level estimates do not fully include that gain change.
 - The current RAM-cache key uses path, source size, source modification time, and `preprocessTag`.
 - The key omits trim, resolved read length, and resolved fade even though these values change cached audio.
-- Progressive loading uses fixed raw velocity representatives near `10`, `35`, `65`, `95`, and `120`, and favors low variant indexes early.
+- Progressive loading uses fixed raw velocity representatives near `10`, `35`, `65`, `95`, and `120`, and favors low round robin IDs early.
 - Instrument and articulation folders already parse `L1..L127`, `C0`, and `R1..R127`. Articulation balance wins over instrument balance.
 - Current automatic balance mainly affects direct mono mics routed to stereo.
-- Current layer pan can affect direct, overhead, and room paths together. This is not selective enough for the requested rule.
-- Current whole-layer `flipLR` cannot repair only one reversed room mic.
-- The pad popup and Instrument tab can rebuild map text through different paths. New fields must not be lost by an editor that does not display them.
+- Current map layer pan can affect direct, overhead, and room paths together. This is not selective enough for the requested rule.
+- Current map-layer-wide `flipLR` cannot repair only one reversed room mic.
+- The pad popup and Instrument page can rebuild map text through different paths. New fields must not be lost by an editor that does not display them.
 - All runtime velocity and routing data must be precomputed. The audio thread must not parse text, allocate, lock, scan files, or log.
 
 Current [`generate_sample_metadata.py`](../scripts/generate_sample_metadata.py) is the developer metadata generator. It keeps the useful Phase 2 measurements, accepts one kit or sample-library root, and writes deterministic per-kit CSV files without renaming samples or producing a separate JSON database.
@@ -124,11 +124,11 @@ Keep these independent values:
 | --- | --- | --- |
 | Global loudness response | plugin instance | raw MIDI velocity to target relative dB |
 | Logical-hit pre-trim intensity | logical hit, derived by C++ from measured CSV rows | preserve each recorded hit's original strength |
-| Raw velocity median | named velocity, derived by C++ from logical hits | calculate stable trim without flattening round robins |
-| Fitted source profile | library articulation runtime | build monotonic source selection across named velocities |
-| Sample calibration trim | named velocity, derived by C++ | move the raw velocity median to its articulation's hardest measured reference |
+| Raw velocity median | velocity level, derived by C++ from logical hits | calculate stable trim without flattening round robins |
+| Fitted source profile | library articulation runtime | build monotonic sample selection across velocity levels |
+| Sample calibration trim | velocity level, derived by C++ | move the raw velocity median to its library articulation's hardest measured reference |
 | Source preprocessing recipe | one load request and cached buffer | define every fixed transform applied before cache publication |
-| Layer velocity response | instrument map layer | optionally replace the global output-gain response for one layer |
+| Map layer velocity response | instrument map layer | optionally replace the global output-gain response for one map layer |
 
 `Mix Gain` is applied after them as a creative offset.
 
@@ -139,13 +139,13 @@ hitIntensityDb(articulation, hit)
     = measured logical-hit pre-trim intensity
 
 rawMedianDb(articulation, velocityLevel)
-    = median hitIntensityDb for all round robins at that named velocity
+    = median hitIntensityDb for all logical hits at that velocity level
 
 fittedSourceDb(articulation, velocityLevel)
-    = monotonic fitted source value for that named velocity
+    = monotonic fitted source value for that velocity level
 
 articulationReferenceDb
-    = fitted source value of the articulation's highest named velocity
+    = fitted source value of the library articulation's highest velocity level
 
 calibrationTrimDb(articulation, velocityLevel)
     = safeTrim(articulationReferenceDb - rawMedianDb)
@@ -153,59 +153,59 @@ calibrationTrimDb(articulation, velocityLevel)
 globalTargetDb(midiVelocity)
     = global target output dB, with globalTargetDb(127) = 0 dB
 
-effectiveTargetDb(layer, midiVelocity)
-    = layer response override target dB when present, otherwise globalTargetDb
+effectiveTargetDb(mapLayer, midiVelocity)
+    = map layer response override target dB when present, otherwise globalTargetDb
 
-selectionTargetDb(layer, midiVelocity)
-    = fittedSourceDb of the exact named velocity region
+selectionTargetDb(mapLayer, midiVelocity)
+    = fittedSourceDb of the exact velocity-level region
 ```
 
 `selectionTargetDb` uses the same source-intensity dB unit as `hitIntensityDb`, `rawMedianDb`, and `fittedSourceDb`. It is never raw MIDI velocity, post-trim peak, or output gain.
 
-Exact selection uses the original named velocity boundaries from sample filenames. It does not use measured dB to replace that timbre choice. TODO15 floating selection may later choose a logical hit by comparing `hitIntensityDb` with `selectionTargetDb`.
+Exact selection uses the original velocity-level boundaries from sample filenames. It does not use measured dB to replace that timbre choice. TODO15 floating selection may later choose a logical hit by comparing `hitIntensityDb` with `selectionTargetDb`.
 
-Every sample at one named velocity, across all variants and linked mic entries, receives the same derived `calibrationTrimDb`. The median rendered reference before creative controls is therefore:
+Every sample at one velocity level, across all logical hits and linked mic entries, receives the same derived `calibrationTrimDb`. The median rendered reference before creative controls is therefore:
 
 ```text
-articulationReferenceDb + effectiveTargetDb(layer, midiVelocity)
+articulationReferenceDb + effectiveTargetDb(mapLayer, midiVelocity)
 ```
 
-The selected round robin still differs by `hitIntensityDb - rawMedianDb`. Report that difference as an outlier when needed. Do not flatten it automatically.
+The selected logical hit still differs by `hitIntensityDb - rawMedianDb`. Report that difference as an outlier when needed. Do not flatten it automatically.
 
 `safeTrim` applies the Phase 1 positive-gain and headroom rules. If the required correction is unsafe, mark the calibration limited or invalid instead of hiding the error.
 
-In simple terms, `calibrationTrimDb` evens the recorded velocity levels inside one articulation, named velocity boundaries choose the recorded timbre in exact mode, and the effective global response or layer override controls how MIDI velocity changes note loudness.
+In simple terms, `calibrationTrimDb` evens the recorded velocity levels inside one library articulation, velocity-level boundaries choose the recorded timbre in exact mode, and the effective global response or map layer override controls how MIDI velocity changes note loudness.
 
 ### Playback flow
 
-For every mapped layer:
+For every map layer:
 
 1. Keep raw MIDI velocity for crosstalk and other MIDI input rules.
-2. Read target relative dB from the layer's 128-value response override when present, otherwise from the global table.
-3. Read the precomputed named velocity region for this layer and MIDI velocity.
-4. Let the active selection policy return one ready logical hit, including its named velocity and round-robin variant.
+2. Read target relative dB from the map layer's 128-value response override when present, otherwise from the global table.
+3. Read the precomputed velocity-level region for this map layer and MIDI velocity.
+4. Let the active selection policy return one ready logical hit, including its velocity level and round robin ID.
 5. Preflight the complete hit's buffers and reserve all required voice slots. Start none of the hit when the full set cannot start.
 6. Start the linked active mic entries owned by that logical hit.
 7. Use immutable sample buffers that already received `calibrationTrimDb` through fixed source preprocessing.
 8. Apply effective target gain instead of the old fixed `velocity / 127` gain.
 9. Apply `Mix Gain`, bleed, envelopes, choke, and routing gains.
 
-Do not select a velocity layer and then make unrelated round-robin or mic choices. The selection result identifies one logical hit.
+Do not select a velocity level and then make unrelated round robin ID or mic choices. The selection result identifies one logical hit.
 
-Named velocity boundaries control exact timbre selection. The effective global response or layer override controls output loudness.
+Velocity-level boundaries control exact timbre selection. The effective global response or map layer override controls output loudness.
 
 Build outside the audio thread:
 
 - one global 128-value gain table;
-- one 128-value `selectionTargetDb` table for each loaded layer articulation;
-- one `velocityCalibrationTrimDb` entry for each named velocity, derived from measured CSV data;
-- one exact source-region lookup for each loaded layer articulation;
+- one 128-value `selectionTargetDb` table for each loaded map layer;
+- one `velocityCalibrationTrimDb` entry for each velocity level, derived from measured CSV data;
+- one exact velocity-region lookup for each loaded map layer;
 - immutable logical-hit descriptions with linked sample entries;
 - a thread-safe readiness snapshot for every logical hit;
-- bounded exact-variant eligibility data; TODO15 adds floating candidate windows;
-- one optional 128-value velocity-response override for each mapped layer.
+- bounded exact logical-hit eligibility data; TODO15 adds floating candidate windows;
+- one optional 128-value velocity-response override for each map layer.
 
-Exact mode keeps the current named-velocity behavior, then chooses only a fully ready round robin and returns a logical hit. Do not fall back to a variant when only some of its active mic buffers are ready. TODO15 can replace the exact region with a small precomputed candidate window, while keeping the same logical-hit result contract and group voice reservation.
+Exact mode keeps the current velocity-level behavior, then chooses only a fully ready logical hit. Do not fall back to a logical hit when only some of its active mic buffers are ready. TODO15 can replace the exact region with a small precomputed candidate window, while keeping the same logical-hit result contract and group voice reservation.
 
 Interpolation of loudness and gain correction happens in dB. Table output used for rendering is linear gain.
 
@@ -216,24 +216,24 @@ The generator first measures every file independently. It preserves signed real 
 Only after file measurement, C++ groups loaded CSV rows by:
 
 ```text
-kit + instrument + articulation + named velocity + round robin
+library kit + library instrument + library articulation + velocity level + round robin ID
 ```
 
 The C++ load pass finds the linked mic files and channel ranges for one logical hit.
 
 - Derive one logical-hit pre-trim intensity from the agreed reference mic rule.
-- Keep the individual logical-hit intensity for every round robin.
-- Calculate `rawMedianDb` from logical hits that share one articulation and named velocity.
-- Fit `fittedSourceDb` from the raw medians while keeping original named-velocity order as a strong hint.
+- Keep the individual logical-hit intensity for every round robin ID.
+- Calculate `rawMedianDb` from logical hits that share one library articulation and velocity level.
+- Fit `fittedSourceDb` from the raw medians while keeping original velocity-level order as a strong hint.
 - Calculate `calibrationTrimDb` from `rawMedianDb` and the articulation's hardest fitted level.
 - Use the same correction for direct, overhead, and room entries of one hit so their recorded balance is preserved.
-- Report strong inversions and round-robin outliers instead of silently flattening or reordering them.
+- Report strong inversions and logical-hit outliers instead of silently flattening or reordering them.
 - Keep individual per-file measurements separate from the shared logical-hit intensity, raw velocity median, fitted source profile, and velocity-level trim.
 - Report noise risk, clipping risk, and unsafe positive trim.
 
 The C++ group pass compares completed rows. It does not mix channel data between files and does not replace any per-file result.
 
-If an articulation has too little valid data, use a clearly marked instrument-level profile only when it is compatible. Otherwise mark the layer `Uncalibrated` and use original exact velocity selection.
+If a library articulation has too little valid data, use a clearly marked library-instrument-level profile only when it is compatible. Otherwise mark the map layer `Uncalibrated` and use original exact velocity selection.
 
 ### Metadata ownership
 
@@ -243,16 +243,16 @@ Core runtime ownership:
 | --- | --- |
 | Sample filename | sample identity plus optional explicit `v` manual-gain default |
 | Per-kit `metadata.csv` | generated per-file and per-mic measurements required by C++ |
-| Per-kit `kit-overrides.yml` | sparse user-authored source corrections owned by TODO18 |
-| Instrument or articulation folder | aggregate existing `L/C/R` source balance |
-| Instrument map | manual override for one mapped layer |
+| Per-kit `kit-overrides.yml` | sparse user-authored library kit overrides owned by TODO18 |
+| Instrument or articulation folder | aggregate existing `L/C/R` placement balance |
+| Instrument map | manual override for one map layer |
 | C++ runtime | logical hits, raw velocity medians, fitted source profiles, calibration trims, decay envelopes, and pan decisions |
 
 Rows are identified by kit-relative sample path plus mic code. The initial CSV contains the measurements required by the planned runtime phases: `content_hash`, `file_size_bytes`, `onset_ms`, `intensity_db`, `true_peak_db`, `peak_db`, `peak_ms`, `decay_end_ms`, `stereo_balance`, and readable decay columns named `-6db_ms`, `-12db_ms`, `-18db_ms`, `-24db_ms`, `-30db_ms`, `-36db_ms`, `-42db_ms`, `-48db_ms`, `-54db_ms`, and `-60db_ms`. A value may be empty when it does not apply, such as stereo balance for a mono mic.
 
 `onset_ms` also provides the timing evidence needed to compare linked mic entries, so a separate timing column is not required initially. Phase 3 C++ derives relative mic timing, logical-hit intensity, velocity medians, calibration trim, and decay envelopes from the measured CSV rows. Phase 6 will use `stereo_balance` for pan decisions.
 
-The readable peak and decay fields replace the runtime use of legacy `p`, `d`, and compressed base62 `c` filename values. Existing `a`, `p`, `d`, and `c` tokens may be ignored when CSV metadata is active. The `v` token remains the per-file `manualGainDb` default. TODO18 may replace it with a saved whole-file source override. Automatic decimal `calibrationTrimDb` is derived separately by C++. Effective manual gain is included when calculating intensity and true peak, and the final preprocessing gain combines effective `manualGainDb` with `calibrationTrimDb`.
+The readable peak and decay fields replace the runtime use of legacy `p`, `d`, and compressed base62 `c` filename values. Existing `a`, `p`, `d`, and `c` tokens may be ignored when CSV metadata is active. The `v` token remains the per-file `manualGainDb` default. TODO18 may replace it with a saved whole-file library kit override. Automatic decimal `calibrationTrimDb` is derived separately by C++. Effective manual gain is included when calculating intensity and true peak, and the final preprocessing gain combines effective `manualGainDb` with `calibrationTrimDb`.
 
 `content_hash` is a BLAKE2b-128 hash of the complete raw sample file. It detects modified files and can match files that were renamed or moved. `file_size_bytes` provides a quick additional check. Hashes stay in `metadata.csv` and are never added to sample filenames.
 
@@ -284,25 +284,25 @@ Keep the current full-file buffer model. One recipe produces one complete multic
 
 Preview, progressive loading, normal playback, and future cache baking must use the same recipe builder. Calibration trim must not be applied again after a processed buffer is returned.
 
-Global and per-layer velocity responses, `Mix Gain`, tuning, envelopes, bleed, pan, routing, choke, aftertouch, and instance effects remain runtime controls. They do not belong in the source recipe.
+Global and map layer velocity responses, `Mix Gain`, tuning, envelopes, bleed, pan, routing, choke, aftertouch, and instance effects remain runtime controls. They do not belong in the source recipe.
 
 A changed derived velocity-level trim or other audio-changing metadata creates a new RAM-cache identity after `Reload All Kits`. A live TODO18 manual-gain override also creates changed recipe keys for the affected articulation; the engine uses a temporary smoothed correction while those recipes load and keeps old immutable buffers alive for existing voices. A changed logical-hit intensity, raw velocity median, fitted-profile algorithm, or velocity-response curve rebuilds selection tables but does not change buffer identity when source content and the audio recipe are unchanged. TODO16 consumes the same identity for persistent disk storage, Bake Cache UI, cleanup, and multi-instance safety.
 
-### Global and layer controls
+### Global And Map Layer Controls
 
 - Store the instance-global response in plugin state as a built-in code or a small set of monotonic MIDI-to-dB points with velocity 127 fixed at `0 dB` relative.
 - Build the full table outside playback.
 - The Conf General section selects the instance-global response from built-in and user presets. An unmatched stored definition is shown as `Unnamed global curve*`.
 - A visual global editor plus explicit machine-default actions remain a separate follow-up.
-- A layer uses the `Global Velocity-to-dB Curve` when no map override is present.
-- A layer uses its own override when its map entry contains `velocityResponse=linear`, `velocityResponse=logarithmic`, `velocityResponse=exponential`, or a valid point list such as `1:-48,64:-12,127:0`.
-- A layer override changes output gain only. Exact named-velocity sample selection remains unchanged.
+- A map layer uses the `Global Velocity-to-dB Curve` when no map override is present.
+- A map layer uses its own override when it contains `velocityResponse=linear`, `velocityResponse=logarithmic`, `velocityResponse=exponential`, or a valid point list such as `1:-48,64:-12,127:0`.
+- A map layer override changes output gain only. Exact velocity-level sample selection remains unchanged.
 - Selecting `Global Velocity-to-dB Curve` removes the map override.
 - Keep `Mix Gain` separate.
-- Manual destination-layer response changes use the parameter-only update path and do not reload samples.
-- Destination velocity response and `Mix Gain` do not change the fixed source preprocessing recipe. TODO18 source `manualGainDb` is a separate audio-changing source value and does change the recipe.
+- Manual map layer response changes use the parameter-only update path and do not reload samples.
+- Map layer velocity response and `Mix Gain` do not change the fixed source preprocessing recipe. TODO18 sample `manualGainDb` is a separate audio-changing library value and does change the recipe.
 
-Both layer editors must share map-entry serialization or preserve fields they do not show. Primary and shadow synths each own their effective tables.
+Both map-layer editors must share map-layer serialization or preserve fields they do not show. Primary and additional instrument players each own their effective tables.
 
 ### Consistent loudness estimates
 
@@ -318,22 +318,22 @@ Original pre-trim intensity remains available after buffer preprocessing. Effect
 
 Do not redesign the accepted hi-hat transition policy. Change only its loudness input and selection identity, then use focused checks and listening review.
 
-### Source balance, room orientation, and timing
+### Placement balance, room orientation, and timing
 
 Pan analysis uses real signed stereo overhead channels, a fixed post-onset window, a center dead zone, and a confidence value.
 
 - Write instrument balance only when its articulations agree.
 - Otherwise write articulation balance.
 - Preserve existing balance when confidence is too low.
-- Treat folder `L/C/R` as the recorded source position, with `L127..L1`, `C0`, and `R1..R127` mapped to `-127..127`.
-- For overhead stereo, preserve the recorded stereo image and do not apply the detected source position again. Apply only the manual layer-pan offset.
-- For an eligible non-room mono mic routed to a stereo output or aux, use detected source position plus manual layer-pan offset, clamped to the pan range.
+- Treat folder `L/C/R` as the recorded placement, with `L127..L1`, `C0`, and `R1..R127` mapped to `-127..127`.
+- For overhead stereo, preserve the recorded stereo image and do not apply the detected placement again. Apply only the manual map layer pan offset.
+- For an eligible non-room mono mic routed to a stereo output or aux, use detected placement plus manual map layer pan offset, clamped to the pan range.
 - For a direct mono mic routed to its own mono output, apply no plugin pan and leave placement to the DAW.
-- For room mics, apply neither detected source position nor the normal layer-pan offset in the first version.
+- For room mics, apply neither detected placement nor the normal map layer pan offset in the first version.
 - For other stereo mic types, preserve the recorded image. Add a manual offset only when their routing mode explicitly allows it.
 - Precompute one mic placement mode and effective offset per routed entry outside playback.
 
-Possible room L/R reversal is per mic, not per layer. Report it only when room direction is strongly and repeatedly opposite to overhead. Do not use whole-layer `flipLR` to repair one mic.
+Possible room L/R reversal is per mic, not per map layer. Report it only when room direction is strongly and repeatedly opposite to overhead. Do not use map-layer-wide `flipLR` to repair one mic.
 
 Timing analysis compares linked hits across many samples. A stable repeated delay for one mic or interface is possible technical latency. A delay that changes by instrument or distance is likely acoustic. Report both, but do not apply timing correction in this plan.
 
@@ -354,7 +354,7 @@ Report-only timing and orientation stay outside playback. If a reviewed value la
 
 [`analyze_drum_samples_phase1.py`](../scripts/analyze_drum_samples_phase1.py) is a read-only comparison tool with explicit measurement constants and output paths. It does not rename or rewrite source files.
 
-The final `todo14-phase1-v4` pass measured 184 logical hits from 30 articulations in four kits. It used low, middle, and high named velocities with up to three round robins, covering kicks, snares, toms, closed and open hi-hats, crashes, rides, and cowbells. It measured every selected reference hit from signed stereo channels and checked true peak across every linked file in the selected hit.
+The final `todo14-phase1-v4` pass measured 184 logical hits from 30 library articulations in four library kits. It used low, middle, and high velocity levels with up to three round robin IDs, covering kicks, snares, toms, closed and open hi-hats, crashes, rides, and cowbells. It measured every selected reference hit from signed stereo channels and checked true peak across every linked file in the selected hit.
 
 | Candidate | Median round-robin MAD | Velocity inversions | Median low-to-high range |
 | --- | ---: | ---: | ---: |
@@ -373,9 +373,9 @@ Measured findings:
 - Linked-file true peak was `-9.25 dBTP` at the median, `+0.02 dBTP` at the 90th percentile, and `+1.63 dBTP` at the maximum before any new calibration trim.
 - The selected corpus contains 198 linked files with existing legacy `v` trim tokens. Phase 1 ignored those tokens and measured the unmodified audio.
 - The first K-weighted 50 ms experiment showed that requiring every post-trim cache buffer to stay below `-1 dBTP` would force `commonReferenceDb` down to `-46.79 dB`. This is too quiet for the intended maximum. The approved rule therefore checks peak safety after the matching global target gain, while allowing immutable floating-point cache buffers to exceed `1.0` internally.
-- With the approved `commonReferenceDb = -38.0 dB`, required trim is `-2.59 dB` at the median, `+27.07 dB` at the 90th percentile, and `+41.31 dB` at the maximum across 79 named-velocity groups.
+- With the approved `commonReferenceDb = -38.0 dB`, required trim is `-2.59 dB` at the median, `+27.07 dB` at the 90th percentile, and `+41.31 dB` at the maximum across 79 velocity levels.
 - Ten groups cross the `+24 dB` noise-risk warning. The `+36 dB` cap limits two very quiet Crocell groups: kick velocity 7 is `3.16 dB` short and ride velocity 16 is `5.31 dB` short. They stay explicitly marked `Limited`.
-- After calibration trim and the velocity-127 global target, the maximum linked-file true peak among highest named velocities is `-2.20 dBTP`. All reference articulations pass the `1.0 dB` headroom rule.
+- After calibration trim and the velocity-127 global target, the maximum linked-file true peak among the highest velocity levels is `-2.20 dBTP`. All reference articulations pass the `1.0 dB` headroom rule.
 
 Approved Phase 1 constants:
 
@@ -384,8 +384,8 @@ Approved Phase 1 constants:
 - Logical-hit intensity: ungated BS.1770 K-weighted energy over 400 ms from detected onset.
 - Reference mic order: normal stereo overhead `ons`, another normal overhead stereo, another overhead stereo, decoded overhead mid-side, otherwise `Uncalibrated`.
 - Mid-side decoding: energy-preserving `L = (M + S) / sqrt(2)` and `R = (M - S) / sqrt(2)`.
-- Raw velocity median: median of all valid logical-hit intensities at the named velocity.
-- Monotonic fit: weighted pool-adjacent-violators isotonic fit in original named-velocity order, weighted by valid logical-hit count.
+- Raw velocity median: median of all valid logical-hit intensities at the velocity level.
+- Monotonic fit: weighted pool-adjacent-violators isotonic fit in original velocity-level order, weighted by valid logical-hit count.
 - Instrument-family offsets: none in the first version.
 - Common reference experiment: `-38.0 dB`; superseded for runtime calibration by the Phase 4 listening correction.
 - Positive-trim noise-risk warning: above `+24.0 dB`.
@@ -393,17 +393,17 @@ Approved Phase 1 constants:
 - Peak safety: require at least `1.0 dB` headroom after automatic calibration trim and the matching response gain, before `Mix Gain`.
 - Default global response: preserve the current linear MIDI gain as `20 * log10(midiVelocity / 127)`, with velocity 127 at `0 dB`.
 - Numeric acceptance: recomputed raw medians within `0.25 dB`; median sample-boundary steps within `1.5 dB` after calibration.
-- Round-robin outlier: report any hit more than `3.0 dB` from its raw velocity median; do not flatten it.
+- Logical-hit outlier: report any hit more than `3.0 dB` from its raw velocity median; do not flatten it.
 - Complete-hit readiness: every active routed mic buffer and every required voice slot must be ready before any voice in the hit starts. Inactive or unrouted mic entries do not block it.
 - Early-load target intensities relative to the highest fitted value: `-24`, `-12`, `-6`, `-3`, and `0 dB`.
 - Source-balance window: signed stereo energy over 200 ms from onset.
-- Pan confidence: center dead zone `-8..8`; require at least six hits over at least two named velocities, at least 80% side agreement, median absolute position above 12, and position MAD no greater than 12.
+- Pan confidence: center dead zone `-8..8`; require at least six hits over at least two velocity levels, at least 80% side agreement, median absolute position above 12, and position MAD no greater than 12.
 
 The approved baseline listening sequence is in `build/todo14_phase1_listening_v4/`. It uses K-weighted 400 ms normalization without instrument-family offsets.
 
 These are the current working values, not a permanent file-format contract. The measurement window and other analysis constants can be tuned later, then `metadata.csv` can be regenerated without renaming samples.
 
-Verification result: weighted isotonic fitting plus the clamped `selectionTargetDb` equation produced no decreasing targets and no backward named-velocity choices across all 30 reference articulations and MIDI velocities 1 to 127.
+Verification result: weighted isotonic fitting plus the clamped `selectionTargetDb` equation produced no decreasing targets and no backward velocity-level choices across all 30 reference articulations and MIDI velocities 1 to 127.
 
 ### Phase 2: Make analyzer measurements correct (implementation complete, verification pending)
 
@@ -442,9 +442,9 @@ Verify later: deterministic generation; Python-to-C++ row matching; backup and r
 
 - ✅ Add explicit immutable logical-hit runtime descriptions and separate thread-safe readiness snapshots.
 - ✅ Persist global curve points in instance state and machine defaults.
-- ✅ Build global gain, `selectionTargetDb`, `velocityCalibrationTrimDb`, exact source-region, and per-layer correction tables outside playback.
+- ✅ Build global gain, `selectionTargetDb`, `velocityCalibrationTrimDb`, exact velocity-region, and map layer correction tables outside playback.
 - ✅ Make selection return one logical hit and start only its linked active mic entries.
-- ✅ Remove any fallback that chooses a variant when only part of its active mic set is ready.
+- ✅ Remove any fallback that chooses a logical hit when only part of its active mic set is ready.
 - ✅ Let loaded fallback search only complete logical hits.
 - ✅ Preflight buffers and reserve all required voice slots as one fixed-size operation before starting a hit.
 - ✅ Start all required voices or start none. Never replace one missing mic entry with data from another logical hit.
@@ -455,25 +455,25 @@ Verify later: deterministic generation; Python-to-C++ row matching; backup and r
 - ✅ Use the same recipe builder for preview, progressive loading, and normal playback.
 - ✅ Derive early-load priority from representative calibrated target intensities and complete logical hits.
 - ✅ Update preview, voice management, and hi-hat loudness estimates.
-- ✅ Restore named velocity boundaries for normal playback, loaded fallback, and preview after measured-dB exact selection chose wrong timbres.
+- ✅ Restore velocity-level boundaries for normal playback, loaded fallback, and preview after measured-dB exact selection chose wrong timbres.
 - ✅ Replace the common cross-instrument reference with each articulation's own hardest fitted level after listening found the snare too soft and quiet and the kick too loud.
 - ✅ Apply fixed calibration gain and the final fade in one loader pass, and increment the preprocessing recipe version.
 - Add clear debug status when all queued sample loads have finished. Report enough counts to distinguish loaded, failed, and still-pending work so listening can start from a known fully loaded state.
 
-For each representative target, load one close logical hit and all its active linked mic entries in the same stage. Do not prefer variants `a` and `b` only because their indexes are small. Load every remaining mapped hit later.
+For each representative target, load one close logical hit and all its active linked mic entries in the same stage. Do not prefer round robin IDs `a` and `b` only because their values are small. Load every remaining mapped hit later.
 
-Verify later: deterministic monotonic tables; the `articulationReferenceDb + effectiveTargetDb` median equation within tolerance for non-limited layers; velocity 127 at `0 dB` relative; named velocity boundary selection; group voice reservation; no partial or mixed mic variants; different recipes never share buffers; equivalent recipes do share buffers; calibrated first-playable coverage; every mapped sample eventually loads; clear all-loaded status and counts; hi-hat listening comparison.
+Verify later: deterministic monotonic tables; the `articulationReferenceDb + effectiveTargetDb` median equation within tolerance for non-limited map layers; velocity 127 at `0 dB` relative; velocity-level boundary selection; group voice reservation; no partial or mixed logical hits; different recipes never share buffers; equivalent recipes do share buffers; calibrated first-playable coverage; every mapped sample eventually loads; clear all-loaded status and counts; hi-hat listening comparison.
 
-### ✅ Phase 5: Add per-layer velocity response overrides (implementation complete, verification pending)
+### ✅ Phase 5: Add map layer velocity response overrides (implementation complete, verification pending)
 
-- ✅ Add optional per-layer `velocityResponse`; absence means `Global Velocity-to-dB Curve`, while a valid definition means a layer override.
+- ✅ Add optional per-map-layer `velocityResponse`; absence means `Global Velocity-to-dB Curve`, while a valid definition means a map layer override.
 - ✅ Extend parser, serializer, fingerprints, and parameter-only runtime updates.
-- ✅ Keep exact named-velocity sample selection unchanged.
-- ✅ Add per-layer response editing in the pad popup and compact named status in the Instrument tab.
-- ✅ Make the Instrument tab use shared map serialization and preserve bleed, mic routes, and velocity response values it does not edit.
-- ✅ Address live changes by destination articulation, source, and layer occurrence.
+- ✅ Keep exact velocity-level sample selection unchanged.
+- ✅ Add map layer response editing in the pad popup and compact named status on the Instrument page.
+- ✅ Make the Instrument page use shared map serialization and preserve bleed, mic routes, and velocity response values it does not edit.
+- ✅ Address live changes by articulation slot, library articulation, and map layer occurrence.
 
-Verify later: independent primary and shadow edits; two articulations in one slot; no sample reload for live popup changes; raw-map load; save and reload; invalid curve feedback; reset to `Global Velocity-to-dB Curve`; editor layout and focus behavior.
+Verify later: independent primary and additional map-layer edits; two articulation slots in one instrument slot; no sample reload for live popup changes; raw-map load; save and reload; invalid curve feedback; reset to `Global Velocity-to-dB Curve`; editor layout and focus behavior.
 
 ### ✅ Phase 5B: Replace the temporary text field with a visual velocity-response editor (implementation complete, verification pending)
 
@@ -483,10 +483,10 @@ Use one custom JUCE `Component` that paints the complete chart and handles its o
 
 #### User flow and chart
 
-- ✅ Add a `Global Velocity-to-dB Curve` dropdown to Conf General with built-in and user presets. Apply it live to every layer without an override, preserve layer overrides, and save the definition in plugin instance state without changing the machine default.
-- ✅ Use one compact dropdown below Tuning, Attack, and Decay. It contains `Global Vel-to-dB curve`, built-in and user presets, and `Edit curve...`. An unmatched inline definition is displayed as `Edited Layer Curve*` but is not a selectable preset.
+- ✅ Add a `Global Velocity-to-dB Curve` dropdown to Conf General with built-in and user presets. Apply it live to every map layer without an override, preserve map layer overrides, and save the definition in plugin instance state without changing the machine default.
+- ✅ Use one compact dropdown below Tuning, Attack, and Decay. It contains `Global Vel-to-dB curve`, built-in and user presets, and `Edit curve...`. An unmatched inline definition is displayed as `Edited Map Layer Curve*` but is not a selectable preset.
 - ✅ Open the editor as a child overlay inside the plugin window, not as a native desktop window. Use about 60% of the host width, 55% of its height, and two equal columns: graph only on the left, all context and controls on the right.
-- ✅ Show a standard two-line title: `Slot / articulation` above `Kit / instrument / articulation`. Add ` (layer N)` to the first line only when `N` is greater than 1.
+- ✅ Show a standard two-line title: `Articulation slot / library articulation` above `Library kit / instrument / articulation`. Add ` (map layer N)` to the first line only when `N` is greater than 1.
 - ✅ Use MIDI velocity `1..127` horizontally and linear output gain vertically so the Linear built-in appears straight. Keep editing, serialization, tooltips, and readouts in dB. Do not draw X or Y axis labels.
 - ✅ Lightly show the MIDI range that selects each sample level in exact mode. Do not draw vertical sample guides or fitted-level markers.
 - ✅ Draw the effective 128-value response as a 3 px main line and show a thin horizontal guide at the cursor.
@@ -495,16 +495,16 @@ Use one custom JUCE `Component` that paints the complete chart and handles its o
 
 #### Editing and validation
 
-- ✅ Keep the chart editable while it shows the global curve. The first real graph or numeric value change copies the global curve into a layer override. Selecting a point without changing its value does not create an override.
-- ✅ For a layer curve, create vertical drag handles at velocity `1`, every recorded sample level, velocity `127`, and any extra points present in the loaded curve or preset.
+- ✅ Keep the chart editable while it shows the global curve. The first real graph or numeric value change copies the global curve into a map layer override. Selecting a point without changing its value does not create an override.
+- ✅ For a map layer curve, create vertical drag handles at velocity `1`, every recorded sample level, velocity `127`, and any extra points present in the loaded curve or preset.
 - ✅ Keep handle velocities fixed. The user changes only dB, so editing the response cannot change recorded sample selection.
 - ✅ Preserve every user control point and use smooth monotone cubic interpolation in dB between points. Do not permit overshoot or a decreasing segment.
 - ✅ Keep velocity `127` fixed at `0 dB`.
 - ✅ Clamp vertical dragging between the neighbouring handles and at or below `0 dB`, so the curve cannot become decreasing or invalid.
 - ✅ Provide one numeric dB field for the selected handle for exact edits. Validate the final definition with the existing `VelocityResponse` parser and keep the last valid curve when text input is invalid.
 - ✅ Update the existing 128-value runtime table while dragging, without reloading samples. Commit map text once on mouse-up or numeric edit completion.
-- ✅ Automatically preview the exact destination layer after a 120 ms hover anywhere in the graph. Convert cursor Y to dB and find the nearest velocity on the current response. Also preview after a simple click, after mouse-up for a changed drag, after numeric edit completion, or after preset selection. Stationary hover previews once, and a recent matching hover suppresses a duplicate mouse-up preview. Do not show a manual Preview button and do not trigger samples for every mouse-move event.
-- ✅ Selecting `Global - <preset>` in the editor or `Global Velocity-to-dB Curve` in the layer dropdown removes the map override exactly as Phase 5 does now.
+- ✅ Automatically preview the exact target map layer after a 120 ms hover anywhere in the graph. Convert cursor Y to dB and find the nearest velocity on the current response. Also preview after a simple click, after mouse-up for a changed drag, after numeric edit completion, or after preset selection. Stationary hover previews once, and a recent matching hover suppresses a duplicate mouse-up preview. Do not show a manual Preview button and do not trigger samples for every mouse-move event.
+- ✅ Selecting `Global - <preset>` in the editor or `Global Velocity-to-dB Curve` in the map layer dropdown removes the map override exactly as Phase 5 does now.
 
 #### Curve presets
 
@@ -519,20 +519,20 @@ velocityResponse: "1:-48,64:-12,127:0"
 ```
 
 - ✅ Do not add a preset schema or version system. Validate the stored definition with the same engine parser.
-- ✅ A preset stores only the universal MIDI `1..127` response curve, not kit, instrument, articulation, or sample-level data, so it can be loaded for any layer.
+- ✅ A preset stores only the universal MIDI `1..127` response curve, not library kit, library instrument, library articulation, or velocity-level data, so it can be loaded for any map layer.
 - ✅ When a preset lacks a point at one of the current articulation's sample velocities, calculate that handle from the preset curve. Adding this handle must not change the loaded curve shape.
-- ✅ Applying a preset copies its curve into the layer's map entry. The saved session must not depend on the preset file remaining on disk.
+- ✅ Applying a preset copies its curve into the map layer. The saved session must not depend on the preset file remaining on disk.
 - ✅ File loading or validation failure leaves the current curve unchanged and shows a short error in the editor.
 
 #### Engine and UI boundary
 
 - ✅ Add a read-only snapshot containing each recorded velocity, raw median relative to the hardest fitted level, fitted level relative to the hardest fitted level, calibration trim, and calibration availability.
-- ✅ Resolve measurement data from the selected source articulation. Keep Phase 5's destination articulation, source, and layer occurrence identity for applying curve edits. Do not expose mutable runtime objects to the UI.
+- ✅ Resolve measurement data from the selected library articulation. Keep Phase 5's articulation slot, library articulation, and map layer occurrence identity for applying curve edits. Do not expose mutable runtime objects to the UI.
 - ✅ Build or refresh this snapshot outside playback. Preset file I/O also stays on the message thread.
-- ✅ Keep exact named-velocity selection, calibration preprocessing, cache identity, and `Mix Gain` unchanged.
-- ✅ Keep the component reusable for the later global-response editor, but implement only the pad-popup layer editor in this phase.
+- ✅ Keep exact velocity-level selection, calibration preprocessing, cache identity, and `Mix Gain` unchanged.
+- ✅ Keep the component reusable for the later global-response editor, but implement only the pad-popup map layer editor in this phase.
 
-Verify later: Conf global preset selection and project-state round trip; global changes affect only layers without overrides; sparse and dense articulations; articulation without metadata; correct dB readouts and subtle sample-range backgrounds; automatic layer-override creation on the first real edit; global selection without an override; distinct built-in shapes on the linear-gain display; smooth monotone point interpolation without overshoot; unnamed global and edited layer-curve status; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; delayed Y-based hover preview anywhere in the graph without repeats; click preview without movement or duplicate mouse-up playback; exact selected-layer preview after committed changes; primary and shadow layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; wider and shorter two-column resizing without axis labels, keyboard focus, tooltips, and visual review.
+Verify later: Conf global preset selection and project-state round trip; global changes affect only map layers without overrides; sparse and dense articulations; articulation without metadata; correct dB readouts and subtle sample-range backgrounds; automatic map-layer-override creation on the first real edit; global selection without an override; distinct built-in shapes on the linear-gain display; smooth monotone point interpolation without overshoot; unnamed global and edited map-layer-curve status; vertical drag clamping; fixed velocity 127 at `0 dB`; numeric validation; delayed Y-based hover preview anywhere in the graph without repeats; click preview without movement or duplicate mouse-up playback; exact selected-map-layer preview after committed changes; primary and additional map layers; live updates without sample reload; preset save, overwrite, load, invalid-file handling, and session independence; wider and shorter two-column resizing without axis labels, keyboard focus, tooltips, and visual review.
 
 ### ✅ Phase 6: Add balance and timing reports (implementation complete, verification pending)
 
@@ -548,7 +548,7 @@ Implementation result:
 - Balance reports use the Phase 1 confidence values. They include current and proposed folder names but never rename a folder.
 - Room orientation compares each stereo room mic with the selected stereo overhead for matching logical hits. Only strong repeated opposite direction produces `recommended_flip_lr = 1`.
 - Timing uses a direct mic as the logical-hit reference when available, then overhead, then the earliest remaining mic. Stable cross-articulation offsets are marked `possible_technical_offset`; changing overhead or room offsets are marked `likely_acoustic_variation`.
-- Runtime mic placement is precomputed outside rendering. Stereo overhead uses only manual layer pan, eligible non-room mono-to-stereo uses source balance plus manual pan, direct mono-to-mono ignores plugin pan, room ignores layer pan, and other stereo routes preserve their image unless routing explicitly permits manual pan.
+- Runtime mic placement is precomputed outside rendering. Stereo overhead uses only manual map layer pan, eligible non-room mono-to-stereo uses placement balance plus manual pan, direct mono-to-mono ignores plugin pan, room ignores map layer pan, and other stereo routes preserve their image unless routing explicitly permits manual pan.
 - Report proposal fields are `recommended_flip_lr` and `recommended_offset_ms`. Reserved future runtime CSV fields are `mic_flip_lr` and signed `playback_offset_ms`; they are not written to `metadata.csv` or read by the engine in this phase.
 
 Verify later: known left, center, right, mirrored, and delayed fixtures; low-confidence no-change behavior; direct and room routing exclusions; listening check for mic-aware pan.
@@ -559,20 +559,20 @@ Automatic analysis-driven timing correction, offset baking, and channel swapping
 
 Update `INSTRUMENT_MAP_FORMAT.md` when final map fields are chosen. Relevant plans are:
 
-- [TODO15 floating sample selection](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) for dense velocity layouts with few round robins;
+- [TODO15 floating sample selection](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) for dense velocity layouts with few logical hits per velocity level;
 - [TODO16 derived sample cache and Bake Cache](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) for persistent processed buffers and cache controls;
-- [TODO11 pad popup layer parameters](TODO11_PAD_POPUP_LAYER_PARAMETERS_PLAN.md) for current layer controls;
-- [Instrument map surgical apply](PLAN-instrument-map-surgical-apply.md) for no-reload parameter updates and shadow layers;
-- [TODO10 UI review](TODO10_UI_REVIEW_REFACTOR_PLAN.md) for layer-address and editor-serialization risks;
+- [TODO11 pad popup layer parameters](TODO11_PAD_POPUP_LAYER_PARAMETERS_PLAN.md) for current map layer controls;
+- [Instrument map surgical apply](PLAN-instrument-map-surgical-apply.md) for no-reload parameter updates and additional map layers;
+- [TODO10 UI review](TODO10_UI_REVIEW_REFACTOR_PLAN.md) for map-layer-address and editor-serialization risks;
 - `TODO05_INSTRUMENT_MAP_PLAN.md` as history only, not current behavior.
 
 Likely implementation areas:
 
 - generator: `../scripts/generate_sample_metadata.py`;
-- library and loading: `../source/Engine/KitLibModel.*`, `InstrumentSynthLoader.cpp`, and `SampleLoader.*`;
-- runtime and maps: `../source/Engine/InstrumentSynth*`, `DrumKitEngine*`, and mapping helpers;
+- library and loading: `../source/Engine/KitLibModel.*`, `InstrumentPlayerLoader.cpp`, and `SampleLoader.*`;
+- runtime and maps: `../source/Engine/InstrumentPlayer*`, `DrumKitEngine*`, and mapping helpers;
 - UI: `../source/UI/PadContextPopup.*`, `InstrumentConfigPanel.*`, and `EngineSettingsPanel.*`;
-- focused parser, map, synth, Python, and listening checks.
+- focused parser, map, instrument player, Python, and listening checks.
 
 Non-goals:
 
@@ -580,16 +580,16 @@ Non-goals:
 - no generated analysis, hash, checksum, or version suffixes in sample filenames;
 - no separate JSON runtime database;
 - no loss of individual logical-hit intensity after median calculation;
-- no independent mic or round-robin selection after a logical hit is chosen;
+- no independent mic or round robin ID selection after a logical hit is chosen;
 - no full floating-selection implementation, because TODO15 owns it;
 - no persistent derived disk cache or Bake Cache UI, because TODO16 owns it;
-- no layer merging;
+- no map layer merging;
 - no output-bus redesign;
 - no calibrated velocity in crosstalk filtering;
-- no automatic layer-count gain reduction;
+- no automatic map-layer-count gain reduction;
 - no automatic room panning or phase alignment;
-- no whole-layer flip used to repair one mic;
-- no source audio-file modification;
+- no map-layer-wide flip used to repair one mic;
+- no sample-file modification;
 - no new realtime parsing, allocation, file I/O, locking, or unbounded work.
 
-No build or tests were run for Phases 1 through 5B or the Phase 4 listening correction. The read-only Phase 1 analyzer was run. The Phase 2 measurement prototype was not run, and no sample filename or source audio was changed. Phase 2 through Phase 5B verification remains pending.
+No build or tests were run for Phases 1 through 5B or the Phase 4 listening correction. The read-only Phase 1 analyzer was run. The Phase 2 measurement prototype was not run, and no sample filename or sample audio was changed. Phase 2 through Phase 5B verification remains pending.

@@ -1,70 +1,121 @@
-# Project Terminology Review
+# Project Terms
 
-Status: naming review. No rename or folder move is approved by this document.
+Status: approved. ✅ means that the name is applied. ⏳ means that the change is deferred.
 
-## Core terms
+## Library data
 
-| Term | Meaning in this project |
+| Term | Meaning |
 | --- | --- |
-| Library | The scanned collection of recorded drum kits on disk. |
-| Library kit | One recorded drum kit in the library. C++ type: `KitLib::DrumKitSpec`. |
-| Kit layout | Layout for users logical (might be a combination of >1 physical device) e-drum kit MIDI capatibilities assignments of slots, articulations, MIDI notes, and controllers. |
-| Instrument slot | One destination place in a kit layout, such as `kick1` or `tom2`. |
-| Instrument map | Assignments from destination slots and articulations to recorded library content, including mapped-layer settings. |
-| Library instrument | One recorded instrument inside a library kit. C++ type: `KitLib::InstrumentSpec`. |
+| Library | All recorded drum kits that the application finds on disk. |
+| Library kit | One recorded drum kit. C++ type: `KitLib::DrumKitSpec`. |
+| Library instrument | One recorded instrument in a library kit. C++ type: `KitLib::InstrumentSpec`. |
 | Library articulation | One recorded playing method, such as center, rim, bow, or edge. C++ type: `KitLib::ArticulationSpec`. |
-| Destination articulation | A playable articulation defined by an instrument slot in the kit layout. |
-| Mapping layer | One library articulation assigned to one destination articulation, with tuning, gain, routing, and other settings. |
-| Velocity level | One recorded named-velocity group inside a library articulation. Current C++ type: `VelocityLayerSpec`. It is not a mapping layer. |
-| Logical hit | One velocity level and round-robin choice with all mic files or channel ranges that belong to that hit. |
-| Round robin | An alternate recorded hit at the same named velocity, usually identified by a letter. |
-| Sample | One recorded audio file or channel range for one mic entry of a logical hit. |
-| Mic layout | The named plugin outputs, their order, channel count, and compatible mic rules. |
-| Route | An assignment from a recorded mic code to one mic-layout output. |
-| Library override | A saved correction to recorded library data in `kit-overrides.yml`. Current code often calls this a source override. |
-| Preview | Audition without changing the instrument map. Qualify it as library preview or mapped preview. |
-| Preset | A saved reusable value. Always qualify it as instrument-map preset, velocity-response preset, or kit-layout preset. |
-| Engine | The top-level runtime coordinator for layouts, maps, synths, loading, persistence, and audio processing. |
-| Instrument synth | Prepared runtime data and playback behavior for mapped instrument content. |
-| Voice | One active sample-playback state. A multi-mic logical hit normally uses several voices. |
+| Velocity level | One recorded velocity group in a library articulation. |
+| Logical hit | One recorded hit at one velocity level. It has one round robin ID and one sample for each mic. |
+| Round robin ID | The letter that identifies an alternate logical hit at the same velocity level. |
+| Sample | Data for one mic in one logical hit. It identifies a sample file and a channel range. |
+| Sample file | One audio file on disk. One experimental multichannel file can contain samples for several mics. |
+| Mic | One recorded microphone signal, such as direct, overhead, or room. |
 
-## Terms that need a naming decision
+The sample model has this structure:
 
-| Current term | Problem | Alternatives |
+```text
+VelocityLevelSpec
+  logicalHits: LogicalHitSpec[]
+
+LogicalHitSpec
+  roundRobinId
+  samples: SampleSpec[]
+```
+
+## Kit and mapping
+
+| Term | Meaning |
+| --- | --- |
+| Kit layout | The user-defined e-drum kit. It defines instrument slots, articulation slots, MIDI notes, and controllers. |
+| Instrument slot | One instrument in a kit layout, such as `kick1`, `tom2`, or `crash1`. |
+| Articulation slot | One playing method in an instrument slot, such as center, rim, bow, or edge. |
+| Instrument map | Assigns library instruments and library articulations to kit layout slots. |
+| Map layer | One assignment in an instrument map. It stores one library articulation, its target slot, and its playback settings. |
+| Mic layout | The plugin outputs, their order, channel count, and compatible mic rules. |
+| Mic route | One assignment from a mic to a mic layout output. |
+| Library kit override | Saved changes to balance, velocity ranges, sample gain, or playback timing in one library kit. |
+
+A map layer must store a complete `kit/instrument/articulation` library path. An articulation slot is optional. A whole-instrument selection creates one map layer for each library articulation and uses the matching articulation-slot code when one is available.
+
+Use `articulation slot` for the kit layout target. Use `library articulation` for recorded content. Do not use `source articulation` or `destination articulation` in new names.
+
+## UI and runtime
+
+| Term | Meaning |
+| --- | --- |
+| Page | Main content selected from the sidebar. |
+| Section | A content choice inside a page, such as Library Kits or Presets. |
+| Panel | A UI component that implements a page or part of a page. It is not a navigation term. |
+| Mode | A behavior state, such as `MicPlacementMode`. It is not a sidebar destination. |
+| Library preview | Audition of library content that does not change the instrument map. |
+| Map preview | Audition of the current instrument map and its playback settings. |
+| Engine | The top-level runtime object. It loads settings and samples, applies maps, and coordinates audio processing. |
+| Instrument player | The runtime object that prepares and plays samples for one instrument slot. |
+| Articulation playback entry | The runtime assignment from one articulation slot to one library articulation. |
+| Voice | One active sample playback. A logical hit normally starts one voice for each sample. |
+
+Use the full names `kit layout preset`, `instrument map preset`, and `velocity response preset`. A mic layout is not a preset.
+
+## C++ rename status
+
+| Old name | Approved name | Status |
 | --- | --- | --- |
-| Source | It can mean library content, a sample file, mapping input, C++ source code, or the source of a rule. Do not use it alone as a folder name. | Library content, library selection, library reference, sample file, or mapping input. |
-| Source item | It identifies a library kit, instrument, and optional articulation. It is not an audio file. | `LibrarySelectionRef`, `LibraryArticulationRef`, `LibraryItem`. |
-| Source picker | It selects recorded library content for an instrument map. | `LibraryPicker`, `LibrarySelectionPopup`, `InstrumentLibraryPicker`. |
-| Source articulation editor | It edits persistent library corrections, not the mapped destination layer. | `LibraryArticulationEditor`, `SampleLibraryOverrideEditor`, `RecordedArticulationEditor`. |
-| Layer | It currently means both a mapped assignment and a recorded velocity group. | Use mapping layer for the assignment and velocity level for recorded samples. |
-| Kit | It can mean a library kit, kit layout, loaded instrument map, or UI page. | Always use library kit, kit layout, instrument map, or Kit page. |
-| Override | It can mean a library correction, mapping value, routing choice, or velocity-response replacement. | Use library override, layer setting, route assignment, or response override. |
+| No model type for one logical hit | `LogicalHitSpec` | ✅ |
+| `SampleVariantSpec` | `SampleSpec` | ✅ |
+| `VelocityLayerSpec` | `VelocityLevelSpec` | ✅ |
+| `VelocityLayerRuntime` | `VelocityLevelRuntime` | ✅ |
+| `VelLayerIdx` | `VelocityLevelIdx` | ✅ |
+| `variantIdx` for a logical hit | `roundRobinId` | ✅ |
+| `InstrumentMapEntry` | `InstrumentMapLayer` | ✅ |
+| `InstrumentMap::entries` | `InstrumentMap::layers` | ✅ |
+| `LayerRow` | `MapLayerRow` | ✅ |
+| `ArticulationTrigger` | `ArticulationSlot` | ✅ |
+| `destinationArticulation` string | `articulationSlotCode` | ✅ |
+| `InstrumentSynth` | `InstrumentPlayer` | ✅ |
+| `InstrumentSynthVoice` | `InstrumentPlayerVoice` | ✅ |
+| `ResolvedArticulationRoute` | `ArticulationPlaybackEntry` | ✅ |
+| `KitSourceOverrides` | `LibraryKitOverrides` | ✅ |
+| `ViewMode` | `PageId` | ✅ |
+| `activeMode` | `activePageId` | ✅ |
+| `ModeButton` | `PageButton` | ✅ |
+| `SourceMode` in `KitBrowserComponent` | `KitSection` | ✅ |
+| `SourceArticulationOverrideEditor` | `LibraryArticulationEditor` | ✅ |
+| `KitBrowserComponent` | `KitPage` | ⏳ Do this after the old Kit page is removed. |
+| `PageId::Browse` | `PageId::Kit` | ⏳ Do this after the old Kit page is removed. |
+| `SourceItem` and `SourcePickerPopup` | Not selected | ⏳ Keep these names until a clear replacement is approved. |
 
-## Folder name review
+## Use of `source`
 
-`source/UI/Source/` is rejected because `Source` does not identify one responsibility.
+Do not use `source` as a general project-domain term. Use the name that states the meaning:
 
-Candidate structures:
+| Old context | Approved name |
+| --- | --- |
+| `sourceInstrument`, `sourceArticulation` | `libraryInstrument`, `libraryArticulation` |
+| `sourceVelocityLayer` | `velocityLevelSpec` |
+| `sourceMicCode` | `micCode` |
+| `sourceBalance` | `placementBalance` |
+| `sourceBalanceResolved` | `balanceResolved` |
+| A `sourcePath` that identifies an audio file | `sampleFilePath` |
 
-1. `UI/Library/` for all library selection and editing UI. This is short but still broad.
-2. `UI/LibrarySelection/` for the picker and references, plus `UI/LibraryEditing/` for persistent library corrections. This is the clearest current option.
-3. `UI/InstrumentMapping/` for mapping selection, plus `UI/LibraryOverrides/` for persistent corrections. This is precise but longer.
+The phrase `source code` remains valid. `SourceItem`, `SourcePickerPopup`, and their related library-selection path and member names are temporary exceptions until replacement names are approved.
 
-Select the final names before moving files. Do not create a temporary `UI/Source/` folder.
+Real audio direction terms remain valid when they refer to a source or destination buffer, channel, voice, playback position, or preprocessing recipe.
 
-## Before and after examples
+## Files and helpers
 
-| Scope | Before | After candidate |
-| --- | --- | --- |
-| One-use drum-pad helper | [DrumPadHelpers.h](../source/UI/DrumPadHelpers.h), namespace `DrumPadHelpers`, functions `buildDisplayOrder()` and `drawPadLabel()` | Move the functions to [DrumPad.cpp](../source/UI/DrumPad.cpp) under `DrumPadDetail`. Remove the helper file. The `DrumPad` class stays. |
-| Instrument-map feature | [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h) and related `.cpp`, mapping-model, and text-view files, plus nested `DrumKitEngine::InstrumentMapEntry` | Move to `Engine/InstrumentMap/InstrumentMapTypes.h`, `InstrumentMapText.*`, `InstrumentMapProjection.*`, and `InstrumentMapFingerprint.*`. Candidate function rename: `makeInstrumentMapEntryFingerprint()` to `InstrumentMapFingerprint::forEntry()`. |
-| Library UI | [SourceItem.h](../source/UI/SourceItem.h), [SourcePickerPopup.h](../source/UI/SourcePickerPopup.h), and [SourceArticulationOverrideEditor.h](../source/UI/SourceArticulationOverrideEditor.h) in the UI root | Candidate split: `LibrarySelection/LibrarySelectionRef.h`, `LibrarySelection/LibraryPickerPopup.*`, and `LibraryEditing/LibraryArticulationEditor.*`. Final names still require approval. |
-| Broad UI helper | [UIHelpers.h](../source/UI/UIHelpers.h) owns `configureComboBox()` and `buildSourceItems()` | Move styling to `Controls/ControlStyling::configureComboBox()`. Move library-list building to candidate `LibrarySelection/LibrarySelectionList::build()`. |
+Do not create `source/UI/Source/` or a general `helpers` folder. Keep a one-use helper in its owning `.cpp` file. Put shared code in the smallest feature that owns its rules.
 
-## Naming rule
+Use a feature namespace, such as `InstrumentMap`. Use `<Feature>Detail` for private helpers in one `.cpp` file. Do not split a file only because it is long.
 
-- Use a term from the core table or add a clear qualifier.
-- A folder name must state one responsibility.
-- A class name must state what the object represents.
-- A namespace name must state which feature owns the operation.
-- Do not rename many terms in one change. Rename one feature and update its tests and documents together.
+| Before | Approved direction |
+| --- | --- |
+| `DrumPadHelpers.h` is used only by `DrumPad.cpp`. | Move the code into `DrumPad.cpp` under `DrumPadDetail`, then delete the helper file. |
+| Instrument map types and operations are spread across engine files. | Start `source/Engine/InstrumentMap/` with `InstrumentMap.h` and `InstrumentMap.cpp` when that work starts. |
+| `UIHelpers` contains styling, library list, and MIDI operations. | Move each operation to its owning UI feature when related code changes. |
+| The old Kit page and the Browse page repeat preset logic. | Move useful behavior to Browse, remove the old Kit page, then rename Browse to Kit. |

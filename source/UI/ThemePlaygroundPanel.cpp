@@ -226,13 +226,13 @@ public:
         };
 
         this->projectInventory = {
-            { "PluginEditor", "Top-level editor that switches all sidebar modes" },
+            { "PluginEditor", "Top-level editor that switches all sidebar pages" },
             { "ThemePlaygroundPanel", "This scrollable visual audit page" },
             { "Sidebar", "Main navigation and performance knobs" },
-            { "Sidebar::ModeButton", "TextButton subtype used for each sidebar mode" },
+            { "Sidebar::PageButton", "TextButton subtype used for each sidebar page" },
             { "StatusBar", "Live example above and persistent bottom status" },
-            { "KitHomePanel", "Kit setup mode. Requires live engine and library data" },
-            { "DrumPadGrid", "Live empty-state example above and Zone mode grid" },
+            { "KitHomePanel", "Kit setup page. Requires live engine and library data" },
+            { "DrumPadGrid", "Live empty-state example above and Zone page grid" },
             { "DrumPad", "Rendered inside DrumPadGrid" },
             { "MidiMapTable", "Live toolbar example above and Map mode table" },
             { "InstrumentConfigPanel", "Instrument mode. Requires live engine and map data" },

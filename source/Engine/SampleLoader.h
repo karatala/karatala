@@ -66,7 +66,7 @@ public:
     // Enqueue a sample candidate for progressive staged loading.
     // - `instType` is the instrument type (Kick, Snare, HiHat, ...)
     // - `artId` is the articulation id (StringsDictSingleton::Id)
-    // - `velocity` is the velocity layer value (1..127)
+    // - `velocity` is the velocity level value (1..127)
     // - `rrIndex` is the round-robin index (1..26)
     void enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, bool earlyLoad, LoadCallback cb);
 

@@ -247,7 +247,7 @@ Suggested status:
 - bytes written;
 - cancellation or failure summary.
 
-If the map or a source-recipe input changes during baking, the active job continues from its immutable snapshot or is cancelled by an explicit policy. A changed source recipe creates a different key and cannot corrupt the active job. Global or layer velocity response, Mix Gain, and other destination runtime controls do not create new keys. A TODO18 source `manualGainDb` override does create a new key.
+If the map or a source-recipe input changes during baking, the active job continues from its immutable snapshot or is cancelled by an explicit policy. A changed source recipe creates a different key and cannot corrupt the active job. Global or map layer velocity response, Mix Gain, and other map layer runtime controls do not create new keys. A TODO18 sample `manualGainDb` override does create a new key.
 
 ## Progressive Loading Integration
 
@@ -293,7 +293,7 @@ Do not merge mapped layers in this plan.
 
 Layers can have different:
 
-- named velocity counts and logical-hit intensities;
+- velocity-level counts and logical-hit intensities;
 - round-robin counts and histories;
 - active mic files and routes;
 - tuning, envelopes, pan, phase, bleed, and `Mix Gain`;
@@ -380,7 +380,7 @@ Focused checks should cover:
 - read-only and full cache locations;
 - size cleanup with active readers;
 - two plugin instances requesting one key;
-- primary and shadow layers sharing only truly equal source recipes;
+- primary and additional map layers sharing only truly equal source recipes;
 - global response and runtime layer changes without a rebake;
 - targeted new data after an audio-changing filename trim or recipe change;
 - all current-map source-recipe pairs prepared by Bake Cache.
@@ -402,7 +402,7 @@ Related plans:
 Likely implementation areas:
 
 - `../source/Engine/SampleLoader.*`
-- `../source/Engine/InstrumentSynthLoader.cpp`
+- `../source/Engine/InstrumentPlayerLoader.cpp`
 - sample request and runtime graph helpers
 - plugin settings and cache-location helpers
 - a small cache status and Bake Cache UI surface

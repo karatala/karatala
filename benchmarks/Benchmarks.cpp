@@ -1,37 +1,37 @@
 #include "../source/Engine/ArticulationNameHelpers.h"
 #include "../source/Engine/DrumKitEngine.h"
-#include "../source/Engine/InstrumentSynth.h"
+#include "../source/Engine/InstrumentPlayer.h"
 #include "../source/Engine/MicRoutingPlan.h"
 #include <catch2/benchmark/catch_benchmark.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-struct InstrumentSynthTestAccess {
-    static std::vector<InstrumentSynth::ArticulationRuntime>& articulations(InstrumentSynth& synth) {
-        return synth.runtimeArticulations;
+struct InstrumentPlayerTestAccess {
+    static std::vector<InstrumentPlayer::ArticulationRuntime>& articulations(InstrumentPlayer& player) {
+        return player.runtimeArticulations;
     }
 
-    static float getMicBleedLevelById(const InstrumentSynth& synth, StringsDictSingleton::Id micCodeId) {
-        return synth.getMicBleedLevel(micCodeId);
+    static float getMicBleedLevelById(const InstrumentPlayer& player, StringsDictSingleton::Id micCodeId) {
+        return player.getMicBleedLevel(micCodeId);
     }
 
-    static InstrumentSynth::ArtRtIdx selectArticulationForController(const InstrumentSynth& synth
-        , InstrumentSynth::ArtRtIdx baseArtIdx
+    static InstrumentPlayer::ArtRtIdx selectArticulationForController(const InstrumentPlayer& player
+        , InstrumentPlayer::ArtRtIdx baseArtIdx
         , KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType
         , int controllerValue
     ) {
-        return synth.selectArticulationForController(baseArtIdx, dimensionType, controllerValue);
+        return player.selectArticulationForController(baseArtIdx, dimensionType, controllerValue);
     }
 
-    static void configureController(InstrumentSynth& synth, int controllerNumber) {
-        synth.ccToArticulationMask[static_cast<size_t>(controllerNumber)] = true;
-        auto& mapping = synth.ccToArticulationTable[static_cast<size_t>(controllerNumber)];
+    static void configureController(InstrumentPlayer& player, int controllerNumber) {
+        player.ccToArticulationMask[static_cast<size_t>(controllerNumber)] = true;
+        auto& mapping = player.ccToArticulationTable[static_cast<size_t>(controllerNumber)];
         for (size_t controllerValue = 0; controllerValue < mapping.size(); ++controllerValue)
             mapping[controllerValue] = controllerValue < 64 ? 0 : 1;
     }
 
-    static void advanceRenderedSamples(InstrumentSynth& synth, uint64_t sampleCount) {
-        synth.renderedSampleCount += sampleCount;
-        synth.processPendingHiHatControllers();
+    static void advanceRenderedSamples(InstrumentPlayer& player, uint64_t sampleCount) {
+        player.renderedSampleCount += sampleCount;
+        player.processPendingHiHatControllers();
     }
 };
 
@@ -44,28 +44,28 @@ namespace BenchmarkHelpers {
         return micCodes;
     }
 
-    static std::unordered_map<juce::String, juce::String> makeStringRouteOverrides(const std::vector<juce::String>& sourceCodes, const std::vector<juce::String>& outputIds) {
+    static std::unordered_map<juce::String, juce::String> makeStringRouteOverrides(const std::vector<juce::String>& micCodes, const std::vector<juce::String>& outputIds) {
         std::unordered_map<juce::String, juce::String> routeOverrides;
-        routeOverrides.reserve(sourceCodes.size());
-        for (size_t micIdx = 0; micIdx < sourceCodes.size(); ++micIdx)
-            routeOverrides[sourceCodes[micIdx]] = outputIds[micIdx % outputIds.size()];
+        routeOverrides.reserve(micCodes.size());
+        for (size_t micIdx = 0; micIdx < micCodes.size(); ++micIdx)
+            routeOverrides[micCodes[micIdx]] = outputIds[micIdx % outputIds.size()];
         return routeOverrides;
     }
 
-    static InstrumentSynth::MicRouteOverrideIdMap makeIdRouteOverrides(const std::unordered_map<juce::String, juce::String>& routeOverrides) {
-        InstrumentSynth::MicRouteOverrideIdMap routeOverrideIds;
+    static InstrumentPlayer::MicRouteOverrideIdMap makeIdRouteOverrides(const std::unordered_map<juce::String, juce::String>& routeOverrides) {
+        InstrumentPlayer::MicRouteOverrideIdMap routeOverrideIds;
         routeOverrideIds.reserve(routeOverrides.size());
-        for (const auto& [sourceMicCode, outputId] : routeOverrides) {
-            const auto sourceMicCodeId = StringsDictSingleton::getId(sourceMicCode.trim().toLowerCase());
+        for (const auto& [micCode, outputId] : routeOverrides) {
+            const auto micCodeId = StringsDictSingleton::getId(micCode.trim().toLowerCase());
             const auto outputKey = StringsDictSingleton::getId(outputId.trim().toLowerCase());
-            routeOverrideIds[sourceMicCodeId] = outputKey;
+            routeOverrideIds[micCodeId] = outputKey;
         }
         return routeOverrideIds;
     }
 
-    static juce::String findStringRouteOverride(const std::unordered_map<juce::String, juce::String>& routeOverrides, const juce::String& sourceMicCode) {
-        for (const auto& [overrideSourceMicCode, outputId] : routeOverrides)
-            if (overrideSourceMicCode.compareIgnoreCase(sourceMicCode) == 0) return outputId;
+    static juce::String findStringRouteOverride(const std::unordered_map<juce::String, juce::String>& routeOverrides, const juce::String& micCode) {
+        for (const auto& [overrideMicCode, outputId] : routeOverrides)
+            if (overrideMicCode.compareIgnoreCase(micCode) == 0) return outputId;
         return {};
     }
 
@@ -151,8 +151,8 @@ TEST_CASE("Boot performance ENABLE DUMMY!") {
 TEST_CASE("Plan item 1 - mic bleed lookup performance", "[benchmark][PlanItem1][MicBleed]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;
-    InstrumentSynth synth(&engine, slot);
-    synth.setMicBleedLevels({ { "mic42", 0.5f }, { "mic64", 0.25f } });
+    InstrumentPlayer player(&engine, slot);
+    player.setMicBleedLevels({ { "mic42", 0.5f }, { "mic64", 0.25f } });
 
     const auto micCodeId = StringsDictSingleton::getId("mic42");
     SampledSound sound;
@@ -163,14 +163,14 @@ TEST_CASE("Plan item 1 - mic bleed lookup performance", "[benchmark][PlanItem1][
     BENCHMARK("String mic bleed lookup") {
         float total = 0.0f;
         for (int lookupIdx = 0; lookupIdx < 256; ++lookupIdx)
-            total += synth.getMicBleedLevel(sound.routedMicCode);
+            total += player.getMicBleedLevel(sound.routedMicCode);
         return total;
     };
 
     BENCHMARK("ID mic bleed lookup") {
         float total = 0.0f;
         for (int lookupIdx = 0; lookupIdx < 256; ++lookupIdx)
-            total += InstrumentSynthTestAccess::getMicBleedLevelById(synth, sound.routedMicCodeId);
+            total += InstrumentPlayerTestAccess::getMicBleedLevelById(player, sound.routedMicCodeId);
         return total;
     };
 
@@ -208,23 +208,23 @@ TEST_CASE("Plan item 2 - StringsDictSingleton performance", "[benchmark][PlanIte
 }
 
 TEST_CASE("Plan item 3 - route override ID lookup performance", "[benchmark][PlanItem3][MicRoute]") {
-    const auto sourceCodes = BenchmarkHelpers::makeMicCodes(96);
+    const auto micCodes = BenchmarkHelpers::makeMicCodes(96);
     const auto outputIds = BenchmarkHelpers::makeMicCodes(16);
-    const auto stringOverrides = BenchmarkHelpers::makeStringRouteOverrides(sourceCodes, outputIds);
+    const auto stringOverrides = BenchmarkHelpers::makeStringRouteOverrides(micCodes, outputIds);
     const auto idOverrides = BenchmarkHelpers::makeIdRouteOverrides(stringOverrides);
 
     BENCHMARK("Old-style string route override scan") {
         int matches = 0;
-        for (const auto& sourceMicCode : sourceCodes)
-            if (BenchmarkHelpers::findStringRouteOverride(stringOverrides, sourceMicCode).isNotEmpty()) ++matches;
+        for (const auto& micCode : micCodes)
+            if (BenchmarkHelpers::findStringRouteOverride(stringOverrides, micCode).isNotEmpty()) ++matches;
         return matches;
     };
 
     BENCHMARK("ID route override map lookup") {
         int matches = 0;
-        for (const auto& sourceMicCode : sourceCodes) {
-            const auto sourceMicCodeId = StringsDictSingleton::getId(sourceMicCode.trim().toLowerCase());
-            if (idOverrides.find(sourceMicCodeId) != idOverrides.end()) ++matches;
+        for (const auto& micCode : micCodes) {
+            const auto micCodeId = StringsDictSingleton::getId(micCode.trim().toLowerCase());
+            if (idOverrides.find(micCodeId) != idOverrides.end()) ++matches;
         }
         return matches;
     };
@@ -255,9 +255,9 @@ TEST_CASE("Plan item 4 - controller selection scan performance", "[benchmark][Pl
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;
     slot.type = KitLib::InstrumentSpec::Type::HiHat;
-    InstrumentSynth synth(&engine, slot);
+    InstrumentPlayer player(&engine, slot);
 
-    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    auto& articulations = InstrumentPlayerTestAccess::articulations(player);
     const auto bowNameId = StringsDictSingleton::getId("bow");
     for (int artIdx = 0; artIdx < 16; ++artIdx) {
         articulations.emplace_back(bowNameId, StringsDictSingleton::getId("expr" + juce::String(artIdx)));
@@ -267,7 +267,7 @@ TEST_CASE("Plan item 4 - controller selection scan performance", "[benchmark][Pl
     BENCHMARK("Select articulation for 128 controller values") {
         int selectedTotal = 0;
         for (int controllerValue = 0; controllerValue < 128; ++controllerValue)
-            selectedTotal += InstrumentSynthTestAccess::selectArticulationForController(synth, 0, KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose, controllerValue);
+            selectedTotal += InstrumentPlayerTestAccess::selectArticulationForController(player, 0, KitLib::ArticulationSpec::ExpressionDimension::Type::PedalOpenClose, controllerValue);
         return selectedTotal;
     };
 }
@@ -275,28 +275,28 @@ TEST_CASE("Plan item 4 - controller selection scan performance", "[benchmark][Pl
 TEST_CASE("Plan item 5 - empty render lock baseline", "[benchmark][PlanItem5][RenderLock]") {
     DrumKitEngine engine;
     KitLayout::InstrumentSlot slot;
-    InstrumentSynth synth(&engine, slot);
-    synth.setCurrentPlaybackSampleRate(48000.0);
-    synth.addVoice(new InstrumentSynthVoice());
+    InstrumentPlayer player(&engine, slot);
+    player.setCurrentPlaybackSampleRate(48000.0);
+    player.addVoice(new InstrumentPlayerVoice());
 
     juce::AudioBuffer<float> outputBuffer(2, 128);
     juce::MidiBuffer midiBuffer;
 
-    BENCHMARK("Render empty synth block") {
-        synth.renderNextBlock(outputBuffer, midiBuffer, 0, 128);
+    BENCHMARK("Render empty player block") {
+        player.renderNextBlock(outputBuffer, midiBuffer, 0, 128);
         return outputBuffer.getNumSamples();
     };
 }
 
 TEST_CASE("Plan item 6 - runtime allocation baseline", "[benchmark][PlanItem6][Allocations]") {
-    BENCHMARK("Create velocity layers with shared atomic counters") {
-        std::vector<InstrumentSynth::VelocityLayerRuntime> layers;
-        layers.reserve(128);
-        for (int layerIdx = 0; layerIdx < 128; ++layerIdx) {
-            auto& layer = layers.emplace_back();
-            layer.velocity = static_cast<uint8_t>(layerIdx);
+    BENCHMARK("Create velocity levels with shared atomic counters") {
+        std::vector<InstrumentPlayer::VelocityLevelRuntime> velocityLevels;
+        velocityLevels.reserve(128);
+        for (int velocityLevelIdx = 0; velocityLevelIdx < 128; ++velocityLevelIdx) {
+            auto& velocityLevel = velocityLevels.emplace_back();
+            velocityLevel.velocity = static_cast<uint8_t>(velocityLevelIdx);
         }
-        return layers.size();
+        return velocityLevels.size();
     };
 
     BENCHMARK("Create small MIDI unordered map") {
@@ -312,10 +312,11 @@ TEST_CASE("Plan item 7 - memory layout size baseline", "[benchmark][PlanItem7][M
     BENCHMARK("Collect candidate type size and alignment constants") {
         size_t total = 0;
         total += sizeof(SampledSound) + alignof(SampledSound);
-        total += sizeof(InstrumentSynthVoice) + alignof(InstrumentSynthVoice);
-        total += sizeof(KitLib::SampleVariantSpec) + alignof(KitLib::SampleVariantSpec);
+        total += sizeof(InstrumentPlayerVoice) + alignof(InstrumentPlayerVoice);
+        total += sizeof(KitLib::LogicalHitSpec) + alignof(KitLib::LogicalHitSpec);
+        total += sizeof(KitLib::SampleSpec) + alignof(KitLib::SampleSpec);
         total += sizeof(KitLib::MicSpec) + alignof(KitLib::MicSpec);
-        total += sizeof(DrumKitEngine::InstrumentMapEntry) + alignof(DrumKitEngine::InstrumentMapEntry);
+        total += sizeof(DrumKitEngine::InstrumentMapLayer) + alignof(DrumKitEngine::InstrumentMapLayer);
         return total;
     };
 }
@@ -352,20 +353,20 @@ TEST_CASE("Hi-hat controller transition performance", "[benchmark][HiHatTransiti
 
     KitLayout::InstrumentSlot slot;
     slot.type = KitLib::InstrumentSpec::Type::HiHat;
-    InstrumentSynth synth(&engine, slot);
-    synth.setCurrentPlaybackSampleRate(48000.0);
+    InstrumentPlayer player(&engine, slot);
+    player.setCurrentPlaybackSampleRate(48000.0);
 
-    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    auto& articulations = InstrumentPlayerTestAccess::articulations(player);
     articulations.emplace_back(1, 1);
     articulations.back().pedalOpenCloseValue = 10;
     articulations.emplace_back(1, 2);
     articulations.back().pedalOpenCloseValue = 90;
-    InstrumentSynthTestAccess::configureController(synth, 4);
+    InstrumentPlayerTestAccess::configureController(player, 4);
 
     BENCHMARK("Process a 128-value hi-hat CC sweep") {
         for (int controllerValue = 0; controllerValue < 128; ++controllerValue)
-            synth.handleController(1, 4, controllerValue);
-        return synth.getHiHatTransitionCounters().processed;
+            player.handleController(1, 4, controllerValue);
+        return player.getHiHatTransitionCounters().processed;
     };
 }
 
@@ -375,20 +376,20 @@ TEST_CASE("Hi-hat controller coalescing performance", "[benchmark][HiHatTransiti
 
     KitLayout::InstrumentSlot slot;
     slot.type = KitLib::InstrumentSpec::Type::HiHat;
-    InstrumentSynth synth(&engine, slot);
-    synth.setCurrentPlaybackSampleRate(48000.0);
+    InstrumentPlayer player(&engine, slot);
+    player.setCurrentPlaybackSampleRate(48000.0);
 
-    auto& articulations = InstrumentSynthTestAccess::articulations(synth);
+    auto& articulations = InstrumentPlayerTestAccess::articulations(player);
     articulations.emplace_back(1, 1);
     articulations.back().pedalOpenCloseValue = 10;
     articulations.emplace_back(1, 2);
     articulations.back().pedalOpenCloseValue = 90;
-    InstrumentSynthTestAccess::configureController(synth, 4);
+    InstrumentPlayerTestAccess::configureController(player, 4);
 
     BENCHMARK("Coalesce a 128-message burst and process its latest value") {
         for (int controllerValue = 0; controllerValue < 128; ++controllerValue)
-            synth.handleController(1, 4, controllerValue);
-        InstrumentSynthTestAccess::advanceRenderedSamples(synth, 720);
-        return synth.getHiHatTransitionCounters().processed;
+            player.handleController(1, 4, controllerValue);
+        InstrumentPlayerTestAccess::advanceRenderedSamples(player, 720);
+        return player.getHiHatTransitionCounters().processed;
     };
 }

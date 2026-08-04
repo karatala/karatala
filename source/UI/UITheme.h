@@ -125,7 +125,7 @@ namespace Spacing {
 namespace Sizes {
     constexpr int sidebarWidth = 56;
     constexpr int statusBarHeight = 24;
-    constexpr int modeButton = 44;
+    constexpr int pageButton = 44;
     constexpr int sidebarKnob = 40;
     constexpr int standardControlHeight = 20;
     constexpr int standardControlTextHeight = 14;

@@ -12,26 +12,26 @@ PluginEditor::PluginEditor(PluginProcessor& p)
     this->tooltipWindow.setOpaque(false);
 
     this->setupSidebarAndStatusBar();
-    this->setupKitMode();
-    this->setupBrowseMode();
-    this->setupDrumPadGridMode();
+    this->setupKitPage();
+    this->setupBrowsePage();
+    this->setupDrumPadGridPage();
     this->setupSidebarKnobs();
-    this->setupRawMode();
-    this->setupMapMode();
-    this->setupSettingsMode();
-    this->setupTroubleshootingMode();
-    this->setupThemePlaygroundMode();
-    this->setupInstrumentConfigMode();
+    this->setupRawPage();
+    this->setupMapPage();
+    this->setupSettingsPage();
+    this->setupTroubleshootingPage();
+    this->setupThemePlaygroundPage();
+    this->setupInstrumentConfigPage();
 
     const auto instrumentMap = this->processorRef.getValueTreeState().state["instrument_map"].toString();
-    this->activeMode = instrumentMap.trim().isEmpty() ? ViewMode::Kit : ViewMode::Zone;
-    this->sidebar.setActiveMode(this->activeMode);
-    this->showComponentsForMode(this->activeMode);
+    this->activePageId = instrumentMap.trim().isEmpty() ? PageId::Kit : PageId::Zone;
+    this->sidebar.setActivePageId(this->activePageId);
+    this->showComponentsForPage(this->activePageId);
 
     setSize(1000, 580);
 }
 
-void PluginEditor::setupKitMode() {
+void PluginEditor::setupKitPage() {
     this->kitHomePanel = std::make_unique<KitHomePanel>(this->processorRef.getEngine());
     this->addChildComponent(*this->kitHomePanel);
     this->kitHomePanel->onStatusMessage = [this](const juce::String& message) {
@@ -81,12 +81,12 @@ void PluginEditor::setupKitMode() {
         this->markMidiMapTableDirty();
         this->markInstrumentConfigDirty();
         this->statusBar.setStatusText(status.joinIntoString(" | "));
-        this->setViewMode(ViewMode::Zone);
+        this->setPage(PageId::Zone);
     };
     this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 }
 
-void PluginEditor::setupBrowseMode() {
+void PluginEditor::setupBrowsePage() {
     this->kitBrowserComponent = std::make_unique<KitBrowserComponent>(this->processorRef.getEngine());
     this->addChildComponent(*this->kitBrowserComponent);
     this->kitBrowserComponent->onStatusMessage = [this](const juce::String& message) {
@@ -101,11 +101,11 @@ void PluginEditor::setupBrowseMode() {
 void PluginEditor::setupSidebarAndStatusBar() {
     // Sidebar
     this->addAndMakeVisible(this->sidebar);
-    this->sidebar.onModeChanged = [this](ViewMode mode) {
-        this->setViewMode(mode);
+    this->sidebar.onPageChanged = [this](PageId pageId) {
+        this->setPage(pageId);
     };
     this->statusBar.onUiRequested = [this] {
-        this->setViewMode(ViewMode::Playground);
+        this->setPage(PageId::Playground);
     };
     this->statusBar.onInspectRequested = [this] {
         if (!this->inspector) {
@@ -120,13 +120,13 @@ void PluginEditor::setupSidebarAndStatusBar() {
     this->statusBar.setStatusText(this->processorRef.getEngine().getLastInstrumentMapStatus());
 }
 
-void PluginEditor::setupThemePlaygroundMode() {
+void PluginEditor::setupThemePlaygroundPage() {
     this->themePlaygroundPanel = std::make_unique<ThemePlaygroundPanel>();
     this->addChildComponent(*this->themePlaygroundPanel);
 }
 
-void PluginEditor::setupDrumPadGridMode() {
-    // Drum pad grid (Zone mode)
+void PluginEditor::setupDrumPadGridPage() {
+    // Drum pad grid (Zone page)
     this->addAndMakeVisible(this->drumPadGrid);
     {
         auto& settings = this->processorRef.getEngine().engineSettings;
@@ -184,8 +184,8 @@ void PluginEditor::setupSidebarKnobs() {
     };
 }
 
-void PluginEditor::setupRawMode() {
-    // Raw mode components
+void PluginEditor::setupRawPage() {
+    // Raw page components
     this->addChildComponent(this->instrumentMapEditor);
     this->addChildComponent(this->instrumentMapLabel);
     this->addChildComponent(this->applyButton);
@@ -277,8 +277,8 @@ bool PluginEditor::applyBrowserInstrumentMap(const juce::String& mapText, const 
     return true;
 }
 
-void PluginEditor::setupMapMode() {
-    // Map mode - MIDI note assignment table
+void PluginEditor::setupMapPage() {
+    // Map page - MIDI note assignment table
     this->addChildComponent(this->midiMapTable);
     this->refreshMidiMapTableIfNeeded(true);
     this->midiMapTable.onMappingChanged = [this] {
@@ -344,8 +344,8 @@ void PluginEditor::setupMapMode() {
     };
 }
 
-void PluginEditor::setupSettingsMode() {
-    // Settings mode
+void PluginEditor::setupSettingsPage() {
+    // Settings page
     this->settingsPanel = std::make_unique<EngineSettingsPanel>(this->processorRef.getEngine());
     this->addChildComponent(*this->settingsPanel);
     this->settingsPanel->onGridSizeChanged = [this] {
@@ -361,7 +361,7 @@ void PluginEditor::setupSettingsMode() {
     };
 }
 
-void PluginEditor::setupTroubleshootingMode() {
+void PluginEditor::setupTroubleshootingPage() {
     this->troubleshootingPanel = std::make_unique<TroubleshootingPanel>(this->processorRef.getEngine());
     this->addChildComponent(*this->troubleshootingPanel);
     this->troubleshootingPanel->onStatusMessage = [this](const juce::String& message) {
@@ -402,8 +402,8 @@ void PluginEditor::reloadLibraryFromTroubleshooting() {
     this->statusBar.setStatusText("Library reloaded. " + engine.getLastInstrumentMapStatus());
 }
 
-void PluginEditor::setupInstrumentConfigMode() {
-    // Instrument config mode
+void PluginEditor::setupInstrumentConfigPage() {
+    // Instrument config page
     this->instrumentConfigPanel = std::make_unique<InstrumentConfigPanel>(this->processorRef.getEngine());
     this->addChildComponent(*this->instrumentConfigPanel);
     this->instrumentConfigPanel->onStatusMessage = [this](const juce::String& msg) {
@@ -629,42 +629,42 @@ void PluginEditor::handlePresetDelete() {
     });
 }
 
-void PluginEditor::setViewMode(ViewMode mode) {
-    if (mode != this->activeMode)
+void PluginEditor::setPage(PageId pageId) {
+    if (pageId != this->activePageId)
         this->dismissPadContextPopup();
-    if (mode != ViewMode::Map)
+    if (pageId != PageId::Map)
         this->dismissCrosstalkPopup();
-    if (this->activeMode == ViewMode::Instrument && mode != ViewMode::Instrument)
+    if (this->activePageId == PageId::Instrument && pageId != PageId::Instrument)
         this->instrumentConfigPanel->flushMapText();
 
-    this->activeMode = mode;
-    this->sidebar.setActiveMode(mode);
-    this->showComponentsForMode(mode);
+    this->activePageId = pageId;
+    this->sidebar.setActivePageId(pageId);
+    this->showComponentsForPage(pageId);
 
-    if (mode == ViewMode::Settings)
+    if (pageId == PageId::Settings)
         this->settingsPanel->loadFromEngine();
 
-    if (mode == ViewMode::Fix)
+    if (pageId == PageId::Fix)
         this->troubleshootingPanel->refresh();
 
-    if (mode == ViewMode::Kit)
+    if (pageId == PageId::Kit)
         this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 
-    if (mode == ViewMode::Browse)
+    if (pageId == PageId::Browse)
         this->kitBrowserComponent->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 
-    if (mode == ViewMode::Zone) {
+    if (pageId == PageId::Zone) {
         this->refreshDrumPadGridIfNeeded();
     }
 
-    if (mode == ViewMode::Map)
+    if (pageId == PageId::Map)
         this->refreshMidiMapTableIfNeeded();
 
-    if (mode == ViewMode::Instrument)
+    if (pageId == PageId::Instrument)
         this->refreshInstrumentConfigIfNeeded();
 
     this->resized();
-    this->statusBar.setUiActive(mode == ViewMode::Playground);
+    this->statusBar.setUiActive(pageId == PageId::Playground);
 }
 
 void PluginEditor::showCrosstalkPopup() {
@@ -719,33 +719,33 @@ void PluginEditor::dismissCrosstalkPopup() {
     }
 }
 
-void PluginEditor::showComponentsForMode(ViewMode mode) {
-    this->kitHomePanel->setVisible(mode == ViewMode::Kit);
-    this->kitBrowserComponent->setVisible(mode == ViewMode::Browse);
+void PluginEditor::showComponentsForPage(PageId pageId) {
+    this->kitHomePanel->setVisible(pageId == PageId::Kit);
+    this->kitBrowserComponent->setVisible(pageId == PageId::Browse);
 
     // Drum pad grid - visible for Zone
-    this->drumPadGrid.setVisible(mode == ViewMode::Zone);
+    this->drumPadGrid.setVisible(pageId == PageId::Zone);
 
-    // Raw mode components
-    bool showRaw = (mode == ViewMode::Raw);
+    // Raw page components
+    bool showRaw = (pageId == PageId::Raw);
     this->instrumentMapEditor.setVisible(showRaw);
     this->instrumentMapLabel.setVisible(showRaw);
     this->applyButton.setVisible(showRaw);
 
-    // Map mode
-    this->midiMapTable.setVisible(mode == ViewMode::Map);
+    // Map page
+    this->midiMapTable.setVisible(pageId == PageId::Map);
 
-    // Instrument config mode
-    this->instrumentConfigPanel->setVisible(mode == ViewMode::Instrument);
+    // Instrument config page
+    this->instrumentConfigPanel->setVisible(pageId == PageId::Instrument);
 
     // Settings
-    this->settingsPanel->setVisible(mode == ViewMode::Settings);
+    this->settingsPanel->setVisible(pageId == PageId::Settings);
 
     // Fix
-    this->troubleshootingPanel->setVisible(mode == ViewMode::Fix);
+    this->troubleshootingPanel->setVisible(pageId == PageId::Fix);
 
     // UI theme playground
-    this->themePlaygroundPanel->setVisible(mode == ViewMode::Playground);
+    this->themePlaygroundPanel->setVisible(pageId == PageId::Playground);
 }
 
 void PluginEditor::paint(juce::Graphics& g) {
@@ -764,20 +764,20 @@ void PluginEditor::resized() {
     // Main area - remaining space
     auto mainArea = area;
 
-    switch (this->activeMode) {
-        case ViewMode::Kit:
+    switch (this->activePageId) {
+        case PageId::Kit:
             this->kitHomePanel->setBounds(mainArea);
             break;
 
-        case ViewMode::Browse:
+        case PageId::Browse:
             this->kitBrowserComponent->setBounds(mainArea);
             break;
 
-        case ViewMode::Zone:
+        case PageId::Zone:
             this->drumPadGrid.setBounds(mainArea);
             break;
 
-        case ViewMode::Raw: {
+        case PageId::Raw: {
             auto rawArea = mainArea.reduced(UITheme::Spacing::md);
             const int gap = UITheme::Spacing::sm;
             auto headerArea = rawArea.removeFromTop(UITheme::Sizes::standardControlHeight);
@@ -789,23 +789,23 @@ void PluginEditor::resized() {
             break;
         }
 
-        case ViewMode::Settings:
+        case PageId::Settings:
             this->settingsPanel->setBounds(mainArea);
             break;
 
-        case ViewMode::Fix:
+        case PageId::Fix:
             this->troubleshootingPanel->setBounds(mainArea);
             break;
 
-        case ViewMode::Instrument:
+        case PageId::Instrument:
             this->instrumentConfigPanel->setBounds(mainArea);
             break;
 
-        case ViewMode::Map:
+        case PageId::Map:
             this->midiMapTable.setBounds(mainArea);
             break;
 
-        case ViewMode::Playground:
+        case PageId::Playground:
             this->themePlaygroundPanel->setBounds(mainArea);
             break;
     }

@@ -61,7 +61,7 @@ struct KitLayout {
         return labelIt->second;
     }
     struct InstrumentSlot {
-        struct ArticulationTrigger {
+        struct ArticulationSlot {
             juce::String codeRaw; // center, rim, edge, bow, pedal, etc.
             MidiNotes notes; // midi notes triggering this articulation
             StringsDictSingleton::Id exprId = 0;
@@ -70,7 +70,7 @@ struct KitLayout {
             // std::vector<juce::String> chokeWith; // list of choke group ids or instrument ids?
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
-            explicit ArticulationTrigger(juce::String raw) : codeRaw(raw) {
+            explicit ArticulationSlot(juce::String raw) : codeRaw(raw) {
                 auto wrapSegm = extractWrappedSegment(raw.trim(), "[", "]");
                 this->nameId = StringsDictSingleton::getId(wrapSegm.prefix);
                 this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
@@ -93,7 +93,7 @@ struct KitLayout {
         std::optional<int> balance;
         std::optional<DirectMicOutPolicy> directMicOuts;
         ExpressionPointMap expressionPoints;
-        std::vector<ArticulationTrigger> articulations;
+        std::vector<ArticulationSlot> articulations;
         std::vector<ContinuousController> controllers;
         // juce::String chokeGroup;
     };
@@ -385,7 +385,7 @@ struct LayoutTraits<KitLayout> {
                 if (artsNode.isSequence()) {
                     for (size_t j = 0; j < artsNode.size(); ++j) {
                         const auto& item = artsNode[j];
-                        KitLayout::InstrumentSlot::ArticulationTrigger art(item["code"].asString());
+                        KitLayout::InstrumentSlot::ArticulationSlot art(item["code"].asString());
 
                         const auto& notesNode = item["notes"];
                         if (notesNode.isSequence()) {

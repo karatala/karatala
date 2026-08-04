@@ -7,12 +7,12 @@
 #include <memory>
 #include <vector>
 
-class SourceArticulationOverrideEditor : public juce::Component, public juce::SettableTooltipClient, private juce::Timer {
+class LibraryArticulationEditor : public juce::Component, public juce::SettableTooltipClient, private juce::Timer {
 public:
-    explicit SourceArticulationOverrideEditor(DrumKitEngine& engine);
-    ~SourceArticulationOverrideEditor() override;
+    explicit LibraryArticulationEditor(DrumKitEngine& engine);
+    ~LibraryArticulationEditor() override;
 
-    void setSource(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& displayTitle);
+    void setLibraryArticulation(const juce::String& libraryKitId, const juce::String& libraryInstrumentId, const juce::String& libraryArticulationId, const juce::String& displayTitle);
     void paint(juce::Graphics& graphics) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& event) override;
@@ -59,7 +59,7 @@ private:
 
     class SampleMatrixModel : public juce::TableListBoxModel {
     public:
-        explicit SampleMatrixModel(SourceArticulationOverrideEditor& editorOwner) : owner(editorOwner) {}
+        explicit SampleMatrixModel(LibraryArticulationEditor& editorOwner) : owner(editorOwner) {}
         int getNumRows() override;
         void paintRowBackground(juce::Graphics& graphics, int rowNumber, int width, int height, bool rowIsSelected) override;
         void paintCell(juce::Graphics& graphics, int rowNumber, int columnId, int width, int height, bool rowIsSelected) override;
@@ -67,23 +67,23 @@ private:
         juce::String getCellTooltip(int rowNumber, int columnId) override;
 
     private:
-        SourceArticulationOverrideEditor& owner;
+        LibraryArticulationEditor& owner;
     };
 
     class SelectedSampleListModel : public juce::ListBoxModel {
     public:
-        explicit SelectedSampleListModel(SourceArticulationOverrideEditor& editorOwner) : owner(editorOwner) {}
+        explicit SelectedSampleListModel(LibraryArticulationEditor& editorOwner) : owner(editorOwner) {}
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) override;
         juce::String getTooltipForRow(int rowNumber) override;
 
     private:
-        SourceArticulationOverrideEditor& owner;
+        LibraryArticulationEditor& owner;
     };
 
     DrumKitEngine& engine;
-    DrumKitEngine::SourceVelocityRangeInfo rangeInfo;
-    DrumKitEngine::SourceVelocityRangeInfo committedRangeInfo;
+    DrumKitEngine::LibraryArticulationInfo rangeInfo;
+    DrumKitEngine::LibraryArticulationInfo committedRangeInfo;
     int selectedDividerIdx = -1;
     bool draggingDivider = false;
     bool previewPending = false;
@@ -168,7 +168,7 @@ private:
     void clearPersistenceFailure();
     bool hasPersistenceFailure() const;
     void reloadSavedOverrides();
-    void replaceInfo(DrumKitEngine::SourceVelocityRangeInfo updatedInfo, bool initializeSelection = false);
+    void replaceInfo(DrumKitEngine::LibraryArticulationInfo updatedInfo, bool initializeSelection = false);
     void timerCallback() override;
     void setStatus(const juce::String& text, bool error = false);
 
@@ -180,9 +180,9 @@ private:
     void invertLogicalHitSelection(std::optional<int> levelIdx, std::optional<int> roundRobinIdx = std::nullopt);
     void toggleMicSelection(const juce::String& micCode);
     bool isMicSelected(const juce::String& micCode) const;
-    const DrumKitEngine::SourceSampleOverrideInfo* findSample(const LogicalHitKey& hit, const juce::String& micCode = {}) const;
+    const DrumKitEngine::LibrarySampleInfo* findSample(const LogicalHitKey& hit, const juce::String& micCode = {}) const;
     std::vector<juce::String> getSelectedRelativePaths() const;
-    std::vector<DrumKitEngine::SourceSamplePlaybackOffsetTarget> getSelectedPlaybackTargets(bool micScoped) const;
+    std::vector<DrumKitEngine::SamplePlaybackOffsetTarget> getSelectedPlaybackTargets(bool micScoped) const;
     CommonBatchValue getCommonBatchValue(BatchField field) const;
     bool selectedSamplesAreEditable() const;
 
@@ -205,8 +205,8 @@ private:
     int getSelectedMaximum() const;
     int getLevelIndexForVelocity(int velocity) const;
     float getBatchWheelBaseValue(BatchField field) const;
-    void stepBalanceEditor(WheelTextEditor& editor, const DrumKitEngine::SourceBalanceInfo& balanceInfo, bool increase, bool fine);
+    void stepBalanceEditor(WheelTextEditor& editor, const DrumKitEngine::PlacementBalanceInfo& balanceInfo, bool increase, bool fine);
     void stepBatchEditor(WheelTextEditor& editor, BatchField field, bool increase, bool fine);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourceArticulationOverrideEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LibraryArticulationEditor)
 };

@@ -7,7 +7,7 @@
 #include "DismissOverlay.h"
 #include "MidiNoteAssignmentControl.h"
 #include "CompactParameterControl.h"
-#include "SourceArticulationOverrideEditor.h"
+#include "LibraryArticulationEditor.h"
 #include "VelocityResponseEditor.h"
 
 class PadContextPopup : public juce::Component {
@@ -96,7 +96,7 @@ private:
         juce::Label label;
         juce::TextButton addLayerButton { "+" };
     };
-    struct LayerRow {
+    struct MapLayerRow {
         juce::String artName;
         juce::String sourcePathHint;
         int selectedSourceIndex = -1;
@@ -105,7 +105,7 @@ private:
         std::unique_ptr<juce::TextButton> sourceButton;
         std::unique_ptr<juce::Label> sourceDetailLabel;
         std::unique_ptr<juce::ComboBox> velocityResponseMode;
-        std::unique_ptr<juce::TextButton> sourceSetupButton;
+        std::unique_ptr<juce::TextButton> libraryArticulationEditorButton;
         std::unique_ptr<CompactParameterControl> tuningPot;
         std::unique_ptr<CompactParameterControl> attackPot;
         std::unique_ptr<CompactParameterControl> decayPot;
@@ -130,30 +130,30 @@ private:
         juce::Rectangle<int> bleedGroupBounds;
     };
     juce::OwnedArray<ArticulationGroup> articulationGroups;
-    juce::OwnedArray<LayerRow> layerRows;
+    juce::OwnedArray<MapLayerRow> layerRows;
     std::vector<DrumKitEngine::VelocityResponsePreset> velocityResponsePresets;
 
     void addArticulationGroup(const juce::String& articulationName);
-    LayerRow* addLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+    MapLayerRow* addMapLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
                           float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
                           const std::optional<juce::String>& velocityResponse,
                           const std::unordered_map<juce::String, float>& micBleedLevels,
                           const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
     juce::uint8 getPreviewVelocity() const;
-    int getLayerIndex(const LayerRow* layer) const;
+    int getLayerIndex(const MapLayerRow* layer) const;
     int findVelocityResponsePresetIndex(const std::optional<juce::String>& definition) const;
-    void rebuildVelocityResponseChoices(LayerRow* layer);
+    void rebuildVelocityResponseChoices(MapLayerRow* layer);
     void refreshVelocityResponseChoices();
-    void commitVelocityResponse(LayerRow* layer);
-    void updateVelocityResponseDisplay(LayerRow* layer);
-    void applyLayerParameterChange(LayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode = {});
+    void commitVelocityResponse(MapLayerRow* layer);
+    void updateVelocityResponseDisplay(MapLayerRow* layer);
+    void applyLayerParameterChange(MapLayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode = {});
     void updateSourceCardButtonVisibility();
-    void updateSourceDisplay(LayerRow* layer);
-    void rebuildBleedControls(LayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
-    void applyRoutingComboChange(LayerRow* layer, LayerRow::MicBleedControl* bleedCtrl);
+    void updateSourceDisplay(MapLayerRow* layer);
+    void rebuildBleedControls(MapLayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
+    void applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::MicBleedControl* bleedCtrl);
     bool applyToEngine();
     void refreshLayerMappings();
-    void rebuildLayerRows();
+    void rebuildMapLayerRows();
     juce::String generateFullMapText() const;
     void populateLayers();
     std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
@@ -169,7 +169,7 @@ private:
     MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const;
     std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const;
     static int findRoutingChoiceIndex(const std::vector<MicRoutingChoice>& choices, const juce::String& outputId);
-    void updateRoutingComboDisplay(LayerRow::MicBleedControl& bleedCtrl) const;
+    void updateRoutingComboDisplay(MapLayerRow::MicBleedControl& bleedCtrl) const;
     bool mapTextDirty = false;
     bool suppressParameterCallbacks = false;
 
@@ -177,27 +177,27 @@ private:
     std::unique_ptr<SourcePickerPopup> activePicker;
     std::unique_ptr<DismissOverlay> velocityResponseOverlay;
     std::unique_ptr<VelocityResponseEditor> activeVelocityResponseEditor;
-    std::unique_ptr<DismissOverlay> sourceOverrideOverlay;
-    std::unique_ptr<SourceArticulationOverrideEditor> activeSourceOverrideEditor;
+    std::unique_ptr<DismissOverlay> libraryArticulationOverlay;
+    std::unique_ptr<LibraryArticulationEditor> activeLibraryArticulationEditor;
 
     // ─── Scrollable layer area ───
     struct LayerContentComponent : public juce::Component {
-        juce::OwnedArray<LayerRow>* layerRowsPtr = nullptr;
+        juce::OwnedArray<MapLayerRow>* layerRowsPtr = nullptr;
         void paint(juce::Graphics& g) override;
     };
     LayerContentComponent layerContent;
     juce::Viewport layerViewport;
 
-    void showSourcePicker(LayerRow* layer);
+    void showSourcePicker(MapLayerRow* layer);
     void showInstrumentPicker();
     void dismissSourcePicker();
     void layoutSourcePicker();
-    void showVelocityResponseEditor(LayerRow* layer);
+    void showVelocityResponseEditor(MapLayerRow* layer);
     void dismissVelocityResponseEditor();
     void layoutVelocityResponseEditor();
-    void showSourceOverrideEditor(LayerRow* layer);
-    void dismissSourceOverrideEditor();
-    void layoutSourceOverrideEditor();
+    void showLibraryArticulationEditor(MapLayerRow* layer);
+    void dismissLibraryArticulationEditor();
+    void layoutLibraryArticulationEditor();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PadContextPopup)
 };

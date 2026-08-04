@@ -28,6 +28,7 @@ private:
 
     std::vector<SourceItem> sourceItems;
     std::vector<DrumKitEngine::VelocityResponsePreset> velocityResponsePresets;
+    std::vector<DrumKitEngine::InstrumentMapLayer> unprojectedActiveSlotMapLayers;
     void rebuildSourceItems();
 
     // ─── Flat table row (one per articulation/layer) ───

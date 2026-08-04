@@ -1,5 +1,5 @@
 #include "../source/Engine/DrumKitEngine.h"
-#include "../source/Engine/InstrumentSynth.h"
+#include "../source/Engine/InstrumentPlayer.h"
 #include <algorithm>
 #include <cmath>
 #include "catch2/catch_approx.hpp"
@@ -134,76 +134,76 @@ TEST_CASE("VelocityResponse - user curve presets save and load normalized defini
     REQUIRE(tempDirectory.deleteRecursively());
 }
 
-TEST_CASE("Calibrated runtime keeps named velocity layer boundaries", "[VelocityResponse]") {
-    InstrumentSynth::ArticulationRuntime articulation(1, 0);
+TEST_CASE("Calibrated runtime keeps named velocity level boundaries", "[VelocityResponse]") {
+    InstrumentPlayer::ArticulationRuntime articulation(1, 0);
     const std::array<juce::uint8, 5> namedVelocities { 27, 52, 77, 102, 127 };
     const std::array<float, 5> fittedLevelsDb { -38.0f, -37.5f, -37.0f, -36.0f, -35.5f };
-    for (size_t layerIdx = 0; layerIdx < namedVelocities.size(); ++layerIdx) {
-        InstrumentSynth::VelocityLayerRuntime layer;
-        layer.velocity = namedVelocities[layerIdx];
-        layer.fittedSourceDb = fittedLevelsDb[layerIdx];
-        layer.calibrationTrimDb = 0.0f;
-        articulation.layers.push_back(std::move(layer));
+    for (size_t velocityLevelIdx = 0; velocityLevelIdx < namedVelocities.size(); ++velocityLevelIdx) {
+        InstrumentPlayer::VelocityLevelRuntime velocityLevel;
+        velocityLevel.velocity = namedVelocities[velocityLevelIdx];
+        velocityLevel.fittedSourceDb = fittedLevelsDb[velocityLevelIdx];
+        velocityLevel.calibrationTrimDb = 0.0f;
+        articulation.velocityLevels.push_back(std::move(velocityLevel));
     }
 
     articulation.buildVelocityMapping(VelocityResponse::linear());
 
     REQUIRE(articulation.calibrated);
-    REQUIRE(articulation.velocityToLayer[100] == 3);
-    REQUIRE(articulation.velocityToLayer[103] == 4);
+    REQUIRE(articulation.velocityToLevel[100] == 3);
+    REQUIRE(articulation.velocityToLevel[103] == 4);
     REQUIRE(articulation.selectionTargetDb[100] == Catch::Approx(fittedLevelsDb[3]));
     REQUIRE(articulation.velocityGain[100] == Catch::Approx(100.0f / 127.0f));
 }
 
-TEST_CASE("Layer velocity response changes gain without changing named velocity selection", "[VelocityResponse]") {
-    InstrumentSynth::ArticulationRuntime articulation(1, 0);
-    InstrumentSynth::VelocityLayerRuntime softLayer;
-    softLayer.velocity = 64;
-    softLayer.fittedSourceDb = -40.0f;
-    softLayer.calibrationTrimDb = 0.0f;
-    articulation.layers.push_back(std::move(softLayer));
-    InstrumentSynth::VelocityLayerRuntime hardLayer;
-    hardLayer.velocity = 127;
-    hardLayer.fittedSourceDb = -30.0f;
-    hardLayer.calibrationTrimDb = 0.0f;
-    articulation.layers.push_back(std::move(hardLayer));
+TEST_CASE("Velocity level response changes gain without changing named velocity selection", "[VelocityResponse]") {
+    InstrumentPlayer::ArticulationRuntime articulation(1, 0);
+    InstrumentPlayer::VelocityLevelRuntime softVelocityLevel;
+    softVelocityLevel.velocity = 64;
+    softVelocityLevel.fittedSourceDb = -40.0f;
+    softVelocityLevel.calibrationTrimDb = 0.0f;
+    articulation.velocityLevels.push_back(std::move(softVelocityLevel));
+    InstrumentPlayer::VelocityLevelRuntime hardVelocityLevel;
+    hardVelocityLevel.velocity = 127;
+    hardVelocityLevel.fittedSourceDb = -30.0f;
+    hardVelocityLevel.calibrationTrimDb = 0.0f;
+    articulation.velocityLevels.push_back(std::move(hardVelocityLevel));
 
     auto customResponse = VelocityResponse::fromDefinition("1:-48,64:-12,127:0");
     REQUIRE(customResponse.ok());
     articulation.parameters.velocityResponse = customResponse.value;
     articulation.buildVelocityMapping(VelocityResponse::linear());
 
-    REQUIRE(articulation.velocityToLayer[64] == 0);
-    REQUIRE(articulation.velocityToLayer[65] == 1);
+    REQUIRE(articulation.velocityToLevel[64] == 0);
+    REQUIRE(articulation.velocityToLevel[65] == 1);
     REQUIRE(articulation.velocityGain[64] == Catch::Approx(juce::Decibels::decibelsToGain(-12.0f)));
 }
 
-TEST_CASE("Source velocity upper boundaries change selection without changing output response", "[VelocityResponse][KitSourceOverrides]") {
-    InstrumentSynth::ArticulationRuntime articulation(1, 0);
-    InstrumentSynth::VelocityLayerRuntime softLayer;
-    softLayer.velocity = 43;
-    softLayer.selectionUpperVelocity = 50;
-    softLayer.fittedSourceDb = -40.0f;
-    softLayer.calibrationTrimDb = 0.0f;
-    articulation.layers.push_back(std::move(softLayer));
-    InstrumentSynth::VelocityLayerRuntime mediumLayer;
-    mediumLayer.velocity = 85;
-    mediumLayer.selectionUpperVelocity = 91;
-    mediumLayer.fittedSourceDb = -34.0f;
-    mediumLayer.calibrationTrimDb = 0.0f;
-    articulation.layers.push_back(std::move(mediumLayer));
-    InstrumentSynth::VelocityLayerRuntime hardLayer;
-    hardLayer.velocity = 127;
-    hardLayer.selectionUpperVelocity = 127;
-    hardLayer.fittedSourceDb = -30.0f;
-    hardLayer.calibrationTrimDb = 0.0f;
-    articulation.layers.push_back(std::move(hardLayer));
+TEST_CASE("Library velocity upper boundaries change selection without changing output response", "[VelocityResponse][LibraryKitOverrides]") {
+    InstrumentPlayer::ArticulationRuntime articulation(1, 0);
+    InstrumentPlayer::VelocityLevelRuntime softVelocityLevel;
+    softVelocityLevel.velocity = 43;
+    softVelocityLevel.selectionUpperVelocity = 50;
+    softVelocityLevel.fittedSourceDb = -40.0f;
+    softVelocityLevel.calibrationTrimDb = 0.0f;
+    articulation.velocityLevels.push_back(std::move(softVelocityLevel));
+    InstrumentPlayer::VelocityLevelRuntime mediumVelocityLevel;
+    mediumVelocityLevel.velocity = 85;
+    mediumVelocityLevel.selectionUpperVelocity = 91;
+    mediumVelocityLevel.fittedSourceDb = -34.0f;
+    mediumVelocityLevel.calibrationTrimDb = 0.0f;
+    articulation.velocityLevels.push_back(std::move(mediumVelocityLevel));
+    InstrumentPlayer::VelocityLevelRuntime hardVelocityLevel;
+    hardVelocityLevel.velocity = 127;
+    hardVelocityLevel.selectionUpperVelocity = 127;
+    hardVelocityLevel.fittedSourceDb = -30.0f;
+    hardVelocityLevel.calibrationTrimDb = 0.0f;
+    articulation.velocityLevels.push_back(std::move(hardVelocityLevel));
 
     articulation.buildVelocityMapping(VelocityResponse::linear());
 
-    REQUIRE(articulation.velocityToLayer[50] == 0);
-    REQUIRE(articulation.velocityToLayer[51] == 1);
-    REQUIRE(articulation.velocityToLayer[91] == 1);
-    REQUIRE(articulation.velocityToLayer[92] == 2);
+    REQUIRE(articulation.velocityToLevel[50] == 0);
+    REQUIRE(articulation.velocityToLevel[51] == 1);
+    REQUIRE(articulation.velocityToLevel[91] == 1);
+    REQUIRE(articulation.velocityToLevel[92] == 2);
     REQUIRE(articulation.velocityGain[50] == Catch::Approx(50.0f / 127.0f));
 }

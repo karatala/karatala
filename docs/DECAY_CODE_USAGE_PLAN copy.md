@@ -52,7 +52,7 @@ File → SampleLoader::LoadJob::runJob()
 - Generic fade-out doesn't respect actual sample envelope
 - No way to query current dB level during playback
 
-### 2.3 InstrumentSynthVoice Playback
+### 2.3 InstrumentPlayerVoice Playback
 ```
 renderNextBlock():
   for each sample:
@@ -105,7 +105,7 @@ Base62 encoding:
 
 ---
 
-# 4.1 Update `SampledSound` (InstrumentSynth.h)
+# 4.1 Update `SampledSound` (InstrumentPlayer.h)
 
 Decay envelope stores **relative decay offsets from the peak** rather than absolute runtime loudness.
 
@@ -273,7 +273,7 @@ float SampledSound::findTimeForAbsDb(float targetAbsDb) const
 
 Decay time must be measured relative to the peak transient.
 
-float InstrumentSynthVoice::getCurrentEstimatedAbsDb() const
+float InstrumentPlayerVoice::getCurrentEstimatedAbsDb() const
 {
     if (!currentlyPlayingSound)
         return -120.0f;
@@ -361,7 +361,7 @@ A more advanced articulation transition technique can be implemented later using
 
 Instead of crossfading between articulations, the system:
 
-Finds the current decay loudness of the source articulation
+Finds the current decay loudness of the library articulation
 
 Finds the matching decay position in the target articulation
 

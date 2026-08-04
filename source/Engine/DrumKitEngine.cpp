@@ -4,13 +4,14 @@
 #include "ArticulationNameHelpers.h"
 #include "DrumKitEngineMapHelpers.h"
 #include "DrumKitEnginePreviewHelpers.h"
-#include "InstrumentSynth.h"
+#include "InstrumentPlayer.h"
 #include "SampleSelector.h"
 #include "../Config/Helpers.h"
 #include "../Config/YamlHelper.h"
 #include <juce_core/juce_core.h>
 #include <cmath>
 #include <algorithm>
+#include <iterator>
 #include <unordered_set>
 #include <utility>
 
@@ -32,15 +33,9 @@ static juce::String firstCandidateOrRaw(const std::vector<juce::String>& candida
     return raw.trim();
 }
 
-static juce::String joinNames(const std::vector<juce::String>& names) {
-    juce::StringArray values;
-    for (const auto& name : names)
-        if (name.trim().isNotEmpty()) values.add(name.trim());
-    return values.joinIntoString(",");
-}
-
-static juce::String makeEntrySortKey(const DrumKitEngine::InstrumentMapEntry& entry) {
-    return entry.slotId.trim().toLowerCase() + "/" + joinNames(entry.slotArticulationFilter).toLowerCase();
+static juce::String makeMapLayerSortKey(const DrumKitEngine::InstrumentMapLayer& mapLayer) {
+    const auto articulationSlotCode = mapLayer.slotArticulationFilter.empty() ? juce::String() : mapLayer.slotArticulationFilter.front().trim().toLowerCase();
+    return mapLayer.slotId.trim().toLowerCase() + "/" + articulationSlotCode;
 }
 
 static int countKitIdMatches(const KitLib::LibraryManager& libraryManager, const juce::String& id) {
@@ -73,42 +68,42 @@ static int countArticulationIdMatches(const KitLib::InstrumentSpec& instrumentSp
 
 static juce::String describeKitResolveFailure(const KitLib::LibraryManager& libraryManager, const juce::String& kitRef, const juce::String& slotId) {
     const auto matchCount = countKitIdMatches(libraryManager, kitRef);
-    const auto reason = matchCount > 1 ? "Kit id is ambiguous" : "Kit not found";
+    const auto reason = matchCount > 1 ? "Library kit ID is ambiguous" : "Library kit was not found";
     return juce::String(reason) + ": " + kitRef + " for slot '" + slotId + "'";
 }
 
 static juce::String describeInstrumentResolveFailure(const KitLib::DrumKitSpec& kitSpec, const juce::String& instCode, const juce::String& slotId) {
     const auto matchCount = countInstrumentIdMatches(kitSpec, instCode);
-    const auto reason = matchCount > 1 ? "Instrument id is ambiguous" : "Instrument not found";
+    const auto reason = matchCount > 1 ? "Library instrument ID is ambiguous" : "Library instrument was not found";
     return juce::String(reason) + ": " + kitSpec.meta.codeRaw + "/" + instCode + " for slot '" + slotId + "'";
 }
 
-static juce::String describeArticulationResolveFailure(const KitLib::InstrumentSpec& instrumentSpec, const juce::String& artCode, const juce::String& targetPath, const juce::String& slotId) {
+static juce::String describeArticulationResolveFailure(const KitLib::InstrumentSpec& instrumentSpec, const juce::String& artCode, const juce::String& libraryInstrumentPath, const juce::String& slotId) {
     const auto matchCount = countArticulationIdMatches(instrumentSpec, artCode);
-    const auto reason = matchCount > 1 ? "Source articulation id is ambiguous" : "Unknown source articulation";
-    return juce::String(reason) + ": " + artCode + " for target '" + targetPath + "' in slot '" + slotId + "'";
+    const auto reason = matchCount > 1 ? "Library articulation ID is ambiguous" : "Unknown library articulation";
+    return juce::String(reason) + ": " + artCode + " in library instrument '" + libraryInstrumentPath + "' for slot '" + slotId + "'";
 }
 
-static void normalizeArticulationFilters(DrumKitEngine::InstrumentMapEntry& entry, const KitLib::InstrumentSpec& instrumentSpec) {
-    for (auto& artName : entry.articulationFilter) {
-        auto* artSpec = instrumentSpec.findArticulationById(artName);
-        if (artSpec != nullptr) artName = instrumentSpec.getPreferredArticulationId(*artSpec);
+static void normalizeLibraryArticulationFilters(DrumKitEngine::InstrumentMapLayer& mapLayer, const KitLib::InstrumentSpec& instrumentSpec) {
+    for (auto& libraryArticulationName : mapLayer.articulationFilter) {
+        auto* articulationSpec = instrumentSpec.findArticulationById(libraryArticulationName);
+        if (articulationSpec != nullptr) libraryArticulationName = instrumentSpec.getPreferredArticulationId(*articulationSpec);
     }
 }
 
-static void normalizeInstrumentMapEntries(DrumKitEngine::InstrumentMap& instrumentMap, KitLib::LibraryManager& libraryManager) {
-    for (auto& entry : instrumentMap.entries) {
-        auto* kitSpec = libraryManager.findKitById(entry.kitRef);
+static void normalizeInstrumentMapLayers(DrumKitEngine::InstrumentMap& instrumentMap, KitLib::LibraryManager& libraryManager) {
+    for (auto& mapLayer : instrumentMap.layers) {
+        auto* kitSpec = libraryManager.findKitById(mapLayer.kitRef);
         if (kitSpec == nullptr) continue;
 
-        entry.kitRef = libraryManager.getPreferredKitId(*kitSpec);
-        if (entry.instCode.isEmpty()) continue;
+        mapLayer.kitRef = libraryManager.getPreferredKitId(*kitSpec);
+        if (mapLayer.instCode.isEmpty()) continue;
 
-        auto* instSpec = kitSpec->findInstrumentById(entry.instCode);
+        auto* instSpec = kitSpec->findInstrumentById(mapLayer.instCode);
         if (instSpec == nullptr) continue;
 
-        entry.instCode = kitSpec->getPreferredInstrumentId(*instSpec);
-        normalizeArticulationFilters(entry, *instSpec);
+        mapLayer.instCode = kitSpec->getPreferredInstrumentId(*instSpec);
+        normalizeLibraryArticulationFilters(mapLayer, *instSpec);
     }
 }
 
@@ -122,7 +117,7 @@ static juce::String safePresetName(const juce::String& name) {
 
 } // namespace DrumKitEngineVelocityResponseHelpers
 
-namespace DrumKitEngineSourceOverrideHelpers {
+namespace DrumKitEngineLibraryOverrideDetail {
 
 static juce::String relativeSamplePath(const KitLib::DrumKitSpec& kit, const juce::File& sampleFile) {
     return sampleFile.getRelativePathFrom(kit.meta.rootDir).replaceCharacter('\\', '/');
@@ -138,25 +133,27 @@ static int recipeStatusPriority(SampledSound::SourceRecipeStatus status) {
     return 0;
 }
 
-static std::vector<KitLib::SampleVariantSpec*> findSamplesByRelativePath(KitLib::DrumKitSpec& kit, KitLib::ArticulationSpec& articulation, const juce::String& relativePath) {
-    std::vector<KitLib::SampleVariantSpec*> matches;
+static std::vector<KitLib::SampleSpec*> findSamplesByRelativePath(KitLib::DrumKitSpec& kit, KitLib::ArticulationSpec& articulation, const juce::String& relativePath) {
+    std::vector<KitLib::SampleSpec*> matches;
     const auto normalizedPath = relativePath.trim().replaceCharacter('\\', '/');
-    for (const auto& layer : articulation.velocityLayerSpecs) {
-        if (layer == nullptr) continue;
-        for (const auto& sample : layer->sampleVariantSpecs) {
-            if (sample != nullptr && relativeSamplePath(kit, sample->sampleFile) == normalizedPath) matches.push_back(sample.get());
+    for (const auto& velocityLevel : articulation.velocityLevels) {
+        if (velocityLevel == nullptr) continue;
+        for (const auto& logicalHit : velocityLevel->logicalHits) {
+            if (logicalHit == nullptr) continue;
+            for (const auto& sample : logicalHit->samples)
+                if (sample != nullptr && relativeSamplePath(kit, sample->sampleFile) == normalizedPath) matches.push_back(sample.get());
         }
     }
     return matches;
 }
 
-static juce::String firstContentHash(const std::vector<KitLib::SampleVariantSpec*>& samples) {
+static juce::String firstContentHash(const std::vector<KitLib::SampleSpec*>& samples) {
     for (const auto* sample : samples)
         if (sample != nullptr && sample->metadataContentHash.isNotEmpty()) return sample->metadataContentHash;
     return {};
 }
 
-} // namespace DrumKitEngineSourceOverrideHelpers
+} // namespace DrumKitEngineLibraryOverrideDetail
 
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
@@ -284,8 +281,8 @@ ParseResult<DrumKitEngine::VelocityResponsePreset> DrumKitEngine::saveVelocityRe
     return result;
 }
 
-DrumKitEngine::VelocityResponseSourceInfo DrumKitEngine::getSourceVelocityResponseInfo(const juce::String& sourcePath) const {
-    VelocityResponseSourceInfo result;
+DrumKitEngine::LibraryVelocityResponseInfo DrumKitEngine::getLibraryVelocityResponseInfo(const juce::String& sourcePath) const {
+    LibraryVelocityResponseInfo result;
     if (this->libraryManagerPtr == nullptr) return result;
 
     juce::StringArray sourceParts;
@@ -302,41 +299,41 @@ DrumKitEngine::VelocityResponseSourceInfo DrumKitEngine::getSourceVelocityRespon
     else if (instrument->articulationSpecs.size() == 1) articulation = instrument->articulationSpecs.front().get();
     if (articulation == nullptr) return result;
 
-    result.sourceFound = true;
+    result.libraryArticulationFound = true;
     std::optional<float> hardestFittedDb;
-    for (auto layerIt = articulation->velocityLayerSpecs.rbegin(); layerIt != articulation->velocityLayerSpecs.rend(); ++layerIt) {
-        if (*layerIt != nullptr && (*layerIt)->fittedSourceDb.has_value()) {
-            hardestFittedDb = (*layerIt)->fittedSourceDb;
+    for (auto velocityLevelIt = articulation->velocityLevels.rbegin(); velocityLevelIt != articulation->velocityLevels.rend(); ++velocityLevelIt) {
+        if (*velocityLevelIt != nullptr && (*velocityLevelIt)->fittedSourceDb.has_value()) {
+            hardestFittedDb = (*velocityLevelIt)->fittedSourceDb;
             break;
         }
     }
 
-    result.levels.reserve(articulation->velocityLayerSpecs.size());
-    for (const auto& layer : articulation->velocityLayerSpecs) {
-        if (layer == nullptr) continue;
+    result.levels.reserve(articulation->velocityLevels.size());
+    for (const auto& velocityLevel : articulation->velocityLevels) {
+        if (velocityLevel == nullptr) continue;
         VelocityResponseLevelInfo level;
-        level.velocity = layer->velocity;
-        if (hardestFittedDb.has_value() && layer->rawVelocityMedianDb.has_value()) level.rawMedianRelativeDb = *layer->rawVelocityMedianDb - *hardestFittedDb;
-        if (hardestFittedDb.has_value() && layer->fittedSourceDb.has_value()) level.fittedRelativeDb = *layer->fittedSourceDb - *hardestFittedDb;
-        level.calibrationTrimDb = layer->calibrationTrimDb;
-        level.calibrationLimited = layer->calibrationLimited;
+        level.velocity = velocityLevel->velocity;
+        if (hardestFittedDb.has_value() && velocityLevel->rawVelocityMedianDb.has_value()) level.rawMedianRelativeDb = *velocityLevel->rawVelocityMedianDb - *hardestFittedDb;
+        if (hardestFittedDb.has_value() && velocityLevel->fittedSourceDb.has_value()) level.fittedRelativeDb = *velocityLevel->fittedSourceDb - *hardestFittedDb;
+        level.calibrationTrimDb = velocityLevel->calibrationTrimDb;
+        level.calibrationLimited = velocityLevel->calibrationLimited;
         result.levels.push_back(std::move(level));
     }
 
     return result;
 }
 
-DrumKitEngine::SourceVelocityRangeInfo DrumKitEngine::getSourceVelocityRangeInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const {
-    SourceVelocityRangeInfo result;
+DrumKitEngine::LibraryArticulationInfo DrumKitEngine::getLibraryArticulationInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const {
+    LibraryArticulationInfo result;
     if (this->libraryManagerPtr == nullptr) return result;
-    const juce::ScopedLock sourceLock(this->sourceModelLock);
+    const juce::ScopedLock libraryLock(this->libraryModelLock);
     const juce::ScopedLock graphLock(this->engineGraphLock);
     const auto* kit = this->libraryManagerPtr->findKitById(kitId);
     const auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     const auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
     if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result;
 
-    result.sourceFound = true;
+    result.libraryArticulationFound = true;
     result.writable = kit->meta.rootDir.hasWriteAccess();
     result.kitCodeRaw = kit->meta.codeRaw;
     result.instrumentCodeRaw = instrument->meta.codeRaw;
@@ -348,61 +345,64 @@ DrumKitEngine::SourceVelocityRangeInfo DrumKitEngine::getSourceVelocityRangeInfo
     result.articulationBalance.overrideValue = articulation->balanceOverride;
     result.articulationBalance.effectiveValue = articulation->getEffectiveBalance();
     result.articulationBalance.filenameConflict = articulation->balanceConflict;
-    const auto* articulationOverride = kit->sourceOverrides.findArticulationOverride(instrument->meta.codeRaw, articulation->codeRaw);
-    result.levels.reserve(articulation->velocityLayerSpecs.size());
-    for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) {
-        const auto& layer = articulation->velocityLayerSpecs[layerIdx];
-        if (layer == nullptr) continue;
-        SourceVelocityRangeLevelInfo level;
-        level.namedVelocity = layer->velocity;
-        level.filenameUpperBoundary = layerIdx + 1 == articulation->velocityLayerSpecs.size() ? MIDI_MAX_VALUE : layer->velocity;
-        level.effectiveUpperBoundary = layer->selectionUpperVelocity;
-        level.overridden = articulationOverride != nullptr && articulationOverride->velocityUpperBounds.find(layer->velocity) != articulationOverride->velocityUpperBounds.end();
+    const auto* articulationOverride = kit->libraryKitOverrides.findArticulationOverride(instrument->meta.codeRaw, articulation->codeRaw);
+    result.levels.reserve(articulation->velocityLevels.size());
+    for (size_t velocityLevelIdx = 0; velocityLevelIdx < articulation->velocityLevels.size(); ++velocityLevelIdx) {
+        const auto& velocityLevel = articulation->velocityLevels[velocityLevelIdx];
+        if (velocityLevel == nullptr) continue;
+        LibraryVelocityLevelInfo level;
+        level.namedVelocity = velocityLevel->velocity;
+        level.filenameUpperBoundary = velocityLevelIdx + 1 == articulation->velocityLevels.size() ? MIDI_MAX_VALUE : velocityLevel->velocity;
+        level.effectiveUpperBoundary = velocityLevel->selectionUpperVelocity;
+        level.overridden = articulationOverride != nullptr && articulationOverride->velocityUpperBounds.find(velocityLevel->velocity) != articulationOverride->velocityUpperBounds.end();
         result.levels.push_back(level);
 
-        for (const auto& sample : layer->sampleVariantSpecs) {
-            if (sample == nullptr) continue;
-            SourceSampleOverrideInfo sampleInfo;
-            sampleInfo.namedVelocity = layer->velocity;
-            sampleInfo.roundRobin = sample->letter == '\0' ? "-" : juce::String::charToString(sample->letter);
-            sampleInfo.relativePath = DrumKitEngineSourceOverrideHelpers::relativeSamplePath(*kit, sample->sampleFile);
-            sampleInfo.fileName = sample->sampleFileName;
-            sampleInfo.micCode = sample->micSpec.raw.trim().toLowerCase();
-            sampleInfo.contentHash = sample->metadataContentHash;
-            sampleInfo.filenameManualGainDb = sample->filenameManualGainDb;
-            sampleInfo.effectiveManualGainDb = sample->manualGainDb;
-            sampleInfo.filenamePlaybackOffsetMs = sample->filenamePlaybackOffsetMs;
-            sampleInfo.effectivePlaybackOffsetMs = sample->playbackOffsetMs;
-            sampleInfo.hasMetadata = sample->hasCsvMetadata;
-            sampleInfo.onsetMs = sample->onsetMs;
-            sampleInfo.intensityDb = sample->intensityDb;
-            sampleInfo.truePeakDb = sample->truePeakDb;
-            const auto sampleOverrideMatch = kit->sourceOverrides.findSampleOverride(sampleInfo.relativePath, sampleInfo.contentHash);
-            const auto* sampleOverride = sampleOverrideMatch.value;
-            sampleInfo.overrideStoredRelativePath = sampleOverrideMatch.storedRelativePath;
-            sampleInfo.overrideMatchedByContentHash = sampleOverrideMatch.matchedByContentHash;
-            sampleInfo.overrideContentHashAmbiguous = sampleOverrideMatch.ambiguousContentHash;
-            if (sampleOverride != nullptr) {
-                sampleInfo.manualGainDbOverride = sampleOverride->manualGainDb;
-                sampleInfo.filePlaybackOffsetMsOverride = sampleOverride->playbackOffsetMs;
-                const auto micOverrideIt = sampleOverride->micOverrides.find(sampleInfo.micCode);
-                if (micOverrideIt != sampleOverride->micOverrides.end()) sampleInfo.micPlaybackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
+        for (const auto& logicalHit : velocityLevel->logicalHits) {
+            if (logicalHit == nullptr) continue;
+            const auto roundRobinLetter = KitLib::roundRobinLetterFromId(logicalHit->roundRobinId);
+            for (const auto& sample : logicalHit->samples) {
+                if (sample == nullptr) continue;
+                LibrarySampleInfo sampleInfo;
+                sampleInfo.namedVelocity = velocityLevel->velocity;
+                sampleInfo.roundRobin = roundRobinLetter == '\0' ? "-" : juce::String::charToString(roundRobinLetter);
+                sampleInfo.relativePath = DrumKitEngineLibraryOverrideDetail::relativeSamplePath(*kit, sample->sampleFile);
+                sampleInfo.fileName = sample->sampleFileName;
+                sampleInfo.micCode = sample->micSpec.raw.trim().toLowerCase();
+                sampleInfo.contentHash = sample->metadataContentHash;
+                sampleInfo.filenameManualGainDb = sample->filenameManualGainDb;
+                sampleInfo.effectiveManualGainDb = sample->manualGainDb;
+                sampleInfo.filenamePlaybackOffsetMs = sample->filenamePlaybackOffsetMs;
+                sampleInfo.effectivePlaybackOffsetMs = sample->playbackOffsetMs;
+                sampleInfo.hasMetadata = sample->hasCsvMetadata;
+                sampleInfo.onsetMs = sample->onsetMs;
+                sampleInfo.intensityDb = sample->intensityDb;
+                sampleInfo.truePeakDb = sample->truePeakDb;
+                const auto sampleOverrideMatch = kit->libraryKitOverrides.findSampleOverride(sampleInfo.relativePath, sampleInfo.contentHash);
+                const auto* sampleOverride = sampleOverrideMatch.value;
+                sampleInfo.overrideStoredRelativePath = sampleOverrideMatch.storedRelativePath;
+                sampleInfo.overrideMatchedByContentHash = sampleOverrideMatch.matchedByContentHash;
+                sampleInfo.overrideContentHashAmbiguous = sampleOverrideMatch.ambiguousContentHash;
+                if (sampleOverride != nullptr) {
+                    sampleInfo.manualGainDbOverride = sampleOverride->manualGainDb;
+                    sampleInfo.filePlaybackOffsetMsOverride = sampleOverride->playbackOffsetMs;
+                    const auto micOverrideIt = sampleOverride->micOverrides.find(sampleInfo.micCode);
+                    if (micOverrideIt != sampleOverride->micOverrides.end()) sampleInfo.micPlaybackOffsetMsOverride = micOverrideIt->second.playbackOffsetMs;
+                }
+                for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
+                    if (instrumentPlayer == nullptr) continue;
+                    const auto recipeStatus = instrumentPlayer->getSourceRecipeStatus(*sample);
+                    if (DrumKitEngineLibraryOverrideDetail::recipeStatusPriority(recipeStatus) > DrumKitEngineLibraryOverrideDetail::recipeStatusPriority(sampleInfo.recipeStatus)) sampleInfo.recipeStatus = recipeStatus;
+                }
+                result.samples.push_back(std::move(sampleInfo));
             }
-            for (const auto& synth : this->instrumentSynthPtrs) {
-                if (synth == nullptr) continue;
-                const auto synthStatus = synth->getSourceRecipeStatus(*sample);
-                if (DrumKitEngineSourceOverrideHelpers::recipeStatusPriority(synthStatus) > DrumKitEngineSourceOverrideHelpers::recipeStatusPriority(sampleInfo.recipeStatus))
-                    sampleInfo.recipeStatus = synthStatus;
-            }
-            result.samples.push_back(std::move(sampleInfo));
         }
     }
     return result;
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelocityUpperBoundary(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId,
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryVelocityUpperBoundary(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId,
                                                                                                   int namedVelocity, std::optional<int> upperBoundary, bool persist) {
-    ParseResult<SourceVelocityRangeInfo> result;
+    ParseResult<LibraryArticulationInfo> result;
     if (namedVelocity < 1 || namedVelocity > MIDI_MAX_VALUE) return result.returnWithError("Named velocity must be 1..127");
     if (upperBoundary.has_value() && (*upperBoundary < 1 || *upperBoundary >= MIDI_MAX_VALUE)) return result.returnWithError("Upper boundary must be 1..126");
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
@@ -410,37 +410,37 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelo
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
-    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
-    if (persist && !kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Library articulation was not found");
+    if (persist && !kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Library kit folder is read-only");
 
-    const auto layerIt = std::find_if(articulation->velocityLayerSpecs.begin(), articulation->velocityLayerSpecs.end(), [namedVelocity](const auto& layer) {
-        return layer != nullptr && layer->velocity == namedVelocity;
+    const auto velocityLevelIt = std::find_if(articulation->velocityLevels.begin(), articulation->velocityLevels.end(), [namedVelocity](const auto& velocityLevel) {
+        return velocityLevel != nullptr && velocityLevel->velocity == namedVelocity;
     });
-    if (layerIt == articulation->velocityLayerSpecs.end()) return result.returnWithError("Named velocity was not found in the source articulation");
-    if (layerIt + 1 == articulation->velocityLayerSpecs.end()) return result.returnWithError("The last velocity layer always ends at 127");
+    if (velocityLevelIt == articulation->velocityLevels.end()) return result.returnWithError("Named velocity was not found in the library articulation");
+    if (velocityLevelIt + 1 == articulation->velocityLevels.end()) return result.returnWithError("The last velocity level always ends at 127");
 
-    auto candidateOverrides = kit->sourceOverrides;
+    auto candidateOverrides = kit->libraryKitOverrides;
     std::optional<uint8_t> typedUpperBoundary;
     if (upperBoundary.has_value()) typedUpperBoundary = static_cast<uint8_t>(*upperBoundary);
     candidateOverrides.setVelocityUpperBoundary(instrument->meta.codeRaw, articulation->codeRaw, static_cast<uint8_t>(namedVelocity), typedUpperBoundary);
 
     std::vector<uint8_t> namedVelocities;
-    namedVelocities.reserve(articulation->velocityLayerSpecs.size());
-    for (const auto& layer : articulation->velocityLayerSpecs) namedVelocities.push_back(layer->velocity);
+    namedVelocities.reserve(articulation->velocityLevels.size());
+    for (const auto& velocityLevel : articulation->velocityLevels) namedVelocities.push_back(velocityLevel->velocity);
     const auto resolved = candidateOverrides.resolveVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw, namedVelocities);
     if (!resolved.ok()) return result.returnWithError(resolved.error());
 
     if (!persist) {
         {
             const juce::ScopedLock graphLock(this->engineGraphLock);
-            for (auto& synth : this->instrumentSynthPtrs)
-                if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation, resolved.value);
+            for (auto& instrumentPlayer : this->instrumentPlayerPtrs)
+                if (instrumentPlayer != nullptr) instrumentPlayer->refreshLibraryVelocityBoundaries(*articulation, resolved.value);
         }
-        result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+        result.value = this->getLibraryArticulationInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
         const auto* candidateArticulationOverride = candidateOverrides.findArticulationOverride(instrument->meta.codeRaw, articulation->codeRaw);
-        for (size_t layerIdx = 0; layerIdx < result.value.levels.size(); ++layerIdx) {
-            auto& level = result.value.levels[layerIdx];
-            level.effectiveUpperBoundary = resolved.value[layerIdx];
+        for (size_t velocityLevelIdx = 0; velocityLevelIdx < result.value.levels.size(); ++velocityLevelIdx) {
+            auto& level = result.value.levels[velocityLevelIdx];
+            level.effectiveUpperBoundary = resolved.value[velocityLevelIdx];
             level.overridden = candidateArticulationOverride != nullptr && candidateArticulationOverride->velocityUpperBounds.find(static_cast<uint8_t>(level.namedVelocity)) != candidateArticulationOverride->velocityUpperBounds.end();
         }
         return result;
@@ -451,31 +451,31 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelo
 
     this->invalidateSourcePreviewCache();
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        kit->sourceOverrides = std::move(candidateOverrides);
-        for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
-        for (auto& synth : this->instrumentSynthPtrs)
-            if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
+        kit->libraryKitOverrides = std::move(candidateOverrides);
+        for (size_t velocityLevelIdx = 0; velocityLevelIdx < articulation->velocityLevels.size(); ++velocityLevelIdx) articulation->velocityLevels[velocityLevelIdx]->selectionUpperVelocity = resolved.value[velocityLevelIdx];
+        for (auto& instrumentPlayer : this->instrumentPlayerPtrs)
+            if (instrumentPlayer != nullptr) instrumentPlayer->refreshLibraryVelocityBoundaries(*articulation);
     }
 
-    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    result.value = this->getLibraryArticulationInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
     for (const auto& warning : resolved.errors) result.addWarning(warning);
     return result;
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelocityUpperBoundariesBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<SourceVelocityUpperBoundaryTarget>& targets) {
-    ParseResult<SourceVelocityRangeInfo> result;
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryVelocityUpperBoundariesBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<VelocityUpperBoundaryTarget>& targets) {
+    ParseResult<LibraryArticulationInfo> result;
     if (targets.empty()) return result.returnWithError("No velocity boundaries were selected");
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
 
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
-    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
-    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Library articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Library kit folder is read-only");
 
-    auto candidateOverrides = kit->sourceOverrides;
+    auto candidateOverrides = kit->libraryKitOverrides;
     std::vector<int> updatedNamedVelocities;
     updatedNamedVelocities.reserve(targets.size());
     for (const auto& target : targets) {
@@ -484,19 +484,19 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelo
         if (std::find(updatedNamedVelocities.begin(), updatedNamedVelocities.end(), target.namedVelocity) != updatedNamedVelocities.end())
             return result.returnWithError("Named velocity appears more than once");
 
-        const auto layerIt = std::find_if(articulation->velocityLayerSpecs.begin(), articulation->velocityLayerSpecs.end(), [&target](const auto& layer) {
-            return layer != nullptr && layer->velocity == target.namedVelocity;
+        const auto velocityLevelIt = std::find_if(articulation->velocityLevels.begin(), articulation->velocityLevels.end(), [&target](const auto& velocityLevel) {
+            return velocityLevel != nullptr && velocityLevel->velocity == target.namedVelocity;
         });
-        if (layerIt == articulation->velocityLayerSpecs.end()) return result.returnWithError("Named velocity was not found in the source articulation");
-        if (layerIt + 1 == articulation->velocityLayerSpecs.end()) return result.returnWithError("The last velocity layer always ends at 127");
+        if (velocityLevelIt == articulation->velocityLevels.end()) return result.returnWithError("Named velocity was not found in the library articulation");
+        if (velocityLevelIt + 1 == articulation->velocityLevels.end()) return result.returnWithError("The last velocity level always ends at 127");
 
         updatedNamedVelocities.push_back(target.namedVelocity);
         candidateOverrides.setVelocityUpperBoundary(instrument->meta.codeRaw, articulation->codeRaw, static_cast<uint8_t>(target.namedVelocity), static_cast<uint8_t>(target.upperBoundary));
     }
 
     std::vector<uint8_t> namedVelocities;
-    namedVelocities.reserve(articulation->velocityLayerSpecs.size());
-    for (const auto& layer : articulation->velocityLayerSpecs) namedVelocities.push_back(layer->velocity);
+    namedVelocities.reserve(articulation->velocityLevels.size());
+    for (const auto& velocityLevel : articulation->velocityLevels) namedVelocities.push_back(velocityLevel->velocity);
     const auto resolved = candidateOverrides.resolveVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw, namedVelocities);
     if (!resolved.ok()) return result.returnWithError(resolved.error());
 
@@ -505,34 +505,34 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceVelo
 
     this->invalidateSourcePreviewCache();
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        kit->sourceOverrides = std::move(candidateOverrides);
-        for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
-        for (auto& synth : this->instrumentSynthPtrs)
-            if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
+        kit->libraryKitOverrides = std::move(candidateOverrides);
+        for (size_t velocityLevelIdx = 0; velocityLevelIdx < articulation->velocityLevels.size(); ++velocityLevelIdx) articulation->velocityLevels[velocityLevelIdx]->selectionUpperVelocity = resolved.value[velocityLevelIdx];
+        for (auto& instrumentPlayer : this->instrumentPlayerPtrs)
+            if (instrumentPlayer != nullptr) instrumentPlayer->refreshLibraryVelocityBoundaries(*articulation);
     }
 
-    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    result.value = this->getLibraryArticulationInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
     for (const auto& warning : resolved.errors) result.addWarning(warning);
     return result;
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::resetSourceVelocityUpperBoundaries(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) {
-    ParseResult<SourceVelocityRangeInfo> result;
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::resetLibraryVelocityUpperBoundaries(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) {
+    ParseResult<LibraryArticulationInfo> result;
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
 
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
-    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
-    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Library articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Library kit folder is read-only");
 
-    auto candidateOverrides = kit->sourceOverrides;
+    auto candidateOverrides = kit->libraryKitOverrides;
     candidateOverrides.resetVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw);
     std::vector<uint8_t> namedVelocities;
-    namedVelocities.reserve(articulation->velocityLayerSpecs.size());
-    for (const auto& layer : articulation->velocityLayerSpecs) namedVelocities.push_back(layer->velocity);
+    namedVelocities.reserve(articulation->velocityLevels.size());
+    for (const auto& velocityLevel : articulation->velocityLevels) namedVelocities.push_back(velocityLevel->velocity);
     const auto resolved = candidateOverrides.resolveVelocityUpperBoundaries(instrument->meta.codeRaw, articulation->codeRaw, namedVelocities);
     if (!resolved.ok()) return result.returnWithError(resolved.error());
 
@@ -541,15 +541,15 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::resetSourceVe
 
     this->invalidateSourcePreviewCache();
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        kit->sourceOverrides = std::move(candidateOverrides);
-        for (size_t layerIdx = 0; layerIdx < articulation->velocityLayerSpecs.size(); ++layerIdx) articulation->velocityLayerSpecs[layerIdx]->selectionUpperVelocity = resolved.value[layerIdx];
-        for (auto& synth : this->instrumentSynthPtrs)
-            if (synth != nullptr) synth->refreshSourceVelocityBoundaries(*articulation);
+        kit->libraryKitOverrides = std::move(candidateOverrides);
+        for (size_t velocityLevelIdx = 0; velocityLevelIdx < articulation->velocityLevels.size(); ++velocityLevelIdx) articulation->velocityLevels[velocityLevelIdx]->selectionUpperVelocity = resolved.value[velocityLevelIdx];
+        for (auto& instrumentPlayer : this->instrumentPlayerPtrs)
+            if (instrumentPlayer != nullptr) instrumentPlayer->refreshLibraryVelocityBoundaries(*articulation);
     }
 
-    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    result.value = this->getLibraryArticulationInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
     return result;
 }
 
@@ -561,25 +561,25 @@ void DrumKitEngine::invalidateSourcePreviewCache() {
     this->pendingPreviewTargetKeys.clear();
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceInstrumentBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance) {
-    return this->setSourceBalance(kitId, instrumentId, articulationId, balance, false);
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryInstrumentBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance) {
+    return this->setLibraryPlacementBalance(kitId, instrumentId, articulationId, balance, false);
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceArticulationBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance) {
-    return this->setSourceBalance(kitId, instrumentId, articulationId, balance, true);
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryArticulationBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance) {
+    return this->setLibraryPlacementBalance(kitId, instrumentId, articulationId, balance, true);
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance, bool articulationScope) {
-    ParseResult<SourceVelocityRangeInfo> result;
-    if (balance.has_value() && (*balance < -127 || *balance > 127)) return result.returnWithError("Source balance must be L1..L127, C0, or R1..R127");
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryPlacementBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance, bool articulationScope) {
+    ParseResult<LibraryArticulationInfo> result;
+    if (balance.has_value() && (*balance < -127 || *balance > 127)) return result.returnWithError("Placement balance must be L1..L127, C0, or R1..R127");
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
-    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
-    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Library articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Library kit folder is read-only");
 
-    auto candidateOverrides = kit->sourceOverrides;
+    auto candidateOverrides = kit->libraryKitOverrides;
     if (articulationScope) candidateOverrides.setArticulationBalance(instrument->meta.codeRaw, articulation->codeRaw, balance);
     else candidateOverrides.setInstrumentBalance(instrument->meta.codeRaw, balance);
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
@@ -587,39 +587,39 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceBala
     this->invalidateSourcePreviewCache();
 
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        kit->sourceOverrides = std::move(candidateOverrides);
+        kit->libraryKitOverrides = std::move(candidateOverrides);
         if (articulationScope) articulation->balanceOverride = balance;
         else instrument->balanceOverride = balance;
-        for (const auto& synth : this->instrumentSynthPtrs) {
-            if (synth == nullptr) continue;
-            synth->refreshSourceBalance(*instrument, articulationScope ? articulation : nullptr);
+        for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
+            if (instrumentPlayer == nullptr) continue;
+            instrumentPlayer->refreshLibraryBalance(*instrument, articulationScope ? articulation : nullptr);
         }
     }
-    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    result.value = this->getLibraryArticulationInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
     return result;
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSampleManualGain(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, std::optional<float> manualGainDb) {
-    return this->setSourceSampleManualGainBatch(kitId, instrumentId, articulationId, std::vector<juce::String> { relativePath }, manualGainDb);
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSampleManualGain(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, std::optional<float> manualGainDb) {
+    return this->setSampleManualGainBatch(kitId, instrumentId, articulationId, std::vector<juce::String> { relativePath }, manualGainDb);
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSampleManualGainBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<juce::String>& relativePaths, std::optional<float> manualGainDb) {
-    ParseResult<SourceVelocityRangeInfo> result;
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSampleManualGainBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<juce::String>& relativePaths, std::optional<float> manualGainDb) {
+    ParseResult<LibraryArticulationInfo> result;
     if (manualGainDb.has_value() && !std::isfinite(*manualGainDb)) return result.returnWithError("Manual gain must be a finite dB value");
-    if (relativePaths.empty()) return result.returnWithError("No source sample files were selected");
+    if (relativePaths.empty()) return result.returnWithError("No sample files were selected");
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
-    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
-    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Library articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Library kit folder is read-only");
 
-    auto candidateOverrides = kit->sourceOverrides;
+    auto candidateOverrides = kit->libraryKitOverrides;
     struct ResolvedTarget {
         juce::String overridePath;
-        std::vector<KitLib::SampleVariantSpec*> matchingSamples;
+        std::vector<KitLib::SampleSpec*> matchingSamples;
     };
     std::vector<ResolvedTarget> resolvedTargets;
     juce::StringArray uniquePaths;
@@ -627,10 +627,10 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
         const auto normalizedPath = relativePath.trim().replaceCharacter('\\', '/');
         if (uniquePaths.contains(normalizedPath)) continue;
         uniquePaths.add(normalizedPath);
-        auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
-        if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation: " + normalizedPath);
-        const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
-        const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(normalizedPath, contentHash);
+        auto matchingSamples = DrumKitEngineLibraryOverrideDetail::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
+        if (matchingSamples.empty()) return result.returnWithError("Sample file was not found in the library articulation: " + normalizedPath);
+        const auto contentHash = DrumKitEngineLibraryOverrideDetail::firstContentHash(matchingSamples);
+        const auto existingOverrideMatch = kit->libraryKitOverrides.findSampleOverride(normalizedPath, contentHash);
         if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
         const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : normalizedPath;
         candidateOverrides.setSampleManualGain(overridePath, contentHash, manualGainDb);
@@ -641,11 +641,11 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
     this->invalidateSourcePreviewCache();
 
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        kit->sourceOverrides = std::move(candidateOverrides);
+        kit->libraryKitOverrides = std::move(candidateOverrides);
         for (const auto& resolvedTarget : resolvedTargets) {
-            const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(resolvedTarget.overridePath);
+            const auto* sampleOverride = kit->libraryKitOverrides.findSampleOverride(resolvedTarget.overridePath);
             const std::optional<float> effectiveOverride = sampleOverride != nullptr ? sampleOverride->manualGainDb : std::nullopt;
             for (auto* sample : resolvedTarget.matchingSamples) {
                 const float previousGainDb = sample->manualGainDb;
@@ -657,33 +657,33 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
             }
         }
         instrument->buildCalibrationProfiles();
-        for (const auto& synth : this->instrumentSynthPtrs)
-            if (synth != nullptr) synth->refreshSourceCalibrationAndReload(*articulation);
+        for (const auto& instrumentPlayer : this->instrumentPlayerPtrs)
+            if (instrumentPlayer != nullptr) instrumentPlayer->refreshLibraryCalibrationAndReload(*articulation);
     }
 
-    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    result.value = this->getLibraryArticulationInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
     return result;
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamplePlaybackOffset(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, const std::optional<juce::String>& micCode, std::optional<float> playbackOffsetMs) {
-    return this->setSourceSamplePlaybackOffsetBatch(kitId, instrumentId, articulationId, std::vector<SourceSamplePlaybackOffsetTarget> { { relativePath, micCode } }, playbackOffsetMs);
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSamplePlaybackOffset(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& relativePath, const std::optional<juce::String>& micCode, std::optional<float> playbackOffsetMs) {
+    return this->setSamplePlaybackOffsetBatch(kitId, instrumentId, articulationId, std::vector<SamplePlaybackOffsetTarget> { { relativePath, micCode } }, playbackOffsetMs);
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamplePlaybackOffsetBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<SourceSamplePlaybackOffsetTarget>& targets, std::optional<float> playbackOffsetMs) {
-    ParseResult<SourceVelocityRangeInfo> result;
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSamplePlaybackOffsetBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<SamplePlaybackOffsetTarget>& targets, std::optional<float> playbackOffsetMs) {
+    ParseResult<LibraryArticulationInfo> result;
     if (playbackOffsetMs.has_value() && !std::isfinite(*playbackOffsetMs)) return result.returnWithError("Playback offset must be a finite millisecond value");
-    if (targets.empty()) return result.returnWithError("No source sample files were selected");
+    if (targets.empty()) return result.returnWithError("No sample files were selected");
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
     auto* articulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
-    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Source articulation was not found");
-    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Kit folder is read-only");
+    if (kit == nullptr || instrument == nullptr || articulation == nullptr) return result.returnWithError("Library articulation was not found");
+    if (!kit->meta.rootDir.hasWriteAccess()) return result.returnWithError("Library kit folder is read-only");
 
-    auto candidateOverrides = kit->sourceOverrides;
+    auto candidateOverrides = kit->libraryKitOverrides;
     struct ResolvedTarget {
         juce::String overridePath;
-        std::vector<KitLib::SampleVariantSpec*> matchingSamples;
+        std::vector<KitLib::SampleSpec*> matchingSamples;
     };
     std::vector<ResolvedTarget> resolvedTargets;
     juce::StringArray uniqueTargets;
@@ -693,15 +693,15 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
         const auto targetKey = normalizedPath + "\n" + normalizedMicCode;
         if (uniqueTargets.contains(targetKey)) continue;
         uniqueTargets.add(targetKey);
-        auto matchingSamples = DrumKitEngineSourceOverrideHelpers::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
-        if (matchingSamples.empty()) return result.returnWithError("Source sample file was not found in this articulation: " + normalizedPath);
-        if (target.micCode.has_value() && normalizedMicCode.isEmpty()) return result.returnWithError("Source mic code is empty");
+        auto matchingSamples = DrumKitEngineLibraryOverrideDetail::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
+        if (matchingSamples.empty()) return result.returnWithError("Sample file was not found in the library articulation: " + normalizedPath);
+        if (target.micCode.has_value() && normalizedMicCode.isEmpty()) return result.returnWithError("Mic code is empty");
         if (target.micCode.has_value() && std::none_of(matchingSamples.begin(), matchingSamples.end(), [&normalizedMicCode](const auto* sample) {
             return sample != nullptr && sample->micSpec.raw.trim().toLowerCase() == normalizedMicCode;
-        })) return result.returnWithError("Source mic was not found in this sample file: " + normalizedMicCode);
+        })) return result.returnWithError("Mic was not found in this sample file: " + normalizedMicCode);
 
-        const auto contentHash = DrumKitEngineSourceOverrideHelpers::firstContentHash(matchingSamples);
-        const auto existingOverrideMatch = kit->sourceOverrides.findSampleOverride(normalizedPath, contentHash);
+        const auto contentHash = DrumKitEngineLibraryOverrideDetail::firstContentHash(matchingSamples);
+        const auto existingOverrideMatch = kit->libraryKitOverrides.findSampleOverride(normalizedPath, contentHash);
         if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
         const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : normalizedPath;
         if (target.micCode.has_value()) candidateOverrides.setMicPlaybackOffset(overridePath, contentHash, normalizedMicCode, playbackOffsetMs);
@@ -713,11 +713,11 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
     this->invalidateSourcePreviewCache();
 
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        kit->sourceOverrides = std::move(candidateOverrides);
+        kit->libraryKitOverrides = std::move(candidateOverrides);
         for (const auto& resolvedTarget : resolvedTargets) {
-            const auto* sampleOverride = kit->sourceOverrides.findSampleOverride(resolvedTarget.overridePath);
+            const auto* sampleOverride = kit->libraryKitOverrides.findSampleOverride(resolvedTarget.overridePath);
             for (auto* sample : resolvedTarget.matchingSamples) {
                 const auto sampleMicCode = sample->micSpec.raw.trim().toLowerCase();
                 if (sampleOverride != nullptr) {
@@ -730,29 +730,29 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::setSourceSamp
                     sample->playbackOffsetMsOverride.reset();
                 }
                 sample->playbackOffsetMs = sample->playbackOffsetMsOverride.value_or(sample->filenamePlaybackOffsetMs);
-                for (const auto& synth : this->instrumentSynthPtrs)
-                    if (synth != nullptr) synth->refreshSourcePlaybackOffset(*sample);
+                for (const auto& instrumentPlayer : this->instrumentPlayerPtrs)
+                    if (instrumentPlayer != nullptr) instrumentPlayer->refreshSamplePlaybackOffset(*sample);
             }
         }
     }
 
-    result.value = this->getSourceVelocityRangeInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
+    result.value = this->getLibraryArticulationInfo(kit->meta.codeRaw, instrument->meta.codeRaw, articulation->codeRaw);
     return result;
 }
 
-ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::reloadSourceOverrides(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) {
-    ParseResult<SourceVelocityRangeInfo> result;
+ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::reloadLibraryKitOverrides(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) {
+    ParseResult<LibraryArticulationInfo> result;
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
 
     juce::File kitRoot;
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const auto* kit = this->libraryManagerPtr->findKitById(kitId);
-        if (kit == nullptr) return result.returnWithError("Source kit was not found");
+        if (kit == nullptr) return result.returnWithError("Library kit was not found");
         kitRoot = kit->meta.rootDir;
     }
 
-    KitLib::KitSourceOverrides reloadedOverrides;
+    KitLib::LibraryKitOverrides reloadedOverrides;
     auto loadResult = reloadedOverrides.loadFromKitRoot(kitRoot);
     if (!loadResult.ok()) return result.returnWithError(loadResult.error());
     this->invalidateSourcePreviewCache();
@@ -761,32 +761,35 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::reloadSourceO
     juce::String resolvedInstrumentId;
     juce::String resolvedArticulationId;
     {
-        const juce::ScopedLock sourceLock(this->sourceModelLock);
+        const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
         auto* kit = this->libraryManagerPtr->findKitById(kitId);
         auto* selectedInstrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
         auto* selectedArticulation = selectedInstrument != nullptr ? selectedInstrument->findArticulationById(articulationId) : nullptr;
-        if (kit == nullptr || selectedInstrument == nullptr || selectedArticulation == nullptr) return result.returnWithError("Source articulation was not found");
+        if (kit == nullptr || selectedInstrument == nullptr || selectedArticulation == nullptr) return result.returnWithError("Library articulation was not found");
 
-        kit->sourceOverrides = std::move(reloadedOverrides);
+        kit->libraryKitOverrides = std::move(reloadedOverrides);
         for (const auto& [instrumentKey, instrument] : kit->instrumentSpecsMap) {
             juce::ignoreUnused(instrumentKey);
-            if (instrument != nullptr) instrument->applySourceOverrides();
+            if (instrument != nullptr) instrument->applyLibraryKitOverrides();
         }
-        for (const auto& synth : this->instrumentSynthPtrs) {
-            if (synth == nullptr) continue;
+        for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
+            if (instrumentPlayer == nullptr) continue;
             for (const auto& [instrumentKey, instrument] : kit->instrumentSpecsMap) {
                 juce::ignoreUnused(instrumentKey);
                 if (instrument == nullptr) continue;
-                synth->refreshSourceBalance(*instrument);
+                instrumentPlayer->refreshLibraryBalance(*instrument);
                 for (const auto& articulation : instrument->articulationSpecs) {
                     if (articulation == nullptr) continue;
-                    synth->refreshSourceVelocityBoundaries(*articulation);
-                    synth->refreshSourceCalibrationAndReload(*articulation);
-                    for (const auto& velocityLayer : articulation->velocityLayerSpecs) {
-                        if (velocityLayer == nullptr) continue;
-                        for (const auto& sample : velocityLayer->sampleVariantSpecs)
-                            if (sample != nullptr) synth->refreshSourcePlaybackOffset(*sample);
+                    instrumentPlayer->refreshLibraryVelocityBoundaries(*articulation);
+                    instrumentPlayer->refreshLibraryCalibrationAndReload(*articulation);
+                    for (const auto& velocityLevel : articulation->velocityLevels) {
+                        if (velocityLevel == nullptr) continue;
+                        for (const auto& logicalHit : velocityLevel->logicalHits) {
+                            if (logicalHit == nullptr) continue;
+                            for (const auto& sample : logicalHit->samples)
+                                if (sample != nullptr) instrumentPlayer->refreshSamplePlaybackOffset(*sample);
+                        }
                     }
                 }
             }
@@ -796,7 +799,7 @@ ParseResult<DrumKitEngine::SourceVelocityRangeInfo> DrumKitEngine::reloadSourceO
         resolvedArticulationId = selectedArticulation->codeRaw;
     }
 
-    result.value = this->getSourceVelocityRangeInfo(resolvedKitId, resolvedInstrumentId, resolvedArticulationId);
+    result.value = this->getLibraryArticulationInfo(resolvedKitId, resolvedInstrumentId, resolvedArticulationId);
     for (const auto& warning : loadResult.errors) result.addWarning(warning);
     return result;
 }
@@ -818,9 +821,9 @@ bool DrumKitEngine::publishSourceRecipeReload(const std::shared_ptr<SampledSound
     if (sound->buffer->getNumChannels() > 0 && sound->buffer->getNumSamples() > 0) {
         int sourceChannelStart = 0;
         int sourceChannelCount = sound->buffer->getNumChannels();
-        if (sound->sampleVariantSpec != nullptr) {
-            sourceChannelStart = sound->sampleVariantSpec->fileChannelStart;
-            if (sound->sampleVariantSpec->fileChannelCount > 0) sourceChannelCount = sound->sampleVariantSpec->fileChannelCount;
+        if (sound->sampleSpec != nullptr) {
+            sourceChannelStart = sound->sampleSpec->fileChannelStart;
+            if (sound->sampleSpec->fileChannelCount > 0) sourceChannelCount = sound->sampleSpec->fileChannelCount;
         }
         const int sourceChannelEnd = juce::jmin(sound->buffer->getNumChannels(), sourceChannelStart + sourceChannelCount);
         for (int sourceChannel = juce::jmax(0, sourceChannelStart); sourceChannel < sourceChannelEnd; ++sourceChannel) {
@@ -921,7 +924,7 @@ void DrumKitEngine::mapDefaultKit() {
             this->lastAppliedShadowReloadFingerprints.clear();
             this->lastAppliedInstrumentMapText.clear();
         }
-        this->lastInstrumentMapStatus = "Mapped default kit and generated starter instrument map";//FIXME: refactor, ui relates shit out
+        this->lastInstrumentMapStatus = "Mapped default library kit and generated starter instrument map";//FIXME: refactor, ui relates shit out
     } else {
         this->suggestedInstrumentMapText.clear();
         this->lastAppliedSlotFingerprints.clear();
@@ -932,24 +935,25 @@ void DrumKitEngine::mapDefaultKit() {
     }
 }
 
-juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& kit) const {
+juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& libraryKit) const {
     InstrumentMap result;
-    std::unordered_set<KitLib::InstrumentSpec*> usedInstruments;
+    std::unordered_set<KitLib::InstrumentSpec*> usedLibraryInstruments;
     std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType;
 
     for (const auto& slot : layout.instrumentSlots) {
-        auto* matched = DrumKitEngineMapHelpers::findMatchingKitInstrument(slot, kit, usedInstruments, nextIndexByType);
-        if (matched == nullptr) continue;
-        const auto preferredKitId = this->libraryManagerPtr != nullptr
-            ? this->libraryManagerPtr->getPreferredKitId(kit)
-            : DrumKitEngineIdentityMapHelpers::firstCandidateOrRaw(KitLib::DrumKitSpec::getIdentityCandidates(kit.meta), kit.meta.codeRaw);
-        result.entries.push_back(DrumKitEngineMapHelpers::buildInstrumentLevelEntry(slot, kit, *matched, preferredKitId));
+        auto* matchedLibraryInstrument = DrumKitEngineMapHelpers::findMatchingLibraryInstrument(slot, libraryKit, usedLibraryInstruments, nextIndexByType);
+        if (matchedLibraryInstrument == nullptr) continue;
+        const auto preferredLibraryKitId = this->libraryManagerPtr != nullptr
+            ? this->libraryManagerPtr->getPreferredKitId(libraryKit)
+            : DrumKitEngineIdentityMapHelpers::firstCandidateOrRaw(KitLib::DrumKitSpec::getIdentityCandidates(libraryKit.meta), libraryKit.meta.codeRaw);
+        auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *matchedLibraryInstrument, preferredLibraryKitId);
+        result.layers.insert(result.layers.end(), std::make_move_iterator(mapLayers.begin()), std::make_move_iterator(mapLayers.end()));
     }
 
     return serializeInstrumentMap(result);
 }
 
-ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(const juce::String& currentMapText, const juce::String& slotId, const juce::String& kitId, const juce::String& instrumentId) const {
+ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(const juce::String& currentMapText, const juce::String& slotId, const juce::String& libraryKitId, const juce::String& libraryInstrumentId) const {
     ParseResult<juce::String> result;
     if (this->libraryManagerPtr == nullptr) return result.returnWithError("Sample library is not loaded");
     if (this->activeKitLayoutPtr == nullptr) return result.returnWithError("Kit layout is not loaded");
@@ -957,12 +961,12 @@ ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(co
     const auto slotIterator = std::find_if(this->activeKitLayoutPtr->instrumentSlots.begin(), this->activeKitLayoutPtr->instrumentSlots.end(), [&slotId](const auto& slot) {
         return slot.id.compareIgnoreCase(slotId) == 0;
     });
-    if (slotIterator == this->activeKitLayoutPtr->instrumentSlots.end()) return result.returnWithError("Destination slot was not found: " + slotId);
+    if (slotIterator == this->activeKitLayoutPtr->instrumentSlots.end()) return result.returnWithError("Instrument slot was not found: " + slotId);
 
-    auto* kit = this->libraryManagerPtr->findKitById(kitId);
-    if (kit == nullptr) return result.returnWithError("Source kit was not found: " + kitId);
-    auto* instrument = kit->findInstrumentById(instrumentId);
-    if (instrument == nullptr) return result.returnWithError("Source instrument was not found: " + instrumentId);
+    auto* libraryKit = this->libraryManagerPtr->findKitById(libraryKitId);
+    if (libraryKit == nullptr) return result.returnWithError("Library kit was not found: " + libraryKitId);
+    auto* libraryInstrument = libraryKit->findInstrumentById(libraryInstrumentId);
+    if (libraryInstrument == nullptr) return result.returnWithError("Library instrument was not found: " + libraryInstrumentId);
 
     InstrumentMap map;
     if (currentMapText.trim().isNotEmpty()) {
@@ -971,9 +975,10 @@ ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(co
         map = std::move(parsedMap.value);
     }
 
-    const auto preferredKitId = this->libraryManagerPtr->getPreferredKitId(*kit);
-    auto replacement = DrumKitEngineMapHelpers::buildInstrumentLevelEntry(*slotIterator, *kit, *instrument, preferredKitId);
-    DrumKitEngineMapHelpers::replaceSlotEntries(map, std::move(replacement));
+    const auto preferredLibraryKitId = this->libraryManagerPtr->getPreferredKitId(*libraryKit);
+    auto replacementMapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(*slotIterator, *libraryKit, *libraryInstrument, preferredLibraryKitId);
+    if (replacementMapLayers.empty()) return result.returnWithError("Library instrument has no articulations: " + libraryInstrumentId);
+    DrumKitEngineMapHelpers::replaceSlotMapLayers(map, slotIterator->id, std::move(replacementMapLayers));
     result.value = DrumKitEngine::serializeInstrumentMap(map);
     return result;
 }
@@ -982,77 +987,60 @@ ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(co
 juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrumentMap) {
     juce::StringArray lines;
 
-    auto joinNames = [](const std::vector<juce::String>& names) {
-        juce::StringArray values;
-        for (const auto& name : names)
-            if (name.trim().isNotEmpty()) values.add(name.trim());
-        return values.joinIntoString(",");
-    };
+    std::vector<const InstrumentMapLayer*> sortedMapLayers;
+    sortedMapLayers.reserve(instrumentMap.layers.size());
+    for (const auto& mapLayer : instrumentMap.layers) sortedMapLayers.push_back(&mapLayer);
 
-    std::vector<const InstrumentMapEntry*> sortedEntries;
-    sortedEntries.reserve(instrumentMap.entries.size());
-    for (const auto& entry : instrumentMap.entries)
-        sortedEntries.push_back(&entry);
-
-    std::stable_sort(sortedEntries.begin(), sortedEntries.end(), [](const auto* leftEntry, const auto* rightEntry) {
-        return DrumKitEngineIdentityMapHelpers::makeEntrySortKey(*leftEntry) < DrumKitEngineIdentityMapHelpers::makeEntrySortKey(*rightEntry);
+    std::stable_sort(sortedMapLayers.begin(), sortedMapLayers.end(), [](const auto* leftMapLayer, const auto* rightMapLayer) {
+        return DrumKitEngineIdentityMapHelpers::makeMapLayerSortKey(*leftMapLayer) < DrumKitEngineIdentityMapHelpers::makeMapLayerSortKey(*rightMapLayer);
     });
 
-    for (const auto* entryPtr : sortedEntries) {
-        const auto& entry = *entryPtr;
-        if (entry.slotId.trim().isEmpty() || entry.kitRef.trim().isEmpty()) continue;
+    for (const auto* mapLayerPtr : sortedMapLayers) {
+        const auto& mapLayer = *mapLayerPtr;
+        if (mapLayer.slotId.trim().isEmpty() || mapLayer.kitRef.trim().isEmpty() || mapLayer.instCode.trim().isEmpty()) continue;
+        if (mapLayer.articulationFilter.size() != 1 || mapLayer.articulationFilter.front().trim().isEmpty() || mapLayer.slotArticulationFilter.size() > 1) continue;
 
-        juce::String slotRef = entry.slotId.trim();
-        const auto slotArts = joinNames(entry.slotArticulationFilter);
-        if (slotArts.isNotEmpty())
-            slotRef += "/" + slotArts;
+        juce::String slotRef = mapLayer.slotId.trim();
+        if (!mapLayer.slotArticulationFilter.empty() && mapLayer.slotArticulationFilter.front().trim().isNotEmpty()) slotRef += "/" + mapLayer.slotArticulationFilter.front().trim();
 
-        juce::String targetRef = entry.kitRef.trim();
-        if (entry.instCode.trim().isNotEmpty())
-            targetRef += "/" + entry.instCode.trim();
-        const auto sourceArts = joinNames(entry.articulationFilter);
-        if (sourceArts.isNotEmpty())
-            targetRef += "/" + sourceArts;
+        const auto libraryRef = mapLayer.kitRef.trim() + "/" + mapLayer.instCode.trim() + "/" + mapLayer.articulationFilter.front().trim();
 
         juce::StringArray params;
-        if (entry.tuningCents.has_value()) params.add("tuning=" + juce::String(*entry.tuningCents));
-        if (entry.attackTimeMs.has_value()) params.add("attack=" + juce::String(*entry.attackTimeMs));
-        if (entry.decayTimeMs.has_value()) params.add("decay=" + juce::String(*entry.decayTimeMs));
-        if (entry.volumeDb.has_value()) params.add("vol=" + juce::String(*entry.volumeDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
-        if (entry.pan.has_value()) params.add("pan=" + juce::String(*entry.pan));
-        if (entry.velocityResponse.has_value()) params.add("velocityResponse=" + *entry.velocityResponse);
-        if (entry.flipLR || entry.flipLRExplicit) params.add("flipLR=" + juce::String(entry.flipLR ? "1" : "0"));
-        if (entry.flipPhase) params.add("flipPhase=1");
-        if (!entry.micBleedLevels.empty()) {
+        if (mapLayer.tuningCents.has_value()) params.add("tuning=" + juce::String(*mapLayer.tuningCents));
+        if (mapLayer.attackTimeMs.has_value()) params.add("attack=" + juce::String(*mapLayer.attackTimeMs));
+        if (mapLayer.decayTimeMs.has_value()) params.add("decay=" + juce::String(*mapLayer.decayTimeMs));
+        if (mapLayer.volumeDb.has_value()) params.add("vol=" + juce::String(*mapLayer.volumeDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
+        if (mapLayer.pan.has_value()) params.add("pan=" + juce::String(*mapLayer.pan));
+        if (mapLayer.velocityResponse.has_value()) params.add("velocityResponse=" + *mapLayer.velocityResponse);
+        if (mapLayer.flipLR || mapLayer.flipLRExplicit) params.add("flipLR=" + juce::String(mapLayer.flipLR ? "1" : "0"));
+        if (mapLayer.flipPhase) params.add("flipPhase=1");
+        if (!mapLayer.micBleedLevels.empty()) {
             std::vector<juce::String> keys;
-            keys.reserve(entry.micBleedLevels.size());
-            for (const auto& [key, value] : entry.micBleedLevels) {
+            keys.reserve(mapLayer.micBleedLevels.size());
+            for (const auto& [key, value] : mapLayer.micBleedLevels) {
                 juce::ignoreUnused(value);
                 keys.push_back(key);
             }
             std::sort(keys.begin(), keys.end());
             juce::StringArray bleedValues;
-            for (const auto& key : keys)
-                bleedValues.add(key + ":" + juce::String(entry.micBleedLevels.at(key), 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
+            for (const auto& key : keys) bleedValues.add(key + ":" + juce::String(mapLayer.micBleedLevels.at(key), 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
             params.add("bleed=" + bleedValues.joinIntoString(","));
         }
-        if (!entry.micRouteOverrides.empty()) {
+        if (!mapLayer.micRouteOverrides.empty()) {
             std::vector<juce::String> keys;
-            keys.reserve(entry.micRouteOverrides.size());
-            for (const auto& [key, value] : entry.micRouteOverrides) {
+            keys.reserve(mapLayer.micRouteOverrides.size());
+            for (const auto& [key, value] : mapLayer.micRouteOverrides) {
                 juce::ignoreUnused(value);
                 keys.push_back(key);
             }
             std::sort(keys.begin(), keys.end());
             juce::StringArray routeValues;
-            for (const auto& key : keys)
-                routeValues.add(key + ":" + entry.micRouteOverrides.at(key));
+            for (const auto& key : keys) routeValues.add(key + ":" + mapLayer.micRouteOverrides.at(key));
             params.add("micRoute=" + routeValues.joinIntoString(","));
         }
 
-        auto line = slotRef + ":" + targetRef;
-        if (!params.isEmpty())
-            line += ":" + params.joinIntoString(";");
+        auto line = slotRef + ":" + libraryRef;
+        if (!params.isEmpty()) line += ":" + params.joinIntoString(";");
         lines.add(line);
     }
 
@@ -1060,14 +1048,14 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
 }
 
 void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, move to ui related helper, or generate on demand in UI instead of storing in engine
-    this->suggestedInstrumentMapText = this->normalizeInstrumentMapText(DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentSynthById));
+    this->suggestedInstrumentMapText = this->normalizeInstrumentMapText(DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentPlayerById));
 }
 
 juce::String DrumKitEngine::normalizeInstrumentMapText(const juce::String& text) const {
     auto parsed = DrumKitEngine::parseInstrumentMapText(text);
     if (!parsed.ok()) return text;
     if (this->libraryManagerPtr != nullptr)
-        DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapEntries(parsed.value, *this->libraryManagerPtr);
+        DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapLayers(parsed.value, *this->libraryManagerPtr);
     return DrumKitEngine::serializeInstrumentMap(parsed.value);
 }
 
@@ -1082,15 +1070,15 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
     std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType;
     
 
-    for (const auto& layoutInstrument : this->activeKitLayoutPtr->instrumentSlots) { //FIXME: rewrite loop thru instrumentSynthById
-        auto sit = this->instrumentSynthById.find(layoutInstrument.id);
-        if (sit == this->instrumentSynthById.end()) {
+    for (const auto& layoutInstrument : this->activeKitLayoutPtr->instrumentSlots) { //FIXME: rewrite loop thru instrumentPlayerById
+        auto sit = this->instrumentPlayerById.find(layoutInstrument.id);
+        if (sit == this->instrumentPlayerById.end()) {
             LOG(Warning, "layout instrument slot not present: " + layoutInstrument.id);
             continue;
         }
-        InstrumentSynth* slot = sit->second;
+        InstrumentPlayer* slot = sit->second;
 
-        auto* matched = DrumKitEngineMapHelpers::findMatchingKitInstrument(layoutInstrument, kit, usedInstSpecSet, nextIndexByType);
+        auto* matched = DrumKitEngineMapHelpers::findMatchingLibraryInstrument(layoutInstrument, kit, usedInstSpecSet, nextIndexByType);
 
         if (matched == nullptr) {
             LOG(Warning, "no matching instrument found in kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
@@ -1104,9 +1092,9 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
     }
 
     if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
-        for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
-            instrumentSynthPtr->setCurrentPlaybackSampleRate(this->lastSampleRate);
-            instrumentSynthPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
+        for (const auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+            instrumentPlayerPtr->setCurrentPlaybackSampleRate(this->lastSampleRate);
+            instrumentPlayerPtr->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
         }
     }
 
@@ -1480,35 +1468,35 @@ bool DrumKitEngine::applyKitLayout() {
         return false;
     }
 
-    struct ExistingSynthState {
-        std::vector<InstrumentSynth*> rawSynths;
+    struct ExistingPlayerState {
+        std::vector<InstrumentPlayer*> rawPlayers;
         std::unordered_map<juce::String, int> primaryIndexById;
         std::unordered_map<juce::String, std::vector<int>> shadowIndicesBySlotId;
     } existingState;
 
     {
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        existingState.rawSynths.reserve(this->instrumentSynthPtrs.size());
-        for (int idx = 0; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
-            auto* synth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
-            existingState.rawSynths.push_back(synth);
-            if (idx < this->primaryInstrumentSynthCount)
-                existingState.primaryIndexById[synth->getId()] = idx;
+        existingState.rawPlayers.reserve(this->instrumentPlayerPtrs.size());
+        for (int idx = 0; idx < static_cast<int>(this->instrumentPlayerPtrs.size()); ++idx) {
+            auto* instrumentPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
+            existingState.rawPlayers.push_back(instrumentPlayer);
+            if (idx < this->primaryInstrumentPlayerCount)
+                existingState.primaryIndexById[instrumentPlayer->getId()] = idx;
             else
-                existingState.shadowIndicesBySlotId[synth->getId()].push_back(idx);
+                existingState.shadowIndicesBySlotId[instrumentPlayer->getId()].push_back(idx);
         }
     }
 
     struct PreparedShadow {
         int oldIndex = -1;
-        std::unique_ptr<InstrumentSynth> replacement;
+        std::unique_ptr<InstrumentPlayer> replacement;
     };
 
     struct PreparedSlot {
         KitLayout::InstrumentSlot layoutSlot;
         juce::String slotId;
         int oldPrimaryIndex = -1;
-        std::unique_ptr<InstrumentSynth> primaryReplacement;
+        std::unique_ptr<InstrumentPlayer> primaryReplacement;
         std::vector<PreparedShadow> shadows;
     };
 
@@ -1523,9 +1511,9 @@ bool DrumKitEngine::applyKitLayout() {
         auto primaryIt = existingState.primaryIndexById.find(layoutSlot.id);
         if (primaryIt != existingState.primaryIndexById.end()) {
             prepared.oldPrimaryIndex = primaryIt->second;
-            auto* oldPrimary = existingState.rawSynths[static_cast<size_t>(prepared.oldPrimaryIndex)];
+            auto* oldPrimary = existingState.rawPlayers[static_cast<size_t>(prepared.oldPrimaryIndex)];
             if (!DrumKitEngineMapHelpers::canReuseSlotWithoutReload(oldPrimary->getInstrumentSlot(), layoutSlot))
-                prepared.primaryReplacement = DrumKitEngineMapHelpers::createReplacementSynth(this, layoutSlot, *oldPrimary, this->lastSampleRate, this->lastSamplesPerBlock);
+                prepared.primaryReplacement = DrumKitEngineMapHelpers::createReplacementPlayer(this, layoutSlot, *oldPrimary, this->lastSampleRate, this->lastSamplesPerBlock);
 
             auto shadowIt = existingState.shadowIndicesBySlotId.find(layoutSlot.id);
             if (shadowIt != existingState.shadowIndicesBySlotId.end()) {
@@ -1534,55 +1522,55 @@ bool DrumKitEngine::applyKitLayout() {
                     PreparedShadow shadow;
                     shadow.oldIndex = shadowIndex;
 
-                    auto* oldShadow = existingState.rawSynths[static_cast<size_t>(shadowIndex)];
+                    auto* oldShadow = existingState.rawPlayers[static_cast<size_t>(shadowIndex)];
                     if (!DrumKitEngineMapHelpers::canReuseSlotWithoutReload(oldShadow->getInstrumentSlot(), layoutSlot))
-                        shadow.replacement = DrumKitEngineMapHelpers::createReplacementSynth(this, layoutSlot, *oldShadow, this->lastSampleRate, this->lastSamplesPerBlock);
+                        shadow.replacement = DrumKitEngineMapHelpers::createReplacementPlayer(this, layoutSlot, *oldShadow, this->lastSampleRate, this->lastSamplesPerBlock);
 
                     prepared.shadows.push_back(std::move(shadow));
                 }
             }
         } else {
-            prepared.primaryReplacement = std::make_unique<InstrumentSynth>(this, layoutSlot);
-            DrumKitEngineMapHelpers::prepareSynthIfNeeded(*prepared.primaryReplacement, this->lastSampleRate, this->lastSamplesPerBlock);
+            prepared.primaryReplacement = std::make_unique<InstrumentPlayer>(this, layoutSlot);
+            DrumKitEngineMapHelpers::preparePlayerIfNeeded(*prepared.primaryReplacement, this->lastSampleRate, this->lastSamplesPerBlock);
         }
 
         preparedSlots.push_back(std::move(prepared));
     }
 
-    std::vector<std::unique_ptr<InstrumentSynth>> oldSynths;
+    std::vector<std::unique_ptr<InstrumentPlayer>> oldPlayers;
     {
         const juce::ScopedLock graphLock(this->engineGraphLock);
-        auto previousSynths = std::move(this->instrumentSynthPtrs);
+        auto previousPlayers = std::move(this->instrumentPlayerPtrs);
 
-        this->instrumentSynthPtrs.clear();
-        this->instrumentSynthById.clear();
-        this->primaryInstrumentSynthCount = 0;
+        this->instrumentPlayerPtrs.clear();
+        this->instrumentPlayerById.clear();
+        this->primaryInstrumentPlayerCount = 0;
 
         for (auto& prepared : preparedSlots) {
             if (prepared.oldPrimaryIndex >= 0 && !prepared.primaryReplacement) {
-                this->instrumentSynthPtrs.push_back(std::move(previousSynths[static_cast<size_t>(prepared.oldPrimaryIndex)]));
+                this->instrumentPlayerPtrs.push_back(std::move(previousPlayers[static_cast<size_t>(prepared.oldPrimaryIndex)]));
             } else {
-                this->instrumentSynthPtrs.push_back(std::move(prepared.primaryReplacement));
+                this->instrumentPlayerPtrs.push_back(std::move(prepared.primaryReplacement));
             }
 
-            auto* inserted = this->instrumentSynthPtrs.back().get();
-            this->instrumentSynthById[prepared.slotId] = inserted;
+            auto* inserted = this->instrumentPlayerPtrs.back().get();
+            this->instrumentPlayerById[prepared.slotId] = inserted;
         }
 
-        this->primaryInstrumentSynthCount = static_cast<int>(this->instrumentSynthPtrs.size());
-        this->clearShadowSynths();
+        this->primaryInstrumentPlayerCount = static_cast<int>(this->instrumentPlayerPtrs.size());
+        this->clearShadowPlayers();
 
         for (auto& prepared : preparedSlots) {
             for (auto& shadow : prepared.shadows) {
                 if (shadow.oldIndex >= 0 && !shadow.replacement) {
-                    this->instrumentSynthPtrs.push_back(std::move(previousSynths[static_cast<size_t>(shadow.oldIndex)]));
+                    this->instrumentPlayerPtrs.push_back(std::move(previousPlayers[static_cast<size_t>(shadow.oldIndex)]));
                 } else if (shadow.replacement) {
-                    this->instrumentSynthPtrs.push_back(std::move(shadow.replacement));
+                    this->instrumentPlayerPtrs.push_back(std::move(shadow.replacement));
                 }
 
-                auto* shadowSynth = this->instrumentSynthPtrs.back().get();
+                auto* shadowPlayer = this->instrumentPlayerPtrs.back().get();
                 
-                this->addShadowSynthNoteRoutes(*shadowSynth, prepared.layoutSlot);
+                this->addShadowPlayerNoteRoutes(*shadowPlayer, prepared.layoutSlot);
             }
         }
 
@@ -1608,23 +1596,23 @@ bool DrumKitEngine::applyKitLayout() {
         if (this->activeMicLayoutPtr != nullptr)
             this->applyMicLayoutUnlocked();
 
-        for (auto& synth : previousSynths) {
-            if (synth)
-                oldSynths.push_back(std::move(synth));
+        for (auto& instrumentPlayer : previousPlayers) {
+            if (instrumentPlayer)
+                oldPlayers.push_back(std::move(instrumentPlayer));
         }
     }
 
     LOG(Info, "Applied kit layout: " + this->activeKitLayoutPtr->id
-        + " (primary slots: " + juce::String(this->primaryInstrumentSynthCount)
-        + ", recycled synths: " + juce::String(static_cast<int>(existingState.rawSynths.size()) - static_cast<int>(oldSynths.size()))
-        + ", retired synths: " + juce::String(static_cast<int>(oldSynths.size())) + ")");
+        + " (primary slots: " + juce::String(this->primaryInstrumentPlayerCount)
+        + ", recycled instrument players: " + juce::String(static_cast<int>(existingState.rawPlayers.size()) - static_cast<int>(oldPlayers.size()))
+        + ", retired instrument players: " + juce::String(static_cast<int>(oldPlayers.size())) + ")");
 
     this->buildNoteNameCache();
     return true;
 }
 
 void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
-    this->instrumentSynthsByNote.clear();
+    this->instrumentPlayersByNote.clear();
     this->trackedCCMask.fill(false);
     this->latestPAValues.fill(0);
     this->trackedPAMask.fill(false);
@@ -1633,14 +1621,14 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
         return;
 
     for (const auto& instrumentSlot : this->activeKitLayoutPtr->instrumentSlots) {
-        auto it = this->instrumentSynthById.find(instrumentSlot.id);
-        if (it == this->instrumentSynthById.end())
+        auto it = this->instrumentPlayerById.find(instrumentSlot.id);
+        if (it == this->instrumentPlayerById.end())
             continue;
 
-        auto* synth = it->second;
+        auto* instrumentPlayer = it->second;
 
-        // Rebuild the synth's internal note/CC routing from current layout data.
-        synth->rebuildRoutingFromLayout(instrumentSlot);
+        // Rebuild the instrument player's internal note/CC routing from current layout data.
+        instrumentPlayer->rebuildRoutingFromLayout(instrumentSlot);
 
         for (const auto& cc : instrumentSlot.controllers) {
             if (cc.number >= 0 && cc.number < 128)
@@ -1648,20 +1636,20 @@ void DrumKitEngine::rebuildPrimaryInstrumentNoteRouting() {
         }
 
         for (const auto& art : instrumentSlot.articulations) {
-            const bool routesArt = DrumKitEngine::synthRoutesLayoutArticulation(*synth, art);
+            const bool routesArt = DrumKitEngine::playerRoutesArticulationSlot(*instrumentPlayer, art);
             for (const int note : art.notes) {
                 if (note < 0 || note >= 128)
                     continue;
                 this->trackedPAMask[static_cast<size_t>(note)] = true;
-                if (routesArt) this->instrumentSynthsByNote[note].push_back(synth);
+                if (routesArt) this->instrumentPlayersByNote[note].push_back(instrumentPlayer);
             }
         }
     }
 }
 
-void DrumKitEngine::clearShadowSynths() {
-    if (static_cast<int>(this->instrumentSynthPtrs.size()) > this->primaryInstrumentSynthCount)
-        this->instrumentSynthPtrs.erase(this->instrumentSynthPtrs.begin() + this->primaryInstrumentSynthCount, this->instrumentSynthPtrs.end());
+void DrumKitEngine::clearShadowPlayers() {
+    if (static_cast<int>(this->instrumentPlayerPtrs.size()) > this->primaryInstrumentPlayerCount)
+        this->instrumentPlayerPtrs.erase(this->instrumentPlayerPtrs.begin() + this->primaryInstrumentPlayerCount, this->instrumentPlayerPtrs.end());
 
     this->lastAppliedShadowFingerprints.clear();
     this->lastAppliedShadowReloadFingerprints.clear();
@@ -1673,32 +1661,32 @@ void DrumKitEngine::rebuildMidiNoteRoutingFromLayout() {
     this->rebuildPrimaryInstrumentNoteRouting();
 
     if (this->activeKitLayoutPtr != nullptr) {
-        for (int idx = this->primaryInstrumentSynthCount; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
-            auto* shadowSynth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
-            if (shadowSynth == nullptr) continue;
+        for (int idx = this->primaryInstrumentPlayerCount; idx < static_cast<int>(this->instrumentPlayerPtrs.size()); ++idx) {
+            auto* shadowPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
+            if (shadowPlayer == nullptr) continue;
 
             const KitLayout::InstrumentSlot* layoutSlot = nullptr;
             for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
-                if (slot.id == shadowSynth->getId()) {
+                if (slot.id == shadowPlayer->getId()) {
                     layoutSlot = &slot;
                     break;
                 }
             }
             if (layoutSlot == nullptr) continue;
 
-            this->addShadowSynthNoteRoutes(*shadowSynth, *layoutSlot);
+            this->addShadowPlayerNoteRoutes(*shadowPlayer, *layoutSlot);
         }
     }
 
     this->buildNoteNameCache();
 }
 
-void DrumKitEngine::addShadowSynthNoteRoutes(InstrumentSynth& shadowSynth, const KitLayout::InstrumentSlot& layoutSlot) {
-    shadowSynth.rebuildRoutingFromLayout(layoutSlot);
+void DrumKitEngine::addShadowPlayerNoteRoutes(InstrumentPlayer& shadowPlayer, const KitLayout::InstrumentSlot& layoutSlot) {
+    shadowPlayer.rebuildRoutingFromLayout(layoutSlot);
     for (const auto& art : layoutSlot.articulations) {
-        if (!DrumKitEngine::synthRoutesLayoutArticulation(shadowSynth, art)) continue;
+        if (!DrumKitEngine::playerRoutesArticulationSlot(shadowPlayer, art)) continue;
         for (const int note : art.notes) {
-            if (note >= 0 && note < 128) this->instrumentSynthsByNote[note].push_back(&shadowSynth);
+            if (note >= 0 && note < 128) this->instrumentPlayersByNote[note].push_back(&shadowPlayer);
         }
     }
 }
@@ -1742,19 +1730,19 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
         return false;
     }
 
-    if (this->instrumentSynthPtrs.size() == 0) {
+    if (this->instrumentPlayerPtrs.size() == 0) {
         LOG(Warning, "unable to apply mic layout: no instrument slots was defined in kit layout");
         return false;
     }
-    // mic layout is for a mapping of each SampleVariantSpec mic (MicSpec) of InstrumentSynth to coresponding output channel of the plugin
+    // mic layout is for a mapping of each SampleSpec mic (MicSpec) of InstrumentPlayer to coresponding output channel of the plugin
     // the map (sequence and other params defined in MicSpec) of channels is defined in micLayout.
     //  MicSpec to determine which of plugin and routing 
     
 
 
     // For each instrument slot, calculate how many mic channels it should have
-    // for (size_t idx = 0; idx < this->instrumentSynthPtrs.size(); ++idx) {
-    //     InstrumentSynth* slotPtr = this->instrumentSynthPtrs[idx].get();
+    // for (size_t idx = 0; idx < this->instrumentPlayerPtrs.size(); ++idx) {
+    //     InstrumentPlayer* slotPtr = this->instrumentPlayerPtrs[idx].get();
     //     int totalChannels = 0;
     //     const auto slotId = slotPtr->getId();
     //     for (const MicLayout::Mic& mic : this->activeMicLayoutPtr->mics) {
@@ -1777,8 +1765,8 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
     // }
 
     // Build an immutable routing-plan snapshot for this kit/mic layout. Stage 3 direct
-    // allocations are populated by the pure builder when source direct mic requests are
-    // provided; this layout-level snapshot is still the shared source for normal mic order.
+    // allocations are populated by the pure builder when library direct mic requests are
+    // provided; this layout-level snapshot still defines normal mic order.
     std::vector<MicRoutingPlan::SlotRequest> planSlotRequests;
     if (this->activeKitLayoutPtr != nullptr) {
         planSlotRequests.reserve(this->activeKitLayoutPtr->instrumentSlots.size());
@@ -1798,8 +1786,8 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
     // All output buses are mono; stereo mics occupy 2 consecutive mono channels
     const int expectedHostChannels = TOTAL_HOST_OUTPUT_CHANNELS;
 
-    // Initialize empty mapping for each synth
-    for (const auto& instPtr : this->instrumentSynthPtrs) {
+    // Initialize an empty mapping for each instrument player.
+    for (const auto& instPtr : this->instrumentPlayerPtrs) {
         instPtr->setMicOutputMapping({});
     }
 
@@ -1813,10 +1801,10 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
             break;
         }
 
-        // Determine target instrument synths //FIXME: move to loadInstrument?
-        std::vector<InstrumentSynth*> targets;
+        // Determine target instrument players. //FIXME: move to loadInstrument?
+        std::vector<InstrumentPlayer*> targets;
         const auto selector = parseMicInstrumentSelector(mic.instrument, this->globalConfig.instrumentCatalog);
-        for (const auto& isp : this->instrumentSynthPtrs) {
+        for (const auto& isp : this->instrumentPlayerPtrs) {
             if (matchMicInstrumentSelector(selector, isp->getId(), isp->getType(), this->globalConfig.instrumentCatalog) != MicSelectorPriority::None)
                 targets.push_back(isp.get());
         }
@@ -1827,7 +1815,7 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
             continue;
         } else {
             juce::StringArray targetSlotIds;
-            for (const auto* targetSynth : targets) targetSlotIds.addIfNotAlreadyThere(targetSynth->getId());
+            for (const auto* targetPlayer : targets) targetSlotIds.addIfNotAlreadyThere(targetPlayer->getId());
             LOG(Info, "Mic output available: name='" + mic.name + "' route=" + mic.id + " channels=" + juce::String(channelCount) + " slots=[" + targetSlotIds.joinIntoString(",") + "]");
         }
 
@@ -1846,17 +1834,17 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
         outCursor += channelCount; // advance by actual mic channel count
     }
 
-    // Apply mapped mic channel counts to synths (used for informational purposes)
-    for (const auto& instPtr : this->instrumentSynthPtrs) {
+    // Apply mapped mic channel counts to instrument players (used for informational purposes).
+    for (const auto& instPtr : this->instrumentPlayerPtrs) {
         const auto& map = instPtr->getMicOutputMapping();
         int totalAssigned = static_cast<int>(map.size());
         if (totalAssigned <= 0) totalAssigned = 2;
         instPtr->setMicChannelCount(totalAssigned);
     }
 
-    for (const auto& instPtr : this->instrumentSynthPtrs) {
-        auto primaryIt = this->instrumentSynthById.find(instPtr->getId());
-        if (primaryIt == this->instrumentSynthById.end())
+    for (const auto& instPtr : this->instrumentPlayerPtrs) {
+        auto primaryIt = this->instrumentPlayerById.find(instPtr->getId());
+        if (primaryIt == this->instrumentPlayerById.end())
             continue;
 
         auto* primary = primaryIt->second;
@@ -1868,7 +1856,7 @@ bool DrumKitEngine::applyMicLayoutUnlocked() {
     }
 
     // Detailed mapping log per instrument
-    for (const auto& instPtr : this->instrumentSynthPtrs) {
+    for (const auto& instPtr : this->instrumentPlayerPtrs) {
         juce::String mapStr = "";
         const auto& map = instPtr->getMicOutputMapping();
         for (size_t i = 0; i < map.size(); ++i) {
@@ -1888,9 +1876,9 @@ void DrumKitEngine::prepareToPlay(double sampleRate, int samplesPerBlock) {
     this->lastSampleRate = sampleRate;
     this->lastSamplesPerBlock = samplesPerBlock;
     this->crosstalkFilter.prepare(sampleRate, juce::jmax(1024, samplesPerBlock * 8));
-    for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
-        instrumentSynthPtr->setCurrentPlaybackSampleRate(sampleRate);
-        instrumentSynthPtr->prepareToPlay(sampleRate, samplesPerBlock);
+    for (const auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+        instrumentPlayerPtr->setCurrentPlaybackSampleRate(sampleRate);
+        instrumentPlayerPtr->prepareToPlay(sampleRate, samplesPerBlock);
     }
 }
 
@@ -1910,8 +1898,8 @@ void DrumKitEngine::processBlock(juce::AudioBuffer<float>& outputBuffer, juce::M
     // Each instrument's SampledSound now stores *global* host channel indices in
     // micBufferChannelStart, so voices can render directly into outputBuffer.
     // The per-instrument micBuffer intermediate and local-to-global copy are no longer needed.
-    for (const auto& instrumentSynthPtr : this->instrumentSynthPtrs) {
-        instrumentSynthPtr->renderNextBlock(outputBuffer, midiMessages, outputBufferStartSample, outputBufferNumSamples);
+    for (const auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+        instrumentPlayerPtr->renderNextBlock(outputBuffer, midiMessages, outputBufferStartSample, outputBufferNumSamples);
     }
 
     // Mix one-shot preview playback into the first two output channels
@@ -2011,11 +1999,11 @@ void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::Stri
     if (midiNote < 0)
         return;
 
-    // Trigger on all synths routed to this note (primary + shadow layers)
-    auto noteIt = this->instrumentSynthsByNote.find(midiNote);
-    if (noteIt != this->instrumentSynthsByNote.end()) {
-        for (auto* synth : noteIt->second)
-            synth->playNote(1, midiNote, velocity);
+    // Trigger all instrument players routed to this note (primary + shadow layers).
+    auto noteIt = this->instrumentPlayersByNote.find(midiNote);
+    if (noteIt != this->instrumentPlayersByNote.end()) {
+        for (auto* instrumentPlayer : noteIt->second)
+            instrumentPlayer->playNote(1, midiNote, velocity);
     }
 }
 
@@ -2041,10 +2029,10 @@ void DrumKitEngine::playLayerPreview(const juce::String& slotId, const juce::Str
 
     const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
     int currentLayerIndex = 0;
-    for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr == nullptr || synthPtr->getId() != slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes)) continue;
+    for (auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+        if (instrumentPlayerPtr == nullptr || instrumentPlayerPtr->getId() != slotId || !DrumKitEngine::playerMatchesTargetRoutes(*instrumentPlayerPtr, targetRoutes)) continue;
         if (currentLayerIndex == layerIndex) {
-            synthPtr->playNote(1, midiNote, velocity);
+            instrumentPlayerPtr->playNote(1, midiNote, velocity);
             return;
         }
         ++currentLayerIndex;
@@ -2055,7 +2043,7 @@ void DrumKitEngine::playPreviewArticulation(const juce::String& slotId, const ju
     auto* layout = this->activeKitLayoutPtr.get();
     if (layout == nullptr) return;
 
-    const KitLayout::InstrumentSlot::ArticulationTrigger previewArticulation(articulationCode);
+    const KitLayout::InstrumentSlot::ArticulationSlot previewArticulation(articulationCode);
     const auto openExpressionId = StringsDictSingleton::getId("open");
     int midiNote = -1;
     for (const auto& slot : layout->instrumentSlots) {
@@ -2072,26 +2060,26 @@ void DrumKitEngine::playPreviewArticulation(const juce::String& slotId, const ju
     }
     if (midiNote < 0) return;
 
-    auto synthsIt = this->instrumentSynthsByNote.find(midiNote);
-    if (synthsIt == this->instrumentSynthsByNote.end()) return;
-    for (auto* synth : synthsIt->second)
-        if (synth != nullptr && synth->getId() == slotId) synth->playPreviewArticulation(1, midiNote, articulationCode, velocity);
+    auto playersIterator = this->instrumentPlayersByNote.find(midiNote);
+    if (playersIterator == this->instrumentPlayersByNote.end()) return;
+    for (auto* instrumentPlayer : playersIterator->second)
+        if (instrumentPlayer != nullptr && instrumentPlayer->getId() == slotId) instrumentPlayer->playPreviewArticulation(1, midiNote, articulationCode, velocity);
 }
 
-bool DrumKitEngine::playSourceLogicalHitPreview(const juce::String& slotId, const juce::String& destinationArticulation, const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, int namedVelocity, const juce::String& roundRobin, juce::uint8 playbackVelocity) {
+bool DrumKitEngine::playLibraryLogicalHitPreview(const juce::String& slotId, const juce::String& articulationSlot, const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, int namedVelocity, const juce::String& roundRobin, juce::uint8 playbackVelocity) {
     if (this->libraryManagerPtr == nullptr || this->activeKitLayoutPtr == nullptr) return false;
-    const juce::ScopedLock sourceLock(this->sourceModelLock);
+    const juce::ScopedLock libraryLock(this->libraryModelLock);
     const juce::ScopedLock graphLock(this->engineGraphLock);
     auto* kit = this->libraryManagerPtr->findKitById(kitId);
     auto* instrument = kit != nullptr ? kit->findInstrumentById(instrumentId) : nullptr;
-    auto* sourceArticulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
-    if (sourceArticulation == nullptr) return false;
+    auto* libraryArticulation = instrument != nullptr ? instrument->findArticulationById(articulationId) : nullptr;
+    if (libraryArticulation == nullptr) return false;
 
     int midiNote = -1;
     for (const auto& slot : this->activeKitLayoutPtr->instrumentSlots) {
         if (slot.id != slotId) continue;
         for (const auto& articulation : slot.articulations) {
-            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(destinationArticulation, articulation.codeRaw) || articulation.notes.empty()) continue;
+            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(articulationSlot, articulation.codeRaw) || articulation.notes.empty()) continue;
             midiNote = static_cast<int>(articulation.notes.front());
             break;
         }
@@ -2100,12 +2088,12 @@ bool DrumKitEngine::playSourceLogicalHitPreview(const juce::String& slotId, cons
     }
     if (midiNote < 0) return false;
 
-    const auto synthsIt = this->instrumentSynthsByNote.find(midiNote);
-    if (synthsIt == this->instrumentSynthsByNote.end()) return false;
-    const auto variantIdx = roundRobin == "-" || roundRobin.isEmpty() ? uint8_t { 0 } : KitLib::SampleVariantSpec::letterToIdx(roundRobin);
-    for (auto* synth : synthsIt->second) {
-        if (synth == nullptr || synth->getId() != slotId) continue;
-        if (synth->playSourceLogicalHitPreview(*sourceArticulation, namedVelocity, variantIdx, 1, midiNote, playbackVelocity)) return true;
+    const auto playersIterator = this->instrumentPlayersByNote.find(midiNote);
+    if (playersIterator == this->instrumentPlayersByNote.end()) return false;
+    const auto roundRobinId = KitLib::roundRobinIdFromText(roundRobin);
+    for (auto* instrumentPlayer : playersIterator->second) {
+        if (instrumentPlayer == nullptr || instrumentPlayer->getId() != slotId) continue;
+        if (instrumentPlayer->playLibraryLogicalHitPreview(*libraryArticulation, namedVelocity, roundRobinId, 1, midiNote, playbackVelocity)) return true;
     }
     return false;
 }
@@ -2144,7 +2132,7 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
                                                                                  juce::uint8 velocity,
                                                                                  const juce::String& relativePath,
                                                                                  const juce::String& micCode) {
-    const juce::ScopedLock sourceLock(this->sourceModelLock);
+    const juce::ScopedLock libraryLock(this->libraryModelLock);
     auto* libMgr = this->libraryManagerPtr.get();
     if (libMgr == nullptr)
         return std::nullopt;
@@ -2179,63 +2167,69 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     if (artSpec == nullptr && !inst->articulationSpecs.empty())
         artSpec = inst->articulationSpecs[0].get();
 
-    if (artSpec == nullptr || artSpec->velocityLayerSpecs.empty())
+    if (artSpec == nullptr || artSpec->velocityLevels.empty())
         return std::nullopt;
 
-    bool calibrated = !artSpec->velocityLayerSpecs.empty();
-    for (const auto& layer : artSpec->velocityLayerSpecs) {
-        if (!layer->fittedSourceDb.has_value() || !layer->calibrationTrimDb.has_value()) {
+    bool calibrated = !artSpec->velocityLevels.empty();
+    for (const auto& velocityLevel : artSpec->velocityLevels) {
+        if (!velocityLevel->fittedSourceDb.has_value() || !velocityLevel->calibrationTrimDb.has_value()) {
             calibrated = false;
             break;
         }
     }
 
-    KitLib::VelocityLayerSpec* bestLayer = nullptr;
-    KitLib::SampleVariantSpec* bestVariant = nullptr;
+    KitLib::VelocityLevelSpec* bestVelocityLevel = nullptr;
+    KitLib::SampleSpec* bestSample = nullptr;
     const auto normalizedRelativePath = relativePath.trim().replaceCharacter('\\', '/');
     const auto normalizedMicCode = micCode.trim();
     if (normalizedRelativePath.isNotEmpty()) {
-        for (auto& layer : artSpec->velocityLayerSpecs) {
-            if (layer == nullptr) continue;
-            for (auto& sampleVariant : layer->sampleVariantSpecs) {
-                if (sampleVariant == nullptr || !sampleVariant->isValid()) continue;
-                const auto candidateRelativePath = sampleVariant->sampleFile.getRelativePathFrom(kit->meta.rootDir).replaceCharacter('\\', '/');
-                if (!candidateRelativePath.equalsIgnoreCase(normalizedRelativePath)) continue;
-                if (normalizedMicCode.isNotEmpty() && !sampleVariant->micSpec.raw.equalsIgnoreCase(normalizedMicCode)) continue;
-                bestLayer = layer.get();
-                bestVariant = sampleVariant.get();
-                break;
+        for (auto& velocityLevel : artSpec->velocityLevels) {
+            if (velocityLevel == nullptr) continue;
+            for (auto& logicalHit : velocityLevel->logicalHits) {
+                if (logicalHit == nullptr) continue;
+                for (auto& sample : logicalHit->samples) {
+                    if (sample == nullptr || !sample->isValid()) continue;
+                    const auto candidateRelativePath = sample->sampleFile.getRelativePathFrom(kit->meta.rootDir).replaceCharacter('\\', '/');
+                    if (!candidateRelativePath.equalsIgnoreCase(normalizedRelativePath)) continue;
+                    if (normalizedMicCode.isNotEmpty() && !sample->micSpec.raw.equalsIgnoreCase(normalizedMicCode)) continue;
+                    bestVelocityLevel = velocityLevel.get();
+                    bestSample = sample.get();
+                    break;
+                }
+                if (bestSample != nullptr) break;
             }
-            if (bestVariant != nullptr) break;
+            if (bestSample != nullptr) break;
         }
     } else {
-        bestLayer = artSpec->velocityLayerSpecs.back().get();
-        for (auto& layer : artSpec->velocityLayerSpecs) {
-            if (velocity <= layer->selectionUpperVelocity) {
-                bestLayer = layer.get();
+        bestVelocityLevel = artSpec->velocityLevels.back().get();
+        for (auto& velocityLevel : artSpec->velocityLevels) {
+            if (velocity <= velocityLevel->selectionUpperVelocity) {
+                bestVelocityLevel = velocityLevel.get();
                 break;
             }
         }
 
-        if (bestLayer == nullptr || bestLayer->sampleVariantSpecs.empty()) return std::nullopt;
-
-        for (auto& sampleVariant : bestLayer->sampleVariantSpecs) {
-            if (sampleVariant == nullptr || !sampleVariant->isValid()) continue;
-            if (bestVariant == nullptr || DrumKitEnginePreviewHelpers::isBetterPreviewSampleVariant(*sampleVariant, *bestVariant)) bestVariant = sampleVariant.get();
+        if (bestVelocityLevel == nullptr) return std::nullopt;
+        for (auto& logicalHit : bestVelocityLevel->logicalHits) {
+            if (logicalHit == nullptr) continue;
+            for (auto& sample : logicalHit->samples) {
+                if (sample == nullptr || !sample->isValid()) continue;
+                if (bestSample == nullptr || DrumKitEnginePreviewHelpers::isBetterPreviewSample(*sample, *bestSample)) bestSample = sample.get();
+            }
         }
     }
 
-    if (bestLayer == nullptr || bestVariant == nullptr) return std::nullopt;
+    if (bestVelocityLevel == nullptr || bestSample == nullptr) return std::nullopt;
 
     PreviewTarget target;
-    target.sampleFile = bestVariant->sampleFile;
-    target.contentHash = bestVariant->metadataContentHash;
-    target.metadataFileSizeBytes = bestVariant->metadataFileSizeBytes;
-    target.micCode = bestVariant->micSpec.raw;
-    target.fileChannelStart = juce::jmax(0, bestVariant->fileChannelStart);
-    target.fileChannelCount = bestVariant->fileChannelCount > 0 ? bestVariant->fileChannelCount : bestVariant->micSpec.channels;
-    target.fixedGainDb = bestVariant->manualGainDb + (calibrated ? *bestLayer->calibrationTrimDb : 0.0f);
-    target.playbackOffsetMs = bestVariant->playbackOffsetMs;
+    target.sampleFile = bestSample->sampleFile;
+    target.contentHash = bestSample->metadataContentHash;
+    target.metadataFileSizeBytes = bestSample->metadataFileSizeBytes;
+    target.micCode = bestSample->micSpec.raw;
+    target.fileChannelStart = juce::jmax(0, bestSample->fileChannelStart);
+    target.fileChannelCount = bestSample->fileChannelCount > 0 ? bestSample->fileChannelCount : bestSample->micSpec.channels;
+    target.fixedGainDb = bestSample->manualGainDb + (calibrated ? *bestVelocityLevel->calibrationTrimDb : 0.0f);
+    target.playbackOffsetMs = bestSample->playbackOffsetMs;
     return target;
 }
 
@@ -2375,13 +2369,13 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const
     const juce::ScopedLock graphLock(this->engineGraphLock);
 
     int currentOccurrence = 0;
-    for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr == nullptr) continue;
-        if (synthPtr->getId() != slotId) continue;
-        if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes) || !synthPtr->routesSourceArticulation(*targetInstrumentSpec, targetArticulationSpec)) continue;
+    for (auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+        if (instrumentPlayerPtr == nullptr) continue;
+        if (instrumentPlayerPtr->getId() != slotId) continue;
+        if (!DrumKitEngine::playerMatchesTargetRoutes(*instrumentPlayerPtr, targetRoutes) || !instrumentPlayerPtr->routesLibraryArticulation(*targetInstrumentSpec, targetArticulationSpec)) continue;
 
         if (currentOccurrence == sourceOccurrenceIndex) {
-            return synthPtr->updateArticulationParameters(targetRoutes, update);
+            return instrumentPlayerPtr->updateArticulationParameters(targetRoutes, update);
         }
 
         ++currentOccurrence;
@@ -2398,13 +2392,13 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     const juce::ScopedLock graphLock(this->engineGraphLock);
 
     int currentLayerIndex = 0;
-    for (auto& synthPtr : this->instrumentSynthPtrs) {
-        if (synthPtr == nullptr) continue;
-        if (synthPtr->getId() != slotId) continue;
-        if (!DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, targetRoutes)) continue;
+    for (auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+        if (instrumentPlayerPtr == nullptr) continue;
+        if (instrumentPlayerPtr->getId() != slotId) continue;
+        if (!DrumKitEngine::playerMatchesTargetRoutes(*instrumentPlayerPtr, targetRoutes)) continue;
 
         if (currentLayerIndex == layerIndex) {
-            synthPtr->updateArticulationParameters(targetRoutes, update);
+            instrumentPlayerPtr->updateArticulationParameters(targetRoutes, update);
             return;
         }
 
@@ -2430,10 +2424,10 @@ bool DrumKitEngine::updateSlotParametersBatch(const std::vector<LayerParameterTa
     bool updated = false;
     for (const auto& preparedTarget : preparedTargets) {
         int currentLayerIndex = 0;
-        for (auto& synthPtr : this->instrumentSynthPtrs) {
-            if (synthPtr == nullptr || synthPtr->getId() != preparedTarget.target->slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, preparedTarget.routes)) continue;
+        for (auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+            if (instrumentPlayerPtr == nullptr || instrumentPlayerPtr->getId() != preparedTarget.target->slotId || !DrumKitEngine::playerMatchesTargetRoutes(*instrumentPlayerPtr, preparedTarget.routes)) continue;
             if (currentLayerIndex == preparedTarget.target->layerIndex) {
-                updated = synthPtr->updateArticulationParameters(preparedTarget.routes, preparedTarget.target->update) || updated;
+                updated = instrumentPlayerPtr->updateArticulationParameters(preparedTarget.routes, preparedTarget.target->update) || updated;
                 break;
             }
             ++currentLayerIndex;
@@ -2451,7 +2445,7 @@ bool DrumKitEngine::updateSlotMicRoutesBatch(const std::vector<MicRouteTarget>& 
     std::vector<PreparedTarget> preparedTargets;
     preparedTargets.reserve(targets.size());
     for (const auto& target : targets) {
-        if (target.layerIndex < 0 || target.slotId.trim().isEmpty() || target.sourceMicCode.trim().isEmpty()) continue;
+        if (target.layerIndex < 0 || target.slotId.trim().isEmpty() || target.micCode.trim().isEmpty()) continue;
         preparedTargets.push_back({ &target, this->getTargetRoutesForArticulationFilter(target.slotId, target.articulationName) });
     }
     if (preparedTargets.empty()) return false;
@@ -2460,10 +2454,10 @@ bool DrumKitEngine::updateSlotMicRoutesBatch(const std::vector<MicRouteTarget>& 
     bool updated = false;
     for (const auto& preparedTarget : preparedTargets) {
         int currentLayerIndex = 0;
-        for (auto& synthPtr : this->instrumentSynthPtrs) {
-            if (synthPtr == nullptr || synthPtr->getId() != preparedTarget.target->slotId || !DrumKitEngine::synthMatchesTargetRoutes(*synthPtr, preparedTarget.routes)) continue;
+        for (auto& instrumentPlayerPtr : this->instrumentPlayerPtrs) {
+            if (instrumentPlayerPtr == nullptr || instrumentPlayerPtr->getId() != preparedTarget.target->slotId || !DrumKitEngine::playerMatchesTargetRoutes(*instrumentPlayerPtr, preparedTarget.routes)) continue;
             if (currentLayerIndex == preparedTarget.target->layerIndex) {
-                updated = synthPtr->updateMicRoute(preparedTarget.target->sourceMicCode, preparedTarget.target->outputId) || updated;
+                updated = instrumentPlayerPtr->updateMicRoute(preparedTarget.target->micCode, preparedTarget.target->outputId) || updated;
                 break;
             }
             ++currentLayerIndex;
@@ -2489,29 +2483,29 @@ std::vector<std::pair<uint32_t, uint32_t>> DrumKitEngine::getTargetRoutesForArti
     return targetRoutes;
 }
 
-bool DrumKitEngine::synthMatchesTargetRoutes(const InstrumentSynth& synth, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
+bool DrumKitEngine::playerMatchesTargetRoutes(const InstrumentPlayer& instrumentPlayer, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
     if (targetRoutes.empty()) return true;
-    if (!synth.hasDestinationRoutes()) return false;
+    if (!instrumentPlayer.hasArticulationSlotRoutes()) return false;
 
     for (const auto& route : targetRoutes) {
-        if (synth.routesDestinationArticulation(route.first, route.second)) return true;
+        if (instrumentPlayer.routesArticulationSlot(route.first, route.second)) return true;
     }
     return false;
 }
 
-bool DrumKitEngine::synthRoutesLayoutArticulation(const InstrumentSynth& synth, const KitLayout::InstrumentSlot::ArticulationTrigger& art) {
-    return synth.routesDestinationArticulation(art.nameId, art.exprId);
+bool DrumKitEngine::playerRoutesArticulationSlot(const InstrumentPlayer& instrumentPlayer, const KitLayout::InstrumentSlot::ArticulationSlot& art) {
+    return instrumentPlayer.routesArticulationSlot(art.nameId, art.exprId);
 }
 
-void DrumKitEngine::applyLayerParameterUpdate(InstrumentSynth& synth, const LayerParameterUpdate& update) {
-    if (update.tuningCents.has_value()) synth.setTuningOffsetCents(*update.tuningCents);
-    if (update.attackMs.has_value()) synth.setAttackOverrideMs(*update.attackMs);
-    if (update.decayMs.has_value()) synth.setDecayOverrideMs(*update.decayMs);
-    if (update.volumeDb.has_value()) synth.setVolumeDb(*update.volumeDb);
-    if (update.pan.has_value()) synth.setPan(*update.pan);
-    if (update.flipLR.has_value()) synth.setFlipLR(*update.flipLR);
-    if (update.flipPhase.has_value()) synth.setFlipPhase(*update.flipPhase);
-    if (update.micBleedLevels.has_value()) synth.setMicBleedLevels(*update.micBleedLevels);
+void DrumKitEngine::applyLayerParameterUpdate(InstrumentPlayer& instrumentPlayer, const LayerParameterUpdate& update) {
+    if (update.tuningCents.has_value()) instrumentPlayer.setTuningOffsetCents(*update.tuningCents);
+    if (update.attackMs.has_value()) instrumentPlayer.setAttackOverrideMs(*update.attackMs);
+    if (update.decayMs.has_value()) instrumentPlayer.setDecayOverrideMs(*update.decayMs);
+    if (update.volumeDb.has_value()) instrumentPlayer.setVolumeDb(*update.volumeDb);
+    if (update.pan.has_value()) instrumentPlayer.setPan(*update.pan);
+    if (update.flipLR.has_value()) instrumentPlayer.setFlipLR(*update.flipLR);
+    if (update.flipPhase.has_value()) instrumentPlayer.setFlipPhase(*update.flipPhase);
+    if (update.micBleedLevels.has_value()) instrumentPlayer.setMicBleedLevels(*update.micBleedLevels);
 }
 
 bool DrumKitEngine::useInstrumentMap(juce::String text) {
@@ -2551,8 +2545,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
     const bool hasChangedSlotHint = changedSlotKey.isNotEmpty();
 
     // ======================== PHASE 2: PARSE & RESOLVE (no lock) ========================
-    // All parsing, kit/instrument resolution, and synth creation happens here.
-    // The audio thread continues processing the OLD synth graph uninterrupted.
+    // All parsing, kit/instrument resolution, and instrument player creation happens here.
+    // The audio thread continues to process the old instrument player graph.
 
     auto parsed = DrumKitEngine::parseInstrumentMapText(text);
     for (const auto& warning : parsed.errors)
@@ -2563,49 +2557,49 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         return false;
     }
 
-    DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapEntries(parsed.value, *librarySnapshot);
+    DrumKitEngineIdentityMapHelpers::normalizeInstrumentMapLayers(parsed.value, *librarySnapshot);
     DrumKitEngineMapHelpers::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *librarySnapshot);
     const auto normalizedMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
 
-    LOG(Info, "=== useInstrumentMap: " + juce::String(parsed.value.entries.size()) + " entries ===");
-    for (size_t idx = 0; idx < parsed.value.entries.size(); ++idx) {
-        const auto& entry = parsed.value.entries[idx];
-        juce::String slotArtStr, srcArtStr;
-        for (const auto& sa : entry.slotArticulationFilter) slotArtStr += (slotArtStr.isEmpty() ? "" : ",") + sa;
-        for (const auto& sa : entry.articulationFilter) srcArtStr += (srcArtStr.isEmpty() ? "" : ",") + sa;
+    LOG(Info, "=== useInstrumentMap: " + juce::String(parsed.value.layers.size()) + " map layers ===");
+    for (size_t idx = 0; idx < parsed.value.layers.size(); ++idx) {
+        const auto& mapLayer = parsed.value.layers[idx];
+        juce::String articulationSlotText, libraryArticulationText;
+        for (const auto& articulationSlotName : mapLayer.slotArticulationFilter) articulationSlotText += (articulationSlotText.isEmpty() ? "" : ",") + articulationSlotName;
+        for (const auto& libraryArticulationName : mapLayer.articulationFilter) libraryArticulationText += (libraryArticulationText.isEmpty() ? "" : ",") + libraryArticulationName;
         juce::String routeStr;
-        for (const auto& [sourceMicCode, outputId] : entry.micRouteOverrides)
-            routeStr += (routeStr.isEmpty() ? "" : ",") + sourceMicCode + "->" + outputId;
-        LOG(Info, "  entry[" + juce::String(idx) + "]: slot=" + entry.slotId
-            + (slotArtStr.isNotEmpty() ? "/" + slotArtStr : "")
-            + " -> kit=" + entry.kitRef + " inst=" + entry.instCode
-            + (srcArtStr.isNotEmpty() ? " art=" + srcArtStr : "")
-            + (entry.tuningCents.has_value() ? " tuning=" + juce::String(*entry.tuningCents) : "")
-            + (entry.attackTimeMs.has_value() ? " attack=" + juce::String(*entry.attackTimeMs) : "")
-            + (entry.decayTimeMs.has_value() ? " decay=" + juce::String(*entry.decayTimeMs) : "")
+        for (const auto& [micCode, outputId] : mapLayer.micRouteOverrides)
+            routeStr += (routeStr.isEmpty() ? "" : ",") + micCode + "->" + outputId;
+        LOG(Info, "  mapLayer[" + juce::String(idx) + "]: slot=" + mapLayer.slotId
+            + (articulationSlotText.isNotEmpty() ? "/" + articulationSlotText : "")
+            + " -> kit=" + mapLayer.kitRef + " inst=" + mapLayer.instCode
+            + (libraryArticulationText.isNotEmpty() ? " art=" + libraryArticulationText : "")
+            + (mapLayer.tuningCents.has_value() ? " tuning=" + juce::String(*mapLayer.tuningCents) : "")
+            + (mapLayer.attackTimeMs.has_value() ? " attack=" + juce::String(*mapLayer.attackTimeMs) : "")
+            + (mapLayer.decayTimeMs.has_value() ? " decay=" + juce::String(*mapLayer.decayTimeMs) : "")
             + (routeStr.isNotEmpty() ? " micRoute=[" + routeStr + "]" : ""));
     }
 
     struct ShadowPlan {
-        const InstrumentMapEntry* entry = nullptr;
+        const InstrumentMapLayer* mapLayer = nullptr;
         KitLib::InstrumentSpec* instSpec = nullptr;
-        std::vector<juce::String> articulations;
-        InstrumentSynth::ArticulationNameRemap artNameRemap;
-        InstrumentSynth::ArticulationExactRemap artExactRemap;
+        std::vector<juce::String> articulationSlots;
+        InstrumentPlayer::ArticulationNameRemap artNameRemap;
+        InstrumentPlayer::ArticulationExactRemap artExactRemap;
     };
 
-    // Build a name remap from an entry's slot/source art filters for cross-art mapping
-    auto buildArtNameRemap = [](const InstrumentMapEntry& entry) -> InstrumentSynth::ArticulationNameRemap {
-        InstrumentSynth::ArticulationNameRemap remap;
-        const auto& slotArts = entry.slotArticulationFilter;
-        const auto& srcArts = entry.articulationFilter;
-        if (slotArts.empty() || srcArts.empty())
+    // Build a name remap from the articulation slot and library articulation filters.
+    auto buildArtNameRemap = [](const InstrumentMapLayer& mapLayer) -> InstrumentPlayer::ArticulationNameRemap {
+        InstrumentPlayer::ArticulationNameRemap remap;
+        const auto& articulationSlots = mapLayer.slotArticulationFilter;
+        const auto& libraryArticulations = mapLayer.articulationFilter;
+        if (articulationSlots.empty() || libraryArticulations.empty())
             return remap;
-        for (size_t idx = 0; idx < slotArts.size() && idx < srcArts.size(); ++idx) {
-            auto slotId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(slotArts[idx]));
-            auto srcId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(srcArts[idx]));
-            if (slotId != srcId) 
-                remap[slotId] = srcId;
+        for (size_t idx = 0; idx < articulationSlots.size() && idx < libraryArticulations.size(); ++idx) {
+            auto articulationSlotId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(articulationSlots[idx]));
+            auto libraryArticulationId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(libraryArticulations[idx]));
+            if (articulationSlotId != libraryArticulationId)
+                remap[articulationSlotId] = libraryArticulationId;
         }
         return remap;
     };
@@ -2614,93 +2608,92 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         return (static_cast<uint64_t>(nameId) << 32) | static_cast<uint64_t>(exprId);
     };
 
-    auto buildArtExactRemap = [&makeArticulationRouteKey](const InstrumentMapEntry& entry) -> InstrumentSynth::ArticulationExactRemap {
-        InstrumentSynth::ArticulationExactRemap remap;
-        const auto& slotArts = entry.slotArticulationFilter;
-        const auto& srcArts = entry.articulationFilter;
-        if (slotArts.empty() || srcArts.empty()) return remap;
-        for (size_t idx = 0; idx < slotArts.size() && idx < srcArts.size(); ++idx) {
-            if (slotArts[idx].isEmpty() || srcArts[idx].isEmpty()) continue;
-            const KitLayout::InstrumentSlot::ArticulationTrigger slotArt(slotArts[idx]);
-            const KitLayout::InstrumentSlot::ArticulationTrigger sourceArt(srcArts[idx]);
-            if (slotArt.nameId == sourceArt.nameId && slotArt.exprId == sourceArt.exprId) continue;
-            remap[makeArticulationRouteKey(slotArt.nameId, slotArt.exprId)] = { sourceArt.nameId, sourceArt.exprId };
+    auto buildArtExactRemap = [&makeArticulationRouteKey](const InstrumentMapLayer& mapLayer) -> InstrumentPlayer::ArticulationExactRemap {
+        InstrumentPlayer::ArticulationExactRemap remap;
+        const auto& articulationSlots = mapLayer.slotArticulationFilter;
+        const auto& libraryArticulations = mapLayer.articulationFilter;
+        if (articulationSlots.empty() || libraryArticulations.empty()) return remap;
+        for (size_t idx = 0; idx < articulationSlots.size() && idx < libraryArticulations.size(); ++idx) {
+            if (articulationSlots[idx].isEmpty() || libraryArticulations[idx].isEmpty()) continue;
+            const KitLayout::InstrumentSlot::ArticulationSlot articulationSlot(articulationSlots[idx]);
+            const KitLayout::InstrumentSlot::ArticulationSlot libraryArticulation(libraryArticulations[idx]);
+            if (articulationSlot.nameId == libraryArticulation.nameId && articulationSlot.exprId == libraryArticulation.exprId) continue;
+            remap[makeArticulationRouteKey(articulationSlot.nameId, articulationSlot.exprId)] = { libraryArticulation.nameId, libraryArticulation.exprId };
         }
         return remap;
     };
-    auto resolveVelocityResponseOverride = [](const InstrumentMapEntry& entry) -> std::optional<VelocityResponse> {
-        if (!entry.velocityResponse.has_value()) return std::nullopt;
-        auto parsedResponse = VelocityResponse::fromDefinition(*entry.velocityResponse);
+    auto resolveVelocityResponseOverride = [](const InstrumentMapLayer& mapLayer) -> std::optional<VelocityResponse> {
+        if (!mapLayer.velocityResponse.has_value()) return std::nullopt;
+        auto parsedResponse = VelocityResponse::fromDefinition(*mapLayer.velocityResponse);
         return parsedResponse.ok() ? std::optional<VelocityResponse>(std::move(parsedResponse.value)) : std::nullopt;
     };
-    auto applyOverrides = [&resolveVelocityResponseOverride](InstrumentSynth& synth, const InstrumentMapEntry& entry) {
-        synth.setTuningOffsetCents(entry.tuningCents.value_or(0));
-        synth.setAttackOverrideMs(entry.attackTimeMs.value_or(-1));
-        synth.setDecayOverrideMs(entry.decayTimeMs.value_or(-1));
-        synth.setVolumeDb(entry.volumeDb.value_or(0.0f));
-        synth.setPan(entry.pan.value_or(0));
-        synth.setFlipLR(entry.flipLR);
-        synth.setFlipPhase(entry.flipPhase);
-        synth.setMicBleedLevels(entry.micBleedLevels);
+    auto applyOverrides = [&resolveVelocityResponseOverride](InstrumentPlayer& instrumentPlayer, const InstrumentMapLayer& mapLayer) {
+        instrumentPlayer.setTuningOffsetCents(mapLayer.tuningCents.value_or(0));
+        instrumentPlayer.setAttackOverrideMs(mapLayer.attackTimeMs.value_or(-1));
+        instrumentPlayer.setDecayOverrideMs(mapLayer.decayTimeMs.value_or(-1));
+        instrumentPlayer.setVolumeDb(mapLayer.volumeDb.value_or(0.0f));
+        instrumentPlayer.setPan(mapLayer.pan.value_or(0));
+        instrumentPlayer.setFlipLR(mapLayer.flipLR);
+        instrumentPlayer.setFlipPhase(mapLayer.flipPhase);
+        instrumentPlayer.setMicBleedLevels(mapLayer.micBleedLevels);
         LayerParameterUpdate velocityResponseUpdate;
         velocityResponseUpdate.updateVelocityResponse = true;
-        velocityResponseUpdate.velocityResponse = resolveVelocityResponseOverride(entry);
-        synth.updateArticulationParameters({}, velocityResponseUpdate);
+        velocityResponseUpdate.velocityResponse = resolveVelocityResponseOverride(mapLayer);
+        instrumentPlayer.updateArticulationParameters({}, velocityResponseUpdate);
     };
 
-    auto makeParameterUpdate = [&resolveVelocityResponseOverride](const InstrumentMapEntry& entry) {
+    auto makeParameterUpdate = [&resolveVelocityResponseOverride](const InstrumentMapLayer& mapLayer) {
         LayerParameterUpdate update;
-        update.tuningCents = entry.tuningCents.value_or(0);
-        update.attackMs = entry.attackTimeMs.value_or(-1);
-        update.decayMs = entry.decayTimeMs.value_or(-1);
-        update.volumeDb = entry.volumeDb.value_or(0.0f);
-        update.pan = entry.pan.value_or(0);
-        update.flipLR = entry.flipLR;
-        update.flipPhase = entry.flipPhase;
-        update.micBleedLevels = entry.micBleedLevels;
+        update.tuningCents = mapLayer.tuningCents.value_or(0);
+        update.attackMs = mapLayer.attackTimeMs.value_or(-1);
+        update.decayMs = mapLayer.decayTimeMs.value_or(-1);
+        update.volumeDb = mapLayer.volumeDb.value_or(0.0f);
+        update.pan = mapLayer.pan.value_or(0);
+        update.flipLR = mapLayer.flipLR;
+        update.flipPhase = mapLayer.flipPhase;
+        update.micBleedLevels = mapLayer.micBleedLevels;
         update.updateVelocityResponse = true;
-        update.velocityResponse = resolveVelocityResponseOverride(entry);
+        update.velocityResponse = resolveVelocityResponseOverride(mapLayer);
         return update;
     };
 
-    auto buildTargetRoutes = [](const KitLayout::InstrumentSlot& slotLayout, const std::vector<juce::String>& articulationFilters) {
+    auto buildTargetRoutes = [](const KitLayout::InstrumentSlot& slotLayout, const std::vector<juce::String>& articulationSlotFilters) {
         std::vector<std::pair<uint32_t, uint32_t>> targetRoutes;
-        if (articulationFilters.empty()) return targetRoutes;
-        for (const auto& articulation : slotLayout.articulations) {
-            for (const auto& filter : articulationFilters) {
-                if (!ArticulationNameHelpers::mapFilterMatchesArticulation(filter, articulation.codeRaw)) continue;
-                const auto route = std::make_pair(articulation.nameId, articulation.exprId);
+        if (articulationSlotFilters.empty()) return targetRoutes;
+        for (const auto& articulationSlot : slotLayout.articulations) {
+            for (const auto& articulationSlotFilter : articulationSlotFilters) {
+                if (!ArticulationNameHelpers::mapFilterMatchesArticulation(articulationSlotFilter, articulationSlot.codeRaw)) continue;
+                const auto route = std::make_pair(articulationSlot.nameId, articulationSlot.exprId);
                 if (std::find(targetRoutes.begin(), targetRoutes.end(), route) == targetRoutes.end()) targetRoutes.push_back(route);
             }
         }
         return targetRoutes;
     };
 
-    auto applyPrimaryOverrides = [&applyOverrides, &makeParameterUpdate](InstrumentSynth& synth, const InstrumentMapEntry& entry, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
-        if (targetRoutes.empty()) applyOverrides(synth, entry);
-        else synth.updateArticulationParameters(targetRoutes, makeParameterUpdate(entry));
+    auto applyPrimaryOverrides = [&applyOverrides, &makeParameterUpdate](InstrumentPlayer& instrumentPlayer, const InstrumentMapLayer& mapLayer, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
+        if (targetRoutes.empty()) applyOverrides(instrumentPlayer, mapLayer);
+        else instrumentPlayer.updateArticulationParameters(targetRoutes, makeParameterUpdate(mapLayer));
     };
 
-    auto makeResolvedEntryFingerprint = [](const InstrumentMapEntry& entry, const KitLib::InstrumentSpec& instSpec) {
-        return DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(entry) + "\nsource\n" + instSpec.getContentFingerprint();
+    auto makeResolvedMapLayerFingerprint = [](const InstrumentMapLayer& mapLayer, const KitLib::InstrumentSpec& instSpec) {
+        return DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(mapLayer) + "\nsource\n" + instSpec.getContentFingerprint();
     };
 
-    auto makeResolvedEntryReloadFingerprint = [](const InstrumentMapEntry& entry, const KitLib::InstrumentSpec& instSpec) {
-        return DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(entry) + "\nsource\n" + instSpec.getContentFingerprint();
+    auto makeResolvedMapLayerReloadFingerprint = [](const InstrumentMapLayer& mapLayer, const KitLib::InstrumentSpec& instSpec) {
+        return DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(mapLayer) + "\nsource\n" + instSpec.getContentFingerprint();
     };
 
     std::vector<juce::String> slotOrder;
-    std::unordered_map<juce::String, std::vector<const InstrumentMapEntry*>> entriesBySlotId;
-    for (const auto& entry : parsed.value.entries) {
-        if (entriesBySlotId.find(entry.slotId) == entriesBySlotId.end())
-            slotOrder.push_back(entry.slotId);
-        entriesBySlotId[entry.slotId].push_back(&entry);
+    std::unordered_map<juce::String, std::vector<const InstrumentMapLayer*>> mapLayersBySlotId;
+    for (const auto& mapLayer : parsed.value.layers) {
+        if (mapLayersBySlotId.find(mapLayer.slotId) == mapLayersBySlotId.end()) slotOrder.push_back(mapLayer.slotId);
+        mapLayersBySlotId[mapLayer.slotId].push_back(&mapLayer);
     }
 
     std::unordered_map<juce::String, juce::String> nextSlotFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotFingerprintMap(parsed.value, *librarySnapshot);
     std::unordered_map<juce::String, juce::String> nextSlotReloadFingerprints = DrumKitEngineMapHelpers::buildResolvedSlotReloadFingerprintMap(parsed.value, *librarySnapshot);
     struct ExistingShadow {
-        InstrumentSynth* synth = nullptr;
+        InstrumentPlayer* instrumentPlayer = nullptr;
         juce::String stateFingerprint;
         juce::String reloadFingerprint;
     };
@@ -2708,21 +2701,21 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
     // Build index maps for fast slot lookup (safe to read on message thread)
     std::unordered_map<juce::String, int> primarySlotIndex;
     std::unordered_map<juce::String, std::vector<ExistingShadow>> existingShadowsBySlotId;
-    for (int idx = 0; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
-        auto* synth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
-        if (synth == nullptr) continue;
-        if (idx < this->primaryInstrumentSynthCount) {
-            primarySlotIndex[synth->getId()] = idx;
+    for (int idx = 0; idx < static_cast<int>(this->instrumentPlayerPtrs.size()); ++idx) {
+        auto* instrumentPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
+        if (instrumentPlayer == nullptr) continue;
+        if (idx < this->primaryInstrumentPlayerCount) {
+            primarySlotIndex[instrumentPlayer->getId()] = idx;
             continue;
         }
 
         ExistingShadow existingShadow;
-        existingShadow.synth = synth;
-        auto stateIt = this->lastAppliedShadowFingerprints.find(synth);
+        existingShadow.instrumentPlayer = instrumentPlayer;
+        auto stateIt = this->lastAppliedShadowFingerprints.find(instrumentPlayer);
         if (stateIt != this->lastAppliedShadowFingerprints.end()) existingShadow.stateFingerprint = stateIt->second;
-        auto reloadIt = this->lastAppliedShadowReloadFingerprints.find(synth);
+        auto reloadIt = this->lastAppliedShadowReloadFingerprints.find(instrumentPlayer);
         if (reloadIt != this->lastAppliedShadowReloadFingerprints.end()) existingShadow.reloadFingerprint = reloadIt->second;
-        existingShadowsBySlotId[synth->getId()].push_back(std::move(existingShadow));
+        existingShadowsBySlotId[instrumentPlayer->getId()].push_back(std::move(existingShadow));
     }
 
     juce::StringArray statusLines;
@@ -2731,23 +2724,23 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
 
     int applied = 0;
 
-    // Per-slot preparation: replacement synths and shadow synths built outside the lock
+    // Prepare replacement and shadow instrument players for each slot outside the lock.
     struct PreparedShadow {
-        std::unique_ptr<InstrumentSynth> synth;
+        std::unique_ptr<InstrumentPlayer> instrumentPlayer;
         juce::String stateFingerprint;
         juce::String reloadFingerprint;
-        std::vector<std::pair<int, InstrumentSynth*>> noteRoutes;
+        std::vector<std::pair<int, InstrumentPlayer*>> noteRoutes;
     };
     struct PreparedShadowParameterUpdate {
-        InstrumentSynth* synth = nullptr;
-        const InstrumentMapEntry* entry = nullptr;
+        InstrumentPlayer* instrumentPlayer = nullptr;
+        const InstrumentMapLayer* mapLayer = nullptr;
         juce::String stateFingerprint;
     };
     struct PreparedSlot {
         juce::String slotId;
         int primaryIndex = -1;
-        std::unique_ptr<InstrumentSynth> primaryReplacement;
-        const InstrumentMapEntry* primaryParameterEntry = nullptr;
+        std::unique_ptr<InstrumentPlayer> primaryReplacement;
+        const InstrumentMapLayer* primaryParameterMapLayer = nullptr;
         std::vector<std::pair<uint32_t, uint32_t>> primaryParameterRoutes;
         bool removeOldShadows = false;
         bool rebuildShadows = false;
@@ -2757,11 +2750,11 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
     std::vector<PreparedSlot> preparedSlots;
 
     for (const auto& slotId : slotOrder) {
-        const auto& group = entriesBySlotId[slotId];
-        if (group.empty()) continue;
+        const auto& slotMapLayers = mapLayersBySlotId[slotId];
+        if (slotMapLayers.empty()) continue;
 
-        auto slotIt = this->instrumentSynthById.find(slotId);
-        if (slotIt == this->instrumentSynthById.end()) {
+        auto slotIt = this->instrumentPlayerById.find(slotId);
+        if (slotIt == this->instrumentPlayerById.end()) {
             statusLines.add("Instrument slot not found: " + slotId);
             continue;
         }
@@ -2772,76 +2765,76 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         const bool slotMatchesHint = !hasChangedSlotHint || slotId.trim().toLowerCase() == changedSlotKey;
         if (hasChangedSlotHint && !slotMatchesHint && !slotChanged && !slotStateChanged && !slotReloadChanged) continue;
 
-        struct ResolvedEntry {
-            const InstrumentMapEntry* entry = nullptr;
+        struct ResolvedMapLayer {
+            const InstrumentMapLayer* mapLayer = nullptr;
             KitLib::DrumKitSpec* kitSpec = nullptr;
             KitLib::InstrumentSpec* instSpec = nullptr;
-            std::vector<juce::String> effectiveFilter;
+            std::vector<juce::String> effectiveArticulationSlotFilters;
         };
 
-        std::vector<ResolvedEntry> resolvedEntries;
+        std::vector<ResolvedMapLayer> resolvedMapLayers;
         bool slotResolveFailed = false;
-        for (const auto* entry : group) {
-            auto* kitSpec = librarySnapshot->findKitById(entry->kitRef);
+        for (const auto* mapLayer : slotMapLayers) {
+            auto* kitSpec = librarySnapshot->findKitById(mapLayer->kitRef);
             if (kitSpec == nullptr) {
-                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, entry->kitRef, entry->slotId));
+                statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, mapLayer->kitRef, mapLayer->slotId));
                 slotResolveFailed = true;
                 continue;
             }
 
-            if (entry->instCode.isEmpty()) {
-                statusLines.add("Instrument code is required for slot '" + entry->slotId + "'");
+            if (mapLayer->instCode.isEmpty()) {
+                statusLines.add("Library instrument ID is required for slot '" + mapLayer->slotId + "'");
                 slotResolveFailed = true;
                 continue;
             }
 
-            auto* instSpec = kitSpec->findInstrumentById(entry->instCode);
+            auto* instSpec = kitSpec->findInstrumentById(mapLayer->instCode);
             if (instSpec == nullptr) {
-                statusLines.add(DrumKitEngineIdentityMapHelpers::describeInstrumentResolveFailure(*kitSpec, entry->instCode, entry->slotId));
+                statusLines.add(DrumKitEngineIdentityMapHelpers::describeInstrumentResolveFailure(*kitSpec, mapLayer->instCode, mapLayer->slotId));
                 slotResolveFailed = true;
                 continue;
             }
 
-            if (!entry->articulationFilter.empty()) {
-                const auto availableSourceArts = DrumKitEngineMapHelpers::collectInstrumentArticulationNames(*instSpec);
-                juce::StringArray unknownSourceArts;
-                juce::StringArray unknownSourceArtKeys;
+            if (!mapLayer->articulationFilter.empty()) {
+                const auto availableLibraryArticulations = DrumKitEngineMapHelpers::collectLibraryArticulationNames(*instSpec);
+                juce::StringArray unknownLibraryArticulations;
+                juce::StringArray unknownLibraryArticulationKeys;
 
-                for (const auto& sourceArtName : entry->articulationFilter) {
-                    const auto normalizedSourceArtName = ArticulationNameHelpers::normalizeArticulationName(sourceArtName);
-                    if (normalizedSourceArtName.isEmpty()) continue;
-                    const auto sourceArtMatchCount = DrumKitEngineIdentityMapHelpers::countArticulationIdMatches(*instSpec, sourceArtName);
-                    if (sourceArtMatchCount == 1) continue;
-                    if (sourceArtMatchCount == 0 && ArticulationNameHelpers::stringArrayContainsIgnoreCase(availableSourceArts, normalizedSourceArtName)) continue;
-                    if (ArticulationNameHelpers::stringArrayContainsIgnoreCase(unknownSourceArtKeys, normalizedSourceArtName)) continue;
-                    auto sourceArtToken = DrumKitEngineIdentityMapHelpers::describeArticulationResolveFailure(*instSpec, sourceArtName, kitSpec->meta.codeRaw + "/" + instSpec->meta.codeRaw, entry->slotId);
-                    const auto suggestedSourceArt = ArticulationNameHelpers::findClosestArticulationName(normalizedSourceArtName, availableSourceArts);
-                    if (suggestedSourceArt.isNotEmpty()) sourceArtToken += " (did you mean '" + suggestedSourceArt + "'?)";
-                    unknownSourceArtKeys.add(normalizedSourceArtName);
-                    unknownSourceArts.add(sourceArtToken);
+                for (const auto& libraryArticulationName : mapLayer->articulationFilter) {
+                    const auto normalizedLibraryArticulationName = ArticulationNameHelpers::normalizeArticulationName(libraryArticulationName);
+                    if (normalizedLibraryArticulationName.isEmpty()) continue;
+                    const auto libraryArticulationMatchCount = DrumKitEngineIdentityMapHelpers::countArticulationIdMatches(*instSpec, libraryArticulationName);
+                    if (libraryArticulationMatchCount == 1) continue;
+                    if (libraryArticulationMatchCount == 0 && ArticulationNameHelpers::stringArrayContainsIgnoreCase(availableLibraryArticulations, normalizedLibraryArticulationName)) continue;
+                    if (ArticulationNameHelpers::stringArrayContainsIgnoreCase(unknownLibraryArticulationKeys, normalizedLibraryArticulationName)) continue;
+                    auto libraryArticulationToken = DrumKitEngineIdentityMapHelpers::describeArticulationResolveFailure(*instSpec, libraryArticulationName, kitSpec->meta.codeRaw + "/" + instSpec->meta.codeRaw, mapLayer->slotId);
+                    const auto suggestedLibraryArticulation = ArticulationNameHelpers::findClosestArticulationName(normalizedLibraryArticulationName, availableLibraryArticulations);
+                    if (suggestedLibraryArticulation.isNotEmpty()) libraryArticulationToken += " (did you mean '" + suggestedLibraryArticulation + "'?)";
+                    unknownLibraryArticulationKeys.add(normalizedLibraryArticulationName);
+                    unknownLibraryArticulations.add(libraryArticulationToken);
                 }
 
-                if (!unknownSourceArts.isEmpty()) {
-                    const auto unknownSourceArtsText = unknownSourceArts.joinIntoString(", ");
-                    const auto availableSourceArtsText = availableSourceArts.isEmpty()
+                if (!unknownLibraryArticulations.isEmpty()) {
+                    const auto unknownLibraryArticulationsText = unknownLibraryArticulations.joinIntoString(", ");
+                    const auto availableLibraryArticulationsText = availableLibraryArticulations.isEmpty()
                         ? juce::String("none")
-                        : availableSourceArts.joinIntoString(", ");
+                        : availableLibraryArticulations.joinIntoString(", ");
 
-                    statusLines.add("Source articulation problem(s): " + unknownSourceArtsText + ". Available source articulations: " + availableSourceArtsText);
+                    statusLines.add("Library articulation errors: " + unknownLibraryArticulationsText + ". Available library articulations: " + availableLibraryArticulationsText);
                     slotResolveFailed = true;
                     continue;
                 }
             }
 
-            auto filter = DrumKitEngineMapHelpers::effectiveArticulationFilter(*entry);
-            juce::String filterStr;
-            for (const auto& fa : filter) filterStr += (filterStr.isEmpty() ? "" : ",") + fa;
-            LOG(Info, "  resolved: slot=" + entry->slotId + " -> " + kitSpec->meta.name + "/" + entry->instCode
-                + (filterStr.isNotEmpty() ? " effectiveFilter=[" + filterStr + "]" : " effectiveFilter=[ALL]"));
-            resolvedEntries.push_back({ entry, kitSpec, instSpec, std::move(filter) });
+            auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(*mapLayer);
+            juce::String articulationSlotFilterText;
+            for (const auto& articulationSlotFilter : articulationSlotFilters) articulationSlotFilterText += (articulationSlotFilterText.isEmpty() ? "" : ",") + articulationSlotFilter;
+            LOG(Info, "  resolved: slot=" + mapLayer->slotId + " -> " + kitSpec->meta.name + "/" + mapLayer->instCode
+                + (articulationSlotFilterText.isNotEmpty() ? " articulationSlots=[" + articulationSlotFilterText + "]" : " articulationSlots=[ALL]"));
+            resolvedMapLayers.push_back({ mapLayer, kitSpec, instSpec, std::move(articulationSlotFilters) });
         }
 
-        if (slotResolveFailed || resolvedEntries.empty()) {
+        if (slotResolveFailed || resolvedMapLayers.empty()) {
             statusLines.add("Slot '" + slotId + "' was not applied; old route kept");
             nextSlotFingerprints[slotId] = this->lastAppliedSlotFingerprints[slotId];
             nextSlotReloadFingerprints[slotId] = this->lastAppliedSlotReloadFingerprints[slotId];
@@ -2851,121 +2844,118 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         slotChanged = slotChanged || slotReloadChanged;
 
         const auto& slotLayout = primarySlot->getInstrumentSlot();
-        const auto& primary = resolvedEntries.front();
-        InstrumentSynth::ArticulationSourceMap artSources;
-        InstrumentSynth::ArticulationNameRemap primaryRemap = buildArtNameRemap(*primary.entry);
-        InstrumentSynth::ArticulationExactRemap primaryExactRemap = buildArtExactRemap(*primary.entry);
+        const auto& primary = resolvedMapLayers.front();
+        InstrumentPlayer::ArticulationLibraryMap articulationLibraryMap;
+        InstrumentPlayer::ArticulationNameRemap primaryRemap = buildArtNameRemap(*primary.mapLayer);
+        InstrumentPlayer::ArticulationExactRemap primaryExactRemap = buildArtExactRemap(*primary.mapLayer);
         std::vector<ShadowPlan> shadowPlans;
-        std::vector<uint32_t> claimedArticulations;
-        std::vector<uint32_t> primaryAllowedArticulationIds;
-        std::vector<juce::String> primaryAllowedArticulationFilters;
-        InstrumentSynth::ArticulationAliasMap artAliases;
-        auto appendPrimaryAllowedArticulationFilter = [&primaryAllowedArticulationFilters](const juce::String& artName) {
-            const auto normalizedArtName = artName.trim();
-            if (normalizedArtName.isEmpty()) return;
-            for (const auto& existingArtName : primaryAllowedArticulationFilters)
-                if (existingArtName.compareIgnoreCase(normalizedArtName) == 0) return;
-            primaryAllowedArticulationFilters.push_back(normalizedArtName);
+        std::vector<uint32_t> claimedArticulationSlotNameIds;
+        std::vector<uint32_t> primaryAllowedArticulationSlotNameIds;
+        std::vector<juce::String> primaryAllowedArticulationSlotFilters;
+        InstrumentPlayer::ArticulationAliasMap artAliases;
+        auto appendPrimaryAllowedArticulationSlotFilter = [&primaryAllowedArticulationSlotFilters](const juce::String& articulationSlotName) {
+            const auto normalizedArticulationSlotName = articulationSlotName.trim();
+            if (normalizedArticulationSlotName.isEmpty()) return;
+            for (const auto& existingArticulationSlotName : primaryAllowedArticulationSlotFilters)
+                if (existingArticulationSlotName.compareIgnoreCase(normalizedArticulationSlotName) == 0) return;
+            primaryAllowedArticulationSlotFilters.push_back(normalizedArticulationSlotName);
         };
-        auto removePrimaryAllowedArticulationFilter = [&primaryAllowedArticulationFilters](uint32_t artId) {
-            std::erase_if(primaryAllowedArticulationFilters, [artId](const juce::String& artName) {
-                return StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(artName)) == artId;
+        auto removePrimaryAllowedArticulationSlotFilter = [&primaryAllowedArticulationSlotFilters](uint32_t articulationSlotNameId) {
+            std::erase_if(primaryAllowedArticulationSlotFilters, [articulationSlotNameId](const juce::String& articulationSlotName) {
+                return StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(articulationSlotName)) == articulationSlotNameId;
             });
         };
 
-        if (primary.effectiveFilter.empty()) {
-            for (const auto& layoutArt : slotLayout.articulations)
-                DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
+        if (primary.effectiveArticulationSlotFilters.empty()) {
+            for (const auto& articulationSlot : slotLayout.articulations)
+                DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationSlotNameIds, articulationSlot.nameId);
         } else {
-            for (const auto& artName : primary.effectiveFilter) {
-                if (artName.isNotEmpty()) {
-                    DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(artName)));
-                    appendPrimaryAllowedArticulationFilter(artName);
+            for (const auto& articulationSlotName : primary.effectiveArticulationSlotFilters) {
+                if (articulationSlotName.isNotEmpty()) {
+                    DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationSlotNameIds, StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(articulationSlotName)));
+                    appendPrimaryAllowedArticulationSlotFilter(articulationSlotName);
                 }
             }
         }
 
         if (LOG_ENABLED(Info)) {
             juce::String allowedStr;
-            for (const auto& artId : primaryAllowedArticulationIds)
-                allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(artId);
+            for (const auto& articulationSlotNameId : primaryAllowedArticulationSlotNameIds)
+                allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(articulationSlotNameId);
             LOG(Info, "  slot=" + slotId + " primaryAllowed(initial)=[" + allowedStr + "] slotChanged=" + juce::String(slotChanged ? "yes" : "no"));
         }
 
-        for (const auto& artName : primary.effectiveFilter) {
-            if (artName.isNotEmpty())
-                DrumKitEngineMapHelpers::appendUniqueId(claimedArticulations, StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(artName)));
+        for (const auto& articulationSlotName : primary.effectiveArticulationSlotFilters) {
+            if (articulationSlotName.isNotEmpty())
+                DrumKitEngineMapHelpers::appendUniqueId(claimedArticulationSlotNameIds, StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(articulationSlotName)));
         }
 
-        for (size_t idx = 1; idx < resolvedEntries.size(); ++idx) {
-            const auto& resolved = resolvedEntries[idx];
-            if (resolved.effectiveFilter.empty()) {
-                shadowPlans.push_back({ resolved.entry, resolved.instSpec, {}, buildArtNameRemap(*resolved.entry), buildArtExactRemap(*resolved.entry) });
+        for (size_t idx = 1; idx < resolvedMapLayers.size(); ++idx) {
+            const auto& resolved = resolvedMapLayers[idx];
+            if (resolved.effectiveArticulationSlotFilters.empty()) {
+                shadowPlans.push_back({ resolved.mapLayer, resolved.instSpec, {}, buildArtNameRemap(*resolved.mapLayer), buildArtExactRemap(*resolved.mapLayer) });
                 continue;
             }
 
-            std::vector<juce::String> layeredArts;
-            const bool hasParameterOverrides = resolved.entry->tuningCents.has_value()
-                                            || resolved.entry->attackTimeMs.has_value()
-                                            || resolved.entry->decayTimeMs.has_value()
-                                            || resolved.entry->volumeDb.has_value()
-                                            || resolved.entry->pan.has_value()
-                                            || resolved.entry->velocityResponse.has_value()
-                                            || resolved.entry->flipLR
-                                            || resolved.entry->flipPhase
-                                            || !resolved.entry->micBleedLevels.empty()
-                                            || !resolved.entry->micRouteOverrides.empty();
-            for (const auto& artName : resolved.effectiveFilter) {
-                if (artName.isEmpty())
-                    continue;
+            std::vector<juce::String> layeredArticulationSlots;
+            const bool hasParameterOverrides = resolved.mapLayer->tuningCents.has_value()
+                                            || resolved.mapLayer->attackTimeMs.has_value()
+                                            || resolved.mapLayer->decayTimeMs.has_value()
+                                            || resolved.mapLayer->volumeDb.has_value()
+                                            || resolved.mapLayer->pan.has_value()
+                                            || resolved.mapLayer->velocityResponse.has_value()
+                                            || resolved.mapLayer->flipLR
+                                            || resolved.mapLayer->flipPhase
+                                            || !resolved.mapLayer->micBleedLevels.empty()
+                                            || !resolved.mapLayer->micRouteOverrides.empty();
+            for (const auto& articulationSlotName : resolved.effectiveArticulationSlotFilters) {
+                if (articulationSlotName.isEmpty()) continue;
 
-                const auto artId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(artName));
-                const bool alreadyClaimed = vectorContains(claimedArticulations, artId);
+                const auto articulationSlotNameId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(articulationSlotName));
+                const bool alreadyClaimed = vectorContains(claimedArticulationSlotNameIds, articulationSlotNameId);
                 if (hasParameterOverrides) {
-                    layeredArts.push_back(artName);
+                    layeredArticulationSlots.push_back(articulationSlotName);
                     if (!alreadyClaimed) {
-                        DrumKitEngineMapHelpers::appendUniqueId(claimedArticulations, artId);
-                        std::erase(primaryAllowedArticulationIds, artId);
-                        removePrimaryAllowedArticulationFilter(artId);
+                        DrumKitEngineMapHelpers::appendUniqueId(claimedArticulationSlotNameIds, articulationSlotNameId);
+                        std::erase(primaryAllowedArticulationSlotNameIds, articulationSlotNameId);
+                        removePrimaryAllowedArticulationSlotFilter(articulationSlotNameId);
                     }
                 } else if (!alreadyClaimed) {
-                    DrumKitEngineMapHelpers::appendUniqueId(claimedArticulations, artId);
-                    artSources[artId] = resolved.instSpec;
-                    DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, artId);
-                    if (!primary.effectiveFilter.empty()) appendPrimaryAllowedArticulationFilter(artName);
-                    // Propagate cross-art remap for this articulation to the primary synth
-                    auto entryRemap = buildArtNameRemap(*resolved.entry);
-                    auto remapIt = entryRemap.find(artId);
-                    if (remapIt != entryRemap.end())
-                        primaryRemap[artId] = remapIt->second;
-                    auto entryExactRemap = buildArtExactRemap(*resolved.entry);
-                    primaryExactRemap.insert(entryExactRemap.begin(), entryExactRemap.end());
+                    DrumKitEngineMapHelpers::appendUniqueId(claimedArticulationSlotNameIds, articulationSlotNameId);
+                    articulationLibraryMap[articulationSlotNameId] = resolved.instSpec;
+                    DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationSlotNameIds, articulationSlotNameId);
+                    if (!primary.effectiveArticulationSlotFilters.empty()) appendPrimaryAllowedArticulationSlotFilter(articulationSlotName);
+                    // Propagate the cross-articulation remap to the primary instrument player.
+                    auto mapLayerRemap = buildArtNameRemap(*resolved.mapLayer);
+                    auto remapIt = mapLayerRemap.find(articulationSlotNameId);
+                    if (remapIt != mapLayerRemap.end()) primaryRemap[articulationSlotNameId] = remapIt->second;
+                    auto mapLayerExactRemap = buildArtExactRemap(*resolved.mapLayer);
+                    primaryExactRemap.insert(mapLayerExactRemap.begin(), mapLayerExactRemap.end());
                 } else {
-                    layeredArts.push_back(artName);
+                    layeredArticulationSlots.push_back(articulationSlotName);
                 }
             }
 
-            if (!layeredArts.empty())
-                shadowPlans.push_back({ resolved.entry, resolved.instSpec, layeredArts, buildArtNameRemap(*resolved.entry), buildArtExactRemap(*resolved.entry) });
+            if (!layeredArticulationSlots.empty())
+                shadowPlans.push_back({ resolved.mapLayer, resolved.instSpec, layeredArticulationSlots, buildArtNameRemap(*resolved.mapLayer), buildArtExactRemap(*resolved.mapLayer) });
         }
 
-        uint32_t fallbackLayoutArtId = 0;
-        InstrumentSynth::ArticulationTarget fallbackSourceArt;
+        uint32_t fallbackArticulationSlotNameId = 0;
+        InstrumentPlayer::ArticulationTarget fallbackLibraryArticulation;
         if (slotLayout.controllers.empty()) {
-            for (const auto& primaryArtName : primary.effectiveFilter) {
-                if (primaryArtName.isEmpty())
-                    continue;
-                fallbackLayoutArtId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(primaryArtName));
-                fallbackSourceArt.nameId = DrumKitEngineMapHelpers::resolveEntrySourceArtId(*primary.entry, primaryArtName);
-                if (!primary.entry->articulationFilter.empty()) {
-                    if (primary.entry->slotArticulationFilter.empty()) {
-                        const KitLayout::InstrumentSlot::ArticulationTrigger sourceArt(primary.entry->articulationFilter.front());
-                        fallbackSourceArt.exprId = sourceArt.exprId;
+            for (const auto& primaryArticulationSlotName : primary.effectiveArticulationSlotFilters) {
+                if (primaryArticulationSlotName.isEmpty()) continue;
+                fallbackArticulationSlotNameId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(primaryArticulationSlotName));
+                fallbackLibraryArticulation.nameId = DrumKitEngineMapHelpers::resolveMapLayerLibraryArticulationId(*primary.mapLayer, primaryArticulationSlotName);
+                if (!primary.mapLayer->articulationFilter.empty()) {
+                    if (primary.mapLayer->slotArticulationFilter.empty()) {
+                        const KitLayout::InstrumentSlot::ArticulationSlot libraryArticulation(primary.mapLayer->articulationFilter.front());
+                        fallbackLibraryArticulation.exprId = libraryArticulation.exprId;
                     } else {
-                        for (size_t artIdx = 0; artIdx < primary.entry->slotArticulationFilter.size() && artIdx < primary.entry->articulationFilter.size(); ++artIdx) {
-                            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(primary.entry->slotArticulationFilter[artIdx], primaryArtName)) continue;
-                            const KitLayout::InstrumentSlot::ArticulationTrigger sourceArt(primary.entry->articulationFilter[artIdx]);
-                            fallbackSourceArt.exprId = sourceArt.exprId;
+                        for (size_t artIdx = 0; artIdx < primary.mapLayer->slotArticulationFilter.size() && artIdx < primary.mapLayer->articulationFilter.size(); ++artIdx) {
+                            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(primary.mapLayer->slotArticulationFilter[artIdx], primaryArticulationSlotName)) continue;
+                            const KitLayout::InstrumentSlot::ArticulationSlot libraryArticulation(primary.mapLayer->articulationFilter[artIdx]);
+                            fallbackLibraryArticulation.exprId = libraryArticulation.exprId;
                             break;
                         }
                     }
@@ -2976,16 +2966,16 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
 
         // Simple non-controller slots inherit empty articulations from the first mapped art.
         // Controller-driven slots keep their existing primary fallback so CC tables remain intact.
-        for (const auto& layoutArt : slotLayout.articulations) {
-            if (vectorContains(claimedArticulations, layoutArt.nameId)) continue;
-            if (fallbackSourceArt.nameId != 0) artAliases[layoutArt.nameId] = fallbackSourceArt;
-            else DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationIds, layoutArt.nameId);
+        for (const auto& articulationSlot : slotLayout.articulations) {
+            if (vectorContains(claimedArticulationSlotNameIds, articulationSlot.nameId)) continue;
+            if (fallbackLibraryArticulation.nameId != 0) artAliases[articulationSlot.nameId] = fallbackLibraryArticulation;
+            else DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationSlotNameIds, articulationSlot.nameId);
         }
 
         if (LOG_ENABLED(Info)) {
             juce::String allowedStr;
-            for (const auto& artId : primaryAllowedArticulationIds)
-                allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(artId);
+            for (const auto& articulationSlotNameId : primaryAllowedArticulationSlotNameIds)
+                allowedStr += (allowedStr.isEmpty() ? "" : ",") + StringsDictSingleton::nameOf(articulationSlotNameId);
             LOG(Info, "  slot=" + slotId + " primaryAllowed(final)=[" + allowedStr + "]");
             if (!primaryRemap.empty()) {
                 juce::String remapStr;
@@ -2993,11 +2983,11 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                     remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
                 LOG(Info, "  primaryRemap: [" + remapStr + "]");
             }
-            if (!artSources.empty()) {
-                juce::String srcStr;
-                for (const auto& [artId, instPtr] : artSources)
-                    srcStr += (srcStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(artId) + "->" + instPtr->meta.codeRaw;
-                LOG(Info, "  artSources: [" + srcStr + "]");
+            if (!articulationLibraryMap.empty()) {
+                juce::String libraryMapText;
+                for (const auto& [artId, instPtr] : articulationLibraryMap)
+                    libraryMapText += (libraryMapText.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(artId) + "->" + instPtr->meta.codeRaw;
+                LOG(Info, "  articulationLibraryMap: [" + libraryMapText + "]");
             }
         }
 
@@ -3006,8 +2996,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         auto pIdxIt = primarySlotIndex.find(slotId);
         prep.primaryIndex = (pIdxIt != primarySlotIndex.end()) ? pIdxIt->second : -1;
         if (!slotChanged && slotStateChanged && prep.primaryIndex >= 0) {
-            prep.primaryParameterEntry = primary.entry;
-            prep.primaryParameterRoutes = buildTargetRoutes(slotLayout, primary.effectiveFilter);
+            prep.primaryParameterMapLayer = primary.mapLayer;
+            prep.primaryParameterRoutes = buildTargetRoutes(slotLayout, primary.effectiveArticulationSlotFilters);
         }
 
         const auto existingShadowIt = existingShadowsBySlotId.find(slotId);
@@ -3019,7 +3009,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
 
         if (canReuseExistingShadows) {
             for (const auto& shadowPlan : shadowPlans) {
-                const auto reloadFingerprint = makeResolvedEntryReloadFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
+                const auto reloadFingerprint = makeResolvedMapLayerReloadFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
                 int matchedShadowIndex = -1;
                 for (int idx = 0; idx < static_cast<int>(existingShadowIt->second.size()); ++idx) {
                     if (matchedExistingShadows[static_cast<size_t>(idx)] || existingShadowIt->second[static_cast<size_t>(idx)].reloadFingerprint != reloadFingerprint) continue;
@@ -3033,10 +3023,10 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 }
 
                 matchedExistingShadows[static_cast<size_t>(matchedShadowIndex)] = true;
-                const auto stateFingerprint = makeResolvedEntryFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
+                const auto stateFingerprint = makeResolvedMapLayerFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
                 const auto& existingShadow = existingShadowIt->second[static_cast<size_t>(matchedShadowIndex)];
                 if (existingShadow.stateFingerprint != stateFingerprint)
-                    shadowParameterUpdates.push_back({ existingShadow.synth, shadowPlan.entry, stateFingerprint });
+                    shadowParameterUpdates.push_back({ existingShadow.instrumentPlayer, shadowPlan.mapLayer, stateFingerprint });
             }
         }
 
@@ -3044,29 +3034,29 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         prep.removeOldShadows = slotHasExistingShadows && (prep.rebuildShadows || (!slotHasShadowPlans && (slotChanged || slotStateChanged)));
         if (canReuseExistingShadows) prep.shadowParameterUpdates = std::move(shadowParameterUpdates);
 
-        // Create a replacement synth for the primary slot (expensive work done outside lock)
+        // Create a replacement instrument player for the primary slot outside the lock.
         if (slotChanged && prep.primaryIndex >= 0) {
-            auto replacement = std::make_unique<InstrumentSynth>(this, slotLayout);
+            auto replacement = std::make_unique<InstrumentPlayer>(this, slotLayout);
             replacement->setMicOutputMapping(primarySlot->getMicOutputMapping());
             replacement->setMicChannelCount(primarySlot->getMicChannelCount());
-            const bool primaryStrictArticulationResolution = !primaryAllowedArticulationFilters.empty() || !primaryRemap.empty() || !primaryExactRemap.empty();
-            InstrumentSynth::RoutingContext primaryRoutingContext;
+            const bool primaryStrictArticulationResolution = !primaryAllowedArticulationSlotFilters.empty() || !primaryRemap.empty() || !primaryExactRemap.empty();
+            InstrumentPlayer::RoutingContext primaryRoutingContext;
             primaryRoutingContext.defaultInstrument = primary.instSpec;
-            primaryRoutingContext.artSources = artSources;
-            primaryRoutingContext.allowedArticulationNameIds = primaryAllowedArticulationIds;
-            primaryRoutingContext.allowedArticulationFilters = primaryAllowedArticulationFilters;
+            primaryRoutingContext.articulationLibraryMap = articulationLibraryMap;
+            primaryRoutingContext.allowedArticulationNameIds = primaryAllowedArticulationSlotNameIds;
+            primaryRoutingContext.allowedArticulationFilters = primaryAllowedArticulationSlotFilters;
             primaryRoutingContext.artNameRemap = primaryRemap;
             primaryRoutingContext.artExactRemap = primaryExactRemap;
             primaryRoutingContext.artAliases = artAliases;
-            primaryRoutingContext.micRouteOverrides = primary.entry->micRouteOverrides;
+            primaryRoutingContext.micRouteOverrides = primary.mapLayer->micRouteOverrides;
             primaryRoutingContext.strictArticulationResolution = primaryStrictArticulationResolution;
-            auto primaryRoutes = replacement->buildResolvedRouteList(slotLayout, primaryRoutingContext);
-            replacement->loadInstrumentWithRouteList(primary.instSpec, primaryRoutingContext, std::move(primaryRoutes), librarySnapshot);
-            applyPrimaryOverrides(*replacement, *primary.entry, buildTargetRoutes(slotLayout, primary.effectiveFilter));
+            auto primaryPlaybackEntries = replacement->buildArticulationPlaybackEntries(slotLayout, primaryRoutingContext);
+            replacement->loadInstrumentWithPlaybackEntries(primary.instSpec, primaryRoutingContext, std::move(primaryPlaybackEntries), librarySnapshot);
+            applyPrimaryOverrides(*replacement, *primary.mapLayer, buildTargetRoutes(slotLayout, primary.effectiveArticulationSlotFilters));
             LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
-                + " tuning=" + juce::String(primary.entry->tuningCents.value_or(0))
-                + (primary.entry->attackTimeMs.has_value() ? " attack=" + juce::String(*primary.entry->attackTimeMs) : "")
-                + (primary.entry->decayTimeMs.has_value() ? " decay=" + juce::String(*primary.entry->decayTimeMs) : ""));
+                + " tuning=" + juce::String(primary.mapLayer->tuningCents.value_or(0))
+                + (primary.mapLayer->attackTimeMs.has_value() ? " attack=" + juce::String(*primary.mapLayer->attackTimeMs) : "")
+                + (primary.mapLayer->decayTimeMs.has_value() ? " decay=" + juce::String(*primary.mapLayer->decayTimeMs) : ""));
             if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
                 replacement->setCurrentPlaybackSampleRate(this->lastSampleRate);
                 replacement->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
@@ -3075,38 +3065,38 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             ++applied;
         }
 
-        // Create shadow synths (expensive work done outside lock)
+        // Create shadow instrument players outside the lock.
         if (prep.rebuildShadows) {
             for (const auto& shadowPlan : shadowPlans) {
-                auto shadow = std::make_unique<InstrumentSynth>(this, slotLayout);
+                auto shadow = std::make_unique<InstrumentPlayer>(this, slotLayout);
                 auto* shadowRaw = shadow.get();
-                const auto shadowArtIds = ArticulationNameHelpers::toArticulationIdList(shadowPlan.articulations);
+                const auto shadowArticulationSlotNameIds = ArticulationNameHelpers::toArticulationIdList(shadowPlan.articulationSlots);
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
-                const bool shadowStrictArticulationResolution = !shadowPlan.articulations.empty() || !shadowPlan.artNameRemap.empty() || !shadowPlan.artExactRemap.empty();
-                InstrumentSynth::ArticulationAliasMap shadowAliases;
-                if (fallbackLayoutArtId != 0 && vectorContains(shadowArtIds, fallbackLayoutArtId)) shadowAliases = artAliases;
-                InstrumentSynth::RoutingContext shadowRoutingContext;
+                const bool shadowStrictArticulationResolution = !shadowPlan.articulationSlots.empty() || !shadowPlan.artNameRemap.empty() || !shadowPlan.artExactRemap.empty();
+                InstrumentPlayer::ArticulationAliasMap shadowAliases;
+                if (fallbackArticulationSlotNameId != 0 && vectorContains(shadowArticulationSlotNameIds, fallbackArticulationSlotNameId)) shadowAliases = artAliases;
+                InstrumentPlayer::RoutingContext shadowRoutingContext;
                 shadowRoutingContext.defaultInstrument = shadowPlan.instSpec;
-                shadowRoutingContext.allowedArticulationNameIds = shadowArtIds;
-                shadowRoutingContext.allowedArticulationFilters = shadowPlan.articulations;
+                shadowRoutingContext.allowedArticulationNameIds = shadowArticulationSlotNameIds;
+                shadowRoutingContext.allowedArticulationFilters = shadowPlan.articulationSlots;
                 shadowRoutingContext.artNameRemap = shadowPlan.artNameRemap;
                 shadowRoutingContext.artExactRemap = shadowPlan.artExactRemap;
                 shadowRoutingContext.artAliases = shadowAliases;
-                shadowRoutingContext.micRouteOverrides = shadowPlan.entry->micRouteOverrides;
+                shadowRoutingContext.micRouteOverrides = shadowPlan.mapLayer->micRouteOverrides;
                 shadowRoutingContext.strictArticulationResolution = shadowStrictArticulationResolution;
-                auto shadowRoutes = shadowRaw->buildResolvedRouteList(slotLayout, shadowRoutingContext);
-                shadowRaw->loadInstrumentWithRouteList(shadowPlan.instSpec, shadowRoutingContext, std::move(shadowRoutes), librarySnapshot);
-                applyOverrides(*shadowRaw, *shadowPlan.entry);
+                auto shadowPlaybackEntries = shadowRaw->buildArticulationPlaybackEntries(slotLayout, shadowRoutingContext);
+                shadowRaw->loadInstrumentWithPlaybackEntries(shadowPlan.instSpec, shadowRoutingContext, std::move(shadowPlaybackEntries), librarySnapshot);
+                applyOverrides(*shadowRaw, *shadowPlan.mapLayer);
                 if (LOG_ENABLED(Info)) {
                     juce::String shadowArtsStr;
-                    for (const auto& sa : shadowPlan.articulations) shadowArtsStr += (shadowArtsStr.isEmpty() ? "" : ",") + sa;
+                    for (const auto& articulationSlotName : shadowPlan.articulationSlots) shadowArtsStr += (shadowArtsStr.isEmpty() ? "" : ",") + articulationSlotName;
                     juce::String remapStr;
                     for (const auto& [fromId, toId] : shadowPlan.artNameRemap) remapStr += (remapStr.isEmpty() ? "" : ", ") + StringsDictSingleton::nameOf(fromId) + "->" + StringsDictSingleton::nameOf(toId);
                     LOG(Info, "  SHADOW loaded: slot=" + slotId + " inst=" + shadowPlan.instSpec->meta.codeRaw
                         + " arts=[" + shadowArtsStr + "]"
                         + (remapStr.isNotEmpty() ? " remap=[" + remapStr + "]" : "")
-                        + " tuning=" + juce::String(shadowPlan.entry->tuningCents.value_or(0)));
+                        + " tuning=" + juce::String(shadowPlan.mapLayer->tuningCents.value_or(0)));
                 }
 
                 if (this->lastSampleRate > 0.0 && this->lastSamplesPerBlock > 0) {
@@ -3115,14 +3105,14 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 }
 
                 PreparedShadow ps;
-                ps.stateFingerprint = makeResolvedEntryFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
-                ps.reloadFingerprint = makeResolvedEntryReloadFingerprint(*shadowPlan.entry, *shadowPlan.instSpec);
-                for (const auto& art : slotLayout.articulations) {
-                    if (!shadowRaw->routesDestinationArticulation(art.nameId, art.exprId)) continue;
-                    for (const int note : art.notes)
+                ps.stateFingerprint = makeResolvedMapLayerFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
+                ps.reloadFingerprint = makeResolvedMapLayerReloadFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
+                for (const auto& articulationSlot : slotLayout.articulations) {
+                    if (!shadowRaw->routesArticulationSlot(articulationSlot.nameId, articulationSlot.exprId)) continue;
+                    for (const int note : articulationSlot.notes)
                         ps.noteRoutes.push_back({note, shadowRaw});
                 }
-                ps.synth = std::move(shadow);
+                ps.instrumentPlayer = std::move(shadow);
                 prep.shadows.push_back(std::move(ps));
                 ++applied;
             }
@@ -3133,8 +3123,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
 
     // ======================== PHASE 3: SWAP (brief lock) ========================
     // The lock is held only for fast pointer swaps and routing table updates.
-    // Old synths are collected and destroyed AFTER the lock is released.
-    std::vector<std::unique_ptr<InstrumentSynth>> oldSynths;
+    // Old instrument players are collected and destroyed after the lock is released.
+    std::vector<std::unique_ptr<InstrumentPlayer>> oldPlayers;
     {
         const juce::ScopedLock graphLock(this->engineGraphLock);
 
@@ -3143,16 +3133,16 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             if (prep.removeOldShadows) shadowSlotIdsToRemove.insert(prep.slotId);
         }
 
-        std::unordered_set<InstrumentSynth*> removedShadowSynths;
+        std::unordered_set<InstrumentPlayer*> removedShadowPlayers;
         if (!shadowSlotIdsToRemove.empty()) {
-            for (int idx = static_cast<int>(this->instrumentSynthPtrs.size()) - 1; idx >= this->primaryInstrumentSynthCount; --idx) {
-                auto* shadowSynth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
-                if (shadowSynth == nullptr || shadowSlotIdsToRemove.find(shadowSynth->getId()) == shadowSlotIdsToRemove.end()) continue;
-                removedShadowSynths.insert(shadowSynth);
-                this->lastAppliedShadowFingerprints.erase(shadowSynth);
-                this->lastAppliedShadowReloadFingerprints.erase(shadowSynth);
-                oldSynths.push_back(std::move(this->instrumentSynthPtrs[static_cast<size_t>(idx)]));
-                this->instrumentSynthPtrs.erase(this->instrumentSynthPtrs.begin() + idx);
+            for (int idx = static_cast<int>(this->instrumentPlayerPtrs.size()) - 1; idx >= this->primaryInstrumentPlayerCount; --idx) {
+                auto* shadowPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
+                if (shadowPlayer == nullptr || shadowSlotIdsToRemove.find(shadowPlayer->getId()) == shadowSlotIdsToRemove.end()) continue;
+                removedShadowPlayers.insert(shadowPlayer);
+                this->lastAppliedShadowFingerprints.erase(shadowPlayer);
+                this->lastAppliedShadowReloadFingerprints.erase(shadowPlayer);
+                oldPlayers.push_back(std::move(this->instrumentPlayerPtrs[static_cast<size_t>(idx)]));
+                this->instrumentPlayerPtrs.erase(this->instrumentPlayerPtrs.begin() + idx);
             }
         }
 
@@ -3160,21 +3150,21 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         bool anyPrimarySwapped = false;
         for (auto& prep : preparedSlots) {
             if (prep.primaryReplacement && prep.primaryIndex >= 0
-                && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
+                && prep.primaryIndex < static_cast<int>(this->instrumentPlayerPtrs.size())) {
                 const auto primaryIndex = static_cast<size_t>(prep.primaryIndex);
-                oldSynths.push_back(std::move(this->instrumentSynthPtrs[primaryIndex]));
-                this->instrumentSynthPtrs[primaryIndex] = std::move(prep.primaryReplacement);
-                this->instrumentSynthById[prep.slotId] = this->instrumentSynthPtrs[primaryIndex].get();
+                oldPlayers.push_back(std::move(this->instrumentPlayerPtrs[primaryIndex]));
+                this->instrumentPlayerPtrs[primaryIndex] = std::move(prep.primaryReplacement);
+                this->instrumentPlayerById[prep.slotId] = this->instrumentPlayerPtrs[primaryIndex].get();
                 anyPrimarySwapped = true;
-            } else if (prep.primaryParameterEntry != nullptr && prep.primaryIndex >= 0 && prep.primaryIndex < static_cast<int>(this->instrumentSynthPtrs.size())) {
-                applyPrimaryOverrides(*this->instrumentSynthPtrs[static_cast<size_t>(prep.primaryIndex)], *prep.primaryParameterEntry, prep.primaryParameterRoutes);
+            } else if (prep.primaryParameterMapLayer != nullptr && prep.primaryIndex >= 0 && prep.primaryIndex < static_cast<int>(this->instrumentPlayerPtrs.size())) {
+                applyPrimaryOverrides(*this->instrumentPlayerPtrs[static_cast<size_t>(prep.primaryIndex)], *prep.primaryParameterMapLayer, prep.primaryParameterRoutes);
                 ++applied;
             }
 
             for (const auto& shadowUpdate : prep.shadowParameterUpdates) {
-                if (shadowUpdate.synth == nullptr || shadowUpdate.entry == nullptr) continue;
-                applyOverrides(*shadowUpdate.synth, *shadowUpdate.entry);
-                this->lastAppliedShadowFingerprints[shadowUpdate.synth] = shadowUpdate.stateFingerprint;
+                if (shadowUpdate.instrumentPlayer == nullptr || shadowUpdate.mapLayer == nullptr) continue;
+                applyOverrides(*shadowUpdate.instrumentPlayer, *shadowUpdate.mapLayer);
+                this->lastAppliedShadowFingerprints[shadowUpdate.instrumentPlayer] = shadowUpdate.stateFingerprint;
                 ++applied;
             }
         }
@@ -3182,29 +3172,29 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         if (anyPrimarySwapped) {
             this->rebuildPrimaryInstrumentNoteRouting();
             if (this->activeKitLayoutPtr != nullptr) {
-                for (int idx = this->primaryInstrumentSynthCount; idx < static_cast<int>(this->instrumentSynthPtrs.size()); ++idx) {
-                    auto* shadowSynth = this->instrumentSynthPtrs[static_cast<size_t>(idx)].get();
-                    if (shadowSynth == nullptr) continue;
-                    const auto layoutIt = std::find_if(this->activeKitLayoutPtr->instrumentSlots.begin(), this->activeKitLayoutPtr->instrumentSlots.end(), [&shadowSynth](const KitLayout::InstrumentSlot& slot) { return slot.id == shadowSynth->getId(); });
-                    if (layoutIt != this->activeKitLayoutPtr->instrumentSlots.end()) this->addShadowSynthNoteRoutes(*shadowSynth, *layoutIt);
+                for (int idx = this->primaryInstrumentPlayerCount; idx < static_cast<int>(this->instrumentPlayerPtrs.size()); ++idx) {
+                    auto* shadowPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
+                    if (shadowPlayer == nullptr) continue;
+                    const auto layoutIt = std::find_if(this->activeKitLayoutPtr->instrumentSlots.begin(), this->activeKitLayoutPtr->instrumentSlots.end(), [&shadowPlayer](const KitLayout::InstrumentSlot& slot) { return slot.id == shadowPlayer->getId(); });
+                    if (layoutIt != this->activeKitLayoutPtr->instrumentSlots.end()) this->addShadowPlayerNoteRoutes(*shadowPlayer, *layoutIt);
                 }
             }
-        } else if (!removedShadowSynths.empty()) {
-            for (auto& [note, synths] : this->instrumentSynthsByNote) {
+        } else if (!removedShadowPlayers.empty()) {
+            for (auto& [note, instrumentPlayers] : this->instrumentPlayersByNote) {
                 juce::ignoreUnused(note);
-                std::erase_if(synths, [&removedShadowSynths](InstrumentSynth* synth) { return removedShadowSynths.find(synth) != removedShadowSynths.end(); });
+                std::erase_if(instrumentPlayers, [&removedShadowPlayers](InstrumentPlayer* instrumentPlayer) { return removedShadowPlayers.find(instrumentPlayer) != removedShadowPlayers.end(); });
             }
         }
 
-        // Add prepared shadow synths and their note routes
+        // Add prepared shadow instrument players and their note routes.
         for (auto& prep : preparedSlots) {
             for (auto& ps : prep.shadows) {
-                for (const auto& [note, synthPtr] : ps.noteRoutes)
-                    this->instrumentSynthsByNote[note].push_back(synthPtr);
-                auto* shadowSynth = ps.synth.get();
-                this->lastAppliedShadowFingerprints[shadowSynth] = ps.stateFingerprint;
-                this->lastAppliedShadowReloadFingerprints[shadowSynth] = ps.reloadFingerprint;
-                this->instrumentSynthPtrs.push_back(std::move(ps.synth));
+                for (const auto& [note, instrumentPlayerPtr] : ps.noteRoutes)
+                    this->instrumentPlayersByNote[note].push_back(instrumentPlayerPtr);
+                auto* shadowPlayer = ps.instrumentPlayer.get();
+                this->lastAppliedShadowFingerprints[shadowPlayer] = ps.stateFingerprint;
+                this->lastAppliedShadowReloadFingerprints[shadowPlayer] = ps.reloadFingerprint;
+                this->instrumentPlayerPtrs.push_back(std::move(ps.instrumentPlayer));
             }
         }
 
@@ -3212,7 +3202,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         this->lastAppliedSlotReloadFingerprints = std::move(nextSlotReloadFingerprints);
         this->lastAppliedInstrumentMapText = normalizedMapText;
     }
-    // Old synths destroyed here outside the lock - audio thread cannot access them
+    // Old instrument players are destroyed here outside the lock. The audio thread cannot access them.
 
     if (applied > 0 && this->sampleLoaderPtr != nullptr)
         this->sampleLoaderPtr->getQueue().startProcessing();
@@ -3224,8 +3214,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         statusLines.add("Instrument map applied successfully");
 
     this->lastInstrumentMapStatus = statusLines.joinIntoString("\n");
-    LOG(Info, "=== useInstrumentMap done: applied=" + juce::String(applied) + " oldSynths=" + juce::String(oldSynths.size())
-        + " totalSynths=" + juce::String(this->instrumentSynthPtrs.size()) + " ===");
+    LOG(Info, "=== useInstrumentMap done: applied=" + juce::String(applied) + " oldPlayers=" + juce::String(oldPlayers.size())
+        + " totalPlayers=" + juce::String(this->instrumentPlayerPtrs.size()) + " ===");
     return applied > 0;
 }
 

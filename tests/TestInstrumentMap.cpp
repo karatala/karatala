@@ -11,10 +11,34 @@ TEST_CASE("InstrumentMap parser rejects empty input", "[InstrumentMap]") {
     const auto parsed = DrumKitEngine::parseInstrumentMapText("");
 
     REQUIRE_FALSE(parsed.ok());
-    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("No valid instrument map entries found"));
+    CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("No valid instrument map layers found"));
 }
 
-TEST_CASE("InstrumentMap parser skips comments and parses basic entries", "[InstrumentMap]") {
+TEST_CASE("InstrumentMap parser requires one complete library articulation path per map layer", "[InstrumentMap]") {
+    const std::vector<juce::String> invalidMapLines {
+        "kick1:MyKit",
+        "kick1:MyKit/kick-24",
+        "kick1:MyKit/kick-24/",
+        "kick1:MyKit/kick-24/center,edge",
+        "kick1:MyKit/kick-24/center/extra",
+    };
+
+    for (const auto& invalidMapLine : invalidMapLines) {
+        const auto parsed = DrumKitEngine::parseInstrumentMapText(invalidMapLine);
+        CHECK_FALSE(parsed.ok());
+    }
+}
+
+TEST_CASE("InstrumentMap parser keeps the articulation slot optional", "[InstrumentMap]") {
+    const auto parsed = DrumKitEngine::parseInstrumentMapText("kick1:MyKit/kick-24/center");
+
+    REQUIRE(parsed.ok());
+    REQUIRE(parsed.value.layers.size() == 1);
+    CHECK(parsed.value.layers.front().slotArticulationFilter.empty());
+    CHECK(parsed.value.layers.front().articulationFilter == std::vector<juce::String> { "center" });
+}
+
+TEST_CASE("InstrumentMap parser skips comments and parses basic map layers", "[InstrumentMap]") {
     const juce::String text = R"MAP(
 # comment
 kick1/center:MyKit/kick-24/center
@@ -24,13 +48,13 @@ snare1/center:MyKit/snare-14/center
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 2);
-    CHECK(parsed.value.entries[0].slotId == "kick1");
-    CHECK(parsed.value.entries[0].kitRef == "MyKit");
-    CHECK(parsed.value.entries[0].instCode == "kick-24");
-    REQUIRE(parsed.value.entries[0].slotArticulationFilter.size() == 1);
-    CHECK(parsed.value.entries[0].slotArticulationFilter[0] == "center");
-    CHECK(parsed.value.entries[1].slotId == "snare1");
+    REQUIRE(parsed.value.layers.size() == 2);
+    CHECK(parsed.value.layers[0].slotId == "kick1");
+    CHECK(parsed.value.layers[0].kitRef == "MyKit");
+    CHECK(parsed.value.layers[0].instCode == "kick-24");
+    REQUIRE(parsed.value.layers[0].slotArticulationFilter.size() == 1);
+    CHECK(parsed.value.layers[0].slotArticulationFilter[0] == "center");
+    CHECK(parsed.value.layers[1].slotId == "snare1");
 }
 
 TEST_CASE("InstrumentMap parser reads params and articulation filters", "[InstrumentMap]") {
@@ -38,20 +62,20 @@ TEST_CASE("InstrumentMap parser reads params and articulation filters", "[Instru
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
+    REQUIRE(parsed.value.layers.size() == 1);
 
-    const auto& entry = parsed.value.entries.front();
-    CHECK(entry.slotId == "ride1");
-    REQUIRE(entry.slotArticulationFilter.size() == 1);
-    CHECK(entry.slotArticulationFilter[0] == "bow");
-    REQUIRE(entry.articulationFilter.size() == 1);
-    CHECK(entry.articulationFilter[0] == "bow");
-    REQUIRE(entry.tuningCents.has_value());
-    CHECK(*entry.tuningCents == -2);
-    REQUIRE(entry.attackTimeMs.has_value());
-    CHECK(*entry.attackTimeMs == 50);
-    REQUIRE(entry.decayTimeMs.has_value());
-    CHECK(*entry.decayTimeMs == 300);
+    const auto& mapLayer = parsed.value.layers.front();
+    CHECK(mapLayer.slotId == "ride1");
+    REQUIRE(mapLayer.slotArticulationFilter.size() == 1);
+    CHECK(mapLayer.slotArticulationFilter[0] == "bow");
+    REQUIRE(mapLayer.articulationFilter.size() == 1);
+    CHECK(mapLayer.articulationFilter[0] == "bow");
+    REQUIRE(mapLayer.tuningCents.has_value());
+    CHECK(*mapLayer.tuningCents == -2);
+    REQUIRE(mapLayer.attackTimeMs.has_value());
+    CHECK(*mapLayer.attackTimeMs == 50);
+    REQUIRE(mapLayer.decayTimeMs.has_value());
+    CHECK(*mapLayer.decayTimeMs == 300);
 }
 
 TEST_CASE("InstrumentMap parser reads gain, flip and bleed params", "[InstrumentMap]") {
@@ -59,18 +83,18 @@ TEST_CASE("InstrumentMap parser reads gain, flip and bleed params", "[Instrument
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
+    REQUIRE(parsed.value.layers.size() == 1);
 
-    const auto& entry = parsed.value.entries.front();
-    REQUIRE(entry.volumeDb.has_value());
-    CHECK_THAT(*entry.volumeDb, Catch::Matchers::WithinAbs(-6.5f, 0.0001f));
-    CHECK(entry.flipLR);
-    CHECK(entry.flipPhase);
-    REQUIRE(entry.micBleedLevels.size() == 2);
-    REQUIRE(entry.micBleedLevels.find("dtm") != entry.micBleedLevels.end());
-    REQUIRE(entry.micBleedLevels.find("dom") != entry.micBleedLevels.end());
-    CHECK_THAT(entry.micBleedLevels.at("dtm"), Catch::Matchers::WithinAbs(0.75f, 0.0001f));
-    CHECK_THAT(entry.micBleedLevels.at("dom"), Catch::Matchers::WithinAbs(0.25f, 0.0001f));
+    const auto& mapLayer = parsed.value.layers.front();
+    REQUIRE(mapLayer.volumeDb.has_value());
+    CHECK_THAT(*mapLayer.volumeDb, Catch::Matchers::WithinAbs(-6.5f, 0.0001f));
+    CHECK(mapLayer.flipLR);
+    CHECK(mapLayer.flipPhase);
+    REQUIRE(mapLayer.micBleedLevels.size() == 2);
+    REQUIRE(mapLayer.micBleedLevels.find("dtm") != mapLayer.micBleedLevels.end());
+    REQUIRE(mapLayer.micBleedLevels.find("dom") != mapLayer.micBleedLevels.end());
+    CHECK_THAT(mapLayer.micBleedLevels.at("dtm"), Catch::Matchers::WithinAbs(0.75f, 0.0001f));
+    CHECK_THAT(mapLayer.micBleedLevels.at("dom"), Catch::Matchers::WithinAbs(0.25f, 0.0001f));
 }
 
 
@@ -79,12 +103,12 @@ TEST_CASE("InstrumentMap parser does not split top-level params on comma", "[Ins
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
-    const auto& entry = parsed.value.entries.front();
-    CHECK_FALSE(entry.tuningCents.has_value());
-    REQUIRE(entry.micBleedLevels.size() == 2);
-    CHECK_THAT(entry.micBleedLevels.at("dtm"), Catch::Matchers::WithinAbs(0.5f, 0.0001f));
-    CHECK_THAT(entry.micBleedLevels.at("room"), Catch::Matchers::WithinAbs(0.8f, 0.0001f));
+    REQUIRE(parsed.value.layers.size() == 1);
+    const auto& mapLayer = parsed.value.layers.front();
+    CHECK_FALSE(mapLayer.tuningCents.has_value());
+    REQUIRE(mapLayer.micBleedLevels.size() == 2);
+    CHECK_THAT(mapLayer.micBleedLevels.at("dtm"), Catch::Matchers::WithinAbs(0.5f, 0.0001f));
+    CHECK_THAT(mapLayer.micBleedLevels.at("room"), Catch::Matchers::WithinAbs(0.8f, 0.0001f));
 }
 
 TEST_CASE("InstrumentMap parser reads mic route overrides", "[InstrumentMap]") {
@@ -92,11 +116,11 @@ TEST_CASE("InstrumentMap parser reads mic route overrides", "[InstrumentMap]") {
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
-    const auto& entry = parsed.value.entries.front();
-    REQUIRE(entry.micRouteOverrides.size() == 2);
-    CHECK(entry.micRouteOverrides.at("dtm") == "room/rfs");
-    CHECK(entry.micRouteOverrides.at("dsm") == "overhead/ons");
+    REQUIRE(parsed.value.layers.size() == 1);
+    const auto& mapLayer = parsed.value.layers.front();
+    REQUIRE(mapLayer.micRouteOverrides.size() == 2);
+    CHECK(mapLayer.micRouteOverrides.at("dtm") == "room/rfs");
+    CHECK(mapLayer.micRouteOverrides.at("dsm") == "overhead/ons");
 }
 
 TEST_CASE("InstrumentMap parser preserves wildcard aux output ids", "[InstrumentMap][routing]") {
@@ -104,92 +128,98 @@ TEST_CASE("InstrumentMap parser preserves wildcard aux output ids", "[Instrument
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
-    CHECK(parsed.value.entries.front().micRouteOverrides.at("dtm1") == "aux1/**m");
-    CHECK(parsed.value.entries.front().micRouteOverrides.at("oni") == "aux1/**i");
+    REQUIRE(parsed.value.layers.size() == 1);
+    CHECK(parsed.value.layers.front().micRouteOverrides.at("dtm1") == "aux1/**m");
+    CHECK(parsed.value.layers.front().micRouteOverrides.at("oni") == "aux1/**i");
     CHECK(DrumKitEngine::serializeInstrumentMap(parsed.value) == text);
 }
 
 TEST_CASE("InstrumentMap serializer preserves mic route overrides in stable order", "[InstrumentMap]") {
     DrumKitEngine::InstrumentMap map;
-    DrumKitEngine::InstrumentMapEntry entry;
-    entry.slotId = "kick1";
-    entry.slotArticulationFilter = { "center" };
-    entry.kitRef = "MyKit";
-    entry.instCode = "kick-24";
-    entry.articulationFilter = { "center" };
-    entry.micRouteOverrides["dtm"] = "room/rfs";
-    entry.micRouteOverrides["dsm"] = "overhead/ons";
-    map.entries.push_back(entry);
+    DrumKitEngine::InstrumentMapLayer mapLayer;
+    mapLayer.slotId = "kick1";
+    mapLayer.slotArticulationFilter = { "center" };
+    mapLayer.kitRef = "MyKit";
+    mapLayer.instCode = "kick-24";
+    mapLayer.articulationFilter = { "center" };
+    mapLayer.micRouteOverrides["dtm"] = "room/rfs";
+    mapLayer.micRouteOverrides["dsm"] = "overhead/ons";
+    map.layers.push_back(mapLayer);
 
     CHECK(DrumKitEngine::serializeInstrumentMap(map) == "kick1/center:MyKit/kick-24/center:micRoute=dsm:overhead/ons,dtm:room/rfs");
 }
 
 TEST_CASE("InstrumentMap fingerprints include mic route overrides", "[InstrumentMap]") {
-    DrumKitEngine::InstrumentMapEntry first;
+    DrumKitEngine::InstrumentMapLayer first;
     first.slotId = "kick1";
     first.kitRef = "MyKit";
     first.instCode = "kick-24";
+    first.articulationFilter = { "center" };
 
-    DrumKitEngine::InstrumentMapEntry second = first;
+    DrumKitEngine::InstrumentMapLayer second = first;
     second.micRouteOverrides["dtm"] = "room/rfs";
 
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(second));
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(second));
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(second));
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(second));
 }
 
-TEST_CASE("InstrumentMap reload fingerprint changes when an entry becomes a parameter layer", "[InstrumentMap]") {
-    DrumKitEngine::InstrumentMapEntry sharedEntry;
-    sharedEntry.slotId = "ride1";
-    sharedEntry.kitRef = "MyKit";
-    sharedEntry.instCode = "ride-20";
-    sharedEntry.slotArticulationFilter = { "bow" };
+TEST_CASE("InstrumentMap reload fingerprint changes when a shared map layer becomes a parameter layer", "[InstrumentMap]") {
+    DrumKitEngine::InstrumentMapLayer sharedMapLayer;
+    sharedMapLayer.slotId = "ride1";
+    sharedMapLayer.kitRef = "MyKit";
+    sharedMapLayer.instCode = "ride-20";
+    sharedMapLayer.slotArticulationFilter = { "bow" };
+    sharedMapLayer.articulationFilter = { "bow" };
 
-    auto parameterLayer = sharedEntry;
+    auto parameterLayer = sharedMapLayer;
     parameterLayer.volumeDb = -3.0f;
 
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(sharedEntry) != DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(parameterLayer));
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(sharedMapLayer) != DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(parameterLayer));
 }
 
 TEST_CASE("InstrumentMap slot replacement removes every old layer and preserves other slots", "[InstrumentMap][assignment]") {
     DrumKitEngine::InstrumentMap map;
 
-    DrumKitEngine::InstrumentMapEntry kickCenter;
+    DrumKitEngine::InstrumentMapLayer kickCenter;
     kickCenter.slotId = "kick1";
     kickCenter.slotArticulationFilter = { "center" };
     kickCenter.kitRef = "KitA";
     kickCenter.instCode = "kick-22";
-    map.entries.push_back(kickCenter);
+    kickCenter.articulationFilter = { "center" };
+    map.layers.push_back(kickCenter);
 
     auto kickEdge = kickCenter;
     kickEdge.slotArticulationFilter = { "edge" };
+    kickEdge.articulationFilter = { "edge" };
     kickEdge.volumeDb = -3.0f;
-    map.entries.push_back(kickEdge);
+    map.layers.push_back(kickEdge);
 
-    DrumKitEngine::InstrumentMapEntry snare;
+    DrumKitEngine::InstrumentMapLayer snare;
     snare.slotId = "snare1";
     snare.kitRef = "KitA";
     snare.instCode = "snare-14";
+    snare.articulationFilter = { "center" };
     snare.tuningCents = 20;
-    map.entries.push_back(snare);
+    map.layers.push_back(snare);
 
-    DrumKitEngine::InstrumentMapEntry replacement;
+    DrumKitEngine::InstrumentMapLayer replacement;
     replacement.slotId = "kick1";
     replacement.kitRef = "KitB";
     replacement.instCode = "kick-24";
-    DrumKitEngineMapHelpers::replaceSlotEntries(map, replacement);
+    replacement.articulationFilter = { "center" };
+    DrumKitEngineMapHelpers::replaceSlotMapLayers(map, "kick1", { replacement });
 
-    REQUIRE(map.entries.size() == 2);
-    CHECK(map.entries[0].slotId == "snare1");
-    CHECK(map.entries[0].tuningCents == 20);
-    CHECK(map.entries[1].slotId == "kick1");
-    CHECK(map.entries[1].kitRef == "KitB");
-    CHECK(map.entries[1].instCode == "kick-24");
-    CHECK(map.entries[1].slotArticulationFilter.empty());
-    CHECK(map.entries[1].articulationFilter.empty());
+    REQUIRE(map.layers.size() == 2);
+    CHECK(map.layers[0].slotId == "snare1");
+    CHECK(map.layers[0].tuningCents == 20);
+    CHECK(map.layers[1].slotId == "kick1");
+    CHECK(map.layers[1].kitRef == "KitB");
+    CHECK(map.layers[1].instCode == "kick-24");
+    CHECK(map.layers[1].slotArticulationFilter.empty());
+    CHECK(map.layers[1].articulationFilter == std::vector<juce::String> { "center" });
 }
 
-TEST_CASE("InstrumentMap destination projections match layer numbers inside each articulation", "[InstrumentMap][linked-edit]") {
+TEST_CASE("InstrumentMap projections match map-layer numbers inside each articulation slot", "[InstrumentMap][linked-edit]") {
     KitLayout layout;
     KitLayout::InstrumentSlot slot;
     slot.id = "snare1";
@@ -199,39 +229,44 @@ TEST_CASE("InstrumentMap destination projections match layer numbers inside each
     layout.instrumentSlots.push_back(slot);
 
     DrumKitEngine::InstrumentMap map;
-    DrumKitEngine::InstrumentMapEntry wildcard;
-    wildcard.slotId = "snare1";
-    wildcard.kitRef = "KitA";
-    wildcard.instCode = "snare-14";
-    map.entries.push_back(wildcard);
-
-    auto centerLayer = wildcard;
+    DrumKitEngine::InstrumentMapLayer centerLayer;
+    centerLayer.slotId = "snare1";
+    centerLayer.kitRef = "KitA";
+    centerLayer.instCode = "snare-14";
     centerLayer.slotArticulationFilter = { "center" };
-    centerLayer.articulationFilter = { "edge" };
-    map.entries.push_back(centerLayer);
+    centerLayer.articulationFilter = { "center" };
+    map.layers.push_back(centerLayer);
 
-    auto rimLayer = wildcard;
+    auto centerParameterLayer = centerLayer;
+    centerParameterLayer.articulationFilter = { "edge" };
+    map.layers.push_back(centerParameterLayer);
+
+    auto rimLayer = centerLayer;
     rimLayer.slotArticulationFilter = { "rim" };
-    rimLayer.articulationFilter = { "rimshot" };
-    map.entries.push_back(rimLayer);
+    rimLayer.articulationFilter = { "rim" };
+    map.layers.push_back(rimLayer);
 
-    const auto projections = DrumKitEngineMapHelpers::projectDestinationLayers(map, layout);
+    auto rimParameterLayer = rimLayer;
+    rimParameterLayer.articulationFilter = { "rimshot" };
+    map.layers.push_back(rimParameterLayer);
+
+    const auto projections = DrumKitEngineMapHelpers::projectMapLayers(map, layout);
     REQUIRE(projections.size() == 4);
-    CHECK(projections[0].articulationName == "center");
-    CHECK(projections[0].entryIndex == 0);
-    CHECK(projections[0].layerIndex == 0);
-    CHECK(projections[1].articulationName == "center");
-    CHECK(projections[1].entryIndex == 1);
-    CHECK(projections[1].layerIndex == 1);
-    CHECK(projections[2].articulationName == "rim");
-    CHECK(projections[2].entryIndex == 0);
-    CHECK(projections[2].layerIndex == 0);
-    CHECK(projections[3].articulationName == "rim");
-    CHECK(projections[3].entryIndex == 2);
-    CHECK(projections[3].layerIndex == 1);
+    CHECK(projections[0].articulationSlotCode == "center");
+    CHECK(projections[0].mapLayerIndex == 0);
+    CHECK(projections[0].articulationSlotLayerIndex == 0);
+    CHECK(projections[1].articulationSlotCode == "center");
+    CHECK(projections[1].mapLayerIndex == 1);
+    CHECK(projections[1].articulationSlotLayerIndex == 1);
+    CHECK(projections[2].articulationSlotCode == "rim");
+    CHECK(projections[2].mapLayerIndex == 2);
+    CHECK(projections[2].articulationSlotLayerIndex == 0);
+    CHECK(projections[3].articulationSlotCode == "rim");
+    CHECK(projections[3].mapLayerIndex == 3);
+    CHECK(projections[3].articulationSlotLayerIndex == 1);
 }
 
-TEST_CASE("InstrumentMap destination projections respect a source-only articulation filter", "[InstrumentMap][linked-edit]") {
+TEST_CASE("InstrumentMap projections use the library articulation as an implicit articulation-slot filter", "[InstrumentMap][linked-edit]") {
     KitLayout layout;
     KitLayout::InstrumentSlot slot;
     slot.id = "snare1";
@@ -240,53 +275,57 @@ TEST_CASE("InstrumentMap destination projections respect a source-only articulat
     layout.instrumentSlots.push_back(slot);
 
     DrumKitEngine::InstrumentMap map;
-    DrumKitEngine::InstrumentMapEntry centerOnly;
+    DrumKitEngine::InstrumentMapLayer centerOnly;
     centerOnly.slotId = "snare1";
     centerOnly.kitRef = "KitA";
     centerOnly.instCode = "snare-14";
     centerOnly.articulationFilter = { "center" };
-    map.entries.push_back(centerOnly);
+    map.layers.push_back(centerOnly);
 
-    const auto projections = DrumKitEngineMapHelpers::projectDestinationLayers(map, layout);
+    const auto projections = DrumKitEngineMapHelpers::projectMapLayers(map, layout);
     REQUIRE(projections.size() == 1);
-    CHECK(projections[0].articulationName == "center");
-    CHECK(DrumKitEngineMapHelpers::sourceArticulationForDestination(map.entries[0], "center") == "center");
+    CHECK(projections[0].articulationSlotCode == "center");
+    CHECK(DrumKitEngineMapHelpers::libraryArticulationForSlot(map.layers[0], "center") == "center");
 }
 
-TEST_CASE("InstrumentMap linked mic edits resolve the source articulation path", "[InstrumentMap][linked-edit][routing]") {
-    DrumKitEngine::InstrumentMapEntry wholeInstrument;
-    wholeInstrument.kitRef = "KitA";
-    wholeInstrument.instCode = "snare-14";
-    CHECK(DrumKitEngineMapHelpers::sourcePathForDestination(wholeInstrument, "rim") == "KitA/snare-14/rim");
+TEST_CASE("InstrumentMap linked mic edits resolve the library articulation path", "[InstrumentMap][linked-edit][routing]") {
+    DrumKitEngine::InstrumentMapLayer mapLayer;
+    mapLayer.kitRef = "KitA";
+    mapLayer.instCode = "snare-14";
+    mapLayer.articulationFilter = { "rim" };
+    CHECK(DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rim");
 
-    wholeInstrument.slotArticulationFilter = { "rim" };
-    wholeInstrument.articulationFilter = { "rimshot" };
-    CHECK(DrumKitEngineMapHelpers::sourcePathForDestination(wholeInstrument, "rim") == "KitA/snare-14/rimshot");
+    mapLayer.slotArticulationFilter = { "rim" };
+    mapLayer.articulationFilter = { "rimshot" };
+    CHECK(DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rimshot");
 }
 
-TEST_CASE("InstrumentMap isolates a wildcard entry before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
+TEST_CASE("InstrumentMap isolates an implicit multi-slot map layer before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
     KitLayout::InstrumentSlot slot;
     slot.id = "snare1";
     slot.type = KitLib::InstrumentSpec::Type::Snare;
-    slot.articulations.emplace_back("center");
-    slot.articulations.emplace_back("rim");
+    slot.articulations.emplace_back("bow[half]");
+    slot.articulations.emplace_back("bow[open]");
 
     DrumKitEngine::InstrumentMap map;
-    DrumKitEngine::InstrumentMapEntry wildcard;
-    wildcard.slotId = "snare1";
-    wildcard.kitRef = "KitA";
-    wildcard.instCode = "snare-14";
-    wildcard.volumeDb = -2.0f;
-    map.entries.push_back(wildcard);
+    DrumKitEngine::InstrumentMapLayer mapLayer;
+    mapLayer.slotId = "snare1";
+    mapLayer.kitRef = "KitA";
+    mapLayer.instCode = "snare-14";
+    mapLayer.articulationFilter = { "bow" };
+    mapLayer.volumeDb = -2.0f;
+    map.layers.push_back(mapLayer);
 
-    const auto centerIndex = DrumKitEngineMapHelpers::isolateEntryForDestinationArticulation(map, slot, 0, "center");
+    const auto halfLayerIndex = DrumKitEngineMapHelpers::isolateMapLayerForArticulationSlot(map, slot, 0, "bow[half]");
 
-    REQUIRE(map.entries.size() == 2);
-    CHECK(centerIndex == 0);
-    CHECK(map.entries[0].slotArticulationFilter == std::vector<juce::String> { "center" });
-    CHECK(map.entries[1].slotArticulationFilter == std::vector<juce::String> { "rim" });
-    CHECK(map.entries[0].volumeDb == -2.0f);
-    CHECK(map.entries[1].volumeDb == -2.0f);
+    REQUIRE(map.layers.size() == 2);
+    CHECK(halfLayerIndex == 0);
+    CHECK(map.layers[0].slotArticulationFilter == std::vector<juce::String> { "bow[half]" });
+    CHECK(map.layers[1].slotArticulationFilter == std::vector<juce::String> { "bow[open]" });
+    CHECK(map.layers[0].articulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(map.layers[1].articulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(map.layers[0].volumeDb == -2.0f);
+    CHECK(map.layers[1].volumeDb == -2.0f);
 }
 
 TEST_CASE("InstrumentMap linked targets use same articulation layer and deduplicate both link modes", "[InstrumentMap][linked-edit]") {
@@ -299,20 +338,20 @@ TEST_CASE("InstrumentMap linked targets use same articulation layer and deduplic
         { 3, "snare1", "center", 0, KitLib::InstrumentSpec::Type::Snare },
     };
 
-    const auto sourceOnly = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, false, false);
-    REQUIRE(sourceOnly.size() == 1);
-    CHECK(sourceOnly[0].slotId == "tom1");
-    CHECK(sourceOnly[0].articulationName == "center");
+    const auto selectedOnly = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, false, false);
+    REQUIRE(selectedOnly.size() == 1);
+    CHECK(selectedOnly[0].slotId == "tom1");
+    CHECK(selectedOnly[0].articulationSlotCode == "center");
 
-    const auto linkedArticulations = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, true, false);
+    const auto linkedArticulations = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, true, false);
     REQUIRE(linkedArticulations.size() == 2);
-    CHECK(std::none_of(linkedArticulations.begin(), linkedArticulations.end(), [](const auto& projection) { return projection.layerIndex == 1; }));
+    CHECK(std::none_of(linkedArticulations.begin(), linkedArticulations.end(), [](const auto& projection) { return projection.articulationSlotLayerIndex == 1; }));
 
-    const auto linkedTomBleed = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, false, true);
+    const auto linkedTomBleed = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, false, true);
     REQUIRE(linkedTomBleed.size() == 4);
     CHECK(std::none_of(linkedTomBleed.begin(), linkedTomBleed.end(), [](const auto& projection) { return projection.slotType != KitLib::InstrumentSpec::Type::Tom; }));
 
-    const auto bothLinks = DrumKitEngineMapHelpers::collectLinkedParameterTargets(projections, "tom1", "center", 0, true, true);
+    const auto bothLinks = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, true, true);
     CHECK(bothLinks.size() == linkedTomBleed.size());
 }
 
@@ -361,18 +400,18 @@ TEST_CASE("MicRoutingPlan resolves explicit mic route override by output id", "[
     CHECK_THAT(invalid.warning.toStdString(), Catch::Matchers::ContainsSubstring("output 'bad' was not found"));
 }
 
-TEST_CASE("InstrumentMap parser supports explicit source articulation path", "[InstrumentMap]") {
+TEST_CASE("InstrumentMap parser supports an explicit library articulation path", "[InstrumentMap]") {
     const juce::String text = "ride1/edge:KitB/crash-18/bell:tuning=120";
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
+    REQUIRE(parsed.value.layers.size() == 1);
 
-    const auto& entry = parsed.value.entries.front();
-    REQUIRE(entry.slotArticulationFilter.size() == 1);
-    CHECK(entry.slotArticulationFilter[0] == "edge");
-    REQUIRE(entry.articulationFilter.size() == 1);
-    CHECK(entry.articulationFilter[0] == "bell");
+    const auto& mapLayer = parsed.value.layers.front();
+    REQUIRE(mapLayer.slotArticulationFilter.size() == 1);
+    CHECK(mapLayer.slotArticulationFilter[0] == "edge");
+    REQUIRE(mapLayer.articulationFilter.size() == 1);
+    CHECK(mapLayer.articulationFilter[0] == "bell");
 }
 
 TEST_CASE("InstrumentMap serializer preserves parsed assignments and parameters", "[InstrumentMap]") {
@@ -385,62 +424,64 @@ TEST_CASE("InstrumentMap serializer preserves parsed assignments and parameters"
     const auto serialized = DrumKitEngine::serializeInstrumentMap(parsed.value);
     auto reparsed = DrumKitEngine::parseInstrumentMapText(serialized);
     REQUIRE(reparsed.ok());
-    REQUIRE(reparsed.value.entries.size() == 1);
+    REQUIRE(reparsed.value.layers.size() == 1);
 
-    const auto& entry = reparsed.value.entries.front();
-    CHECK(entry.slotId == "snare1");
-    REQUIRE(entry.slotArticulationFilter.size() == 1);
-    CHECK(entry.slotArticulationFilter.front() == "rim");
-    CHECK(entry.kitRef == "MixedKit");
-    CHECK(entry.instCode == "snare-14");
-    REQUIRE(entry.articulationFilter.size() == 1);
-    CHECK(entry.articulationFilter.front() == "sidestick");
-    CHECK(entry.tuningCents == -25);
-    CHECK(entry.attackTimeMs == 12);
-    CHECK(entry.decayTimeMs == 450);
-    CHECK(entry.volumeDb == -3.5f);
-    REQUIRE(entry.velocityResponse.has_value());
-    CHECK(*entry.velocityResponse == "1:-48,64:-12,127:0");
-    CHECK(entry.flipLR);
-    CHECK(entry.flipPhase);
-    CHECK(entry.micBleedLevels.at("oh") == 0.25f);
-    CHECK(entry.micBleedLevels.at("room") == 0.5f);
+    const auto& mapLayer = reparsed.value.layers.front();
+    CHECK(mapLayer.slotId == "snare1");
+    REQUIRE(mapLayer.slotArticulationFilter.size() == 1);
+    CHECK(mapLayer.slotArticulationFilter.front() == "rim");
+    CHECK(mapLayer.kitRef == "MixedKit");
+    CHECK(mapLayer.instCode == "snare-14");
+    REQUIRE(mapLayer.articulationFilter.size() == 1);
+    CHECK(mapLayer.articulationFilter.front() == "sidestick");
+    CHECK(mapLayer.tuningCents == -25);
+    CHECK(mapLayer.attackTimeMs == 12);
+    CHECK(mapLayer.decayTimeMs == 450);
+    CHECK(mapLayer.volumeDb == -3.5f);
+    REQUIRE(mapLayer.velocityResponse.has_value());
+    CHECK(*mapLayer.velocityResponse == "1:-48,64:-12,127:0");
+    CHECK(mapLayer.flipLR);
+    CHECK(mapLayer.flipPhase);
+    CHECK(mapLayer.micBleedLevels.at("oh") == 0.25f);
+    CHECK(mapLayer.micBleedLevels.at("room") == 0.5f);
 }
 
 TEST_CASE("InstrumentMap parser rejects an invalid layer velocity response", "[InstrumentMap][VelocityResponse]") {
     const auto parsed = DrumKitEngine::parseInstrumentMapText("snare1/center:MyKit/snare-14/center:velocityResponse=1:-12,127:-1");
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
-    CHECK_FALSE(parsed.value.entries.front().velocityResponse.has_value());
+    REQUIRE(parsed.value.layers.size() == 1);
+    CHECK_FALSE(parsed.value.layers.front().velocityResponse.has_value());
     CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("invalid value for 'velocityResponse'"));
 }
 
 TEST_CASE("InstrumentMap velocity response changes without changing an existing custom layer shape", "[InstrumentMap][VelocityResponse]") {
-    DrumKitEngine::InstrumentMapEntry first;
+    DrumKitEngine::InstrumentMapLayer first;
     first.slotId = "snare1";
     first.kitRef = "MyKit";
     first.instCode = "snare-14";
+    first.articulationFilter = { "center" };
     first.velocityResponse = "1:-48,64:-12,127:0";
 
     auto second = first;
     second.velocityResponse = "1:-36,64:-9,127:0";
 
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint(second));
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(first) == DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint(second));
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(second));
+    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(first) == DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(second));
 }
 
-TEST_CASE("InstrumentMap serializer omits entries without slot or kit", "[InstrumentMap]") {
+TEST_CASE("InstrumentMap serializer omits map layers without a complete library path", "[InstrumentMap]") {
     DrumKitEngine::InstrumentMap map;
-    map.entries.push_back({});
+    map.layers.push_back({});
 
-    DrumKitEngine::InstrumentMapEntry valid;
+    DrumKitEngine::InstrumentMapLayer valid;
     valid.slotId = "kick1";
     valid.kitRef = "FactoryKit";
     valid.instCode = "kick-22";
-    map.entries.push_back(valid);
+    valid.articulationFilter = { "center" };
+    map.layers.push_back(valid);
 
-    CHECK(DrumKitEngine::serializeInstrumentMap(map) == "kick1:FactoryKit/kick-22");
+    CHECK(DrumKitEngine::serializeInstrumentMap(map) == "kick1:FactoryKit/kick-22/center");
 }
 
 TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[InstrumentMap]") {
@@ -448,7 +489,7 @@ TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[I
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
+    REQUIRE(parsed.value.layers.size() == 1);
     CHECK_FALSE(parsed.errors.empty());
     CHECK_THAT(parsed.error().toStdString(), Catch::Matchers::ContainsSubstring("unknown param 'unknown'"));
     CHECK(parsed.error().toStdString().find("malformed param 'broken'") == std::string::npos);
@@ -459,13 +500,13 @@ TEST_CASE("InstrumentMap parser preserves explicit false flipLR", "[InstrumentMa
     const auto parsed = DrumKitEngine::parseInstrumentMapText(text);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
-    CHECK_FALSE(parsed.value.entries.front().flipLR);
-    CHECK(parsed.value.entries.front().flipLRExplicit);
+    REQUIRE(parsed.value.layers.size() == 1);
+    CHECK_FALSE(parsed.value.layers.front().flipLR);
+    CHECK(parsed.value.layers.front().flipLRExplicit);
     CHECK(DrumKitEngine::serializeInstrumentMap(parsed.value) == text);
 }
 
-TEST_CASE("InstrumentMap builder infers flipLR from opposite slot and source balance", "[InstrumentMap][orientation]") {
+TEST_CASE("InstrumentMap builder infers flipLR from opposite slot and library placement balance", "[InstrumentMap][orientation]") {
     KitLayout layout;
 
     KitLayout::InstrumentSlot leftSlot;
@@ -522,55 +563,67 @@ TEST_CASE("InstrumentMap builder infers flipLR from opposite slot and source bal
     const auto parsed = DrumKitEngine::parseInstrumentMapText(mapText);
 
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 3);
-    CHECK(parsed.value.entries[0].slotId == "ride1");
-    CHECK(parsed.value.entries[0].instCode == "ride-a");
-    CHECK(parsed.value.entries[0].flipLR);
-    CHECK(parsed.value.entries[0].flipLRExplicit);
-    CHECK(parsed.value.entries[1].slotId == "ride2");
-    CHECK(parsed.value.entries[1].instCode == "ride-b");
-    CHECK_FALSE(parsed.value.entries[1].flipLR);
-    CHECK_FALSE(parsed.value.entries[1].flipLRExplicit);
-    CHECK(parsed.value.entries[2].slotId == "ride3");
-    CHECK(parsed.value.entries[2].instCode == "ride-c");
-    CHECK_FALSE(parsed.value.entries[2].flipLR);
-    CHECK_FALSE(parsed.value.entries[2].flipLRExplicit);
+    REQUIRE(parsed.value.layers.size() == 4);
+    CHECK(parsed.value.layers[0].slotId == "ride1");
+    CHECK(parsed.value.layers[0].instCode == "ride-a");
+    CHECK(parsed.value.layers[0].articulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(parsed.value.layers[0].flipLR);
+    CHECK(parsed.value.layers[0].flipLRExplicit);
+    CHECK(parsed.value.layers[1].slotId == "ride2");
+    CHECK(parsed.value.layers[1].instCode == "ride-b");
+    CHECK(parsed.value.layers[1].articulationFilter == std::vector<juce::String> { "bow" });
+    CHECK_FALSE(parsed.value.layers[1].flipLR);
+    CHECK_FALSE(parsed.value.layers[1].flipLRExplicit);
+    CHECK(parsed.value.layers[2].slotId == "ride3");
+    CHECK(parsed.value.layers[2].instCode == "ride-c");
+    CHECK(parsed.value.layers[2].articulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(parsed.value.layers[2].flipLR);
+    CHECK(parsed.value.layers[2].flipLRExplicit);
+    CHECK(parsed.value.layers[3].slotId == "ride3");
+    CHECK(parsed.value.layers[3].instCode == "ride-c");
+    CHECK(parsed.value.layers[3].articulationFilter == std::vector<juce::String> { "edge" });
+    CHECK_FALSE(parsed.value.layers[3].flipLR);
+    CHECK_FALSE(parsed.value.layers[3].flipLRExplicit);
 }
 
 TEST_CASE("InstrumentMap serializer groups by slot without changing layer order", "[InstrumentMap]") {
     DrumKitEngine::InstrumentMap map;
 
-    DrumKitEngine::InstrumentMapEntry snareRimFirst;
+    DrumKitEngine::InstrumentMapLayer snareRimFirst;
     snareRimFirst.slotId = "snare1";
     snareRimFirst.slotArticulationFilter = { "rim" };
     snareRimFirst.kitRef = "KitA";
     snareRimFirst.instCode = "snare-14";
+    snareRimFirst.articulationFilter = { "rim" };
     snareRimFirst.tuningCents = -10;
-    map.entries.push_back(snareRimFirst);
+    map.layers.push_back(snareRimFirst);
 
-    DrumKitEngine::InstrumentMapEntry kick;
+    DrumKitEngine::InstrumentMapLayer kick;
     kick.slotId = "kick1";
     kick.kitRef = "KitA";
     kick.instCode = "kick-22";
-    map.entries.push_back(kick);
+    kick.articulationFilter = { "center" };
+    map.layers.push_back(kick);
 
-    DrumKitEngine::InstrumentMapEntry snareCenter;
+    DrumKitEngine::InstrumentMapLayer snareCenter;
     snareCenter.slotId = "snare1";
     snareCenter.slotArticulationFilter = { "center" };
     snareCenter.kitRef = "KitA";
     snareCenter.instCode = "snare-14";
-    map.entries.push_back(snareCenter);
+    snareCenter.articulationFilter = { "center" };
+    map.layers.push_back(snareCenter);
 
-    DrumKitEngine::InstrumentMapEntry snareRimSecond;
+    DrumKitEngine::InstrumentMapLayer snareRimSecond;
     snareRimSecond.slotId = "snare1";
     snareRimSecond.slotArticulationFilter = { "rim" };
     snareRimSecond.kitRef = "KitB";
     snareRimSecond.instCode = "snare-14";
+    snareRimSecond.articulationFilter = { "rim" };
     snareRimSecond.tuningCents = 15;
-    map.entries.push_back(snareRimSecond);
+    map.layers.push_back(snareRimSecond);
 
     const auto serialized = DrumKitEngine::serializeInstrumentMap(map);
-    const juce::String expected = "kick1:KitA/kick-22\nsnare1/center:KitA/snare-14\nsnare1/rim:KitA/snare-14:tuning=-10\nsnare1/rim:KitB/snare-14:tuning=15";
+    const juce::String expected = "kick1:KitA/kick-22/center\nsnare1/center:KitA/snare-14/center\nsnare1/rim:KitA/snare-14/rim:tuning=-10\nsnare1/rim:KitB/snare-14/rim:tuning=15";
     CHECK(serialized == expected);
 }
 
@@ -591,9 +644,37 @@ TEST_CASE("InstrumentMap builder writes preferred kit and instrument ids", "[Ins
     meta.balance = 64;
     meta.description = "Yamaha";
     kit.addInstrument(meta);
+    auto* instrument = kit.findInstrument("kick-22-R64-Yamaha");
+    REQUIRE(instrument != nullptr);
+    instrument->getOrAddArticulation("center");
 
     DrumKitEngine engine;
     const auto mapText = engine.buildInstrumentMapForKit(layout, kit);
 
-    CHECK(mapText == "kick1:StudioKit/kick-22");
+    CHECK(mapText == "kick1:StudioKit/kick-22/center");
+}
+
+TEST_CASE("InstrumentMap builder creates one map layer per library articulation and matches compatible articulation slots", "[InstrumentMap][assignment]") {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "ride1";
+    slot.articulations.emplace_back("bow");
+    slot.articulations.emplace_back("edge");
+
+    KitLib::DrumKitSpec libraryKit { { {}, "KitA", "Kit A", {}, {} } };
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = "ride-20";
+    meta.type = KitLib::InstrumentSpec::Type::Ride;
+    libraryKit.addInstrument(meta);
+    auto* libraryInstrument = libraryKit.findInstrument("ride-20");
+    REQUIRE(libraryInstrument != nullptr);
+    libraryInstrument->getOrAddArticulation("bow");
+    libraryInstrument->getOrAddArticulation("bell");
+
+    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA");
+
+    REQUIRE(mapLayers.size() == 2);
+    CHECK(mapLayers[0].slotArticulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(mapLayers[0].articulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(mapLayers[1].slotArticulationFilter.empty());
+    CHECK(mapLayers[1].articulationFilter == std::vector<juce::String> { "bell" });
 }

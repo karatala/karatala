@@ -1,4 +1,4 @@
-#include "KitSourceOverrides.h"
+#include "LibraryKitOverrides.h"
 #include "../Config/YamlHelper.h"
 #include "RoutingTypes.h"
 #include <algorithm>
@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <string>
 
-namespace KitSourceOverrideHelpers {
+namespace LibraryKitOverridesDetail {
 
 static juce::String decodeYamlKey(const juce::String& rawKey) {
     const auto trimmed = rawKey.trim();
@@ -96,7 +96,7 @@ static void parseBalance(const YamlHelper::YamlNode& node, const juce::String& c
     else result.addWarning(context + ": invalid balance '" + node.asString() + "' was ignored");
 }
 
-static void parseVelocityUpperBounds(const YamlHelper::YamlNode& node, const juce::String& context, KitLib::ArticulationSourceOverride& target, ParseResult<int>& result) {
+static void parseVelocityUpperBounds(const YamlHelper::YamlNode& node, const juce::String& context, KitLib::ArticulationOverride& target, ParseResult<int>& result) {
     if (node.isNull()) return;
     if (!node.isMap()) {
         result.addWarning(context + ": velocityUpperBounds must be a map");
@@ -118,7 +118,7 @@ static void parseVelocityUpperBounds(const YamlHelper::YamlNode& node, const juc
     }
 }
 
-static void parseArticulations(const YamlHelper::YamlNode& node, const juce::String& instrumentCodeRaw, KitLib::InstrumentSourceOverride& target, ParseResult<int>& result) {
+static void parseArticulations(const YamlHelper::YamlNode& node, const juce::String& instrumentCodeRaw, KitLib::InstrumentOverride& target, ParseResult<int>& result) {
     if (node.isNull()) return;
     if (!node.isMap()) {
         result.addWarning("Instrument '" + instrumentCodeRaw + "': articulations must be a map");
@@ -133,7 +133,7 @@ static void parseArticulations(const YamlHelper::YamlNode& node, const juce::Str
             continue;
         }
 
-        KitLib::ArticulationSourceOverride articulationOverride;
+        KitLib::ArticulationOverride articulationOverride;
         parseBalance(articulationNode["balance"], context, articulationOverride.balance, result);
         parseVelocityUpperBounds(articulationNode["velocityUpperBounds"], context, articulationOverride, result);
         addUnknownKeyWarnings(articulationNode, { "balance", "velocityUpperBounds" }, context, result);
@@ -141,7 +141,7 @@ static void parseArticulations(const YamlHelper::YamlNode& node, const juce::Str
     }
 }
 
-static void parseInstruments(const YamlHelper::YamlNode& node, KitLib::KitSourceOverrides& target, ParseResult<int>& result) {
+static void parseInstruments(const YamlHelper::YamlNode& node, KitLib::LibraryKitOverrides& target, ParseResult<int>& result) {
     if (node.isNull()) return;
     if (!node.isMap()) {
         result.addWarning("instruments must be a map");
@@ -156,7 +156,7 @@ static void parseInstruments(const YamlHelper::YamlNode& node, KitLib::KitSource
             continue;
         }
 
-        KitLib::InstrumentSourceOverride instrumentOverride;
+        KitLib::InstrumentOverride instrumentOverride;
         parseBalance(instrumentNode["balance"], context, instrumentOverride.balance, result);
         parseArticulations(instrumentNode["articulations"], instrumentCodeRaw, instrumentOverride, result);
         addUnknownKeyWarnings(instrumentNode, { "balance", "articulations" }, context, result);
@@ -164,7 +164,7 @@ static void parseInstruments(const YamlHelper::YamlNode& node, KitLib::KitSource
     }
 }
 
-static void parseMicOverrides(const YamlHelper::YamlNode& node, const juce::String& samplePath, KitLib::SampleSourceOverride& target, ParseResult<int>& result) {
+static void parseMicOverrides(const YamlHelper::YamlNode& node, const juce::String& samplePath, KitLib::SampleOverride& target, ParseResult<int>& result) {
     if (node.isNull()) return;
     if (!node.isMap()) {
         result.addWarning("Sample '" + samplePath + "': mics must be a map");
@@ -179,7 +179,7 @@ static void parseMicOverrides(const YamlHelper::YamlNode& node, const juce::Stri
             continue;
         }
 
-        KitLib::MicSourceOverride micOverride;
+        KitLib::MicOverride micOverride;
         if (!micNode["playbackOffsetMs"].isNull()) {
             const auto parsedOffset = parseStrictFloat(micNode["playbackOffsetMs"]);
             if (parsedOffset.has_value()) micOverride.playbackOffsetMs = *parsedOffset;
@@ -190,7 +190,7 @@ static void parseMicOverrides(const YamlHelper::YamlNode& node, const juce::Stri
     }
 }
 
-static void parseSamples(const YamlHelper::YamlNode& node, KitLib::KitSourceOverrides& target, ParseResult<int>& result) {
+static void parseSamples(const YamlHelper::YamlNode& node, KitLib::LibraryKitOverrides& target, ParseResult<int>& result) {
     if (node.isNull()) return;
     if (!node.isMap()) {
         result.addWarning("samples must be a map");
@@ -205,7 +205,7 @@ static void parseSamples(const YamlHelper::YamlNode& node, KitLib::KitSourceOver
             continue;
         }
 
-        KitLib::SampleSourceOverride sampleOverride;
+        KitLib::SampleOverride sampleOverride;
         if (!sampleNode["contentHash"].isNull()) {
             const auto contentHash = sampleNode["contentHash"].asString().trim().toLowerCase();
             if (isValidContentHash(contentHash)) sampleOverride.contentHash = contentHash;
@@ -232,14 +232,14 @@ static void appendBalance(juce::String& yaml, const juce::String& indent, const 
     if (balance.has_value()) yaml += indent + "balance: " + balanceValueToString(*balance) + "\n";
 }
 
-} // namespace KitSourceOverrideHelpers
+} // namespace LibraryKitOverridesDetail
 
 namespace KitLib {
 
-ParseResult<int> KitSourceOverrides::loadFromKitRoot(const juce::File& kitRoot) {
+ParseResult<int> LibraryKitOverrides::loadFromKitRoot(const juce::File& kitRoot) {
     this->instrumentOverrides.clear();
     this->sampleOverrides.clear();
-    const auto file = kitRoot.getChildFile(KitSourceOverrides::FILE_NAME);
+    const auto file = kitRoot.getChildFile(LibraryKitOverrides::FILE_NAME);
     this->loadedFileExisted = file.existsAsFile();
     this->loadedFileValid = true;
     this->loadedFileContent = this->loadedFileExisted ? file.loadFileAsString() : juce::String();
@@ -247,26 +247,26 @@ ParseResult<int> KitSourceOverrides::loadFromKitRoot(const juce::File& kitRoot) 
     if (file.getSize() <= 0) {
         ParseResult<int> result;
         this->loadedFileValid = false;
-        return result.returnWithError("Empty " + juce::String(KitSourceOverrides::FILE_NAME) + ": " + file.getFullPathName());
+        return result.returnWithError("Empty " + juce::String(LibraryKitOverrides::FILE_NAME) + ": " + file.getFullPathName());
     }
     auto result = this->parseYaml(this->loadedFileContent);
     this->loadedFileValid = result.ok();
     return result;
 }
 
-ParseResult<int> KitSourceOverrides::parseYaml(const juce::String& yaml) {
+ParseResult<int> LibraryKitOverrides::parseYaml(const juce::String& yaml) {
     ParseResult<int> result;
-    KitSourceOverrides parsedOverrides;
+    LibraryKitOverrides parsedOverrides;
     const auto root = YamlHelper::parse(yaml);
-    if (!root.isMap()) return result.returnWithError("Unable to parse " + juce::String(KitSourceOverrides::FILE_NAME));
+    if (!root.isMap()) return result.returnWithError("Unable to parse " + juce::String(LibraryKitOverrides::FILE_NAME));
 
-    const auto version = KitSourceOverrideHelpers::parseStrictInt(root["version"]);
+    const auto version = LibraryKitOverridesDetail::parseStrictInt(root["version"]);
     if (!version.has_value()) return result.returnWithError("kit-overrides.yml requires integer version");
-    if (*version != KitSourceOverrides::FORMAT_VERSION) return result.returnWithError("Unsupported kit-overrides.yml version " + juce::String(*version));
+    if (*version != LibraryKitOverrides::FORMAT_VERSION) return result.returnWithError("Unsupported kit-overrides.yml version " + juce::String(*version));
 
-    KitSourceOverrideHelpers::parseInstruments(root["instruments"], parsedOverrides, result);
-    KitSourceOverrideHelpers::parseSamples(root["samples"], parsedOverrides, result);
-    KitSourceOverrideHelpers::addUnknownKeyWarnings(root, { "version", "instruments", "samples" }, "kit-overrides.yml", result);
+    LibraryKitOverridesDetail::parseInstruments(root["instruments"], parsedOverrides, result);
+    LibraryKitOverridesDetail::parseSamples(root["samples"], parsedOverrides, result);
+    LibraryKitOverridesDetail::addUnknownKeyWarnings(root, { "version", "instruments", "samples" }, "kit-overrides.yml", result);
 
     this->instrumentOverrides = std::move(parsedOverrides.instrumentOverrides);
     this->sampleOverrides = std::move(parsedOverrides.sampleOverrides);
@@ -274,19 +274,19 @@ ParseResult<int> KitSourceOverrides::parseYaml(const juce::String& yaml) {
     return result;
 }
 
-ParseResult<bool> KitSourceOverrides::saveToKitRoot(const juce::File& kitRoot) {
+ParseResult<bool> LibraryKitOverrides::saveToKitRoot(const juce::File& kitRoot) {
     ParseResult<bool> result;
     if (!kitRoot.isDirectory()) return result.returnWithError("Kit root is not a directory: " + kitRoot.getFullPathName());
 
-    const auto targetFile = kitRoot.getChildFile(KitSourceOverrides::FILE_NAME);
-    const auto backupFile = kitRoot.getChildFile(juce::String(KitSourceOverrides::FILE_NAME) + ".bak");
+    const auto targetFile = kitRoot.getChildFile(LibraryKitOverrides::FILE_NAME);
+    const auto backupFile = kitRoot.getChildFile(juce::String(LibraryKitOverrides::FILE_NAME) + ".bak");
     if (!this->loadedFileValid) return result.returnWithError("The loaded kit-overrides.yml is invalid. Fix or reload it before saving.");
     const bool targetExists = targetFile.existsAsFile();
     if (targetExists != this->loadedFileExisted || (targetExists && targetFile.loadFileAsString() != this->loadedFileContent))
         return result.returnWithError("kit-overrides.yml changed outside this editor. Reload the kit before saving.");
 
     const auto yaml = this->toYaml();
-    KitSourceOverrides validationCopy;
+    LibraryKitOverrides validationCopy;
     const auto validation = validationCopy.parseYaml(yaml);
     if (!validation.ok()) return result.returnWithError("Generated kit-overrides.yml is invalid: " + validation.error());
     if (validationCopy.toYaml() != yaml) return result.returnWithError("Generated kit-overrides.yml did not round-trip without data loss");
@@ -305,25 +305,25 @@ ParseResult<bool> KitSourceOverrides::saveToKitRoot(const juce::File& kitRoot) {
     return result;
 }
 
-juce::String KitSourceOverrides::toYaml() const {
+juce::String LibraryKitOverrides::toYaml() const {
     juce::String yaml;
-    yaml += "version: " + juce::String(KitSourceOverrides::FORMAT_VERSION) + "\n";
+    yaml += "version: " + juce::String(LibraryKitOverrides::FORMAT_VERSION) + "\n";
 
     if (!this->instrumentOverrides.empty()) {
         yaml += "\ninstruments:\n";
         for (const auto& [instrumentCodeRaw, instrumentOverride] : this->instrumentOverrides) {
-            yaml += "  " + KitSourceOverrideHelpers::quoteYaml(instrumentCodeRaw) + ":\n";
-            KitSourceOverrideHelpers::appendBalance(yaml, "    ", instrumentOverride.balance);
+            yaml += "  " + LibraryKitOverridesDetail::quoteYaml(instrumentCodeRaw) + ":\n";
+            LibraryKitOverridesDetail::appendBalance(yaml, "    ", instrumentOverride.balance);
             if (!instrumentOverride.articulationOverrides.empty()) {
                 yaml += "    articulations:\n";
                 for (const auto& [articulationCodeRaw, articulationOverride] : instrumentOverride.articulationOverrides) {
-                    yaml += "      " + KitSourceOverrideHelpers::quoteYaml(articulationCodeRaw) + ":\n";
-                    KitSourceOverrideHelpers::appendBalance(yaml, "        ", articulationOverride.balance);
+                    yaml += "      " + LibraryKitOverridesDetail::quoteYaml(articulationCodeRaw) + ":\n";
+                    LibraryKitOverridesDetail::appendBalance(yaml, "        ", articulationOverride.balance);
                     if (!articulationOverride.velocityUpperBounds.empty()) {
                         yaml += "        velocityUpperBounds:\n";
                         for (const auto& [namedVelocity, upperBoundary] : articulationOverride.velocityUpperBounds) {
                             const auto namedVelocityText = juce::String(static_cast<int>(namedVelocity)).paddedLeft('0', 3);
-                            yaml += "          " + KitSourceOverrideHelpers::quoteYaml(namedVelocityText) + ": " + juce::String(static_cast<int>(upperBoundary)) + "\n";
+                            yaml += "          " + LibraryKitOverridesDetail::quoteYaml(namedVelocityText) + ": " + juce::String(static_cast<int>(upperBoundary)) + "\n";
                         }
                     }
                 }
@@ -334,15 +334,15 @@ juce::String KitSourceOverrides::toYaml() const {
     if (!this->sampleOverrides.empty()) {
         yaml += "\nsamples:\n";
         for (const auto& [relativePath, sampleOverride] : this->sampleOverrides) {
-            yaml += "  " + KitSourceOverrideHelpers::quoteYaml(KitSourceOverrideHelpers::normalizeRelativePath(relativePath)) + ":\n";
-            if (sampleOverride.contentHash.isNotEmpty()) yaml += "    contentHash: " + KitSourceOverrideHelpers::quoteYaml(sampleOverride.contentHash.toLowerCase()) + "\n";
-            if (sampleOverride.manualGainDb.has_value()) yaml += "    manualGainDb: " + KitSourceOverrideHelpers::formatFloat(*sampleOverride.manualGainDb) + "\n";
-            if (sampleOverride.playbackOffsetMs.has_value()) yaml += "    playbackOffsetMs: " + KitSourceOverrideHelpers::formatFloat(*sampleOverride.playbackOffsetMs) + "\n";
+            yaml += "  " + LibraryKitOverridesDetail::quoteYaml(LibraryKitOverridesDetail::normalizeRelativePath(relativePath)) + ":\n";
+            if (sampleOverride.contentHash.isNotEmpty()) yaml += "    contentHash: " + LibraryKitOverridesDetail::quoteYaml(sampleOverride.contentHash.toLowerCase()) + "\n";
+            if (sampleOverride.manualGainDb.has_value()) yaml += "    manualGainDb: " + LibraryKitOverridesDetail::formatFloat(*sampleOverride.manualGainDb) + "\n";
+            if (sampleOverride.playbackOffsetMs.has_value()) yaml += "    playbackOffsetMs: " + LibraryKitOverridesDetail::formatFloat(*sampleOverride.playbackOffsetMs) + "\n";
             if (!sampleOverride.micOverrides.empty()) {
                 yaml += "    mics:\n";
                 for (const auto& [micCode, micOverride] : sampleOverride.micOverrides) {
-                    yaml += "      " + KitSourceOverrideHelpers::quoteYaml(micCode.trim().toLowerCase()) + ":\n";
-                    if (micOverride.playbackOffsetMs.has_value()) yaml += "        playbackOffsetMs: " + KitSourceOverrideHelpers::formatFloat(*micOverride.playbackOffsetMs) + "\n";
+                    yaml += "      " + LibraryKitOverridesDetail::quoteYaml(micCode.trim().toLowerCase()) + ":\n";
+                    if (micOverride.playbackOffsetMs.has_value()) yaml += "        playbackOffsetMs: " + LibraryKitOverridesDetail::formatFloat(*micOverride.playbackOffsetMs) + "\n";
                 }
             }
         }
@@ -350,27 +350,27 @@ juce::String KitSourceOverrides::toYaml() const {
     return yaml;
 }
 
-const InstrumentSourceOverride* KitSourceOverrides::findInstrumentOverride(const juce::String& instrumentCodeRaw) const {
+const InstrumentOverride* LibraryKitOverrides::findInstrumentOverride(const juce::String& instrumentCodeRaw) const {
     const auto overrideIt = this->instrumentOverrides.find(instrumentCodeRaw);
     return overrideIt == this->instrumentOverrides.end() ? nullptr : &overrideIt->second;
 }
 
-const ArticulationSourceOverride* KitSourceOverrides::findArticulationOverride(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw) const {
+const ArticulationOverride* LibraryKitOverrides::findArticulationOverride(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw) const {
     const auto* instrumentOverride = this->findInstrumentOverride(instrumentCodeRaw);
     if (instrumentOverride == nullptr) return nullptr;
     const auto overrideIt = instrumentOverride->articulationOverrides.find(articulationCodeRaw);
     return overrideIt == instrumentOverride->articulationOverrides.end() ? nullptr : &overrideIt->second;
 }
 
-const SampleSourceOverride* KitSourceOverrides::findSampleOverride(const juce::String& relativePath) const {
-    const auto normalizedPath = KitSourceOverrideHelpers::normalizeRelativePath(relativePath);
+const SampleOverride* LibraryKitOverrides::findSampleOverride(const juce::String& relativePath) const {
+    const auto normalizedPath = LibraryKitOverridesDetail::normalizeRelativePath(relativePath);
     const auto overrideIt = this->sampleOverrides.find(normalizedPath);
     return overrideIt == this->sampleOverrides.end() ? nullptr : &overrideIt->second;
 }
 
-SampleSourceOverrideMatch KitSourceOverrides::findSampleOverride(const juce::String& relativePath, const juce::String& contentHash) const {
-    SampleSourceOverrideMatch result;
-    const auto normalizedPath = KitSourceOverrideHelpers::normalizeRelativePath(relativePath);
+SampleOverrideMatch LibraryKitOverrides::findSampleOverride(const juce::String& relativePath, const juce::String& contentHash) const {
+    SampleOverrideMatch result;
+    const auto normalizedPath = LibraryKitOverridesDetail::normalizeRelativePath(relativePath);
     const auto exactIt = this->sampleOverrides.find(normalizedPath);
     if (exactIt != this->sampleOverrides.end()) {
         result.value = &exactIt->second;
@@ -379,7 +379,7 @@ SampleSourceOverrideMatch KitSourceOverrides::findSampleOverride(const juce::Str
     }
 
     const auto normalizedHash = contentHash.trim().toLowerCase();
-    if (!KitSourceOverrideHelpers::isValidContentHash(normalizedHash) || normalizedHash.isEmpty()) return result;
+    if (!LibraryKitOverridesDetail::isValidContentHash(normalizedHash) || normalizedHash.isEmpty()) return result;
     for (const auto& [storedRelativePath, sampleOverride] : this->sampleOverrides) {
         if (sampleOverride.contentHash.compareIgnoreCase(normalizedHash) != 0) continue;
         if (result.value != nullptr) {
@@ -395,14 +395,14 @@ SampleSourceOverrideMatch KitSourceOverrides::findSampleOverride(const juce::Str
     return result;
 }
 
-const MicSourceOverride* KitSourceOverrides::findMicOverride(const juce::String& relativePath, const juce::String& micCode) const {
+const MicOverride* LibraryKitOverrides::findMicOverride(const juce::String& relativePath, const juce::String& micCode) const {
     const auto* sampleOverride = this->findSampleOverride(relativePath);
     if (sampleOverride == nullptr) return nullptr;
     const auto micOverrideIt = sampleOverride->micOverrides.find(micCode.trim().toLowerCase());
     return micOverrideIt == sampleOverride->micOverrides.end() ? nullptr : &micOverrideIt->second;
 }
 
-void KitSourceOverrides::setInstrumentBalance(const juce::String& instrumentCodeRaw, std::optional<int> balance) {
+void LibraryKitOverrides::setInstrumentBalance(const juce::String& instrumentCodeRaw, std::optional<int> balance) {
     if (balance.has_value() && (*balance < -127 || *balance > 127)) return;
     if (balance.has_value()) this->instrumentOverrides[instrumentCodeRaw].balance = *balance;
     else {
@@ -412,7 +412,7 @@ void KitSourceOverrides::setInstrumentBalance(const juce::String& instrumentCode
     this->removeEmptyInstrumentOverride(instrumentCodeRaw);
 }
 
-void KitSourceOverrides::setArticulationBalance(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw, std::optional<int> balance) {
+void LibraryKitOverrides::setArticulationBalance(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw, std::optional<int> balance) {
     if (balance.has_value() && (*balance < -127 || *balance > 127)) return;
     if (balance.has_value()) this->instrumentOverrides[instrumentCodeRaw].articulationOverrides[articulationCodeRaw].balance = *balance;
     else {
@@ -425,7 +425,7 @@ void KitSourceOverrides::setArticulationBalance(const juce::String& instrumentCo
     this->removeEmptyInstrumentOverride(instrumentCodeRaw);
 }
 
-void KitSourceOverrides::setVelocityUpperBoundary(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw, uint8_t namedVelocity, std::optional<uint8_t> upperBoundary) {
+void LibraryKitOverrides::setVelocityUpperBoundary(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw, uint8_t namedVelocity, std::optional<uint8_t> upperBoundary) {
     if (upperBoundary.has_value()) {
         this->instrumentOverrides[instrumentCodeRaw].articulationOverrides[articulationCodeRaw].velocityUpperBounds[namedVelocity] = *upperBoundary;
         return;
@@ -439,7 +439,7 @@ void KitSourceOverrides::setVelocityUpperBoundary(const juce::String& instrument
     this->removeEmptyInstrumentOverride(instrumentCodeRaw);
 }
 
-void KitSourceOverrides::resetVelocityUpperBoundaries(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw) {
+void LibraryKitOverrides::resetVelocityUpperBoundaries(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw) {
     const auto instrumentIt = this->instrumentOverrides.find(instrumentCodeRaw);
     if (instrumentIt == this->instrumentOverrides.end()) return;
     const auto articulationIt = instrumentIt->second.articulationOverrides.find(articulationCodeRaw);
@@ -448,13 +448,13 @@ void KitSourceOverrides::resetVelocityUpperBoundaries(const juce::String& instru
     this->removeEmptyInstrumentOverride(instrumentCodeRaw);
 }
 
-void KitSourceOverrides::setSampleManualGain(const juce::String& relativePath, const juce::String& contentHash, std::optional<float> manualGainDb) {
-    const auto normalizedPath = KitSourceOverrideHelpers::normalizeRelativePath(relativePath);
-    if (!KitSourceOverrideHelpers::isSafeRelativePath(normalizedPath) || (manualGainDb.has_value() && !std::isfinite(*manualGainDb))) return;
+void LibraryKitOverrides::setSampleManualGain(const juce::String& relativePath, const juce::String& contentHash, std::optional<float> manualGainDb) {
+    const auto normalizedPath = LibraryKitOverridesDetail::normalizeRelativePath(relativePath);
+    if (!LibraryKitOverridesDetail::isSafeRelativePath(normalizedPath) || (manualGainDb.has_value() && !std::isfinite(*manualGainDb))) return;
     if (manualGainDb.has_value()) {
         auto& sampleOverride = this->sampleOverrides[normalizedPath];
         sampleOverride.manualGainDb = *manualGainDb;
-        if (KitSourceOverrideHelpers::isValidContentHash(contentHash) && contentHash.isNotEmpty()) sampleOverride.contentHash = contentHash.toLowerCase();
+        if (LibraryKitOverridesDetail::isValidContentHash(contentHash) && contentHash.isNotEmpty()) sampleOverride.contentHash = contentHash.toLowerCase();
     } else {
         const auto sampleIt = this->sampleOverrides.find(normalizedPath);
         if (sampleIt != this->sampleOverrides.end()) sampleIt->second.manualGainDb.reset();
@@ -462,13 +462,13 @@ void KitSourceOverrides::setSampleManualGain(const juce::String& relativePath, c
     this->removeEmptySampleOverride(normalizedPath);
 }
 
-void KitSourceOverrides::setSamplePlaybackOffset(const juce::String& relativePath, const juce::String& contentHash, std::optional<float> playbackOffsetMs) {
-    const auto normalizedPath = KitSourceOverrideHelpers::normalizeRelativePath(relativePath);
-    if (!KitSourceOverrideHelpers::isSafeRelativePath(normalizedPath) || (playbackOffsetMs.has_value() && !std::isfinite(*playbackOffsetMs))) return;
+void LibraryKitOverrides::setSamplePlaybackOffset(const juce::String& relativePath, const juce::String& contentHash, std::optional<float> playbackOffsetMs) {
+    const auto normalizedPath = LibraryKitOverridesDetail::normalizeRelativePath(relativePath);
+    if (!LibraryKitOverridesDetail::isSafeRelativePath(normalizedPath) || (playbackOffsetMs.has_value() && !std::isfinite(*playbackOffsetMs))) return;
     if (playbackOffsetMs.has_value()) {
         auto& sampleOverride = this->sampleOverrides[normalizedPath];
         sampleOverride.playbackOffsetMs = *playbackOffsetMs;
-        if (KitSourceOverrideHelpers::isValidContentHash(contentHash) && contentHash.isNotEmpty()) sampleOverride.contentHash = contentHash.toLowerCase();
+        if (LibraryKitOverridesDetail::isValidContentHash(contentHash) && contentHash.isNotEmpty()) sampleOverride.contentHash = contentHash.toLowerCase();
     } else {
         const auto sampleIt = this->sampleOverrides.find(normalizedPath);
         if (sampleIt != this->sampleOverrides.end()) sampleIt->second.playbackOffsetMs.reset();
@@ -476,14 +476,14 @@ void KitSourceOverrides::setSamplePlaybackOffset(const juce::String& relativePat
     this->removeEmptySampleOverride(normalizedPath);
 }
 
-void KitSourceOverrides::setMicPlaybackOffset(const juce::String& relativePath, const juce::String& contentHash, const juce::String& micCode, std::optional<float> playbackOffsetMs) {
-    const auto normalizedPath = KitSourceOverrideHelpers::normalizeRelativePath(relativePath);
+void LibraryKitOverrides::setMicPlaybackOffset(const juce::String& relativePath, const juce::String& contentHash, const juce::String& micCode, std::optional<float> playbackOffsetMs) {
+    const auto normalizedPath = LibraryKitOverridesDetail::normalizeRelativePath(relativePath);
     const auto normalizedMicCode = micCode.trim().toLowerCase();
-    if (!KitSourceOverrideHelpers::isSafeRelativePath(normalizedPath) || normalizedMicCode.isEmpty() || (playbackOffsetMs.has_value() && !std::isfinite(*playbackOffsetMs))) return;
+    if (!LibraryKitOverridesDetail::isSafeRelativePath(normalizedPath) || normalizedMicCode.isEmpty() || (playbackOffsetMs.has_value() && !std::isfinite(*playbackOffsetMs))) return;
     if (playbackOffsetMs.has_value()) {
         auto& sampleOverride = this->sampleOverrides[normalizedPath];
         sampleOverride.micOverrides[normalizedMicCode].playbackOffsetMs = *playbackOffsetMs;
-        if (KitSourceOverrideHelpers::isValidContentHash(contentHash) && contentHash.isNotEmpty()) sampleOverride.contentHash = contentHash.toLowerCase();
+        if (LibraryKitOverridesDetail::isValidContentHash(contentHash) && contentHash.isNotEmpty()) sampleOverride.contentHash = contentHash.toLowerCase();
     } else {
         const auto sampleIt = this->sampleOverrides.find(normalizedPath);
         if (sampleIt != this->sampleOverrides.end()) sampleIt->second.micOverrides.erase(normalizedMicCode);
@@ -491,7 +491,7 @@ void KitSourceOverrides::setMicPlaybackOffset(const juce::String& relativePath, 
     this->removeEmptySampleOverride(normalizedPath);
 }
 
-void KitSourceOverrides::removeEmptyInstrumentOverride(const juce::String& instrumentCodeRaw) {
+void LibraryKitOverrides::removeEmptyInstrumentOverride(const juce::String& instrumentCodeRaw) {
     const auto instrumentIt = this->instrumentOverrides.find(instrumentCodeRaw);
     if (instrumentIt == this->instrumentOverrides.end()) return;
     std::erase_if(instrumentIt->second.articulationOverrides, [](const auto& entry) {
@@ -500,15 +500,15 @@ void KitSourceOverrides::removeEmptyInstrumentOverride(const juce::String& instr
     if (!instrumentIt->second.balance.has_value() && instrumentIt->second.articulationOverrides.empty()) this->instrumentOverrides.erase(instrumentIt);
 }
 
-void KitSourceOverrides::removeEmptySampleOverride(const juce::String& relativePath) {
-    const auto normalizedPath = KitSourceOverrideHelpers::normalizeRelativePath(relativePath);
+void LibraryKitOverrides::removeEmptySampleOverride(const juce::String& relativePath) {
+    const auto normalizedPath = LibraryKitOverridesDetail::normalizeRelativePath(relativePath);
     const auto sampleIt = this->sampleOverrides.find(normalizedPath);
     if (sampleIt == this->sampleOverrides.end()) return;
     std::erase_if(sampleIt->second.micOverrides, [](const auto& entry) { return !entry.second.playbackOffsetMs.has_value(); });
     if (!sampleIt->second.manualGainDb.has_value() && !sampleIt->second.playbackOffsetMs.has_value() && sampleIt->second.micOverrides.empty()) this->sampleOverrides.erase(sampleIt);
 }
 
-ParseResult<std::vector<uint8_t>> KitSourceOverrides::resolveVelocityUpperBoundaries(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw, const std::vector<uint8_t>& namedVelocities) const {
+ParseResult<std::vector<uint8_t>> LibraryKitOverrides::resolveVelocityUpperBoundaries(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw, const std::vector<uint8_t>& namedVelocities) const {
     ParseResult<std::vector<uint8_t>> result;
     if (namedVelocities.empty()) return result;
 
@@ -524,7 +524,7 @@ ParseResult<std::vector<uint8_t>> KitSourceOverrides::resolveVelocityUpperBounda
             }
             const auto layerIdx = static_cast<size_t>(std::distance(namedVelocities.begin(), namedVelocityIt));
             if (layerIdx + 1 == namedVelocities.size()) {
-                result.addWarning("The last velocity layer always ends at 127 for " + instrumentCodeRaw + "/" + articulationCodeRaw);
+                result.addWarning("The last velocity level always ends at 127 for " + instrumentCodeRaw + "/" + articulationCodeRaw);
                 continue;
             }
             result.value[layerIdx] = upperBoundary;
@@ -541,7 +541,7 @@ ParseResult<std::vector<uint8_t>> KitSourceOverrides::resolveVelocityUpperBounda
     return result;
 }
 
-int KitSourceOverrides::getExplicitValueCount() const {
+int LibraryKitOverrides::getExplicitValueCount() const {
     int count = 0;
     for (const auto& [instrumentCodeRaw, instrumentOverride] : this->instrumentOverrides) {
         juce::ignoreUnused(instrumentCodeRaw);

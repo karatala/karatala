@@ -3,7 +3,7 @@
 
 namespace UIHelpersTests {
 
-SourceItem makeSourceItem(const juce::String& articulation) {
+static SourceItem makeSourceItem(const juce::String& articulation) {
     SourceItem item;
     item.kitCodeRaw = "KitA";
     item.kitDisplayName = "Kit A";
@@ -30,11 +30,11 @@ TEST_CASE("UIHelpers keeps the old hihat source when the matching expression is 
 }
 
 TEST_CASE("UIHelpers migrates only legacy destination expression filters", "[UI][InstrumentMap][HiHat]") {
-    CHECK(UIHelpers::usesLegacyDestinationExpressionFilter({ "bow" }, "bow[open]"));
-    CHECK(UIHelpers::usesLegacyDestinationExpressionFilter({}, "bow[tight]"));
-    CHECK_FALSE(UIHelpers::usesLegacyDestinationExpressionFilter({ "bow[open]" }, "bow[open]"));
-    CHECK_FALSE(UIHelpers::usesLegacyDestinationExpressionFilter({ "edge" }, "bow[open]"));
-    CHECK_FALSE(UIHelpers::usesLegacyDestinationExpressionFilter({ "bow" }, "bow"));
+    CHECK(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "bow" }, "bow[open]"));
+    CHECK(UIHelpers::usesLegacyArticulationSlotExpressionFilter({}, "bow[tight]"));
+    CHECK_FALSE(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "bow[open]" }, "bow[open]"));
+    CHECK_FALSE(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "edge" }, "bow[open]"));
+    CHECK_FALSE(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "bow" }, "bow"));
 }
 
 } // namespace UIHelpersTests

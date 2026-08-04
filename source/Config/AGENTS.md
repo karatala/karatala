@@ -11,7 +11,7 @@
 # Local Contracts
 
 - Parsing returns structured results with warnings/errors instead of silently accepting malformed required data.
-- Quoted YAML map keys may contain `:`. Key/value splitting must use only an unquoted colon so portable source paths and identities round-trip safely.
+- Quoted YAML map keys may contain `:`. Key/value splitting must use only an unquoted colon so portable file paths and identities round-trip safely.
 - Logging used from realtime paths must not perform avoidable formatting or allocation when its level is disabled.
 - Human-readable log lines use local `HH:MM:SS.mmm` timestamps without a date or timezone.
 

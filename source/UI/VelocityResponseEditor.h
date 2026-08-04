@@ -11,7 +11,7 @@ public:
     struct LayerData {
         juce::String title;
         std::optional<juce::String> customDefinition;
-        DrumKitEngine::VelocityResponseSourceInfo sourceInfo;
+        DrumKitEngine::LibraryVelocityResponseInfo libraryInfo;
     };
 
     explicit VelocityResponseEditor(DrumKitEngine& engine);

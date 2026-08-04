@@ -172,28 +172,19 @@ std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryMa
         });
 
         for (const auto* inst : instruments) {
-            if (inst->articulationSpecs.empty()) {
+            if (inst->articulationSpecs.empty()) continue;
+            for (const auto& artPtr : inst->articulationSpecs) {
+                if (artPtr == nullptr) continue;
                 SourceItem item;
                 item.kitCodeRaw = kitId;
                 item.kitDisplayName = kitShort;
                 item.instCode = kitPtr->getPreferredInstrumentId(*inst);
+                item.artCode = inst->getPreferredArticulationId(*artPtr);
                 item.rawKitCode = kitPtr->meta.codeRaw;
                 item.rawInstCode = inst->meta.codeRaw;
+                item.rawArtCode = artPtr->codeRaw;
                 item.instType = inst->meta.type;
                 addUniqueSourceItem(std::move(item));
-            } else {
-                for (const auto& artPtr : inst->articulationSpecs) {
-                    SourceItem item;
-                    item.kitCodeRaw = kitId;
-                    item.kitDisplayName = kitShort;
-                    item.instCode = kitPtr->getPreferredInstrumentId(*inst);
-                    item.artCode = inst->getPreferredArticulationId(*artPtr);
-                    item.rawKitCode = kitPtr->meta.codeRaw;
-                    item.rawInstCode = inst->meta.codeRaw;
-                    item.rawArtCode = artPtr->codeRaw;
-                    item.instType = inst->meta.type;
-                    addUniqueSourceItem(std::move(item));
-                }
             }
         }
     }
@@ -227,22 +218,22 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
     return -1;
 }
 
-bool usesLegacyDestinationExpressionFilter(const std::vector<juce::String>& destinationFilters, const juce::String& destinationArticulation) {
-    if (!destinationArticulation.containsChar('[')) return false;
-    if (destinationFilters.empty()) return true;
+bool usesLegacyArticulationSlotExpressionFilter(const std::vector<juce::String>& articulationSlotFilters, const juce::String& articulationSlotCode) {
+    if (!articulationSlotCode.containsChar('[')) return false;
+    if (articulationSlotFilters.empty()) return true;
 
-    for (const auto& filter : destinationFilters)
-        if (ArticulationNameHelpers::articulationCodeMatches(filter, destinationArticulation)) return false;
+    for (const auto& filter : articulationSlotFilters)
+        if (ArticulationNameHelpers::articulationCodeMatches(filter, articulationSlotCode)) return false;
 
-    for (const auto& filter : destinationFilters)
-        if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, destinationArticulation)) return true;
+    for (const auto& filter : articulationSlotFilters)
+        if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, articulationSlotCode)) return true;
 
     return false;
 }
 
-juce::String resolveLegacyHihatSourcePath(const std::vector<SourceItem>& sourceItems, const juce::String& sourcePath, const juce::String& destinationArticulation) {
-    const int expressionStartIdx = destinationArticulation.indexOfChar('[');
-    const int expressionEndIdx = destinationArticulation.indexOfChar(expressionStartIdx + 1, ']');
+juce::String resolveLegacyHihatSourcePath(const std::vector<SourceItem>& sourceItems, const juce::String& sourcePath, const juce::String& articulationSlotCode) {
+    const int expressionStartIdx = articulationSlotCode.indexOfChar('[');
+    const int expressionEndIdx = articulationSlotCode.indexOfChar(expressionStartIdx + 1, ']');
     if (expressionStartIdx < 0 || expressionEndIdx <= expressionStartIdx + 1) return sourcePath;
 
     juce::StringArray sourceParts;
@@ -250,11 +241,11 @@ juce::String resolveLegacyHihatSourcePath(const std::vector<SourceItem>& sourceI
     sourceParts.removeEmptyStrings();
     if (sourceParts.size() < 3) return sourcePath;
 
-    const auto sourceArticulation = ArticulationNameHelpers::baseArticulationName(sourceParts[2]);
-    const auto destinationExpression = destinationArticulation.substring(expressionStartIdx + 1, expressionEndIdx).trim();
-    if (sourceArticulation.isEmpty() || destinationExpression.isEmpty()) return sourcePath;
+    const auto libraryArticulation = ArticulationNameHelpers::baseArticulationName(sourceParts[2]);
+    const auto articulationSlotExpression = articulationSlotCode.substring(expressionStartIdx + 1, expressionEndIdx).trim();
+    if (libraryArticulation.isEmpty() || articulationSlotExpression.isEmpty()) return sourcePath;
 
-    const auto expressionSourcePath = sourceParts[0] + "/" + sourceParts[1] + "/" + sourceArticulation + "[" + destinationExpression + "]";
+    const auto expressionSourcePath = sourceParts[0] + "/" + sourceParts[1] + "/" + libraryArticulation + "[" + articulationSlotExpression + "]";
     for (const auto& sourceItem : sourceItems) {
         if (sourceItem.fullPath().equalsIgnoreCase(expressionSourcePath) || sourceItem.rawFullPath().equalsIgnoreCase(expressionSourcePath)) return sourceItem.fullPath();
     }

@@ -23,7 +23,7 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->descriptionLabel.setFont(UITheme::Fonts::small());
     this->descriptionLabel.setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
     this->descriptionLabel.setJustificationType(juce::Justification::centredLeft);
-    this->descriptionLabel.setTooltip("This curve changes output gain. Recorded sample selection uses the source velocity ranges.");
+    this->descriptionLabel.setTooltip("This curve changes output gain. Recorded sample selection uses the library velocity levels.");
     this->addAndMakeVisible(this->descriptionLabel);
 
     this->readoutLabel.setFont(UITheme::Fonts::normal());
@@ -37,7 +37,7 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->addAndMakeVisible(this->statusLabel);
 
     UIHelpers::configureComboBox(this->presetCombo);
-    this->presetCombo.setTextWhenNothingSelected("Edited Layer Curve*");
+    this->presetCombo.setTextWhenNothingSelected("Edited Map Layer Curve*");
     this->presetCombo.onChange = [this] { this->selectPreset(); };
     this->addAndMakeVisible(this->presetCombo);
 
@@ -68,7 +68,7 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
 
 void VelocityResponseEditor::setLayerData(LayerData data) {
     this->layerData = std::move(data);
-    std::sort(this->layerData.sourceInfo.levels.begin(), this->layerData.sourceInfo.levels.end(), [](const auto& leftLevel, const auto& rightLevel) {
+    std::sort(this->layerData.libraryInfo.levels.begin(), this->layerData.libraryInfo.levels.end(), [](const auto& leftLevel, const auto& rightLevel) {
         return leftLevel.velocity < rightLevel.velocity;
     });
     this->custom = this->layerData.customDefinition.has_value();
@@ -103,7 +103,7 @@ void VelocityResponseEditor::rebuildHandles() {
 
     std::set<int> velocities { 1, 127 };
     for (const auto& point : this->currentResponse.getPoints()) velocities.insert(point.velocity);
-    for (const auto& level : this->layerData.sourceInfo.levels) velocities.insert(level.velocity);
+    for (const auto& level : this->layerData.libraryInfo.levels) velocities.insert(level.velocity);
 
     this->handles.clear();
     this->handles.reserve(velocities.size());
@@ -130,7 +130,7 @@ void VelocityResponseEditor::rebuildHandles() {
 void VelocityResponseEditor::updateViewMinimum() {
     float minimumDb = -48.0f;
     for (const auto& handle : this->handles) minimumDb = juce::jmin(minimumDb, handle.targetDb);
-    for (const auto& level : this->layerData.sourceInfo.levels) {
+    for (const auto& level : this->layerData.libraryInfo.levels) {
         if (level.fittedRelativeDb.has_value()) minimumDb = juce::jmin(minimumDb, *level.fittedRelativeDb);
     }
     this->viewMinimumDb = std::floor(minimumDb / 12.0f) * 12.0f;
@@ -179,7 +179,7 @@ void VelocityResponseEditor::updatePresetSelection() {
         }
     }
     this->presetCombo.setSelectedId(selectedId, juce::dontSendNotification);
-    if (selectedId == 0) this->presetCombo.setText("Edited Layer Curve*", juce::dontSendNotification);
+    if (selectedId == 0) this->presetCombo.setText("Edited Map Layer Curve*", juce::dontSendNotification);
 }
 
 void VelocityResponseEditor::refreshPresets() {
@@ -423,7 +423,7 @@ int VelocityResponseEditor::findNearestHandle(float xPosition) const {
 }
 
 const DrumKitEngine::VelocityResponseLevelInfo* VelocityResponseEditor::findLevel(int velocity) const {
-    for (const auto& level : this->layerData.sourceInfo.levels)
+    for (const auto& level : this->layerData.libraryInfo.levels)
         if (level.velocity == velocity) return &level;
     return nullptr;
 }
@@ -481,10 +481,10 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
     graphics.fillRoundedRectangle(this->plotBounds, 4.0f);
 
     int previousVelocity = 0;
-    for (int levelIdx = 0; levelIdx < static_cast<int>(this->layerData.sourceInfo.levels.size()); ++levelIdx) {
-        const auto& level = this->layerData.sourceInfo.levels[static_cast<size_t>(levelIdx)];
+    for (int levelIdx = 0; levelIdx < static_cast<int>(this->layerData.libraryInfo.levels.size()); ++levelIdx) {
+        const auto& level = this->layerData.libraryInfo.levels[static_cast<size_t>(levelIdx)];
         const int regionStartVelocity = previousVelocity + 1;
-        const int regionEndVelocity = levelIdx + 1 == static_cast<int>(this->layerData.sourceInfo.levels.size()) ? 127 : level.velocity;
+        const int regionEndVelocity = levelIdx + 1 == static_cast<int>(this->layerData.libraryInfo.levels.size()) ? 127 : level.velocity;
         const float regionLeft = this->velocityToX(regionStartVelocity);
         const float regionRight = this->velocityToX(regionEndVelocity);
         graphics.setColour(UITheme::Colours::selectionStrong.withAlpha(levelIdx % 2 == 0 ? 0.035f : 0.065f));
@@ -523,10 +523,10 @@ void VelocityResponseEditor::paint(juce::Graphics& graphics) {
         graphics.fillEllipse(xPosition - 4.0f, yPosition - 4.0f, 8.0f, 8.0f);
     }
 
-    if (this->layerData.sourceInfo.levels.empty()) {
+    if (this->layerData.libraryInfo.levels.empty()) {
         graphics.setColour(UITheme::Colours::textMuted);
         graphics.setFont(UITheme::Fonts::normal());
-        graphics.drawText(this->layerData.sourceInfo.sourceFound ? "No recorded velocity levels" : "Source velocity information unavailable", this->plotBounds.toNearestInt(), juce::Justification::centred);
+        graphics.drawText(this->layerData.libraryInfo.libraryArticulationFound ? "No recorded velocity levels" : "Library velocity information unavailable", this->plotBounds.toNearestInt(), juce::Justification::centred);
     }
 }
 

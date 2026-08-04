@@ -6,6 +6,7 @@
 
 - `TODO*_PLAN.md` files describe scoped future or in-progress work.
 - Performance and decay documents record cross-cutting design constraints.
+- `PROJECT_TERMINOLOGY_REVIEW.md` defines preferred project terms and related C++ names.
 
 # Local Contracts
 
@@ -23,4 +24,3 @@
 - Re-read referenced source and tests before updating implementation-status claims.
 
 # Child DOX Index
-

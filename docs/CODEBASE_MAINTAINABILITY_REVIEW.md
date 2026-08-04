@@ -1,12 +1,12 @@
 # Codebase Maintainability Review
 
-Status: static review complete on 2026-07-30. All changes below are suggestions. No source change is implemented by this document.
+Status: static review complete. Project decisions updated on 2026-07-31. All code changes below are suggestions.
 
 ## Scope and limits
 
 This review covers first-party C++ source, tests, benchmarks, and Python tools. It does not review JUCE, other vendored code, or generated instrument data as normal hand-written source.
 
-No build, test, compiler timing, or audio check was run. File sizes and include paths were checked statically.
+File sizes and include paths were checked statically.
 
 The include result measures potential rebuild scope:
 
@@ -22,18 +22,21 @@ This review complements [CODEBASE_IMPROVEMENT_PLAN.md](CODEBASE_IMPROVEMENT_PLAN
 The main structural problems are:
 
 1. `DrumKitEngine` and some UI files contain too many responsibilities.
-2. Some rules are implemented more than once. Instrument-map preset storage already has different behavior in two screens.
+2. The old Kit page and the new Browse page contain repeated instrument-map preset behavior. The old Kit page will be removed.
 3. Broad headers connect unrelated parts of the project. This is usually called transitive include coupling or high header fan-out.
 4. Several large implementations are inside headers. A small header edit can therefore make many `.cpp` files parse the same implementation again.
-5. The DrumGizmo converter keeps a program inside another program and generates very large Python files that mostly contain data.
+5. Helper files and helper namespaces have unclear ownership in several folders. Moving all of them to one common folder would hide the problem instead of fixing it.
+6. The DrumGizmo converter keeps a program inside another program and generates very large Python files that mostly contain data. This is accepted temporary code and has the lowest cleanup priority.
 
 Recommended order:
 
 1. Fix small exact duplicates and one clear placeholder.
 2. Reduce header coupling.
-3. Split large implementation files without behavior changes.
-4. Divide the largest functions only after the physical file splits are stable.
-5. Simplify the converter and generated file format.
+3. Organize helpers by feature and responsibility.
+4. Move useful Kit page behavior to Browse, remove the old Kit page, and rename Browse to Kit.
+5. Split large implementation files without behavior changes.
+6. Divide the largest functions only after the physical file splits are stable.
+7. Verify the DrumGizmo conversion result, then archive or remove the temporary converter files.
 
 ## Measured facts
 
@@ -41,15 +44,15 @@ Recommended order:
 
 | File | Lines | Main concern |
 | --- | ---: | --- |
-| [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | 3,234 | Engine setup, settings, source edits, graph rebuild, preview, live updates, and map application are together. |
+| [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | 3,234 | Engine setup, settings, library edits, graph rebuild, preview, live updates, and map application are together. |
 | [convert-drumgizmo2karatala.py](../scripts/convert-drumgizmo2karatala.py) | 2,119 | Current and legacy flows plus an embedded generated runtime are together. |
-| [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | 1,888 | UI construction, source lookup, routing, linked edits, dialogs, and layout are together. |
-| [TestInstrumentSynthVoiceGrouping.cpp](../tests/TestInstrumentSynthVoiceGrouping.cpp) | 1,797 | Several different synth behaviors share one test file. |
-| [SourceArticulationOverrideEditor.cpp](../source/UI/SourceArticulationOverrideEditor.cpp) | 1,394 | View, state, persistence, preview, and input are together. |
-| [InstrumentSynthController.cpp](../source/Engine/InstrumentSynthController.cpp) | 1,375 | Large realtime controller and aftertouch workflows are together. |
-| [InstrumentSynthLoader.cpp](../source/Engine/InstrumentSynthLoader.cpp) | 1,343 | Loading, live updates, parameters, and routing are together. |
+| [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | 1,888 | UI construction, library lookup, routing, linked edits, dialogs, and layout are together. |
+| [TestInstrumentPlayerVoiceGrouping.cpp](../tests/TestInstrumentPlayerVoiceGrouping.cpp) | 1,797 | Several different instrument player behaviors share one test file. |
+| [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp) | 1,394 | View, state, persistence, preview, and input are together. |
+| [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | 1,375 | Large realtime controller and aftertouch workflows are together. |
+| [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | 1,343 | Loading, live updates, parameters, and routing are together. |
 | [KitLibModel.cpp](../source/Engine/KitLibModel.cpp) | 1,168 | Model parsing, calibration, sample scanning, and library scanning are together. |
-| [InstrumentSynth.h](../source/Engine/InstrumentSynth.h) | 815 | Several public classes, runtime records, and inline logic are in one header. |
+| [InstrumentPlayer.h](../source/Engine/InstrumentPlayer.h) | 815 | Several public classes, runtime records, and inline logic are in one header. |
 | [KitLibModel.h](../source/Engine/KitLibModel.h) | 608 | Seven linked model types and several shared enums are in one header. |
 | [LayoutManager.h](../source/Engine/LayoutManager.h) | 543 | About 340 lines of YAML parsing, validation, and writing are in a header. |
 
@@ -130,14 +133,14 @@ Expected result: a YAML parser change has a smaller potential rebuild scope.
 Evidence:
 
 - [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h), [DrumKitEngineMappingModel.h](../source/Engine/DrumKitEngineMappingModel.h), and [DrumKitEngineTextView.h](../source/Engine/DrumKitEngineTextView.h) include all of `DrumKitEngine.h`.
-- They need nested map types such as `DrumKitEngine::InstrumentMapEntry`.
-- [DrumKitEngine.h](../source/Engine/DrumKitEngine.h) includes the full synth, layout, catalog, routing, loader, settings, and velocity response headers.
+- They need nested map types such as `DrumKitEngine::InstrumentMapLayer`.
+- [DrumKitEngine.h](../source/Engine/DrumKitEngine.h) includes the full instrument player, layout, catalog, routing, loader, settings, and velocity response headers.
 
 Suggestion:
 
-1. Move `InstrumentMapEntry` and `InstrumentMap` to a narrow `InstrumentMapTypes.h`.
-2. Move source-view records to a narrow source override view header.
-3. Move `LayerParameterUpdate` out of the nested synth type if the engine only needs this small update record.
+1. Move `InstrumentMapLayer` and `InstrumentMap` to `Engine/InstrumentMap/InstrumentMap.h`.
+2. Move library kit override view records to a narrow header only when this reduces include dependencies.
+3. Move `LayerParameterUpdate` out of the nested instrument player type if the engine only needs this small update record.
 4. Move the `DrumKitEngine` constructor, destructor, and other non-trivial inline methods to `.cpp` files.
 
 Expected result: map parsing, formatting, and UI code can use map data without including the full audio engine.
@@ -148,58 +151,66 @@ Review these after the first four changes:
 
 - [InstrumentCatalog.h](../source/Engine/InstrumentCatalog.h) is mostly inline parsing and catalog logic.
 - [MicRoutingPlan.h](../source/Engine/MicRoutingPlan.h) contains its routing implementation inline.
-- [InstrumentSynth.h](../source/Engine/InstrumentSynth.h) contains `SampledSound`, `InstrumentSynthVoice`, `InstrumentSynth`, many runtime records, and non-trivial inline methods.
+- [InstrumentPlayer.h](../source/Engine/InstrumentPlayer.h) contains `SampledSound`, `InstrumentPlayerVoice`, `InstrumentPlayer`, many runtime records, and non-trivial inline methods.
 
 Move normal implementation to `.cpp` files first. Split public types only when a real caller needs the smaller boundary. Do not add a private implementation pattern to every class without a measured need.
 
 ## Priority 1: Consolidate repeated behavior
 
-### 1. Add one instrument-map preset store
+### 1. Consolidate preset behavior in Browse, then remove the old Kit page
 
 Evidence:
 
 - [KitHomePanel.cpp](../source/UI/KitHomePanel.cpp), lines 186-209 and 437-498, scans, saves, overwrites, and deletes presets.
 - [KitBrowserComponent.cpp](../source/UI/KitBrowserComponent.cpp), lines 118-148 and 424-487, implements the same storage flow.
 - The behavior has already drifted. "Save As" in `KitHomePanel` can replace a same-name file. `KitBrowserComponent` rejects the same case.
+- The Kit page was an experiment and is planned for removal. The Browse page is the intended replacement but still needs usage testing.
 
 Suggestion:
 
-- Add one `InstrumentMapPresetStore` with folder lookup, scan, normalized save, overwrite, and delete operations.
-- Decide the same-name rule before extraction.
-- Keep dialogs, sorting, selection, filtering, and status text in each UI component.
+- List the useful Kit page elements and rules.
+- Migrate only those useful parts to Browse.
+- Decide the same-name, overwrite, sorting, and selection rules in Browse.
+- Usage-test the completed Browse flow.
+- Remove the old Kit page and `KitHomePanel`.
+- Rename Browse to Kit after the old page is removed.
 
-This is the highest-value duplicate because it already causes different user behavior.
+Do not create a shared preset store only to support two screens when one screen will be deleted. After migration, keep the file operations in the remaining component if they are small. Extract an `InstrumentMapPresetStore` only if the remaining component becomes too large or another real caller needs the same storage rules.
 
-### 2. Consolidate source target resolution
+### 2. Consolidate library item resolution
 
-[DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) repeats the library, kit, instrument, articulation, and write-access lookup in eight source-edit paths around lines 329-769.
+[DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) repeats the library kit, instrument, articulation, and write-access lookup in eight library edit paths around lines 329-769.
 
-Add one small resolver for this source chain. Keep lock ownership and pointer lifetime explicit. Keep the write-access decision explicit at the caller or use a named access policy. Do not return pointers that outlive the active library snapshot.
+Add one small resolver for this library item chain. Keep lock ownership and pointer lifetime explicit. Keep the write-access decision at the caller.
+
+Do not return pointers that outlive the active library snapshot.
 
 The manual-gain and playback-offset paths also repeat moved-file recovery and ambiguity checks around lines 626-637 and 690-709. Extract the common sample target resolution, but keep mic-specific validation in the playback-offset path.
 
-### 3. Consolidate source-path articulation lookup in `PadContextPopup`
+### 3. Consolidate library item lookup in `PadContextPopup`
 
-[PadContextPopup.cpp](../source/UI/PadContextPopup.cpp), lines 262-402, resolves the same source item, kit, instrument, and articulation set twice. Only the final mic filter differs.
+[PadContextPopup.cpp](../source/UI/PadContextPopup.cpp), lines 262-402, resolves the same library item and articulation set twice. Only the final mic filter differs.
 
-Add a private `resolveSourceArticulationsForPath()` operation. Preserve these current rules:
+Add a private `resolveLibraryArticulationsForPath()` operation. Preserve these current rules:
 
 - A specific articulation selects its matching base articulation.
-- A source path without an articulation uses all articulations.
+- A library item without an articulation uses all articulations.
 
 ### 4. Consolidate exact small copies
 
 Good small candidates:
 
 - The local processing suspension guard appears four times in [PluginEditor.cpp](../source/PluginEditor.cpp), around lines 41, 213, 247, and 374. Define it once and preserve its order relative to the callback lock.
-- Strict finite-float parsing is repeated in [VelocityResponse.cpp](../source/Engine/VelocityResponse.cpp), [SourceArticulationOverrideEditor.cpp](../source/UI/SourceArticulationOverrideEditor.cpp), and [VelocityResponseEditor.cpp](../source/UI/VelocityResponseEditor.cpp). Use one strict parser that preserves full-input, range, finite-value, and locale behavior.
+- Strict finite-float parsing is repeated in [VelocityResponse.cpp](../source/Engine/VelocityResponse.cpp), [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp), and [VelocityResponseEditor.cpp](../source/UI/VelocityResponseEditor.cpp). Use one strict parser that preserves full-input, range, finite-value, and locale behavior.
 - `parseSignedGainDb()` and `parseSignedOffsetMs()` in [KitLibModel.cpp](../source/Engine/KitLibModel.cpp), lines 67-117, can share one signed metadata number parser while retaining clear wrapper names.
 - Search term syntax is repeated in [KitBrowserComponent.cpp](../source/UI/KitBrowserComponent.cpp), lines 150-162, and [SourcePickerPopup.cpp](../source/UI/SourcePickerPopup.cpp), lines 295-305. Add one UI search matcher.
 - Sample load type groups are repeated in two large switches in [SampleLoader.cpp](../source/Engine/SampleLoader.cpp), lines 53-179. Use one local load-class classifier, but keep the special kick, snare, hi-hat, ride, crash, and tom rules explicit.
 - Data path resolution is repeated in [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp), lines 161-172, and [DrumKitEngineController.cpp](../source/Engine/DrumKitEngineController.cpp), lines 23-30. Use one constructor-independent data-path resolver.
 - The same 16-byte BLAKE2b file identity is implemented in [generate_sample_metadata.py](../scripts/generate_sample_metadata.py), lines 232-238, and [apply_kit_overrides.py](../scripts/apply_kit_overrides.py), lines 47-55. Put the standard-library-only algorithm in one script module.
 
-The exact `identityKey()` and `candidateMatches()` duplicate is already accepted in the [Workstream 1 audit](CODEBASE_IMPROVEMENT_WORKSTREAM_1_AUDIT.md). Implement that small accepted change before creating broader identity helpers.
+The exact `identityKey()` and `candidateMatches()` merge is accepted in the [Workstream 1 audit](CODEBASE_IMPROVEMENT_WORKSTREAM_1_AUDIT.md).
+
+Merge it when map types move to the `InstrumentMap` feature pair. Do not create an identity-only file or a feature pair for this small merge.
 
 ### Do not merge these only because they look similar
 
@@ -210,22 +221,95 @@ The exact `identityKey()` and `candidateMatches()` duplicate is already accepted
 
 Avoid a generic helper with many flags or callbacks. Extract one shared primitive when the complete workflows are different.
 
+## Priority 1: Organize helper files and namespaces
+
+Use [PROJECT_TERMINOLOGY_REVIEW.md](PROJECT_TERMINOLOGY_REVIEW.md) before naming new feature folders, classes, or namespaces. In particular, do not use bare `Source` as a feature name.
+
+### Main rule
+
+Do not create one `source/helpers/` folder.
+
+A common helper folder usually becomes a place for unrelated code. It also makes ownership less clear and can create more cross-domain includes. Use this order instead:
+
+1. If only one `.cpp` file uses the helper, keep it in that `.cpp` file.
+2. If several files in one feature use it, create a named feature module.
+3. If several features in one domain use it, place it in that domain with a precise name.
+4. Create a precisely named project-wide support module only when engine, UI, and configuration code all need the same small and stable rule.
+
+Use names that describe the owner. Prefer `InstrumentMap`, `ArticulationNames`, or `PathResolver` over `Helpers`.
+
+### Current helper inventory
+
+There are 12 files with `Helper` or `Helpers` in their name. The count is not large, but some files mix unrelated work or have unclear names.
+
+| Current file or group | Suggested ownership |
+| --- | --- |
+| [Helpers.h](../source/Config/Helpers.h) | Do not move it unchanged. Split it by concern, such as parse results, path resolution, MIDI values, wrapped text parsing, and string IDs. Put each result in the domain that owns it. |
+| [YamlHelper.h](../source/Config/YamlHelper.h) and [YamlHelper.cpp](../source/Config/YamlHelper.cpp) | This is one cohesive YAML module. It can stay in `Config`. Rename it to `YamlParser` only when related code is already being changed. |
+| [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h), its `.cpp`, the mapping model, and the text view | Create `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`. Keep the related work together first. Add another file only for a separate, substantial responsibility. |
+| [ArticulationNameHelpers.h](../source/Engine/ArticulationNameHelpers.h) | Rename it to `ArticulationNames.h` and keep it in `Engine` while it is one cohesive file. Create an articulation feature folder only if that module grows to several files. |
+| [DrumKitEnginePreviewHelpers.h](../source/Engine/DrumKitEnginePreviewHelpers.h) | It currently has one production caller. Move its private logic into `DrumKitEnginePreview.cpp`. Create `PreviewSampleSelector` only if a second real caller appears. |
+| [UIHelpers.h](../source/UI/UIHelpers.h) and its `.cpp` | Split by concern. Control styling belongs in `UI/Controls/`. Keep library item building with `LibraryItem`. MIDI display and assignment operations stay with the MIDI controls. |
+| [KitHomePanelHelpers.h](../source/UI/KitHomePanelHelpers.h) | Do not reorganize this file first. Move the required choices and preset rules to Browse, then delete this helper with the old Kit page. |
+| [DrumPadHelpers.h](../source/UI/DrumPadHelpers.h) | It has one production caller. Move the private operations into `DrumPad.cpp`. |
+| [ParameterPotHelpers.h](../source/UI/ParameterPotHelpers.h) | Its layout and value conversion rules have several callers. Move it to `UI/Controls/` and rename it to `ParameterPotSupport.h`, or make the operations named static members when they directly belong to `ParameterPot`. |
+
+Suggested feature folders:
+
+```text
+source/
+  Engine/
+    InstrumentMap/
+  UI/
+    Controls/
+```
+
+Create a folder only when several files share one responsibility. Do not create a folder for every small helper.
+
+Keep renamed library UI files in `UI/` during the first change. Review a `UI/Library/` folder only if the group later needs a clear boundary.
+
+### Namespace rule
+
+The number of namespaces is not a problem by itself. Namespaces such as `KitLib`, `UITheme`, `HiHatTransitionPolicy`, and the YAML module have clear ownership.
+
+Folders make files easier to find. Namespaces prevent name conflicts and show code ownership. They solve different problems, so a folder move alone does not require a new namespace hierarchy.
+
+Use these rules:
+
+- Reusable functions should use a feature namespace, such as `InstrumentMap` or `ArticulationNames`.
+- Private functions used by one `.cpp` file should use a named `<Feature>Detail` namespace at the top of that file and should have internal linkage. This follows the project rule that forbids nameless namespaces.
+- Do not create a public `FooHelpers` namespace only because the file contains free functions.
+- Do not add one new top-level namespace to the complete codebase as part of this cleanup. That would create a large diff without solving the current ownership problems.
+- Folder and namespace names should normally describe the same feature.
+
+### Safe migration order
+
+1. Remove one-use helper headers by moving their code into the owning `.cpp`.
+2. Remove `KitHomePanelHelpers.h` as part of the Kit page replacement.
+3. Create the `InstrumentMap` feature pair when map types are extracted from `DrumKitEngine`.
+4. Split `UIHelpers` when the first related UI component is changed.
+5. Split `Config/Helpers.h` one concern at a time. Do not create a new general helper file.
+
+This order avoids a large move-only change and keeps each diff connected to a real cleanup.
+
 ## Priority 1 and 2: Split large files by responsibility
 
 Start with physical moves of existing member functions. Do not change behavior during the first split.
 
 | Current file | First physical split | Later logic split |
 | --- | --- | --- |
-| [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | `DrumKitEngineSourceOverrides.cpp`, `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, and `DrumKitEngineMapApply.cpp` | Divide the roughly 706-line `useInstrumentMapInternal()` into preparation without the graph lock and a short locked commit using named plan records. |
-| [InstrumentSynthController.cpp](../source/Engine/InstrumentSynthController.cpp) | `InstrumentSynthHiHat.cpp`, `InstrumentSynthAftertouch.cpp`, and a note playback implementation file | Divide the roughly 423-line hi-hat transition into bounded, allocation-free steps. Preserve voice order and accepted sound behavior. |
-| [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | `PadContextPopupLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` | Add one owned linked-edit context for parsed map and projected targets. Never return pointers into temporary projection data. |
-| [InstrumentSynthLoader.cpp](../source/Engine/InstrumentSynthLoader.cpp) | Source updates, parameter updates, routing, and sample loading implementation files | Divide `createVelocityLayers()` into sound creation, logical-hit grouping, early-load selection, and queue submission. |
+| [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | `DrumKitEngineLibraryKitOverrides.cpp`, `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, and `DrumKitEngineMapApply.cpp` | Divide the roughly 706-line `useInstrumentMapInternal()` into preparation without the graph lock and a short locked commit using named plan records. |
+| [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | `InstrumentPlayerHiHat.cpp`, `InstrumentPlayerAftertouch.cpp`, and a note playback implementation file | Divide the roughly 423-line hi-hat transition into bounded, allocation-free steps. Preserve voice order and accepted sound behavior. |
+| [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | `PadContextPopupMapLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` | Add one owned linked-edit context for parsed map and projected targets. Never return pointers into temporary projection data. |
+| [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | Library updates, parameter updates, routing, and sample loading implementation files | Divide `createVelocityLevels()` into sound creation, logical-hit grouping, early-load selection, and queue submission. |
 | [KitLibModel.cpp](../source/Engine/KitLibModel.cpp) | Decay, mic, calibration, instrument, kit, and library manager implementation files | Split `KitLibModel.h` later, starting with independent enums and small records. Parent pointers make an immediate full header split risky. |
-| [SourceArticulationOverrideEditor.cpp](../source/UI/SourceArticulationOverrideEditor.cpp) | Model, state and persistence, preview, and main component implementation files | Consider a separate selection state model only after the low-risk file split. |
+| [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp) | Model, state and persistence, preview, and main component implementation files | Consider a separate selection state model only after the low-risk file split. |
 | [PluginEditor.cpp](../source/PluginEditor.cpp) | Preset store and popup implementation files | Keep the editor as the coordinator. Pass directories into stores instead of making stores depend on the full engine. |
-| [TestInstrumentSynthVoiceGrouping.cpp](../tests/TestInstrumentSynthVoiceGrouping.cpp) | Shared test support plus routing, hi-hat, rendering, and aftertouch test files | Do this after production boundaries are stable. More test files can make a clean test build slightly slower. |
+| [TestInstrumentPlayerVoiceGrouping.cpp](../tests/TestInstrumentPlayerVoiceGrouping.cpp) | Shared test support plus routing, hi-hat, rendering, and aftertouch test files | Do this after production boundaries are stable. More test files can make a clean test build slightly slower. |
 
-## Priority 2: Simplify the converter and generated files
+## Lowest priority: Verify, then archive or remove the converter
+
+Decision: do not spend normal cleanup time on converter structure now. The large generated files are acceptable temporary artifacts because the converter will be archived or removed after its result is fully verified.
 
 Evidence:
 
@@ -233,18 +317,17 @@ Evidence:
 - That runtime closely repeats [drumgizmo_runtime.py](../instruments_py/_common/drumgizmo_runtime.py).
 - The old `process_kit()` and `legacy_copy_main()` flow at lines 825-1049 is not called by the current main path inside this repository.
 - The seven generated converter files contain 723,764 lines, mostly operation construction.
-- No focused test was found for output plan generation, generated runtime behavior, or operation manifest round trips.
+- No focused test was found for output plan generation or generated runtime behavior.
 
 Suggestion:
 
-1. Make the normal runtime module the single source of truth. Do not maintain a second program inside a string.
-2. Preserve generated output during this first extraction.
-3. Add focused tests for output planning, audit schema, and runtime execution.
-4. Remove the legacy path after confirming that no external workflow calls it.
-5. Replace generated Python operation construction with one data manifest, such as JSON or CSV, read by the shared runtime. Choose one canonical manifest instead of storing the same operation data in both runtime code and audit files.
-6. Regenerate the seven converter artifacts. Do not edit them by hand.
+1. Freeze converter feature changes unless a verification defect requires a fix.
+2. Define the final verification checklist for files, paths, channel mapping, hashes, operation counts, and audit results.
+3. Verify at least one small and one large converted kit.
+4. Keep the current generated artifacts unchanged while verification is in progress.
+5. After the conversion result is accepted, archive or remove the converter, embedded runtime, legacy path, and generated operation scripts together.
 
-Because the application is not released, this can use a clean new generated format without compatibility code.
+If the converter must stay maintained for a longer time, then make the shared runtime canonical and replace Python operation construction with a data manifest. Do not perform that refactor only to delete the result soon afterward.
 
 ## Other problems
 
@@ -267,26 +350,24 @@ The scripts contract marks several analysis scripts as deprecated experiments. R
 ### Phase 1: Small and exact changes
 
 1. Remove or replace the placeholder plugin parameter.
-2. Implement the accepted identity primitive from the existing audit.
-3. Define the processing suspension guard once.
-4. Decide the preset same-name rule, then add the instrument-map preset store.
-5. Consolidate strict float parsing and Python file hashing.
+2. Define the processing suspension guard once.
+3. Consolidate strict float parsing.
 
 Verification for this phase:
 
 - Add or identify focused tests before changing behavior.
-- Compare preset save, overwrite, scan, and delete behavior in both screens.
-- Run source identity, map parsing, and serialization tests.
-- Run script hash and direct-execution checks.
+- Run library identity, map parsing, and serialization tests.
 
-### Phase 2: Header boundaries
+### Phase 2: Helper and header boundaries
 
 1. Remove the logger include from `Helpers.h` and add direct includes at real users.
 2. Move logger implementation to `.cpp`.
 3. Extract the narrow instrument type.
 4. Move layout YAML implementation out of `LayoutManager.h`.
-5. Extract instrument-map types from `DrumKitEngine`.
-6. Move routing, catalog, and synth implementation out of headers where practical.
+5. Move instrument map types into `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`.
+6. Merge the accepted identity functions into the same feature pair.
+7. Remove one-use helper headers.
+8. Move routing, catalog, and instrument player implementation out of headers where practical.
 
 Verification for this phase:
 
@@ -295,7 +376,22 @@ Verification for this phase:
 - Change one representative leaf header and record which `.cpp` files rebuild.
 - Confirm that every header includes the types that it uses directly.
 
-### Phase 3: Physical file splits
+### Phase 3: Replace the old Kit page
+
+1. List useful Kit page elements and rules.
+2. Migrate them to Browse.
+3. Decide and verify one preset save and overwrite policy.
+4. Usage-test Browse.
+5. Remove the old Kit page and its remaining helper code.
+6. Rename Browse to Kit.
+
+Verification for this phase:
+
+- Check preset scan, load, save, overwrite, and delete behavior.
+- Check filtering, selection, kit loading, and instrument-map loading.
+- Confirm that no old Kit page route or `KitHomePanel` reference remains.
+
+### Phase 4: Physical file splits
 
 Move existing member function definitions into the responsibility-based `.cpp` files listed above. Keep public interfaces and behavior unchanged.
 
@@ -305,31 +401,26 @@ Verification for this phase:
 - Run focused tests, then the full test target.
 - Do not add benchmarks for a pure file move.
 
-### Phase 4: Divide large workflows
+### Phase 5: Divide large workflows
 
 1. Divide instrument-map preparation from its locked commit.
 2. Divide hi-hat and aftertouch workflows into bounded realtime-safe steps.
 3. Add owned linked-edit state to `PadContextPopup`.
-4. Divide velocity-layer construction into named phases.
+4. Divide velocity-level construction into named phases.
 
 Verification for this phase:
 
-- Run focused engine, routing, source override, and UI behavior tests.
+- Run focused engine, routing, library kit override, and UI behavior tests.
 - Use listening checks for hi-hat, aftertouch, choke, phase, gain, and routing changes.
 - Confirm that realtime helpers allocate no memory, perform no blocking I/O, and preserve iteration order.
 
-### Phase 5: Converter format
+### Phase 6: Converter closeout
 
-1. Make the shared runtime canonical.
-2. Add generator and manifest tests.
-3. Remove the confirmed unused legacy path.
-4. Generate data manifests instead of very large Python operation lists.
+This is the lowest-priority phase.
 
-Verification for this phase:
-
-- Compare operation counts and audit rows before and after.
-- Run one small and one large kit conversion.
-- Compare generated paths, hashes, channel rules, and audit results.
+1. Complete the final conversion verification.
+2. Archive or remove the converter and generated operation scripts.
+3. Refactor the converter only if it must remain maintained.
 
 ## Completion criteria
 
@@ -338,9 +429,12 @@ The cleanup is complete when:
 - `Helpers.h` no longer brings logging into unrelated files.
 - `UITheme.h` no longer includes the complete library model.
 - Map helper headers no longer include the complete engine only for nested data types.
-- Instrument-map preset storage has one explicit same-name policy.
+- Generic helper files have been removed, renamed by responsibility, or placed in a clear feature module.
+- The useful Kit page behavior exists in the usage-tested Browse replacement.
+- The old Kit page and its unused helper code are removed. Browse is renamed to Kit.
+- Instrument-map preset storage has one explicit same-name policy in the remaining screen.
 - Exact repeated parsing and guard logic has one owner.
 - The large engine and UI files are separated by responsibility.
 - Instrument-map preparation and locked commit are visibly separate.
-- The converter has one runtime implementation and one canonical operation manifest.
+- The verified converter and generated operation scripts are archived or removed. If they remain active, they have one runtime implementation and one canonical operation manifest.
 - Focused tests, the full test target, relevant listening checks, and incremental build measurements pass.

@@ -7,35 +7,35 @@
 
 namespace KitLib {
 
-struct MicSourceOverride {
+struct MicOverride {
     std::optional<float> playbackOffsetMs;
 };
 
-struct SampleSourceOverride {
+struct SampleOverride {
     juce::String contentHash;
     std::optional<float> manualGainDb;
     std::optional<float> playbackOffsetMs;
-    std::map<juce::String, MicSourceOverride> micOverrides;
+    std::map<juce::String, MicOverride> micOverrides;
 };
 
-struct ArticulationSourceOverride {
+struct ArticulationOverride {
     std::optional<int> balance;
     std::map<uint8_t, uint8_t> velocityUpperBounds;
 };
 
-struct InstrumentSourceOverride {
+struct InstrumentOverride {
     std::optional<int> balance;
-    std::map<juce::String, ArticulationSourceOverride> articulationOverrides;
+    std::map<juce::String, ArticulationOverride> articulationOverrides;
 };
 
-struct SampleSourceOverrideMatch {
-    const SampleSourceOverride* value = nullptr;
+struct SampleOverrideMatch {
+    const SampleOverride* value = nullptr;
     juce::String storedRelativePath;
     bool matchedByContentHash = false;
     bool ambiguousContentHash = false;
 };
 
-class KitSourceOverrides {
+class LibraryKitOverrides {
 public:
     static constexpr int FORMAT_VERSION = 1;
     static constexpr const char* FILE_NAME = "kit-overrides.yml";
@@ -45,11 +45,11 @@ public:
     ParseResult<bool> saveToKitRoot(const juce::File& kitRoot);
     juce::String toYaml() const;
 
-    const InstrumentSourceOverride* findInstrumentOverride(const juce::String& instrumentCodeRaw) const;
-    const ArticulationSourceOverride* findArticulationOverride(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw) const;
-    const SampleSourceOverride* findSampleOverride(const juce::String& relativePath) const;
-    SampleSourceOverrideMatch findSampleOverride(const juce::String& relativePath, const juce::String& contentHash) const;
-    const MicSourceOverride* findMicOverride(const juce::String& relativePath, const juce::String& micCode) const;
+    const InstrumentOverride* findInstrumentOverride(const juce::String& instrumentCodeRaw) const;
+    const ArticulationOverride* findArticulationOverride(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw) const;
+    const SampleOverride* findSampleOverride(const juce::String& relativePath) const;
+    SampleOverrideMatch findSampleOverride(const juce::String& relativePath, const juce::String& contentHash) const;
+    const MicOverride* findMicOverride(const juce::String& relativePath, const juce::String& micCode) const;
 
     void setInstrumentBalance(const juce::String& instrumentCodeRaw, std::optional<int> balance);
     void setArticulationBalance(const juce::String& instrumentCodeRaw, const juce::String& articulationCodeRaw, std::optional<int> balance);
@@ -63,8 +63,8 @@ public:
     bool isActive() const { return !this->instrumentOverrides.empty() || !this->sampleOverrides.empty(); }
     int getExplicitValueCount() const;
 
-    std::map<juce::String, InstrumentSourceOverride> instrumentOverrides;
-    std::map<juce::String, SampleSourceOverride> sampleOverrides;
+    std::map<juce::String, InstrumentOverride> instrumentOverrides;
+    std::map<juce::String, SampleOverride> sampleOverrides;
 
 private:
     bool loadedFileExisted = false;

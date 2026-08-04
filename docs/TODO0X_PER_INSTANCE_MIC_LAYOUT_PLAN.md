@@ -2,7 +2,7 @@
 
 ## Goal
 
-Allow each plugin instance (each track in a DAW project) to persist and restore its own mic layout choice. On project reload, the correct mic layout — including correct output bus names — is applied per-instance, with fallback to `config.yaml` default.
+Allow each plugin instance (each track in a DAW project) to persist and restore its own mic layout choice. On project reload, the correct mic layout - including correct output bus names - is applied per-instance, with fallback to `config.yaml` default.
 
 ## Background: VST3 Lifecycle
 
@@ -83,7 +83,7 @@ In `DrumKitEngine`, after `setMicLayout()` / `setKitLayout()` succeed, write the
 
 **Option:** Add a method `DrumKitEngine::syncStateToTree(APVTS& treeState)` that writes current layout IDs and instrument map into `treeState.state` properties. Call it from `PluginProcessor` after any layout change.
 
-**OR** make `useState()` bidirectional — after resolving layouts, write the resolved IDs back:
+**OR** make `useState()` bidirectional - after resolving layouts, write the resolved IDs back:
 
 ```cpp
 void DrumKitEngine::useState(juce::AudioProcessorValueTreeState& treeState) {
@@ -272,7 +272,7 @@ void maybeReconstructForState(const MemoryBlock& rawState)
 | **Memory leak of old `pluginInstance`** | The old raw pointer must be `delete`d before reassignment. Currently it's a raw `AudioProcessor*`. Wrap the delete explicitly. |
 | **Edit controller holds stale `comPluginInstance`** | `setAudioProcessor()` re-binds it. Verify the edit controller re-reads parameter state after swap. |
 | **Race with audio thread** | `setState()` is called from the message thread when `active == false` (VST3 spec). No audio processing during reconstruction. But add `jassert(!active)` as safety. |
-| **Standalone wrapper** | Standalone doesn't call `setState()` the same way — it uses `getStateInformation`/`setStateInformation` directly. The stash mechanism is harmless (null by default). |
+| **Standalone wrapper** | Standalone doesn't call `setState()` the same way - it uses `getStateInformation`/`setStateInformation` directly. The stash mechanism is harmless (null by default). |
 | **Thread-local correctness** | `thread_local` ensures multiple plugin instances being loaded simultaneously on different threads don't interfere. |
 | **First-load (no saved state)** | `sPendingStateData` is null → constructor falls back to `resolveMicLayoutFromConfig()` as today. |
 
@@ -284,7 +284,7 @@ Some hosts (notably Cubase, Studio One) cache bus topology from the VST3 `getAud
 
 ---
 
-### Phase 3: Bus::setName() (Option A — supplementary safety net)
+### Phase 3: Bus::setName() (Option A - supplementary safety net)
 
 **File:** `JUCE/modules/juce_audio_processors_headless/processors/juce_AudioProcessor.h`
 
@@ -336,16 +336,16 @@ void PluginProcessor::renameBusesFromMicLayout() {
 
 ## Implementation Order
 
-1. **Phase 1** — state persistence. Test: save/load project, verify `mic_layout` round-trips in state.
-2. **Phase 3** — `Bus::setName()` (trivial, no risk). Test: rename buses after `setStateInformation()`, verify names in debug log.
-3. **Phase 2** — reconstruction in `setState()`. Test: save project with layout X, close, reopen, verify bus names match layout X in host mixer.
+1. **Phase 1** - state persistence. Test: save/load project, verify `mic_layout` round-trips in state.
+2. **Phase 3** - `Bus::setName()` (trivial, no risk). Test: rename buses after `setStateInformation()`, verify names in debug log.
+3. **Phase 2** - reconstruction in `setState()`. Test: save project with layout X, close, reopen, verify bus names match layout X in host mixer.
 
 Phase 3 before Phase 2 because it provides a fallback while Phase 2 is being debugged.
 
 ## Open Questions
 
-1. **Should `maybeReconstructForState()` live in the JUCE wrapper or should we add a virtual hook?** — A virtual method like `AudioProcessor::shouldReconstructForState(const void* data, int size)` would be cleaner and less JUCE-fork-specific. The wrapper calls it, and if it returns true, triggers reconstruction. This way the JUCE mod is generic, not plugin-specific.
+1. **Should `maybeReconstructForState()` live in the JUCE wrapper or should we add a virtual hook?** - A virtual method like `AudioProcessor::shouldReconstructForState(const void* data, int size)` would be cleaner and less JUCE-fork-specific. The wrapper calls it, and if it returns true, triggers reconstruction. This way the JUCE mod is generic, not plugin-specific.
 
-2. **Do we want `restartComponent(kIoChanged)` after reconstruction?** — Depends on target DAW testing. Worth trying.
+2. **Do we want `restartComponent(kIoChanged)` after reconstruction?** - Depends on target DAW testing. Worth trying.
 
-3. **Old `pluginInstance` cleanup** — The raw pointer needs explicit `delete`. Should we switch it to `unique_ptr` while we're modifying the wrapper? That would be a larger but cleaner refactor.
+3. **Old `pluginInstance` cleanup** - The raw pointer needs explicit `delete`. Should we switch it to `unique_ptr` while we're modifying the wrapper? That would be a larger but cleaner refactor.

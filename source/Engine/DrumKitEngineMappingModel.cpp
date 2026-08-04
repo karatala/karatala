@@ -1,21 +1,26 @@
 #include "DrumKitEngineMappingModel.h"
 
 namespace DrumKitEngineMappingModel {
+namespace Detail {
 
 struct ParsedSlotRef {
     juce::String slotId;
-    std::vector<juce::String> articulations;
+    std::vector<juce::String> articulationSlotCodes;
+    bool hasExtraPathSegment = false;
 };
-static std::vector<juce::String> parseDelimitedNames(const juce::String& text) {//TODO: doxygen document what doing with example
+
+static std::vector<juce::String> parseDelimitedNames(const juce::String& text) {
     std::vector<juce::String> result;
     juce::StringArray parts;
     parts.addTokens(text, ",", "");
-    parts.removeEmptyStrings(true);
-    for (const auto& part : parts) result.push_back(part.trim());
+    for (const auto& part : parts) {
+        const auto name = part.trim();
+        if (name.isNotEmpty()) result.push_back(name);
+    }
     return result;
 }
 
-static ParsedSlotRef parseSlotRef(const juce::String& text) {//TODO: doxygen document what doing with example
+static ParsedSlotRef parseSlotRef(const juce::String& text) {
     ParsedSlotRef result;
     const auto trimmed = text.trim();
     const int slashIdx = trimmed.indexOfChar('/');
@@ -25,19 +30,21 @@ static ParsedSlotRef parseSlotRef(const juce::String& text) {//TODO: doxygen doc
     }
 
     result.slotId = trimmed.substring(0, slashIdx).trim();
-    result.articulations = parseDelimitedNames(trimmed.substring(slashIdx + 1));
+    const auto articulationSlotText = trimmed.substring(slashIdx + 1);
+    result.hasExtraPathSegment = articulationSlotText.containsChar('/');
+    result.articulationSlotCodes = parseDelimitedNames(articulationSlotText);
     return result;
 }
 
-
-struct ParsedTargetRef {
+struct ParsedLibraryRef {
     juce::String kitRef;
     juce::String instCode;
-    std::vector<juce::String> articulations;
+    std::vector<juce::String> libraryArticulationCodes;
+    bool hasExtraPathSegment = false;
 };
 
-static ParsedTargetRef parseTargetRef(const juce::String& text) {//TODO: doxygen document what doing with example
-    ParsedTargetRef result;
+static ParsedLibraryRef parseLibraryRef(const juce::String& text) {
+    ParsedLibraryRef result;
     const auto trimmed = text.trim();
     const int firstSlashIdx = trimmed.indexOfChar('/');
     if (firstSlashIdx < 0) {
@@ -54,7 +61,9 @@ static ParsedTargetRef parseTargetRef(const juce::String& text) {//TODO: doxygen
     }
 
     result.instCode = remainder.substring(0, secondSlashIdx).trim();
-    result.articulations = parseDelimitedNames(remainder.substring(secondSlashIdx + 1));
+    const auto articulationText = remainder.substring(secondSlashIdx + 1).trim();
+    result.hasExtraPathSegment = articulationText.containsChar('/');
+    result.libraryArticulationCodes = parseDelimitedNames(articulationText);
     return result;
 }
 
@@ -64,11 +73,13 @@ static int findNextParamBoundary(const juce::String& text, int startIndex) {
     return -1;
 }
 
+} // namespace Detail
+
 /**
  * Parses instrument map text.
  *
  * Line format:
- *   slot/slotArt:kitRef/instrumentCode/articulations[:param=value;param=value,value;param=key:value,key:value] //TODO: check why articulationS, it should be only one per line
+ *   slot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:param=value;param=value,value;param=key:value,key:value]
  *
  * Examples:
  *   kick1/center:MyKit/kick-24/center
@@ -82,7 +93,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
     auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<DrumKitEngine::InstrumentMap>& parseResult, int lineNumber, std::optional<int>& target) {
         auto trimmed = valueText.trim();
         if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789")) {
-            parseResult.addWarning("Line " + juce::String(lineNumber) + ": invalid value for '" + key + "': " + valueText); //FIXME: missing the context of what slot/art:kitref/instCode/art was that
+            parseResult.addWarning("Line " + juce::String(lineNumber) + ": invalid value for '" + key + "': " + valueText);
             return;
         }
         target = trimmed.getIntValue();
@@ -95,7 +106,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
 
         const int firstColon = line.indexOfChar(':');
         if (firstColon <= 0) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": expected '<slot>:<target>'");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
+            result.addWarning("Line " + juce::String(idx + 1) + ": expected '<instrument slot>:<library kit>/<library instrument>/<library articulation>'");
             continue;
         }
 
@@ -105,28 +116,40 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
         const auto paramsText = secondColon >= 0 ? line.substring(secondColon + 1).trim() : juce::String();
 
         if (slotText.isEmpty() || targetText.isEmpty()) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": empty slot or target");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
+            result.addWarning("Line " + juce::String(idx + 1) + ": instrument slot or library path is empty");
             continue;
         }
 
-        auto slotRef = parseSlotRef(slotText);
-        auto targetRef = parseTargetRef(targetText);
+        auto slotRef = Detail::parseSlotRef(slotText);
+        auto libraryRef = Detail::parseLibraryRef(targetText);
 
         if (slotRef.slotId.isEmpty()) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": slot id is empty");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
+            result.addWarning("Line " + juce::String(idx + 1) + ": instrument slot id is empty");
             continue;
         }
-        if (targetRef.kitRef.isEmpty()) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": kit reference is empty");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
+        if (slotRef.hasExtraPathSegment || slotRef.articulationSlotCodes.size() > 1) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": a map layer can target only one articulation slot");
+            continue;
+        }
+        if (libraryRef.kitRef.isEmpty()) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": library kit is empty; expected 'kit/instrument/articulation'");
+            continue;
+        }
+        if (libraryRef.instCode.isEmpty()) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": library instrument is empty; expected 'kit/instrument/articulation'");
+            continue;
+        }
+        if (libraryRef.hasExtraPathSegment || libraryRef.libraryArticulationCodes.size() != 1) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": one library articulation is required; expected 'kit/instrument/articulation'");
             continue;
         }
 
-        DrumKitEngine::InstrumentMapEntry entry;
-        entry.slotId = slotRef.slotId;
-        entry.slotArticulationFilter = slotRef.articulations;
-        entry.kitRef = targetRef.kitRef;
-        entry.instCode = targetRef.instCode;
-        entry.articulationFilter = targetRef.articulations;
+        DrumKitEngine::InstrumentMapLayer mapLayer;
+        mapLayer.slotId = slotRef.slotId;
+        mapLayer.slotArticulationFilter = slotRef.articulationSlotCodes;
+        mapLayer.kitRef = libraryRef.kitRef;
+        mapLayer.instCode = libraryRef.instCode;
+        mapLayer.articulationFilter = libraryRef.libraryArticulationCodes;
 
         if (!paramsText.isEmpty()) {
             int start = 0;
@@ -138,37 +161,37 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
 
                 const int equalsIdx = paramsText.indexOf(start, "=");
                 if (equalsIdx < 0) {
-                    result.addWarning("Line " + juce::String(idx + 1) + ": malformed param '" + paramsText.substring(start).trim() + "'");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
+                    result.addWarning("Line " + juce::String(idx + 1) + ": malformed param '" + paramsText.substring(start).trim() + "'");
                     break;
                 }
 
                 const auto key = paramsText.substring(start, equalsIdx).trim();
-                const int boundaryIdx = findNextParamBoundary(paramsText, equalsIdx + 1);
+                const int boundaryIdx = Detail::findNextParamBoundary(paramsText, equalsIdx + 1);
                 const auto value = (boundaryIdx < 0 ? paramsText.substring(equalsIdx + 1) : paramsText.substring(equalsIdx + 1, boundaryIdx)).trim();
 
                 if (key == "tuning")
-                    parseInt(value, key, result, idx + 1, entry.tuningCents);
+                    parseInt(value, key, result, idx + 1, mapLayer.tuningCents);
                 else if (key == "attack")
-                    parseInt(value, key, result, idx + 1, entry.attackTimeMs);
+                    parseInt(value, key, result, idx + 1, mapLayer.attackTimeMs);
                 else if (key == "decay")
-                    parseInt(value, key, result, idx + 1, entry.decayTimeMs);
+                    parseInt(value, key, result, idx + 1, mapLayer.decayTimeMs);
                 else if (key == "vol") {
                     auto trimmed = value.trim();
                     if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789."))
-                        result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'vol': " + value); //FIXME: missing the context of what slot/art:kitref/instCode/art was that
+                        result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'vol': " + value);
                     else
-                        entry.volumeDb = trimmed.getFloatValue();
+                        mapLayer.volumeDb = trimmed.getFloatValue();
                 } else if (key == "pan") {
-                    parseInt(value, key, result, idx + 1, entry.pan);
+                    parseInt(value, key, result, idx + 1, mapLayer.pan);
                 } else if (key == "velocityResponse") {
                     auto parsedResponse = VelocityResponse::fromDefinition(value);
                     if (!parsedResponse.ok()) result.addWarning("Line " + juce::String(idx + 1) + ": invalid value for 'velocityResponse': " + parsedResponse.error());
-                    else entry.velocityResponse = parsedResponse.value.getDefinition();
+                    else mapLayer.velocityResponse = parsedResponse.value.getDefinition();
                 } else if (key == "flipLR") {
-                    entry.flipLR = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
-                    entry.flipLRExplicit = true;
+                    mapLayer.flipLR = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
+                    mapLayer.flipLRExplicit = true;
                 } else if (key == "flipPhase") {
-                    entry.flipPhase = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
+                    mapLayer.flipPhase = (value.trim() == "1" || value.trim().equalsIgnoreCase("true"));
                 } else if (key == "bleed") {
                     // Format: bleed=micCode:level,micCode:level,...
                     juce::StringArray pairs;
@@ -179,24 +202,24 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                             auto micCode = pair.substring(0, colonPos).trim();
                             auto levelStr = pair.substring(colonPos + 1).trim();
                             if (micCode.isNotEmpty() && levelStr.containsOnly("0123456789."))
-                                entry.micBleedLevels[micCode] = levelStr.getFloatValue();
+                                mapLayer.micBleedLevels[micCode] = levelStr.getFloatValue();
                         }
                     }
                 } else if (key == "micRoute") {
-                    // Format: micRoute=sourceMic:outputId,sourceMic:outputId,...
+                    // Format: micRoute=micCode:outputId,micCode:outputId,...
                     juce::StringArray pairs;
                     pairs.addTokens(value, ",", "");
                     for (const auto& pair : pairs) {
                         auto colonPos = pair.indexOf(":");
                         if (colonPos > 0) {
-                            auto sourceMicCode = pair.substring(0, colonPos).trim();
+                            auto micCode = pair.substring(0, colonPos).trim();
                             auto outputId = pair.substring(colonPos + 1).trim();
-                            if (sourceMicCode.isNotEmpty() && outputId.isNotEmpty())
-                                entry.micRouteOverrides[sourceMicCode] = outputId;
+                            if (micCode.isNotEmpty() && outputId.isNotEmpty())
+                                mapLayer.micRouteOverrides[micCode] = outputId;
                         }
                     }
                 } else
-                    result.addWarning("Line " + juce::String(idx + 1) + ": unknown param '" + key + "'");//FIXME: missing the context of what slot/art:kitref/instCode/art was that
+                    result.addWarning("Line " + juce::String(idx + 1) + ": unknown param '" + key + "'");
 
                 if (boundaryIdx < 0)
                     break;
@@ -204,16 +227,11 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
             }
         }
 
-        if (entry.slotArticulationFilter.empty() && !entry.articulationFilter.empty())
-            entry.slotArticulationFilter = entry.articulationFilter;
-        else if (!entry.slotArticulationFilter.empty() && entry.articulationFilter.empty())
-            entry.articulationFilter = entry.slotArticulationFilter;
-
-        result.value.entries.push_back(std::move(entry));
+        result.value.layers.push_back(std::move(mapLayer));
     }
 
-    if (result.value.entries.empty())
-        return result.returnWithError("No valid instrument map entries found");
+    if (result.value.layers.empty())
+        return result.returnWithError("No valid instrument map layers found");
 
     return result;
 }

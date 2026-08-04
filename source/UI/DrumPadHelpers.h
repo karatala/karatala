@@ -22,7 +22,7 @@ inline void drawPadLabel(juce::Graphics& gfx, const juce::Rectangle<int>& bounds
     gfx.drawFittedText(text, bounds, juce::Justification::centred, maxLines, 0.9f);
 }
 
-inline std::vector<int> buildDisplayOrder(const std::vector<KitLayout::InstrumentSlot::ArticulationTrigger>& articulations) {
+inline std::vector<int> buildDisplayOrder(const std::vector<KitLayout::InstrumentSlot::ArticulationSlot>& articulations) {
     std::vector<int> order(articulations.size());
     std::iota(order.begin(), order.end(), 0);
     return order;

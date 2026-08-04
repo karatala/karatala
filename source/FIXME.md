@@ -32,5 +32,4 @@ hihat1/edge[open]:NakedDrums/hihat-X1/edge[open]
 hihat1/edge[close]:NakedDrums/hihat-X1/edge[close]
 hihat1/pedal:NakedDrums/hihat-X1/pedal
 ```
-and internally we have implicit hihat logic with cc-controlled transitions open>half>close>tight abd backwards, that already kinda worked well (before we introduced mapFilterMatchesArticulation inside collectResolvedLayoutArticulations)
-
+and internally we have implicit hihat logic with cc-controlled transitions open>half>close>tight abd backwards, that already kinda worked well (before we introduced mapFilterMatchesArticulation inside collectResolvedArticulationSlots)

@@ -1,4 +1,4 @@
-# ✅ COMPLETED: TODO01: Hi-Hat Pedal Transition — Detailed Implementation Plan (Mostly superseded by TODO12. Old multi-mic/group transition idea was rejected/reworked, not still pending)
+# ✅ COMPLETED: TODO01: Hi-Hat Pedal Transition - Detailed Implementation Plan (Mostly superseded by TODO12. Old multi-mic/group transition idea was rejected/reworked, not still pending)
 
 ## Goal
 When the hi-hat pedal CC changes articulation while a sound is already playing (e.g., closed → half-open), start the new articulation's sample **at a time-offset that matches the current RMS level of the old sound**, instead of using a fixed 50ms offset. This produces a seamless, natural transition without an audible attack transient or unnatural choke+fade-in.
@@ -7,7 +7,7 @@ When the hi-hat pedal CC changes articulation while a sound is already playing (
 
 ## Current Behavior (what happens today)
 
-In `InstrumentSynth::handleController()` ([InstrumentSynth.cpp](../source/Engine/InstrumentSynth.cpp#L48)):
+In `InstrumentPlayer::handleController()` ([InstrumentPlayer.cpp](../source/Engine/InstrumentPlayer.cpp#L48)):
 
 1. Pedal CC change detected → maps to new `ArticulationRuntime` index (e.g., `edge[close]` → `edge[half]`)
 2. For each active voice whose articulation differs from the target:
@@ -84,18 +84,18 @@ newVoice->sourceSamplePosition = (newOffsetMs / 1000.0) * srcSampleRate
 ### Edge Cases
 - **Old sound louder than new peak**: `newRelativeDb > 0` → start new sample at its peak (offset = peakMs). Apply short crossfade.
 - **Old sound quieter than -60dB of new**: offset beyond sample length → don't start replacement (old is already inaudible relative to new)
-- **No decay data available**: do **not** fall back to a fixed offset (the old 50ms approach was a complete failure). Instead, skip the replacement entirely — let the old voice continue playing naturally. Log a warning at load time for samples missing decay metadata so the user knows which files need re-analysis.
+- **No decay data available**: do **not** fall back to a fixed offset (the old 50ms approach was a complete failure). Instead, skip the replacement entirely - let the old voice continue playing naturally. Log a warning at load time for samples missing decay metadata so the user knows which files need re-analysis.
 - **Different mic channels**: each mic has its own decay table. Use the **direct mic** (closest, usually `dtm`, or any other starting with `d`; fallback to **overhead mic** starting with `o`) for the level calculation since it has the cleanest envelope. Apply same time offset to all mic voices.
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Persist Decay Metadata in `SampleVariantSpec`
+### Step 1: Persist Decay Metadata in `SampleSpec`
 
 **File**: [KitLibModel.h](../source/Engine/KitLibModel.h#L89)
 
-Add fields to `SampleVariantSpec`:
+Add fields to `SampleSpec`:
 ```cpp
 // Parsed decay envelope metadata (populated from filename at scan time)
 float peakDb = 0.0f;        // RMS peak level in dB
@@ -106,20 +106,19 @@ juce::String decayCode;     // raw base62-encoded decay curve
 
 **File**: [KitLibModel.cpp](../source/Engine/KitLibModel.cpp#L148) (inside `scanInstrumentSamples`)
 
-After `parseSampleFile()` succeeds and before `getOrAddSampleVariant()`, transfer metadata:
+After `parseSampleFile()` succeeds, get the logical hit by round robin ID and then get its mic sample:
 ```cpp
-// After: velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
-// Transfer parsed metadata to the sample variant spec
-auto* sv = velSpec->getOrAddSampleVariant(sampleFile, variantIdx, micDesc, channelCursor);
-sv->peakDb = parsedInfo.value.peakDb;
-sv->peakMs = parsedInfo.value.peakMs;
-sv->decayMs = parsedInfo.value.decayMs;
-sv->decayCode = parsedInfo.value.decayCode;
+auto* logicalHit = velocityLevelSpec->getOrAddLogicalHit(roundRobinId);
+auto* sample = logicalHit->getOrAddSample(sampleFile, micDesc, channelCursor);
+sample->peakDb = parsedInfo.value.peakDb;
+sample->peakMs = parsedInfo.value.peakMs;
+sample->decayMs = parsedInfo.value.decayMs;
+sample->decayCode = parsedInfo.value.decayCode;
 ```
 
 ### Step 2: Add Decoded Decay Table Structure
 
-**New file or in KitLibModel.h** — a lightweight struct for the decoded decay envelope:
+**New file or in KitLibModel.h** - a lightweight struct for the decoded decay envelope:
 
 ```cpp
 /**
@@ -264,26 +263,22 @@ float DecayEnvelope::getMsAtAbsoluteDb(float targetAbsDb) const {
 
 ### Step 6: Pre-build DecayEnvelope at Load Time
 
-**Option A: Build on `SampleVariantSpec`** (model layer) — decode during `scanInstrumentSamples()`:
-Add `DecayEnvelope decayEnvelope;` to `SampleVariantSpec`. After transferring metadata (Step 1):
+**Implemented model:** Decode during `scanInstrumentSamples()` and store the result on `SampleSpec`:
 ```cpp
-sv->decayEnvelope = DecayEnvelope::decode(sv->decayCode, sv->peakDb, sv->peakMs);
+sample->decayEnvelope = DecayEnvelope::decode(sample->decayCode, sample->peakDb, sample->peakMs);
 ```
 
-**Option B: Build on `SampledSound`** (runtime layer) — decode during `createVelocityLayers()`:
-Add `DecayEnvelope decayEnvelope;` to `SampledSound`. In `createVelocityLayers()`:
+`SampledSound` copies the decoded envelope during `createVelocityLevels()`:
 ```cpp
-auto* sound = new SampledSound(instSpec, varSpec.get(), varSpec->sampleFile, notes);
-sound->decayEnvelope = DecayEnvelope::decode(varSpec->decayCode, varSpec->peakDb, varSpec->peakMs);
+auto* sound = new SampledSound(instrumentSpec, sample, sample->sampleFile, notes);
+sound->decayEnvelope = sample->decayEnvelope;
 ```
-
-**Recommended: Option B** — keeps the model layer clean and puts runtime data where it's consumed. `SampledSound` is already the primary runtime representation that voices use.
 
 ### Step 7: Modify `handleController()` for Smart Offset
 
 Replace the fixed-offset block in `handleController()` with decay-level-matched offset calculation.
 
-**File**: [InstrumentSynth.cpp](../source/Engine/InstrumentSynth.cpp#L130-L148)
+**File**: [InstrumentPlayer.cpp](../source/Engine/InstrumentPlayer.cpp#L130-L148)
 
 Replace:
 ```cpp
@@ -305,7 +300,7 @@ const auto& oldEnv = ss->decayEnvelope;
 const auto& newEnv = targetSe->sound->decayEnvelope;
 
 if (!oldEnv.isValid() || !newEnv.isValid()) {
-    // No decay data — skip replacement entirely; let old voice continue naturally
+    // No decay data - skip replacement entirely; let old voice continue naturally
     continue;
 }
 
@@ -348,7 +343,7 @@ voice->fadeOutSec(fadeInSec); // old voice fades for same duration as new fades 
 
 When replacing voices, multiple voices may be active for different mics of the same note. The offset must be **the same for all mic channels** of a given articulation replacement.
 
-**Approach**: Calculate the offset once using the **direct mic** (type `d` — closest/cleanest), then apply the same `offsetMs` to all mic voices for this replacement.
+**Approach**: Calculate the offset once using the **direct mic** (type `d` - closest/cleanest), then apply the same `offsetMs` to all mic voices for this replacement.
 
 In `handleController()`, before the voice loop:
 ```cpp
@@ -375,11 +370,11 @@ Priority: prefer using a `d` (direct) mic type for the canonical calculation.
 
 | File | Changes |
 |------|---------|
-| [KitLibModel.h](../source/Engine/KitLibModel.h) | Add `DecayEnvelope` struct. Add `peakDb/peakMs/decayMs/decayCode` fields to `SampleVariantSpec` |
-| [KitLibModel.cpp](../source/Engine/KitLibModel.cpp) | Transfer parsed metadata to `SampleVariantSpec` in `scanInstrumentSamples()` |
-| [InstrumentSynth.h](../source/Engine/InstrumentSynth.h) | Add `DecayEnvelope decayEnvelope` to `SampledSound` |
-| [InstrumentSynthLoader.cpp](../source/Engine/InstrumentSynthLoader.cpp) | Decode `DecayEnvelope` in `createVelocityLayers()` |
-| [InstrumentSynth.cpp](../source/Engine/InstrumentSynth.cpp) | Replace fixed offset with `DecayEnvelope`-based calculation in `handleController()` |
+| [KitLibModel.h](../source/Engine/KitLibModel.h) | Add `DecayEnvelope` struct. Add `peakDb/peakMs/decayMs/decayCode` fields to `SampleSpec` |
+| [KitLibModel.cpp](../source/Engine/KitLibModel.cpp) | Transfer parsed metadata to `SampleSpec` in `scanInstrumentSamples()` |
+| [InstrumentPlayer.h](../source/Engine/InstrumentPlayer.h) | Add `DecayEnvelope decayEnvelope` to `SampledSound` |
+| [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | Decode `DecayEnvelope` in `createVelocityLevels()` |
+| [InstrumentPlayer.cpp](../source/Engine/InstrumentPlayer.cpp) | Replace fixed offset with `DecayEnvelope`-based calculation in `handleController()` |
 | New: `DecayEnvelope.h/.cpp` or inline in KitLibModel | `DecayEnvelope` implementation (decode, getAbsoluteDbAtMs, getMsAtAbsoluteDb, base62ToInt) |
 
 ---
@@ -390,7 +385,7 @@ Priority: prefer using a `d` (direct) mic type for the canonical calculation.
 1. **`base62ToInt`** round-trip: encode known values in Python, decode in C++, verify match
 2. **`DecayEnvelope::decode`**: Feed known decay codes from actual filenames, verify decoded points match CSV data
 3. **`getAbsoluteDbAtMs`**: For known decay table, verify interpolation at exact breakpoints and midpoints
-4. **`getMsAtAbsoluteDb`**: Inverse of above — verify round-trip consistency
+4. **`getMsAtAbsoluteDb`**: Inverse of above - verify round-trip consistency
 5. **Edge cases**: empty decay code, single-point envelope, level louder than peak, level below -60dB floor
 
 ### Integration Tests
@@ -422,8 +417,8 @@ Priority: prefer using a `d` (direct) mic type for the canonical calculation.
 1. **Step 3**: `base62ToInt()` utility + unit tests
 2. **Step 2**: `DecayEnvelope` struct + `decode()` + unit tests  
 3. **Step 5**: `getAbsoluteDbAtMs()` + `getMsAtAbsoluteDb()` + unit tests
-4. **Step 1**: Add fields to `SampleVariantSpec`, transfer in `scanInstrumentSamples()`
-5. **Step 6**: Add `DecayEnvelope` to `SampledSound`, decode in `createVelocityLayers()`
+4. **Step 1**: Add fields to `SampleSpec`, transfer in `scanInstrumentSamples()`
+5. **Step 6**: Add `DecayEnvelope` to `SampledSound`, decode in `createVelocityLevels()`
 6. **Step 7**: Modify `handleController()` offset calculation
 7. **Step 8**: Crossfade envelope tuning
 8. **Step 9**: Multi-mic coherence

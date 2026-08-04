@@ -1,6 +1,8 @@
 #include "InstrumentConfigPanel.h"
 #include "../Engine/ArticulationNameHelpers.h"
+#include "../Engine/DrumKitEngineMapHelpers.h"
 #include "UIHelpers.h"
+#include <algorithm>
 
 // InstrumentConfigPanel
 
@@ -46,6 +48,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
     this->velocityResponsePresets = this->engine.getVelocityResponsePresets();
     this->tableRows.clear();
     this->contentComponent.removeAllChildren();
+    this->unprojectedActiveSlotMapLayers.clear();
     this->populated = true;
 
     auto* layout = this->engine.getKitLayout();
@@ -57,7 +60,17 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
         mapText = this->engine.getSuggestedInstrumentMapText();
 
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
-    const auto& existingEntries = parseResult.value.entries;
+    const auto& existingMapLayers = parseResult.value.layers;
+    const auto mapLayerProjections = DrumKitEngineMapHelpers::projectMapLayers(parseResult.value, *layout);
+    std::vector<bool> mapLayerIsProjected(existingMapLayers.size(), false);
+    for (const auto& projection : mapLayerProjections)
+        if (projection.mapLayerIndex < mapLayerIsProjected.size()) mapLayerIsProjected[projection.mapLayerIndex] = true;
+    for (size_t mapLayerIndex = 0; mapLayerIndex < existingMapLayers.size(); ++mapLayerIndex) {
+        if (mapLayerIsProjected[mapLayerIndex]) continue;
+        const auto& mapLayer = existingMapLayers[mapLayerIndex];
+        const bool belongsToActiveSlot = std::any_of(layout->instrumentSlots.begin(), layout->instrumentSlots.end(), [&mapLayer](const auto& slot) { return slot.id.compareIgnoreCase(mapLayer.slotId) == 0; });
+        if (belongsToActiveSlot) this->unprojectedActiveSlotMapLayers.push_back(mapLayer);
+    }
 
     for (const auto& slot : layout->instrumentSlots) {
         std::vector<juce::String> artNames;
@@ -71,44 +84,37 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
         }
 
         for (const auto& artName : artNames) {
-            std::vector<const DrumKitEngine::InstrumentMapEntry*> matchingEntries;
-            for (const auto& entry : existingEntries) {
-                if (entry.slotId != slot.id)
-                    continue;
-                if (!entry.slotArticulationFilter.empty()) {
-                    bool found = false;
-                    for (const auto& filter : entry.slotArticulationFilter)
-                        if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, artName)) found = true;
-                    if (!found) continue;
+            std::vector<const DrumKitEngine::InstrumentMapLayer*> matchingMapLayers;
+            for (const auto& mapLayer : existingMapLayers) {
+                if (mapLayer.slotId != slot.id) continue;
+                const auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(mapLayer);
+                bool matchesArticulationSlot = articulationSlotFilters.empty();
+                for (const auto& articulationSlotFilter : articulationSlotFilters) {
+                    if (ArticulationNameHelpers::mapFilterMatchesArticulation(articulationSlotFilter, artName)) {
+                        matchesArticulationSlot = true;
+                        break;
+                    }
                 }
-                matchingEntries.push_back(&entry);
+                if (matchesArticulationSlot) matchingMapLayers.push_back(&mapLayer);
             }
 
-            if (matchingEntries.empty()) {
-                for (const auto& entry : existingEntries) {
-                    if (entry.slotId == slot.id && entry.slotArticulationFilter.empty())
-                        matchingEntries.push_back(&entry);
-                }
-            }
-
-            if (matchingEntries.empty()) {
+            if (matchingMapLayers.empty()) {
                 this->addRow(slot.id, artName, slot.type, "", 0, -1, -1, 0.0f, 0, false, false, false);
             } else {
-                for (const auto* entry : matchingEntries) {
-                    juce::String sourceFullPath = entry->kitRef;
-                    if (entry->instCode.isNotEmpty())
-                        sourceFullPath += "/" + entry->instCode;
-                    if (!entry->articulationFilter.empty())
-                        sourceFullPath += "/" + entry->articulationFilter[0];
-                    if (slot.type == KitLib::InstrumentSpec::Type::HiHat && UIHelpers::usesLegacyDestinationExpressionFilter(entry->slotArticulationFilter, artName))
+                for (const auto* mapLayer : matchingMapLayers) {
+                    juce::String sourceFullPath = mapLayer->kitRef;
+                    if (mapLayer->instCode.isNotEmpty()) sourceFullPath += "/" + mapLayer->instCode;
+                    const auto libraryArticulation = DrumKitEngineMapHelpers::libraryArticulationForSlot(*mapLayer, artName);
+                    if (libraryArticulation.isNotEmpty()) sourceFullPath += "/" + libraryArticulation;
+                    if (slot.type == KitLib::InstrumentSpec::Type::HiHat && UIHelpers::usesLegacyArticulationSlotExpressionFilter(mapLayer->slotArticulationFilter, artName))
                         sourceFullPath = UIHelpers::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, artName);
 
-                    int tuning = entry->tuningCents.value_or(0);
-                    int attack = entry->attackTimeMs.value_or(-1);
-                    int decay = entry->decayTimeMs.value_or(-1);
-                    float volume = entry->volumeDb.value_or(0.0f);
-                    int pan = entry->pan.value_or(0);
-                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay, volume, pan, entry->flipLR, entry->flipLRExplicit, entry->flipPhase, -1, entry->velocityResponse, entry->micBleedLevels, entry->micRouteOverrides);
+                    const int tuning = mapLayer->tuningCents.value_or(0);
+                    const int attack = mapLayer->attackTimeMs.value_or(-1);
+                    const int decay = mapLayer->decayTimeMs.value_or(-1);
+                    const float volume = mapLayer->volumeDb.value_or(0.0f);
+                    const int pan = mapLayer->pan.value_or(0);
+                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay, volume, pan, mapLayer->flipLR, mapLayer->flipLRExplicit, mapLayer->flipPhase, -1, mapLayer->velocityResponse, mapLayer->micBleedLevels, mapLayer->micRouteOverrides);
                 }
             }
         }
@@ -286,7 +292,7 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     }
     if (layerNumber < 1) layerNumber = 1;
     auto pickerTitle = slotTitle + " / " + row->artName;
-    if (layerNumber > 1) pickerTitle += " (layer " + juce::String(layerNumber) + ")";
+    if (layerNumber > 1) pickerTitle += " (map layer " + juce::String(layerNumber) + ")";
     this->activePopup->setTitle(pickerTitle);
     this->activePopup->onDismiss = [this] {
         juce::MessageManager::callAsync([this] { this->dismissPopup(); });
@@ -488,40 +494,41 @@ void InstrumentConfigPanel::layoutContent() {
 }
 juce::String InstrumentConfigPanel::generateMapText() const {
     DrumKitEngine::InstrumentMap instrumentMap;
+    instrumentMap.layers = this->unprojectedActiveSlotMapLayers;
 
     for (const auto* row : this->tableRows) {
         if (row->selectedSourceIndex < 0)
             continue;
 
         const auto& srcItem = this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)];
-        DrumKitEngine::InstrumentMapEntry entry;
-        entry.slotId = row->slotId;
-        if (row->artName != "(default)") entry.slotArticulationFilter.push_back(row->artName);
-        entry.kitRef = srcItem.kitCodeRaw;
-        entry.instCode = srcItem.instCode;
-        if (srcItem.artCode.isNotEmpty()) entry.articulationFilter.push_back(srcItem.artCode);
+        DrumKitEngine::InstrumentMapLayer mapLayer;
+        mapLayer.slotId = row->slotId;
+        if (row->artName != "(default)") mapLayer.slotArticulationFilter.push_back(row->artName);
+        mapLayer.kitRef = srcItem.kitCodeRaw;
+        mapLayer.instCode = srcItem.instCode;
+        if (srcItem.artCode.isNotEmpty()) mapLayer.articulationFilter.push_back(srcItem.artCode);
 
         int tuning = static_cast<int>(row->tuningControl->getValue());
-        if (tuning != 0) entry.tuningCents = tuning;
+        if (tuning != 0) mapLayer.tuningCents = tuning;
 
         double attackVal = row->attackControl->getValue();
-        if (attackVal >= 0.0) entry.attackTimeMs = static_cast<int>(attackVal);
+        if (attackVal >= 0.0) mapLayer.attackTimeMs = static_cast<int>(attackVal);
 
         double decayVal = row->decayControl->getValue();
-        if (decayVal >= 0.0) entry.decayTimeMs = static_cast<int>(decayVal);
+        if (decayVal >= 0.0) mapLayer.decayTimeMs = static_cast<int>(decayVal);
 
         double volVal = row->gainControl->getValue();
-        if (volVal <= -0.01 || volVal >= 0.01) entry.volumeDb = static_cast<float>(volVal);
+        if (volVal <= -0.01 || volVal >= 0.01) mapLayer.volumeDb = static_cast<float>(volVal);
 
         int panValue = static_cast<int>(row->panControl->getValue());
-        if (panValue != 0) entry.pan = panValue;
-        entry.velocityResponse = row->velocityResponse;
-        entry.flipLR = row->flipLRButton->getToggleState();
-        entry.flipLRExplicit = entry.flipLR || row->flipLRExplicit;
-        entry.flipPhase = row->flipPhaseButton->getToggleState();
-        entry.micBleedLevels = row->micBleedLevels;
-        entry.micRouteOverrides = row->micRouteOverrides;
-        instrumentMap.entries.push_back(std::move(entry));
+        if (panValue != 0) mapLayer.pan = panValue;
+        mapLayer.velocityResponse = row->velocityResponse;
+        mapLayer.flipLR = row->flipLRButton->getToggleState();
+        mapLayer.flipLRExplicit = mapLayer.flipLR || row->flipLRExplicit;
+        mapLayer.flipPhase = row->flipPhaseButton->getToggleState();
+        mapLayer.micBleedLevels = row->micBleedLevels;
+        mapLayer.micRouteOverrides = row->micRouteOverrides;
+        instrumentMap.layers.push_back(std::move(mapLayer));
     }
     return this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(instrumentMap));
 }
@@ -534,6 +541,7 @@ int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const 
     for (int idx = 0; idx < this->tableRows.size(); ++idx) {
         const auto* currentRow = this->tableRows[idx];
         if (currentRow->slotId != row->slotId) continue;
+        if (currentRow->artName.trim().compareIgnoreCase(row->artName.trim()) != 0) continue;
         if (currentRow->selectedSourceIndex < 0) continue;
         if (currentRow == row) return mappedLayerIndex;
         ++mappedLayerIndex;
@@ -544,8 +552,8 @@ int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const 
 void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
     if (row == nullptr) return;
 
-    const int layerIndex = this->getMappedLayerIndexForRow(row);
-    if (layerIndex < 0) return;
+    const int mappedLayerIndex = this->getMappedLayerIndexForRow(row);
+    if (mappedLayerIndex < 0) return;
 
     DrumKitEngine::LayerParameterUpdate update;
     update.tuningCents = static_cast<int>(row->tuningControl->getValue());
@@ -556,7 +564,7 @@ void InstrumentConfigPanel::applyRowParametersFast(TableRow* row) {
     update.flipLR = row->flipLRButton->getToggleState();
     update.flipPhase = row->flipPhaseButton->getToggleState();
 
-    this->engine.updateSlotParameters(row->slotId, row->artName, layerIndex, update);
+    this->engine.updateSlotParameters(row->slotId, row->artName, mappedLayerIndex, update);
     this->mapTextDirty = true;
     this->queueMapTextFlush();
 }

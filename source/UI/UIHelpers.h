@@ -63,9 +63,9 @@ std::vector<SourceItem> buildSourceItems(const KitLib::LibraryManager* libraryMa
 
 int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::String& searchPath);
 
-bool usesLegacyDestinationExpressionFilter(const std::vector<juce::String>& destinationFilters, const juce::String& destinationArticulation);
+bool usesLegacyArticulationSlotExpressionFilter(const std::vector<juce::String>& articulationSlotFilters, const juce::String& articulationSlotCode);
 
-juce::String resolveLegacyHihatSourcePath(const std::vector<SourceItem>& sourceItems, const juce::String& sourcePath, const juce::String& destinationArticulation);
+juce::String resolveLegacyHihatSourcePath(const std::vector<SourceItem>& sourceItems, const juce::String& sourcePath, const juce::String& articulationSlotCode);
 
 std::unique_ptr<juce::Slider> createParamSlider(
     double minVal,

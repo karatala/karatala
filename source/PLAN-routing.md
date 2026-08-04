@@ -4,7 +4,7 @@
 
 Add explicit kit-slot instrument kinds, direct-mic output policy, shared/spare direct outputs, and balance-aware stereo placement.
 
-This document is the source of truth. Avoid repeating rules later in the file; link back to these sections instead.
+This document is authoritative. Avoid repeating rules later in the file; link back to these sections instead.
 
 ## Entity Map
 
@@ -52,17 +52,17 @@ This document is the source of truth. Avoid repeating rules later in the file; l
                            |
                            v
 +---------------------------------------------------+
-| Instrument Synths                                 |
+| Instrument Players                                |
 |---------------------------------------------------|
-| primary slot synths + layered shadow synths       |
+| primary and additional instrument players       |
 +---------------------------------------------------+
 ```
 
 ## Goals
 
-- Give custom instrument slots like octobans a predictable way to use direct mics from layered source instruments.
+- Give custom instrument slots like octobans a predictable way to use direct mics from layered library instruments.
 - Preserve separate direct mic codes instead of combining all direct mics into one output.
-- Prevent direct mics from unrelated source instruments from being routed through another instrument's dedicated processing.
+- Prevent direct mics from unrelated library instruments from being routed through another instrument's dedicated processing.
 - Describe the intended type and stereo balance of a kit-layout instrument slot explicitly.
 - Read balance metadata from library articulation folders and automatically orient stereo sources to the correct side.
 - Keep routing-plan construction and sample loading outside the realtime audio path.
@@ -93,7 +93,7 @@ Use this order so each stage leaves the tree buildable and gives later routing w
 - Build one immutable routing plan after the instrument map and library layers are resolved.
 - Allocate `own` direct outputs before `auto`, then shared/group fallbacks in mic-layout order.
 - Share private claims by slot plus full direct mic code, and emit diagnostics for skipped direct mic codes.
-- Make primary and shadow synths consume the same routing plan.
+- Make primary and additional instrument players consume the same routing plan.
 
 ### Stage 4: Balance-Aware Rendering
 
@@ -117,7 +117,7 @@ Use this order so each stage leaves the tree buildable and gives later routing w
 
 - Build `Tests`.
 - Run focused parser/routing/orientation tests, then the full Catch2 suite for cross-domain changes.
-- Do UI smoke verification for source selection, resizing, and preset save/reload.
+- Do UI smoke verification for library selection, resizing, and preset save or reload.
 
 ## Direct Mic Output Policy
 
@@ -229,11 +229,11 @@ instrumentCatalog:
 
 `other` is the name for the third family. It is imperfect but clearer than `percussion` and avoids overloading `aux`.
 
-Catalog changes should require only a routing rebuild unless the implementation discovers that source-picker filtering also needs the updated family list.
+Catalog changes should require only a routing rebuild unless the implementation discovers that library-picker filtering also needs the updated family list.
 
 ## Mic Layout
 
-Mic layout is the only source of truth for output order and which slots/kinds/families may use each output. Do not hardcode channels in engine logic.
+The mic layout is authoritative for output order and for which slots, kinds, and families may use each output. Do not hardcode channels in engine logic.
 
 Use `instrument` as a selector. No extra `role` field is needed.
 
@@ -292,11 +292,11 @@ Exact catalog kind beats a comma-list group when both match. Shared/group fallba
 
 Direct output compatibility is based on full direct mic code, including variant, channel count, and format. Group outputs may accept any compatible `d*` direct mic code selected by `instrument`; mono direct mics can be panned into stereo selected group outputs.
 
-Use KitLib mic naming: sample files contain mic codes like `dim`, `dom`, `dts`, `ons`, `rfs`, `dtm1`; do not introduce a separate "source mic" term.
+Use KitLib mic naming: sample files contain mic codes like `dim`, `dom`, `dts`, `ons`, `rfs`, `dtm1`; do not introduce a separate "mic" term.
 
 ## Routing Rules
 
-Build one immutable routing plan after the instrument map and library layers are resolved. Both primary and shadow synths consume this plan; they must not reconstruct routing independently.
+Build one immutable routing plan after the instrument map and library layers are resolved. Both primary and additional instrument players consume this plan; they must not reconstruct routing independently.
 
 | `directMicOuts` | Behavior |
 | --- | --- |
@@ -425,7 +425,7 @@ Routing plan:
 
 - Kit layout parsing: explicit type, derived type, `directMicOuts` override, balance, invalid values, YAML round trip.
 - Library parsing: balance suffixes, expression dimensions with balance suffixes, conflicting balance values.
-- Routing: current common overhead/room behavior, missing mic `code` warning, Own Direct private claim before Auto Direct, Auto Direct private claim after Own Direct, group fallback by mic-layout order, unmatched direct mic warning, primary/shadow synth consistency.
+- Routing: current common overhead/room behavior, missing mic `code` warning, Own Direct private claim before Auto Direct, Auto Direct private claim after Own Direct, group fallback by mic-layout order, unmatched direct mic warning, primary/additional instrument-player consistency.
 - Orientation: opposite-side auto `flipLR`, matching-side no flip, unknown/center no inference, manual override preserved.
-- UI smoke test: type/balance/directMicOuts edits, source selection, resize, preset save/reload.
+- UI smoke test: type, balance, and `directMicOuts` edits; library selection; resize; preset save or reload.
 - Build `Tests` and run the focused parser/routing tests plus the full Catch2 suite for cross-domain changes.

@@ -5,39 +5,39 @@
 #include <cstddef>
 #include <map>
 
-class InstrumentSynth;
+class InstrumentPlayer;
 
 namespace DrumKitEngineMapHelpers {
 
 struct InstrumentMapLayerProjection {
-    size_t entryIndex = 0;
+    size_t mapLayerIndex = 0;
     juce::String slotId;
-    juce::String articulationName;
-    int layerIndex = -1;
+    juce::String articulationSlotCode;
+    int articulationSlotLayerIndex = -1;
     KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
 };
 
 void appendUniqueId(std::vector<uint32_t>& values, uint32_t value);
-std::vector<juce::String> effectiveArticulationFilter(const DrumKitEngine::InstrumentMapEntry& entry);
-uint32_t resolveEntrySourceArtId(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& slotArtName);
-juce::StringArray collectInstrumentArticulationNames(const KitLib::InstrumentSpec& instrumentSpec);
-std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& instrumentSpec, const DrumKitEngine::InstrumentMapEntry& entry);
+std::vector<juce::String> effectiveArticulationSlotFilter(const DrumKitEngine::InstrumentMapLayer& mapLayer);
+uint32_t resolveMapLayerLibraryArticulationId(const DrumKitEngine::InstrumentMapLayer& mapLayer, const juce::String& articulationSlotCode);
+juce::StringArray collectLibraryArticulationNames(const KitLib::InstrumentSpec& libraryInstrument);
+std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& libraryInstrument, const DrumKitEngine::InstrumentMapLayer& mapLayer);
 void applyAutomaticOrientation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout& layout, KitLib::LibraryManager& libraryManager);
-juce::String makeInstrumentMapEntryFingerprint(const DrumKitEngine::InstrumentMapEntry& entry);
-juce::String makeInstrumentMapEntryReloadFingerprint(const DrumKitEngine::InstrumentMapEntry& entry);
+juce::String makeInstrumentMapLayerFingerprint(const DrumKitEngine::InstrumentMapLayer& mapLayer);
+juce::String makeInstrumentMapLayerReloadFingerprint(const DrumKitEngine::InstrumentMapLayer& mapLayer);
 std::unordered_map<juce::String, juce::String> buildSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap);
 std::unordered_map<juce::String, juce::String> buildResolvedSlotFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLib::LibraryManager& libraryManager);
 std::unordered_map<juce::String, juce::String> buildResolvedSlotReloadFingerprintMap(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLib::LibraryManager& libraryManager);
 bool canReuseSlotWithoutReload(const KitLayout::InstrumentSlot& oldSlot, const KitLayout::InstrumentSlot& newSlot);
-void prepareSynthIfNeeded(InstrumentSynth& synth, double sampleRate, int samplesPerBlock);
-std::unique_ptr<InstrumentSynth> createReplacementSynth(DrumKitEngine* owner, const KitLayout::InstrumentSlot& layoutSlot, const InstrumentSynth& source, double sampleRate, int samplesPerBlock);
-KitLib::InstrumentSpec* findMatchingKitInstrument(const KitLayout::InstrumentSlot& layoutInstrument, const KitLib::DrumKitSpec& kit, std::unordered_set<KitLib::InstrumentSpec*>& usedInstruments, std::map<KitLib::InstrumentSpec::Type, int>& nextIndexByType);
-DrumKitEngine::InstrumentMapEntry buildInstrumentLevelEntry(const KitLayout::InstrumentSlot& slot, const KitLib::DrumKitSpec& kit, const KitLib::InstrumentSpec& instrument, const juce::String& preferredKitId);
-void replaceSlotEntries(DrumKitEngine::InstrumentMap& instrumentMap, DrumKitEngine::InstrumentMapEntry replacement);
-std::vector<InstrumentMapLayerProjection> projectDestinationLayers(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout& layout);
-std::vector<InstrumentMapLayerProjection> collectLinkedParameterTargets(const std::vector<InstrumentMapLayerProjection>& projections, const juce::String& sourceSlotId, const juce::String& sourceArticulation, int sourceLayerIndex, bool linkArticulations, bool linkAllTomBleed);
-size_t isolateEntryForDestinationArticulation(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout::InstrumentSlot& slot, size_t entryIndex, const juce::String& articulationName);
-juce::String sourceArticulationForDestination(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& destinationArticulation);
-juce::String sourcePathForDestination(const DrumKitEngine::InstrumentMapEntry& entry, const juce::String& destinationArticulation);
+void preparePlayerIfNeeded(InstrumentPlayer& player, double sampleRate, int samplesPerBlock);
+std::unique_ptr<InstrumentPlayer> createReplacementPlayer(DrumKitEngine* owner, const KitLayout::InstrumentSlot& layoutSlot, const InstrumentPlayer& player, double sampleRate, int samplesPerBlock);
+KitLib::InstrumentSpec* findMatchingLibraryInstrument(const KitLayout::InstrumentSlot& layoutInstrument, const KitLib::DrumKitSpec& libraryKit, std::unordered_set<KitLib::InstrumentSpec*>& usedLibraryInstruments, std::map<KitLib::InstrumentSpec::Type, int>& nextIndexByType);
+std::vector<DrumKitEngine::InstrumentMapLayer> buildInstrumentMapLayers(const KitLayout::InstrumentSlot& slot, const KitLib::DrumKitSpec& libraryKit, const KitLib::InstrumentSpec& libraryInstrument, const juce::String& preferredLibraryKitId);
+void replaceSlotMapLayers(DrumKitEngine::InstrumentMap& instrumentMap, const juce::String& slotId, std::vector<DrumKitEngine::InstrumentMapLayer> replacements);
+std::vector<InstrumentMapLayerProjection> projectMapLayers(const DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout& layout);
+std::vector<InstrumentMapLayerProjection> collectLinkedMapLayerTargets(const std::vector<InstrumentMapLayerProjection>& projections, const juce::String& selectedSlotId, const juce::String& selectedArticulationSlotCode, int selectedArticulationSlotLayerIndex, bool linkArticulations, bool linkAllTomBleed);
+size_t isolateMapLayerForArticulationSlot(DrumKitEngine::InstrumentMap& instrumentMap, const KitLayout::InstrumentSlot& slot, size_t mapLayerIndex, const juce::String& articulationSlotCode);
+juce::String libraryArticulationForSlot(const DrumKitEngine::InstrumentMapLayer& mapLayer, const juce::String& articulationSlotCode);
+juce::String libraryPathForArticulationSlot(const DrumKitEngine::InstrumentMapLayer& mapLayer, const juce::String& articulationSlotCode);
 
 } // namespace DrumKitEngineMapHelpers

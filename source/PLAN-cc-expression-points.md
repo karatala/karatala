@@ -33,13 +33,13 @@ instruments:
   - `zon_bow_edg`: `{ bow: 24, edge: 85 }`
   - pdl_opn_cls should have validation open>half>close>tight>=pedal
 - Add an engine-side resolver that returns effective expression values:
-  - Explicit source folder dimensions win.
+  - Explicit library-articulation folder dimensions win.
   - Otherwise use slot override, then layout override, then built-in default.
   - For `pdl_opn_cls`, match by articulation expression first (`open`, `half`, `close`, `tight`) and by name for `pedal`.
   - For zone controllers, match by articulation name (`center/rim`, `bow/edge`).
 - Add layout validation warnings when controller `notes` are empty or reference notes that are not present on any articulation in the same slot.
 - Update routing build only, not the audio thread:
-  - `collectResolvedLayoutArticulations()` can discover implicit controller siblings.
+  - `collectResolvedArticulationSlots()` can discover implicit controller siblings.
   - `buildCcMappings()` uses effective values, not only folder-encoded values.
   - hi-hat `pocValue` uses the effective `pdl_opn_cls` value when explicit metadata is absent.
 - Preserve current behavior for instruments that already encode CC values in folder names.
@@ -50,7 +50,7 @@ instruments:
 - Show button only for slots/controllers that use known expression dimensions.
 - Each controller row shows named point sliders/steppers for its dimension, seeded from effective values.
 - Edited values are stored as per-slot layout overrides and trigger `setKitLayoutDirect(..., reapplyCurrentMap=true)`.
-- Source picker and instrument-map syntax stay unchanged.
+- The library picker and instrument-map syntax stay unchanged.
 
 ## Tests
 
@@ -64,12 +64,12 @@ instruments:
 - Run:
   - `cmake --build T:/source/repos/karatala/build --config Debug --target Tests -j 8`
   - `Tests.exe "[yaml]"`
-  - focused synth/controller routing tests
+  - focused instrument player/controller routing tests
   - full `Tests.exe`
 
 ## Assumptions
 
-- "Implicit" means source articulations without expression-dimension suffixes only.
+- "Implicit" means library articulations without expression-dimension suffixes only.
 - Built-in defaults are not user config; user-editable persistence is through kit layout YAML.
 - V1 UI edits per-slot values, because different pads/controllers may need different calibration.
 - Controller rows must explicitly reference the notes they apply to; empty controller note lists are invalid for this feature.

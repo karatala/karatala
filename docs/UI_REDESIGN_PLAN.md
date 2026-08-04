@@ -3,15 +3,15 @@
 ## Overview
 
 Replace current two-panel layout (reference + instrument map) with a tabbed UI:
-- **Left sidebar** — mode selector icons + global controls (velocity, hihat openness, RR lock)
-- **Main area** — content depends on selected mode
-- **Status bar** — bottom strip showing engine status, last action result, loading progress
+- **Left sidebar** - page selector icons and global controls for velocity, hihat openness, and RR lock
+- **Main area** - content depends on the selected page
+- **Status bar** - bottom strip showing engine status, last action result, loading progress
 
 ## Current State
 
 - `PluginEditor` has: reference panel (left 1/3), instrument map editor (right 2/3), settings toggle, status label, apply button
-- `EngineSettingsPanel` — 16 sliders in 3 groups
-- `LookAndFeel` — dark theme already in `source/UI/`
+- `EngineSettingsPanel` - 16 sliders in 3 groups
+- `LookAndFeel` - dark theme already in `source/UI/`
 - Window size: 1000×580
 
 ---
@@ -21,7 +21,7 @@ Replace current two-panel layout (reference + instrument map) with a tabbed UI:
 ```
 ┌─────────┬──────────────────────────────────────┐
 │ SIDEBAR │          MAIN AREA                   │
-│ (56px)  │  (content depends on selected mode)  │
+│ (56px)  │  (content depends on selected page)  │
 │         │                                      │
 │ [Zen]   │                                      │
 │ [Zoned] │                                      │
@@ -43,18 +43,18 @@ Replace current two-panel layout (reference + instrument map) with a tabbed UI:
 ```
 
 ### Sidebar (56px wide)
-- **Top section** — 5 mode buttons (icon-only, square, 44×44px), vertically stacked:
+- **Top section** - 5 page buttons (icon-only, square, 44×44px), vertically stacked:
   1. Zen (grid icon)
   2. Zoned (split-grid icon)
   3. Map (table icon)
   4. Raw (code/text icon)
   5. Settings (gear icon)
-- **Bottom section** — global controls:
+- **Bottom section** - global controls:
   - Velocity knob (rotary, small, 40px)
   - HiHat Openness knob (rotary, small, 40px)
   - Round-Robin Lock knob (rotary or stepped, values: 0=all, 1=first, 2=second, etc.)
   - Inspect button (🔍, small)
-- Active mode button highlighted with accent colour
+- Active page button highlighted with accent colour
 - Sidebar background slightly darker than main area
 
 ### Status Bar (24px tall)
@@ -64,7 +64,7 @@ Replace current two-panel layout (reference + instrument map) with a tabbed UI:
 
 ---
 
-## Mode 1: Zen View (Default)
+## Page 1: Zen (Default)
 
 Grid of drum pads, no padding between them.
 
@@ -84,7 +84,7 @@ Grid of drum pads, no padding between them.
 └────────┴────────┴────────┴────────┴────────┴────────┘
 ```
 
-- Grid size: **columns × rows** (default 6×4, configurable in Settings mode)
+- Grid size: **columns × rows** (default 6×4, configurable on the Settings page)
 - Pads populated from current `KitLayout::instrumentSlots` in order
 - Each pad shows:
   - Instrument slot display name (or id if no display name)
@@ -92,18 +92,18 @@ Grid of drum pads, no padding between them.
   - On MIDI note-on: pad flashes/lights up proportional to velocity
 - Pads are clickable: sends MIDI note-on (first articulation's first note) at sidebar velocity knob value
 - Empty slots (beyond instrument count) shown as dark empty cells
-- No gaps/padding between pads — they tile edge-to-edge
+- No gaps/padding between pads - they tile edge-to-edge
 
 ### Implementation
 - New component: `source/UI/DrumPadGrid.h/.cpp`
 - `DrumPadGrid` owns a flat `std::vector<DrumPad>` laid out in grid
-- `DrumPad` — single pad component, knows its `KitLayout::InstrumentSlot*`
+- `DrumPad` - single pad component, knows its `KitLayout::InstrumentSlot*`
 - `DrumPadGrid` listens to engine for note-on events to trigger flash animations
 - Grid dimensions stored in `EngineSettings` or a separate UI config: `int padGridColumns = 6; int padGridRows = 4;`
 
 ---
 
-## Mode 2: Zoned View
+## Page 2: Zoned
 
 Same grid layout as Zen, but each pad is horizontally split into articulation zones.
 
@@ -140,7 +140,7 @@ Same grid layout as Zen, but each pad is horizontally split into articulation zo
 
 ---
 
-## Mode 3: Map Mode
+## Page 3: Map
 
 Table view for MIDI note assignment per articulation.
 
@@ -164,9 +164,9 @@ Table view for MIDI note assignment per articulation.
 
 - Scrollable table, full width of main area
 - Columns:
-  1. **Instrument** — slot id/display name (merged cells or first-row-only for each instrument)
-  2. **Articulation** — articulation code; CC controllers shown separately with "CC:" prefix
-  3. **MIDI Note** — 2 ComboBox dropdowns showing `NoteName/NoteNumber` (e.g. "C3 / 60"), all 128 MIDI notes + "-- / --" for unassigned eachwith a red circle button for MIDI learn
+  1. **Instrument** - slot id/display name (merged cells or first-row-only for each instrument)
+  2. **Articulation** - articulation code; CC controllers shown separately with "CC:" prefix
+  3. **MIDI Note** - 2 ComboBox dropdowns showing `NoteName/NoteNumber` (e.g. "C3 / 60"), all 128 MIDI notes + "-- / --" for unassigned eachwith a red circle button for MIDI learn
 - Rows grouped by instrument with alternating row background for readability
 - Changes apply immediately to users version of `KitLayout` and engine (no separate "Apply" button) but also saved to `config.yaml` for persistence
 - Auto-apply on dropdown change
@@ -177,11 +177,11 @@ Table view for MIDI note assignment per articulation.
 - `MidiMapTable` reads from active `KitLayout`
 - MIDI learn: engine calls back when note received; `MidiMapTable` has an `activeLearningRow` index
 - ComboBox items: generate from MIDI note names (C-2..G8 / 0..127)
-- Changes write back to `KitLayout::InstrumentSlot::ArticulationTrigger::notes`
+- Changes write back to `KitLayout::InstrumentSlot::ArticulationSlot::notes`
 
 ---
 
-## Mode 4: Raw Mode
+## Page 4: Raw
 
 Current instrument map + reference panels moved here verbatim.
 
@@ -200,18 +200,18 @@ Current instrument map + reference panels moved here verbatim.
 
 - Left 1/3: `referencePanel` (TextEditor, read-only, monospaced)
 - Right 2/3: `instrumentMapEditor` (TextEditor, editable) + `applyButton`
-- Exactly the current layout, just relocated into this mode tab
+- Keep the current layout, but move it to this page.
 - No changes to functionality
 
 ### Implementation
-- Move existing `referencePanel`, `referencePanelLabel`, `instrumentMapEditor`, `instrumentMapLabel`, `applyButton` to be visible only in Raw mode
-- They remain owned by `PluginEditor`, just shown/hidden based on mode
+- Show the existing `referencePanel`, `referencePanelLabel`, `instrumentMapEditor`, `instrumentMapLabel`, and `applyButton` only on the Raw page.
+- Keep them owned by `PluginEditor` and show or hide them by page.
 
 ---
 
-## Mode 5: Instrument Config (Inst)
+## Page 5: Instrument Config (Inst)
 
-Visual editor for instrument slot → sample library mapping, per-slot articulation selection, tuning, attack/decay, and layer configuration. GUI version of manual text editing in Raw mode.
+Visual editor for instrument-slot to library mapping, articulation-slot selection, tuning, attack, decay, and map-layer configuration. It is the GUI version of manual text editing on the Raw page.
 
 ### Layout
 
@@ -249,16 +249,16 @@ Visual editor for instrument slot → sample library mapping, per-slot articulat
 
 Each instrument slot from `KitLayout::instrumentSlots` gets a collapsible card:
 
-1. **Header** — slot id (bold), instrument type color indicator
-2. **Kit dropdown** — lists all kits/instruments/articulations from `LibraryManager::getKits()` by `DrumKitSpec::meta.codeRaw`, `InstrumentSpec::Type` etc. Dropdown items show `kitRef/instCode/artCode` (e.g. "aasimonster2/kick-22/center") ordered by instrument relevance, then articulation (matching type first, then others)
-4. **Tuning slider** — integer, range -2400..+2400 cents, default 0, interval 10. Maps to `InstrumentMapEntry::tuningCents`
-5. **Attack slider** — integer, range 0..500 ms, interval 10, default unset (--). Maps to `InstrumentMapEntry::attackTimeMs`
-6. **Decay slider** — integer, range 0..5000 ms, interval 10, default unset (--). Maps to `InstrumentMapEntry::decayTimeMs`
-7. **Add layer button** — adds another set of dropdown + params for layering multiple samples on the same slot/articulation with different settings (e.g. multiple kick samples layered together)
+1. **Header** - slot id (bold), instrument type color indicator
+2. **Kit dropdown** - lists all kits/instruments/articulations from `LibraryManager::getKits()` by `DrumKitSpec::meta.codeRaw`, `InstrumentSpec::Type` etc. Dropdown items show `kitRef/instCode/artCode` (e.g. "aasimonster2/kick-22/center") ordered by instrument relevance, then articulation (matching type first, then others)
+4. **Tuning slider** - integer, range -2400..+2400 cents, default 0, interval 10. Maps to `InstrumentMapLayer::tuningCents`
+5. **Attack slider** - integer, range 0..500 ms, interval 10, default unset (--). Maps to `InstrumentMapLayer::attackTimeMs`
+6. **Decay slider** - integer, range 0..5000 ms, interval 10, default unset (--). Maps to `InstrumentMapLayer::decayTimeMs`
+7. **Add layer button** - adds another set of dropdown + params for layering multiple samples on the same slot/articulation with different settings (e.g. multiple kick samples layered together)
 
 ### Behaviour
 
-- On any change → rebuild `InstrumentMap` entries from UI state → call `useInstrumentMap()` with generated text → update status bar
+- On any change → rebuild `InstrumentMap` map layers from UI state → call `useInstrumentMap()` with generated text → update status bar
 - "Unset" values for tuning/attack/decay: slider at a sentinel position or a checkbox "override" toggle next to each
 - Cards are scrollable in a `juce::Viewport`
 - Each card has a subtle border matching `LookAndFeel::darkerGrey`
@@ -272,9 +272,9 @@ LibraryManager::getKits()   →  kit dropdown items
 Kit::instrumentSpecsMap     →  instrument dropdown items  
 InstrumentSpec::articulationSpecs → articulation checkboxes
                                     ↓
-User edits card             →  generate InstrumentMapEntry
+User edits card             →  generate InstrumentMapLayer
                                     ↓
-All entries                 →  serialize to instrument map text
+All map layers              →  serialize to instrument map text
                                     ↓
                             →  DrumKitEngine::useInstrumentMap(text)
                             →  statusBar.setStatusText(...)
@@ -286,7 +286,7 @@ All entries                 →  serialize to instrument map text
 - New component: `source/UI/InstrumentConfigPanel.h/.cpp`
 - `InstrumentConfigPanel` contains a `juce::Viewport` with a content component
 - Each slot card: `InstrumentSlotCard` (inner struct/class) owning the dropdowns, sliders, toggles
-- Card reads from current `InstrumentMapEntry` (parsed from existing instrument map text) for initial values
+- Card reads from current `InstrumentMapLayer` (parsed from existing instrument map text) for initial values
 - Card writes back by generating map text line: `slotId:kitRef/instCode:tuning=X,attack=Y,decay=Z,art=a,b,c`
 - Needs references to: `DrumKitEngine` (for `LibraryManager`, `KitLayout`, `useInstrumentMap`)
 
@@ -299,13 +299,13 @@ source/UI/
 
 ### Sidebar Addition
 
-- Add new mode button between Map and Raw: "Inst" (instrument icon)
-- `ViewMode::Instrument` added to enum after `Map`
-- Total modes: Zen, Zoned, Map, **Inst**, Raw, Settings (6 buttons)
+- Add a new page button between Map and Raw: `Inst` with an instrument icon.
+- `PageId::Instrument` added to enum after `Map`
+- Total pages: Zen, Zoned, Map, **Inst**, Raw, and Settings (6 buttons)
 
 ---
 
-## Mode 6: Settings
+## Page 6: Settings
 
 All engine settings in a clean two-column layout with grouped sections.
 
@@ -372,14 +372,14 @@ All engine settings in a clean two-column layout with grouped sections.
 
 ```
 source/
-├── PluginEditor.h/.cpp          ← MODIFIED: new layout, sidebar, mode switching
+├── PluginEditor.h/.cpp          ← MODIFIED: new layout, sidebar, page switching
 ├── UI/
 |   ├── EngineSettingsPanel.h/.cpp   ← MODIFIED: grouped sections, grid size settings, moved to UI folder
 │   ├── LookAndFeel.h/.cpp       ← existing, minor additions for new components
-│   ├── Sidebar.h/.cpp           ← NEW: sidebar with mode buttons + knobs
+│   ├── Sidebar.h/.cpp           ← NEW: sidebar with page buttons + knobs
 │   ├── DrumPadGrid.h/.cpp       ← NEW: zen/zoned pad grid
 │   ├── DrumPad.h/.cpp           ← NEW: single pad component
-│   ├── MidiMapTable.h/.cpp      ← NEW: map mode table
+│   ├── MidiMapTable.h/.cpp      ← NEW: Map page table
 │   └── StatusBar.h/.cpp         ← NEW: bottom status bar
 ```
 
@@ -387,40 +387,40 @@ source/
 
 ## Implementation Order
 
-### Phase 1: Shell — sidebar + mode switching + status bar
-1. Create `Sidebar` component with 5 mode buttons (text labels initially, icons later)
+### Phase 1: Shell - sidebar + page switching + status bar
+1. Create `Sidebar` component with 5 page buttons. Use text labels first and icons later.
 2. Create `StatusBar` component
 3. Refactor `PluginEditor` to new layout: sidebar | main area | status bar
-4. Implement mode switching: show/hide components based on active mode
-5. Move existing components to Raw mode (mode 4)
-6. Move `EngineSettingsPanel` to Settings mode (mode 5)
+4. Implement page switching. Show or hide components based on the active page.
+5. Move existing components to the Raw page.
+6. Move `EngineSettingsPanel` to the Settings page.
 7. Verify build + existing functionality preserved
 
-### Phase 2: Zen view (mode 1)
-1. Create `DrumPad` component — displays slot name, type colour, handles click
-2. Create `DrumPadGrid` — arranges pads in NxM grid, reads from `KitLayout`
+### Phase 2: Zen page
+1. Create `DrumPad` component - displays slot name, type colour, handles click
+2. Create `DrumPadGrid` - arranges pads in NxM grid, reads from `KitLayout`
 3. Wire pad click → send MIDI note-on via engine at sidebar velocity
 4. Wire engine note-on callback → pad flash animation (simple alpha fade)
-5. Set Zen as default mode
+5. Set Zen as the default page.
 
-### Phase 3: Zoned view (mode 2)
-1. Add `PadMode::Zoned` to `DrumPad` — horizontal split by articulations
+### Phase 3: Zoned page
+1. Add `PadMode::Zoned` to `DrumPad` - horizontal split by articulations
 2. Each zone clickable with its own MIDI note
 3. Zone labels showing articulation codes
 
-### Phase 4: Map mode (mode 3)
+### Phase 4: Map page
 1. Create `MidiMapTable` component with scrollable rows
 2. Populate from active `KitLayout` articulations
 3. MIDI note ComboBox dropdowns (128 notes + unassigned)
-4. MIDI learn button per row — listen for next note, assign, deactivate
+4. MIDI learn button per row - listen for next note, assign, deactivate
 5. Apply changes back to `KitLayout`
 
 ### Phase 5: Sidebar knobs + polish
 1. Add velocity, hihat openness, RR lock knobs to sidebar
 2. Wire knobs to engine (CC4, velocity override, RR lock)
-3. Add RR lock support to `InstrumentSynth`/`SampleSelector`
+3. Add RR lock support to `InstrumentPlayer`/`SampleSelector`
 4. Visual polish: pad colours by instrument type, hover states, flash animations
-5. Replace mode button text with icons (SVG or path-drawn)
+5. Replace page-button text with SVG or path-drawn icons.
 
 ### Phase 6: Settings improvements
 1. Restructure `EngineSettingsPanel` into grouped sections with headers
@@ -442,7 +442,7 @@ DrumKitEngine note-on callback → DrumPadGrid → DrumPad flash
 
 MidiMapTable reads/writes KitLayout articulation notes
     ↓
-Changes → rebuild engine note→synth mapping
+Changes → rebuild engine note→instrument player mapping
 
 Sidebar::velocityKnob → stored value used by DrumPad on click
 Sidebar::hihatKnob → CC4 sent to engine

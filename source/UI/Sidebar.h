@@ -4,7 +4,7 @@
 #include "ParameterSlider.h"
 #include "UITheme.h"
 
-enum class ViewMode {
+enum class PageId {
     Kit = 0,
     Browse,
     Map,
@@ -24,30 +24,30 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    ViewMode getActiveMode() const { return this->activeMode; }
-    void setActiveMode(ViewMode mode);
+    PageId getActivePageId() const { return this->activePageId; }
+    void setActivePageId(PageId pageId);
 
-    std::function<void(ViewMode)> onModeChanged;
+    std::function<void(PageId)> onPageChanged;
 
     ParameterSlider velocityKnob;
     ParameterSlider hihatKnob;
     ParameterSlider rrLockKnob;
 
 private:
-    static constexpr int buttonSize = UITheme::Sizes::modeButton;
+    static constexpr int buttonSize = UITheme::Sizes::pageButton;
     static constexpr int knobSize = UITheme::Sizes::sidebarKnob;
 
-    ViewMode activeMode = ViewMode::Kit;
+    PageId activePageId = PageId::Kit;
 
-    struct ModeButton : public juce::TextButton {
-        ViewMode mode;
-        explicit ModeButton(ViewMode buttonMode, const juce::String& label) : mode(buttonMode) {
+    struct PageButton : public juce::TextButton {
+        PageId pageId;
+        explicit PageButton(PageId buttonPageId, const juce::String& label) : pageId(buttonPageId) {
             this->setButtonText(label);
             this->setClickingTogglesState(false);
         }
     };
 
-    juce::OwnedArray<ModeButton> modeButtons;
+    juce::OwnedArray<PageButton> pageButtons;
 
     juce::Label velocityLabel;
     juce::Label hihatLabel;

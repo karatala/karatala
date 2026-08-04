@@ -80,7 +80,7 @@ When the user requests a durable behavior change, record it here or in the relev
 
 ## Child DOX Index
 
-- `source/AGENTS.md` - plugin source architecture and source-domain index
+- `source/AGENTS.md` - plugin source architecture and source-tree index
 - `tests/AGENTS.md` - Catch2 test ownership and verification
 - `benchmarks/AGENTS.md` - performance benchmark ownership
 - `docs/AGENTS.md` - design plans, reviews, and durable engineering records

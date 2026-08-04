@@ -1,12 +1,12 @@
 #include "../source/Engine/KitLibModel.h"
-#include "../source/Engine/KitSourceOverrides.h"
+#include "../source/Engine/LibraryKitOverrides.h"
 #include "catch2/catch_approx.hpp"
 #include "catch2/catch_test_macros.hpp"
 
 using namespace KitLib;
 
-TEST_CASE("Kit source overrides parse sparse velocity and sample values", "[KitSourceOverrides][yaml]") {
-    KitSourceOverrides overrides;
+TEST_CASE("Library kit overrides parse sparse velocity and sample values", "[LibraryKitOverrides][yaml]") {
+    LibraryKitOverrides overrides;
     const auto parsed = overrides.parseYaml(R"yaml(
 version: 1
 instruments:
@@ -51,8 +51,8 @@ samples:
     REQUIRE(*sampleOverride->micOverrides.at("ons").playbackOffsetMs == Catch::Approx(0.2f));
 }
 
-TEST_CASE("Kit source overrides resolve complete increasing velocity ranges", "[KitSourceOverrides][velocity]") {
-    KitSourceOverrides overrides;
+TEST_CASE("Library kit overrides resolve complete increasing velocity ranges", "[LibraryKitOverrides][velocity]") {
+    LibraryKitOverrides overrides;
     overrides.setVelocityUpperBoundary("snare-X1", "center", 43, 50);
     overrides.setVelocityUpperBoundary("snare-X1", "center", 85, 91);
 
@@ -70,8 +70,8 @@ TEST_CASE("Kit source overrides resolve complete increasing velocity ranges", "[
     REQUIRE(reset.value == std::vector<uint8_t> { 43, 91, 127 });
 }
 
-TEST_CASE("Kit source overrides isolate invalid fields and paths", "[KitSourceOverrides][yaml]") {
-    KitSourceOverrides overrides;
+TEST_CASE("Library kit overrides isolate invalid fields and paths", "[LibraryKitOverrides][yaml]") {
+    LibraryKitOverrides overrides;
     const auto parsed = overrides.parseYaml(R"yaml(
 version: 1
 samples:
@@ -91,11 +91,11 @@ samples:
     REQUIRE(validSibling->manualGainDb.has_value());
     REQUIRE(*validSibling->manualGainDb == Catch::Approx(0.0f));
 
-    KitSourceOverrides unsupported;
+    LibraryKitOverrides unsupported;
     REQUIRE_FALSE(unsupported.parseYaml("version: 2\n").ok());
 }
 
-TEST_CASE("Kit source overrides save and reload deterministic YAML", "[KitSourceOverrides][yaml][file]") {
+TEST_CASE("Library kit overrides save and reload deterministic YAML", "[LibraryKitOverrides][yaml][file]") {
     const auto kitRoot = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-kit-overrides", "", false);
     REQUIRE(kitRoot.createDirectory());
 
@@ -104,11 +104,11 @@ TEST_CASE("Kit source overrides save and reload deterministic YAML", "[KitSource
         ~TempDirectoryCleanup() { this->directory.deleteRecursively(); }
     } cleanup { kitRoot };
 
-    KitSourceOverrides overrides;
+    LibraryKitOverrides overrides;
     overrides.setVelocityUpperBoundary("ride-R1", "bow", 64, 72);
     REQUIRE(overrides.saveToKitRoot(kitRoot).ok());
 
-    KitSourceOverrides loaded;
+    LibraryKitOverrides loaded;
     const auto loadedResult = loaded.loadFromKitRoot(kitRoot);
     REQUIRE(loadedResult.ok());
     REQUIRE(loaded.findArticulationOverride("ride-R1", "bow") != nullptr);
@@ -120,8 +120,8 @@ TEST_CASE("Kit source overrides save and reload deterministic YAML", "[KitSource
     REQUIRE(kitRoot.getChildFile("kit-overrides.yml.bak").existsAsFile());
 }
 
-TEST_CASE("Kit source override setters remove only reset values", "[KitSourceOverrides][update]") {
-    KitSourceOverrides overrides;
+TEST_CASE("Library kit override setters remove only reset values", "[LibraryKitOverrides][update]") {
+    LibraryKitOverrides overrides;
     const juce::String samplePath = "snare-X1/center/sample.flac";
     const juce::String contentHash = "0123456789abcdef0123456789abcdef";
     overrides.setInstrumentBalance("snare-X1", -12);
@@ -146,8 +146,8 @@ TEST_CASE("Kit source override setters remove only reset values", "[KitSourceOve
     REQUIRE(overrides.findSampleOverride(samplePath) == nullptr);
 }
 
-TEST_CASE("Kit source overrides recover a moved sample only by unique content hash", "[KitSourceOverrides][hash]") {
-    KitSourceOverrides overrides;
+TEST_CASE("Library kit overrides recover a moved sample only by unique content hash", "[LibraryKitOverrides][hash]") {
+    LibraryKitOverrides overrides;
     const juce::String contentHash = "0123456789abcdef0123456789abcdef";
     overrides.setSampleManualGain("old/sample.flac", contentHash, -2.0f);
 
@@ -163,7 +163,7 @@ TEST_CASE("Kit source overrides recover a moved sample only by unique content ha
     REQUIRE(ambiguous.ambiguousContentHash);
 }
 
-TEST_CASE("Kit source override save rejects external file changes", "[KitSourceOverrides][yaml][file][conflict]") {
+TEST_CASE("Library kit override save rejects external file changes", "[LibraryKitOverrides][yaml][file][conflict]") {
     const auto kitRoot = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-kit-overrides-conflict", "", false);
     REQUIRE(kitRoot.createDirectory());
 
@@ -172,13 +172,13 @@ TEST_CASE("Kit source override save rejects external file changes", "[KitSourceO
         ~TempDirectoryCleanup() { this->directory.deleteRecursively(); }
     } cleanup { kitRoot };
 
-    KitSourceOverrides initial;
+    LibraryKitOverrides initial;
     initial.setInstrumentBalance("snare-X1", 0);
     REQUIRE(initial.saveToKitRoot(kitRoot).ok());
 
-    KitSourceOverrides editorCopy;
+    LibraryKitOverrides editorCopy;
     REQUIRE(editorCopy.loadFromKitRoot(kitRoot).ok());
-    const auto overrideFile = kitRoot.getChildFile(KitSourceOverrides::FILE_NAME);
+    const auto overrideFile = kitRoot.getChildFile(LibraryKitOverrides::FILE_NAME);
     const juce::String externalText = "version: 1\n\ninstruments:\n  \"ride-R1\":\n    balance: R12\n";
     REQUIRE(overrideFile.replaceWithText(externalText));
     const auto externalFileContent = overrideFile.loadFileAsString();
@@ -189,44 +189,44 @@ TEST_CASE("Kit source override save rejects external file changes", "[KitSourceO
     REQUIRE(overrideFile.loadFileAsString() == externalFileContent);
 }
 
-TEST_CASE("Instrument source model applies velocity boundaries without changing named layers", "[KitSourceOverrides][velocity][KitLib]") {
+TEST_CASE("Library instrument model applies velocity boundaries without changing named velocity levels", "[LibraryKitOverrides][velocity][KitLib]") {
     DrumKitSpec kit { { {}, "KitA", "Kit A", {}, {} } };
-    kit.sourceOverrides.setVelocityUpperBoundary("snare-X1", "center", 43, 50);
-    kit.sourceOverrides.setVelocityUpperBoundary("snare-X1", "center", 85, 91);
+    kit.libraryKitOverrides.setVelocityUpperBoundary("snare-X1", "center", 43, 50);
+    kit.libraryKitOverrides.setVelocityUpperBoundary("snare-X1", "center", 85, 91);
 
     InstrumentSpec::MetaInfo instrumentMeta;
     instrumentMeta.codeRaw = "snare-X1";
     InstrumentSpec instrument(&kit, instrumentMeta);
     auto* articulation = instrument.getOrAddArticulation("center");
-    articulation->getOrAddVelocityLayer(43);
-    articulation->getOrAddVelocityLayer(85);
-    articulation->getOrAddVelocityLayer(127);
+    articulation->getOrAddVelocityLevel(43);
+    articulation->getOrAddVelocityLevel(85);
+    articulation->getOrAddVelocityLevel(127);
 
     const auto applied = instrument.applyVelocityUpperBoundaryOverrides(*articulation);
     REQUIRE(applied.ok());
-    REQUIRE(articulation->velocityLayerSpecs[0]->velocity == 43);
-    REQUIRE(articulation->velocityLayerSpecs[0]->selectionUpperVelocity == 50);
-    REQUIRE(articulation->velocityLayerSpecs[1]->velocity == 85);
-    REQUIRE(articulation->velocityLayerSpecs[1]->selectionUpperVelocity == 91);
-    REQUIRE(articulation->velocityLayerSpecs[2]->velocity == 127);
-    REQUIRE(articulation->velocityLayerSpecs[2]->selectionUpperVelocity == 127);
+    REQUIRE(articulation->velocityLevels[0]->velocity == 43);
+    REQUIRE(articulation->velocityLevels[0]->selectionUpperVelocity == 50);
+    REQUIRE(articulation->velocityLevels[1]->velocity == 85);
+    REQUIRE(articulation->velocityLevels[1]->selectionUpperVelocity == 91);
+    REQUIRE(articulation->velocityLevels[2]->velocity == 127);
+    REQUIRE(articulation->velocityLevels[2]->selectionUpperVelocity == 127);
 }
 
-TEST_CASE("Instrument content fingerprint includes kit source overrides", "[KitSourceOverrides][fingerprint][KitLib]") {
+TEST_CASE("Instrument content fingerprint includes library kit overrides", "[LibraryKitOverrides][fingerprint][KitLib]") {
     DrumKitSpec defaultKit { { {}, "KitA", "Kit A", {}, {} } };
     InstrumentSpec::MetaInfo instrumentMeta;
     instrumentMeta.codeRaw = "snare-X1";
     InstrumentSpec defaultInstrument(&defaultKit, instrumentMeta);
 
     DrumKitSpec overriddenKit { { {}, "KitA", "Kit A", {}, {} } };
-    overriddenKit.sourceOverrides.setArticulationBalance("snare-X1", "center", 20);
+    overriddenKit.libraryKitOverrides.setArticulationBalance("snare-X1", "center", 20);
     InstrumentSpec overriddenInstrument(&overriddenKit, instrumentMeta);
 
     REQUIRE(defaultInstrument.getContentFingerprint() != overriddenInstrument.getContentFingerprint());
 }
 
-TEST_CASE("Kit source values preserve filename defaults and apply loaded overrides", "[KitSourceOverrides][KitLib]") {
-    const auto kitRoot = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-source-values", "", false);
+TEST_CASE("Library kit values preserve filename defaults and apply loaded overrides", "[LibraryKitOverrides][KitLib]") {
+    const auto kitRoot = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-library-values", "", false);
     const auto instrumentRoot = kitRoot.getChildFile("snare-X1-L64");
     const auto articulationRoot = instrumentRoot.getChildFile("center-L12");
     REQUIRE(articulationRoot.createDirectory());
@@ -239,12 +239,12 @@ TEST_CASE("Kit source values preserve filename defaults and apply loaded overrid
     } cleanup { kitRoot };
 
     DrumKitSpec kit { { kitRoot, "KitA", "Kit A", {}, {} } };
-    kit.sourceOverrides.instrumentOverrides["snare-X1-L64"].balance = 0;
-    kit.sourceOverrides.instrumentOverrides["snare-X1-L64"].articulationOverrides["center"].balance = 20;
-    SampleSourceOverride sampleOverride;
+    kit.libraryKitOverrides.instrumentOverrides["snare-X1-L64"].balance = 0;
+    kit.libraryKitOverrides.instrumentOverrides["snare-X1-L64"].articulationOverrides["center"].balance = 20;
+    SampleOverride sampleOverride;
     sampleOverride.manualGainDb = -1.5f;
     sampleOverride.playbackOffsetMs = 0.25f;
-    kit.sourceOverrides.sampleOverrides["snare-X1-L64/center-L12/snare-X1-center-043a-dtm-vn4-on2.flac"] = sampleOverride;
+    kit.libraryKitOverrides.sampleOverrides["snare-X1-L64/center-L12/snare-X1-center-043a-dtm-vn4-on2.flac"] = sampleOverride;
 
     auto instrumentMeta = InstrumentSpec::parseInfo("snare-X1-L64").value;
     instrumentMeta.rootDir = instrumentRoot;
@@ -265,14 +265,14 @@ TEST_CASE("Kit source values preserve filename defaults and apply loaded overrid
     REQUIRE(*articulation->balance == -12);
     REQUIRE(articulation->getEffectiveBalance().has_value());
     REQUIRE(*articulation->getEffectiveBalance() == 20);
-    const auto* sample = articulation->velocityLayerSpecs.front()->sampleVariantSpecs.front().get();
+    const auto* sample = articulation->velocityLevels.front()->logicalHits.front()->samples.front().get();
     REQUIRE(sample->filenameManualGainDb == Catch::Approx(-4.0f));
     REQUIRE(sample->manualGainDb == Catch::Approx(-1.5f));
     REQUIRE(sample->filenamePlaybackOffsetMs == Catch::Approx(-2.0f));
     REQUIRE(sample->playbackOffsetMs == Catch::Approx(0.25f));
 }
 
-TEST_CASE("Kit source values can reload saved overrides into an existing model", "[KitSourceOverrides][KitLib][reload]") {
+TEST_CASE("Library kit values can reload saved overrides into an existing model", "[LibraryKitOverrides][KitLib][reload]") {
     const auto kitRoot = juce::File::getSpecialLocation(juce::File::tempDirectory).getNonexistentChildFile("karatala-kit-override-reload", "", false);
     REQUIRE(kitRoot.createDirectory());
 
@@ -293,15 +293,17 @@ TEST_CASE("Kit source values can reload saved overrides into an existing model",
     auto* articulation = instrument.getOrAddArticulation("center");
     REQUIRE(articulation != nullptr);
     articulation->filenameBalance = 3;
-    articulation->sourceBalanceResolved = true;
-    auto* velocityLayer = articulation->getOrAddVelocityLayer(64);
-    REQUIRE(velocityLayer != nullptr);
-    velocityLayer->selectionUpperVelocity = 127;
+    articulation->balanceResolved = true;
+    auto* velocityLevel = articulation->getOrAddVelocityLevel(64);
+    REQUIRE(velocityLevel != nullptr);
+    velocityLevel->selectionUpperVelocity = 127;
     KitLib::MicSpec micSpec;
     micSpec.raw = "dtm";
     micSpec.channels = 1;
     const auto sampleFile = kitRoot.getChildFile("snare-X1/center/sample.flac");
-    auto* sample = velocityLayer->getOrAddSampleVariant(sampleFile, 1, micSpec, 0);
+    auto* logicalHit = velocityLevel->getOrAddLogicalHit(1);
+    REQUIRE(logicalHit != nullptr);
+    auto* sample = logicalHit->getOrAddSample(sampleFile, micSpec, 0);
     REQUIRE(sample != nullptr);
     sample->filenameManualGainDb = 1.0f;
     sample->manualGainDb = 1.0f;
@@ -309,15 +311,15 @@ TEST_CASE("Kit source values can reload saved overrides into an existing model",
     sample->playbackOffsetMs = -0.5f;
     sample->peakDb = -12.0f;
 
-    KitSourceOverrides savedOverrides;
+    LibraryKitOverrides savedOverrides;
     savedOverrides.setInstrumentBalance("snare-X1", 10);
     savedOverrides.setArticulationBalance("snare-X1", "center", -8);
     savedOverrides.setSampleManualGain("snare-X1/center/sample.flac", {}, 4.0f);
     savedOverrides.setMicPlaybackOffset("snare-X1/center/sample.flac", {}, "dtm", 2.5f);
     REQUIRE(savedOverrides.saveToKitRoot(kitRoot).ok());
-    REQUIRE(kit.sourceOverrides.loadFromKitRoot(kitRoot).ok());
+    REQUIRE(kit.libraryKitOverrides.loadFromKitRoot(kitRoot).ok());
 
-    instrument.applySourceOverrides();
+    instrument.applyLibraryKitOverrides();
 
     REQUIRE(instrument.balanceOverride.has_value());
     CHECK(*instrument.balanceOverride == 10);
@@ -330,9 +332,9 @@ TEST_CASE("Kit source values can reload saved overrides into an existing model",
     CHECK(*sample->playbackOffsetMsOverride == Catch::Approx(2.5f));
     CHECK(sample->playbackOffsetMs == Catch::Approx(2.5f));
 
-    REQUIRE(kitRoot.getChildFile(KitSourceOverrides::FILE_NAME).replaceWithText("version: 1\n"));
-    REQUIRE(kit.sourceOverrides.loadFromKitRoot(kitRoot).ok());
-    instrument.applySourceOverrides();
+    REQUIRE(kitRoot.getChildFile(LibraryKitOverrides::FILE_NAME).replaceWithText("version: 1\n"));
+    REQUIRE(kit.libraryKitOverrides.loadFromKitRoot(kitRoot).ok());
+    instrument.applyLibraryKitOverrides();
 
     CHECK_FALSE(instrument.balanceOverride.has_value());
     CHECK_FALSE(articulation->balanceOverride.has_value());

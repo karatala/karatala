@@ -2,14 +2,14 @@
 
 ## Purpose
 
-The instrument map tells Karatala which library instrument and articulation each kit slot should play.
+The instrument map tells Karatala which library instrument and library articulation each kit-layout slot plays.
 
-Each non-empty, non-comment line maps one slot or one slot articulation to one source. Multiple matching lines become layers.
+Each non-empty, non-comment line is one map layer. It maps an instrument slot, and optionally an articulation slot, to one library articulation.
 
 ## Basic Line Shape
 
 ```text
-slot/slotArt:kit/instrument/sourceArt[:params]
+instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:params]
 ```
 
 Simple examples:
@@ -22,62 +22,72 @@ hihat1/bow[open]:KitA/hihat-14/bow[open]:tuning=-2;attack=50;decay=300
 
 Parts:
 
-- `slot` is the kit layout slot id, for example `kick1`, `snare1`, `hihat1`, `ride1`, ...
-- `slotArt` is the destination pad articulation, for example `center`, `rim`, `bow`, `edge`, `bell`, ...
-- `kit` is the source drum kit identity.
-- `instrument` is the source instrument identity inside that kit.
-- `sourceArt` is the source articulation inside that instrument.
-- `params` are optional per-layer settings.
+- `instrumentSlot` is the kit-layout instrument-slot ID, for example `kick1`, `snare1`, `hihat1`, or `ride1`.
+- `articulationSlot` is optional. It is the kit-layout articulation-slot code, for example `center`, `rim`, `bow`, `edge`, or `bell`.
+- `libraryKit` is the complete library-kit identity.
+- `libraryInstrument` is the complete library-instrument identity inside that library kit.
+- `libraryArticulation` is required. It is the library-articulation identity inside that library instrument.
+- `params` are optional map-layer settings.
 
-## Slot Art And Source Art
+## Articulation Slot And Library Articulation
 
-Slot art is what the pad plays. Source art is what the library provides.
+The articulation slot is what the e-drum kit triggers. The library articulation is the recorded content that Karatala plays.
 
-Same destination and source art:
+Matching articulation-slot and library-articulation codes:
 
 ```text
 snare1/rim:MyKit/snare-14/rim
 ```
 
-Different destination and source art:
+Different articulation-slot and library-articulation codes:
 
 ```text
 tom2/rim:AasiMonster/tom-X2/center
 ```
 
-That means: when `tom2/rim` is triggered, play source `center` from `AasiMonster/tom-X2`.
+This line plays library articulation `center` from `AasiMonster/tom-X2` when articulation slot `tom2/rim` is triggered.
 
-## Layers
+## Map Layers
 
-If more than one line maps the same slot/art, those lines are layers.
+If more than one line maps the same instrument slot and articulation slot, those lines are map layers.
 
 ```text
 snare1/rim:NakedDrums/snare-X1/center
 snare1/rim:NakedDrums/snare-X2/center:tuning=60
 ```
 
-Both layers are used for `snare1/rim`.
+Both map layers are used for `snare1/rim`.
 
-Layer order is the order in the normalized map for that slot/art. UI rows should keep this order.
+Map-layer order is the line order in the normalized map for that instrument slot and articulation slot. UI rows must keep this order.
+
+## Whole-Instrument Selection
+
+When the user selects one complete library instrument:
+
+- remove all existing map layers for the selected instrument slot;
+- create one map layer for each library articulation;
+- add the matching articulation slot when an exact match is available;
+- leave the articulation slot empty when there is no exact match;
+- preserve every map layer for all other instrument slots.
 
 ## Current Params
 
 | Param | Example | Meaning | Current apply behavior |
 | --- | --- | --- | --- |
-| `tuning` | `tuning=-20` | cents, negative or positive | live for existing layer |
-| `attack` | `attack=25` | attack in ms, `-1` means default | live for existing layer |
-| `decay` | `decay=250` | decay in ms, `-1` means default | live for existing layer |
-| `vol` | `vol=-3.5` | layer gain in dB | live for existing layer |
-| `pan` | `pan=-40` | -127 left to +127 right | live for existing layer |
-| `velocityResponse` | `velocityResponse=logarithmic` | per-layer MIDI velocity to output dB override | live in the pad popup without reloading samples |
-| `flipLR` | `flipLR=1` | swap stereo left/right | live for existing layer |
-| `flipPhase` | `flipPhase=1` | invert phase | live for existing layer |
-| `bleed` | `bleed=oh:0.25,room:0.5` | mic gain trims from 0.0 to 1.0 | live for existing layer |
-| `micRoute` | `micRoute=dtm1:snare1/dtm,ons:overhead/ons` | send source mic to one exact output route | live in the pad popup; raw map apply reloads the slot |
+| `tuning` | `tuning=-20` | cents, negative or positive | live for the existing map layer |
+| `attack` | `attack=25` | attack in ms, `-1` means default | live for the existing map layer |
+| `decay` | `decay=250` | decay in ms, `-1` means default | live for the existing map layer |
+| `vol` | `vol=-3.5` | map-layer gain in dB | live for the existing map layer |
+| `pan` | `pan=-40` | -127 left to +127 right | live for the existing map layer |
+| `velocityResponse` | `velocityResponse=logarithmic` | map-layer MIDI velocity to output dB override | live in the pad popup without reloading samples |
+| `flipLR` | `flipLR=1` | swap stereo left/right | live for the existing map layer |
+| `flipPhase` | `flipPhase=1` | invert phase | live for the existing map layer |
+| `bleed` | `bleed=oh:0.25,room:0.5` | mic gain trims from 0.0 to 1.0 | live for the existing map layer |
+| `micRoute` | `micRoute=dtm1:snare1/dtm,ons:overhead/ons` | send a mic to one exact output route | live in the pad popup; raw map apply reloads the instrument slot |
 
-Use `micRoute=dtm1:-` to leave source mic `dtm1` unassigned from every output.
+Use `micRoute=dtm1:-` to leave mic `dtm1` unassigned from every output.
 
-If `velocityResponse` is absent, the layer uses the global response. A layer override can use the stable built-in code `linear`, `logarithmic`, or `exponential`, or a comma-separated list of increasing `velocity:dB` points. A point list must start at velocity 1, end at velocity 127 and `0 dB`, never decrease, and never exceed `0 dB`. It changes output gain only. Exact sample selection still follows the sample filename velocity boundaries.
+If `velocityResponse` is absent, the map layer uses the global response. A map-layer override can use the stable built-in code `linear`, `logarithmic`, or `exponential`, or a comma-separated list of increasing `velocity:dB` points. A point list must start at velocity 1, end at velocity 127 and `0 dB`, never decrease, and never exceed `0 dB`. It changes output gain only. Exact sample selection still follows the sample filename velocity boundaries.
 
 Built-in gains use normalized velocity `x = midiVelocity / 127`:
 
@@ -117,9 +127,9 @@ Commas are not top-level separators. They stay inside list values like `bleed=` 
 
 ## Hihat Notes
 
-Hihat maps usually need destination zone and expression state.
+Hihat maps usually need an articulation-slot zone and expression state.
 
-Common destination examples:
+Common articulation-slot examples:
 
 ```text
 hihat1/bow[open]:MyKit/hihat-14/bow[open]
@@ -136,7 +146,7 @@ Practical model:
 - MIDI note 42 often means tight bow.
 - CC4 can move between open, half, close, and tight states while a hihat voice is ringing.
 
-Some libraries have richer internal source states, for example:
+Some libraries have more library-articulation states, for example:
 
 ```text
 bow[open]-pdl_opn_cls013
@@ -144,7 +154,7 @@ bow[half]-pdl_opn_cls049
 bow[tight]-pdl_opn_cls085
 ```
 
-The map should keep the destination intent clear. Example:
+The map must keep the articulation-slot intent clear. Example:
 
 ```text
 hihat1/bow[open]:TchackpoumDG1.3/hihat-14/bow[open]
@@ -154,12 +164,12 @@ hihat1/pedal:TchackpoumDG1.3/hihat-14/pedal
 
 ## Mic Routing Param
 
-Use this when one source mic should go to a different output mic than automatic routing chooses.
+Use this when one mic must go to a different output than automatic routing chooses.
 
 Param:
 
 ```text
-micRoute=sourceMic:outputId,sourceMic:outputId
+micRoute=micCode:outputId,micCode:outputId
 ```
 
 Example:
@@ -170,16 +180,16 @@ snare1/center:MyKit/snare-14/center:micRoute=dtm1:snare1/dtm,dtm2:aux1/**m
 
 Meaning:
 
-- `dtm1` and `dtm2` are separate source mics.
+- `dtm1` and `dtm2` are separate mic codes.
 - `snare1/dtm` is the stable ID of `Snr1 Top` in the default mic layout.
 - `aux1/**m` is the stable ID of the mono `Aux1` output.
-- `micRoute=dtm1:-` leaves source mic `dtm1` unassigned.
+- `micRoute=dtm1:-` leaves mic `dtm1` unassigned.
 
 Pad popup routing changes update loaded sample destinations in place. Applying a changed raw map still rebuilds the affected slot.
-When a popup mic code is an output-layout alias rather than the library's original source code, full map loading resolves that alias through the source mic's automatic output assignment.
-Source variants stay independent. For example, `dtm1` and `dtm2` have separate popup controls and may use `micRoute=dtm1:snare1/dtm,dtm2:-`. A generic layout output code such as `dtm` accepts both variants, while a variant output code such as `dtm1` accepts only that variant. The popup shows output names, but saves each mic-layout output's unique ID so repeated output codes remain separate and layout reordering does not change saved routes.
+When a popup mic code is an output-layout alias instead of the library's original mic code, full map loading resolves that alias through the mic's automatic output assignment.
+Mic-code variants stay independent. For example, `dtm1` and `dtm2` have separate popup controls and can use `micRoute=dtm1:snare1/dtm,dtm2:-`. A generic layout output code such as `dtm` accepts both variants. A variant output code such as `dtm1` accepts only that variant. The popup shows output names, but saves each mic-layout output's unique ID. This keeps repeated output codes separate and prevents layout reordering from changing saved routes.
 
-Only mic-layout target output `code` values may use `*`, independently in the type and position characters. Source mic codes and sample filenames never use `*`. The format stays exact. A present variant must match, while an omitted variant accepts all variants:
+Only mic-layout output `code` values can use `*`, independently in the type and position characters. Mic codes and sample filenames never use `*`. The format stays exact. A present variant must match, while an omitted variant accepts all variants:
 
 - `**m` accepts any mono mic, including numbered variants.
 - `**s` accepts any stereo mic.
@@ -192,9 +202,9 @@ Only mic-layout target output `code` values may use `*`, independently in the ty
 
 Raw map apply should use diff apply by default.
 
-A full rebuild is still useful as an explicit recovery/debug action, but it should be a separate button or option. Normal edits should rebuild only the affected slot/layers when possible.
+A full rebuild is still useful as an explicit recovery or debug action, but it must be a separate button or option. Normal edits must rebuild only the affected instrument slot and map layers when possible.
 
-## Current Source Of Truth
+## Current References
 
 Current implementation and tests:
 

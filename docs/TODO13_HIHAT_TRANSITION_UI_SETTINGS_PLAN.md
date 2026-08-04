@@ -226,7 +226,7 @@ Used when the target represents a more closed state. It may be shorter than the 
 
 Defines the minimum processing interval for tail-transition decisions, not MIDI input capture. The latest raw CC value is always retained.
 
-At `0 ms`, process at most once per audio sub-block. Never process multiple complete transitions for the same synth at the same sample position.
+At `0 ms`, process at most once per audio sub-block. Never process multiple complete transitions for the same instrument player at the same sample position.
 
 ### Hysteresis
 

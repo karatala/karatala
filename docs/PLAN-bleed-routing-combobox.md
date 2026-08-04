@@ -6,7 +6,7 @@ The bleed routing combobox now changes and saves the loaded sample output route.
 
 - Bleed level knob stays live and cheap.
 - Routing combobox becomes a saved instrument-map setting.
-- Routing combobox reroutes loaded samples in place and applies the affected slot only when the source mic is not loaded.
+- Routing combobox reroutes loaded samples in place and applies the affected slot only when the mic is not loaded.
 - Debug logs show exactly what changed.
 
 ## Practical Example
@@ -14,20 +14,20 @@ The bleed routing combobox now changes and saves the loaded sample output route.
 Current bleed level setting:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8
+kick1:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8
 ```
 
 Routing override:
 
 ```text
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m
+kick1:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m
 ```
 
 Meaning:
 
-- `bleed=dtm:0.5` means source/output mic `dtm` plays at 50 percent.
+- `bleed=dtm:0.5` means mic `dtm` plays at 50 percent.
 - `bleed=room:0.8` means `room` plays at 80 percent.
-- `micRoute=dtm:aux1/**m` means source mic `dtm` should be written to the mic-layout output whose stable ID is `aux1/**m`.
+- `micRoute=dtm:aux1/**m` means mic `dtm` should be written to the mic-layout output whose stable ID is `aux1/**m`.
 
 Why semicolon:
 
@@ -37,10 +37,10 @@ Why semicolon:
 ## Current Facts
 
 - `PadContextPopup::rebuildBleedControls()` creates each bleed pot and routing combo.
-- Bleed pot calls `applyLayerParametersFast()` and updates the current `InstrumentSynth` live.
+- Bleed pot calls `applyLayerParametersFast()` and updates the current `InstrumentPlayer` live.
 - Routing combo updates its display, reroutes the loaded layer, and saves the map text.
-- `InstrumentMapEntry` stores both `micBleedLevels` and `micRouteOverrides`.
-- `MicRoutingBuilder::resolve()` assigns sample variants to host output channels during load.
+- `InstrumentMapLayer` stores both `micBleedLevels` and `micRouteOverrides`.
+- `MicRoutingBuilder::resolve()` assigns samples to host output channels during load.
 - `SampledSound::micBufferChannelStart`, `micBufferChannelCount`, and `routedMicCode` are set during sample routing.
 - Output channel assignment is stored in loaded sample data, but an existing loaded assignment can be changed safely under the engine graph lock.
 
@@ -49,31 +49,31 @@ Why semicolon:
 Add a new param:
 
 ```text
-micRoute=sourceMic:outputId,sourceMic:outputId
+micRoute=micCode:outputId,micCode:outputId
 ```
 
 Rules:
 
-- `sourceMic` is the library/sample mic code before routing.
+- `micCode` is the library/mic code before routing.
 - `outputId` is the stable ID declared by the mic-layout output, for example `snare1/dtm` or `aux1/**m`.
 - Missing entry means automatic routing.
-- Output `-` means the source mic is unassigned.
+- Output `-` means the mic is unassigned.
 - Unknown `outputId` should warn and use automatic routing.
-- Unknown `sourceMic` should warn only when a sample actually tries to use it, or should be ignored during apply if no matching source mic exists.
+- Unknown `micCode` should warn only when a sample actually tries to use it, or should be ignored during apply if no matching mic exists.
 - Serializer should write route pairs in stable sorted order.
 
 Parser examples:
 
 ```text
-kick1:MyKit/kick-24:micRoute=dtm:aux1/**m
-kick1:MyKit/kick-24:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m,dss:aux1/**s
+kick1:MyKit/kick-24/center:micRoute=dtm:aux1/**m
+kick1:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m,dss:aux1/**s
 ```
 
 ## Engine Support
 
 ### 1. Parse And Serialize
 
-Add to `DrumKitEngine::InstrumentMapEntry`:
+Add to `DrumKitEngine::InstrumentMapLayer`:
 
 ```cpp
 std::unordered_map<juce::String, juce::String> micRouteOverrides;
@@ -83,22 +83,22 @@ Update:
 
 - `DrumKitEngineMappingModel::parseInstrumentMapText()`
   - Add `micRoute` to `knownKeys`.
-  - Parse `sourceMic:outputId` pairs.
+  - Parse `micCode:outputId` pairs.
   - Store normalized trimmed keys and values.
 - `DrumKitEngine::serializeInstrumentMap()`
   - Serialize `micRoute=` after `bleed=`.
-  - Sort by source mic for stable output.
-- `DrumKitEngineMapHelpers::makeInstrumentMapEntryFingerprint()`
+  - Sort by mic for stable output.
+- `DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint()`
   - Include route overrides.
-- `DrumKitEngineMapHelpers::makeInstrumentMapEntryReloadFingerprint()`
+- `DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint()`
   - Include route overrides so raw map changes still rebuild the affected slot when needed.
 
-### 2. Pass Overrides To Synth Loading
+### 2. Pass Overrides to Instrument-Player Loading
 
 Options:
 
-1. Store route overrides in `InstrumentSynth::RoutingContext`.
-2. Store route overrides as a separate `InstrumentSynth` field set before loading samples.
+1. Store route overrides in `InstrumentPlayer::RoutingContext`.
+2. Store route overrides as a separate `InstrumentPlayer` field set before loading samples.
 
 Recommendation: put it in `RoutingContext`, because route choice is part of load-time routing.
 
@@ -110,18 +110,18 @@ std::unordered_map<juce::String, juce::String> micRouteOverrides;
 
 Then copy it wherever routing context is copied or reused.
 
-Apply from map entries:
+Apply from map layers:
 
-- Primary synth gets the primary entry's route overrides.
-- Shadow synth gets its own entry's route overrides.
+- The primary instrument player gets the first map layer's route overrides.
+- Each additional instrument player gets its own map layer's route overrides.
 - Pad popup route changes update loaded sample assignments in place. Raw map route changes remain reload changes.
 - Repeated output codes stay as separate destinations through their unique route IDs.
-- Full map loading checks the original source mic code first, then the source mic's resolved output-layout alias.
-- Source variants such as `dtm1` and `dtm2` are retained by library loading and use separate popup controls and routes.
+- Full map loading checks the original mic code first, then the mic's resolved output-layout alias.
+- Mic-code variants such as `dtm1` and `dtm2` are retained by library loading and use separate popup controls and routes.
 - A variant-free output such as `dtm` may receive either variant. A variant-specific output only receives its matching variant.
-- The popup shows the resolved destination as the default choice instead of adding a separate `Auto` item. Selecting the default destination clears the explicit override.
+- The popup shows the resolved output as the default choice instead of adding a separate `Auto` item. Selecting the default output clears the explicit override.
 - Output names remain the visible labels. Saved values use unique route IDs, so `Snr1 Top`, `Aux1`, `Aux2`, `Aux3`, and `Aux4` remain separate choices even though the aux outputs use wildcard codes such as `**m`.
-- Only mic-layout target output codes allow `*`, independently for type and position. Source mic codes and sample filenames stay concrete. Format stays exact, and a present variant must match.
+- Only mic-layout target output codes allow `*`, independently for type and position. Mic codes and sample filenames stay concrete. Format stays exact, and a present variant must match.
 
 ### 3. Use Override In MicRoutingBuilder
 
@@ -136,15 +136,15 @@ In `MicRoutingBuilder::resolve()`:
 Example log:
 
 ```text
-Mic route override: slot=kick1 source=dtm target=aux1/**m hostStart=24 channels=1
-Mic route override ignored: slot=kick1 source=dtm target=missing/dtm reason=output not found
+Mic route override: instrumentSlot=kick1 micCode=dtm outputId=aux1/**m hostStart=24 channels=1
+Mic route override ignored: instrumentSlot=kick1 micCode=dtm outputId=missing/dtm reason=output not found
 ```
 
 ## Pad Popup Behavior
 
 ### 1. Store Combo Choice Per Row
 
-Extend `LayerRow::MicBleedControl` with selected route state:
+Extend `MapLayerRow::MicBleedControl` with selected route state:
 
 ```cpp
 juce::String selectedOutputId;
@@ -160,7 +160,7 @@ The output name is the visible label. `outputId` is the stable saved selection.
 
 ### 2. Load Existing Route From Map
 
-When `populateLayers()` reads `InstrumentMapEntry`, pass `entry.micRouteOverrides` into `addLayerRow()`.
+When `populateLayers()` reads `InstrumentMapLayer`, pass `mapLayer.micRouteOverrides` into `addMapLayerRow()`.
 
 When `rebuildBleedControls()` builds controls:
 
@@ -176,14 +176,14 @@ When user changes a route combobox:
 2. Log old route and new route.
 3. Update the loaded layer through the route-specific engine API.
 4. Mark map text dirty and save it without applying the full map.
-5. Fall back to `applyToEngine()` only when the source mic is not already loaded.
+5. Fall back to `applyToEngine()` only when the mic is not already loaded.
 6. Play preview note if useful.
 
 Simple log:
 
 ```text
-Pad popup route: slot=kick1 art=center layer=1 source=dtm old=auto new=room
-Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=aux1/**m
+Pad popup route: instrumentSlot=kick1 articulationSlot=center mapLayer=1 micCode=dtm old=auto new=room
+Pad popup route: instrumentSlot=kick1 articulationSlot=center mapLayer=1 micCode=dtm old=auto new=aux1/**m
 ```
 
 ### 4. Keep Bleed Knob Live
@@ -191,7 +191,7 @@ Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=aux1/*
 Do not change bleed knob behavior:
 
 - Moving bleed pot calls `applyLayerParametersFast()`.
-- It updates current synth state live.
+- It updates current instrument player state live.
 - It also marks map text dirty for persistence.
 - It does not rebuild the slot.
 
@@ -204,7 +204,7 @@ Add debug logs only on message-thread changes and load-time routing, not per sam
 When `applyLayerParametersFast()` runs, log one compact line:
 
 ```text
-Pad popup params: slot=kick1 art=center layer=1 source=MyKit/kick-24 tuning=-20 attack=-1 decay=-1 gain=-3.5 pan=0 flipLR=0 flipPhase=0 bleed=dtm:0.50,room:0.80
+Pad popup params: instrumentSlot=kick1 articulationSlot=center mapLayer=1 libraryPath=MyKit/kick-24/center tuning=-20 attack=-1 decay=-1 gain=-3.5 pan=0 flipLR=0 flipPhase=0 bleed=dtm:0.50,room:0.80
 ```
 
 Avoid logging on every mouse movement if it becomes too noisy. If needed, only log on drag end for pots and immediately for toggles.
@@ -212,7 +212,7 @@ Avoid logging on every mouse movement if it becomes too noisy. If needed, only l
 ### Route Combobox Change
 
 ```text
-Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=room
+Pad popup route: instrumentSlot=kick1 articulationSlot=center mapLayer=1 micCode=dtm old=auto new=room
 ```
 
 ### Slot Apply
@@ -224,13 +224,13 @@ Instrument map apply: changedSlot=kick1 reason=pad-popup micRoute
 ### Engine Route Override
 
 ```text
-Mic route override: slot=kick1 source=dtm target=aux1/**m hostStart=24 channels=1
+Mic route override: instrumentSlot=kick1 micCode=dtm outputId=aux1/**m hostStart=24 channels=1
 ```
 
 Invalid route:
 
 ```text
-Mic route override ignored: slot=kick1 source=dtm target=missing/dtm reason=output not found
+Mic route override ignored: instrumentSlot=kick1 micCode=dtm outputId=missing/dtm reason=output not found
 ```
 
 ## Tests
@@ -257,7 +257,7 @@ Add focused checks that:
 
 If practical, add a small `MicRoutingBuilder` or engine-level test:
 
-- Source mic `dtm` normally routes to `dtm` output.
+- Mic `dtm` normally routes to `dtm` output.
 - With `micRoute=dtm:aux1/**m`, it routes to the output whose stable ID is `aux1/**m`.
 - Invalid override falls back to automatic routing and warns.
 
@@ -283,7 +283,7 @@ If practical, add a small `MicRoutingBuilder` or engine-level test:
 
 1. Add parser storage, parse, serialize, and tests.
 2. Add fingerprints.
-3. Add route override field to synth routing context.
+3. Add route override field to instrument player routing context.
 4. Add `MicRoutingBuilder` override lookup.
 5. Wire pad popup combobox to map text and slot apply.
 6. Add debug logs.

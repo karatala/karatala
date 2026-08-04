@@ -1,4 +1,4 @@
-#include "InstrumentSynth.h"
+#include "InstrumentPlayer.h"
 #include "DrumKitEngine.h"
 #include "HiHatTransitionPolicy.h"
 #include <limits>
@@ -7,7 +7,7 @@
 
 
 
-void InstrumentSynth::renderNextBlock(juce::AudioBuffer<float>& outputAudio, const juce::MidiBuffer& inputMidi, int startSample, int numSamples) {
+void InstrumentPlayer::renderNextBlock(juce::AudioBuffer<float>& outputAudio, const juce::MidiBuffer& inputMidi, int startSample, int numSamples) {
     jassert(!juce::exactlyEqual(sampleRate, 0.0));
     if (juce::exactlyEqual(sampleRate, 0.0))
         return;
@@ -56,7 +56,7 @@ void InstrumentSynth::renderNextBlock(juce::AudioBuffer<float>& outputAudio, con
     std::for_each(midiIterator, inputMidi.cend(), [&](const auto& meta) { handleMidiEvent(meta.getMessage()); });
 }
 
-void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSample, int numSamples) {
+void InstrumentPlayer::renderVoices(juce::AudioBuffer<float>& buffer, int startSample, int numSamples) {
     int activeCount = 0;
     for (auto* voice : this->voices) {
         voice->renderNextBlock(buffer, startSample, numSamples);
@@ -68,7 +68,7 @@ void InstrumentSynth::renderVoices(juce::AudioBuffer<float>& buffer, int startSa
     this->processPendingHiHatControllers();
 }
 
-void InstrumentSynth::applyAdaptiveTailShortening() {
+void InstrumentPlayer::applyAdaptiveTailShortening() {
     const auto& settings = this->parent->getEngineSettings();
     const float loadThreshold = settings.tailShortenLoadThreshold.load();
     const float minimumFactor = settings.tailShortenMinFactor.load();
@@ -84,9 +84,9 @@ void InstrumentSynth::applyAdaptiveTailShortening() {
     for (auto* voice : this->voices) {
         if (!voice->isVoiceActive()) continue;
         const auto state = voice->getEnvelopeState();
-        if (state == InstrumentSynthVoice::EnvelopeState::FadingOut
-            || state == InstrumentSynthVoice::EnvelopeState::Releasing
-            || state == InstrumentSynthVoice::EnvelopeState::Dying)
+        if (state == InstrumentPlayerVoice::EnvelopeState::FadingOut
+            || state == InstrumentPlayerVoice::EnvelopeState::Releasing
+            || state == InstrumentPlayerVoice::EnvelopeState::Dying)
             continue;
 
         const float estimatedDb = voice->getEstimatedCurrentDb();
@@ -98,25 +98,25 @@ void InstrumentSynth::applyAdaptiveTailShortening() {
     }
 }
 
-InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int /*midiNoteNumber*/, int groupId, InstrumentSynthVoice* const* excludedVoices, size_t excludedVoiceCount) const {
+InstrumentPlayerVoice* InstrumentPlayer::findVoiceToSteal(int /*midiChannel*/, int /*midiNoteNumber*/, int groupId, InstrumentPlayerVoice* const* excludedVoices, size_t excludedVoiceCount) const {
     // Single-pass scan: find best candidate per state category without heap allocations.
     // Priority order: Dying (oldest) > FadingOut (quietest) > Releasing (quietest)
     //               > Playing (quietest non-protected) > oldest in group.
-    InstrumentSynthVoice* oldestDying = nullptr;
-    InstrumentSynthVoice* quietestFading = nullptr;
+    InstrumentPlayerVoice* oldestDying = nullptr;
+    InstrumentPlayerVoice* quietestFading = nullptr;
     float quietestFadingDb = std::numeric_limits<float>::infinity();
-    InstrumentSynthVoice* quietestReleasing = nullptr;
+    InstrumentPlayerVoice* quietestReleasing = nullptr;
     float quietestReleasingDb = std::numeric_limits<float>::infinity();
 
     // Playing state: track both the loudest (protected) and quietest (steal target)
-    InstrumentSynthVoice* protectedPlaying = nullptr;
+    InstrumentPlayerVoice* protectedPlaying = nullptr;
     float protectedPlayingDb = -std::numeric_limits<float>::infinity();
     uint32_t protectedPlayingTime = 0;
-    InstrumentSynthVoice* quietestPlaying = nullptr;
+    InstrumentPlayerVoice* quietestPlaying = nullptr;
     float quietestPlayingDb = std::numeric_limits<float>::infinity();
     int playingCount = 0;
 
-    InstrumentSynthVoice* oldestInGroup = nullptr;
+    InstrumentPlayerVoice* oldestInGroup = nullptr;
 
     for (auto* voice : this->voices) {
         bool excluded = false;
@@ -136,13 +136,13 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
 
         const auto state = voice->getEnvelopeState();
         switch (state) {
-            case InstrumentSynthVoice::EnvelopeState::Idle:
+            case InstrumentPlayerVoice::EnvelopeState::Idle:
                 break;
-            case InstrumentSynthVoice::EnvelopeState::Dying:
+            case InstrumentPlayerVoice::EnvelopeState::Dying:
                 if (oldestDying == nullptr || voice->wasStartedBefore(*oldestDying))
                     oldestDying = voice;
                 break;
-            case InstrumentSynthVoice::EnvelopeState::FadingOut: {
+            case InstrumentPlayerVoice::EnvelopeState::FadingOut: {
                 const float db = voice->getEstimatedCurrentDb();
                 if (quietestFading == nullptr || db < quietestFadingDb) {
                     quietestFading = voice;
@@ -150,7 +150,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
                 }
                 break;
             }
-            case InstrumentSynthVoice::EnvelopeState::Releasing: {
+            case InstrumentPlayerVoice::EnvelopeState::Releasing: {
                 const float db = voice->getEstimatedCurrentDb();
                 if (quietestReleasing == nullptr || db < quietestReleasingDb) {
                     quietestReleasing = voice;
@@ -158,7 +158,7 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
                 }
                 break;
             }
-            case InstrumentSynthVoice::EnvelopeState::Playing: {
+            case InstrumentPlayerVoice::EnvelopeState::Playing: {
                 ++playingCount;
                 const float db = voice->getEstimatedCurrentDb();
                 // Track loudest/newest for protection
@@ -193,29 +193,23 @@ InstrumentSynthVoice* InstrumentSynth::findVoiceToSteal(int /*midiChannel*/, int
     return oldestInGroup;
 }
 
-void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
+void InstrumentPlayer::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     // micBuffer is no longer used for rendering - voices write directly to the global output
     // buffer using globally-indexed micBufferChannelStart values.  Free any previous allocation.
     micBuffer.setSize(0, 0);
 
-    // Configure voices for this synth
+    // Configure voices for this instrument player.
     this->clearVoices();
 
     // Dynamically determine required voices based on the maximum number of simultaneous
     // sample entries that may be started for a single note. This counts how many
-    // samples belong to the same round-robin variant group (variantIdx) per layer,
-    // and uses the largest such group across all articulations and layers.
+    // samples belong to the same round-robin ID in one velocity level, and uses the
+    // largest such group across all articulations and velocity levels.
     int maxSimultaneousSamples = 0;
     for (const auto& art : this->runtimeArticulations) {
-        for (const auto& layer : art.layers) {
-            std::unordered_map<uint8_t, int> groupCounts;
-            for (const auto& se : layer.samples) {
-                uint8_t key = se.variantIdx; // 0 means no-letter variants
-                groupCounts[key]++;
-            }
-            for (const auto& kv : groupCounts) {
-                if (kv.second > maxSimultaneousSamples) maxSimultaneousSamples = kv.second;
-            }
+        for (const auto& velocityLevel : art.velocityLevels) {
+            for (const auto& logicalHit : velocityLevel.logicalHits)
+                maxSimultaneousSamples = juce::jmax(maxSimultaneousSamples, static_cast<int>(logicalHit.sampleEntryIndexes.size()));
         }
     }
 
@@ -223,7 +217,7 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     const int minVoices = 10;
     const int numVoices = std::max(minVoices, maxSimultaneousSamples * minVoices);
     for (int i = 0; i < numVoices; ++i)
-        this->addVoice(new InstrumentSynthVoice());
+        this->addVoice(new InstrumentPlayerVoice());
     LOG(Debug, "prepareToPlay - instrument: " + this->instrumentSlot.id + " sampleRate=" + juce::String(newSampleRate) + " samplesPerBlock=" + juce::String(samplesPerBlock) + " numVoices=" + juce::String(numVoices));
 
     // set playback sample rate for voices
@@ -235,7 +229,7 @@ void InstrumentSynth::prepareToPlay(double newSampleRate, int samplesPerBlock) {
     }
 }
 
-void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, SampledSound* sound) {
+void InstrumentPlayerVoice::startNote(int midiNoteNumber, float velocity, SampledSound* sound) {
     juce::ignoreUnused(midiNoteNumber);
     this->velocityGain = velocity;
     this->sourceSamplePosition = 0.0;
@@ -264,7 +258,7 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     this->dbUpdateCounter = 3; // force immediate dB update on first render
 
     this->chokeProcessor.noteStarted();
-    // LOG(Debug, "InstrumentSynthVoice: startNote velocity=" + juce::String(velocity) + " pitchRatio=" + juce::String(this->pitchRatio));
+    // LOG(Debug, "InstrumentPlayerVoice: startNote velocity=" + juce::String(velocity) + " pitchRatio=" + juce::String(this->pitchRatio));
 
     if (sound->sampleRate > 0 && getSampleRate() > 0)
         this->pitchRatio = sound->sampleRate / getSampleRate();
@@ -284,7 +278,7 @@ void InstrumentSynthVoice::startNote(int midiNoteNumber, float velocity, Sampled
     }
 }
 
-void InstrumentSynthVoice::requestFadeOut(float durationSec) {
+void InstrumentPlayerVoice::requestFadeOut(float durationSec) {
     if (this->envelopeState == EnvelopeState::Idle)
         return;
     this->envelopeState = EnvelopeState::FadingOut;
@@ -295,7 +289,7 @@ void InstrumentSynthVoice::requestFadeOut(float durationSec) {
     this->adsr.noteOff();
 }
 
-void InstrumentSynthVoice::requestRelease() {
+void InstrumentPlayerVoice::requestRelease() {
     if (this->envelopeState == EnvelopeState::Idle)
         return;
     this->envelopeState = EnvelopeState::Releasing;
@@ -305,17 +299,17 @@ void InstrumentSynthVoice::requestRelease() {
     this->adsr.noteOff();
 }
 
-void InstrumentSynthVoice::killImmediately() {
+void InstrumentPlayerVoice::killImmediately() {
     this->envelopeState = EnvelopeState::Dying;
     this->adsr.reset();
     this->clearCurrentNote();
 }
 
-float InstrumentSynthVoice::getEstimatedCurrentDb() const {
+float InstrumentPlayerVoice::getEstimatedCurrentDb() const {
     return this->cachedEstimatedDb;
 }
 
-void InstrumentSynthVoice::updateEstimatedDb() {
+void InstrumentPlayerVoice::updateEstimatedDb() {
     if (!this->isVoiceActive()) {
         this->cachedEstimatedDb = -100.0f;
         return;
@@ -353,7 +347,7 @@ void InstrumentSynthVoice::updateEstimatedDb() {
     this->cachedEstimatedDb = this->currentDecayEnvelope.getAbsoluteDbAtMs(elapsedMs) + velDb + layerGainDb + sourceCorrectionDb;
 }
 
-void InstrumentSynthVoice::stopNote(bool allowTailOff) {
+void InstrumentPlayerVoice::stopNote(bool allowTailOff) {
     if (allowTailOff) {
         this->requestRelease();
     } else {
@@ -361,13 +355,13 @@ void InstrumentSynthVoice::stopNote(bool allowTailOff) {
     }
 }
 
-void InstrumentSynthVoice::aftertouchChanged(int newValue) {
+void InstrumentPlayerVoice::aftertouchChanged(int newValue) {
     // LOG(Debug, "aftertouchChanged " + juce::String(newValue));
     if (this->currentlyPlayingSound != nullptr && this->currentlyPlayingSound->isAftertouchChokeTarget) return;
     this->chokeProcessor.handlePolyAftertouch(newValue);
 }
 
-void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) {
+void InstrumentPlayerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) {
     if (!this->isVoiceActive())
         return;
 
@@ -387,12 +381,12 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     auto& buf = *this->currentBuffer;
     const int srcChannels = buf.getNumChannels();
     const int srcLen = buf.getNumSamples();
-    // Determine source/destination channel mapping based on SampleVariantSpec metadata.
+    // Determine source/destination channel mapping based on SampleSpec metadata.
     int srcStart = 0;
     int srcCount = srcChannels;
-    if (s->sampleVariantSpec) {
-        srcStart = s->sampleVariantSpec->fileChannelStart;
-        srcCount = s->sampleVariantSpec->fileChannelCount > 0 ? s->sampleVariantSpec->fileChannelCount : srcChannels;
+    if (s->sampleSpec) {
+        srcStart = s->sampleSpec->fileChannelStart;
+        srcCount = s->sampleSpec->fileChannelCount > 0 ? s->sampleSpec->fileChannelCount : srcChannels;
     }
 
     const int destChCount = outputBuffer.getNumChannels();
@@ -460,7 +454,7 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         const int idx = static_cast<int>(pos);
         const double frac = pos - idx;
 
-        // For each source channel in this sample variant, fetch interpolated sample
+        // For each source channel in this sample, fetch the interpolated sample.
         // and write to corresponding destination channel (offset by srcStart).
         if (idx >= 0 && idx < srcLen) {
             const auto env = this->adsr.getNextSample();
@@ -504,13 +498,13 @@ void InstrumentSynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             
             // reached end
             this->stopNote(false);
-            // LOG(Debug, "Reached end of sample for voice note " + juce::String(this->currentlyPlayingNote) + " sample=" + (s->sampleVariantSpec ? s->sampleVariantSpec->sampleFile.getFileName() : juce::String("unknown")) + " pos=" + juce::String(this->sourceSamplePosition) + " srcLen=" + juce::String(srcLen));
+            // LOG(Debug, "Reached end of sample for voice note " + juce::String(this->currentlyPlayingNote) + " sample=" + (s->sampleSpec ? s->sampleSpec->sampleFile.getFileName() : juce::String("unknown")) + " pos=" + juce::String(this->sourceSamplePosition) + " srcLen=" + juce::String(srcLen));
             break;
         }
     }
     if (!this->adsr.isActive()) {
         this->stopNote(false);
-        // LOG(Debug, "ADSR release finished for voice note " + juce::String(this->currentlyPlayingNote) + " sample=" + (s->sampleVariantSpec ? s->sampleVariantSpec->sampleFile.getFileName() : juce::String("unknown")) + " pos=" + juce::String(this->sourceSamplePosition) + " srcLen=" + juce::String(srcLen));
+        // LOG(Debug, "ADSR release finished for voice note " + juce::String(this->currentlyPlayingNote) + " sample=" + (s->sampleSpec ? s->sampleSpec->sampleFile.getFileName() : juce::String("unknown")) + " pos=" + juce::String(this->sourceSamplePosition) + " srcLen=" + juce::String(srcLen));
     }
     this->updateEstimatedDb();
 }

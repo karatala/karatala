@@ -4,27 +4,27 @@ Status: Design plan only. No implementation or verification has started.
 
 ## Scope And Ownership
 
-- `layer`: one source instrument articulation, with its own parameters, assigned to a destination pad articulation.
-- `named velocity level`: one source velocity label such as `043`.
-- `round-robin variant`: one variant such as `a` or `b` inside a named velocity level.
-- `logical hit`: one named velocity and round-robin variant, including all linked mic entries.
+- `map layer`: one library articulation, with its own parameters, assigned to an articulation slot.
+- `velocity level`: one recorded velocity group such as `043`.
+- `round robin ID`: one letter such as `a` or `b` that identifies an alternate logical hit at the same velocity level.
+- `logical hit`: one recorded hit at one velocity level. It includes all linked mic samples.
 - `measured intensity`: the logical-hit pre-trim source-intensity dB produced by TODO14.
-- `exact selection`: choose one named velocity region, then one variant inside that region.
-- `floating selection`: choose one logical hit from nearby measured intensities, even when it belongs to another named velocity level.
+- `exact selection`: choose one velocity level, then one logical hit inside that level.
+- `floating selection`: choose one logical hit from nearby measured intensities, even when it belongs to another velocity level.
 - `candidate window`: a small fixed list of logical hits prepared for one `selectionTargetDb` value.
-- `complete hit`: a logical hit whose required active mic sample buffers are all ready in one thread-safe readiness snapshot.
+- `complete hit`: a logical hit whose required active sample buffers are all ready in one thread-safe readiness snapshot.
 
 This plan changes sample selection only.
 
-[TODO14](TODO14_SAMPLE_CALIBRATION_AND_VELOCITY_RESPONSE_PLAN.md) owns sample analysis, filename metadata, calibration trim, `selectionTargetDb[128]`, the exact logical-hit selector, group voice reservation, and per-layer calibration curves. This plan reuses those contracts and only adds the floating policy. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) owns persistent derived sample storage.
+[TODO14](TODO14_SAMPLE_CALIBRATION_AND_VELOCITY_RESPONSE_PLAN.md) owns sample analysis, filename metadata, calibration trim, `selectionTargetDb[128]`, the exact logical-hit selector, group voice reservation, and map layer calibration curves. This plan reuses those contracts and only adds the floating policy. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) owns persistent derived sample storage.
 
 ## Problem And Goal
 
-Some instruments have many named velocity levels but only one or two round-robin variants at each level. Exact selection can repeat the same hit many times at one MIDI velocity, even though nearby recorded hits have a suitable strength.
+Some instruments have many velocity levels but only one or two logical hits at each level. Exact selection can repeat the same hit many times at one MIDI velocity, even though nearby recorded hits have a suitable strength.
 
-Floating selection should use measured hit intensity as the main ordering. It may cross named velocity boundaries inside one articulation to find a close alternative. It must not cross into another articulation.
+Floating selection should use measured hit intensity as the main ordering. It may cross velocity-level boundaries inside one library articulation to find a close alternative. It must not cross into another library articulation.
 
-For a calibrated layer:
+For a calibrated map layer:
 
 - repeated notes can use suitable logical hits from nearby measured intensities;
 - the selected hit stays within an agreed distance from the requested target;
@@ -33,22 +33,22 @@ For a calibrated layer:
 - mic entries from different variants are never combined;
 - incomplete candidates are skipped;
 - missing, invalid, or conflicting intensity metadata uses exact selection;
-- primary and shadow layers keep independent selection history;
+- primary and additional map layers keep independent selection history;
 - response or mode changes rebuild selection data without reloading audio;
 - runtime work is fixed and bounded;
 - the audio thread does not allocate, parse, log, lock, access files, or scan the full articulation.
 
-The main reference case is an articulation with many named velocities and no more than two variants at most levels.
+The main reference case is a library articulation with many velocity levels and no more than two logical hits at most levels.
 
 ## Current Facts And Constraints
 
-- `../source/Engine/InstrumentSynth.h` stores `velocityToLayer[128]`.
-- Current exact selection chooses the first named velocity greater than or equal to incoming velocity.
-- `../source/Engine/InstrumentSynthController.cpp` normally chooses a ready round-robin variant inside that selected layer, but no-ready and RR-lock paths can return an incomplete variant.
-- A logical hit is currently identified by velocity-layer index and variant index.
+- `../source/Engine/InstrumentPlayer.h` stores `velocityToLevel[128]`.
+- Current exact selection chooses the first velocity level with a filename velocity greater than or equal to the incoming velocity.
+- `../source/Engine/InstrumentPlayerController.cpp` chooses one complete ready logical hit inside the selected velocity level.
+- A logical hit is identified by its velocity level and round robin ID.
 - Several mic `SampleEntry` objects can share one logical-hit identity.
-- Current loaded fallback can search another named velocity when the preferred layer is unavailable.
-- Progressive loading favors representative raw velocities and low variant indexes.
+- Current loaded fallback can search another velocity level when the preferred level is unavailable.
+- Progressive loading favors representative raw velocities and low round robin IDs.
 - TODO14 changes output gain, so raw MIDI velocity must remain separate from calibrated gain.
 - Round-robin lock is used for predictable sample audition and must keep a clear meaning.
 
@@ -56,30 +56,30 @@ The local [DrumGizmo floating selection reference](drumgizmoFloatingVelocityGrou
 
 ## Plan Decisions
 
-- Add a separate per-layer `selectionMode` field with `Automatic`, `Exact`, and `Floating` choices. Do not reuse TODO14's `calibrationMode` field.
+- Add a separate per-map-layer `selectionMode` field with `Automatic`, `Exact`, and `Floating` choices. Do not reuse TODO14's `calibrationMode` field.
 - `Automatic` enables floating selection only for a reviewed dense-velocity, low-round-robin topology with complete valid intensity metadata.
-- `Exact` preserves current named-velocity behavior.
+- `Exact` preserves current velocity-level behavior.
 - `Floating` is an explicit manual choice, but invalid metadata still falls back safely to exact selection.
 - Determine the automatic topology thresholds from library inspection and listening in Phase 1. Do not guess them in this document.
 - Use TODO14 logical-hit pre-trim intensity. Do not use post-trim peak, raw filename velocity, or output gain as a substitute.
-- Select one complete logical hit, identified by named velocity and variant.
+- Select one complete logical hit, identified by velocity level and round robin ID.
 - Keep the individual intensity of every hit. TODO14 raw medians produce trims and fitted source values guide the exact target region. Neither replaces hit-level intensity.
 - Precompute a fixed candidate window for each MIDI target outside playback.
 - Keep exact lookup beside floating windows as the fallback path.
-- Keep selection history inside each mapped layer runtime. Do not share history between primary and shadow layers or between plugin instances.
+- Keep selection history inside each map layer runtime. Do not share history between primary and additional map layers or between plugin instances.
 - Use a hard intensity eligibility limit before diversity and randomness are scored.
 - Keep the first version's weights internal and reviewed. Add UI only if real use shows a need.
-- Keep RR lock on the exact path for predictable audit behavior.
+- Keep round robin lock on the exact path for predictable audit behavior.
 
 ## TODO14 Filename Intensity Contract
 
-TODO14 must provide one logical-hit pre-trim intensity for every calibrated hit and one `selectionTargetDb[128]` table for every effective mapped layer.
+TODO14 must provide one logical-hit pre-trim intensity for every calibrated hit and one `selectionTargetDb[128]` table for every effective map layer.
 
 - Every separate mic file belonging to one logical hit contains the same logical-hit intensity.
 - A multichannel file naturally gives all of its mic ranges the same hit identity and intensity.
 - The value is measured before filename calibration trim.
 - The value and `selectionTargetDb` use the same source-intensity dB unit.
-- The value remains separate from named velocity, raw velocity median, fitted source value, peak and decay data, global output gain, layer correction, and `Mix Gain`.
+- The value remains separate from filename velocity, raw velocity median, fitted source value, peak and decay data, global output gain, map layer correction, and `Mix Gain`.
 - Linked files with missing or conflicting shared values invalidate floating selection for that articulation.
 - The runtime reconstructs the value from filename metadata. No calibration sidecar is required.
 
@@ -99,8 +99,8 @@ Build immutable logical-hit descriptions outside playback. Each description cont
 
 ```text
 LogicalHitRuntime
-  velocity-layer index
-  variant index
+  velocity-level index
+  round robin ID
   measured pre-trim intensity
   required active SampleEntry references
   stable tie order
@@ -108,7 +108,7 @@ LogicalHitRuntime
 
 Keep changing buffer readiness in a separate atomic or immutable snapshot. Do not place mutable readiness inside an otherwise immutable logical-hit description.
 
-Each mapped layer owns mutable selection state:
+Each map layer owns mutable selection state:
 
 ```text
 LogicalHitSelectionState
@@ -122,8 +122,8 @@ Selection returns one structured result:
 HitSelectionResult
   validity
   logical-hit index
-  velocity-layer index
-  variant index
+  velocity-level index
+  round robin ID
   requested selection target dB
 ```
 
@@ -143,13 +143,13 @@ For every MIDI velocity from 1 to 127:
 4. Keep a fixed maximum number of nearby hits.
 5. Always include the closest valid hit.
 6. Include hits below and above the target when available.
-7. Allow hits from neighboring named velocity levels.
+7. Allow hits from neighboring velocity levels.
 8. Keep stable ordering for equal values.
 9. Store logical-hit indexes in a fixed-capacity array plus count.
 
-Choose the capacity from corpus review and performance measurement. It must cover dense one-variant and two-variant layouts without creating an unbounded runtime scan.
+Choose the capacity from corpus review and performance measurement. It must cover dense layouts with one or two logical hits per velocity level without creating an unbounded runtime scan.
 
-Do not fill a window only with variants from one named level when equally close neighboring levels offer useful alternatives.
+Do not fill a window only with logical hits from one velocity level when equally close neighboring levels offer useful alternatives.
 
 Publish rebuilt windows through immutable runtime data or the existing safe graph-update path.
 
@@ -165,7 +165,7 @@ For a floating note:
 6. Use TODO14's fixed-size preflight and group voice reservation.
 7. Start every required active mic entry, or start none.
 8. Update history only after the complete hit starts.
-9. Apply TODO14 calibrated output gain and the normal layer runtime controls.
+9. Apply TODO14 calibrated output gain and the normal map layer runtime controls.
 
 The score uses three parts:
 
@@ -177,18 +177,18 @@ Distance eligibility is checked before scoring. Diversity and randomness cannot 
 
 Use audio sample position for recent-use timing. Do not use wall-clock time.
 
-Use a small synth-local random state with no lock. Automated checks must be able to inject a fixed seed or fixed random values.
+Use a small instrument-player-local random state with no lock. Automated checks must be able to inject a fixed seed or fixed random values.
 
 If no floating candidate is ready, use one complete exact fallback. If no complete hit is ready, or complete voice reservation fails, return no selection instead of playing only part of the mic set.
 
-## Exact Fallback And RR Lock
+## Exact Fallback And Round Robin Lock
 
 Calibrated exact selection remains:
 
 ```text
 selectionTargetDb[midiVelocity]
--> precomputed named velocity region
--> one ready variant
+-> precomputed velocity-level region
+-> one ready logical hit
 -> one complete logical hit
 -> all active linked mic entries
 ```
@@ -197,14 +197,14 @@ Missing or conflicting calibration uses the legacy exact region lookup instead:
 
 ```text
 raw MIDI velocity
--> current velocityToLayer region
--> one complete ready variant
+-> current velocityToLevel region
+-> one complete ready logical hit
 -> one complete logical hit
 ```
 
-RR lock uses the active exact region lookup. Lock `1` means the first variant, lock `2` means the second variant, and so on. The implementation phase must define the fallback when a locked variant is incomplete or unavailable.
+Round robin lock uses the active exact region lookup. Lock `1` means the first round robin ID, lock `2` means the second round robin ID, and so on. The implementation phase must define the fallback when a locked logical hit is incomplete or unavailable.
 
-RR lock does not consume floating history or random state.
+Round robin lock does not consume floating history or random state.
 
 ## Calibrated Progressive Loading
 
@@ -225,14 +225,14 @@ All mapped hits must still load eventually.
 
 Persistent buffers, cache keys, and Bake Cache behavior remain owned by TODO16.
 
-## Layer, Preview, And Hi-Hat Rules
+## Map Layer, Preview, And Hi-Hat Rules
 
-- Store the per-layer selection mode in the instrument map.
-- Treat a mode change as a parameter-only update when source and routing are unchanged.
-- Primary and shadow layers each own independent history and random state.
-- Changing one mapped source resets only that layer's selection history.
+- Store the per-map-layer selection mode in the instrument map.
+- Treat a mode change as a parameter-only update when the library assignment and routing are unchanged.
+- Primary and additional map layers each own independent history and random state.
+- Changing one map layer's library assignment resets only that map layer's selection history.
 - Preview and normal playback use the same effective selection mode unless an explicit audit preview mode is later approved.
-- Each started voice keeps raw MIDI velocity, requested selection target dB, effective output gain, and selected logical-hit identity.
+- Each started voice keeps raw MIDI velocity, requested selection target dB, effective output gain, and selected logical hit identity.
 - Do not reconstruct MIDI velocity from nonlinear output gain.
 - A hi-hat replacement selects one complete target logical hit and reuses that result for all replacement mic voices.
 - Do not run independent selection for each active mic voice.
@@ -244,9 +244,9 @@ Persistent buffers, cache keys, and Bake Cache behavior remain owned by TODO16.
 
 - Inspect real library topologies and choose the automatic-mode thresholds.
 - Choose candidate capacity, hard intensity limit, initial score weights, and recent-use history length.
-- Decide normal-session random seeding, preview audit behavior, RR-lock fallback, and hi-hat history behavior.
+- Decide normal-session random seeding, preview audit behavior, round-robin-lock fallback, and hi-hat history behavior.
 
-Verify later: record decisions and keep reference fixtures for dense one-variant, dense two-variant, and normal round-robin articulations.
+Verify later: record decisions and keep reference fixtures for dense articulations with one or two logical hits per velocity level, and for normal round robin articulations.
 
 ### Phase 2: Add floating eligibility to TODO14 logical hits
 
@@ -255,7 +255,7 @@ Verify later: record decisions and keep reference fixtures for dense one-variant
 - Calculate automatic-mode eligibility from the reviewed topology rules.
 - Add floating-policy state without changing exact audible behavior.
 
-Verify later: mono, multichannel, separate-mic, missing, conflicting, topology eligibility, and exact round-robin fixtures.
+Verify later: mono, multichannel, separate-mic, missing, conflicting, topology eligibility, and exact round robin fixtures.
 
 ### Phase 3: Build bounded candidate data
 
@@ -269,12 +269,12 @@ Verify later: range boundaries, equal intensities, sparse sets, dense sets, manu
 ### Phase 4: Add floating selection
 
 - Add hard eligibility and bounded scoring.
-- Add per-layer recent-use and random state.
+- Add per-map-layer recent-use and random state.
 - Return one logical-hit result and start only its entries.
 - Reuse TODO14 all-or-nothing buffer preflight and group voice reservation.
 - Use exact complete-hit fallback when needed.
 
-Verify later: fixed seeds, recent-use avoidance, distance protection, group reservation failure, no allocation, no full scan, and no partial or mixed mic variants.
+Verify later: fixed seeds, recent-use avoidance, distance protection, group reservation failure, no allocation, no full scan, and no partial or mixed logical hits.
 
 ### Phase 5: Update loading priority
 
@@ -285,11 +285,11 @@ Verify later: fixed seeds, recent-use avoidance, distance protection, group rese
 
 Verify later: first playable data covers calibrated intensities, fallback changes naturally as preferred hits arrive, and all hits eventually load.
 
-### Phase 6: Integrate map, layers, preview, and hi-hat
+### Phase 6: Integrate map layers, preview, and hi-hat
 
-- Add and serialize the per-layer mode.
-- Preserve independent primary and shadow state.
-- Preserve exact RR-lock audit behavior.
+- Add and serialize the per-map-layer mode.
+- Preserve independent state for each map layer.
+- Preserve exact round-robin-lock audit behavior.
 - Store raw velocity and selected-hit data on voices.
 - Update preview and hi-hat replacement to select one complete logical hit.
 
@@ -299,9 +299,9 @@ Verify later: layered slots, locked audition, preview, pedal transitions, save a
 
 Focused checks should cover:
 
-- one level with several variants;
-- many levels with one variant each;
-- many levels with two variants each;
+- one velocity level with several logical hits;
+- many velocity levels with one logical hit each;
+- many velocity levels with two logical hits each;
 - irregular and equal measured intensities;
 - requests below and above the measured range;
 - missing and conflicting intensity metadata;
@@ -310,8 +310,8 @@ Focused checks should cover:
 - several mic files for one hit;
 - one multichannel hit;
 - fixed random sequences and stable ties;
-- RR lock inside and outside available variants;
-- independent primary and shadow history;
+- round robin lock inside and outside available round robin IDs;
+- independent history for each map layer;
 - response and mode changes without sample reload;
 - calibrated loading order;
 - hi-hat transitions between different velocity layouts;
@@ -334,11 +334,11 @@ Related plans:
 Likely implementation areas:
 
 - `../source/Engine/KitLibModel.*`
-- `../source/Engine/InstrumentSynth.h`
-- `../source/Engine/InstrumentSynthLoader.cpp`
-- `../source/Engine/InstrumentSynthController.cpp`
+- `../source/Engine/InstrumentPlayer.h`
+- `../source/Engine/InstrumentPlayerLoader.cpp`
+- `../source/Engine/InstrumentPlayerController.cpp`
 - `../source/Engine/SampleLoader.*`
-- instrument-map parsing and shared layer serialization
+- instrument-map parsing and shared map layer serialization
 - focused parser, selector, loading, layering, preview, and hi-hat checks
 
 Non-goals:
@@ -349,7 +349,7 @@ Non-goals:
 - no pan, timing, phase, or room-orientation work;
 - no selection across different articulations;
 - no automatic gain reduction for layered pads;
-- no shared history between mapped layers;
+- no shared history between map layers;
 - no unbounded outward search;
 - no output-bus redesign;
 - no required scoring-weight UI in the first version.

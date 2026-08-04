@@ -21,7 +21,7 @@ This plan also covers helper tools for renaming sample files after parent folder
 - `../source/Engine/DrumKitEngine.cpp` applies the parsed map and resolves kit, instrument, and articulation references.
 - `../source/Engine/KitLibModel.cpp` currently resolves kits by kit display name or full kit folder name.
 - `../source/Engine/KitLibModel.cpp` currently resolves instruments by exact full instrument folder name.
-- `../source/Engine/DrumKitEngine.cpp` currently reports missing kits, missing instruments, and unknown source articulations while applying a map.
+- `../source/Engine/DrumKitEngine.cpp` currently reports missing kits, missing instruments, and unknown library articulations while applying a map.
 - `../source/UI/TroubleshootingPanel.*` owns the `Log Level` dropdown, log file buttons, important-log text area, and library reload button.
 - `../source/Config/PluginLogger.h` writes instance logs under the data path `logs` folder and keeps recent `Error`, `Warning`, and `Notice` lines for the troubleshooting UI.
 
@@ -123,8 +123,8 @@ When writing, generating, changing, or saving an instrument map:
 - Use the shortest unique articulation identity inside that instrument.
 - Preserve explicit params like `tuning`, `attack`, `decay`, `vol`, `flipLR`, `flipPhase`, and `bleed`.
 - Revalidate and normalize resolved old names when the map changed.
-- Sort map lines by destination slot so lines for the same instrument/articulation stay together.
-- Do not sort or reorder layer order inside the same destination instrument/articulation slot.
+- Sort map lines by instrument slot so lines for the same instrument/articulation stay together.
+- Do not sort or reorder map layer order inside the same instrument slot and articulation slot.
 
 Example before rename:
 
@@ -204,7 +204,7 @@ Verification later:
 
 ## Removed Missing Instrument Map Fixer UI
 
-The missing-instrument repair button, replacement table, scoring, and map rewrite action were later removed. The shared library identity resolver and source parsing remain because normal map loading and source selection still use them.
+The missing-instrument repair button, replacement table, scoring, and map rewrite action were later removed. The shared library identity resolver and library-path parsing remain because normal map loading and library selection still use them.
 
 ## Logs UI
 
@@ -248,12 +248,12 @@ Status: implemented in `../source/Engine/DrumKitEngine.*`, `../source/Engine/Dru
 
 Implemented:
 
-- Map apply, automatic orientation, and preview source resolving use identity lookup.
+- Map apply, automatic orientation, and library-preview path resolution use identity lookup.
 - Old full folder names stay valid when they resolve uniquely.
-- Generated and changed map text is normalized to preferred IDs and sorted by destination slot/art group.
+- Generated and changed map text is normalized to preferred IDs and sorted by instrument slot/art group.
 - Stable sorting keeps layer order inside the same slot/art group.
 - Missing and ambiguous kit, instrument, and articulation IDs report clearer status text.
-- Source pickers keep raw path aliases so old maps still select the right source row.
+- Library pickers keep raw path aliases so old maps still select the correct library row.
 
 Verification status:
 
@@ -306,6 +306,6 @@ Verify later:
 
 - Map serialization rewrites to preferred short IDs when a map is generated or changed.
 - When a changed map preset is saved, revalidation and sorting should apply.
-- Sorting is only for grouping lines by destination slot. It must not reorder layer order inside the same destination instrument/articulation slot.
+- Sorting is only for grouping lines by instrument slot. It must not reorder map layer order inside the same instrument slot and articulation slot.
 - Old full names that still resolve can be silently normalized on any map change.
 - Kit identity keeps the exact license text from the folder, for example `[CC-BY-SA-whatever]`.

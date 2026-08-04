@@ -1,23 +1,24 @@
 #include "../source/Engine/DrumKitEngine.h"
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+#include <vector>
 
 struct DrumKitEngineTestAccess {
     static void setLibraryManager(DrumKitEngine& engine, std::shared_ptr<KitLib::LibraryManager> libraryManager) {
         engine.libraryManagerPtr = std::move(libraryManager);
     }
 
-    static InstrumentSynth* primarySynth(DrumKitEngine& engine, const juce::String& slotId) {
-        const auto synthIt = engine.instrumentSynthById.find(slotId);
-        return synthIt != engine.instrumentSynthById.end() ? synthIt->second : nullptr;
+    static InstrumentPlayer* primaryPlayer(DrumKitEngine& engine, const juce::String& slotId) {
+        const auto playerIterator = engine.instrumentPlayerById.find(slotId);
+        return playerIterator != engine.instrumentPlayerById.end() ? playerIterator->second : nullptr;
     }
 
-    static InstrumentSynth* shadowSynth(DrumKitEngine& engine, const juce::String& slotId, int occurrence = 0) {
+    static InstrumentPlayer* shadowPlayer(DrumKitEngine& engine, const juce::String& slotId, int occurrence = 0) {
         int currentOccurrence = 0;
-        for (int synthIdx = engine.primaryInstrumentSynthCount; synthIdx < static_cast<int>(engine.instrumentSynthPtrs.size()); ++synthIdx) {
-            auto* synth = engine.instrumentSynthPtrs[static_cast<size_t>(synthIdx)].get();
-            if (synth == nullptr || synth->getId() != slotId) continue;
-            if (currentOccurrence == occurrence) return synth;
+        for (int playerIdx = engine.primaryInstrumentPlayerCount; playerIdx < static_cast<int>(engine.instrumentPlayerPtrs.size()); ++playerIdx) {
+            auto* player = engine.instrumentPlayerPtrs[static_cast<size_t>(playerIdx)].get();
+            if (player == nullptr || player->getId() != slotId) continue;
+            if (currentOccurrence == occurrence) return player;
             ++currentOccurrence;
         }
         return nullptr;
@@ -36,17 +37,18 @@ public:
 
     ~ScopedInstrumentMapLibrary() { this->root.deleteRecursively(); }
 
-    void addInstrument(const juce::String& kitName, const juce::String& instrumentName) {
-        this->root.getChildFile(kitName).getChildFile(instrumentName).createDirectory();
+    void addInstrument(const juce::String& libraryKitName, const juce::String& libraryInstrumentName) {
+        this->root.getChildFile(libraryKitName).getChildFile(libraryInstrumentName).getChildFile("center").createDirectory();
     }
 
     juce::File root;
 };
 
-void addSlot(KitLayout& layout, const juce::String& slotId, KitLib::InstrumentSpec::Type type) {
+static void addSlot(KitLayout& layout, const juce::String& slotId, KitLib::InstrumentSpec::Type type) {
     KitLayout::InstrumentSlot slot;
     slot.id = slotId;
     slot.type = type;
+    slot.articulations.emplace_back("center");
     layout.instrumentSlots.push_back(std::move(slot));
 }
 
@@ -79,57 +81,57 @@ public:
     DrumKitEngine engine;
 };
 
-TEST_CASE("InstrumentMap apply keeps primary synths after the seeded map is applied", "[InstrumentMap][IncrementalApply]") {
+TEST_CASE("InstrumentMap apply keeps primary players after the seeded map is applied", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
     fixture.engine.mapDefaultKit();
 
-    auto* kickBefore = DrumKitEngineTestAccess::primarySynth(fixture.engine, "kick1");
-    auto* snareBefore = DrumKitEngineTestAccess::primarySynth(fixture.engine, "snare1");
+    auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
+    auto* snareBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "snare1");
     const auto seededMap = fixture.engine.getSuggestedInstrumentMapText();
     REQUIRE(kickBefore != nullptr);
     REQUIRE(snareBefore != nullptr);
     REQUIRE(seededMap.isNotEmpty());
 
     CHECK_FALSE(fixture.engine.useInstrumentMap(seededMap));
-    CHECK(DrumKitEngineTestAccess::primarySynth(fixture.engine, "kick1") == kickBefore);
-    CHECK(DrumKitEngineTestAccess::primarySynth(fixture.engine, "snare1") == snareBefore);
+    CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") == kickBefore);
+    CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "snare1") == snareBefore);
     CHECK(fixture.engine.getLastInstrumentMapStatus().contains("unchanged"));
 }
 
 TEST_CASE("InstrumentMap apply reloads only the changed primary slot", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
-    const juce::String initialMap = "kick1:KitA/kick-22\nsnare1:KitA/snare-14";
+    const juce::String initialMap = "kick1:KitA/kick-22/center\nsnare1:KitA/snare-14/center";
     REQUIRE(fixture.engine.useInstrumentMap(initialMap));
 
-    auto* kickBefore = DrumKitEngineTestAccess::primarySynth(fixture.engine, "kick1");
-    auto* snareBefore = DrumKitEngineTestAccess::primarySynth(fixture.engine, "snare1");
+    auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
+    auto* snareBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "snare1");
     REQUIRE(kickBefore != nullptr);
     REQUIRE(snareBefore != nullptr);
 
-    const juce::String changedMap = "kick1:KitB/kick-24\nsnare1:KitA/snare-14";
+    const juce::String changedMap = "kick1:KitB/kick-24/center\nsnare1:KitA/snare-14/center";
     REQUIRE(fixture.engine.applyInstrumentMapSlotChange(changedMap, "kick1"));
-    CHECK(DrumKitEngineTestAccess::primarySynth(fixture.engine, "kick1") != kickBefore);
-    CHECK(DrumKitEngineTestAccess::primarySynth(fixture.engine, "snare1") == snareBefore);
+    CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") != kickBefore);
+    CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "snare1") == snareBefore);
 }
 
-TEST_CASE("InstrumentMap whole-instrument assignment replaces one slot with an instrument-level entry", "[InstrumentMap][assignment]") {
+TEST_CASE("InstrumentMap whole-instrument assignment replaces one slot with one map layer per library articulation", "[InstrumentMap][assignment]") {
     InstrumentMapApplyFixture fixture;
-    const juce::String currentMap = "kick1/center:KitA/kick-22/center:vol=-3\nkick1/edge:KitC/kick-26/center\nsnare1:KitA/snare-14:tuning=20";
+    const juce::String currentMap = "kick1/center:KitA/kick-22/center:vol=-3\nkick1/edge:KitC/kick-26/center\nsnare1:KitA/snare-14/center:tuning=20";
 
     const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument(currentMap, "kick1", "KitB", "kick-24");
 
     REQUIRE(updatedMap.ok());
     const auto parsed = DrumKitEngine::parseInstrumentMapText(updatedMap.value);
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 2);
-    const auto kickIterator = std::find_if(parsed.value.entries.begin(), parsed.value.entries.end(), [](const auto& entry) { return entry.slotId == "kick1"; });
-    const auto snareIterator = std::find_if(parsed.value.entries.begin(), parsed.value.entries.end(), [](const auto& entry) { return entry.slotId == "snare1"; });
-    REQUIRE(kickIterator != parsed.value.entries.end());
-    REQUIRE(snareIterator != parsed.value.entries.end());
+    REQUIRE(parsed.value.layers.size() == 2);
+    const auto kickIterator = std::find_if(parsed.value.layers.begin(), parsed.value.layers.end(), [](const auto& mapLayer) { return mapLayer.slotId == "kick1"; });
+    const auto snareIterator = std::find_if(parsed.value.layers.begin(), parsed.value.layers.end(), [](const auto& mapLayer) { return mapLayer.slotId == "snare1"; });
+    REQUIRE(kickIterator != parsed.value.layers.end());
+    REQUIRE(snareIterator != parsed.value.layers.end());
     CHECK(kickIterator->kitRef == "KitB");
     CHECK(kickIterator->instCode == "kick-24");
-    CHECK(kickIterator->slotArticulationFilter.empty());
-    CHECK(kickIterator->articulationFilter.empty());
+    CHECK(kickIterator->slotArticulationFilter == std::vector<juce::String> { "center" });
+    CHECK(kickIterator->articulationFilter == std::vector<juce::String> { "center" });
     CHECK_FALSE(kickIterator->volumeDb.has_value());
     CHECK(snareIterator->kitRef == "KitA");
     CHECK(snareIterator->instCode == "snare-14");
@@ -139,43 +141,62 @@ TEST_CASE("InstrumentMap whole-instrument assignment replaces one slot with an i
 TEST_CASE("InstrumentMap whole-instrument assignment allows a different instrument type", "[InstrumentMap][assignment]") {
     InstrumentMapApplyFixture fixture;
 
-    const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument("kick1:KitA/kick-22", "kick1", "KitB", "snare-13");
+    const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument("kick1:KitA/kick-22/center", "kick1", "KitB", "snare-13");
 
     REQUIRE(updatedMap.ok());
     const auto parsed = DrumKitEngine::parseInstrumentMapText(updatedMap.value);
     REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.entries.size() == 1);
-    CHECK(parsed.value.entries.front().slotId == "kick1");
-    CHECK(parsed.value.entries.front().kitRef == "KitB");
-    CHECK(parsed.value.entries.front().instCode == "snare-13");
+    REQUIRE(parsed.value.layers.size() == 1);
+    CHECK(parsed.value.layers.front().slotId == "kick1");
+    CHECK(parsed.value.layers.front().kitRef == "KitB");
+    CHECK(parsed.value.layers.front().instCode == "snare-13");
+    CHECK(parsed.value.layers.front().articulationFilter == std::vector<juce::String> { "center" });
 }
 
 TEST_CASE("InstrumentMap apply rebuilds shadows only for the changed layered slot", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
-    const juce::String initialMap = "snare1:KitA/snare-14\nsnare1:KitB/snare-13\ntom1:KitA/tom-10\ntom1:KitB/tom-12";
+    const juce::String initialMap = "snare1:KitA/snare-14/center\nsnare1:KitB/snare-13/center\ntom1:KitA/tom-10/center\ntom1:KitB/tom-12/center";
     REQUIRE(fixture.engine.useInstrumentMap(initialMap));
 
-    auto* snareShadowBefore = DrumKitEngineTestAccess::shadowSynth(fixture.engine, "snare1");
-    auto* tomShadowBefore = DrumKitEngineTestAccess::shadowSynth(fixture.engine, "tom1");
+    auto* snareShadowBefore = DrumKitEngineTestAccess::shadowPlayer(fixture.engine, "snare1");
+    auto* tomShadowBefore = DrumKitEngineTestAccess::shadowPlayer(fixture.engine, "tom1");
     REQUIRE(snareShadowBefore != nullptr);
     REQUIRE(tomShadowBefore != nullptr);
 
-    const juce::String changedMap = "snare1:KitA/snare-14\nsnare1:KitB/snare-13\ntom1:KitA/tom-10\ntom1:KitC/tom-14";
+    const juce::String changedMap = "snare1:KitA/snare-14/center\nsnare1:KitB/snare-13/center\ntom1:KitA/tom-10/center\ntom1:KitC/tom-14/center";
     REQUIRE(fixture.engine.applyInstrumentMapSlotChange(changedMap, "tom1"));
-    CHECK(DrumKitEngineTestAccess::shadowSynth(fixture.engine, "snare1") == snareShadowBefore);
-    CHECK(DrumKitEngineTestAccess::shadowSynth(fixture.engine, "tom1") != tomShadowBefore);
+    CHECK(DrumKitEngineTestAccess::shadowPlayer(fixture.engine, "snare1") == snareShadowBefore);
+    CHECK(DrumKitEngineTestAccess::shadowPlayer(fixture.engine, "tom1") != tomShadowBefore);
 }
 
-TEST_CASE("InstrumentMap parameter-only apply keeps the loaded primary synth", "[InstrumentMap][IncrementalApply]") {
+TEST_CASE("InstrumentMap parameter-only apply keeps the loaded primary player", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
-    REQUIRE(fixture.engine.useInstrumentMap("kick1:KitA/kick-22"));
+    REQUIRE(fixture.engine.useInstrumentMap("kick1:KitA/kick-22/center"));
 
-    auto* kickBefore = DrumKitEngineTestAccess::primarySynth(fixture.engine, "kick1");
+    auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
     REQUIRE(kickBefore != nullptr);
 
-    REQUIRE(fixture.engine.applyInstrumentMapSlotChange("kick1:KitA/kick-22:vol=-3", "kick1"));
-    CHECK(DrumKitEngineTestAccess::primarySynth(fixture.engine, "kick1") == kickBefore);
-    CHECK(kickBefore->getVolumeDb() == -3.0f);
+    REQUIRE(fixture.engine.applyInstrumentMapSlotChange("kick1:KitA/kick-22/center:vol=-3", "kick1"));
+    CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") == kickBefore);
+}
+
+TEST_CASE("InstrumentMap apply rejects incomplete library paths without replacing the loaded player", "[InstrumentMap][IncrementalApply]") {
+    InstrumentMapApplyFixture fixture;
+    REQUIRE(fixture.engine.useInstrumentMap("kick1:KitA/kick-22/center"));
+
+    auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
+    REQUIRE(kickBefore != nullptr);
+
+    const std::vector<juce::String> incompleteMaps {
+        "kick1:KitA",
+        "kick1:KitA/kick-22",
+        "kick1:KitA/kick-22/",
+    };
+
+    for (const auto& incompleteMap : incompleteMaps) {
+        CHECK_FALSE(fixture.engine.applyInstrumentMapSlotChange(incompleteMap, "kick1"));
+        CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") == kickBefore);
+    }
 }
 
 } // namespace InstrumentMapApplyTests

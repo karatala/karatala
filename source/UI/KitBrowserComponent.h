@@ -20,7 +20,7 @@ public:
     std::function<void(const juce::String&)> onStatusMessage;
 
 private:
-    enum class SourceMode {
+    enum class KitSection {
         LibraryKits,
         Presets,
     };
@@ -56,7 +56,7 @@ private:
     static constexpr int filterDebounceMs = 100;
 
     DrumKitEngine& engine;
-    SourceMode sourceMode = SourceMode::LibraryKits;
+    KitSection activeSection = KitSection::LibraryKits;
     juce::String currentMapText;
     juce::String selectedKitId;
     juce::String selectedPresetPath;
@@ -66,8 +66,8 @@ private:
     std::vector<int> filteredIndexes;
 
     juce::Label titleLabel;
-    juce::TextButton kitsModeButton { "LIBRARY KITS" };
-    juce::TextButton presetsModeButton { "PRESETS" };
+    juce::TextButton kitsSectionButton { "LIBRARY KITS" };
+    juce::TextButton presetsSectionButton { "PRESETS" };
     juce::TextEditor filterField;
     juce::ListBox sourceList;
     SourceListModel sourceListModel { *this };
@@ -83,7 +83,7 @@ private:
     juce::TextButton saveAsButton { "SAVE AS" };
     juce::TextButton deleteButton { "DELETE" };
 
-    void setSourceMode(SourceMode mode);
+    void setActiveSection(KitSection section);
     void rebuildLibraryEntries();
     void rebuildPresetEntries(const juce::String& preferredSelectionPath = {});
     void rebuildFilteredEntries();

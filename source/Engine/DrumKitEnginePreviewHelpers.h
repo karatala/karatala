@@ -9,11 +9,11 @@ namespace Detail {
 
 constexpr int previewVelocityBandSize = 8;
 
-inline int getPreviewMicRank(const KitLib::SampleVariantSpec& variant) {
-    if (!variant.isValid() || !variant.micSpec.isValid())
+inline int getPreviewMicRank(const KitLib::SampleSpec& sample) {
+    if (!sample.isValid() || !sample.micSpec.isValid())
         return std::numeric_limits<int>::max();
 
-    const auto& mic = variant.micSpec;
+    const auto& mic = sample.micSpec;
     const bool stereoCapable = mic.channels >= 2
         || mic.format == KitLib::MicSpec::Format::Stereo
         || mic.format == KitLib::MicSpec::Format::MidSide;
@@ -61,7 +61,7 @@ inline juce::uint8 getPreviewVelocityForBucket(juce::uint8 velocity) {
     return static_cast<juce::uint8>(juce::jlimit(1, 127, bucketVelocity));
 }
 
-inline bool isBetterPreviewSampleVariant(const KitLib::SampleVariantSpec& candidate, const KitLib::SampleVariantSpec& current) {
+inline bool isBetterPreviewSample(const KitLib::SampleSpec& candidate, const KitLib::SampleSpec& current) {
     const int candidateRank = Detail::getPreviewMicRank(candidate);
     const int currentRank = Detail::getPreviewMicRank(current);
     if (candidateRank != currentRank)

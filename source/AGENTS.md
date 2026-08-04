@@ -6,7 +6,7 @@
 
 - `PluginProcessor.*` owns the audio-processor entry point and state integration.
 - `PluginEditor.*` owns the top-level editor composition.
-- `Types.h` owns source-wide shared types.
+- `Types.h` owns plugin-wide shared types.
 - Domain-specific behavior belongs in the indexed child folders.
 
 # Local Contracts
@@ -19,6 +19,11 @@
 
 - Follow existing C++20/JUCE patterns and the repository `.clang-format`.
 - Treat `CMakeLists.txt` source globs as the source registration mechanism.
+- Keep one-use helper functions in their owning `.cpp` file.
+- Name shared files and namespaces by responsibility or feature. Do not create general `helpers` folders or public `FooHelpers` namespaces.
+- Use a named `<Feature>Detail` namespace with internal linkage for private `.cpp` helpers.
+- Create a feature subfolder only when several files share one responsibility.
+- Review [`docs/PROJECT_TERMINOLOGY_REVIEW.md`](../docs/PROJECT_TERMINOLOGY_REVIEW.md) before naming new shared modules. Do not use bare `Source` as a feature-folder name.
 
 # Verification
 

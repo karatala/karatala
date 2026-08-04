@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include "../Config/Helpers.h"
 #include "KitLibConsts.h"
-#include "KitSourceOverrides.h"
+#include "LibraryKitOverrides.h"
 #include "RoutingTypes.h"
 #include "SampleMetadata.h"
 
@@ -19,15 +19,16 @@
  *   └─ DrumKitSpec
  *      └─ InstrumentSpec
  *          └─ ArticulationSpec
- *              └─ VelocityLayerSpec
- *                  └─ SampleVariantSpec
- *                      └─ MicSpec
+ *              └─ VelocityLevelSpec
+ *                  └─ LogicalHitSpec
+ *                      └─ SampleSpec
+ *                          └─ MicSpec
  * Sample Filename Convention:
  *    <InstrumentsRoot>/
  *       └─ <kitInfo>/
  *          └─ <instrumentType>-<size>[-<balance>][-<description>]/
  *              └─ <articulation>[optionalExpressionShortName]-<optionalExpressionCode><value>-<anotherExpressionCode><value>/
- *                  └─ <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><sampleVariant>-<micChain>-<otherOptionalSampleParams>.<ext>
+ *                  └─ <instrumentType>-<size>-<articulation>[optionalExpressionShortName]-<velocity><roundRobinLetter>-<micChain>-<otherOptionalSampleParams>.<ext>
  * otherOptionalSampleParams:
  *     v{n|p}<gainDb>                  manual gain, where vn is negative and vp is positive
  *     o{n|p}<milliseconds>[_micCode...]  playback timing, where on advances and op delays; optional mic codes limit the offset
@@ -36,7 +37,7 @@
  *       └─ Kit Name by Author Name  [CC-BY-4.0]/                   DrumKitSpec
  *          └─ kick-22-Tama Starclassic etc/                        InstrumentSpec
  *              └─ center/                                          ArticulationSpec
- *                  └─ kick-22-center-127a-dim.flac                                VelocityLayerSpec, SampleVariantSpec, MicSpec
+ *                  └─ kick-22-center-127a-dim.flac                                VelocityLevelSpec, LogicalHitSpec, SampleSpec, MicSpec
  *          └─ hihat-14-Sabian HHX/
  *              └─ bow[half]-pdl_opn_cls043-zon_bel_edg085/
  *                  └─ hihat-14-bow[half]-043a-oni-vp5.flac
@@ -64,7 +65,7 @@
  *     articulation    = center rim rimshot edge bell bow pedal
  *     dimensionCode   = pdl_opn_cls zon_bel_edg zon_ctr_edg zon_lft_rgt // or shorter codes poc zbe zce zlr?
  *     velocity        = 001-127
- *     sampleVariant   = letter a-z
+ *     roundRobinLetter = letter a-z
  *     micChain        = micCode("_"micCode)* to describe each channel for multichannel files
  *                         ex. dim_dom_ons_rfs for direct in mono, direct out mono, overhead normal stereo, room far stereo
  *                       type = d (direct) | o (overhead) | r (room)
@@ -119,19 +120,29 @@ struct DecayEnvelope {
 class DrumKitSpec;
 class InstrumentSpec;
 class ArticulationSpec;
-class VelocityLayerSpec;
-class SampleVariantSpec;
+class VelocityLevelSpec;
+class LogicalHitSpec;
+class SampleSpec;
 class MicSpec;
 
+inline uint8_t roundRobinIdFromLetter(juce::juce_wchar letter) {
+    if (letter >= 'A' && letter <= 'Z') letter = static_cast<juce::juce_wchar>(letter - 'A' + 'a');
+    return letter >= 'a' && letter <= 'z' ? static_cast<uint8_t>(letter - 'a' + 1) : 0;
+}
+
+inline uint8_t roundRobinIdFromText(const juce::String& text) { return text.isEmpty() ? 0 : roundRobinIdFromLetter(text[0]); }
+
+inline juce::juce_wchar roundRobinLetterFromId(uint8_t roundRobinId) {
+    return roundRobinId >= 1 && roundRobinId <= 26 ? static_cast<juce::juce_wchar>('a' + roundRobinId - 1) : '\0';
+}
+
 /**
- * SampleVariantSpec
- * Represents a single audio file for a specific round-robin variation.
+ * SampleSpec
+ * Represents one mic entry in a logical hit.
  */
-class SampleVariantSpec {
+class SampleSpec {
 public:
-    VelocityLayerSpec* parent = nullptr;
-    uint8_t id;
-    juce::juce_wchar letter; // 'a'-'z'
+    LogicalHitSpec* parent = nullptr;
     juce::File sampleFile;
     juce::String sampleFileName;
 
@@ -168,9 +179,8 @@ public:
 
     MicSpec micSpec;
 
-    explicit SampleVariantSpec(VelocityLayerSpec* parentSpec, const juce::File& file, juce::juce_wchar variantLetter, const MicSpec& newMicSpec, int channelStart = 0)
+    explicit SampleSpec(LogicalHitSpec* parentSpec, const juce::File& file, const MicSpec& newMicSpec, int channelStart = 0)
         : parent(parentSpec)
-        , letter(variantLetter)
         , sampleFile(file)
         , sampleFileName(file.getFileName())
         , fileChannelStart(channelStart)
@@ -178,63 +188,72 @@ public:
         , micSpec(newMicSpec)
     {}
 
-    bool isValid() const { return sampleFile.existsAsFile(); }
-
-    /**
-     * Converts a single letter a-z (case-insensitive) to 1-26.
-     * @return uint8_t 1-26 or 0 if invalid
-     */
-    static uint8_t letterToIdx(const juce::String& letter) { return letterToIdx(letter[0]); }
-    static uint8_t letterToIdx(const juce::juce_wchar& letter) {
-        if (letter == '\0') return 0;
-        juce::juce_wchar c = std::tolower(letter);
-        return (c >= 'a' && c <= 'z') ? uint8_t(c - 'a' + 1) : 0;
-    }
+    bool isValid() const { return this->sampleFile.existsAsFile(); }
 };
 
 /**
- * VelocityLayerSpec
- * Represents a specific velocity level with multiple round-robin samples.
+ * LogicalHitSpec
+ * Groups all mic samples that must play together for one round-robin hit.
  */
-class VelocityLayerSpec {
+class LogicalHitSpec {
 public:
-    struct LogicalHitMeasurement {
-        uint8_t variantIdx = 0;
-        float intensityDb = 0.0f;
-        std::optional<float> maxTruePeakDb;
-    };
+    VelocityLevelSpec* parent = nullptr;
+    uint8_t roundRobinId = 0;
+    std::vector<std::unique_ptr<SampleSpec>> samples;
+    std::optional<float> intensityDb;
+    std::optional<float> maxTruePeakDb;
 
+    explicit LogicalHitSpec(VelocityLevelSpec* parentSpec, uint8_t newRoundRobinId)
+        : parent(parentSpec), roundRobinId(newRoundRobinId) {}
+
+    SampleSpec* findSample(const MicSpec& micSpec) {
+        for (auto& existing : this->samples)
+            if (existing->micSpec.raw.compareIgnoreCase(micSpec.raw) == 0) return existing.get();
+        return nullptr;
+    }
+
+    SampleSpec* getOrAddSample(const juce::File& sampleFile, const MicSpec& micSpec, int fileChannelStart) {
+        auto* existing = this->findSample(micSpec);
+        if (existing != nullptr) return existing;
+        this->samples.push_back(std::make_unique<SampleSpec>(this, sampleFile, micSpec, fileChannelStart));
+        return this->samples.back().get();
+    }
+
+    bool isEmpty() const { return this->samples.empty(); }
+};
+
+/**
+ * VelocityLevelSpec
+ * Represents a specific velocity level with multiple logical hits.
+ */
+class VelocityLevelSpec {
+public:
     ArticulationSpec* parent = nullptr;
     uint8_t velocity;
     uint8_t selectionUpperVelocity = 0;
-    std::vector<std::unique_ptr<SampleVariantSpec>> sampleVariantSpecs;
-    std::vector<LogicalHitMeasurement> logicalHitMeasurements;
+    std::vector<std::unique_ptr<LogicalHitSpec>> logicalHits;
     std::optional<float> rawVelocityMedianDb;
     std::optional<float> fittedSourceDb;
     std::optional<float> calibrationTrimDb;
     bool calibrationLimited = false;
 
-    explicit VelocityLayerSpec(ArticulationSpec* parentSpec, uint8_t layerVelocity)
-        : parent(parentSpec), velocity(layerVelocity) {}
+    explicit VelocityLevelSpec(ArticulationSpec* parentSpec, uint8_t namedVelocity)
+        : parent(parentSpec), velocity(namedVelocity) {}
 
-    SampleVariantSpec* findSampleVariant(juce::juce_wchar variantLetter, const MicSpec& micSpec) {
-        for (auto& existing : this->sampleVariantSpecs)
-            if (existing->letter == variantLetter && existing->micSpec.raw.compareIgnoreCase(micSpec.raw) == 0)
-                return existing.get();
+    LogicalHitSpec* findLogicalHit(uint8_t roundRobinId) {
+        for (auto& existing : this->logicalHits)
+            if (existing->roundRobinId == roundRobinId) return existing.get();
         return nullptr;
-    }    
-    
-    SampleVariantSpec* getOrAddSampleVariant(const juce::File& sampleFile, uint8_t variantIdx, const MicSpec& micSpec, int fileChannelStart) {
-        juce::juce_wchar variantLetter = (variantIdx > 0 && variantIdx <= 26) ? static_cast<juce::juce_wchar>('a' + variantIdx - 1) : '\0';
-        auto existing = this->findSampleVariant(variantLetter, micSpec);
-        if (existing != nullptr) return existing;
-        this->sampleVariantSpecs.push_back(std::make_unique<SampleVariantSpec>(this, sampleFile, variantLetter, micSpec, fileChannelStart));
-        return this->sampleVariantSpecs.back().get();
     }
 
-    bool isEmpty() const {
-        return this->sampleVariantSpecs.empty();
+    LogicalHitSpec* getOrAddLogicalHit(uint8_t roundRobinId) {
+        auto* existing = this->findLogicalHit(roundRobinId);
+        if (existing != nullptr) return existing;
+        this->logicalHits.push_back(std::make_unique<LogicalHitSpec>(this, roundRobinId));
+        return this->logicalHits.back().get();
     }
+
+    bool isEmpty() const { return this->logicalHits.empty() || std::all_of(this->logicalHits.begin(), this->logicalHits.end(), [](const auto& logicalHit) { return logicalHit->isEmpty(); }); }
 };
 
 /**
@@ -280,12 +299,12 @@ public:
     std::optional<int> balanceOverride;
     std::optional<int> balance;
     bool balanceConflict = false;
-    bool sourceBalanceResolved = false;
+    bool balanceResolved = false;
     StringsDictSingleton::Id nameId = 0;
     StringsDictSingleton::Id exprId = 0;
     std::vector<juce::String> folderCodeRaws; //FIXME: wtf is this naming
     std::vector<std::unique_ptr<ExpressionDimension>> expressionDimensions;
-    std::vector<std::unique_ptr<VelocityLayerSpec>> velocityLayerSpecs;
+    std::vector<std::unique_ptr<VelocityLevelSpec>> velocityLevels;
 
     explicit ArticulationSpec(InstrumentSpec* parentSpec, const juce::String& newCodeRaw)
         : codeRaw(newCodeRaw), parent(parentSpec)
@@ -295,13 +314,13 @@ public:
         this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
     }
 
-    const std::vector<std::unique_ptr<VelocityLayerSpec>>& getVelocityLayers() const { return this->velocityLayerSpecs; }
+    const std::vector<std::unique_ptr<VelocityLevelSpec>>& getVelocityLevels() const { return this->velocityLevels; }
     void addFolderIdentity(const juce::String& folderCodeRaw);
     std::vector<juce::String> getIdentityCandidates() const;
     std::optional<int> getEffectiveBalance() const;
 
     bool isEmpty() const {
-        return this->velocityLayerSpecs.empty() || std::all_of(this->velocityLayerSpecs.begin(), this->velocityLayerSpecs.end(), [](const auto& v) {
+        return this->velocityLevels.empty() || std::all_of(this->velocityLevels.begin(), this->velocityLevels.end(), [](const auto& v) {
             return v->isEmpty();
         });
     }
@@ -324,22 +343,22 @@ public:
         return this->expressionDimensions.back().get();
     }
 
-    VelocityLayerSpec* findVelocityLayer(uint8_t velocity) {
-        for (auto& existing : this->velocityLayerSpecs)
+    VelocityLevelSpec* findVelocityLevel(uint8_t velocity) {
+        for (auto& existing : this->velocityLevels)
             if (existing->velocity == velocity)
                 return existing.get();
         return nullptr;
     }
 
-    VelocityLayerSpec* getOrAddVelocityLayer(uint8_t velocity) {
-        auto existing = this->findVelocityLayer(velocity);
+    VelocityLevelSpec* getOrAddVelocityLevel(uint8_t velocity) {
+        auto existing = this->findVelocityLevel(velocity);
         if (existing != nullptr) return existing;
-        this->velocityLayerSpecs.push_back(std::make_unique<VelocityLayerSpec>(this, velocity));
-        return this->velocityLayerSpecs.back().get();
+        this->velocityLevels.push_back(std::make_unique<VelocityLevelSpec>(this, velocity));
+        return this->velocityLevels.back().get();
     }
 
-    void sortVelocityLayers() {
-        std::sort(this->velocityLayerSpecs.begin(), this->velocityLayerSpecs.end(), [](const auto& a, const auto& b) {
+    void sortVelocityLevels() {
+        std::sort(this->velocityLevels.begin(), this->velocityLevels.end(), [](const auto& a, const auto& b) {
             return a->velocity < b->velocity;
         });
     }
@@ -480,7 +499,7 @@ public:
         juce::String type;
         juce::String articulation;
         uint8_t velocity;
-        juce::String sampleVariant;
+        juce::String roundRobinLetter;
         std::vector<MicSpec> micDescriptors;
         juce::File file;
         
@@ -516,13 +535,13 @@ public:
     struct ScanStats {
         std::map<juce::String, int> dimensionCodeCounts;
         std::map<juce::String, int> micCodeCounts;
-        std::map<juce::String, int> sampleVariantCounts;
+        std::map<juce::String, int> roundRobinCounts;
         std::map<int, int> velocityCounts;
     };
 
     int scanInstrumentSamples(ScanStats* stats = nullptr);
     void buildCalibrationProfiles();
-    void applySourceOverrides();
+    void applyLibraryKitOverrides();
     ParseResult<int> applyVelocityUpperBoundaryOverrides(ArticulationSpec& articulation);
 
     static ParseResult<InstrumentSpec::SampleFileInfo> parseSampleFile(const juce::String& fileName);
@@ -578,7 +597,7 @@ public:
     MetaInfo meta;
     juce::String readmeMarkdown;
     SampleMetadataTable sampleMetadata;
-    KitSourceOverrides sourceOverrides;
+    LibraryKitOverrides libraryKitOverrides;
     std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>> instrumentSpecsMap;
     const std::unordered_map<juce::String, std::unique_ptr<InstrumentSpec>>& getInstrumentSpecsMap() const { return this->instrumentSpecsMap; }
 };

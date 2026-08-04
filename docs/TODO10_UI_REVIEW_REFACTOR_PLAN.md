@@ -7,14 +7,14 @@ Date: 2026-05-30
 Review the current UI implementation end to end, then make the next UI pass safer by separating real problems from already-completed older TODO items. The plan focuses on:
 
 - Correctness and usability problems in the current UI.
-- Performance improvements for repeated UI edits, mode switches, source picking, previews, and settings changes.
+- Performance improvements for repeated UI edits, page switches, library picking, previews, and settings changes.
 - Reducing repeated code by extracting shared components and helpers.
 - Introducing common theme variables for colours, fonts, spacing, control sizes, and instrument type colours.
 
 ## Current UI Surface Reviewed
 
 - Main integration: `source/PluginEditor.h`, `source/PluginEditor.cpp`
-- Pad views: `source/UI/DrumPad.*`, `source/UI/DrumPadGrid.*`
+- Pad components: `source/UI/DrumPad.*`, `source/UI/DrumPadGrid.*`
 - Instrument editing: `source/UI/InstrumentConfigPanel.*`, `source/UI/PadContextPopup.*`, `source/UI/SourcePickerPopup.*`
 - MIDI editing: `source/UI/MidiMapTable.*`, `source/UI/MidiNotePicker.*`
 - Global UI: `source/UI/Sidebar.*`, `source/UI/StatusBar.*`, `source/UI/EngineSettingsPanel.*`
@@ -29,7 +29,7 @@ Several older UI TODOs are already partly implemented and should not be repeated
 - `SourceItem`, `buildSourceItems`, `findSourceIndex`, and `createParamSlider` already exist in `UITypes.h` / `UIHelpers.cpp`.
 - Attack/decay sentinel values now use `-1.0` in the current slider and pot setup.
 - Instrument config slider text boxes are already `40x20` via `UIHelpers::createParamSlider`.
-- Settings mode is already scrollable and has reset buttons.
+- The Settings page is already scrollable and has reset buttons.
 - Sidebar knob labels already show `HH`, `VL`, and `RR` values.
 - Pad grid spacing already uses integer remainder distribution and configurable `padGap`.
 
@@ -39,7 +39,7 @@ The next pass should update or replace stale parts of `TODO06` and `TODO07` rath
 
 ### 1. Instrument config add-layer path is half-refactored
 
-`InstrumentConfigPanel::addRow` contains the normal row setup, but the `addButton->onClick` lambda manually creates a second kind of row inline. That inline path duplicates setup for labels, source button, sliders, add button, and remove button. It also leaves the new row's `addButton` with a no-op lambda, so adding a third layer from a newly-created layer will not work.
+`InstrumentConfigPanel::addRow` contains the normal row setup, but the `addButton->onClick` lambda manually creates a second kind of row inline. That inline path duplicates setup for labels, library button, sliders, add button, and remove button. It also leaves the new row's `addButton` with a no-op lambda, so adding a third map layer from a newly created map layer will not work.
 
 Files:
 
@@ -56,7 +56,7 @@ Plan:
 
 ### 2. Fast parameter updates can target the wrong layer
 
-`DrumKitEngine::updateSlotParameters` accepts `slotId`, `artName`, and `layerIndex`, but currently ignores `artName` and counts synth layers only by `slotId`. `PadContextPopup` computes layer index within the popup's current articulation, while `InstrumentConfigPanel` computes layer index across selected rows for the whole slot. These assumptions can diverge for slots with multiple articulations or layered shadow synths.
+`DrumKitEngine::updateSlotParameters` accepts `slotId`, `artName`, and `layerIndex`, but currently ignores `artName` and counts instrument player layers only by `slotId`. `PadContextPopup` computes layer index within the popup's current articulation, while `InstrumentConfigPanel` computes layer index across selected rows for the whole slot. These assumptions can diverge for slots with multiple articulations or layered additional instrument players.
 
 Files:
 
@@ -67,8 +67,8 @@ Files:
 
 Plan:
 
-- Define the canonical identity for an editable map row: slot id, slot articulation filter, source path, and layer ordinal within that exact slot/art group.
-- Make `updateSlotParameters` use the articulation filter, or replace `layerIndex` with a stable map-entry id generated from the parsed map.
+- Define the canonical identity for an editable map layer: instrument-slot ID, articulation-slot filter, library path, and map layer ordinal within that exact instrument-slot and articulation-slot group.
+- Make `updateSlotParameters` use the articulation-slot filter, or replace `layerIndex` with a stable map-layer ID generated from the parsed map.
 - Keep `PadContextPopup` and `InstrumentConfigPanel` using the same layer-index helper.
 - Verify with a slot that has at least two articulations and multiple layers on one articulation.
 
@@ -90,7 +90,7 @@ Plan:
 - Add a small `juce::Timer` based fade in `DrumPad`, with a fixed 200-300 ms decay.
 - Wire UI-injected MIDI and incoming MIDI learn paths only where appropriate, so pad feedback does not require rebuilding the grid.
 
-### 4. Pad context source picker positioning is fragile
+### 4. Pad context library picker positioning is fragile
 
 `PadContextPopup::showSourcePicker` creates the picker as a child of the popup and comments that it may overflow beyond popup bounds. In practice, this can be clipped or awkward because the overlay only covers the popup local bounds. The picker can also open downward even when the row is near the bottom of the editor.
 
@@ -114,13 +114,13 @@ Files:
 - `source/UI/PadContextPopup.cpp`
 - `source/Engine/DrumKitEngine.h`
 - `source/Engine/DrumKitEngine.cpp`
-- `source/Engine/InstrumentSynth.*`
+- `source/Engine/InstrumentPlayer.*`
 
 Plan:
 
 - Decide which parameters can be applied atomically without sample reload: gain, phase, LR flip, and mic bleed should be reviewed.
 - Extend the atomic update API only for parameters that are safe to change live.
-- Keep source changes on the full map path because they can require sample loading.
+- Keep library-assignment changes on the full map path because they can require sample loading.
 - Debounce preview playback so slider/pot drags do not trigger repeated previews.
 
 ## Performance Plan
@@ -144,12 +144,12 @@ Plan:
 
 - Apply atomic engine updates immediately for audible feedback.
 - Mark the row/table dirty during drag.
-- Flush map text on drag end, source change, mode switch, or a debounce timer.
+- Flush map text on drag end, library-assignment change, page switch, or a debounce timer.
 - Share dirty/flush behavior with `PadContextPopup::flushMapText`.
 
-### 3. Avoid rebuilding whole UI component trees on common mode changes
+### 3. Avoid rebuilding complete UI component trees on common page changes
 
-`PluginEditor` repopulates `DrumPadGrid`, `MidiMapTable`, and `InstrumentConfigPanel` in several mode-change and map-change paths. `DrumPadGrid::populate` clears and recreates every pad component.
+`PluginEditor` repopulates `DrumPadGrid`, `MidiMapTable`, and `InstrumentConfigPanel` in several page-change and map-change paths. `DrumPadGrid::populate` clears and recreates every pad component.
 
 Plan:
 
@@ -158,9 +158,9 @@ Plan:
 - Rebuild tables only when their backing layout/map actually changed.
 - Keep the first pass conservative: do not cache stale `KitLayout` pointers across a layout replacement unless ownership is clear.
 
-### 4. Debounce source picker filtering
+### 4. Debounce library picker filtering
 
-`SourcePickerPopup::rebuildFiltered` scans all source items and repaints the list on each text edit. This is fine for small libraries, but can become sluggish with large kits.
+`SourcePickerPopup::rebuildFiltered` scans all library items and repaints the list on each text edit. This is fine for small libraries, but can become sluggish with large kits.
 
 Plan:
 
@@ -169,15 +169,15 @@ Plan:
 - Avoid `listBox.repaint()` when `updateContent()` is enough.
 - Keep related-type filtering synchronous because it is cheap and user initiated.
 
-### 5. Keep source preview non-blocking
+### 5. Keep library preview non-blocking
 
 `previewSourceItem` uses async sample loading after selecting a sample, but it may scan instrument samples on the UI thread when articulation specs are empty.
 
 Plan:
 
-- Pre-scan source items when building the library list, or move scan work behind the async loader path.
-- Cache preview targets by source index and velocity band.
-- Keep preview clicks responsive even when the first preview of a source is cold.
+- Pre-scan library items when building the library list, or move scan work behind the async loader path.
+- Cache preview targets by library-item index and velocity band.
+- Keep preview clicks responsive even when the first preview of library content is cold.
 
 ## Repeated Code and Component Extraction
 
@@ -282,7 +282,7 @@ Plan:
 
 - Create a small `PopupHost` or `DismissOverlay` helper.
 - Support editor-level hosting, local hosting, and dismissal callbacks.
-- Use it for source pickers and pad context popups.
+- Use it for library pickers and pad context popups.
 - This also fixes clipping and z-order edge cases.
 
 ### 5. Shared row/button styling helpers
@@ -305,7 +305,7 @@ Keep these as tiny helper functions. Avoid adding a large style abstraction unti
 
 Plan:
 
-- `SourceItem.h`: source item model and display helpers.
+- `SourceItem.h`: temporary library-item model name and display helpers.
 - `UIHelpers.h/.cpp`: small setup helpers and factories.
 - `UITheme.h`: tokens and palette.
 - Keep include dependencies narrow to reduce rebuild cost.
@@ -318,14 +318,14 @@ Plan:
 - Fix new layer add buttons so they work recursively.
 - Correct atomic parameter addressing so `slotId`, `artName`, and layer identity agree between UI and engine.
 - Implement `DrumPadGrid::flashPad` and `DrumPad` fade-out.
-- Fix pad context nested source picker clipping/placement.
+- Fix pad context nested library picker clipping and placement.
 
 Verification:
 
 - Add one layer from an original row, then add another from the new row.
 - Edit tuning/attack/decay on multiple articulations of the same slot and verify the intended layer changes.
 - Click pads and verify visual flash decays.
-- Open source picker from top and bottom popup rows.
+- Open the library picker from top and bottom popup rows.
 
 ### Phase 2: Add theme tokens without visual redesign
 
@@ -337,7 +337,7 @@ Verification:
 Verification:
 
 - Confirm no component changes size unexpectedly.
-- Compare core views: Zen, Zoned, Map, Inst, Raw, Conf.
+- Compare core pages: Zen, Zoned, Map, Inst, Raw, Conf.
 
 ### Phase 3: Extract shared components
 
@@ -357,21 +357,21 @@ Verification:
 
 - Debounce settings saves.
 - Dirty/debounce map text generation from `InstrumentConfigPanel` sliders.
-- Avoid unnecessary grid and table rebuilds on mode switches.
-- Debounce source picker filtering and cache lowercase search text.
-- Review source preview cold path for UI-thread scanning.
+- Avoid unnecessary grid and table rebuilds on page switches.
+- Debounce library picker filtering and cache lowercase search text.
+- Review the cold library-preview path for UI-thread scanning.
 
 Verification:
 
 - Drag settings pots and verify config saves once after the drag or debounce.
 - Drag tuning/attack/decay and verify audio responds without ValueTree/map text churn on every tick.
-- Switch modes repeatedly and verify no visible lag or stale tables.
-- Type rapidly in source filter on a large library.
+- Switch pages repeatedly and verify no visible lag or stale tables.
+- Type rapidly in the library filter on a large library.
 
 ### Phase 5: Polish and consistency
 
-- Center and fit pad text consistently in Zen and Zoned views.
-- Add empty/disabled states for unavailable pads, missing sources, and empty source picker filters.
+- Center and fit pad text consistently in Zen and Zoned pages.
+- Add empty or disabled states for unavailable pads, missing library content, and empty library-picker filters.
 - Give MIDI learn active state stronger contrast than only red/yellow text colour.
 - Make popup dimensions responsive to editor size and content.
 - Review labels for consistent abbreviations: `HH`, `VL`, `RR`, `Inst`, `Conf`, `Zone`.
@@ -380,7 +380,7 @@ Verification:
 
 - Manual pass at minimum editor size and the default `1000x580` size.
 - Check all visible text fits inside controls.
-- Check keyboard/mouse interactions in each view.
+- Check keyboard/mouse interactions in each page.
 
 ## Suggested Acceptance Checklist
 
@@ -388,7 +388,7 @@ Verification:
 - New UI constants come from `UITheme` instead of new hardcoded hex colours or ad hoc sizes.
 - Repeated control setup is moved only when at least two current users adopt the helper/component.
 - Slider and pot drags do not write config files or full map text on every tiny movement.
-- Source changes still use the full map path when sample loading is required.
+- Library-assignment changes still use the full map path when sample loading is required.
 - Atomic parameter changes update the correct slot/art/layer combination.
 - UI remains buildable after each phase; user can run the CMake build manually per repo preference.
 

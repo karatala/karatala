@@ -3,22 +3,22 @@
 #include "UIHelpers.h"
 
 Sidebar::Sidebar() {
-    this->modeButtons.add(new ModeButton(ViewMode::Kit, "Kit"));
-    this->modeButtons.add(new ModeButton(ViewMode::Browse, "Browse"));
-    this->modeButtons.add(new ModeButton(ViewMode::Instrument, "Inst"));
-    this->modeButtons.add(new ModeButton(ViewMode::Zone, "Zone"));
-    this->modeButtons.add(new ModeButton(ViewMode::Map, "Map"));
-    this->modeButtons.add(new ModeButton(ViewMode::Raw, "Raw"));
-    this->modeButtons.add(new ModeButton(ViewMode::Settings, "Conf"));
-    this->modeButtons.add(new ModeButton(ViewMode::Fix, "Fix"));
+    this->pageButtons.add(new PageButton(PageId::Kit, "Kit"));
+    this->pageButtons.add(new PageButton(PageId::Browse, "Browse"));
+    this->pageButtons.add(new PageButton(PageId::Instrument, "Inst"));
+    this->pageButtons.add(new PageButton(PageId::Zone, "Zone"));
+    this->pageButtons.add(new PageButton(PageId::Map, "Map"));
+    this->pageButtons.add(new PageButton(PageId::Raw, "Raw"));
+    this->pageButtons.add(new PageButton(PageId::Settings, "Conf"));
+    this->pageButtons.add(new PageButton(PageId::Fix, "Fix"));
 
-    for (auto* btn : this->modeButtons) {
-        btn->onClick = [this, btn] {
-            this->setActiveMode(btn->mode);
-            if (this->onModeChanged)
-                this->onModeChanged(btn->mode);
+    for (auto* button : this->pageButtons) {
+        button->onClick = [this, button] {
+            this->setActivePageId(button->pageId);
+            if (this->onPageChanged)
+                this->onPageChanged(button->pageId);
         };
-        addAndMakeVisible(btn);
+        this->addAndMakeVisible(button);
     }
 
     // HiHat openness knob
@@ -59,14 +59,14 @@ Sidebar::Sidebar() {
     this->updateButtonStates();
 }
 
-void Sidebar::setActiveMode(ViewMode mode) {
-    this->activeMode = mode;
+void Sidebar::setActivePageId(PageId pageId) {
+    this->activePageId = pageId;
     this->updateButtonStates();
 }
 
 void Sidebar::updateButtonStates() {
-    for (auto* btn : this->modeButtons) {
-        btn->setToggleState(btn->mode == this->activeMode, juce::dontSendNotification);
+    for (auto* button : this->pageButtons) {
+        button->setToggleState(button->pageId == this->activePageId, juce::dontSendNotification);
     }
 }
 
@@ -80,9 +80,9 @@ void Sidebar::paint(juce::Graphics& g) {
 void Sidebar::resized() {
     auto area = getLocalBounds().reduced(4, 6);
 
-    // Mode buttons at top
-    for (auto* btn : this->modeButtons) {
-        btn->setBounds(area.removeFromTop(buttonSize).reduced(2, 1));
+    // Page buttons at top
+    for (auto* button : this->pageButtons) {
+        button->setBounds(area.removeFromTop(this->buttonSize).reduced(2, 1));
         area.removeFromTop(2);
     }
 

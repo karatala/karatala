@@ -56,7 +56,7 @@ FFMPEG = r"ffmpeg"
 AUDIO_FORMAT = "flac"
 ```
 
-`map_<kit>.py` is the main human review/correction surface. The generator should create it with all source instruments, articulations, parameters, useful mic groups, and skipped bleed mic groups enumerated near the top. Existing map files should not be overwritten unless `--overwrite-map` is used.
+`map_<kit>.py` is the main human review/correction surface. The generator should create it with all library instruments, articulations, parameters, useful mic groups, and skipped bleed mic groups enumerated near the top. Existing map files should not be overwritten unless `--overwrite-map` is used.
 
 Generated `convert_<kit>.py` scripts default to dry-run: they print ffmpeg commands and do not create folders or audio files. Passing `--write-review` rewrites the review CSV using the current edited map values. Passing `--execute` creates folders and runs ffmpeg.
 

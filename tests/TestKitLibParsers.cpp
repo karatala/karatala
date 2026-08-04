@@ -159,10 +159,10 @@ TEST_CASE("KitLib - LibraryManager loads kit README text", "[DrumKitSpec][metada
 
     auto kitDirectory = root.getChildFile("README Kit by Author [MIT]");
     REQUIRE(kitDirectory.createDirectory());
-    REQUIRE(kitDirectory.getChildFile("README.md").replaceWithText("# Kit title\n\nPreview notes.\n"));
+    REQUIRE(kitDirectory.getChildFile("README.md").replaceWithText("# Kit title\n\nPreview notes.\n", false, false, "\n"));
     auto fallbackKitDirectory = root.getChildFile("Fallback Kit");
     REQUIRE(fallbackKitDirectory.createDirectory());
-    REQUIRE(fallbackKitDirectory.getChildFile("readme.md").replaceWithText("Fallback README\n"));
+    REQUIRE(fallbackKitDirectory.getChildFile("readme.md").replaceWithText("Fallback README\n", false, false, "\n"));
 
     LibraryManager manager(root);
     REQUIRE(manager.scanAll() == 2);
@@ -513,12 +513,12 @@ mics:
     CHECK(overheadMidSide.outputId == "aux1/**i");
 }
 
-TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain", "[InstrumentSpec]") {
+TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity, round-robin ID, and mic chain", "[InstrumentSpec]") {
     {
         auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-127a-dim_dom_ons.flac");
         REQUIRE(parsed.ok());
         REQUIRE(parsed.value.velocity == 127);
-        REQUIRE(parsed.value.sampleVariant == "a");
+        REQUIRE(parsed.value.roundRobinLetter == "a");
         REQUIRE(parsed.value.micDescriptors.size() == 3);
         REQUIRE(parsed.value.micDescriptors[0].raw == "dim");
         REQUIRE(parsed.value.micDescriptors[1].raw == "dom");
@@ -550,11 +550,10 @@ TEST_CASE("KitLib - InstrumentSpec::parseSampleFile parses velocity and micChain
         auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-000a-dim.wav");
         REQUIRE(!parsed.ok());
     }
-    {// multi-letter rr variant -> warning but still parsed; we check that first letter is used
+    {// A multi-letter round-robin code gives a warning, but the first letter is used.
         auto parsed = InstrumentSpec::parseSampleFile("kick-22-center-100ab-dim.wav");
         REQUIRE(parsed.ok());
-        REQUIRE(parsed.value.sampleVariant.length() >= 1);
-        // first letter should be used by warning logic (function does not alter stored value here)
+        REQUIRE(parsed.value.roundRobinLetter == "a");
         REQUIRE(parsed.value.micDescriptors.size() == 1);
     }
 }

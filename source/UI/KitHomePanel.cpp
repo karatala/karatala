@@ -1,5 +1,6 @@
 #include "KitHomePanel.h"
 
+#include "../Engine/DrumKitEngineMapHelpers.h"
 #include "CompactModalDialog.h"
 #include "KitHomePanelHelpers.h"
 #include "UIHelpers.h"
@@ -84,9 +85,9 @@ KitHomePanel::KitHomePanel(DrumKitEngine& drumKitEngine)
         std::unordered_set<std::string> validSlots;
         for (const auto& slot : selectedLayout->layout.instrumentSlots)
             validSlots.insert(slot.id.toStdString());
-        parsed.value.entries.erase(std::remove_if(parsed.value.entries.begin(), parsed.value.entries.end(), [&validSlots](const auto& entry) {
-            return entry.slotId != "*" && validSlots.find(entry.slotId.toStdString()) == validSlots.end();
-        }), parsed.value.entries.end());
+        parsed.value.layers.erase(std::remove_if(parsed.value.layers.begin(), parsed.value.layers.end(), [&validSlots](const auto& mapLayer) {
+            return mapLayer.slotId != "*" && validSlots.find(mapLayer.slotId.toStdString()) == validSlots.end();
+        }), parsed.value.layers.end());
         const auto compatibleMapText = this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(parsed.value));
         if (compatibleMapText.trim().isEmpty()) {
             this->reportStatus("The current map has no assignments compatible with this kit layout");
@@ -273,6 +274,7 @@ void KitHomePanel::rebuildSlotRows() {
                 std::vector<const KitLib::InstrumentSpec*> instruments;
                 for (const auto& [id, instrument] : kit->getInstrumentSpecsMap()) {
                     juce::ignoreUnused(id);
+                    if (instrument == nullptr || instrument->articulationSpecs.empty()) continue;
                     if (slot.type == KitLib::InstrumentSpec::Type::Unknown || instrument->meta.type == slot.type)
                         instruments.push_back(instrument.get());
                 }
@@ -294,10 +296,10 @@ void KitHomePanel::rebuildSlotRows() {
         }
 
         int selectedId = 1;
-        for (const auto& entry : existingMap.entries) {
-            if (entry.slotId != slot.id)
+        for (const auto& mapLayer : existingMap.layers) {
+            if (mapLayer.slotId != slot.id)
                 continue;
-            const auto wanted = entry.kitRef + "/" + entry.instCode;
+            const auto wanted = mapLayer.kitRef + "/" + mapLayer.instCode;
             for (size_t idx = 0; idx < row->choices.size(); ++idx) {
                 const auto& choice = row->choices[idx];
                 const auto choicePath = KitHomePanelHelpers::sourcePath(choice);
@@ -337,19 +339,25 @@ void KitHomePanel::replaceDraftSlot(const SlotRow& row) {
     if (parsed.ok())
         map = std::move(parsed.value);
 
-    map.entries.erase(std::remove_if(map.entries.begin(), map.entries.end(), [&row](const auto& entry) {
-        return entry.slotId == row.slotId;
-    }), map.entries.end());
-
+    std::vector<DrumKitEngine::InstrumentMapLayer> replacementMapLayers;
     const int choiceIdx = row.sourceCombo.getSelectedId() - 2;
     if (choiceIdx >= 0 && choiceIdx < static_cast<int>(row.choices.size())) {
         const auto& choice = row.choices[static_cast<size_t>(choiceIdx)];
-        DrumKitEngine::InstrumentMapEntry entry;
-        entry.slotId = row.slotId;
-        entry.kitRef = choice.kitCode;
-        entry.instCode = choice.instrumentCode;
-        map.entries.push_back(std::move(entry));
+        const auto* selectedLayout = this->getSelectedLayout();
+        const auto* libraryManager = this->engine.getInstrumentManager();
+        const KitLayout::InstrumentSlot* selectedSlot = nullptr;
+        if (selectedLayout != nullptr) {
+            const auto slotIterator = std::find_if(selectedLayout->layout.instrumentSlots.begin(), selectedLayout->layout.instrumentSlots.end(), [&row](const auto& slot) { return slot.id == row.slotId; });
+            if (slotIterator != selectedLayout->layout.instrumentSlots.end()) selectedSlot = &*slotIterator;
+        }
+        const auto* libraryKit = libraryManager != nullptr ? libraryManager->findKitById(choice.kitCode) : nullptr;
+        const auto* libraryInstrument = libraryKit != nullptr ? libraryKit->findInstrumentById(choice.instrumentCode) : nullptr;
+        if (selectedSlot != nullptr && libraryKit != nullptr && libraryInstrument != nullptr) {
+            const auto preferredLibraryKitId = libraryManager->getPreferredKitId(*libraryKit);
+            replacementMapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(*selectedSlot, *libraryKit, *libraryInstrument, preferredLibraryKitId);
+        }
     }
+    DrumKitEngineMapHelpers::replaceSlotMapLayers(map, row.slotId, std::move(replacementMapLayers));
     this->draftMapText = this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(map));
 }
 
@@ -410,21 +418,21 @@ void KitHomePanel::loadSelectedPreset() {
 
     std::unordered_set<std::string> replacedSlots;
     juce::StringArray skippedSlots;
-    for (const auto& entry : parsedPreset.value.entries) {
-        if (validSlots.find(entry.slotId.toStdString()) == validSlots.end()) {
-            if (!skippedSlots.contains(entry.slotId))
-                skippedSlots.add(entry.slotId);
+    for (const auto& mapLayer : parsedPreset.value.layers) {
+        if (validSlots.find(mapLayer.slotId.toStdString()) == validSlots.end()) {
+            if (!skippedSlots.contains(mapLayer.slotId))
+                skippedSlots.add(mapLayer.slotId);
             continue;
         }
-        replacedSlots.insert(entry.slotId.toStdString());
+        replacedSlots.insert(mapLayer.slotId.toStdString());
     }
 
-    merged.entries.erase(std::remove_if(merged.entries.begin(), merged.entries.end(), [&replacedSlots](const auto& entry) {
-        return replacedSlots.find(entry.slotId.toStdString()) != replacedSlots.end();
-    }), merged.entries.end());
-    for (const auto& entry : parsedPreset.value.entries)
-        if (validSlots.find(entry.slotId.toStdString()) != validSlots.end())
-            merged.entries.push_back(entry);
+    merged.layers.erase(std::remove_if(merged.layers.begin(), merged.layers.end(), [&replacedSlots](const auto& mapLayer) {
+        return replacedSlots.find(mapLayer.slotId.toStdString()) != replacedSlots.end();
+    }), merged.layers.end());
+    for (const auto& mapLayer : parsedPreset.value.layers)
+        if (validSlots.find(mapLayer.slotId.toStdString()) != validSlots.end())
+            merged.layers.push_back(mapLayer);
 
     this->draftMapText = this->engine.normalizeInstrumentMapText(DrumKitEngine::serializeInstrumentMap(merged));
     this->rebuildSlotRows();

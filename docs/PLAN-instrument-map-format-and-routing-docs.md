@@ -8,7 +8,7 @@ The current format mostly lives in tests and parser code. That makes changes ris
 
 ## Current Facts
 
-Source checked:
+References checked:
 
 - `../source/Engine/DrumKitEngineMappingModel.cpp` parses instrument map text.
 - `../source/Engine/DrumKitEngine.cpp` serializes normalized instrument map text.
@@ -18,7 +18,7 @@ Source checked:
 Current line shape:
 
 ```text
-slot/slotArt:kit/instrument/sourceArt[:params]
+instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:params]
 ```
 
 Current examples:
@@ -63,8 +63,8 @@ It should include:
 2. Examples for common cases.
 3. Parameter table with type, default, and whether it is live or requires slot reload.
 4. Separator rule with good and bad examples.
-5. Explanation of slot art vs source art.
-6. Explanation of layer order: multiple matching lines become layers.
+5. Explanation of articulation slot versus library articulation.
+6. Explanation of map-layer order: each line is one map layer.
 7. Explanation of hihat examples with `bow[open]`, `bow[tight]`, `edge[open]`, and `pedal`.
 8. Note that raw map apply should use diff by default, with full rebuild as an explicit button later.
 
@@ -73,7 +73,7 @@ It should include:
 Implemented param:
 
 ```text
-micRoute=sourceMic:outputMic,sourceMic:outputMic //FIXME: 'micRoute' > 'send'
+micRoute=micCode:outputId,micCode:outputId
 ```
 
 Example:
@@ -85,12 +85,12 @@ kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:room
 Meaning:
 
 - `bleed=dtm:0.5,room:0.8` changes levels.
-- `micRoute=dtm:room` sends source mic `dtm` to output mic `room`.
+- `micRoute=dtm:room` sends mic `dtm` to output mic `room`.
 
 Rules:
 
-- `sourceMic` is the sample/library mic code before routing.
-- `outputMic` is the active mic-layout output code.
+- `micCode` is the sample/library mic code before routing.
+- `outputId` is the active mic-layout output ID.
 - Missing `micRoute` means automatic routing.
 - Unknown output mic warns and keeps automatic routing.
 - `micRoute` changes require slot reload because sample output channels are assigned when samples are loaded.
@@ -146,7 +146,7 @@ Doxygen comment style:
  * Parses instrument map text.
  *
  * Line format:
- *   slot/slotArt:kit/instrument/sourceArt[:param=value;param=value]
+ *   instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:param=value;param=value]
  *
  * Examples:
  *   kick1/center:MyKit/kick-24/center
@@ -157,7 +157,7 @@ Doxygen comment style:
  */
 ```
 
-### 3. Remove Old Source-Art Param And Comma Top-Level Support
+### 3. Remove the Old Library-Articulation Param and Comma Top-Level Support
 
 Status: implemented for parser, serializer, UI map writers, tests, and parser docs.
 
@@ -165,7 +165,7 @@ No backward compatibility is needed because the app is not released yet.
 
 Implemented rules:
 
-- Source art belongs in the target path: `slot/slotArt:kit/instrument/sourceArt`.
+- A complete library articulation belongs in the library path: `instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation`.
 - Top-level params use semicolon, not comma.
 - Comma stays only inside list values like `bleed=oh:0.25,room:0.5` and `micRoute=dtm:room,dsm:oh`.
 - Unknown params still warn through the normal unknown-param path.
@@ -182,7 +182,7 @@ Covered behavior:
 - Serializer preserves routes in stable sorted order.
 - Reload fingerprint changes when only `micRoute` changes.
 - Normal state fingerprint also changes.
-- Routing plan resolves a source mic to an explicit output mic code.
+- Routing plan resolves a mic to an explicit output mic code.
 
 ### 5. Add Engine Behavior
 
@@ -190,10 +190,10 @@ Status: implemented.
 
 Implemented behavior:
 
-- `InstrumentMapEntry::micRouteOverrides` stores `sourceMic -> outputMic`.
-- `InstrumentSynth::RoutingContext` carries route overrides during load/reload.
+- `InstrumentMapLayer::micRouteOverrides` stores `micCode -> outputId`.
+- `InstrumentPlayer::RoutingContext` carries route overrides during load/reload.
 - `MicRoutingBuilder` checks route override before automatic routing.
-- Valid override routes the sample mic to that output mic.
+- Valid override routes the mic to that output mic.
 - Invalid override logs a warning and falls back to automatic routing.
 - Route changes are included in reload fingerprint.
 
@@ -204,20 +204,20 @@ Status: implemented.
 Routing combobox behavior:
 
 - On selection, the row stores a `micRoute` override.
-- Popup map text writes `micRoute=sourceMic:outputMic`.
+- Popup map text writes `micRoute=micCode:outputId`.
 - Route combobox changes apply the affected slot so samples rebuild with the new output channel.
 - Bleed knobs remain live scalar changes.
 
 Debug logs on message thread:
 
-- `Pad popup: slot=kick1 art=center layer=1 source=MyKit/kick-24/center gain=-3.5 pan=0 bleed=[dtm:0.500]`
-- `Pad popup route: slot=kick1 art=center layer=1 sourceMic=dtm old=auto new=room`
-- `Instrument map apply: changed slot=kick1 art=center reason=pad-popup route`
+- `Pad popup: instrumentSlot=kick1 articulationSlot=center mapLayer=1 libraryPath=MyKit/kick-24/center gain=-3.5 pan=0 bleed=[dtm:0.500]`
+- `Pad popup route: instrumentSlot=kick1 articulationSlot=center mapLayer=1 micCode=dtm old=auto new=room`
+- `Instrument map apply: changed instrumentSlot=kick1 articulationSlot=center reason=pad-popup route`
 
 Engine debug logs:
 
-- `Mic route override: slot=kick1 source=dtm output=room hostStart=8 channels=2`
-- `Mic route override ignored: slot=kick1 source=dtm output=badRoom reason=output not found`
+- `Mic route override: instrumentSlot=kick1 micCode=dtm output=room hostStart=8 channels=2`
+- `Mic route override ignored: instrumentSlot=kick1 micCode=dtm output=badRoom reason=output not found`
 
 Do not add logs inside per-sample render loops.
 

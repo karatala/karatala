@@ -1,4 +1,4 @@
-#include "SourceArticulationOverrideEditor.h"
+#include "LibraryArticulationEditor.h"
 #include "../Engine/RoutingTypes.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 
-namespace SourceArticulationOverrideEditorHelpers {
+namespace LibraryArticulationEditorDetail {
 
 static std::optional<float> parseFiniteFloat(const juce::String& text) {
     const auto trimmed = text.trim();
@@ -50,9 +50,9 @@ static juce::String micHoverKey(int namedVelocity, const juce::String& roundRobi
     return "mic:" + juce::String(namedVelocity) + ":" + roundRobin + ":" + micCode.toLowerCase();
 }
 
-} // namespace SourceArticulationOverrideEditorHelpers
+} // namespace LibraryArticulationEditorDetail
 
-void SourceArticulationOverrideEditor::WheelTextEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
+void LibraryArticulationEditor::WheelTextEditor::mouseWheelMove(const juce::MouseEvent& event, const juce::MouseWheelDetails& wheel) {
     if (!this->isEnabled() || event.mods.isAnyMouseButtonDown() || !this->onWheelStep) {
         juce::TextEditor::mouseWheelMove(event, wheel);
         return;
@@ -64,7 +64,7 @@ void SourceArticulationOverrideEditor::WheelTextEditor::mouseWheelMove(const juc
     this->onWheelStep(wheelAmount > 0.0, event.mods.isShiftDown());
 }
 
-void SourceArticulationOverrideEditor::SampleMatrixLookAndFeel::drawTableHeaderColumn(juce::Graphics& graphics, juce::TableHeaderComponent& header, const juce::String& columnName, int columnId, int width, int height, bool isMouseOver, bool isMouseDown, int columnFlags) {
+void LibraryArticulationEditor::SampleMatrixLookAndFeel::drawTableHeaderColumn(juce::Graphics& graphics, juce::TableHeaderComponent& header, const juce::String& columnName, int columnId, int width, int height, bool isMouseOver, bool isMouseDown, int columnFlags) {
     juce::ignoreUnused(columnId, columnFlags);
     const auto highlightColour = header.findColour(juce::TableHeaderComponent::highlightColourId);
     if (isMouseDown) graphics.fillAll(highlightColour);
@@ -74,7 +74,7 @@ void SourceArticulationOverrideEditor::SampleMatrixLookAndFeel::drawTableHeaderC
     graphics.drawFittedText(columnName, juce::Rectangle<int>(0, 0, width, height).reduced(2, 0), juce::Justification::centred, 1);
 }
 
-SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine& drumKitEngine)
+LibraryArticulationEditor::LibraryArticulationEditor(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine),
       sampleMatrixModel(*this),
       selectedSampleListModel(*this),
@@ -236,29 +236,29 @@ SourceArticulationOverrideEditor::SourceArticulationOverrideEditor(DrumKitEngine
     };
 }
 
-SourceArticulationOverrideEditor::~SourceArticulationOverrideEditor() {
+LibraryArticulationEditor::~LibraryArticulationEditor() {
     this->stopTimer();
     this->clearHoverPreview();
     this->restoreCommittedPreview();
     this->sampleMatrix.getHeader().setLookAndFeel(nullptr);
 }
 
-int SourceArticulationOverrideEditor::SampleMatrixModel::getNumRows() {
+int LibraryArticulationEditor::SampleMatrixModel::getNumRows() {
     return static_cast<int>(this->owner.roundRobins.size());
 }
 
-void SourceArticulationOverrideEditor::SampleMatrixModel::paintRowBackground(juce::Graphics& graphics, int rowNumber, int width, int height, bool rowIsSelected) {
+void LibraryArticulationEditor::SampleMatrixModel::paintRowBackground(juce::Graphics& graphics, int rowNumber, int width, int height, bool rowIsSelected) {
     juce::ignoreUnused(rowIsSelected);
     graphics.fillAll(rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd);
     graphics.setColour(UITheme::Colours::borderSubtle);
     graphics.drawHorizontalLine(height - 1, 0.0f, static_cast<float>(width));
 }
 
-void SourceArticulationOverrideEditor::SampleMatrixModel::paintCell(juce::Graphics& graphics, int rowNumber, int columnId, int width, int height, bool rowIsSelected) {
+void LibraryArticulationEditor::SampleMatrixModel::paintCell(juce::Graphics& graphics, int rowNumber, int columnId, int width, int height, bool rowIsSelected) {
     juce::ignoreUnused(rowIsSelected);
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.roundRobins.size())) return;
     graphics.setFont(UITheme::Fonts::normal());
-    if (columnId == SourceArticulationOverrideEditor::roundRobinColumnId) {
+    if (columnId == LibraryArticulationEditor::roundRobinColumnId) {
         auto& header = this->owner.sampleMatrix.getHeader();
         graphics.setColour(header.findColour(juce::TableHeaderComponent::backgroundColourId));
         graphics.fillRect(0, 0, width, height);
@@ -269,7 +269,7 @@ void SourceArticulationOverrideEditor::SampleMatrixModel::paintCell(juce::Graphi
         return;
     }
 
-    const int levelIdx = columnId - SourceArticulationOverrideEditor::velocityColumnIdBase;
+    const int levelIdx = columnId - LibraryArticulationEditor::velocityColumnIdBase;
     if (levelIdx < 0 || levelIdx >= static_cast<int>(this->owner.rangeInfo.levels.size())) return;
     LogicalHitKey hit;
     hit.namedVelocity = this->owner.rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity;
@@ -291,32 +291,32 @@ void SourceArticulationOverrideEditor::SampleMatrixModel::paintCell(juce::Graphi
     else graphics.drawEllipse(circle, 1.3f);
 }
 
-void SourceArticulationOverrideEditor::SampleMatrixModel::cellClicked(int rowNumber, int columnId, const juce::MouseEvent& event) {
+void LibraryArticulationEditor::SampleMatrixModel::cellClicked(int rowNumber, int columnId, const juce::MouseEvent& event) {
     juce::ignoreUnused(event);
-    if (columnId == SourceArticulationOverrideEditor::roundRobinColumnId) {
+    if (columnId == LibraryArticulationEditor::roundRobinColumnId) {
         this->owner.invertLogicalHitSelection(std::nullopt, rowNumber);
         return;
     }
-    const int levelIdx = columnId - SourceArticulationOverrideEditor::velocityColumnIdBase;
+    const int levelIdx = columnId - LibraryArticulationEditor::velocityColumnIdBase;
     if (levelIdx < 0) return;
     this->owner.toggleLogicalHitSelection(levelIdx, rowNumber);
 }
 
-juce::String SourceArticulationOverrideEditor::SampleMatrixModel::getCellTooltip(int rowNumber, int columnId) {
+juce::String LibraryArticulationEditor::SampleMatrixModel::getCellTooltip(int rowNumber, int columnId) {
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.roundRobins.size())) return {};
-    if (columnId == SourceArticulationOverrideEditor::roundRobinColumnId) return "RR " + this->owner.roundRobins[static_cast<size_t>(rowNumber)] + ": click to invert this row";
-    const int levelIdx = columnId - SourceArticulationOverrideEditor::velocityColumnIdBase;
+    if (columnId == LibraryArticulationEditor::roundRobinColumnId) return "RR " + this->owner.roundRobins[static_cast<size_t>(rowNumber)] + ": click to invert this row";
+    const int levelIdx = columnId - LibraryArticulationEditor::velocityColumnIdBase;
     if (levelIdx < 0 || levelIdx >= static_cast<int>(this->owner.rangeInfo.levels.size())) return {};
     if (!this->owner.logicalHitExists(levelIdx, rowNumber)) return {};
     const auto velocity = juce::String(this->owner.rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity).paddedLeft('0', 3);
     return velocity + this->owner.roundRobins[static_cast<size_t>(rowNumber)] + ": hover to preview all mics, click to select";
 }
 
-int SourceArticulationOverrideEditor::SelectedSampleListModel::getNumRows() {
+int LibraryArticulationEditor::SelectedSampleListModel::getNumRows() {
     return static_cast<int>(this->owner.selectedSampleIndices.size());
 }
 
-void SourceArticulationOverrideEditor::SelectedSampleListModel::paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) {
+void LibraryArticulationEditor::SelectedSampleListModel::paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) {
     juce::ignoreUnused(rowIsSelected);
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.selectedSampleIndices.size())) return;
     const int sampleIdx = this->owner.selectedSampleIndices[static_cast<size_t>(rowNumber)];
@@ -328,7 +328,7 @@ void SourceArticulationOverrideEditor::SelectedSampleListModel::paintListBoxItem
     graphics.drawText(sample.fileName, 6, 0, width - 12, height, juce::Justification::centredLeft, true);
 }
 
-juce::String SourceArticulationOverrideEditor::SelectedSampleListModel::getTooltipForRow(int rowNumber) {
+juce::String LibraryArticulationEditor::SelectedSampleListModel::getTooltipForRow(int rowNumber) {
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.selectedSampleIndices.size())) return {};
     const int sampleIdx = this->owner.selectedSampleIndices[static_cast<size_t>(rowNumber)];
     if (sampleIdx < 0 || sampleIdx >= static_cast<int>(this->owner.rangeInfo.samples.size())) return {};
@@ -336,22 +336,22 @@ juce::String SourceArticulationOverrideEditor::SelectedSampleListModel::getToolt
     juce::StringArray details;
     details.add(sample.fileName);
     details.add("Mic: " + sample.micCode);
-    if (sample.onsetMs.has_value()) details.add("Onset: " + SourceArticulationOverrideEditorHelpers::floatText(*sample.onsetMs) + " ms");
-    if (sample.intensityDb.has_value()) details.add("Intensity: " + SourceArticulationOverrideEditorHelpers::floatText(*sample.intensityDb) + " dB");
-    if (sample.truePeakDb.has_value()) details.add("Peak: " + SourceArticulationOverrideEditorHelpers::floatText(*sample.truePeakDb) + " dB");
+    if (sample.onsetMs.has_value()) details.add("Onset: " + LibraryArticulationEditorDetail::floatText(*sample.onsetMs) + " ms");
+    if (sample.intensityDb.has_value()) details.add("Intensity: " + LibraryArticulationEditorDetail::floatText(*sample.intensityDb) + " dB");
+    if (sample.truePeakDb.has_value()) details.add("Peak: " + LibraryArticulationEditorDetail::floatText(*sample.truePeakDb) + " dB");
     if (!sample.hasMetadata) details.add("Measurements unavailable");
     if (sample.overrideMatchedByContentHash) details.add("Override matched by content hash");
     if (sample.overrideContentHashAmbiguous) details.add("Editing disabled: duplicate content hash");
-    details.add(SourceArticulationOverrideEditorHelpers::recipeStatusText(sample.recipeStatus));
+    details.add(LibraryArticulationEditorDetail::recipeStatusText(sample.recipeStatus));
     return details.joinIntoString("\n");
 }
 
-void SourceArticulationOverrideEditor::setSource(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const juce::String& displayTitle) {
+void LibraryArticulationEditor::setLibraryArticulation(const juce::String& libraryKitId, const juce::String& libraryInstrumentId, const juce::String& libraryArticulationId, const juce::String& displayTitle) {
     this->restoreCommittedPreview();
     this->clearPersistenceFailure();
     this->clearHoverPreview();
     this->titleLabel.setText(displayTitle, juce::dontSendNotification);
-    this->rangeInfo = this->engine.getSourceVelocityRangeInfo(kitId, instrumentId, articulationId);
+    this->rangeInfo = this->engine.getLibraryArticulationInfo(libraryKitId, libraryInstrumentId, libraryArticulationId);
     this->committedRangeInfo = this->rangeInfo;
     this->selectedDividerIdx = this->rangeInfo.levels.size() > 1 ? 0 : -1;
     this->draggingDivider = false;
@@ -361,13 +361,13 @@ void SourceArticulationOverrideEditor::setSource(const juce::String& kitId, cons
     this->micOffsetDirty = false;
     this->hasLastPreview = false;
     this->replaceInfo(this->rangeInfo, true);
-    if (!this->rangeInfo.sourceFound) this->setStatus("Source articulation was not found.", true);
+    if (!this->rangeInfo.libraryArticulationFound) this->setStatus("Library articulation was not found.", true);
     else if (!this->rangeInfo.writable) this->setStatus("Preview is available, but this kit is read-only.", true);
-    else if (this->rangeInfo.levels.size() == 1) this->setStatus("Single velocity layer: MIDI 1-127. Click it to preview.");
+    else if (this->rangeInfo.levels.size() == 1) this->setStatus("Single velocity level: MIDI 1-127. Click it to preview.");
     else this->setStatus("Hover to preview. Click cells, headers, and mics to select files.");
 }
 
-bool SourceArticulationOverrideEditor::applySelectedBoundary(int upperBoundary, bool persist) {
+bool LibraryArticulationEditor::applySelectedBoundary(int upperBoundary, bool persist) {
     if (this->selectedDividerIdx < 0 || this->selectedDividerIdx + 1 >= static_cast<int>(this->rangeInfo.levels.size())) return false;
     const int minimumBoundary = this->getSelectedMinimum();
     const int maximumBoundary = this->getSelectedMaximum();
@@ -377,7 +377,7 @@ bool SourceArticulationOverrideEditor::applySelectedBoundary(int upperBoundary, 
     }
 
     const int namedVelocity = this->rangeInfo.levels[static_cast<size_t>(this->selectedDividerIdx)].namedVelocity;
-    auto updateResult = this->engine.setSourceVelocityUpperBoundary(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, namedVelocity, upperBoundary, persist);
+    auto updateResult = this->engine.setLibraryVelocityUpperBoundary(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, namedVelocity, upperBoundary, persist);
     if (!updateResult.ok()) {
         if (persist) {
             const int dividerIdx = this->selectedDividerIdx;
@@ -405,10 +405,10 @@ bool SourceArticulationOverrideEditor::applySelectedBoundary(int upperBoundary, 
     return true;
 }
 
-void SourceArticulationOverrideEditor::resetAllBoundaries() {
-    if (!this->rangeInfo.writable || !this->rangeInfo.sourceFound) return;
+void LibraryArticulationEditor::resetAllBoundaries() {
+    if (!this->rangeInfo.writable || !this->rangeInfo.libraryArticulationFound) return;
     this->restoreCommittedPreview();
-    auto resetResult = this->engine.resetSourceVelocityUpperBoundaries(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw);
+    auto resetResult = this->engine.resetLibraryVelocityUpperBoundaries(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw);
     if (!resetResult.ok()) {
         this->showPersistenceFailure(resetResult.error(), [this] { this->resetAllBoundaries(); });
         return;
@@ -419,19 +419,19 @@ void SourceArticulationOverrideEditor::resetAllBoundaries() {
     this->replayLastPreview();
 }
 
-void SourceArticulationOverrideEditor::evenlyDistributeRanges() {
-    if (!this->rangeInfo.writable || !this->rangeInfo.sourceFound || this->rangeInfo.levels.size() < 2) return;
+void LibraryArticulationEditor::evenlyDistributeRanges() {
+    if (!this->rangeInfo.writable || !this->rangeInfo.libraryArticulationFound || this->rangeInfo.levels.size() < 2) return;
     this->restoreCommittedPreview();
 
     const int levelCount = static_cast<int>(this->rangeInfo.levels.size());
-    std::vector<DrumKitEngine::SourceVelocityUpperBoundaryTarget> targets;
+    std::vector<DrumKitEngine::VelocityUpperBoundaryTarget> targets;
     targets.reserve(this->rangeInfo.levels.size() - 1);
     for (int levelIdx = 0; levelIdx + 1 < levelCount; ++levelIdx) {
         const int upperBoundary = juce::roundToInt(127.0f * static_cast<float>(levelIdx + 1) / static_cast<float>(levelCount));
         targets.push_back({ this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity, upperBoundary });
     }
 
-    auto updateResult = this->engine.setSourceVelocityUpperBoundariesBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, targets);
+    auto updateResult = this->engine.setLibraryVelocityUpperBoundariesBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, targets);
     if (!updateResult.ok()) {
         this->showPersistenceFailure(updateResult.error(), [this] { this->evenlyDistributeRanges(); });
         return;
@@ -442,20 +442,20 @@ void SourceArticulationOverrideEditor::evenlyDistributeRanges() {
     this->replayLastPreview();
 }
 
-void SourceArticulationOverrideEditor::restoreCommittedPreview() {
+void LibraryArticulationEditor::restoreCommittedPreview() {
     if (!this->previewPending || this->selectedDividerIdx < 0 || this->selectedDividerIdx >= static_cast<int>(this->committedRangeInfo.levels.size())) return;
     const auto& committedLevel = this->committedRangeInfo.levels[static_cast<size_t>(this->selectedDividerIdx)];
     std::optional<int> committedBoundary;
     if (committedLevel.overridden) committedBoundary = committedLevel.effectiveUpperBoundary;
-    this->engine.setSourceVelocityUpperBoundary(this->committedRangeInfo.kitCodeRaw, this->committedRangeInfo.instrumentCodeRaw, this->committedRangeInfo.articulationCodeRaw, committedLevel.namedVelocity, committedBoundary, false);
+    this->engine.setLibraryVelocityUpperBoundary(this->committedRangeInfo.kitCodeRaw, this->committedRangeInfo.instrumentCodeRaw, this->committedRangeInfo.articulationCodeRaw, committedLevel.namedVelocity, committedBoundary, false);
     this->rangeInfo = this->committedRangeInfo;
     this->previewPending = false;
     this->draggingDivider = false;
 }
 
-void SourceArticulationOverrideEditor::updateControls() {
-    this->evenRangesButton.setEnabled(this->rangeInfo.sourceFound && this->rangeInfo.writable && this->rangeInfo.levels.size() > 1);
-    this->resetRangesButton.setEnabled(this->rangeInfo.sourceFound && this->rangeInfo.writable && std::any_of(this->rangeInfo.levels.begin(), this->rangeInfo.levels.end(), [](const auto& level) {
+void LibraryArticulationEditor::updateControls() {
+    this->evenRangesButton.setEnabled(this->rangeInfo.libraryArticulationFound && this->rangeInfo.writable && this->rangeInfo.levels.size() > 1);
+    this->resetRangesButton.setEnabled(this->rangeInfo.libraryArticulationFound && this->rangeInfo.writable && std::any_of(this->rangeInfo.levels.begin(), this->rangeInfo.levels.end(), [](const auto& level) {
         return level.overridden;
     }));
     this->updateBalanceControls();
@@ -469,29 +469,29 @@ void SourceArticulationOverrideEditor::updateControls() {
     this->repaint();
 }
 
-void SourceArticulationOverrideEditor::updateBalanceControls() {
-    const bool editable = this->rangeInfo.sourceFound && this->rangeInfo.writable;
+void LibraryArticulationEditor::updateBalanceControls() {
+    const bool editable = this->rangeInfo.libraryArticulationFound && this->rangeInfo.writable;
     this->instrumentNameLabel.setText(this->rangeInfo.instrumentCodeRaw, juce::dontSendNotification);
     this->articulationNameLabel.setText(this->rangeInfo.articulationCodeRaw, juce::dontSendNotification);
     this->instrumentBalanceEditor.setEnabled(editable);
     this->articulationBalanceEditor.setEnabled(editable);
 
-    const auto instrumentEffective = SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.instrumentBalance.effectiveValue, "C0");
-    const auto articulationEffective = SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.articulationBalance.effectiveValue, "C0");
+    const auto instrumentEffective = LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.instrumentBalance.effectiveValue, "C0");
+    const auto articulationEffective = LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.articulationBalance.effectiveValue, "C0");
     this->instrumentBalanceEditor.setTextToShowWhenEmpty(instrumentEffective, UITheme::Colours::textMuted);
     this->articulationBalanceEditor.setTextToShowWhenEmpty(articulationEffective, UITheme::Colours::textMuted);
-    if (!this->instrumentBalanceEditor.hasKeyboardFocus(true)) this->instrumentBalanceEditor.setText(SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.instrumentBalance.overrideValue), false);
-    if (!this->articulationBalanceEditor.hasKeyboardFocus(true)) this->articulationBalanceEditor.setText(SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.articulationBalance.overrideValue), false);
+    if (!this->instrumentBalanceEditor.hasKeyboardFocus(true)) this->instrumentBalanceEditor.setText(LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.instrumentBalance.overrideValue), false);
+    if (!this->articulationBalanceEditor.hasKeyboardFocus(true)) this->articulationBalanceEditor.setText(LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.articulationBalance.overrideValue), false);
     this->resetInstrumentBalanceButton.setEnabled(editable && this->rangeInfo.instrumentBalance.overrideValue.has_value());
     this->resetArticulationBalanceButton.setEnabled(editable && this->rangeInfo.articulationBalance.overrideValue.has_value());
 
-    const auto instrumentFilename = SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.instrumentBalance.filenameValue, "none");
-    const auto articulationFilename = this->rangeInfo.articulationBalance.filenameConflict ? juce::String("conflict") : SourceArticulationOverrideEditorHelpers::optionalBalanceText(this->rangeInfo.articulationBalance.filenameValue, "inherit instrument");
+    const auto instrumentFilename = LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.instrumentBalance.filenameValue, "none");
+    const auto articulationFilename = this->rangeInfo.articulationBalance.filenameConflict ? juce::String("conflict") : LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.articulationBalance.filenameValue, "inherit instrument");
     this->instrumentBalanceEditor.setTooltip("Folder: " + instrumentFilename + ". Current: " + instrumentEffective + ". Wheel: 4. Shift-wheel: 1.");
     this->articulationBalanceEditor.setTooltip("Folder: " + articulationFilename + ". Current: " + articulationEffective + ". Wheel: 4. Shift-wheel: 1.");
 }
 
-void SourceArticulationOverrideEditor::rebuildSampleView(bool initializeSelection) {
+void LibraryArticulationEditor::rebuildSampleView(bool initializeSelection) {
     const auto previousMicCodes = this->micCodes;
     this->roundRobins.clear();
     this->micCodes.clear();
@@ -525,7 +525,7 @@ void SourceArticulationOverrideEditor::rebuildSampleView(bool initializeSelectio
     this->updateSelectedSamples();
 }
 
-void SourceArticulationOverrideEditor::rebuildMatrixColumns() {
+void LibraryArticulationEditor::rebuildMatrixColumns() {
     auto& header = this->sampleMatrix.getHeader();
     header.removeAllColumns();
     header.addColumn("*", roundRobinColumnId, 30, 30, 30, juce::TableHeaderComponent::visible);
@@ -536,7 +536,7 @@ void SourceArticulationOverrideEditor::rebuildMatrixColumns() {
     this->sampleMatrix.updateContent();
 }
 
-void SourceArticulationOverrideEditor::rebuildMicButtons() {
+void LibraryArticulationEditor::rebuildMicButtons() {
     this->micButtons.clear();
     for (const auto& micCode : this->micCodes) {
         auto button = std::make_unique<juce::TextButton>();
@@ -552,7 +552,7 @@ void SourceArticulationOverrideEditor::rebuildMicButtons() {
     this->resized();
 }
 
-void SourceArticulationOverrideEditor::updateSelectedSamples() {
+void LibraryArticulationEditor::updateSelectedSamples() {
     this->selectedSampleIndices.clear();
     for (int sampleIdx = 0; sampleIdx < static_cast<int>(this->rangeInfo.samples.size()); ++sampleIdx) {
         const auto& sample = this->rangeInfo.samples[static_cast<size_t>(sampleIdx)];
@@ -568,13 +568,13 @@ void SourceArticulationOverrideEditor::updateSelectedSamples() {
     this->sampleMatrix.repaint();
 }
 
-void SourceArticulationOverrideEditor::updateBatchEditors() {
+void LibraryArticulationEditor::updateBatchEditors() {
     const bool editable = this->selectedSamplesAreEditable();
     auto updateEditor = [this, editable](juce::TextEditor& editor, juce::TextButton& resetButton, BatchField field, bool dirty, const juce::String& inheritedText) {
         editor.setEnabled(editable);
         const auto commonValue = this->getCommonBatchValue(field);
         if (!dirty && !editor.hasKeyboardFocus(true)) {
-            editor.setText(commonValue.value.has_value() && !commonValue.mixed ? SourceArticulationOverrideEditorHelpers::floatText(*commonValue.value) : juce::String(), false);
+            editor.setText(commonValue.value.has_value() && !commonValue.mixed ? LibraryArticulationEditorDetail::floatText(*commonValue.value) : juce::String(), false);
             editor.setTextToShowWhenEmpty(commonValue.mixed ? "Mixed" : inheritedText, UITheme::Colours::textMuted);
         }
         bool anyOverride = false;
@@ -593,7 +593,7 @@ void SourceArticulationOverrideEditor::updateBatchEditors() {
     updateEditor(this->micOffsetEditor, this->resetMicOffsetButton, BatchField::MicOffset, this->micOffsetDirty, "Use file");
 }
 
-void SourceArticulationOverrideEditor::updateMicButtonStates() {
+void LibraryArticulationEditor::updateMicButtonStates() {
     for (int micIdx = 0; micIdx < static_cast<int>(this->micButtons.size()) && micIdx < static_cast<int>(this->micCodes.size()); ++micIdx) {
         const bool selected = this->isMicSelected(this->micCodes[static_cast<size_t>(micIdx)]);
         auto& button = *this->micButtons[static_cast<size_t>(micIdx)];
@@ -602,7 +602,7 @@ void SourceArticulationOverrideEditor::updateMicButtonStates() {
     }
 }
 
-void SourceArticulationOverrideEditor::commitInstrumentBalance() {
+void LibraryArticulationEditor::commitInstrumentBalance() {
     if (!this->instrumentBalanceEditor.isEnabled()) return;
     const auto text = this->instrumentBalanceEditor.getText().trim();
     const auto parsedBalance = text.isEmpty() ? std::optional<int> {} : parseBalanceValue(text);
@@ -614,7 +614,7 @@ void SourceArticulationOverrideEditor::commitInstrumentBalance() {
     }
     if (parsedBalance == this->rangeInfo.instrumentBalance.overrideValue) return;
     this->restoreCommittedPreview();
-    auto updateResult = this->engine.setSourceInstrumentBalance(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, parsedBalance);
+    auto updateResult = this->engine.setLibraryInstrumentBalance(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, parsedBalance);
     if (!updateResult.ok()) {
         this->showPersistenceFailure(updateResult.error(), [this] { this->commitInstrumentBalance(); });
         return;
@@ -625,7 +625,7 @@ void SourceArticulationOverrideEditor::commitInstrumentBalance() {
     this->previewChangedValues();
 }
 
-void SourceArticulationOverrideEditor::commitArticulationBalance() {
+void LibraryArticulationEditor::commitArticulationBalance() {
     if (!this->articulationBalanceEditor.isEnabled()) return;
     const auto text = this->articulationBalanceEditor.getText().trim();
     const auto parsedBalance = text.isEmpty() ? std::optional<int> {} : parseBalanceValue(text);
@@ -637,7 +637,7 @@ void SourceArticulationOverrideEditor::commitArticulationBalance() {
     }
     if (parsedBalance == this->rangeInfo.articulationBalance.overrideValue) return;
     this->restoreCommittedPreview();
-    auto updateResult = this->engine.setSourceArticulationBalance(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, parsedBalance);
+    auto updateResult = this->engine.setLibraryArticulationBalance(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, parsedBalance);
     if (!updateResult.ok()) {
         this->showPersistenceFailure(updateResult.error(), [this] { this->commitArticulationBalance(); });
         return;
@@ -648,10 +648,10 @@ void SourceArticulationOverrideEditor::commitArticulationBalance() {
     this->previewChangedValues();
 }
 
-void SourceArticulationOverrideEditor::commitManualGain() {
+void LibraryArticulationEditor::commitManualGain() {
     if (!this->manualGainDirty || !this->manualGainEditor.isEnabled()) return;
     const auto text = this->manualGainEditor.getText().trim();
-    const auto parsedValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(text);
+    const auto parsedValue = LibraryArticulationEditorDetail::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
         this->setStatus("File gain correction must be a valid dB number.", true);
         return;
@@ -659,7 +659,7 @@ void SourceArticulationOverrideEditor::commitManualGain() {
     const auto relativePaths = this->getSelectedRelativePaths();
     if (relativePaths.empty()) return;
     this->restoreCommittedPreview();
-    auto updateResult = this->engine.setSourceSampleManualGainBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, relativePaths, parsedValue);
+    auto updateResult = this->engine.setSampleManualGainBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, relativePaths, parsedValue);
     if (!updateResult.ok()) {
         this->showPersistenceFailure(updateResult.error(), [this] { this->commitManualGain(); });
         return;
@@ -674,10 +674,10 @@ void SourceArticulationOverrideEditor::commitManualGain() {
     this->previewChangedValues();
 }
 
-void SourceArticulationOverrideEditor::commitFilePlaybackOffset() {
+void LibraryArticulationEditor::commitFilePlaybackOffset() {
     if (!this->fileOffsetDirty || !this->fileOffsetEditor.isEnabled()) return;
     const auto text = this->fileOffsetEditor.getText().trim();
-    const auto parsedValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(text);
+    const auto parsedValue = LibraryArticulationEditorDetail::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
         this->setStatus("File start offset must be a valid millisecond number.", true);
         return;
@@ -685,7 +685,7 @@ void SourceArticulationOverrideEditor::commitFilePlaybackOffset() {
     const auto targets = this->getSelectedPlaybackTargets(false);
     if (targets.empty()) return;
     this->restoreCommittedPreview();
-    auto updateResult = this->engine.setSourceSamplePlaybackOffsetBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, targets, parsedValue);
+    auto updateResult = this->engine.setSamplePlaybackOffsetBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, targets, parsedValue);
     if (!updateResult.ok()) {
         this->showPersistenceFailure(updateResult.error(), [this] { this->commitFilePlaybackOffset(); });
         return;
@@ -697,10 +697,10 @@ void SourceArticulationOverrideEditor::commitFilePlaybackOffset() {
     this->previewChangedValues();
 }
 
-void SourceArticulationOverrideEditor::commitMicPlaybackOffset() {
+void LibraryArticulationEditor::commitMicPlaybackOffset() {
     if (!this->micOffsetDirty || !this->micOffsetEditor.isEnabled()) return;
     const auto text = this->micOffsetEditor.getText().trim();
-    const auto parsedValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(text);
+    const auto parsedValue = LibraryArticulationEditorDetail::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
         this->setStatus("Mic offset must be a valid millisecond number.", true);
         return;
@@ -708,7 +708,7 @@ void SourceArticulationOverrideEditor::commitMicPlaybackOffset() {
     const auto targets = this->getSelectedPlaybackTargets(true);
     if (targets.empty()) return;
     this->restoreCommittedPreview();
-    auto updateResult = this->engine.setSourceSamplePlaybackOffsetBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, targets, parsedValue);
+    auto updateResult = this->engine.setSamplePlaybackOffsetBatch(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw, targets, parsedValue);
     if (!updateResult.ok()) {
         this->showPersistenceFailure(updateResult.error(), [this] { this->commitMicPlaybackOffset(); });
         return;
@@ -720,7 +720,7 @@ void SourceArticulationOverrideEditor::commitMicPlaybackOffset() {
     this->previewChangedValues();
 }
 
-bool SourceArticulationOverrideEditor::commitPendingSampleEditors() {
+bool LibraryArticulationEditor::commitPendingSampleEditors() {
     this->commitManualGain();
     if (this->manualGainDirty || this->hasPersistenceFailure()) return false;
     this->commitFilePlaybackOffset();
@@ -729,7 +729,7 @@ bool SourceArticulationOverrideEditor::commitPendingSampleEditors() {
     return !this->micOffsetDirty && !this->hasPersistenceFailure();
 }
 
-void SourceArticulationOverrideEditor::showPersistenceFailure(const juce::String& errorText, std::function<void()> retryAction) {
+void LibraryArticulationEditor::showPersistenceFailure(const juce::String& errorText, std::function<void()> retryAction) {
     this->retrySaveAction = std::move(retryAction);
     this->retrySaveButton.setVisible(true);
     this->reloadSavedButton.setVisible(true);
@@ -737,7 +737,7 @@ void SourceArticulationOverrideEditor::showPersistenceFailure(const juce::String
     this->resized();
 }
 
-void SourceArticulationOverrideEditor::clearPersistenceFailure() {
+void LibraryArticulationEditor::clearPersistenceFailure() {
     const bool wasVisible = this->retrySaveButton.isVisible() || this->reloadSavedButton.isVisible();
     this->retrySaveAction = {};
     this->retrySaveButton.setVisible(false);
@@ -745,14 +745,14 @@ void SourceArticulationOverrideEditor::clearPersistenceFailure() {
     if (wasVisible) this->resized();
 }
 
-bool SourceArticulationOverrideEditor::hasPersistenceFailure() const {
+bool LibraryArticulationEditor::hasPersistenceFailure() const {
     return this->retrySaveButton.isVisible();
 }
 
-void SourceArticulationOverrideEditor::reloadSavedOverrides() {
-    if (!this->rangeInfo.sourceFound) return;
+void LibraryArticulationEditor::reloadSavedOverrides() {
+    if (!this->rangeInfo.libraryArticulationFound) return;
     this->restoreCommittedPreview();
-    auto reloadResult = this->engine.reloadSourceOverrides(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw);
+    auto reloadResult = this->engine.reloadLibraryKitOverrides(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw);
     if (!reloadResult.ok()) {
         this->setStatus(reloadResult.error(), true);
         return;
@@ -765,7 +765,7 @@ void SourceArticulationOverrideEditor::reloadSavedOverrides() {
     this->setStatus("Reloaded saved values.");
 }
 
-void SourceArticulationOverrideEditor::replaceInfo(DrumKitEngine::SourceVelocityRangeInfo updatedInfo, bool initializeSelection) {
+void LibraryArticulationEditor::replaceInfo(DrumKitEngine::LibraryArticulationInfo updatedInfo, bool initializeSelection) {
     this->rangeInfo = std::move(updatedInfo);
     this->committedRangeInfo = this->rangeInfo;
     this->previewPending = false;
@@ -773,9 +773,9 @@ void SourceArticulationOverrideEditor::replaceInfo(DrumKitEngine::SourceVelocity
     this->updateControls();
 }
 
-void SourceArticulationOverrideEditor::timerCallback() {
-    if (!this->rangeInfo.sourceFound || this->previewPending || this->draggingDivider) return;
-    auto refreshedInfo = this->engine.getSourceVelocityRangeInfo(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw);
+void LibraryArticulationEditor::timerCallback() {
+    if (!this->rangeInfo.libraryArticulationFound || this->previewPending || this->draggingDivider) return;
+    auto refreshedInfo = this->engine.getLibraryArticulationInfo(this->rangeInfo.kitCodeRaw, this->rangeInfo.instrumentCodeRaw, this->rangeInfo.articulationCodeRaw);
     const bool failed = std::any_of(refreshedInfo.samples.begin(), refreshedInfo.samples.end(), [](const auto& sample) {
         return sample.recipeStatus == SampledSound::SourceRecipeStatus::Failed;
     });
@@ -787,31 +787,31 @@ void SourceArticulationOverrideEditor::timerCallback() {
     else if (!pending) this->setStatus("Selected gain changes are active.");
 }
 
-void SourceArticulationOverrideEditor::setStatus(const juce::String& text, bool error) {
+void LibraryArticulationEditor::setStatus(const juce::String& text, bool error) {
     this->statusLabel.setText(text, juce::dontSendNotification);
     this->statusLabel.setColour(juce::Label::textColourId, error ? UITheme::Colours::accent : UITheme::Colours::textMuted);
 }
 
-bool SourceArticulationOverrideEditor::logicalHitExists(const LogicalHitKey& hit) const {
+bool LibraryArticulationEditor::logicalHitExists(const LogicalHitKey& hit) const {
     return std::any_of(this->rangeInfo.samples.begin(), this->rangeInfo.samples.end(), [&hit](const auto& sample) {
         return sample.namedVelocity == hit.namedVelocity && sample.roundRobin == hit.roundRobin;
     });
 }
 
-bool SourceArticulationOverrideEditor::logicalHitExists(int levelIdx, int roundRobinIdx) const {
+bool LibraryArticulationEditor::logicalHitExists(int levelIdx, int roundRobinIdx) const {
     if (levelIdx < 0 || levelIdx >= static_cast<int>(this->rangeInfo.levels.size()) || roundRobinIdx < 0 || roundRobinIdx >= static_cast<int>(this->roundRobins.size())) return false;
     return this->logicalHitExists({ this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity, this->roundRobins[static_cast<size_t>(roundRobinIdx)] });
 }
 
-bool SourceArticulationOverrideEditor::isLogicalHitSelected(const LogicalHitKey& hit) const {
+bool LibraryArticulationEditor::isLogicalHitSelected(const LogicalHitKey& hit) const {
     return std::any_of(this->selectedHits.begin(), this->selectedHits.end(), [this, &hit](const auto& selectedHit) { return this->logicalHitsMatch(hit, selectedHit); });
 }
 
-bool SourceArticulationOverrideEditor::logicalHitsMatch(const LogicalHitKey& first, const LogicalHitKey& second) const {
+bool LibraryArticulationEditor::logicalHitsMatch(const LogicalHitKey& first, const LogicalHitKey& second) const {
     return first.namedVelocity == second.namedVelocity && first.roundRobin == second.roundRobin;
 }
 
-void SourceArticulationOverrideEditor::toggleLogicalHitSelection(int levelIdx, int roundRobinIdx) {
+void LibraryArticulationEditor::toggleLogicalHitSelection(int levelIdx, int roundRobinIdx) {
     if (!this->logicalHitExists(levelIdx, roundRobinIdx) || !this->commitPendingSampleEditors()) return;
     LogicalHitKey hit { this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity, this->roundRobins[static_cast<size_t>(roundRobinIdx)] };
     const auto selectedIt = std::find_if(this->selectedHits.begin(), this->selectedHits.end(), [this, &hit](const auto& selectedHit) { return this->logicalHitsMatch(hit, selectedHit); });
@@ -819,13 +819,13 @@ void SourceArticulationOverrideEditor::toggleLogicalHitSelection(int levelIdx, i
     else this->selectedHits.erase(selectedIt);
     this->activeHit = hit;
     this->hasActiveHit = true;
-    this->hoverPreviewKey = SourceArticulationOverrideEditorHelpers::logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
+    this->hoverPreviewKey = LibraryArticulationEditorDetail::logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
     ++this->hoverPreviewGeneration;
     this->updateSelectedSamples();
     this->previewLogicalHit(hit, hit.namedVelocity);
 }
 
-void SourceArticulationOverrideEditor::invertLogicalHitSelection(std::optional<int> levelIdx, std::optional<int> roundRobinIdx) {
+void LibraryArticulationEditor::invertLogicalHitSelection(std::optional<int> levelIdx, std::optional<int> roundRobinIdx) {
     if (!this->commitPendingSampleEditors()) return;
     const int firstLevelIdx = levelIdx.value_or(0);
     const int lastLevelIdx = levelIdx.has_value() ? *levelIdx + 1 : static_cast<int>(this->rangeInfo.levels.size());
@@ -845,7 +845,7 @@ void SourceArticulationOverrideEditor::invertLogicalHitSelection(std::optional<i
     this->updateSelectedSamples();
 }
 
-void SourceArticulationOverrideEditor::toggleMicSelection(const juce::String& micCode) {
+void LibraryArticulationEditor::toggleMicSelection(const juce::String& micCode) {
     if (!this->commitPendingSampleEditors()) {
         this->updateMicButtonStates();
         return;
@@ -854,7 +854,7 @@ void SourceArticulationOverrideEditor::toggleMicSelection(const juce::String& mi
     if (selectedIt == this->selectedMicCodes.end()) this->selectedMicCodes.push_back(micCode);
     else this->selectedMicCodes.erase(selectedIt);
     if (this->hasActiveHit) {
-        this->hoverPreviewKey = SourceArticulationOverrideEditorHelpers::micHoverKey(this->activeHit.namedVelocity, this->activeHit.roundRobin, micCode);
+        this->hoverPreviewKey = LibraryArticulationEditorDetail::micHoverKey(this->activeHit.namedVelocity, this->activeHit.roundRobin, micCode);
         ++this->hoverPreviewGeneration;
     } else {
         this->clearHoverPreview();
@@ -863,18 +863,18 @@ void SourceArticulationOverrideEditor::toggleMicSelection(const juce::String& mi
     if (this->hasActiveHit) this->previewMic(this->activeHit, micCode, this->activeHit.namedVelocity);
 }
 
-bool SourceArticulationOverrideEditor::isMicSelected(const juce::String& micCode) const {
+bool LibraryArticulationEditor::isMicSelected(const juce::String& micCode) const {
     return std::any_of(this->selectedMicCodes.begin(), this->selectedMicCodes.end(), [&micCode](const auto& selectedMicCode) { return selectedMicCode.compareIgnoreCase(micCode) == 0; });
 }
 
-const DrumKitEngine::SourceSampleOverrideInfo* SourceArticulationOverrideEditor::findSample(const LogicalHitKey& hit, const juce::String& micCode) const {
+const DrumKitEngine::LibrarySampleInfo* LibraryArticulationEditor::findSample(const LogicalHitKey& hit, const juce::String& micCode) const {
     const auto sampleIt = std::find_if(this->rangeInfo.samples.begin(), this->rangeInfo.samples.end(), [&hit, &micCode](const auto& sample) {
         return sample.namedVelocity == hit.namedVelocity && sample.roundRobin == hit.roundRobin && (micCode.isEmpty() || sample.micCode.compareIgnoreCase(micCode) == 0);
     });
     return sampleIt != this->rangeInfo.samples.end() ? &*sampleIt : nullptr;
 }
 
-std::vector<juce::String> SourceArticulationOverrideEditor::getSelectedRelativePaths() const {
+std::vector<juce::String> LibraryArticulationEditor::getSelectedRelativePaths() const {
     juce::StringArray uniquePaths;
     for (const int sampleIdx : this->selectedSampleIndices) {
         if (sampleIdx < 0 || sampleIdx >= static_cast<int>(this->rangeInfo.samples.size())) continue;
@@ -886,8 +886,8 @@ std::vector<juce::String> SourceArticulationOverrideEditor::getSelectedRelativeP
     return result;
 }
 
-std::vector<DrumKitEngine::SourceSamplePlaybackOffsetTarget> SourceArticulationOverrideEditor::getSelectedPlaybackTargets(bool micScoped) const {
-    std::vector<DrumKitEngine::SourceSamplePlaybackOffsetTarget> result;
+std::vector<DrumKitEngine::SamplePlaybackOffsetTarget> LibraryArticulationEditor::getSelectedPlaybackTargets(bool micScoped) const {
+    std::vector<DrumKitEngine::SamplePlaybackOffsetTarget> result;
     juce::StringArray uniqueKeys;
     for (const int sampleIdx : this->selectedSampleIndices) {
         if (sampleIdx < 0 || sampleIdx >= static_cast<int>(this->rangeInfo.samples.size())) continue;
@@ -900,7 +900,7 @@ std::vector<DrumKitEngine::SourceSamplePlaybackOffsetTarget> SourceArticulationO
     return result;
 }
 
-SourceArticulationOverrideEditor::CommonBatchValue SourceArticulationOverrideEditor::getCommonBatchValue(BatchField field) const {
+LibraryArticulationEditor::CommonBatchValue LibraryArticulationEditor::getCommonBatchValue(BatchField field) const {
     CommonBatchValue result;
     bool hasFirstValue = false;
     for (const int sampleIdx : this->selectedSampleIndices) {
@@ -922,14 +922,14 @@ SourceArticulationOverrideEditor::CommonBatchValue SourceArticulationOverrideEdi
     return result;
 }
 
-bool SourceArticulationOverrideEditor::selectedSamplesAreEditable() const {
+bool LibraryArticulationEditor::selectedSamplesAreEditable() const {
     if (!this->rangeInfo.writable || this->selectedSampleIndices.empty()) return false;
     return std::none_of(this->selectedSampleIndices.begin(), this->selectedSampleIndices.end(), [this](int sampleIdx) {
         return sampleIdx < 0 || sampleIdx >= static_cast<int>(this->rangeInfo.samples.size()) || this->rangeInfo.samples[static_cast<size_t>(sampleIdx)].overrideContentHashAmbiguous;
     });
 }
 
-void SourceArticulationOverrideEditor::previewLogicalHit(const LogicalHitKey& hit, int playbackVelocity) {
+void LibraryArticulationEditor::previewLogicalHit(const LogicalHitKey& hit, int playbackVelocity) {
     const auto* sample = this->findSample(hit);
     if (sample == nullptr || !this->onPreview) return;
     this->activeHit = hit;
@@ -943,7 +943,7 @@ void SourceArticulationOverrideEditor::previewLogicalHit(const LogicalHitKey& hi
     this->onPreview(this->lastPreviewVelocity, hit.namedVelocity, hit.roundRobin, sample->relativePath, {});
 }
 
-void SourceArticulationOverrideEditor::previewMic(const LogicalHitKey& hit, const juce::String& micCode, int playbackVelocity) {
+void LibraryArticulationEditor::previewMic(const LogicalHitKey& hit, const juce::String& micCode, int playbackVelocity) {
     const auto* sample = this->findSample(hit, micCode);
     if (sample == nullptr || !this->onPreview) return;
     this->activeHit = hit;
@@ -957,7 +957,7 @@ void SourceArticulationOverrideEditor::previewMic(const LogicalHitKey& hit, cons
     this->onPreview(this->lastPreviewVelocity, hit.namedVelocity, hit.roundRobin, sample->relativePath, sample->micCode);
 }
 
-void SourceArticulationOverrideEditor::previewVelocityAt(float xPosition) {
+void LibraryArticulationEditor::previewVelocityAt(float xPosition) {
     if (this->rangeBounds.getWidth() <= 0.0f || this->rangeInfo.levels.empty()) return;
     const float proportion = juce::jlimit(0.0f, 1.0f, (xPosition - this->rangeBounds.getX()) / this->rangeBounds.getWidth());
     const int velocity = juce::jlimit(1, 127, 1 + juce::roundToInt(proportion * 126.0f));
@@ -973,7 +973,7 @@ void SourceArticulationOverrideEditor::previewVelocityAt(float xPosition) {
     this->previewLogicalHit(hit, velocity);
 }
 
-void SourceArticulationOverrideEditor::previewChangedValues() {
+void LibraryArticulationEditor::previewChangedValues() {
     if (!this->selectedSampleIndices.empty()) {
         const int sampleIdx = this->selectedSampleIndices.back();
         if (sampleIdx >= 0 && sampleIdx < static_cast<int>(this->rangeInfo.samples.size())) {
@@ -991,44 +991,44 @@ void SourceArticulationOverrideEditor::previewChangedValues() {
     else if (this->hasLastPreview) this->previewLogicalHit(this->lastPreviewHit, this->lastPreviewVelocity);
 }
 
-void SourceArticulationOverrideEditor::replayLastPreview() {
+void LibraryArticulationEditor::replayLastPreview() {
     if (!this->hasLastPreview) return;
     if (this->lastPreviewWasMicSolo) this->previewMic(this->lastPreviewHit, this->lastPreviewMicCode, this->lastPreviewVelocity);
     else this->previewLogicalHit(this->lastPreviewHit, this->lastPreviewVelocity);
 }
 
-void SourceArticulationOverrideEditor::queueLogicalHitHover(const LogicalHitKey& hit) {
-    const auto hoverKey = SourceArticulationOverrideEditorHelpers::logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
+void LibraryArticulationEditor::queueLogicalHitHover(const LogicalHitKey& hit) {
+    const auto hoverKey = LibraryArticulationEditorDetail::logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
     if (this->hoverPreviewKey == hoverKey) return;
     this->hoverPreviewKey = hoverKey;
     const int previewGeneration = ++this->hoverPreviewGeneration;
-    juce::Component::SafePointer<SourceArticulationOverrideEditor> safeEditor(this);
+    juce::Component::SafePointer<LibraryArticulationEditor> safeEditor(this);
     juce::Timer::callAfterDelay(150, [safeEditor, previewGeneration, hit] {
         if (safeEditor == nullptr || safeEditor->hoverPreviewGeneration != previewGeneration) return;
         safeEditor->previewLogicalHit(hit, hit.namedVelocity);
     });
 }
 
-void SourceArticulationOverrideEditor::queueMicHover(const juce::String& micCode) {
+void LibraryArticulationEditor::queueMicHover(const juce::String& micCode) {
     if (!this->hasActiveHit) return;
     const auto hit = this->activeHit;
-    const auto hoverKey = SourceArticulationOverrideEditorHelpers::micHoverKey(hit.namedVelocity, hit.roundRobin, micCode);
+    const auto hoverKey = LibraryArticulationEditorDetail::micHoverKey(hit.namedVelocity, hit.roundRobin, micCode);
     if (this->hoverPreviewKey == hoverKey) return;
     this->hoverPreviewKey = hoverKey;
     const int previewGeneration = ++this->hoverPreviewGeneration;
-    juce::Component::SafePointer<SourceArticulationOverrideEditor> safeEditor(this);
+    juce::Component::SafePointer<LibraryArticulationEditor> safeEditor(this);
     juce::Timer::callAfterDelay(150, [safeEditor, previewGeneration, hit, micCode] {
         if (safeEditor == nullptr || safeEditor->hoverPreviewGeneration != previewGeneration) return;
         safeEditor->previewMic(hit, micCode, hit.namedVelocity);
     });
 }
 
-void SourceArticulationOverrideEditor::clearHoverPreview() {
+void LibraryArticulationEditor::clearHoverPreview() {
     this->hoverPreviewKey.clear();
     ++this->hoverPreviewGeneration;
 }
 
-void SourceArticulationOverrideEditor::updateHoverTarget(const juce::MouseEvent& event) {
+void LibraryArticulationEditor::updateHoverTarget(const juce::MouseEvent& event) {
     const auto micCode = this->getMicCodeAt(event);
     if (micCode.isNotEmpty()) {
         this->queueMicHover(micCode);
@@ -1042,7 +1042,7 @@ void SourceArticulationOverrideEditor::updateHoverTarget(const juce::MouseEvent&
     this->clearHoverPreview();
 }
 
-std::optional<SourceArticulationOverrideEditor::LogicalHitKey> SourceArticulationOverrideEditor::getMatrixHitAt(const juce::MouseEvent& event) const {
+std::optional<LibraryArticulationEditor::LogicalHitKey> LibraryArticulationEditor::getMatrixHitAt(const juce::MouseEvent& event) const {
     if (event.eventComponent == nullptr) return std::nullopt;
     if (event.eventComponent != &this->sampleMatrix && !this->sampleMatrix.isParentOf(event.eventComponent)) return std::nullopt;
     const auto matrixPosition = this->sampleMatrix.getLocalPoint(event.eventComponent, event.getPosition());
@@ -1055,7 +1055,7 @@ std::optional<SourceArticulationOverrideEditor::LogicalHitKey> SourceArticulatio
     return std::nullopt;
 }
 
-juce::String SourceArticulationOverrideEditor::getMicCodeAt(const juce::MouseEvent& event) const {
+juce::String LibraryArticulationEditor::getMicCodeAt(const juce::MouseEvent& event) const {
     if (event.eventComponent == nullptr) return {};
     for (int micIdx = 0; micIdx < static_cast<int>(this->micButtons.size()) && micIdx < static_cast<int>(this->micCodes.size()); ++micIdx) {
         const auto* button = this->micButtons[static_cast<size_t>(micIdx)].get();
@@ -1064,7 +1064,7 @@ juce::String SourceArticulationOverrideEditor::getMicCodeAt(const juce::MouseEve
     return {};
 }
 
-int SourceArticulationOverrideEditor::findNearestDivider(float xPosition, float maximumDistance) const {
+int LibraryArticulationEditor::findNearestDivider(float xPosition, float maximumDistance) const {
     int nearestDividerIdx = -1;
     float nearestDistance = maximumDistance;
     for (int dividerIdx = 0; dividerIdx + 1 < static_cast<int>(this->rangeInfo.levels.size()); ++dividerIdx) {
@@ -1077,33 +1077,33 @@ int SourceArticulationOverrideEditor::findNearestDivider(float xPosition, float 
     return nearestDividerIdx;
 }
 
-int SourceArticulationOverrideEditor::boundaryForX(float xPosition) const {
+int LibraryArticulationEditor::boundaryForX(float xPosition) const {
     if (this->rangeBounds.getWidth() <= 0.0f) return 1;
     const float proportion = juce::jlimit(0.0f, 1.0f, (xPosition - this->rangeBounds.getX()) / this->rangeBounds.getWidth());
     return juce::jlimit(1, 126, juce::roundToInt(proportion * 127.0f));
 }
 
-float SourceArticulationOverrideEditor::boundaryToX(int upperBoundary) const {
+float LibraryArticulationEditor::boundaryToX(int upperBoundary) const {
     return this->rangeBounds.getX() + this->rangeBounds.getWidth() * static_cast<float>(upperBoundary) / 127.0f;
 }
 
-int SourceArticulationOverrideEditor::getSelectedMinimum() const {
+int LibraryArticulationEditor::getSelectedMinimum() const {
     if (this->selectedDividerIdx <= 0) return 1;
     return this->rangeInfo.levels[static_cast<size_t>(this->selectedDividerIdx - 1)].effectiveUpperBoundary + 1;
 }
 
-int SourceArticulationOverrideEditor::getSelectedMaximum() const {
+int LibraryArticulationEditor::getSelectedMaximum() const {
     if (this->selectedDividerIdx < 0 || this->selectedDividerIdx + 1 >= static_cast<int>(this->rangeInfo.levels.size())) return 126;
     return this->rangeInfo.levels[static_cast<size_t>(this->selectedDividerIdx + 1)].effectiveUpperBoundary - 1;
 }
 
-int SourceArticulationOverrideEditor::getLevelIndexForVelocity(int velocity) const {
+int LibraryArticulationEditor::getLevelIndexForVelocity(int velocity) const {
     for (int levelIdx = 0; levelIdx < static_cast<int>(this->rangeInfo.levels.size()); ++levelIdx)
         if (velocity <= this->rangeInfo.levels[static_cast<size_t>(levelIdx)].effectiveUpperBoundary) return levelIdx;
     return this->rangeInfo.levels.empty() ? -1 : static_cast<int>(this->rangeInfo.levels.size()) - 1;
 }
 
-float SourceArticulationOverrideEditor::getBatchWheelBaseValue(BatchField field) const {
+float LibraryArticulationEditor::getBatchWheelBaseValue(BatchField field) const {
     if (this->selectedSampleIndices.empty()) return 0.0f;
     const int sampleIdx = this->selectedSampleIndices.back();
     if (sampleIdx < 0 || sampleIdx >= static_cast<int>(this->rangeInfo.samples.size())) return 0.0f;
@@ -1113,20 +1113,20 @@ float SourceArticulationOverrideEditor::getBatchWheelBaseValue(BatchField field)
     return sample.effectivePlaybackOffsetMs;
 }
 
-void SourceArticulationOverrideEditor::stepBalanceEditor(WheelTextEditor& editor, const DrumKitEngine::SourceBalanceInfo& balanceInfo, bool increase, bool fine) {
+void LibraryArticulationEditor::stepBalanceEditor(WheelTextEditor& editor, const DrumKitEngine::PlacementBalanceInfo& balanceInfo, bool increase, bool fine) {
     const auto editorValue = parseBalanceValue(editor.getText().trim());
     const int currentValue = editorValue.value_or(balanceInfo.effectiveValue.value_or(0));
     const int step = fine ? 1 : 4;
     editor.setText(balanceValueToString(juce::jlimit(-127, 127, currentValue + (increase ? step : -step))), false);
 }
 
-void SourceArticulationOverrideEditor::stepBatchEditor(WheelTextEditor& editor, BatchField field, bool increase, bool fine) {
-    const auto editorValue = SourceArticulationOverrideEditorHelpers::parseFiniteFloat(editor.getText().trim());
+void LibraryArticulationEditor::stepBatchEditor(WheelTextEditor& editor, BatchField field, bool increase, bool fine) {
+    const auto editorValue = LibraryArticulationEditorDetail::parseFiniteFloat(editor.getText().trim());
     const float currentValue = editorValue.value_or(this->getBatchWheelBaseValue(field));
     const float coarseStep = field == BatchField::ManualGain ? 0.5f : 10.0f;
     const float fineStep = field == BatchField::ManualGain ? 0.1f : 1.0f;
     const float step = fine ? fineStep : coarseStep;
-    editor.setText(SourceArticulationOverrideEditorHelpers::floatText(currentValue + (increase ? step : -step)), false);
+    editor.setText(LibraryArticulationEditorDetail::floatText(currentValue + (increase ? step : -step)), false);
     if (field == BatchField::ManualGain) {
         this->manualGainDirty = true;
         this->commitManualGain();
@@ -1139,7 +1139,7 @@ void SourceArticulationOverrideEditor::stepBatchEditor(WheelTextEditor& editor, 
     }
 }
 
-void SourceArticulationOverrideEditor::paint(juce::Graphics& graphics) {
+void LibraryArticulationEditor::paint(juce::Graphics& graphics) {
     graphics.setColour(UITheme::Colours::bgPanelRaised);
     graphics.fillRoundedRectangle(this->getLocalBounds().toFloat(), 6.0f);
     graphics.setColour(UITheme::Colours::borderMid);
@@ -1148,7 +1148,7 @@ void SourceArticulationOverrideEditor::paint(juce::Graphics& graphics) {
 
     graphics.setColour(UITheme::Colours::bgEditor);
     graphics.fillRoundedRectangle(this->rangeBounds, 4.0f);
-    if (!this->rangeInfo.sourceFound || this->rangeInfo.levels.empty()) {
+    if (!this->rangeInfo.libraryArticulationFound || this->rangeInfo.levels.empty()) {
         graphics.setColour(UITheme::Colours::textMuted);
         graphics.setFont(UITheme::Fonts::normal());
         graphics.drawText("Velocity ranges unavailable", this->rangeBounds.toNearestInt(), juce::Justification::centred);
@@ -1189,7 +1189,7 @@ void SourceArticulationOverrideEditor::paint(juce::Graphics& graphics) {
     }
 }
 
-void SourceArticulationOverrideEditor::resized() {
+void LibraryArticulationEditor::resized() {
     auto area = this->getLocalBounds().reduced(12);
     auto header = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->doneButton.setBounds(header.removeFromRight(UITheme::Sizes::standardControlHeight));
@@ -1285,7 +1285,7 @@ void SourceArticulationOverrideEditor::resized() {
     }
 }
 
-void SourceArticulationOverrideEditor::mouseDown(const juce::MouseEvent& event) {
+void LibraryArticulationEditor::mouseDown(const juce::MouseEvent& event) {
     auto& matrixHeader = this->sampleMatrix.getHeader();
     if (event.eventComponent == &matrixHeader || matrixHeader.isParentOf(event.eventComponent)) {
         const auto headerPosition = matrixHeader.getLocalPoint(event.eventComponent, event.getPosition());
@@ -1309,7 +1309,7 @@ void SourceArticulationOverrideEditor::mouseDown(const juce::MouseEvent& event) 
     if (this->rangeBounds.contains(localPosition)) this->previewVelocityAt(localPosition.x);
 }
 
-void SourceArticulationOverrideEditor::mouseDrag(const juce::MouseEvent& event) {
+void LibraryArticulationEditor::mouseDrag(const juce::MouseEvent& event) {
     if (!this->draggingDivider || this->selectedDividerIdx < 0) return;
     const auto localPosition = event.getEventRelativeTo(this).position;
     const int upperBoundary = juce::jlimit(this->getSelectedMinimum(), this->getSelectedMaximum(), this->boundaryForX(localPosition.x));
@@ -1317,7 +1317,7 @@ void SourceArticulationOverrideEditor::mouseDrag(const juce::MouseEvent& event) 
     if (upperBoundary != selectedLevel.effectiveUpperBoundary) this->applySelectedBoundary(upperBoundary, false);
 }
 
-void SourceArticulationOverrideEditor::mouseUp(const juce::MouseEvent& event) {
+void LibraryArticulationEditor::mouseUp(const juce::MouseEvent& event) {
     if (!this->draggingDivider) return;
     this->draggingDivider = false;
     const auto localPosition = event.getEventRelativeTo(this).position;
@@ -1329,11 +1329,11 @@ void SourceArticulationOverrideEditor::mouseUp(const juce::MouseEvent& event) {
     }
 }
 
-void SourceArticulationOverrideEditor::mouseEnter(const juce::MouseEvent& event) {
+void LibraryArticulationEditor::mouseEnter(const juce::MouseEvent& event) {
     this->updateHoverTarget(event);
 }
 
-void SourceArticulationOverrideEditor::mouseMove(const juce::MouseEvent& event) {
+void LibraryArticulationEditor::mouseMove(const juce::MouseEvent& event) {
     this->updateHoverTarget(event);
     const auto localPosition = event.getEventRelativeTo(this).position;
     const int dividerIdx = this->findNearestDivider(localPosition.x, 12.0f);
@@ -1355,7 +1355,7 @@ void SourceArticulationOverrideEditor::mouseMove(const juce::MouseEvent& event) 
     }
 }
 
-void SourceArticulationOverrideEditor::mouseExit(const juce::MouseEvent& event) {
+void LibraryArticulationEditor::mouseExit(const juce::MouseEvent& event) {
     if (event.eventComponent != nullptr) {
         const auto localPosition = this->getLocalPoint(event.eventComponent, event.getPosition());
         bool insidePreviewTarget = this->sampleMatrix.getBounds().contains(localPosition);
@@ -1369,7 +1369,7 @@ void SourceArticulationOverrideEditor::mouseExit(const juce::MouseEvent& event) 
     this->setTooltip({});
 }
 
-bool SourceArticulationOverrideEditor::keyPressed(const juce::KeyPress& key) {
+bool LibraryArticulationEditor::keyPressed(const juce::KeyPress& key) {
     if (key == juce::KeyPress::returnKey) {
         if (this->hasLastPreview) this->replayLastPreview();
         else if (this->hasActiveHit) this->previewLogicalHit(this->activeHit, this->activeHit.namedVelocity);
