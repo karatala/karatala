@@ -80,6 +80,10 @@ bool PluginProcessor::setVelocityResponseDefinition(const juce::String& definiti
     return true;
 }
 
+void PluginProcessor::parameterChanged(const juce::String& parameterId, float newValue) {
+    LOG(Debug, "CHECK IT OUT parameterChanged: " + parameterId + ": " + juce::String::formatted("%.3f", newValue));
+}
+
 //==============================================================================
 int PluginProcessor::getNumPrograms() {
     return 1; // NB: some hosts don't cope very well if you tell them there are 0 programs,

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include "../Engine/KitLibModel.h"
+#include "../Engine/InstrumentType.h"
 
 struct SourceItem {
     juce::String kitCodeRaw;
@@ -11,7 +11,7 @@ struct SourceItem {
     juce::String rawKitCode;
     juce::String rawInstCode;
     juce::String rawArtCode;
-    KitLib::InstrumentSpec::Type instType = KitLib::InstrumentSpec::Type::Unknown;
+    KitLib::InstrumentType instType = KitLib::InstrumentType::Unknown;
 
     juce::String fullPath() const {
         juce::String result = this->kitCodeRaw;

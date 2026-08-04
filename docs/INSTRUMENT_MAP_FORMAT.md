@@ -225,7 +225,7 @@ A full rebuild is still useful as an explicit recovery or debug action, but it m
 
 Current implementation and tests:
 
-- `../source/Engine/DrumKitEngineMappingModel.cpp`
+- `../source/Engine/InstrumentMap/InstrumentMap.cpp`
 - `../source/Engine/DrumKitEngine.cpp`
 - `../tests/TestInstrumentMap.cpp`
 

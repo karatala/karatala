@@ -29,7 +29,7 @@ public:
     void resized() override;
     void paint(juce::Graphics& g) override;
 
-    void setFilterType(KitLib::InstrumentSpec::Type type);
+    void setFilterType(KitLib::InstrumentType type);
     void setSelectedItem(int originalIndex);
     void setTitle(const juce::String& title);
     void focusItemList();
@@ -60,7 +60,7 @@ private:
     const std::vector<SourceItem>& allItems;
     const InstrumentCatalog& catalog;
     SelectionMode selectionMode = SelectionMode::Articulation;
-    KitLib::InstrumentSpec::Type selectedKind = KitLib::InstrumentSpec::Type::Unknown;
+    KitLib::InstrumentType selectedKind = KitLib::InstrumentType::Unknown;
     Category selectedCategory = Category::All;
     
     juce::Label titleLabel;
@@ -84,7 +84,7 @@ private:
     int actionRowBeforeMouseSelection = -1;
     bool mouseSelectionChanged = false;
     bool suppressSelectionPreview = false;
-    std::vector<KitLib::InstrumentSpec::Type> kindEntries;
+    std::vector<KitLib::InstrumentType> kindEntries;
     std::vector<juce::String> articulationEntries;
     std::vector<int> articulationSourceIndexes;
     std::set<juce::String> selectedArticulations;
@@ -95,11 +95,11 @@ private:
     void rebuildKindEntries();
     void rebuildArticulationEntries();
     void rebuildFiltered();
-    bool matchesCategory(KitLib::InstrumentSpec::Type type) const;
+    bool matchesCategory(KitLib::InstrumentType type) const;
     bool matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const;
-    Category categoryForType(KitLib::InstrumentSpec::Type type) const;
+    Category categoryForType(KitLib::InstrumentType type) const;
     static std::optional<InstrumentFamily> familyForCategory(Category category);
-    static juce::String kindLabel(KitLib::InstrumentSpec::Type type);
+    static juce::String kindLabel(KitLib::InstrumentType type);
     static juce::String wholeInstrumentKey(const SourceItem& item);
     static juce::String wholeInstrumentDisplayText(const SourceItem& item);
     void updateCategoryButtons();

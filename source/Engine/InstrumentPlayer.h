@@ -140,27 +140,8 @@ public:
         return this->adsr.isActive() && (this->envelopeState == EnvelopeState::Releasing || this->envelopeState == EnvelopeState::FadingOut);
     }
 
-    void clearCurrentNote() {
-        this->currentlyPlayingNote = -1;
-        this->currentlyPlayingSound = nullptr;
-        this->currentBuffer.reset();
-        this->currentPlayingMidiChannel = 0;
-        this->artRuntimeIdx = -1;
-        this->midiVelocity = 0;
-        this->envelopeState = EnvelopeState::Idle;
-        this->playbackDelaySamplesRemaining = 0;
-    }
-
-    void setTailShorteningFactor(float factor, float minClamp) {
-        factor = juce::jlimit(minClamp, 1.0f, factor);
-        if (factor >= this->tailShortenFactor)
-            return; // never lengthen here, only shorten
-        this->tailShortenFactor = factor;
-
-        juce::ADSR::Parameters p = this->adsr.getParameters();
-        p.release = this->releaseTimeSec * this->tailShortenFactor;
-        this->adsr.setParameters(p);
-    }
+    void clearCurrentNote();
+    void setTailShorteningFactor(float factor, float minClamp);
 
 private:
     friend class InstrumentPlayer;
@@ -220,9 +201,7 @@ public:
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> sourceGainCorrection { 1.0f };
     float lastSourceGainCorrection = 1.0f;
 
-    void setSourceGainCorrectionDb(float correctionDb) {
-        this->sourceGainCorrection.setTargetValue(juce::Decibels::decibelsToGain(correctionDb, -100.0f));
-    }
+    void setSourceGainCorrectionDb(float correctionDb);
 
 public:
     JUCE_LEAK_DETECTOR(InstrumentPlayerVoice)
@@ -360,19 +339,8 @@ public:
         LayerParameters parameters;
         std::vector<VelocityLevelRuntime> velocityLevels;
 
-        explicit ArticulationRuntime(StringsDictSingleton::Id newNameId, StringsDictSingleton::Id newExprId) : nameId(newNameId), exprId(newExprId) {
-            velocityToLevel.fill(-1);
-            for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) velocityGain[static_cast<size_t>(velocity)] = static_cast<float>(velocity) / 127.0f;
-            selectionTargetDb.fill(-100.0f);
-            selectionOffsetDb.fill(0.0f);
-            residualOutputDb.fill(0.0f);
-        }
-
-        juce::String getCodeRaw() const {
-            juce::String result = StringsDictSingleton::nameOf(nameId);
-            if (exprId != 0) result += "[" + StringsDictSingleton::nameOf(exprId) + "]";
-            return result;
-        }
+        explicit ArticulationRuntime(StringsDictSingleton::Id newNameId, StringsDictSingleton::Id newExprId);
+        juce::String getCodeRaw() const;
 
         void buildVelocityMapping(const VelocityResponse& velocityResponse);
     };
@@ -389,38 +357,12 @@ public:
         MicRouteOverrideIdMap micRouteOverrideIds;
         bool strictArticulationResolution = false;
         bool isValid() const { return defaultInstrument != nullptr; }
-        void setMicRouteOverrides(const std::unordered_map<juce::String, juce::String>& overrides) {
-            this->micRouteOverrides = overrides;
-            this->rebuildMicRouteOverrideIds();
-        }
-        void rebuildMicRouteOverrideIds() {
-            this->micRouteOverrideIds.clear();
-            this->micRouteOverrideIds.reserve(this->micRouteOverrides.size());
-            for (const auto& [micCode, outputId] : this->micRouteOverrides) {
-                const auto micCodeId = StringsDictSingleton::getId(micCode.trim().toLowerCase());
-                const auto outputKey = StringsDictSingleton::getId(outputId.trim().toLowerCase());
-                if (micCodeId != StringsDictSingleton::EMPTY && outputKey != StringsDictSingleton::EMPTY) this->micRouteOverrideIds[micCodeId] = outputKey;
-            }
-        }
+        void setMicRouteOverrides(const std::unordered_map<juce::String, juce::String>& overrides);
+        void rebuildMicRouteOverrideIds();
     };
 
-    InstrumentPlayer(DrumKitEngine* parentEngine, KitLayout::InstrumentSlot layoutInstrument
-        //DUNNO: add params to instrument or do it somewhere else?
-        // ,juce::RangedAudioParameter& gainParameter
-        // ,juce::RangedAudioParameter& panParameter
-        // ,juce::AudioParameterBool& phaseParameter
-    )
-        : parent(parentEngine)
-        , id(layoutInstrument.id)
-        , type(layoutInstrument.type)
-        , instrumentSlot(std::move(layoutInstrument))
-    {
-        this->lastCcArticulation.fill(-1);
-        this->pendingCcArticulation.fill(-1);
-        this->hihatNotePedalOpenCloseValues.fill(-1);
-        this->rebuildHiHatNoteChokeValues();
-    }
-    ~InstrumentPlayer() {}
+    InstrumentPlayer(DrumKitEngine* parentEngine, KitLayout::InstrumentSlot layoutInstrument);
+    ~InstrumentPlayer();
 
     void unloadInstrument();
     void loadInstrument(KitLib::InstrumentSpec* kitInstrument);
@@ -451,14 +393,8 @@ public:
     const std::unordered_map<juce::String, float>& getMicBleedLevels() const { return this->micBleedLevels; }
     void clearParameterOverrides();
     
-    void clearSounds() {
-        const juce::ScopedLock sl(this->lock);
-        this->sampledSoundPtrs.clear();
-    }
-    void clearVoices() {
-        const juce::ScopedLock sl(this->lock);
-        this->voices.clear();
-    }
+    void clearSounds();
+    void clearVoices();
     
     void handleMidiEvent(const juce::MidiMessage& midiMessage);
     bool playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity);

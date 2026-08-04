@@ -5,12 +5,17 @@
 # Ownership
 
 - `InstrumentPlayer*` owns per-instrument runtime tables, voices, note/controller handling, and rendering.
+- `ArticulationNames.h` owns shared articulation-name normalization and matching.
+- `InstrumentType*` owns the narrow shared instrument type and its text conversions.
+- `InstrumentCatalog*` owns instrument families, aliases, and mic selector matching.
+- `InstrumentMap/` owns instrument-map data, text parsing, normalized serialization, and shared identity matching.
 - `ArticulationSlotFallbackRules.h` owns built-in and user-overridden articulation-slot fallback order for whole-instrument map generation.
 - `KitLibModel*` owns parsed library metadata, including decay-envelope metadata and kit README text loaded during library scanning.
 - `LibraryKitOverrides*` owns sparse user-authored library kit corrections loaded from and saved to each kit's `kit-overrides.yml`.
 - `SampleLoader*` owns asynchronous sample loading and publication.
 - `DrumKitEngine*` coordinates instrument players, layouts, persistence, and process-block flow.
-- `LayoutManager*` owns kit and mic layout models and parsing.
+- `LayoutManager*` owns kit and mic layout models plus generic layout discovery. `LayoutYaml.cpp` owns YAML parsing, validation, and serialization.
+- `MicRoutingPlan*` owns resolved output allocation and mic-route lookup.
 
 # Local Contracts
 
@@ -64,3 +69,5 @@
 - Use listening tests for multi-mic hi-hat transitions; unit tests alone cannot validate timbre or phase coherence.
 
 # Child DOX Index
+
+- `InstrumentMap/AGENTS.md` - instrument-map data and text format ownership

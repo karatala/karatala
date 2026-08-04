@@ -1,7 +1,31 @@
-#include "DrumKitEngineMappingModel.h"
+#include "InstrumentMap.h"
 
-namespace DrumKitEngineMappingModel {
-namespace Detail {
+#include "../VelocityResponse.h"
+#include <algorithm>
+#include <utility>
+
+namespace InstrumentMapDetail {
+
+static juce::String makeLayerSortKey(const InstrumentMap::Layer& mapLayer) {
+    const auto articulationSlotCode = mapLayer.slotArticulationFilter.empty() ? juce::String() : mapLayer.slotArticulationFilter.front().trim().toLowerCase();
+    return mapLayer.slotId.trim().toLowerCase() + "/" + articulationSlotCode;
+}
+
+} // namespace InstrumentMapDetail
+
+juce::String InstrumentMap::identityKey(const juce::String& value) {
+    return value.trim().toLowerCase();
+}
+
+bool InstrumentMap::candidateMatches(const std::vector<juce::String>& candidates, const juce::String& id) {
+    const auto key = identityKey(id);
+    if (key.isEmpty()) return false;
+    for (const auto& candidate : candidates)
+        if (identityKey(candidate) == key) return true;
+    return false;
+}
+
+namespace InstrumentMapDetail {
 
 struct ParsedSlotRef {
     juce::String slotId;
@@ -73,7 +97,7 @@ static int findNextParamBoundary(const juce::String& text, int startIndex) {
     return -1;
 }
 
-} // namespace Detail
+} // namespace InstrumentMapDetail
 
 /**
  * Parses instrument map text.
@@ -87,10 +111,10 @@ static int findNextParamBoundary(const juce::String& text, int startIndex) {
  *   snare1/rim:MixedKit/snare-14/sidestick:vol=-3.5;bleed=oh:0.25,room:0.5;micRoute=oh:room
  *
  */
-ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::String& text) {
-    ParseResult<DrumKitEngine::InstrumentMap> result;
+ParseResult<InstrumentMap::Map> InstrumentMap::parseText(const juce::String& text) {
+    ParseResult<InstrumentMap::Map> result;
     const juce::StringArray lines = juce::StringArray::fromLines(text);
-    auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<DrumKitEngine::InstrumentMap>& parseResult, int lineNumber, std::optional<int>& target) {
+    auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<InstrumentMap::Map>& parseResult, int lineNumber, std::optional<int>& target) {
         auto trimmed = valueText.trim();
         if (trimmed.isEmpty() || !trimmed.containsOnly("+-0123456789")) {
             parseResult.addWarning("Line " + juce::String(lineNumber) + ": invalid value for '" + key + "': " + valueText);
@@ -120,8 +144,8 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
             continue;
         }
 
-        auto slotRef = Detail::parseSlotRef(slotText);
-        auto libraryRef = Detail::parseLibraryRef(targetText);
+        auto slotRef = InstrumentMapDetail::parseSlotRef(slotText);
+        auto libraryRef = InstrumentMapDetail::parseLibraryRef(targetText);
 
         if (slotRef.slotId.isEmpty()) {
             result.addWarning("Line " + juce::String(idx + 1) + ": instrument slot id is empty");
@@ -144,7 +168,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
             continue;
         }
 
-        DrumKitEngine::InstrumentMapLayer mapLayer;
+        InstrumentMap::Layer mapLayer;
         mapLayer.slotId = slotRef.slotId;
         mapLayer.slotArticulationFilter = slotRef.articulationSlotCodes;
         mapLayer.kitRef = libraryRef.kitRef;
@@ -166,7 +190,7 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
                 }
 
                 const auto key = paramsText.substring(start, equalsIdx).trim();
-                const int boundaryIdx = Detail::findNextParamBoundary(paramsText, equalsIdx + 1);
+                const int boundaryIdx = InstrumentMapDetail::findNextParamBoundary(paramsText, equalsIdx + 1);
                 const auto value = (boundaryIdx < 0 ? paramsText.substring(equalsIdx + 1) : paramsText.substring(equalsIdx + 1, boundaryIdx)).trim();
 
                 if (key == "tuning")
@@ -236,4 +260,64 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
     return result;
 }
 
+juce::String InstrumentMap::serialize(const Map& instrumentMap) {
+    juce::StringArray lines;
+
+    std::vector<const Layer*> sortedMapLayers;
+    sortedMapLayers.reserve(instrumentMap.layers.size());
+    for (const auto& mapLayer : instrumentMap.layers) sortedMapLayers.push_back(&mapLayer);
+
+    std::stable_sort(sortedMapLayers.begin(), sortedMapLayers.end(), [](const auto* leftMapLayer, const auto* rightMapLayer) {
+        return InstrumentMapDetail::makeLayerSortKey(*leftMapLayer) < InstrumentMapDetail::makeLayerSortKey(*rightMapLayer);
+    });
+
+    for (const auto* mapLayerPtr : sortedMapLayers) {
+        const auto& mapLayer = *mapLayerPtr;
+        if (mapLayer.slotId.trim().isEmpty() || mapLayer.kitRef.trim().isEmpty() || mapLayer.instCode.trim().isEmpty()) continue;
+        if (mapLayer.articulationFilter.size() != 1 || mapLayer.articulationFilter.front().trim().isEmpty() || mapLayer.slotArticulationFilter.size() != 1 || mapLayer.slotArticulationFilter.front().trim().isEmpty()) continue;
+
+        const auto slotRef = mapLayer.slotId.trim() + "/" + mapLayer.slotArticulationFilter.front().trim();
+
+        const auto libraryRef = mapLayer.kitRef.trim() + "/" + mapLayer.instCode.trim() + "/" + mapLayer.articulationFilter.front().trim();
+
+        juce::StringArray params;
+        if (mapLayer.tuningCents.has_value()) params.add("tuning=" + juce::String(*mapLayer.tuningCents));
+        if (mapLayer.attackTimeMs.has_value()) params.add("attack=" + juce::String(*mapLayer.attackTimeMs));
+        if (mapLayer.decayTimeMs.has_value()) params.add("decay=" + juce::String(*mapLayer.decayTimeMs));
+        if (mapLayer.volumeDb.has_value()) params.add("vol=" + juce::String(*mapLayer.volumeDb, 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
+        if (mapLayer.pan.has_value()) params.add("pan=" + juce::String(*mapLayer.pan));
+        if (mapLayer.velocityResponse.has_value()) params.add("velocityResponse=" + *mapLayer.velocityResponse);
+        if (mapLayer.flipLR || mapLayer.flipLRExplicit) params.add("flipLR=" + juce::String(mapLayer.flipLR ? "1" : "0"));
+        if (mapLayer.flipPhase) params.add("flipPhase=1");
+        if (!mapLayer.micBleedLevels.empty()) {
+            std::vector<juce::String> keys;
+            keys.reserve(mapLayer.micBleedLevels.size());
+            for (const auto& [key, value] : mapLayer.micBleedLevels) {
+                juce::ignoreUnused(value);
+                keys.push_back(key);
+            }
+            std::sort(keys.begin(), keys.end());
+            juce::StringArray bleedValues;
+            for (const auto& key : keys) bleedValues.add(key + ":" + juce::String(mapLayer.micBleedLevels.at(key), 4).trimCharactersAtEnd("0").trimCharactersAtEnd("."));
+            params.add("bleed=" + bleedValues.joinIntoString(","));
+        }
+        if (!mapLayer.micRouteOverrides.empty()) {
+            std::vector<juce::String> keys;
+            keys.reserve(mapLayer.micRouteOverrides.size());
+            for (const auto& [key, value] : mapLayer.micRouteOverrides) {
+                juce::ignoreUnused(value);
+                keys.push_back(key);
+            }
+            std::sort(keys.begin(), keys.end());
+            juce::StringArray routeValues;
+            for (const auto& key : keys) routeValues.add(key + ":" + mapLayer.micRouteOverrides.at(key));
+            params.add("micRoute=" + routeValues.joinIntoString(","));
+        }
+
+        auto line = slotRef + ":" + libraryRef;
+        if (!params.isEmpty()) line += ":" + params.joinIntoString(";");
+        lines.add(line);
+    }
+
+    return lines.joinIntoString("\n");
 }

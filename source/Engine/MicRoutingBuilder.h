@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Config/PluginLogger.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <set>
 #include "InstrumentPlayer.h"

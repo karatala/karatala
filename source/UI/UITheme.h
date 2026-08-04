@@ -1,7 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../Engine/KitLibModel.h"
+#include "../Engine/InstrumentType.h"
 
 namespace UITheme {
 namespace Symbols {
@@ -44,57 +44,57 @@ namespace Colours {
     inline const juce::Colour keyBlackText = juce::Colour(0xffEEEEEE);
     inline const juce::Colour transparent = juce::Colour(0x00000000);
 
-    inline juce::Colour instrumentType(KitLib::InstrumentSpec::Type type) {
+    inline juce::Colour instrumentType(KitLib::InstrumentType type) {
         switch (type) {
-            case KitLib::InstrumentSpec::Type::Kick:       return juce::Colour(0xffcc3333);
-            case KitLib::InstrumentSpec::Type::Snare:      return juce::Colour(0xffcc8833);
-            case KitLib::InstrumentSpec::Type::HiHat:      return juce::Colour(0xffcccc33);
-            case KitLib::InstrumentSpec::Type::Tom:        return juce::Colour(0xff3366cc);
-            case KitLib::InstrumentSpec::Type::Ride:       return juce::Colour(0xff33cccc);
-            case KitLib::InstrumentSpec::Type::Crash:      return juce::Colour(0xff9933cc);
-            case KitLib::InstrumentSpec::Type::Splash:     return juce::Colour(0xff33cc99);
-            case KitLib::InstrumentSpec::Type::China:      return juce::Colour(0xffcc3399);
-            case KitLib::InstrumentSpec::Type::Bell:
-            case KitLib::InstrumentSpec::Type::Stack:
-            case KitLib::InstrumentSpec::Type::Chopper:
-            case KitLib::InstrumentSpec::Type::Gong:
-            case KitLib::InstrumentSpec::Type::Karatala:
-            case KitLib::InstrumentSpec::Type::Cymbal:
+            case KitLib::InstrumentType::Kick:       return juce::Colour(0xffcc3333);
+            case KitLib::InstrumentType::Snare:      return juce::Colour(0xffcc8833);
+            case KitLib::InstrumentType::HiHat:      return juce::Colour(0xffcccc33);
+            case KitLib::InstrumentType::Tom:        return juce::Colour(0xff3366cc);
+            case KitLib::InstrumentType::Ride:       return juce::Colour(0xff33cccc);
+            case KitLib::InstrumentType::Crash:      return juce::Colour(0xff9933cc);
+            case KitLib::InstrumentType::Splash:     return juce::Colour(0xff33cc99);
+            case KitLib::InstrumentType::China:      return juce::Colour(0xffcc3399);
+            case KitLib::InstrumentType::Bell:
+            case KitLib::InstrumentType::Stack:
+            case KitLib::InstrumentType::Chopper:
+            case KitLib::InstrumentType::Gong:
+            case KitLib::InstrumentType::Karatala:
+            case KitLib::InstrumentType::Cymbal:
                 return juce::Colour(0xff6699cc);
-            case KitLib::InstrumentSpec::Type::Octoban:
-            case KitLib::InstrumentSpec::Type::Rototom:
-            case KitLib::InstrumentSpec::Type::Timbale:
-            case KitLib::InstrumentSpec::Type::Timpani:
-            case KitLib::InstrumentSpec::Type::Conga:
-            case KitLib::InstrumentSpec::Type::Bongo:
-            case KitLib::InstrumentSpec::Type::Djembe:
-            case KitLib::InstrumentSpec::Type::Cajon:
-            case KitLib::InstrumentSpec::Type::Taiko:
-            case KitLib::InstrumentSpec::Type::Surdo:
-            case KitLib::InstrumentSpec::Type::Mridangam:
-            case KitLib::InstrumentSpec::Type::TalkingDrum:
-            case KitLib::InstrumentSpec::Type::Drum:
+            case KitLib::InstrumentType::Octoban:
+            case KitLib::InstrumentType::Rototom:
+            case KitLib::InstrumentType::Timbale:
+            case KitLib::InstrumentType::Timpani:
+            case KitLib::InstrumentType::Conga:
+            case KitLib::InstrumentType::Bongo:
+            case KitLib::InstrumentType::Djembe:
+            case KitLib::InstrumentType::Cajon:
+            case KitLib::InstrumentType::Taiko:
+            case KitLib::InstrumentType::Surdo:
+            case KitLib::InstrumentType::Mridangam:
+            case KitLib::InstrumentType::TalkingDrum:
+            case KitLib::InstrumentType::Drum:
                 return juce::Colour(0xff6666cc);
-            case KitLib::InstrumentSpec::Type::Cowbell:
-            case KitLib::InstrumentSpec::Type::Tambourine:
-            case KitLib::InstrumentSpec::Type::Shaker:
-            case KitLib::InstrumentSpec::Type::Maracas:
-            case KitLib::InstrumentSpec::Type::Cabasa:
-            case KitLib::InstrumentSpec::Type::Guiro:
-            case KitLib::InstrumentSpec::Type::Claves:
-            case KitLib::InstrumentSpec::Type::Agogo:
-            case KitLib::InstrumentSpec::Type::WoodBlock:
-            case KitLib::InstrumentSpec::Type::TempleBlock:
-            case KitLib::InstrumentSpec::Type::Triangle:
-            case KitLib::InstrumentSpec::Type::Vibraslap:
-            case KitLib::InstrumentSpec::Type::Castanets:
-            case KitLib::InstrumentSpec::Type::SleighBells:
-            case KitLib::InstrumentSpec::Type::Whip:
-            case KitLib::InstrumentSpec::Type::Ratchet:
-            case KitLib::InstrumentSpec::Type::Percussion:
+            case KitLib::InstrumentType::Cowbell:
+            case KitLib::InstrumentType::Tambourine:
+            case KitLib::InstrumentType::Shaker:
+            case KitLib::InstrumentType::Maracas:
+            case KitLib::InstrumentType::Cabasa:
+            case KitLib::InstrumentType::Guiro:
+            case KitLib::InstrumentType::Claves:
+            case KitLib::InstrumentType::Agogo:
+            case KitLib::InstrumentType::WoodBlock:
+            case KitLib::InstrumentType::TempleBlock:
+            case KitLib::InstrumentType::Triangle:
+            case KitLib::InstrumentType::Vibraslap:
+            case KitLib::InstrumentType::Castanets:
+            case KitLib::InstrumentType::SleighBells:
+            case KitLib::InstrumentType::Whip:
+            case KitLib::InstrumentType::Ratchet:
+            case KitLib::InstrumentType::Percussion:
                 return juce::Colour(0xff999966);
-            case KitLib::InstrumentSpec::Type::Unknown:
-            case KitLib::InstrumentSpec::Type::Other:
+            case KitLib::InstrumentType::Unknown:
+            case KitLib::InstrumentType::Other:
                 return juce::Colour(0xff555555);
         }
         return juce::Colour(0xff555555);

@@ -17,13 +17,13 @@ This plan also covers helper tools for renaming sample files after parent folder
 - `../source/Engine/KitLibModel.cpp` currently parses kit folder info into `codeRaw`, `name`, `author`, and `license`.
 - `../source/Engine/KitLibModel.cpp` currently parses instrument folder info into `codeRaw`, `name`, `size`, optional `balance`, and `description`.
 - Balance is currently parsed from articulation folder suffixes, such as `center-L64` or `bow-R64`, and stored on `ArticulationSpec`.
-- `../source/Engine/DrumKitEngineMappingModel.cpp` parses instrument-map text lines like `slot:kit/instrument/articulation:params`.
+- `../source/Engine/InstrumentMap/InstrumentMap.cpp` parses instrument-map text lines like `slot:kit/instrument/articulation:params`.
 - `../source/Engine/DrumKitEngine.cpp` applies the parsed map and resolves kit, instrument, and articulation references.
 - `../source/Engine/KitLibModel.cpp` currently resolves kits by kit display name or full kit folder name.
 - `../source/Engine/KitLibModel.cpp` currently resolves instruments by exact full instrument folder name.
 - `../source/Engine/DrumKitEngine.cpp` currently reports missing kits, missing instruments, and unknown library articulations while applying a map.
 - `../source/UI/TroubleshootingPanel.*` owns the `Log Level` dropdown, log file buttons, important-log text area, and library reload button.
-- `../source/Config/PluginLogger.h` writes instance logs under the data path `logs` folder and keeps recent `Error`, `Warning`, and `Notice` lines for the troubleshooting UI.
+- `../source/Config/PluginLogger.*` writes instance logs under the data path `logs` folder and keeps recent `Error`, `Warning`, and `Notice` lines for the troubleshooting UI.
 
 ## Proposed Identity Rules
 

@@ -1,10 +1,12 @@
 #pragma once
 
+#include "../Config/LogLevel.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 #include "EngineSettings.h"
 #include "ArticulationSlotFallbackRules.h"
 #include "InstrumentCatalog.h"
+#include "InstrumentMap/InstrumentMap.h"
 #include "InstrumentPlayer.h"
 #include "LayoutManager.h"
 #include "MidiCrosstalkFilter.h"
@@ -24,30 +26,8 @@ public:
     // All output buses are mono; stereo mics use two mono buses with L/R suffixes
     static constexpr int TOTAL_HOST_OUTPUT_CHANNELS = 32;
 
-    struct InstrumentMapLayer {
-        juce::String slotId;
-        std::vector<juce::String> slotArticulationFilter;
-        juce::String kitRef;
-        juce::String instCode;
-        std::vector<juce::String> articulationFilter;
-        std::optional<int> tuningCents;
-        std::optional<int> attackTimeMs;
-        std::optional<int> decayTimeMs;
-        std::optional<float> volumeDb;    // -60 to +12 dB
-        std::optional<int> pan;           // -127 left to +127 right
-        std::optional<juce::String> velocityResponse;
-        bool flipLR = false;
-        bool flipLRExplicit = false;
-        bool flipPhase = false;
-        // Per-mic bleed levels: mic code -> gain (0.0 to 1.0)
-        std::unordered_map<juce::String, float> micBleedLevels;
-        // Per-mic route override: sample mic code -> output mic code.
-        std::unordered_map<juce::String, juce::String> micRouteOverrides;
-    };
-
-    struct InstrumentMap {
-        std::vector<InstrumentMapLayer> layers;
-    };
+    using InstrumentMapLayer = ::InstrumentMap::Layer;
+    using InstrumentMap = ::InstrumentMap::Map;
 
     struct VelocityResponsePreset {
         juce::String name;
@@ -129,13 +109,8 @@ public:
         int upperBoundary = 0;
     };
 
-    explicit DrumKitEngine() {
-        this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
-        this->micLayoutManagerPtr = std::make_unique<MicLayoutManager>();
-    }
-    ~DrumKitEngine() {
-        this->previewResolveThreadPool.removeAllJobs(true, 2000);
-    }
+    explicit DrumKitEngine();
+    ~DrumKitEngine();
 
     juce::File dataPath;
     const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::commonDocumentsDirectory).getChildFile("Karatala") };
@@ -281,10 +256,7 @@ public:
     bool updateSlotMicRoutesBatch(const std::vector<MicRouteTarget>& targets);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
     
-    void logMessage(const juce::String& msg, DebugLevel debugLevel) {
-        juce::ignoreUnused(msg);
-        if (this->maxDebugLevel >= debugLevel) DBG(DebugLevelToString(debugLevel) + ": " + msg);
-    } //FIXME: check is this dedicated only for ui and why cant we just use there LOG(Debug, ...) like everywhere else
+    void logMessage(const juce::String& msg, DebugLevel debugLevel);
     DebugLevel maxDebugLevel = DebugLevel::Error;
 
     EngineSettings engineSettings;

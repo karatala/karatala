@@ -6,7 +6,8 @@
 
 - `YamlHelper*` owns the lightweight YAML representation and parser behavior.
 - `Parsing*` owns shared parse results, wrapped-text parsing, and strict finite-number parsing.
-- `PluginLogger.h` owns log levels and logging macros.
+- `LogLevel.h` owns log-level values and text conversion declarations.
+- `PluginLogger.*` owns global logging, the writer thread, file output, and logging macros.
 - `Helpers.h` owns the remaining small configuration-oriented helpers while they are split by responsibility.
 
 # Local Contracts

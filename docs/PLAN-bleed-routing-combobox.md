@@ -73,7 +73,7 @@ kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m,d
 
 ### 1. Parse And Serialize
 
-Add to `DrumKitEngine::InstrumentMapLayer`:
+Add to `InstrumentMap::Layer`:
 
 ```cpp
 std::unordered_map<juce::String, juce::String> micRouteOverrides;
@@ -81,11 +81,11 @@ std::unordered_map<juce::String, juce::String> micRouteOverrides;
 
 Update:
 
-- `DrumKitEngineMappingModel::parseInstrumentMapText()`
+- `InstrumentMap::parseText()`
   - Add `micRoute` to `knownKeys`.
   - Parse `micCode:outputId` pairs.
   - Store normalized trimmed keys and values.
-- `DrumKitEngine::serializeInstrumentMap()`
+- `InstrumentMap::serialize()`
   - Serialize `micRoute=` after `bleed=`.
   - Sort by mic for stable output.
 - `DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint()`

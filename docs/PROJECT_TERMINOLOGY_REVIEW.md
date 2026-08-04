@@ -115,7 +115,7 @@ Use a feature namespace, such as `InstrumentMap`. Use `<Feature>Detail` for priv
 
 | Before | Approved direction |
 | --- | --- |
-| `DrumPadHelpers.h` is used only by `DrumPad.cpp`. | Move the code into `DrumPad.cpp` under `DrumPadDetail`, then delete the helper file. |
-| Instrument map types and operations are spread across engine files. | Start `source/Engine/InstrumentMap/` with `InstrumentMap.h` and `InstrumentMap.cpp` when that work starts. |
+| ✅ `DrumPadHelpers.h` was used only by `DrumPad.cpp`. | Its code is now private in `DrumPad.cpp` under `DrumPadDetail`; the helper header was deleted. |
+| ✅ Instrument map types and text operations were spread across engine files. | `source/Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp` now own the map data and text boundary. |
 | `UIHelpers` contains styling, library list, and MIDI operations. | Move each operation to its owning UI feature when related code changes. |
 | The old Kit page and the Browse page repeat preset logic. | Move useful behavior to Browse, remove the old Kit page, then rename Browse to Kit. |

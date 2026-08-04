@@ -10,8 +10,7 @@ The current format mostly lives in tests and parser code. That makes changes ris
 
 References checked:
 
-- `../source/Engine/DrumKitEngineMappingModel.cpp` parses instrument map text.
-- `../source/Engine/DrumKitEngine.cpp` serializes normalized instrument map text.
+- `../source/Engine/InstrumentMap/InstrumentMap.cpp` parses and serializes normalized instrument map text.
 - `../tests/TestInstrumentMap.cpp` has the best current examples.
 - `../docs/TODO11_PAD_POPUP_LAYER_PARAMETERS_PLAN.md` documents current pad popup params.
 
@@ -120,8 +119,8 @@ Target functions:
   - `serializeSettingsYaml()` - say it writes the normalized settings YAML.
   - `parseInstrumentMapText()` - describe instrument map line format and params.
   - `serializeInstrumentMap()` - say it normalizes and sorts map text.
-- `../source/Engine/DrumKitEngineMappingModel.h`
-  - `parseInstrumentMapText()` - repeat the instrument-map grammar because this is the direct parser module.
+- `../source/Engine/InstrumentMap/InstrumentMap.h`
+  - `parseText()` and `serialize()` - document the direct instrument-map text boundary.
 - `../source/Engine/LayoutManager.h`
   - `LayoutTraits<MicLayout>::parseYaml()` - describe mic layout YAML with one mic example.
   - `LayoutTraits<KitLayout>::parseYaml()` - describe kit layout YAML with one instrument/articulation example.

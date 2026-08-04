@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Config/PluginLogger.h"
+#include "../Config/LogLevel.h"
 #include "ParameterPot.h"
 #include "UITheme.h"
 

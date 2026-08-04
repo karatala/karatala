@@ -1,5 +1,6 @@
 #include "InstrumentPlayer.h"
-#include "ArticulationNameHelpers.h"
+#include "../Config/PluginLogger.h"
+#include "ArticulationNames.h"
 #include "DrumKitEngine.h"
 #include "MicRoutingBuilder.h"
 #include "SampleLoader.h"
@@ -686,7 +687,7 @@ std::vector<InstrumentPlayer::ResolvedArticulationSlotBinding> InstrumentPlayer:
         if (!routingContext.allowedArticulationFilters.empty()) {
             bool matchesFilter = false;
             for (const auto& artFilter : routingContext.allowedArticulationFilters) {
-                if (ArticulationNameHelpers::mapFilterMatchesArticulation(artFilter, articulationSlot.codeRaw)) {
+                if (ArticulationNames::mapFilterMatchesArticulation(artFilter, articulationSlot.codeRaw)) {
                     matchesFilter = true;
                     break;
                 }

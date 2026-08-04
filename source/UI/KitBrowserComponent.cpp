@@ -1,6 +1,6 @@
 #include "KitBrowserComponent.h"
 
-#include "../Engine/ArticulationNameHelpers.h"
+#include "../Engine/ArticulationNames.h"
 #include "CompactModalDialog.h"
 #include "KitHomePanelHelpers.h"
 #include "UIHelpers.h"
@@ -260,7 +260,7 @@ std::vector<KitPreviewGrid::Item> KitBrowserComponent::buildPresetPreviewItems(c
             if (!source.rawKitCode.equalsIgnoreCase(kit->meta.codeRaw) || !source.rawInstCode.equalsIgnoreCase(instrument->meta.codeRaw)) continue;
             if (!libraryArticulationFilters.empty()) {
                 const bool matches = std::any_of(libraryArticulationFilters.begin(), libraryArticulationFilters.end(), [&source](const auto& filter) {
-                    return ArticulationNameHelpers::mapFilterMatchesArticulation(filter, source.rawArtCode);
+                    return ArticulationNames::mapFilterMatchesArticulation(filter, source.rawArtCode);
                 });
                 if (!matches) continue;
             }

@@ -1,4 +1,5 @@
 #include "SampleLoader.h"
+#include "../Config/PluginLogger.h"
 #include <juce_events/juce_events.h>
 #include <algorithm>
 #include <chrono>

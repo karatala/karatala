@@ -1,4 +1,4 @@
-#include "../source/Engine/ArticulationNameHelpers.h"
+#include "../source/Engine/ArticulationNames.h"
 #include "../source/Engine/DrumKitEngine.h"
 #include "../source/Engine/InstrumentPlayer.h"
 #include "../source/Engine/MicRoutingPlan.h"
@@ -327,7 +327,7 @@ TEST_CASE("Plan item 8 - repeated string helper baseline", "[benchmark][PlanItem
     BENCHMARK("Repeated articulation trim and case matching") {
         int matches = 0;
         for (const auto& name : names)
-            if (ArticulationNameHelpers::articulationCodeMatches(name, "center 0")) ++matches;
+            if (ArticulationNames::articulationCodeMatches(name, "center 0")) ++matches;
         return matches;
     };
 }

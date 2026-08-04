@@ -1,5 +1,5 @@
 #include "SourcePickerPopup.h"
-#include "../Engine/ArticulationNameHelpers.h"
+#include "../Engine/ArticulationNames.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 
@@ -71,7 +71,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->updateCategoryButtons();
 }
 
-void SourcePickerPopup::setFilterType(KitLib::InstrumentSpec::Type type) {
+void SourcePickerPopup::setFilterType(KitLib::InstrumentType type) {
     this->selectedCategory = this->categoryForType(type);
     this->selectedKind = type;
     this->rebuildKindEntries();
@@ -160,7 +160,7 @@ void SourcePickerPopup::setCategory(Category category) {
         return;
 
     this->selectedCategory = category;
-    this->selectedKind = KitLib::InstrumentSpec::Type::Unknown;
+    this->selectedKind = KitLib::InstrumentType::Unknown;
     this->rebuildKindEntries();
     this->rebuildArticulationEntries();
     this->rebuildFiltered();
@@ -177,7 +177,7 @@ std::optional<InstrumentFamily> SourcePickerPopup::familyForCategory(Category ca
     return std::nullopt;
 }
 
-SourcePickerPopup::Category SourcePickerPopup::categoryForType(KitLib::InstrumentSpec::Type type) const {
+SourcePickerPopup::Category SourcePickerPopup::categoryForType(KitLib::InstrumentType type) const {
     switch (this->catalog.familyFor(type)) {
         case InstrumentFamily::Drum: return Category::Drums;
         case InstrumentFamily::Cymbal: return Category::Cymbals;
@@ -187,15 +187,15 @@ SourcePickerPopup::Category SourcePickerPopup::categoryForType(KitLib::Instrumen
     return Category::All;
 }
 
-bool SourcePickerPopup::matchesCategory(KitLib::InstrumentSpec::Type type) const {
+bool SourcePickerPopup::matchesCategory(KitLib::InstrumentType type) const {
     const auto categoryFamily = familyForCategory(this->selectedCategory);
     if (!categoryFamily.has_value())
         return true;
     return this->catalog.familyFor(type) == *categoryFamily;
 }
 
-juce::String SourcePickerPopup::kindLabel(KitLib::InstrumentSpec::Type type) {
-    return KitLib::InstrumentSpec::typeToString(type).replaceCharacter('_', ' ');
+juce::String SourcePickerPopup::kindLabel(KitLib::InstrumentType type) {
+    return KitLib::instrumentTypeToString(type).replaceCharacter('_', ' ');
 }
 
 juce::String SourcePickerPopup::wholeInstrumentKey(const SourceItem& item) {
@@ -208,9 +208,9 @@ juce::String SourcePickerPopup::wholeInstrumentDisplayText(const SourceItem& ite
 }
 
 void SourcePickerPopup::rebuildKindEntries() {
-    std::set<KitLib::InstrumentSpec::Type> seenKinds;
+    std::set<KitLib::InstrumentType> seenKinds;
     for (const auto& item : this->allItems) {
-        if (item.instType == KitLib::InstrumentSpec::Type::Unknown)
+        if (item.instType == KitLib::InstrumentType::Unknown)
             continue;
         if (!this->matchesCategory(item.instType))
             continue;
@@ -222,12 +222,12 @@ void SourcePickerPopup::rebuildKindEntries() {
         return kindLabel(left).compareIgnoreCase(kindLabel(right)) < 0;
     });
 
-    if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && !vectorContains(this->kindEntries, this->selectedKind))
-        this->selectedKind = KitLib::InstrumentSpec::Type::Unknown;
+    if (this->selectedKind != KitLib::InstrumentType::Unknown && !vectorContains(this->kindEntries, this->selectedKind))
+        this->selectedKind = KitLib::InstrumentType::Unknown;
 
     this->kindListBox.updateContent();
     int selectedRow = 0;
-    if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown) {
+    if (this->selectedKind != KitLib::InstrumentType::Unknown) {
         auto it = std::find(this->kindEntries.begin(), this->kindEntries.end(), this->selectedKind);
         if (it != this->kindEntries.end())
             selectedRow = static_cast<int>(std::distance(this->kindEntries.begin(), it)) + 1;
@@ -260,8 +260,8 @@ void SourcePickerPopup::rebuildArticulationEntries() {
     std::set<juce::String> availableArticulations;
     for (const auto& item : this->allItems) {
         if (!this->matchesCategory(item.instType)) continue;
-        if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && item.instType != this->selectedKind) continue;
-        const auto articulationName = ArticulationNameHelpers::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
+        if (this->selectedKind != KitLib::InstrumentType::Unknown && item.instType != this->selectedKind) continue;
+        const auto articulationName = ArticulationNames::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
         if (articulationName.isNotEmpty()) availableArticulations.insert(articulationName);
     }
 
@@ -285,10 +285,10 @@ void SourcePickerPopup::rebuildArticulationEntries() {
 bool SourcePickerPopup::matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const {
     if (!this->matchesCategory(item.instType))
         return false;
-    if (this->selectedKind != KitLib::InstrumentSpec::Type::Unknown && item.instType != this->selectedKind)
+    if (this->selectedKind != KitLib::InstrumentType::Unknown && item.instType != this->selectedKind)
         return false;
     if (this->selectionMode == SelectionMode::Articulation && !this->selectedArticulations.empty()) {
-        const auto articulationName = ArticulationNameHelpers::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
+        const auto articulationName = ArticulationNames::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
         if (this->selectedArticulations.find(articulationName) == this->selectedArticulations.end()) return false;
     }
 
@@ -372,7 +372,7 @@ int SourcePickerPopup::KindListModel::getNumRows() {
 }
 
 void SourcePickerPopup::KindListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
-    const bool selected = (rowNumber == 0 && this->owner.selectedKind == KitLib::InstrumentSpec::Type::Unknown)
+    const bool selected = (rowNumber == 0 && this->owner.selectedKind == KitLib::InstrumentType::Unknown)
         || (rowNumber > 0
             && rowNumber - 1 < static_cast<int>(this->owner.kindEntries.size())
             && this->owner.kindEntries[static_cast<size_t>(rowNumber - 1)] == this->owner.selectedKind);
@@ -393,7 +393,7 @@ void SourcePickerPopup::KindListModel::paintListBoxItem(int rowNumber, juce::Gra
 void SourcePickerPopup::KindListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
     juce::ignoreUnused(event);
     if (row <= 0) {
-        this->owner.selectedKind = KitLib::InstrumentSpec::Type::Unknown;
+        this->owner.selectedKind = KitLib::InstrumentType::Unknown;
     } else if (row - 1 < static_cast<int>(this->owner.kindEntries.size())) {
         this->owner.selectedKind = this->owner.kindEntries[static_cast<size_t>(row - 1)];
     } else {

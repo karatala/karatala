@@ -1,12 +1,12 @@
 # Codebase Maintainability Review
 
-Status: static review complete. Project decisions updated on 2026-07-31. Implementation started on 2026-08-04. Completed work is marked with ✅.
+Status: static review complete. Project decisions updated on 2026-07-31. Phases 1 and 2 were implemented on 2026-08-04. Completed work is marked with ✅.
 
 ## Scope and limits
 
 This review covers first-party C++ source, tests, benchmarks, and Python tools. It does not review JUCE, other vendored code, or generated instrument data as normal hand-written source.
 
-File sizes and include paths were checked statically.
+File sizes and include paths were checked statically. The measured facts below are the baseline before implementation unless a row is marked as updated.
 
 The include result measures potential rebuild scope:
 
@@ -75,7 +75,7 @@ The scan found 46 production `.cpp` files and 17 test or benchmark `.cpp` files.
 
 ## Priority 1: Reduce include coupling
 
-### 1. Remove logging from the general helper chain
+### 1. ✅ Remove logging from the general helper chain
 
 Evidence:
 
@@ -94,7 +94,7 @@ Suggestion:
 
 Expected result: a logger implementation change no longer reaches almost every production file through `Helpers.h`.
 
-### 2. Separate instrument type from the full library model
+### 2. ✅ Separate instrument type from the full library model
 
 Evidence:
 
@@ -111,7 +111,7 @@ Suggestion:
 
 Expected result: a library model edit does not force most UI files to parse the model chain.
 
-### 3. Move YAML implementation out of `LayoutManager.h`
+### 3. ✅ Move YAML implementation out of `LayoutManager.h`
 
 Evidence:
 
@@ -128,11 +128,11 @@ Suggestion:
 
 Expected result: a YAML parser change has a smaller potential rebuild scope.
 
-### 4. Remove full engine includes from map helper headers
+### 4. ✅ Remove full engine includes from map helper headers
 
 Evidence:
 
-- [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h), [DrumKitEngineMappingModel.h](../source/Engine/DrumKitEngineMappingModel.h), and [DrumKitEngineTextView.h](../source/Engine/DrumKitEngineTextView.h) include all of `DrumKitEngine.h`.
+- Before Phase 2, `DrumKitEngineMapHelpers.h`, `DrumKitEngineMappingModel.h`, and `DrumKitEngineTextView.h` included all of `DrumKitEngine.h`.
 - They need nested map types such as `DrumKitEngine::InstrumentMapLayer`.
 - [DrumKitEngine.h](../source/Engine/DrumKitEngine.h) includes the full instrument player, layout, catalog, routing, loader, settings, and velocity response headers.
 
@@ -145,7 +145,7 @@ Suggestion:
 
 Expected result: map parsing, formatting, and UI code can use map data without including the full audio engine.
 
-### 5. Move other complete implementations out of headers
+### 5. ✅ Move practical complete implementations out of headers
 
 Review these after the first four changes:
 
@@ -242,18 +242,18 @@ Use names that describe the owner. Prefer `InstrumentMap`, `ArticulationNames`, 
 
 ### Current helper inventory
 
-There are 12 files with `Helper` or `Helpers` in their name. The count is not large, but some files mix unrelated work or have unclear names.
+There are now 9 files with `Helper` or `Helpers` in their name. The count is not large, but some files still mix unrelated work or have unclear names.
 
 | Current file or group | Suggested ownership |
 | --- | --- |
 | [Helpers.h](../source/Config/Helpers.h) | ✅ Parse results and wrapped-text parsing moved to `Config/Parsing`. Continue splitting path resolution, MIDI values, and string IDs by concern. |
 | [YamlHelper.h](../source/Config/YamlHelper.h) and [YamlHelper.cpp](../source/Config/YamlHelper.cpp) | This is one cohesive YAML module. It can stay in `Config`. Rename it to `YamlParser` only when related code is already being changed. |
-| [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h), its `.cpp`, the mapping model, and the text view | Create `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`. Keep the related work together first. Add another file only for a separate, substantial responsibility. |
-| [ArticulationNameHelpers.h](../source/Engine/ArticulationNameHelpers.h) | Rename it to `ArticulationNames.h` and keep it in `Engine` while it is one cohesive file. Create an articulation feature folder only if that module grows to several files. |
-| [DrumKitEnginePreviewHelpers.h](../source/Engine/DrumKitEnginePreviewHelpers.h) | It currently has one production caller. Move its private logic into `DrumKitEnginePreview.cpp`. Create `PreviewSampleSelector` only if a second real caller appears. |
+| [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h) and its `.cpp` | ✅ Map data, parsing, serialization, and shared identity matching moved to `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`. The remaining operations no longer include the full engine. |
+| [ArticulationNames.h](../source/Engine/ArticulationNames.h) | ✅ Renamed by responsibility and kept as one cohesive `Engine` header. Create an articulation feature folder only if this module grows to several files. |
+| `DrumKitEnginePreviewHelpers.h` | ✅ Removed. Its one-use private logic is in `DrumKitEngine.cpp` until the planned engine preview file split. |
 | [UIHelpers.h](../source/UI/UIHelpers.h) and its `.cpp` | Split by concern. Control styling belongs in `UI/Controls/`. Keep library item building with `LibraryItem`. MIDI display and assignment operations stay with the MIDI controls. |
 | [KitHomePanelHelpers.h](../source/UI/KitHomePanelHelpers.h) | Do not reorganize this file first. Move the required choices and preset rules to Browse, then delete this helper with the old Kit page. |
-| [DrumPadHelpers.h](../source/UI/DrumPadHelpers.h) | It has one production caller. Move the private operations into `DrumPad.cpp`. |
+| `DrumPadHelpers.h` | ✅ Removed. Its private operations are in `DrumPad.cpp`. |
 | [ParameterPotHelpers.h](../source/UI/ParameterPotHelpers.h) | Its layout and value conversion rules have several callers. Move it to `UI/Controls/` and rename it to `ParameterPotSupport.h`, or make the operations named static members when they directly belong to `ParameterPot`. |
 
 Suggested feature folders:
@@ -286,9 +286,9 @@ Use these rules:
 
 ### Safe migration order
 
-1. Remove one-use helper headers by moving their code into the owning `.cpp`.
+1. ✅ Remove one-use helper headers by moving their code into the owning `.cpp`.
 2. Remove `KitHomePanelHelpers.h` as part of the Kit page replacement.
-3. Create the `InstrumentMap` feature pair when map types are extracted from `DrumKitEngine`.
+3. ✅ Create the `InstrumentMap` feature pair when map types are extracted from `DrumKitEngine`.
 4. Split `UIHelpers` when the first related UI component is changed.
 5. Split `Config/Helpers.h` one concern at a time. ✅ Parsing support moved first to the cohesive `Config/Parsing` module. Do not create a new general helper file.
 
@@ -360,14 +360,14 @@ Verification for this phase:
 
 ### Phase 2: Helper and header boundaries
 
-1. Remove the logger include from `Helpers.h` and add direct includes at real users.
-2. Move logger implementation to `.cpp`.
-3. Extract the narrow instrument type.
-4. Move layout YAML implementation out of `LayoutManager.h`.
-5. Move instrument map types into `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`.
-6. Merge the accepted identity functions into the same feature pair.
-7. Remove one-use helper headers.
-8. Move routing, catalog, and instrument player implementation out of headers where practical.
+1. ✅ Removed the logger include from `Helpers.h` and added direct includes at real users.
+2. ✅ Moved logger implementation to `PluginLogger.cpp` and log-level declarations to `LogLevel.h`.
+3. ✅ Extracted the narrow instrument type.
+4. ✅ Moved layout YAML implementation out of `LayoutManager.h`.
+5. ✅ Moved instrument map types, parsing, and serialization into `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`.
+6. ✅ Merged the accepted identity functions into the same feature pair.
+7. ✅ Removed the one-use preview, map text-view, and drum-pad helper headers.
+8. ✅ Moved catalog and mic-routing implementation plus practical non-trivial engine and instrument-player methods out of headers.
 
 Verification for this phase:
 

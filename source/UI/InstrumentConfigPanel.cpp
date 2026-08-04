@@ -1,5 +1,5 @@
 #include "InstrumentConfigPanel.h"
-#include "../Engine/ArticulationNameHelpers.h"
+#include "../Engine/ArticulationNames.h"
 #include "../Engine/DrumKitEngineMapHelpers.h"
 #include "UIHelpers.h"
 #include <algorithm>
@@ -90,7 +90,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                 const auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(mapLayer);
                 bool matchesArticulationSlot = articulationSlotFilters.empty();
                 for (const auto& articulationSlotFilter : articulationSlotFilters) {
-                    if (ArticulationNameHelpers::mapFilterMatchesArticulation(articulationSlotFilter, artName)) {
+                    if (ArticulationNames::mapFilterMatchesArticulation(articulationSlotFilter, artName)) {
                         matchesArticulationSlot = true;
                         break;
                     }

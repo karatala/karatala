@@ -1,8 +1,86 @@
 #include "InstrumentPlayer.h"
+#include "../Config/PluginLogger.h"
 #include "DrumKitEngine.h"
 #include "HiHatTransitionPolicy.h"
 #include <limits>
 #include <cmath>
+
+void InstrumentPlayerVoice::clearCurrentNote() {
+    this->currentlyPlayingNote = -1;
+    this->currentlyPlayingSound = nullptr;
+    this->currentBuffer.reset();
+    this->currentPlayingMidiChannel = 0;
+    this->artRuntimeIdx = -1;
+    this->midiVelocity = 0;
+    this->envelopeState = EnvelopeState::Idle;
+    this->playbackDelaySamplesRemaining = 0;
+}
+
+void InstrumentPlayerVoice::setTailShorteningFactor(float factor, float minClamp) {
+    factor = juce::jlimit(minClamp, 1.0f, factor);
+    if (factor >= this->tailShortenFactor) return;
+    this->tailShortenFactor = factor;
+
+    juce::ADSR::Parameters parameters = this->adsr.getParameters();
+    parameters.release = this->releaseTimeSec * this->tailShortenFactor;
+    this->adsr.setParameters(parameters);
+}
+
+void InstrumentPlayerVoice::setSourceGainCorrectionDb(float correctionDb) {
+    this->sourceGainCorrection.setTargetValue(juce::Decibels::decibelsToGain(correctionDb, -100.0f));
+}
+
+InstrumentPlayer::ArticulationRuntime::ArticulationRuntime(StringsDictSingleton::Id newNameId, StringsDictSingleton::Id newExprId) : nameId(newNameId), exprId(newExprId) {
+    this->velocityToLevel.fill(-1);
+    for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) this->velocityGain[static_cast<size_t>(velocity)] = static_cast<float>(velocity) / 127.0f;
+    this->selectionTargetDb.fill(-100.0f);
+    this->selectionOffsetDb.fill(0.0f);
+    this->residualOutputDb.fill(0.0f);
+}
+
+juce::String InstrumentPlayer::ArticulationRuntime::getCodeRaw() const {
+    juce::String result = StringsDictSingleton::nameOf(this->nameId);
+    if (this->exprId != 0) result += "[" + StringsDictSingleton::nameOf(this->exprId) + "]";
+    return result;
+}
+
+void InstrumentPlayer::RoutingContext::setMicRouteOverrides(const std::unordered_map<juce::String, juce::String>& overrides) {
+    this->micRouteOverrides = overrides;
+    this->rebuildMicRouteOverrideIds();
+}
+
+void InstrumentPlayer::RoutingContext::rebuildMicRouteOverrideIds() {
+    this->micRouteOverrideIds.clear();
+    this->micRouteOverrideIds.reserve(this->micRouteOverrides.size());
+    for (const auto& [micCode, outputId] : this->micRouteOverrides) {
+        const auto micCodeId = StringsDictSingleton::getId(micCode.trim().toLowerCase());
+        const auto outputKey = StringsDictSingleton::getId(outputId.trim().toLowerCase());
+        if (micCodeId != StringsDictSingleton::EMPTY && outputKey != StringsDictSingleton::EMPTY) this->micRouteOverrideIds[micCodeId] = outputKey;
+    }
+}
+
+InstrumentPlayer::InstrumentPlayer(DrumKitEngine* parentEngine, KitLayout::InstrumentSlot layoutInstrument)
+    : parent(parentEngine)
+    , id(layoutInstrument.id)
+    , type(layoutInstrument.type)
+    , instrumentSlot(std::move(layoutInstrument)) {
+    this->lastCcArticulation.fill(-1);
+    this->pendingCcArticulation.fill(-1);
+    this->hihatNotePedalOpenCloseValues.fill(-1);
+    this->rebuildHiHatNoteChokeValues();
+}
+
+InstrumentPlayer::~InstrumentPlayer() = default;
+
+void InstrumentPlayer::clearSounds() {
+    const juce::ScopedLock scopedLock(this->lock);
+    this->sampledSoundPtrs.clear();
+}
+
+void InstrumentPlayer::clearVoices() {
+    const juce::ScopedLock scopedLock(this->lock);
+    this->voices.clear();
+}
 
 
 

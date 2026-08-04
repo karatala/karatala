@@ -1,6 +1,6 @@
 #include "UIHelpers.h"
 
-#include "../Engine/ArticulationNameHelpers.h"
+#include "../Engine/ArticulationNames.h"
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <unordered_set>
@@ -207,12 +207,12 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
     needleParts.addTokens(needle, "/", "");
     needleParts.removeEmptyStrings();
     if (needleParts.size() >= 3) {
-        const auto needleBaseArt = ArticulationNameHelpers::normalizeArticulationName(needleParts[2]);
+        const auto needleBaseArt = ArticulationNames::normalizeArticulationName(needleParts[2]);
         for (int idx = 0; idx < static_cast<int>(sourceItems.size()); ++idx) {
             const auto& item = sourceItems[static_cast<size_t>(idx)];
             if (item.kitCodeRaw.toLowerCase() != needleParts[0] && item.rawKitCode.toLowerCase() != needleParts[0]) continue;
             if (item.instCode.toLowerCase() != needleParts[1] && item.rawInstCode.toLowerCase() != needleParts[1]) continue;
-            if (ArticulationNameHelpers::normalizeArticulationName(item.artCode) == needleBaseArt || ArticulationNameHelpers::normalizeArticulationName(item.rawArtCode) == needleBaseArt) return idx;
+            if (ArticulationNames::normalizeArticulationName(item.artCode) == needleBaseArt || ArticulationNames::normalizeArticulationName(item.rawArtCode) == needleBaseArt) return idx;
         }
     }
     return -1;
@@ -223,10 +223,10 @@ bool usesLegacyArticulationSlotExpressionFilter(const std::vector<juce::String>&
     if (articulationSlotFilters.empty()) return false;
 
     for (const auto& filter : articulationSlotFilters)
-        if (ArticulationNameHelpers::articulationCodeMatches(filter, articulationSlotCode)) return false;
+        if (ArticulationNames::articulationCodeMatches(filter, articulationSlotCode)) return false;
 
     for (const auto& filter : articulationSlotFilters)
-        if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, articulationSlotCode)) return true;
+        if (ArticulationNames::mapFilterMatchesArticulation(filter, articulationSlotCode)) return true;
 
     return false;
 }
@@ -241,7 +241,7 @@ juce::String resolveLegacyHihatSourcePath(const std::vector<SourceItem>& sourceI
     sourceParts.removeEmptyStrings();
     if (sourceParts.size() < 3) return sourcePath;
 
-    const auto libraryArticulation = ArticulationNameHelpers::baseArticulationName(sourceParts[2]);
+    const auto libraryArticulation = ArticulationNames::baseArticulationName(sourceParts[2]);
     const auto articulationSlotExpression = articulationSlotCode.substring(expressionStartIdx + 1, expressionEndIdx).trim();
     if (libraryArticulation.isEmpty() || articulationSlotExpression.isEmpty()) return sourcePath;
 

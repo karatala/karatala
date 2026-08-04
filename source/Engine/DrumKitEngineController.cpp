@@ -1,5 +1,6 @@
 #include "DrumKitEngine.h"
 #include "../Config/Helpers.h"
+#include "../Config/PluginLogger.h"
 
 void DrumKitEngine::init(juce::AudioProcessorValueTreeState& treeState) {
     this->initGlobalSettings();

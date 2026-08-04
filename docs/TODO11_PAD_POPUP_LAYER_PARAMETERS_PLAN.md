@@ -17,7 +17,7 @@ Keep the current map syntax:
 
 - `PadContextPopup` already shows Gain, Flip L/R, Flip Phase, and per-mic bleed pots.
 - `PadContextPopup::generateFullMapText()` already serializes `vol`, `flipLR`, `flipPhase`, and `bleed`.
-- `DrumKitEngineMappingModel::parseInstrumentMapText()` already parses those fields into `InstrumentMapLayer`.
+- `InstrumentMap::parseText()` parses those fields into `InstrumentMap::Layer`.
 - `DrumKitEngine::useInstrumentMap()` only applies tuning, attack, and decay to instrument players.
 - `DrumKitEngine::updateSlotParameters()` only supports tuning, attack, and decay.
 - `InstrumentPlayer` has runtime state for tuning, attack, and decay, but not gain, LR flip, phase flip, or bleed.

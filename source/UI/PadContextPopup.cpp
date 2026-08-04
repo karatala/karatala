@@ -1,5 +1,5 @@
 #include "PadContextPopup.h"
-#include "../Engine/ArticulationNameHelpers.h"
+#include "../Engine/ArticulationNames.h"
 #include "../Engine/DrumKitEngineMapHelpers.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
@@ -56,13 +56,13 @@ void PadContextPopup::syncMidiNotesToActiveLayout() {
             return;
         }
         for (auto& art : slot.articulations) {
-            if (ArticulationNameHelpers::articulationCodeMatches(art.codeRaw, this->artName)) {
+            if (ArticulationNames::articulationCodeMatches(art.codeRaw, this->artName)) {
                 art.notes = *this->midiNotesPtr;
                 return;
             }
         }
         for (auto& art : slot.articulations) {
-            if (ArticulationNameHelpers::baseArticulationMatches(art.codeRaw, this->artName)) {
+            if (ArticulationNames::baseArticulationMatches(art.codeRaw, this->artName)) {
                 art.notes = *this->midiNotesPtr;
                 return;
             }
@@ -234,7 +234,7 @@ void PadContextPopup::populateLayers() {
             const auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(mapLayer);
             bool matchesArticulation = articulationSlotFilters.empty();
             for (const auto& filter : articulationSlotFilters) {
-                if (ArticulationNameHelpers::mapFilterMatchesArticulation(filter, group->artName)) {
+                if (ArticulationNames::mapFilterMatchesArticulation(filter, group->artName)) {
                     matchesArticulation = true;
                     break;
                 }
@@ -292,7 +292,7 @@ std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantM
     if (sourceItem.artCode.isNotEmpty()) {
         for (const auto& artPtr : libraryInstrument->articulationSpecs) {
             if (artPtr == nullptr) continue;
-            if (ArticulationNameHelpers::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNameHelpers::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
+            if (ArticulationNames::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNames::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
                 libraryArticulations.push_back(artPtr.get());
                 break;
             }
@@ -379,7 +379,7 @@ std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForSourcePath(con
     if (sourceItem.artCode.isNotEmpty()) {
         for (const auto& artPtr : libraryInstrument->articulationSpecs) {
             if (artPtr == nullptr) continue;
-            if (ArticulationNameHelpers::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNameHelpers::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
+            if (ArticulationNames::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNames::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
                 libraryArticulations.push_back(artPtr.get());
                 break;
             }
@@ -1214,7 +1214,7 @@ juce::String PadContextPopup::generateFullMapText() const {
         for (const auto* articulationGroup : this->articulationGroups) {
             if (articulationGroup == nullptr) continue;
             for (const auto& filter : articulationSlotFilters) {
-                if (!ArticulationNameHelpers::mapFilterMatchesArticulation(filter, articulationGroup->artName)) continue;
+                if (!ArticulationNames::mapFilterMatchesArticulation(filter, articulationGroup->artName)) continue;
                 matchesVisibleArticulationSlot = true;
                 break;
             }
@@ -1734,7 +1734,7 @@ void PadContextPopup::showInstrumentPicker() {
     for (const auto* layer : this->layerRows) {
         if (layer == nullptr || layer->selectedSourceIndex < 0) continue;
         initialSourceIndex = layer->selectedSourceIndex;
-        if (ArticulationNameHelpers::articulationCodeMatches(layer->artName, this->artName)) break;
+        if (ArticulationNames::articulationCodeMatches(layer->artName, this->artName)) break;
     }
     this->activePicker->setSelectedItem(initialSourceIndex);
     this->activePicker->focusItemList();

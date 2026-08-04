@@ -1,8 +1,16 @@
 #pragma once
 
-#include <juce_core/juce_core.h>
 #include "Parsing.h"
-#include "PluginLogger.h"
+
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <juce_core/juce_core.h>
+#include <mutex>
+#include <unordered_map>
+#include <vector>
 
 const int MIDI_MIN_VALUE = 0;
 const int MIDI_MAX_VALUE = 127;

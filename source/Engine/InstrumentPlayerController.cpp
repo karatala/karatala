@@ -1,4 +1,5 @@
 #include "InstrumentPlayer.h"
+#include "../Config/PluginLogger.h"
 #include "DrumKitEngine.h"
 #include "HiHatTransitionPolicy.h"
 #include <cmath>

@@ -2,7 +2,7 @@
 
 #include "../Config/Helpers.h"
 
-namespace ArticulationNameHelpers {
+namespace ArticulationNames {
 
 inline juce::String baseArticulationName(const juce::String& codeRaw) { return codeRaw.upToFirstOccurrenceOf("[", false, false).trim(); }
 
@@ -87,4 +87,4 @@ inline std::vector<uint32_t> toArticulationIdList(const std::vector<juce::String
     return result;
 }
 
-} // namespace ArticulationNameHelpers
+} // namespace ArticulationNames
