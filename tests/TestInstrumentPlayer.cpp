@@ -109,7 +109,7 @@ private:
 
 namespace InstrumentPlayerTests {
 
-KitLayout::InstrumentSlot makeHiHatSlot() {
+static KitLayout::InstrumentSlot makeHiHatSlot() {
     KitLayout::InstrumentSlot slot;
     slot.type = KitLib::InstrumentSpec::Type::HiHat;
     KitLayout::InstrumentSlot::ArticulationSlot pedalTrigger { "pedal" };
@@ -122,7 +122,7 @@ KitLayout::InstrumentSlot makeHiHatSlot() {
     return slot;
 }
 
-KitLayout::InstrumentSlot makeImplicitHiHatExpressionSlot() {
+static KitLayout::InstrumentSlot makeImplicitHiHatExpressionSlot() {
     KitLayout::InstrumentSlot slot;
     slot.id = "hihat1";
     slot.type = KitLib::InstrumentSpec::Type::HiHat;
@@ -137,7 +137,7 @@ KitLayout::InstrumentSlot makeImplicitHiHatExpressionSlot() {
     return slot;
 }
 
-KitLayout::InstrumentSlot makeHiHatZoneRemapSlot() {
+static KitLayout::InstrumentSlot makeHiHatZoneRemapSlot() {
     KitLayout::InstrumentSlot slot;
     slot.id = "hihat1";
     slot.type = KitLib::InstrumentSpec::Type::HiHat;
@@ -157,7 +157,7 @@ KitLayout::InstrumentSlot makeHiHatZoneRemapSlot() {
     return slot;
 }
 
-KitLayout::InstrumentSlot makeCrossLayerHiHatSlot() {
+static KitLayout::InstrumentSlot makeCrossLayerHiHatSlot() {
     KitLayout::InstrumentSlot slot;
     slot.id = "hihat2";
     slot.type = KitLib::InstrumentSpec::Type::HiHat;
@@ -176,7 +176,7 @@ KitLayout::InstrumentSlot makeCrossLayerHiHatSlot() {
     return slot;
 }
 
-KitLayout::InstrumentSlot makeImplicitBowEdgeExpressionSlot() {
+static KitLayout::InstrumentSlot makeImplicitBowEdgeExpressionSlot() {
     KitLayout::InstrumentSlot slot;
     slot.id = "ride1";
     slot.type = KitLib::InstrumentSpec::Type::Ride;
@@ -190,7 +190,7 @@ KitLayout::InstrumentSlot makeImplicitBowEdgeExpressionSlot() {
     slot.controllers.push_back(std::move(zoneController));
     return slot;
 }
-KitLayout::InstrumentSlot makeSimpleStackSlot() {
+static KitLayout::InstrumentSlot makeSimpleStackSlot() {
     KitLayout::InstrumentSlot slot;
     slot.id = "stax1";
     slot.type = KitLib::InstrumentSpec::Type::Stack;
@@ -205,27 +205,27 @@ KitLayout::InstrumentSlot makeSimpleStackSlot() {
     return slot;
 }
 
-KitLib::InstrumentSpec::MetaInfo makeStackInstrumentMeta(const juce::String& codeRaw) {
+static KitLib::InstrumentSpec::MetaInfo makeStackInstrumentMeta(const juce::String& codeRaw) {
     KitLib::InstrumentSpec::MetaInfo meta;
     meta.codeRaw = codeRaw;
     meta.type = KitLib::InstrumentSpec::Type::Stack;
     return meta;
 }
 
-KitLib::InstrumentSpec::MetaInfo makePlaybackInstrumentMeta(const juce::String& codeRaw, KitLib::InstrumentSpec::Type type) {
+static KitLib::InstrumentSpec::MetaInfo makePlaybackInstrumentMeta(const juce::String& codeRaw, KitLib::InstrumentSpec::Type type) {
     KitLib::InstrumentSpec::MetaInfo meta;
     meta.codeRaw = codeRaw;
     meta.type = type;
     return meta;
 }
 
-void addSlotArticulation(KitLayout::InstrumentSlot& slot, const juce::String& codeRaw, uint8_t midiNote) {
+static void addSlotArticulation(KitLayout::InstrumentSlot& slot, const juce::String& codeRaw, uint8_t midiNote) {
     KitLayout::InstrumentSlot::ArticulationSlot trigger { codeRaw };
     trigger.notes.push_back(midiNote);
     slot.articulations.push_back(std::move(trigger));
 }
 
-bool hasNormalPlaybackEntry(const std::vector<InstrumentPlayer::ArticulationPlaybackEntry>& playbackEntries, const juce::String& articulationSlotCodeRaw, const juce::String& libraryArticulationCodeRaw) {
+static bool hasNormalPlaybackEntry(const std::vector<InstrumentPlayer::ArticulationPlaybackEntry>& playbackEntries, const juce::String& articulationSlotCodeRaw, const juce::String& libraryArticulationCodeRaw) {
     for (const auto& playbackEntry : playbackEntries) {
         if (playbackEntry.isAliasEntry || playbackEntry.isControllerSibling) continue;
         if (playbackEntry.libraryArticulation == nullptr) continue;
@@ -234,7 +234,7 @@ bool hasNormalPlaybackEntry(const std::vector<InstrumentPlayer::ArticulationPlay
     return false;
 }
 
-bool ownsArticulationSlotPlaybackEntry(const std::vector<InstrumentPlayer::ArticulationPlaybackEntry>& playbackEntries, const juce::String& articulationSlotCodeRaw) {
+static bool ownsArticulationSlotPlaybackEntry(const std::vector<InstrumentPlayer::ArticulationPlaybackEntry>& playbackEntries, const juce::String& articulationSlotCodeRaw) {
     for (const auto& playbackEntry : playbackEntries) {
         if (playbackEntry.isAliasEntry || playbackEntry.isControllerSibling) continue;
         if (playbackEntry.articulationSlot.codeRaw == articulationSlotCodeRaw) return true;
@@ -242,7 +242,7 @@ bool ownsArticulationSlotPlaybackEntry(const std::vector<InstrumentPlayer::Artic
     return false;
 }
 
-bool hasControllerSiblingPlaybackEntry(const std::vector<InstrumentPlayer::ArticulationPlaybackEntry>& playbackEntries, const juce::String& articulationSlotCodeRaw, const juce::String& libraryArticulationCodeRaw) {
+static bool hasControllerSiblingPlaybackEntry(const std::vector<InstrumentPlayer::ArticulationPlaybackEntry>& playbackEntries, const juce::String& articulationSlotCodeRaw, const juce::String& libraryArticulationCodeRaw) {
     for (const auto& playbackEntry : playbackEntries) {
         if (!playbackEntry.isControllerSibling) continue;
         if (playbackEntry.libraryArticulation == nullptr) continue;
@@ -251,39 +251,39 @@ bool hasControllerSiblingPlaybackEntry(const std::vector<InstrumentPlayer::Artic
     return false;
 }
 
-uint64_t makeArticulationSlotBindingKey(uint32_t articulationNameId, uint32_t expressionId) {
+static uint64_t makeArticulationSlotBindingKey(uint32_t articulationNameId, uint32_t expressionId) {
     return (static_cast<uint64_t>(articulationNameId) << 32) | static_cast<uint64_t>(expressionId);
 }
 
-KitLib::InstrumentSpec::MetaInfo makeInstrumentMeta() {
+static KitLib::InstrumentSpec::MetaInfo makeInstrumentMeta() {
     KitLib::InstrumentSpec::MetaInfo meta;
     meta.codeRaw = "hihat-test";
     meta.type = KitLib::InstrumentSpec::Type::HiHat;
     return meta;
 }
 
-KitLib::MicSpec makeDirectMic() {
+static KitLib::MicSpec makeDirectMic() {
     KitLib::MicSpec micSpec;
     micSpec.type = KitLib::MicSpec::Type::Direct;
     micSpec.channels = 1;
     return micSpec;
 }
 
-KitLib::MicSpec makeOverheadMic() {
+static KitLib::MicSpec makeOverheadMic() {
     KitLib::MicSpec micSpec;
     micSpec.type = KitLib::MicSpec::Type::Overhead;
     micSpec.channels = 2;
     return micSpec;
 }
 
-KitLib::MicSpec makeRoomMic() {
+static KitLib::MicSpec makeRoomMic() {
     KitLib::MicSpec micSpec;
     micSpec.type = KitLib::MicSpec::Type::Room;
     micSpec.channels = 2;
     return micSpec;
 }
 
-KitLib::DecayEnvelope makeTransitionEnvelope() {
+static KitLib::DecayEnvelope makeTransitionEnvelope() {
     KitLib::DecayEnvelope envelope;
     envelope.peakDb = -20.0f;
     envelope.peakMs = 10.0f;
