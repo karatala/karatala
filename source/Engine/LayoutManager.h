@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Config/Helpers.h"
+#include "../Config/Parsing.h"
 #include "../Config/YamlHelper.h"
 #include "KitLibModel.h"
 #include "RoutingTypes.h"
@@ -71,7 +72,7 @@ struct KitLayout {
             // int priority = 0;
             //MAYBE: cc_conditions, crossfade?
             explicit ArticulationSlot(juce::String raw) : codeRaw(raw) {
-                auto wrapSegm = extractWrappedSegment(raw.trim(), "[", "]");
+                auto wrapSegm = Parsing::extractWrappedSegment(raw.trim(), "[", "]");
                 this->nameId = StringsDictSingleton::getId(wrapSegm.prefix);
                 this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
             }

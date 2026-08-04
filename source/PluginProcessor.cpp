@@ -222,8 +222,6 @@ bool PluginProcessor::popCapturedMidiNote(int& noteNumber, int& velocity) {
 
 juce::AudioProcessorValueTreeState::ParameterLayout PluginProcessor::createParameterLayout() {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
-    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID { "kitLayoutChoice", 1 }, "Kit Layout", juce::StringArray { "default", "FUK U JUCE" }, 0)); //FIXME: is it even changable later?
-
     return layout;
 }
 

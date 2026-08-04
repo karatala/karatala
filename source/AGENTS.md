@@ -21,6 +21,8 @@
 - Treat `CMakeLists.txt` source globs as the source registration mechanism.
 - Keep one-use helper functions in their owning `.cpp` file.
 - Name shared files and namespaces by responsibility or feature. Do not create general `helpers` folders or public `FooHelpers` namespaces.
+- Keep main entry-point files in `source/`. Put reusable secondary code in the smallest domain that owns its rules.
+- Do not create a standalone `.h` and `.cpp` pair for one small generic operation. Add it to a cohesive existing support module.
 - Use a named `<Feature>Detail` namespace with internal linkage for private `.cpp` helpers.
 - Create a feature subfolder only when several files share one responsibility.
 - Review [`docs/PROJECT_TERMINOLOGY_REVIEW.md`](../docs/PROJECT_TERMINOLOGY_REVIEW.md) before naming new shared modules. Do not use bare `Source` as a feature-folder name.

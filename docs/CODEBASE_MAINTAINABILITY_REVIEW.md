@@ -1,6 +1,6 @@
 # Codebase Maintainability Review
 
-Status: static review complete. Project decisions updated on 2026-07-31. All code changes below are suggestions.
+Status: static review complete. Project decisions updated on 2026-07-31. Implementation started on 2026-08-04. Completed work is marked with ✅.
 
 ## Scope and limits
 
@@ -200,8 +200,8 @@ Add a private `resolveLibraryArticulationsForPath()` operation. Preserve these c
 
 Good small candidates:
 
-- The local processing suspension guard appears four times in [PluginEditor.cpp](../source/PluginEditor.cpp), around lines 41, 213, 247, and 374. Define it once and preserve its order relative to the callback lock.
-- Strict finite-float parsing is repeated in [VelocityResponse.cpp](../source/Engine/VelocityResponse.cpp), [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp), and [VelocityResponseEditor.cpp](../source/UI/VelocityResponseEditor.cpp). Use one strict parser that preserves full-input, range, finite-value, and locale behavior.
+- ✅ [PluginEditor.cpp](../source/PluginEditor.cpp) now creates its processing suspension guard through one local operation. The guard remains before the callback lock at all four call sites.
+- ✅ The cohesive [Parsing.h](../source/Config/Parsing.h) and [Parsing.cpp](../source/Config/Parsing.cpp) module now owns parse results, wrapped-text parsing, and strict finite-float parsing. The float parser preserves full-input, range, finite-value, and locale behavior.
 - `parseSignedGainDb()` and `parseSignedOffsetMs()` in [KitLibModel.cpp](../source/Engine/KitLibModel.cpp), lines 67-117, can share one signed metadata number parser while retaining clear wrapper names.
 - Search term syntax is repeated in [KitBrowserComponent.cpp](../source/UI/KitBrowserComponent.cpp), lines 150-162, and [SourcePickerPopup.cpp](../source/UI/SourcePickerPopup.cpp), lines 295-305. Add one UI search matcher.
 - Sample load type groups are repeated in two large switches in [SampleLoader.cpp](../source/Engine/SampleLoader.cpp), lines 53-179. Use one local load-class classifier, but keep the special kick, snare, hi-hat, ride, crash, and tom rules explicit.
@@ -236,6 +236,8 @@ A common helper folder usually becomes a place for unrelated code. It also makes
 3. If several features in one domain use it, place it in that domain with a precise name.
 4. Create a precisely named project-wide support module only when engine, UI, and configuration code all need the same small and stable rule.
 
+Do not create a standalone header and implementation pair for one small generic function. Add it to a cohesive existing support module or keep it private in the owning `.cpp` file.
+
 Use names that describe the owner. Prefer `InstrumentMap`, `ArticulationNames`, or `PathResolver` over `Helpers`.
 
 ### Current helper inventory
@@ -244,7 +246,7 @@ There are 12 files with `Helper` or `Helpers` in their name. The count is not la
 
 | Current file or group | Suggested ownership |
 | --- | --- |
-| [Helpers.h](../source/Config/Helpers.h) | Do not move it unchanged. Split it by concern, such as parse results, path resolution, MIDI values, wrapped text parsing, and string IDs. Put each result in the domain that owns it. |
+| [Helpers.h](../source/Config/Helpers.h) | ✅ Parse results and wrapped-text parsing moved to `Config/Parsing`. Continue splitting path resolution, MIDI values, and string IDs by concern. |
 | [YamlHelper.h](../source/Config/YamlHelper.h) and [YamlHelper.cpp](../source/Config/YamlHelper.cpp) | This is one cohesive YAML module. It can stay in `Config`. Rename it to `YamlParser` only when related code is already being changed. |
 | [DrumKitEngineMapHelpers.h](../source/Engine/DrumKitEngineMapHelpers.h), its `.cpp`, the mapping model, and the text view | Create `Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp`. Keep the related work together first. Add another file only for a separate, substantial responsibility. |
 | [ArticulationNameHelpers.h](../source/Engine/ArticulationNameHelpers.h) | Rename it to `ArticulationNames.h` and keep it in `Engine` while it is one cohesive file. Create an articulation feature folder only if that module grows to several files. |
@@ -288,7 +290,7 @@ Use these rules:
 2. Remove `KitHomePanelHelpers.h` as part of the Kit page replacement.
 3. Create the `InstrumentMap` feature pair when map types are extracted from `DrumKitEngine`.
 4. Split `UIHelpers` when the first related UI component is changed.
-5. Split `Config/Helpers.h` one concern at a time. Do not create a new general helper file.
+5. Split `Config/Helpers.h` one concern at a time. ✅ Parsing support moved first to the cohesive `Config/Parsing` module. Do not create a new general helper file.
 
 This order avoids a large move-only change and keeps each diff connected to a real cleanup.
 
@@ -331,11 +333,9 @@ If the converter must stay maintained for a longer time, then make the shared ru
 
 ## Other problems
 
-### Host-facing placeholder parameter
+### ✅ Host-facing placeholder parameter
 
-[PluginProcessor.cpp](../source/PluginProcessor.cpp), line 225, defines `kitLayoutChoice` with choices `"default"` and `"FUK U JUCE"`. This is the only repository reference to that parameter ID.
-
-Remove the parameter if it is unused. Otherwise, replace it with the real supported choices and add the code that applies the selection. Do this before a package is shared because a host can expose plugin parameter names and values.
+The unused `kitLayoutChoice` parameter and its placeholder host-facing choice were removed from [PluginProcessor.cpp](../source/PluginProcessor.cpp).
 
 ### Stale and deprecated code needs targeted cleanup
 
@@ -349,13 +349,13 @@ The scripts contract marks several analysis scripts as deprecated experiments. R
 
 ### Phase 1: Small and exact changes
 
-1. Remove or replace the placeholder plugin parameter.
-2. Define the processing suspension guard once.
-3. Consolidate strict float parsing.
+1. ✅ Removed the unused placeholder plugin parameter.
+2. ✅ Defined the processing suspension guard once.
+3. ✅ Consolidated strict float parsing.
 
 Verification for this phase:
 
-- Add or identify focused tests before changing behavior.
+- ✅ Added focused shared parsing coverage and identified the existing map parsing and serialization tests.
 - Run library identity, map parsing, and serialization tests.
 
 ### Phase 2: Helper and header boundaries

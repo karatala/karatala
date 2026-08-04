@@ -1,12 +1,11 @@
 #include "VelocityResponseEditor.h"
+#include "../Config/Parsing.h"
 #include "CompactModalDialog.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 
 #include <algorithm>
-#include <cerrno>
 #include <cmath>
-#include <cstdlib>
 #include <limits>
 #include <set>
 
@@ -328,7 +327,7 @@ bool VelocityResponseEditor::applySelectedDb(float targetDb, bool clampValue, bo
 
 void VelocityResponseEditor::commitDbEditor() {
     if (!this->dbEditor.isEnabled() || this->selectedHandleIdx < 0 || this->selectedHandleIdx >= static_cast<int>(this->handles.size())) return;
-    const auto targetDb = VelocityResponseEditor::parseDb(this->dbEditor.getText());
+    const auto targetDb = Parsing::parseFiniteFloat(this->dbEditor.getText());
     if (!targetDb.has_value()) {
         this->setStatus("Enter a valid dB number", true);
         this->updateReadout();
@@ -457,17 +456,6 @@ juce::String VelocityResponseEditor::tooltipForVelocity(int velocity) const {
 
 juce::String VelocityResponseEditor::formatDb(float value) {
     return juce::String(value, 1) + " dB";
-}
-
-std::optional<float> VelocityResponseEditor::parseDb(const juce::String& text) {
-    const auto trimmed = text.trim();
-    if (trimmed.isEmpty()) return std::nullopt;
-    const auto utf8Text = trimmed.toRawUTF8();
-    char* endPtr = nullptr;
-    errno = 0;
-    const float value = std::strtof(utf8Text, &endPtr);
-    if (errno != 0 || endPtr == utf8Text || *endPtr != '\0' || !std::isfinite(value)) return std::nullopt;
-    return value;
 }
 
 void VelocityResponseEditor::paint(juce::Graphics& graphics) {

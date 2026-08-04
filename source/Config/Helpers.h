@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
+#include "Parsing.h"
 #include "PluginLogger.h"
 
 const int MIDI_MIN_VALUE = 0;
@@ -52,36 +53,6 @@ static inline juce::String midiVectorToString(const std::vector<uint8_t>& v) {
     return s;
 }
 
-template <typename T>
-struct ParseResult {
-    T value;
-    bool isValid = true;
-    std::vector<juce::String> errors;
-
-    ParseResult& returnWithError(const juce::String& msg) {
-        errors.push_back(msg);
-        isValid = false;
-        return *this;
-    }
-    void addWarning(const juce::String& msg) {
-        errors.push_back(msg);
-    }
-
-    bool ok() const noexcept {
-        return isValid;
-    }
-
-    juce::String error(const juce::String& separator = "\n") const {
-        juce::String out;
-        for (size_t errorIdx = 0; errorIdx < errors.size(); ++errorIdx) {
-            out += errors[errorIdx];
-            if (errorIdx + 1 < errors.size())
-                out += separator;
-        }
-        return out;
-    }
-};
-
 static inline ParseResult<juce::File> getEnvPath(const char* envName) {
 #if defined(_MSC_VER)
 #pragma warning(push)
@@ -110,30 +81,6 @@ static inline juce::File resolvePathRelOrAbs(const juce::File& base, const juce:
     if (juce::File::isAbsolutePath(path))
         return juce::File(path);
     return base.getChildFile(path);
-}
-
-struct WrappedSegment {
-    juce::String prefix;
-    juce::String wrapped;
-    juce::String suffix;
-};
-
-static inline WrappedSegment extractWrappedSegment(const juce::String& input, const juce::String& leftWrapper, const juce::String& rightWrapper) {
-    WrappedSegment result;
-    juce::String processed = input.trim();
-
-    const int lIdx = processed.indexOf(leftWrapper);
-    const int rIdx = processed.indexOf(rightWrapper);
-
-    if (lIdx >= 0 && rIdx > lIdx) {
-        result.prefix  = processed.substring(0, lIdx).trim();
-        result.wrapped = processed.substring(lIdx + leftWrapper.length(), rIdx).trim();
-        result.suffix  = processed.substring(rIdx + rightWrapper.length()).trim();
-    } else {
-        result.prefix = processed;
-    }
-
-    return result;
 }
 
 class StringsDictSingleton {

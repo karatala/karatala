@@ -101,7 +101,6 @@ private:
     float yToDb(float yPosition) const;
     juce::String tooltipForVelocity(int velocity) const;
     static juce::String formatDb(float value);
-    static std::optional<float> parseDb(const juce::String& text);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VelocityResponseEditor)
 };

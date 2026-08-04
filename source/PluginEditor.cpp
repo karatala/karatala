@@ -5,6 +5,15 @@
 #include "Engine/LayoutManager.h"
 #include <set>
 
+namespace PluginEditorDetail {
+
+static auto makeProcessingSuspendGuard(PluginProcessor& processor) {
+    processor.suspendProcessing(true);
+    return juce::ScopeGuard { [processorPtr = &processor] { processorPtr->suspendProcessing(false); } };
+}
+
+} // namespace PluginEditorDetail
+
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
     , processorRef(p) {
@@ -38,16 +47,7 @@ void PluginEditor::setupKitPage() {
         this->statusBar.setStatusText(message);
     };
     this->kitHomePanel->onLoadRequested = [this](KitHomePanel::Commit commit) {
-        struct ProcessingSuspendGuard {
-            PluginProcessor& processor;
-            explicit ProcessingSuspendGuard(PluginProcessor& pluginProcessor)
-                : processor(pluginProcessor) {
-                this->processor.suspendProcessing(true);
-            }
-            ~ProcessingSuspendGuard() {
-                this->processor.suspendProcessing(false);
-            }
-        } processingGuard(this->processorRef);
+        const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
 
         const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
         auto& engine = this->processorRef.getEngine();
@@ -213,16 +213,7 @@ void PluginEditor::setupRawPage() {
 }
 
 void PluginEditor::applyInstrumentMapFromEditor() {
-    struct ProcessingSuspendGuard {
-        PluginProcessor& processor;
-        explicit ProcessingSuspendGuard(PluginProcessor& proc)
-            : processor(proc) {
-            this->processor.suspendProcessing(true);
-        }
-        ~ProcessingSuspendGuard() {
-            this->processor.suspendProcessing(false);
-        }
-    } processingSuspendGuard(this->processorRef);
+    const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
 
@@ -247,16 +238,7 @@ void PluginEditor::applyInstrumentMapFromEditor() {
 }
 
 bool PluginEditor::applyBrowserInstrumentMap(const juce::String& mapText, const juce::String& statusText) {
-    struct ProcessingSuspendGuard {
-        PluginProcessor& processor;
-        explicit ProcessingSuspendGuard(PluginProcessor& pluginProcessor)
-            : processor(pluginProcessor) {
-            this->processor.suspendProcessing(true);
-        }
-        ~ProcessingSuspendGuard() {
-            this->processor.suspendProcessing(false);
-        }
-    } processingSuspendGuard(this->processorRef);
+    const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
     auto& engine = this->processorRef.getEngine();
@@ -374,16 +356,7 @@ void PluginEditor::setupTroubleshootingPage() {
 }
 
 void PluginEditor::reloadLibraryFromTroubleshooting() {
-    struct ProcessingSuspendGuard {
-        PluginProcessor& processor;
-        explicit ProcessingSuspendGuard(PluginProcessor& pluginProcessor)
-            : processor(pluginProcessor) {
-            this->processor.suspendProcessing(true);
-        }
-        ~ProcessingSuspendGuard() {
-            this->processor.suspendProcessing(false);
-        }
-    } processingGuard(this->processorRef);
+    const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
     auto& engine = this->processorRef.getEngine();

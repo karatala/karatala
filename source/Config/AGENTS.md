@@ -1,12 +1,13 @@
 # Purpose
 
-- Own configuration parsing helpers and application logging utilities shared by the engine.
+- Own configuration and parsing support plus application logging shared by the engine and UI.
 
 # Ownership
 
 - `YamlHelper*` owns the lightweight YAML representation and parser behavior.
+- `Parsing*` owns shared parse results, wrapped-text parsing, and strict finite-number parsing.
 - `PluginLogger.h` owns log levels and logging macros.
-- `Helpers.h` owns small configuration-oriented helpers.
+- `Helpers.h` owns the remaining small configuration-oriented helpers while they are split by responsibility.
 
 # Local Contracts
 
@@ -21,6 +22,7 @@
 
 # Verification
 
+- Run the `[Parsing]` Catch2 tests after shared parsing changes.
 - Run the `[yaml]` Catch2 tests after parser changes.
 
 # Child DOX Index

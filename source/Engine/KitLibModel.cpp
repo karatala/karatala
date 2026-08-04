@@ -931,7 +931,7 @@ ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& di
     result.value.author = "";
     result.value.license = "";
 
-    auto wrapSegm = extractWrappedSegment(processed, "[", "]");
+    auto wrapSegm = Parsing::extractWrappedSegment(processed, "[", "]");
     result.value.license = wrapSegm.wrapped;
     processed = wrapSegm.prefix + " " + wrapSegm.suffix;
 

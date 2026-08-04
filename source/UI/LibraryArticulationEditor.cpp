@@ -1,25 +1,13 @@
 #include "LibraryArticulationEditor.h"
+#include "../Config/Parsing.h"
 #include "../Engine/RoutingTypes.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 
 #include <algorithm>
-#include <cerrno>
 #include <cmath>
-#include <cstdlib>
 
 namespace LibraryArticulationEditorDetail {
-
-static std::optional<float> parseFiniteFloat(const juce::String& text) {
-    const auto trimmed = text.trim();
-    if (trimmed.isEmpty()) return std::nullopt;
-    const auto utf8Text = trimmed.toRawUTF8();
-    char* endPtr = nullptr;
-    errno = 0;
-    const float value = std::strtof(utf8Text, &endPtr);
-    if (errno != 0 || endPtr == utf8Text || *endPtr != '\0' || !std::isfinite(value)) return std::nullopt;
-    return value;
-}
 
 static juce::String optionalBalanceText(const std::optional<int>& value, const juce::String& emptyText = {}) {
     return value.has_value() ? balanceValueToString(*value) : emptyText;
@@ -651,7 +639,7 @@ void LibraryArticulationEditor::commitArticulationBalance() {
 void LibraryArticulationEditor::commitManualGain() {
     if (!this->manualGainDirty || !this->manualGainEditor.isEnabled()) return;
     const auto text = this->manualGainEditor.getText().trim();
-    const auto parsedValue = LibraryArticulationEditorDetail::parseFiniteFloat(text);
+    const auto parsedValue = Parsing::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
         this->setStatus("File gain correction must be a valid dB number.", true);
         return;
@@ -677,7 +665,7 @@ void LibraryArticulationEditor::commitManualGain() {
 void LibraryArticulationEditor::commitFilePlaybackOffset() {
     if (!this->fileOffsetDirty || !this->fileOffsetEditor.isEnabled()) return;
     const auto text = this->fileOffsetEditor.getText().trim();
-    const auto parsedValue = LibraryArticulationEditorDetail::parseFiniteFloat(text);
+    const auto parsedValue = Parsing::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
         this->setStatus("File start offset must be a valid millisecond number.", true);
         return;
@@ -700,7 +688,7 @@ void LibraryArticulationEditor::commitFilePlaybackOffset() {
 void LibraryArticulationEditor::commitMicPlaybackOffset() {
     if (!this->micOffsetDirty || !this->micOffsetEditor.isEnabled()) return;
     const auto text = this->micOffsetEditor.getText().trim();
-    const auto parsedValue = LibraryArticulationEditorDetail::parseFiniteFloat(text);
+    const auto parsedValue = Parsing::parseFiniteFloat(text);
     if (text.isNotEmpty() && !parsedValue.has_value()) {
         this->setStatus("Mic offset must be a valid millisecond number.", true);
         return;
@@ -1121,7 +1109,7 @@ void LibraryArticulationEditor::stepBalanceEditor(WheelTextEditor& editor, const
 }
 
 void LibraryArticulationEditor::stepBatchEditor(WheelTextEditor& editor, BatchField field, bool increase, bool fine) {
-    const auto editorValue = LibraryArticulationEditorDetail::parseFiniteFloat(editor.getText().trim());
+    const auto editorValue = Parsing::parseFiniteFloat(editor.getText());
     const float currentValue = editorValue.value_or(this->getBatchWheelBaseValue(field));
     const float coarseStep = field == BatchField::ManualGain ? 0.5f : 10.0f;
     const float fineStep = field == BatchField::ManualGain ? 0.1f : 1.0f;

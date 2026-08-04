@@ -8,6 +8,7 @@
 #include <optional>
 #include <unordered_map>
 #include "../Config/Helpers.h"
+#include "../Config/Parsing.h"
 #include "KitLibConsts.h"
 #include "LibraryKitOverrides.h"
 #include "RoutingTypes.h"
@@ -309,7 +310,7 @@ public:
     explicit ArticulationSpec(InstrumentSpec* parentSpec, const juce::String& newCodeRaw)
         : codeRaw(newCodeRaw), parent(parentSpec)
     {
-        auto wrapSegm = extractWrappedSegment(newCodeRaw, "[", "]");
+        auto wrapSegm = Parsing::extractWrappedSegment(newCodeRaw, "[", "]");
         this->nameId = StringsDictSingleton::getId(wrapSegm.prefix);
         this->exprId = StringsDictSingleton::getId(wrapSegm.wrapped);
     }

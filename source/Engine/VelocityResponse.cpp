@@ -1,23 +1,11 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "VelocityResponse.h"
-#include <cerrno>
+#include "../Config/Parsing.h"
 #include <cmath>
-#include <cstdlib>
 #include <limits>
 #include <vector>
 
 namespace VelocityResponseHelpers {
-
-static std::optional<float> parseFloat(const juce::String& text) {
-    const auto trimmed = text.trim();
-    if (trimmed.isEmpty()) return std::nullopt;
-    const auto utf8Text = trimmed.toRawUTF8();
-    char* endPtr = nullptr;
-    errno = 0;
-    const float value = std::strtof(utf8Text, &endPtr);
-    if (errno != 0 || endPtr == utf8Text || *endPtr != '\0' || !std::isfinite(value)) return std::nullopt;
-    return value;
-}
 
 static juce::String serializePoints(const std::vector<VelocityResponse::Point>& points) {
     juce::StringArray tokens;
@@ -150,7 +138,7 @@ ParseResult<VelocityResponse> VelocityResponse::fromDefinition(const juce::Strin
         if (pointParts.size() != 2 || !pointParts[0].trim().containsOnly("0123456789")) return result.returnWithError("Velocity response point must use velocity:db format: " + pointToken);
         VelocityResponse::Point point;
         point.velocity = pointParts[0].trim().getIntValue();
-        const auto targetDb = VelocityResponseHelpers::parseFloat(pointParts[1]);
+        const auto targetDb = Parsing::parseFiniteFloat(pointParts[1]);
         if (point.velocity < 1 || point.velocity > 127 || !targetDb.has_value()) return result.returnWithError("Invalid velocity response point: " + pointToken);
         point.targetDb = *targetDb;
         if (!points.empty() && point.velocity <= points.back().velocity) return result.returnWithError("Velocity response velocities must increase");

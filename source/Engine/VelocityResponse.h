@@ -3,7 +3,7 @@
 #include <array>
 #include <juce_core/juce_core.h>
 #include <vector>
-#include "../Config/Helpers.h"
+#include "../Config/Parsing.h"
 
 class VelocityResponse {
 public:
