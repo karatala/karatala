@@ -2,7 +2,7 @@
 
 Date: 2026-07-17
 
-Status: In progress - phases 1 and 2 implementation complete, build and manual verification pending
+Status: Implementation complete through phase 3 - build and manual verification pending
 
 md plan for next features: new similar to instrument picker component for kit list+preview where we can see more kit info (its Title, Author [license] and readme.md content) and easily preview any instrument with articulations using some tiny pad-grid, pads dont have to be square but just color grouped by instrument, all on single page with ability to fully load selected kit or assign any instrument to some coresponding slot of our kit layout.
 then in pad popup need to add 'set instrument' button on left of midi note buttons that opens new instrument picker
@@ -18,15 +18,18 @@ The original paragraph above and the latest user decisions override the older im
    - Keep parameter and mic-routing updates field-specific and persist the instrument map immediately.
    - Build and manual verification are still pending because they were not requested.
 2. ✅ Phase 2 implementation:
-   - Add a separate Browse page for complete library kits and saved instrument-map presets.
+   - Add a separate page for complete library kits and saved instrument-map presets. This page was initially named Browse and is now the Kit page.
    - Preview instruments and articulations before loading.
    - Load, save, save as, and delete user instrument-map presets.
    - A saved preset contains only the instrument map, including layers and layer settings. It does not contain the kit layout or MIDI notes.
    - Preset entries for instrument slots missing from the active layout are skipped and reported. Automatic remapping remains deferred.
-3. Phase 3:
-   - Review the experimental Kit page and decide which existing elements should be reused, replaced, or removed.
+3. ✅ Phase 3 implementation:
+   - Reviewed and removed the experimental old Kit page.
+   - Kept complete-kit loading, preview, and instrument-map preset behavior in `KitPage`.
+   - Kept layout defaults in Conf, per-slot instrument replacement in the pad popup, and active MIDI layout editing in Map.
+   - Removed the old helper and duplicate sidebar route.
 
-The browser is implemented as a separate page in phase 2. Review of the older Kit-page controls remains phase 3.
+The current Kit page is the browser implemented in phase 2. The older experimental page was removed in phase 3.
 
 ## Goal
 
@@ -39,8 +42,8 @@ Add three connected workflows:
 ## Decisions and Assumptions
 
 - The instrument-selection mode is opened from a known instrument slot and never offers full-kit loading.
-- The complete-kit and instrument-map preset workflow is the separate `Browse` sidebar page.
-- The experimental Kit page is unchanged during phases 1 and 2. Reuse of its layout, preset, assignment, and mic-layout controls is deferred to phase 3.
+- The complete-kit and instrument-map preset workflow is the `Kit` sidebar page.
+- The experimental old Kit page was removed. Conf owns default kit and mic layouts. The Map page owns active MIDI layout edits. The pad popup owns whole-instrument replacement.
 - Selecting a kit or preview pad never changes the loaded instrument map.
 - `Load kit`, `Load preset`, and `Set instrument` are explicit actions. Each action applies its change immediately after its button is clicked.
 - Kit README content is shown as read-only plain Markdown text with its original line breaks. A full Markdown renderer is not required.
@@ -49,14 +52,14 @@ Add three connected workflows:
 - Link switches are temporary editing modes. They reset to off when the pad popup closes and are not saved in plugin state.
 - Active link switches use a steady bright-red background and white text. They do not blink, because constant motion would distract from the parameter controls.
 - Saved combined presets contain only instrument-map text with its layers and layer settings. They do not contain kit-layout or MIDI-note data.
-- Loading from Browse replaces the complete current instrument map. It preserves the active kit layout and MIDI notes.
+- Loading from the Kit page replaces the complete current instrument map. It preserves the active kit layout and MIDI notes.
 
 ## Current State
 
-- [`KitHomePanel`](../source/UI/KitHomePanel.h) has a small `Start from library kit` combo and builds a complete draft map with `DrumKitEngine::buildInstrumentMapForKit()`.
+- The removed `KitHomePanel` previously combined draft layout, assignment, mic-layout, and preset controls.
 - `KitLib::DrumKitSpec::MetaInfo` already contains `name`, `author`, `license`, and the kit root directory.
 - `KitLib::DrumKitSpec::readmeMarkdown` stores `README.md` or fallback `readme.md` content loaded during library scanning.
-- [`KitBrowserComponent`](../source/UI/KitBrowserComponent.h) is the separate Browse page for library kits and instrument-map presets.
+- [`KitPage`](../source/UI/KitPage.h) is the single page for library kits and instrument-map presets.
 - [`KitPreviewGrid`](../source/UI/KitPreviewGrid.h) shows grouped rectangular articulation pads and previews without changing the map.
 - [`SourcePickerPopup`](../source/UI/SourcePickerPopup.h) supports contextual titles, a right-side `×` close button, library filtering, per-articulation preview, articulation-specific `Use`, and a whole-instrument mode with one main-list row per library instrument and a separate library-articulation preview list.
 - [`PadContextPopup`](../source/UI/PadContextPopup.h) has all articulation groups for the current instrument slot and updates tuning, attack, decay, gain, pan, phase, L/R, and bleed without reloading samples.
@@ -65,11 +68,11 @@ Add three connected workflows:
 
 ## ✅ Phase 2 Kit and Preset Browser
 
-The browser is a separate `Browse` sidebar page. The experimental `KitHomePanel` is unchanged and will be reviewed in phase 3.
+The browser was first added as a separate Browse page in phase 2. It became the single Kit page after the experimental old page was removed in phase 3.
 
 ### Page Layout
 
-Keep the browser and actions visible on one Browse page:
+Keep the browser and actions visible on one Kit page:
 
 ```text
 ┌ Kit list ───────┬ Kit information ─────────┬ Instrument preview ─────────────┐
@@ -87,7 +90,7 @@ Keep the browser and actions visible on one Browse page:
 - Give the metadata and README area about 30 percent.
 - Give the instrument preview area the remaining width.
 - Use local scrolling for long kit lists, long README files, and large instrument collections.
-- Keep the component usable when the Browse page is narrow.
+- Keep the component usable when the Kit page is narrow.
 
 ### Kit List and Information
 
@@ -244,7 +247,7 @@ Files:
   - ✅ Building one map layer for each library articulation.
   - ✅ Applying automatic orientation to each new map layer.
   - ✅ Replacing one instrument slot while preserving all other map layers.
-  - Compatible instrument-slot listing was removed from this phase because Browse does not assign one instrument.
+  - Compatible instrument-slot listing was removed from this phase because complete-kit loading does not assign one instrument.
 - Reuse the slot replacement helpers from the engine and `PadContextPopup`.
 
 Files:
@@ -256,20 +259,20 @@ Files:
 
 ### ✅ 3. Build the Kit and Preset Browser
 
-- Add `KitBrowserComponent` for kit selection, metadata, README display, and actions.
+- Add `KitPage` for kit selection, metadata, README display, and actions.
 - Add a small library-kit preview component that groups rectangular articulation pads by instrument.
 - Reuse `UITheme` instrument colours and library-preview callbacks.
 - Keep browser state as stable kit/instrument identities rather than raw pointers across library reloads.
 
 Files:
 
-- [`source/UI/KitBrowserComponent.h`](../source/UI/KitBrowserComponent.h) and [`source/UI/KitBrowserComponent.cpp`](../source/UI/KitBrowserComponent.cpp)
+- [`source/UI/KitPage.h`](../source/UI/KitPage.h) and [`source/UI/KitPage.cpp`](../source/UI/KitPage.cpp)
 - [`source/UI/KitPreviewGrid.h`](../source/UI/KitPreviewGrid.h) and [`source/UI/KitPreviewGrid.cpp`](../source/UI/KitPreviewGrid.cpp)
 - [`source/UI/UITheme.h`](../source/UI/UITheme.h)
 
-### ✅ 4. Add Separate Browse Integration
+### ✅ 4. Add Kit Page Integration
 
-- Add a separate `Browse` sidebar page without changing the experimental Kit page.
+- Phase 2 first added a separate `Browse` sidebar page. Phase 3 removed the experimental old Kit page and renamed the replacement to `Kit`.
 - Apply complete kit and preset maps through `PluginEditor`, with processing suspended and plugin state updated once.
 - Keep the active kit layout and MIDI notes unchanged.
 - Skip and report preset entries for slots absent from the active layout. Do not remap them automatically.
@@ -333,13 +336,13 @@ After implementation, update [`source/UI/AGENTS.md`](../source/UI/AGENTS.md) wit
 - Whole-instrument picker mode.
 - Exact linked-edit scope.
 - The non-blinking bright-red active state.
-- Browse ownership, loading scope, preview behavior, and preset contents.
+- Kit-page ownership, loading scope, preview behavior, and preset contents.
 
 ### ✅ 9. Move Developer Actions to the Status Bar
 
 - Remove `UI` and the debug-only `?` inspector action from the sidebar.
 - Place both actions at the right side of the status bar.
-- Keep Browse and normal work pages in the sidebar.
+- Keep Kit and normal work pages in the sidebar.
 
 Files:
 
@@ -347,6 +350,15 @@ Files:
 - [`source/UI/Sidebar.cpp`](../source/UI/Sidebar.cpp)
 - [`source/UI/StatusBar.h`](../source/UI/StatusBar.h)
 - [`source/UI/StatusBar.cpp`](../source/UI/StatusBar.cpp)
+
+### ✅ 10. Complete Old Kit Page Closeout
+
+- Remove `KitHomePanel` and `KitHomePanelHelpers`.
+- Rename `KitBrowserComponent` to `KitPage` and remove `PageId::Browse`.
+- Keep complete-kit loading and instrument-map preset actions in the Kit page.
+- Keep default kit and mic layout choices in Conf.
+- Keep active MIDI layout editing in Map and whole-instrument replacement in the pad popup.
+- Use one preset policy: `Save` overwrites only the selected user preset, while `Save As` rejects case-insensitive duplicate user names across supported preset file extensions.
 
 Mark each completed section in this plan with `✅`. When all work and verification are complete, change the main heading to start with `# ✅ COMPLETED:`.
 
@@ -375,7 +387,7 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 
 ## Manual Verification
 
-### Kit Browser
+### Kit Page
 
 - Select kits with and without author, license, and README metadata.
 - Filter kits with positive words and `-word` exclusions.
@@ -385,7 +397,7 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 - Load, save, save as, and delete user instrument-map presets.
 - Confirm preset loading replaces the instrument map but keeps the active kit layout and MIDI notes.
 - Confirm missing instrument slots are skipped and reported.
-- Reload the sample library while Browse is open and confirm browser selection remains safe.
+- Reload the sample library while Kit is open and confirm page selection remains safe.
 - Confirm `UI` and the debug-only `?` action are at the right side of the status bar and are absent from the sidebar.
 
 ### Pad Popup
@@ -406,7 +418,7 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 
 ## Completion Criteria
 
-- The separate Browse page shows a searchable kit list, title, author, license, README content, and grouped articulation preview pads on one page.
+- The Kit page shows a searchable kit list, title, author, license, README content, and grouped articulation preview pads on one page.
 - Any articulation in the selected kit can be previewed without changing the current map.
 - The selected kit can replace the complete current kit explicitly.
 - Instrument-map presets can be loaded, saved, saved as, and deleted without changing the kit layout or MIDI notes.

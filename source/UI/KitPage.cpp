@@ -1,8 +1,7 @@
-#include "KitBrowserComponent.h"
+#include "KitPage.h"
 
 #include "../Engine/ArticulationNames.h"
 #include "CompactModalDialog.h"
-#include "KitHomePanelHelpers.h"
 #include "UIHelpers.h"
 #include "UITheme.h"
 #include <algorithm>
@@ -10,9 +9,17 @@
 #include <unordered_set>
 #include <utility>
 
-KitBrowserComponent::KitBrowserComponent(DrumKitEngine& drumKitEngine)
+namespace KitPageDetail {
+
+static juce::String safePresetFileName(juce::String name) {
+    return name.trim().replaceCharacters("\\/:|*?<>\"", "_________");
+}
+
+} // namespace KitPageDetail
+
+KitPage::KitPage(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine) {
-    this->titleLabel.setText("Kit and Preset Browser", juce::dontSendNotification);
+    this->titleLabel.setText("Kits and Presets", juce::dontSendNotification);
     UIHelpers::configureSectionLabel(this->titleLabel);
     this->addAndMakeVisible(this->titleLabel);
 
@@ -75,11 +82,11 @@ KitBrowserComponent::KitBrowserComponent(DrumKitEngine& drumKitEngine)
     this->refresh({});
 }
 
-KitBrowserComponent::~KitBrowserComponent() {
+KitPage::~KitPage() {
     this->previewViewport.setViewedComponent(nullptr, false);
 }
 
-void KitBrowserComponent::refresh(const juce::String& activeInstrumentMapText) {
+void KitPage::refresh(const juce::String& activeInstrumentMapText) {
     this->currentMapText = activeInstrumentMapText;
     this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
     this->rebuildLibraryEntries();
@@ -87,7 +94,7 @@ void KitBrowserComponent::refresh(const juce::String& activeInstrumentMapText) {
     this->rebuildFilteredEntries();
 }
 
-void KitBrowserComponent::rebuildLibraryEntries() {
+void KitPage::rebuildLibraryEntries() {
     const auto previousSelection = this->selectedKitId;
     this->kits.clear();
     const auto* library = this->engine.getInstrumentManager();
@@ -115,11 +122,11 @@ void KitBrowserComponent::rebuildLibraryEntries() {
     if (!selectionExists) this->selectedKitId = this->kits.empty() ? juce::String() : this->kits.front().id;
 }
 
-juce::File KitBrowserComponent::getUserPresetDirectory() const {
+juce::File KitPage::getUserPresetDirectory() const {
     return this->engine.getUserPresetsDir().getChildFile("instrument_maps");
 }
 
-void KitBrowserComponent::rebuildPresetEntries(const juce::String& preferredSelectionPath) {
+void KitPage::rebuildPresetEntries(const juce::String& preferredSelectionPath) {
     const auto wantedPath = preferredSelectionPath.isNotEmpty() ? preferredSelectionPath : this->selectedPresetPath;
     this->presets.clear();
     auto scanDirectory = [this](const juce::File& directory, bool isUser) {
@@ -147,7 +154,7 @@ void KitBrowserComponent::rebuildPresetEntries(const juce::String& preferredSele
     if (!selectionExists) this->selectedPresetPath = this->presets.empty() ? juce::String() : this->presets.front().file.getFullPathName();
 }
 
-bool KitBrowserComponent::matchesFilter(const juce::String& searchText, const juce::String& filterText) {
+bool KitPage::matchesFilter(const juce::String& searchText, const juce::String& filterText) {
     juce::StringArray terms;
     terms.addTokens(filterText.toLowerCase(), " \t\r\n", "");
     terms.removeEmptyStrings();
@@ -161,16 +168,16 @@ bool KitBrowserComponent::matchesFilter(const juce::String& searchText, const ju
     return true;
 }
 
-void KitBrowserComponent::rebuildFilteredEntries() {
+void KitPage::rebuildFilteredEntries() {
     this->stopTimer();
     this->filteredIndexes.clear();
     const auto filterText = this->filterField.getText();
     if (this->activeSection == KitSection::LibraryKits) {
         for (int idx = 0; idx < static_cast<int>(this->kits.size()); ++idx)
-            if (KitBrowserComponent::matchesFilter(this->kits[static_cast<size_t>(idx)].searchText, filterText)) this->filteredIndexes.push_back(idx);
+            if (KitPage::matchesFilter(this->kits[static_cast<size_t>(idx)].searchText, filterText)) this->filteredIndexes.push_back(idx);
     } else {
         for (int idx = 0; idx < static_cast<int>(this->presets.size()); ++idx)
-            if (KitBrowserComponent::matchesFilter(this->presets[static_cast<size_t>(idx)].searchText, filterText)) this->filteredIndexes.push_back(idx);
+            if (KitPage::matchesFilter(this->presets[static_cast<size_t>(idx)].searchText, filterText)) this->filteredIndexes.push_back(idx);
     }
 
     this->sourceList.updateContent();
@@ -197,7 +204,7 @@ void KitBrowserComponent::rebuildFilteredEntries() {
     this->updateSelectedContent();
 }
 
-void KitBrowserComponent::setActiveSection(KitSection section) {
+void KitPage::setActiveSection(KitSection section) {
     if (this->activeSection == section) return;
     this->activeSection = section;
     this->filterField.clear();
@@ -205,19 +212,19 @@ void KitBrowserComponent::setActiveSection(KitSection section) {
     this->resized();
 }
 
-const KitBrowserComponent::KitEntry* KitBrowserComponent::getSelectedKit() const {
+const KitPage::KitEntry* KitPage::getSelectedKit() const {
     for (const auto& kit : this->kits)
         if (kit.id == this->selectedKitId) return &kit;
     return nullptr;
 }
 
-const KitBrowserComponent::PresetEntry* KitBrowserComponent::getSelectedPreset() const {
+const KitPage::PresetEntry* KitPage::getSelectedPreset() const {
     for (const auto& preset : this->presets)
         if (preset.file.getFullPathName() == this->selectedPresetPath) return &preset;
     return nullptr;
 }
 
-std::vector<KitPreviewGrid::Item> KitBrowserComponent::buildKitPreviewItems(const KitEntry& kit) const {
+std::vector<KitPreviewGrid::Item> KitPage::buildKitPreviewItems(const KitEntry& kit) const {
     std::vector<KitPreviewGrid::Item> result;
     for (const auto& source : this->sourceItems) {
         if (!source.rawKitCode.equalsIgnoreCase(kit.rawId) && !source.kitCodeRaw.equalsIgnoreCase(kit.id)) continue;
@@ -230,7 +237,7 @@ std::vector<KitPreviewGrid::Item> KitBrowserComponent::buildKitPreviewItems(cons
     return result;
 }
 
-std::vector<KitPreviewGrid::Item> KitBrowserComponent::buildPresetPreviewItems(const PresetEntry& preset) const {
+std::vector<KitPreviewGrid::Item> KitPage::buildPresetPreviewItems(const PresetEntry& preset) const {
     std::vector<KitPreviewGrid::Item> result;
     auto parsed = DrumKitEngine::parseInstrumentMapText(preset.file.loadFileAsString());
     const auto* library = this->engine.getInstrumentManager();
@@ -272,7 +279,7 @@ std::vector<KitPreviewGrid::Item> KitBrowserComponent::buildPresetPreviewItems(c
     return result;
 }
 
-void KitBrowserComponent::updateSelectedContent() {
+void KitPage::updateSelectedContent() {
     std::vector<KitPreviewGrid::Item> previewItems;
     if (this->filteredIndexes.empty()) {
         const bool sourceEmpty = this->activeSection == KitSection::LibraryKits ? this->kits.empty() : this->presets.empty();
@@ -322,7 +329,7 @@ void KitBrowserComponent::updateSelectedContent() {
     this->updateActionButtons();
 }
 
-void KitBrowserComponent::updateActionButtons() {
+void KitPage::updateActionButtons() {
     const bool presetsSectionActive = this->activeSection == KitSection::Presets;
     const auto* preset = this->getSelectedPreset();
     const bool hasVisibleSelection = !this->filteredIndexes.empty();
@@ -339,12 +346,12 @@ void KitBrowserComponent::updateActionButtons() {
     this->presetsSectionButton.setColour(juce::TextButton::buttonColourId, presetsSectionActive ? UITheme::Colours::selectionStrong : UITheme::Colours::bgControl);
 }
 
-void KitBrowserComponent::loadSelected() {
+void KitPage::loadSelected() {
     if (this->activeSection == KitSection::LibraryKits) this->loadSelectedKit();
     else this->loadSelectedPreset();
 }
 
-void KitBrowserComponent::loadSelectedKit() {
+void KitPage::loadSelectedKit() {
     const auto* selectedKit = this->getSelectedKit();
     const auto* layout = this->engine.getKitLayout();
     const auto* library = this->engine.getInstrumentManager();
@@ -381,7 +388,7 @@ void KitBrowserComponent::loadSelectedKit() {
     }
 }
 
-void KitBrowserComponent::loadSelectedPreset() {
+void KitPage::loadSelectedPreset() {
     const auto* preset = this->getSelectedPreset();
     const auto* layout = this->engine.getKitLayout();
     if (preset == nullptr || layout == nullptr) {
@@ -423,7 +430,7 @@ void KitBrowserComponent::loadSelectedPreset() {
     }
 }
 
-void KitBrowserComponent::saveSelectedPreset() {
+void KitPage::saveSelectedPreset() {
     const auto* preset = this->getSelectedPreset();
     if (preset == nullptr || !preset->isUser || this->currentMapText.trim().isEmpty()) return;
     const auto normalizedMapText = this->engine.normalizeInstrumentMapText(this->currentMapText);
@@ -436,7 +443,7 @@ void KitBrowserComponent::saveSelectedPreset() {
     this->reportStatus("Saved preset: " + preset->name);
 }
 
-void KitBrowserComponent::savePresetAs() {
+void KitPage::savePresetAs() {
     if (this->currentMapText.trim().isEmpty()) {
         this->reportStatus("There is no instrument map to save");
         return;
@@ -447,11 +454,15 @@ void KitBrowserComponent::savePresetAs() {
     options.message = "Enter a preset name.";
     options.confirmText = "Save";
     options.fields.push_back({ "name", "Name", "My Kit", 0, {} });
-    juce::Component::SafePointer<KitBrowserComponent> safeThis(this);
+    juce::Component::SafePointer<KitPage> safeThis(this);
     CompactModalDialog::show(*this, std::move(options), [safeThis](const CompactModalDialog& dialog) {
         if (safeThis == nullptr) return juce::String();
-        const auto name = KitHomePanelHelpers::safePresetFileName(dialog.getFieldText("name"));
+        const auto name = KitPageDetail::safePresetFileName(dialog.getFieldText("name"));
         if (name.isEmpty()) return juce::String("Enter a preset name.");
+        const bool nameExists = std::any_of(safeThis->presets.begin(), safeThis->presets.end(), [&name](const auto& preset) {
+            return preset.isUser && preset.name.equalsIgnoreCase(name);
+        });
+        if (nameExists) return juce::String("A preset with this name already exists.");
         auto directory = safeThis->getUserPresetDirectory();
         directory.createDirectory();
         auto file = directory.getChildFile(name + ".map");
@@ -467,7 +478,7 @@ void KitBrowserComponent::savePresetAs() {
     });
 }
 
-void KitBrowserComponent::deleteSelectedPreset() {
+void KitPage::deleteSelectedPreset() {
     const auto* selectedPreset = this->getSelectedPreset();
     if (selectedPreset == nullptr || !selectedPreset->isUser) return;
     const auto preset = *selectedPreset;
@@ -477,7 +488,7 @@ void KitBrowserComponent::deleteSelectedPreset() {
     options.message = "Delete \"" + preset.name + "\"?";
     options.confirmText = "Delete";
     options.destructive = true;
-    juce::Component::SafePointer<KitBrowserComponent> safeThis(this);
+    juce::Component::SafePointer<KitPage> safeThis(this);
     CompactModalDialog::show(*this, std::move(options), [safeThis, preset](const CompactModalDialog&) {
         if (safeThis == nullptr) return juce::String();
         if (!preset.file.deleteFile()) return juce::String("Could not delete this preset.");
@@ -489,19 +500,19 @@ void KitBrowserComponent::deleteSelectedPreset() {
     });
 }
 
-void KitBrowserComponent::reportStatus(const juce::String& message) {
+void KitPage::reportStatus(const juce::String& message) {
     if (this->onStatusMessage) this->onStatusMessage(message);
 }
 
-void KitBrowserComponent::timerCallback() {
+void KitPage::timerCallback() {
     this->rebuildFilteredEntries();
 }
 
-int KitBrowserComponent::SourceListModel::getNumRows() {
+int KitPage::SourceListModel::getNumRows() {
     return this->owner.filteredIndexes.empty() ? 1 : static_cast<int>(this->owner.filteredIndexes.size());
 }
 
-void KitBrowserComponent::SourceListModel::paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) {
+void KitPage::SourceListModel::paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) {
     if (this->owner.filteredIndexes.empty()) {
         graphics.fillAll(UITheme::Colours::bgControlAlt);
         graphics.setColour(UITheme::Colours::textMuted);
@@ -533,7 +544,7 @@ void KitBrowserComponent::SourceListModel::paintListBoxItem(int rowNumber, juce:
     graphics.drawFittedText(detail, 6, 14, width - 12, height - 14, juce::Justification::centredLeft, 1);
 }
 
-void KitBrowserComponent::SourceListModel::selectedRowsChanged(int lastRowSelected) {
+void KitPage::SourceListModel::selectedRowsChanged(int lastRowSelected) {
     if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.filteredIndexes.size())) return;
     const int itemIndex = this->owner.filteredIndexes[static_cast<size_t>(lastRowSelected)];
     if (this->owner.activeSection == KitSection::LibraryKits)
@@ -543,17 +554,17 @@ void KitBrowserComponent::SourceListModel::selectedRowsChanged(int lastRowSelect
     this->owner.updateSelectedContent();
 }
 
-void KitBrowserComponent::paint(juce::Graphics& graphics) {
+void KitPage::paint(juce::Graphics& graphics) {
     graphics.fillAll(UITheme::Colours::bgEditor);
 }
 
-void KitBrowserComponent::updatePreviewGridSize() {
+void KitPage::updatePreviewGridSize() {
     const int width = juce::jmax(1, this->previewViewport.getWidth() - this->previewViewport.getScrollBarThickness());
     const int height = juce::jmax(this->previewViewport.getHeight(), this->previewGrid.getPreferredHeight(width));
     this->previewGrid.setSize(width, height);
 }
 
-void KitBrowserComponent::resized() {
+void KitPage::resized() {
     auto area = this->getLocalBounds().reduced(UITheme::Spacing::md);
     auto titleRow = area.removeFromTop(UITheme::Sizes::standardControlHeight);
     this->titleLabel.setBounds(titleRow);

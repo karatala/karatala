@@ -231,7 +231,7 @@ public:
             { "Sidebar", "Main navigation and performance knobs" },
             { "Sidebar::PageButton", "TextButton subtype used for each sidebar page" },
             { "StatusBar", "Live example above and persistent bottom status" },
-            { "KitHomePanel", "Kit setup page. Requires live engine and library data" },
+            { "KitPage", "Library kit and instrument-map preset page. Requires live engine and library data" },
             { "DrumPadGrid", "Live empty-state example above and Zone page grid" },
             { "DrumPad", "Rendered inside DrumPadGrid" },
             { "MidiMapTable", "Live toolbar example above and Map mode table" },

@@ -4,7 +4,6 @@
 
 Sidebar::Sidebar() {
     this->pageButtons.add(new PageButton(PageId::Kit, "Kit"));
-    this->pageButtons.add(new PageButton(PageId::Browse, "Browse"));
     this->pageButtons.add(new PageButton(PageId::Instrument, "Inst"));
     this->pageButtons.add(new PageButton(PageId::Zone, "Zone"));
     this->pageButtons.add(new PageButton(PageId::Map, "Map"));

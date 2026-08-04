@@ -2,7 +2,7 @@
 
 #include <juce_core/juce_core.h>
 
-namespace KitLib {
+namespace KitLib { //FIXME: why in Engine root, why namespace is KitLib, and in .cpp extra namespace InstrumentTypeDetail?
 
 enum class InstrumentType {
     Unknown,

@@ -172,7 +172,7 @@ static const KitLayout::InstrumentSlot::ArticulationSlot* findFallbackArticulati
 
 namespace DrumKitEngineMapHelpers {
 
-std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& libraryInstrument, const InstrumentMap::Layer& mapLayer) {
+std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& libraryInstrument, const InstrumentMap::Layer& mapLayer) { //FIXME: wtf is this wrapper for?
     return DrumKitEngineMapDetail::inferAutomaticFlipLR(slot, libraryInstrument, mapLayer);
 }
 

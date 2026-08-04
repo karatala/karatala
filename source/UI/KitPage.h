@@ -6,11 +6,11 @@
 #include <functional>
 #include <vector>
 
-class KitBrowserComponent final : public juce::Component,
-                                  private juce::Timer {
+class KitPage final : public juce::Component,
+                      private juce::Timer {
 public:
-    explicit KitBrowserComponent(DrumKitEngine& engine);
-    ~KitBrowserComponent() override;
+    explicit KitPage(DrumKitEngine& engine);
+    ~KitPage() override;
 
     void refresh(const juce::String& activeInstrumentMapText);
     void paint(juce::Graphics& graphics) override;
@@ -44,13 +44,13 @@ private:
 
     class SourceListModel final : public juce::ListBoxModel {
     public:
-        explicit SourceListModel(KitBrowserComponent& browserOwner) : owner(browserOwner) {}
+        explicit SourceListModel(KitPage& pageOwner) : owner(pageOwner) {}
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) override;
         void selectedRowsChanged(int lastRowSelected) override;
 
     private:
-        KitBrowserComponent& owner;
+        KitPage& owner;
     };
 
     static constexpr int filterDebounceMs = 100;
@@ -106,5 +106,5 @@ private:
     std::vector<KitPreviewGrid::Item> buildPresetPreviewItems(const PresetEntry& preset) const;
     static bool matchesFilter(const juce::String& searchText, const juce::String& filterText);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KitBrowserComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KitPage)
 };

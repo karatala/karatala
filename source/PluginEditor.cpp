@@ -7,7 +7,7 @@
 
 namespace PluginEditorDetail {
 
-static auto makeProcessingSuspendGuard(PluginProcessor& processor) {
+static auto makeProcessingSuspendGuard(PluginProcessor& processor) { //FIXME: why inside namespace, and why not in PluginProcessor like static or whatever?
     processor.suspendProcessing(true);
     return juce::ScopeGuard { [processorPtr = &processor] { processorPtr->suspendProcessing(false); } };
 }
@@ -22,7 +22,6 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
     this->setupSidebarAndStatusBar();
     this->setupKitPage();
-    this->setupBrowsePage();
     this->setupDrumPadGridPage();
     this->setupSidebarKnobs();
     this->setupRawPage();
@@ -41,61 +40,15 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 }
 
 void PluginEditor::setupKitPage() {
-    this->kitHomePanel = std::make_unique<KitHomePanel>(this->processorRef.getEngine());
-    this->addChildComponent(*this->kitHomePanel);
-    this->kitHomePanel->onStatusMessage = [this](const juce::String& message) {
+    this->kitPage = std::make_unique<KitPage>(this->processorRef.getEngine());
+    this->addChildComponent(*this->kitPage);
+    this->kitPage->onStatusMessage = [this](const juce::String& message) {
         this->statusBar.setStatusText(message);
     };
-    this->kitHomePanel->onLoadRequested = [this](KitHomePanel::Commit commit) {
-        const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
-
-        const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
-        auto& engine = this->processorRef.getEngine();
-        if (!engine.setKitLayoutDirect(commit.layout, false)) {
-            this->statusBar.setStatusText("Could not apply kit layout");
-            return;
-        }
-        if (!engine.useInstrumentMap(commit.instrumentMapText)) {
-            this->statusBar.setStatusText(engine.getLastInstrumentMapStatus());
-            return;
-        }
-
-        auto& state = this->processorRef.getValueTreeState().state;
-        state.setProperty("kit_layout", commit.layout.id, nullptr);
-        state.setProperty("instrument_map", commit.instrumentMapText, nullptr);
-        this->instrumentMapEditor.setText(commit.instrumentMapText, false);
-
-        juce::StringArray status;
-        status.add(engine.getLastInstrumentMapStatus());
-        if (commit.setGlobalKitLayout && !engine.setGlobalKitLayoutId(commit.layout.id))
-            status.add("Could not save the default kit layout");
-        if (commit.globalMicLayoutId.isNotEmpty()
-            && commit.globalMicLayoutId != engine.getGlobalMicLayoutId()) {
-            if (engine.setGlobalMicLayoutId(commit.globalMicLayoutId))
-                status.add("Mic layout saved for newly created plugin instances");
-            else
-                status.add("Could not save the global mic layout");
-        }
-
-        this->markDrumPadGridDirty();
-        this->markMidiMapTableDirty();
-        this->markInstrumentConfigDirty();
-        this->statusBar.setStatusText(status.joinIntoString(" | "));
-        this->setPage(PageId::Zone);
+    this->kitPage->onMapLoadRequested = [this](const juce::String& mapText, const juce::String& statusText) {
+        return this->applyKitPageInstrumentMap(mapText, statusText);
     };
-    this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
-}
-
-void PluginEditor::setupBrowsePage() {
-    this->kitBrowserComponent = std::make_unique<KitBrowserComponent>(this->processorRef.getEngine());
-    this->addChildComponent(*this->kitBrowserComponent);
-    this->kitBrowserComponent->onStatusMessage = [this](const juce::String& message) {
-        this->statusBar.setStatusText(message);
-    };
-    this->kitBrowserComponent->onMapLoadRequested = [this](const juce::String& mapText, const juce::String& statusText) {
-        return this->applyBrowserInstrumentMap(mapText, statusText);
-    };
-    this->kitBrowserComponent->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+    this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 }
 
 void PluginEditor::setupSidebarAndStatusBar() {
@@ -237,7 +190,7 @@ void PluginEditor::applyInstrumentMapFromEditor() {
     this->refreshMidiMapTableIfNeeded();
 }
 
-bool PluginEditor::applyBrowserInstrumentMap(const juce::String& mapText, const juce::String& statusText) {
+bool PluginEditor::applyKitPageInstrumentMap(const juce::String& mapText, const juce::String& statusText) {
     const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
@@ -369,10 +322,8 @@ void PluginEditor::reloadLibraryFromTroubleshooting() {
     this->refreshDrumPadGridIfNeeded(true);
     this->refreshMidiMapTableIfNeeded(true);
     this->refreshInstrumentConfigIfNeeded(true);
-    if (this->kitHomePanel)
-        this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
-    if (this->kitBrowserComponent)
-        this->kitBrowserComponent->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+    if (this->kitPage)
+        this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
     if (this->troubleshootingPanel)
         this->troubleshootingPanel->refresh();
     this->statusBar.setStatusText("Library reloaded. " + engine.getLastInstrumentMapStatus());
@@ -624,10 +575,7 @@ void PluginEditor::setPage(PageId pageId) {
         this->troubleshootingPanel->refresh();
 
     if (pageId == PageId::Kit)
-        this->kitHomePanel->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
-
-    if (pageId == PageId::Browse)
-        this->kitBrowserComponent->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+        this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
 
     if (pageId == PageId::Zone) {
         this->refreshDrumPadGridIfNeeded();
@@ -697,8 +645,7 @@ void PluginEditor::dismissCrosstalkPopup() {
 }
 
 void PluginEditor::showComponentsForPage(PageId pageId) {
-    this->kitHomePanel->setVisible(pageId == PageId::Kit);
-    this->kitBrowserComponent->setVisible(pageId == PageId::Browse);
+    this->kitPage->setVisible(pageId == PageId::Kit);
 
     // Drum pad grid - visible for Zone
     this->drumPadGrid.setVisible(pageId == PageId::Zone);
@@ -743,11 +690,7 @@ void PluginEditor::resized() {
 
     switch (this->activePageId) {
         case PageId::Kit:
-            this->kitHomePanel->setBounds(mainArea);
-            break;
-
-        case PageId::Browse:
-            this->kitBrowserComponent->setBounds(mainArea);
+            this->kitPage->setBounds(mainArea);
             break;
 
         case PageId::Zone:

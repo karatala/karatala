@@ -6,7 +6,6 @@
 
 enum class PageId {
     Kit = 0,
-    Browse,
     Map,
     Zone,
     Instrument,

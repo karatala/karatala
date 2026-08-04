@@ -86,8 +86,8 @@ Use the full names `kit layout preset`, `instrument map preset`, and `velocity r
 | `ModeButton` | `PageButton` | ✅ |
 | `SourceMode` in `KitBrowserComponent` | `KitSection` | ✅ |
 | `SourceArticulationOverrideEditor` | `LibraryArticulationEditor` | ✅ |
-| `KitBrowserComponent` | `KitPage` | ⏳ Do this after the old Kit page is removed. |
-| `PageId::Browse` | `PageId::Kit` | ⏳ Do this after the old Kit page is removed. |
+| `KitBrowserComponent` | `KitPage` | ✅ |
+| `PageId::Browse` | `PageId::Kit` | ✅ |
 | `SourceItem` and `SourcePickerPopup` | Not selected | ⏳ Keep these names until a clear replacement is approved. |
 
 ## Use of `source`
@@ -118,4 +118,4 @@ Use a feature namespace, such as `InstrumentMap`. Use `<Feature>Detail` for priv
 | ✅ `DrumPadHelpers.h` was used only by `DrumPad.cpp`. | Its code is now private in `DrumPad.cpp` under `DrumPadDetail`; the helper header was deleted. |
 | ✅ Instrument map types and text operations were spread across engine files. | `source/Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp` now own the map data and text boundary. |
 | `UIHelpers` contains styling, library list, and MIDI operations. | Move each operation to its owning UI feature when related code changes. |
-| The old Kit page and the Browse page repeat preset logic. | Move useful behavior to Browse, remove the old Kit page, then rename Browse to Kit. |
+| The old Kit page and the Browse page repeated preset logic. | ✅ The old page was removed, and the replacement is the single `KitPage`. |
