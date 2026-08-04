@@ -4,8 +4,59 @@
 Karatala is a drum kit engine instrument for e-Drummers and everyone.
 
 
+DO NOT CHANGE THIS FILE, its for my manual temporary editing only!
 
-reverted 4, 3 is now staged, benchmarks files are in working tree,
+
+
+remove base62ToInt with related stuff, we obsoleted it, instead for decay envelope we now use library kit owned cvs files
+
+
+
+
+
+do we need to reorganize code better, like move out from drumKitEngine.cpp to some separate file(s?) and rethink how to better name namespaces:
+namespace DrumKitEngineIdentityMapHelpers
+namespace DrumKitEnginePreviewDetail
+namespace DrumKitEngineMapTextDetail
+namespace DrumKitEngineVelocityResponseHelpers
+namespace DrumKitEngineLibraryOverrideDetail
+namespace DrumKitEngineMapDetail
+namespace DrumKitEngineMapHelpers
+also check for usage of the code, like might be questionable stuff like below or even worse
+std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& libraryInstrument, const InstrumentMap::Layer& mapLayer) { //FIXME: what is this wrapper for?
+    return DrumKitEngineMapDetail::inferAutomaticFlipLR(slot, libraryInstrument, mapLayer);
+}
+
+similar in KitLibModel:
+namespace KitLibIdentityHelpers
+namespace KitLibSampleMetadataHelpers
+namespace KitLibCalibrationHelpers
+in InstrumentMap:
+namespace InstrumentMapDetail
+namespace InstrumentMapDetail
+
+
+
+here is unrelated tasks description but maybe we need to somehow keep them in mind designing this architecture, and maybe made some corrections to plan:
+
+according "Use the median response of round robins at each recorded velocity first. Report outliers instead of automatically flattening each round robin." - TODO: + probably separate unrelated task: 
+
+
+there might be instruments with 2 or less round robins but with many velocity levels, so for them only we need to have some special logic - instead of exact velocity matching there we need to use something similar to drumgizmo approach - see docs/drumgizmoFloatingVelocityGroups.cpp where we use primarily list of available samples by their 'power' maybe even ignoring velocity levels and round robins, need to plan well
+
+
+
+
+
+
+
+according "it analyzes every file separately instead of grouping one hit across mic files" - it should do  every file separately, we write to each sample filename its calculated metadata with --rename and use that in engine, what is wrong about it? 
+does it clarify plan a little? should we include that to this plan? let’s negotiate, dont make md changes yet
+
+
+
+
+app need to use everywhere only 1 font with 2 possible sizes (normal and small) and limited colors selection (primary secondary danger success info) and standartized buttons sizes etc
 
 
 the original idea was to review the codebase and make plan for improvements like:
@@ -16,45 +67,22 @@ check where string comparison used and where could be better to replace strings 
 
 so can u modify the plan md doc, maybe split/remove something from it and add there proper tests and benchmarks planning. main goal is very readable, reusable and performant code, since currently project got pretty bloated. its unreleased yet so there are some experimental unfinished ui, but it works kinda well now, except some places, so i wanted to make the code base more compact and readable
 
+TODO: apply processing to cache - plan how to save cpu and time by applying sample reference volume/curve and future effects to cached sample data, make dedicated 'bake cache' button that applies effects to cached data (and maybe even merge layers - but that probably not so easy or even impossible/pointless, since layers can have different roundrobins and velocity level numbers)
+ - when we have sample trim volume compensation, wouldn't it be better to also apply that to cache when reading the sample.
 
 
-
-
+todo: build is too slow and often rebuilds too many .cpp files, also after building vst building tests rebuilds same files and then benchmarks also rebuilds many same files, can it be optimized somehow to better reuse stuff
 
 FIXME:
--when opening inst tab first time it freezes for several sec, probably because it starts for some reason rebuilding inst map (why should it?)
--micRouting dropdown freezes everything for several seconds
-
--instrument picker on instrument tab and on pad popup have different style, why? need to keep instrument tab's version
+- statusbar shows some text that sometimes dont fit if its multiline, what text it can show and why/when? 
 
 
 
 
--we have pad popup (when in zone tab) opening popup with only layers of clicked articulation, need to make pad popup universal and always show all layers of all articulations just with visual separators, so layers grouped by art in the popup, also it will need dedicated +Layer button for each articulation inline with the separator: edge -------- [+layer]
--remove 'replace' check-button on pad popup and logic related to it
--remove zen tab
--on zone tab redesign pads, make them have black thin line with vertical title (ftom top to bottom, top-aligned) on left side (like "Kick 1"), and articulations dont prepend instrument title anymore
--add to statusbar button that opens 
-- statusbar shows some text that usually dont fit if its multiline, what text it shows and why/when? 
--inst tab table header should be fixed, so it stays on top when scrolling,
-
-
--add near replace button another similar button to link param changes for all articulations of that instrument (tuning, attack, ..., bleed)
--add similar for link toms bleed params so a
-
-- add 
 - need to standartize fonts and their sizes, now there are to many different, need to keep 2 or 3 at maximum, one is normal and small (title size maybe no need)
 
 only there are some unfinished/bad ux on some tabs, many fixme/todo comments by me in the code to be reviewed/addressed 
 
-hihats instrument map works well and shosing correct expressions (open/half/close/tight) but why the text saved in instrumentMap is [close]?  
-hihat1/bow:NakedDrums/hihat-X1/edge[close]
-hihat1/edge:NakedDrums/hihat-X1/edge[close]
-hihat1/pedal:NakedDrums/hihat-X1/pedal
-hihat2/bow:TchackpoumDG1.3/hihat-14/bow[close]
-hihat2/edge:TchackpoumDG1.3/hihat-14/edge[close]
-hihat2/pedal:TchackpoumDG1.3/hihat-14/pedal
-is there some formatting on editing that adding this [close]?
 
 
 
@@ -70,10 +98,6 @@ questionable features:
 
 
 
-docs\PLAN-instrument-map-surgical-apply.md
-Stage 6 - Document And Preserve Hihat Expression Routing
-Stage 7 - Preserve Incremental Apply Safety, mostly started but tests still open
-Stage 8 - Tests To Add, partly covered but not fully closed
 
 docs\TODO_LIBRARY_SNAPSHOT_PLAN.md
 Phase 4 - Verify Reload Behavior
@@ -106,10 +130,9 @@ P1-A - Aftertouch choke gain still appears per-sample/per-call sensitive
 P4 - Hi-hat CC target RMS / validation scan remains
 P5 - Voice estimated dB work was improved/throttled, but not fully gone
 
-
-therminology: layer - instrument articulation with params assigned for some pad thru pad popup or inst tab
-
-2 tasks rough description: instruments for different kits can be recorded with different volume and and samples of them named using different velocity 'curve', sometimes missrepresenting the volume, so midi velocity can have different effect on them, so need to think about way to intelegently apply some custom curves to specific instrument and articulation automatically (with ability to change it manually for any instrument/articulation), even when instrument slot is layered *have several different instruments articulations layered for that slot), need to make it with combination with analyze_drum_samples.py (which will need some improvements for that, and also new features like pan detection (as an extra code in range L127-C0-R127) for stereo samples and instrument folders, based on overhead mic, since its the most common one. pan we should use for layer panning
+need to think about next tasks and write md plan
+therminology: layer - instrument articulation with params assigned for some pad thru pad popup or inst tab.
+tasks rough description: instruments for different kits can be recorded with different volume and samples of them can be named using different velocity 'curve', sometimes missrepresenting the loudness, so midi velocity can have different effect on them even if we compensate gain of samples accordint velocities and overall sample gains. main goal here is to have all kits instruments to play max velocity notes globally with the same loudness and lover velocity notes also follow some globally defined loudness curve for predictable user controlled velocity curve config. so need to think about way to intelegently apply/save some custom curves to specific instruments/articulations automatically (with ability to change it manually for any instrument/articulation), even when instrument slot is layered (have several different instruments articulations layered for that slot), need to make it with combination with analyze_drum_samples.py (which will need some improvements for that, so it can analyze sample library and apply to folders/filenames some engine-compatible parsable extra params (which can also later be used for modifying sample audio files by applying gain and maybe offset changes etc (we have some kits with samples recorded using different audio interfaces, so direct/room/oh mics can be out of sync),  also new features for py like pan detection (as an extra code in range L127-C0-R127) for stereo samples and instrument folders, based on overhead mic, since its the most common one. pan we should use for layer panning - mainly on overhead mic types and mono mics that routed to stereo out/aux, since room mics are usually far and direct mono mics are mono and panned outside of the plugin on DAW level, we can probably skip them, only maybe room mics can be flipped sometimes if panning dramatically changed (like from LXXX to RXXX or opposite)
 
 
 
@@ -133,7 +156,7 @@ can u review the codebase and make plan for improvements like:
 - check where string comparison used and where could be better to replace strings with StringsDictSingleton
 
 
-replace '—'
+replace em dash characters with hyphens
 
 
 
@@ -150,7 +173,8 @@ normally if instrument have >1 articulations and nothing asigned for them, then 
 
 
 
-TODO0A: get rid of juce completely, decide on what plugin format is needed, maybe only clap or keep also vst3, find better framework/tools to replace juce quirkiness
+TODO0A: get rid of juce completely, decide on what plugin format is needed, maybe only clap or keep also vst3, find better framework/tools to replace juce quirkiness or give up and use ui https://github.com/ImJimmi/JIVE
+
 TODO0X: avpts on plugin init to decide what micLayout to use?
 
 
@@ -161,7 +185,7 @@ TODO: after routing-plan done, need to make preview of instrument articulation l
 
 
 TODO: ignore low velocity notes on polyaftertouch changes (min velocity to conf ui, 1-20, default 10
-TODO: add crosstalk support - midi filter for instruments since crash or splash can be near tom and hitting one always can produce low velocity hit for another instrument. need to add some button on map panel to record users drumkit x-talk profile womething like this (or suggest better ideas for better ux) user interactively following instructions and hit with max velocity all the notes for instruments sequentially, one at time, so plugin reads hit and records other sounding notes, so this data later getting saved and used in runtime to filter those crasstalking midi from e-kit)
+TODO: add crosstalk support - midi filter for instruments since crash or splash can be near tom and hitting one always can produce low velocity hit for another instrument. need to add some button on Map page to record users drumkit x-talk profile womething like this (or suggest better ideas for better ux) user interactively following instructions and hit with max velocity all the notes for instruments sequentially, one at time, so plugin reads hit and records other sounding notes, so this data later getting saved and used in runtime to filter those crasstalking midi from e-kit)
 
 
 
@@ -204,7 +228,7 @@ FIXME: sort properties in classes and structs so 1st go the heaviest for memory 
             const StringsDictSingleton::Id ID_sidestick = StringsDictSingleton::getId("sidestick");
             const StringsDictSingleton::Id ID_center = StringsDictSingleton::getId("center");
 
-[FAIL] Reduce voices to use one multichannel voice instead of many 1-2 ch, and then cache multichannel variant from n files - FAILED (performance become worse and idea is logically wrong, cause for example, room channers have different attack/length, cannot wait for them)
+[FAIL] Reduce voices to use one multichannel voice instead of many 1-2 ch, and then cache one logical hit from multiple files - FAILED (performance become worse and idea is logically wrong, cause for example, room channers have different attack/length, cannot wait for them)
 
 
 
@@ -232,7 +256,7 @@ global decay?
 room reverb: amount, decay, predelay for short/long?
 
 
-TODO: peak offset for diffenetn mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that sample variant relatively, for example far room = 10ms etc...) smart-parse from samples and save to filename
+TODO: peak offset for diffenetn mics (found minimal for example di and take it as 0, based on that calculate for all other mics of that logical hit relatively, for example far room = 10ms etc...) smart-parse from samples and save to filename
 
 
 
@@ -291,12 +315,12 @@ Loading of inst preset ( kick1(slit) kit inst (spec) params , support stacking s
 
 
 
-how would be better to implement InstrumentSynth::loadInstrument so it creates very fast data structure that for each InstrumentSynth instance, that later will be queried from InstrumentSynth::handleMidiEvent with next requirements: it should very fast find a sound to play dependeing on several factors:
- - main factor is note (described in InstrumentSynth.instrumentSlot.articulations.notes), here we decide what articulation (KitLib::ArticulationSpec) to use.
- - latest cc values (for some instruments might be optional, used if the instrument have cc "subscriptions", that are defined in InstrumentSynth.instrumentSlot.controllers (type KitLayout::InstrumentSlot) - cc number is ContinuousController.id) latest cc values can be find from this->parent->getLatestContinuousControllerValues(), here we decide what KitLib::ArticulationSpec::ExpressionDimension to use if there was at least one defined
- - midi velocity value to find suitable velocityLayer (and neighbor layers)
+how would be better to implement InstrumentPlayer::loadInstrument so it creates very fast data structure that for each InstrumentPlayer instance, that later will be queried from InstrumentPlayer::handleMidiEvent with next requirements: it should very fast find a sound to play dependeing on several factors:
+ - main factor is note (described in InstrumentPlayer.instrumentSlot.articulations.notes), here we decide what articulation (KitLib::ArticulationSpec) to use.
+ - latest cc values (for some instruments might be optional, used if the instrument have cc "subscriptions", that are defined in InstrumentPlayer.instrumentSlot.controllers (type KitLayout::InstrumentSlot) - cc number is ContinuousController.id) latest cc values can be find from this->parent->getLatestContinuousControllerValues(), here we decide what KitLib::ArticulationSpec::ExpressionDimension to use if there was at least one defined
+ - midi velocity value to find a suitable velocity level (and neighbor levels)
  - and next starts the most difficult part: 
- -- if we have less then NAME_IT_BETTER_MIN_VARIANTS=3 sampleVariants for the velocityLayer, we need to look to neighbor velocity layers in they are not too far from selected layer velocity (NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS=32 (since midi velocity range is 0-127))
+ -- if we have fewer than NAME_IT_BETTER_MIN_VARIANTS=3 logical hits for the velocity level, we need to look at neighbor velocity levels if they are not too far from the selected level velocity (NAME_IT_BETTER_MAX_VELOCITY_DISTANCE_TO_USE_SAMPLES_FROM_NEARBY_VELOCITY_LAYERS=32 (since midi velocity range is 0-127))
  --
 
 
@@ -515,11 +539,11 @@ Update `.github/copilot-instructions.md` for the user, then ask for feedback on 
 
 GitHub Copilot: Chat took too long to get ready. Please ensure you are signed in to GitHub and that the extension `GitHub.copilot-chat` is installed and enabled.
 
-need to make next changes to Map mode page (source\UI\MidiMapTable.cpp and related):
+need to make next changes to Map page (source\UI\MidiMapTable.cpp and related):
 1. dropdown on top should also show item for 'default' layout (hardcoded in KitLayout::getDefault)
 2. dropdown dont need rounded corners and need to be half of its current width, position more on right side of top toolbar, have "Layout" label before it
 3. more ('...') button showing context menu with default juce theme colors, need to make it follow UITheme colors instead
-4. some instruments in the Map table have CC controls, currently those controls are the same as for note assignment (4 buttons [note1][learn1][note2][learn2] where 'noteN' showing for example "38 / D 1" and midi key popup on click), need to change it to have different controls, for now just one dropdown with numbers 0-127 / GM cc name to assign control number, no learn buttons needed for cc or second alternative assignment buttons
+4. some instruments in the Map page table have CC controls, currently those controls are the same as for note assignment (4 buttons [note1][learn1][note2][learn2] where 'noteN' showing for example "38 / D 1" and midi key popup on click), need to change it to have different controls, for now just one dropdown with numbers 0-127 / GM cc name to assign control number, no learn buttons needed for cc or second alternative assignment buttons
 
 
 
@@ -554,3 +578,4 @@ It also contains:
 3. A `VERSION` file that will propagate through JUCE and your app.
 4. A ton of useful comments and options around the CMake config.
 
+# python3 scripts/generate_sample_metadata.py -i ./sample_library --report-folder ./reports
