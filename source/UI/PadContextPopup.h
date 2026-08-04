@@ -10,7 +10,7 @@
 #include "LibraryArticulationEditor.h"
 #include "VelocityResponseEditor.h"
 
-class PadContextPopup : public juce::Component {
+class PadContextPopup : public juce::Component, private juce::Timer {
 public:
     explicit PadContextPopup(DrumKitEngine& engine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedInstrumentMapText = "");
     ~PadContextPopup() override;
@@ -147,6 +147,7 @@ private:
     void commitVelocityResponse(MapLayerRow* layer);
     void updateVelocityResponseDisplay(MapLayerRow* layer);
     void applyLayerParameterChange(MapLayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode = {});
+    void timerCallback() override;
     void updateSourceCardButtonVisibility();
     void updateSourceDisplay(MapLayerRow* layer);
     void rebuildBleedControls(MapLayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
@@ -170,8 +171,12 @@ private:
     std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const;
     static int findRoutingChoiceIndex(const std::vector<MicRoutingChoice>& choices, const juce::String& outputId);
     void updateRoutingComboDisplay(MapLayerRow::MicBleedControl& bleedCtrl) const;
+    std::optional<DrumKitEngine::InstrumentMap> pendingInstrumentMap;
+    juce::String pendingPreviewArtName;
     bool mapTextDirty = false;
     bool suppressParameterCallbacks = false;
+
+    static constexpr int parameterChangeDebounceMs = 250;
 
     std::unique_ptr<DismissOverlay> pickerOverlay;
     std::unique_ptr<SourcePickerPopup> activePicker;

@@ -701,9 +701,6 @@ void PadContextPopup::rebuildBleedControls(MapLayerRow* layer, const std::unorde
         bleedCtrl->bleedPot->onValueChange = [this, layer, bleedCtrlPtr] {
             this->applyLayerParameterChange(layer, EditableLayerParameter::Bleed, bleedCtrlPtr->micCode);
         };
-        bleedCtrl->bleedPot->onDragEnd = [this, layer] {
-            this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
-        };
 
         bleedCtrl->routingChoices = this->buildMicRoutingChoices(sourcePath, micCode, this->slotId);
         bleedCtrl->routingCombo = std::make_unique<juce::ComboBox>();
@@ -782,27 +779,18 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->tuningPot->setInteraction(0.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->tuningPot);
     layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Tuning); };
-    layer->tuningPot->onDragEnd = [this, layer] {
-        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
-    };
 
     // Attack pot
     layer->attackPot = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
     layer->attackPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Attack); };
-    layer->attackPot->onDragEnd = [this, layer] {
-        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
-    };
 
     // Decay pot
     layer->decayPot = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
     layer->decayPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Decay); };
-    layer->decayPot->onDragEnd = [this, layer] {
-        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
-    };
 
     // Gain pot (-60 to +12 dB)
     layer->gainPot = std::make_unique<CompactParameterControl>("Gain", -60.0, 12.0, 0.1, static_cast<double>(volumeDb),
@@ -813,9 +801,6 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->gainPot->setInteraction(0.0, 0.5, 0.1);
     this->layerContent.addAndMakeVisible(*layer->gainPot);
     layer->gainPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Gain); };
-    layer->gainPot->onDragEnd = [this, layer] {
-        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
-    };
 
     // Pan pot
     layer->panPot = std::make_unique<CompactParameterControl>("Pan", -127.0, 127.0, 1.0, static_cast<double>(pan), [](double value) -> juce::String {
@@ -826,9 +811,6 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->panPot->setInteraction(0.0, 4.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->panPot);
     layer->panPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Pan); };
-    layer->panPot->onDragEnd = [this, layer] {
-        this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
-    };
 
     // Flip L/R button (toggle)
     layer->flipLRButton = std::make_unique<juce::TextButton>("L/R");
@@ -866,6 +848,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->removeButton->onStateChange = [this] { this->updateSourceCardButtonVisibility(); };
     layer->removeButton->onClick = [this, layer] {
         juce::MessageManager::callAsync([this, layer] {
+            this->flushMapText();
             const bool removedMappedLayer = layer->selectedSourceIndex >= 0;
             this->layerRows.removeObject(layer);
             this->updateSourceCardButtonVisibility();
@@ -1015,12 +998,19 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
         return;
     }
 
-    const auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
-    auto parsedMap = DrumKitEngine::parseInstrumentMapText(currentMapText);
+    DrumKitEngine::InstrumentMap workingMap;
+    if (this->pendingInstrumentMap.has_value()) {
+        workingMap = *this->pendingInstrumentMap;
+    } else {
+        const auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
+        auto parsedMap = DrumKitEngine::parseInstrumentMapText(currentMapText);
+        if (!parsedMap.ok()) return;
+        workingMap = std::move(parsedMap.value);
+    }
     const auto* layout = this->engine.getKitLayout();
-    if (!parsedMap.ok() || layout == nullptr) return;
+    if (layout == nullptr) return;
 
-    auto projections = DrumKitEngineMapHelpers::projectMapLayers(parsedMap.value, *layout);
+    auto projections = DrumKitEngineMapHelpers::projectMapLayers(workingMap, *layout);
     auto findMapLayerProjection = [this, layer](const auto& candidateProjections) -> const DrumKitEngineMapHelpers::InstrumentMapLayerProjection* {
         for (const auto& projection : candidateProjections) {
             if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationSlotCode.compareIgnoreCase(layer->artName) != 0 || projection.articulationSlotLayerIndex != layer->mappedLayerIndex) continue;
@@ -1039,8 +1029,8 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
             return slot.id.compareIgnoreCase(this->slotId) == 0;
         });
         if (slotIterator != layout->instrumentSlots.end()) {
-            DrumKitEngineMapHelpers::isolateMapLayerForArticulationSlot(parsedMap.value, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
-            projections = DrumKitEngineMapHelpers::projectMapLayers(parsedMap.value, *layout);
+            DrumKitEngineMapHelpers::isolateMapLayerForArticulationSlot(workingMap, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
+            projections = DrumKitEngineMapHelpers::projectMapLayers(workingMap, *layout);
             mapLayerProjection = findMapLayerProjection(projections);
             if (mapLayerProjection == nullptr) return;
         }
@@ -1100,9 +1090,9 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
     }
 
     if (parameter == EditableLayerParameter::Bleed) {
-        std::erase_if(targetProjections, [this, &parsedMap, &micCode](const auto& projection) {
-            if (projection.mapLayerIndex >= parsedMap.value.layers.size()) return true;
-            const auto& mapLayer = parsedMap.value.layers[projection.mapLayerIndex];
+        std::erase_if(targetProjections, [this, &workingMap, &micCode](const auto& projection) {
+            if (projection.mapLayerIndex >= workingMap.layers.size()) return true;
+            const auto& mapLayer = workingMap.layers[projection.mapLayerIndex];
             const auto libraryPath = DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, projection.articulationSlotCode);
             const auto relevantMics = this->getRelevantMicsForSourcePath(libraryPath);
             return std::none_of(relevantMics.begin(), relevantMics.end(), [&micCode](const auto& mic) {
@@ -1114,8 +1104,8 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
 
     std::unordered_set<size_t> updatedMapLayerIndexes;
     for (const auto& projection : targetProjections) {
-        if (projection.mapLayerIndex >= parsedMap.value.layers.size() || !updatedMapLayerIndexes.insert(projection.mapLayerIndex).second) continue;
-        auto& mapLayer = parsedMap.value.layers[projection.mapLayerIndex];
+        if (projection.mapLayerIndex >= workingMap.layers.size() || !updatedMapLayerIndexes.insert(projection.mapLayerIndex).second) continue;
+        auto& mapLayer = workingMap.layers[projection.mapLayerIndex];
         switch (parameter) {
             case EditableLayerParameter::Tuning:
                 if (integerValue == 0) mapLayer.tuningCents.reset();
@@ -1194,10 +1184,18 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
     for (const auto& projection : targetProjections) runtimeTargets.push_back({ projection.slotId, projection.articulationSlotCode, projection.articulationSlotLayerIndex, runtimeUpdate });
     this->engine.updateSlotParametersBatch(runtimeTargets);
 
-    this->savedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(parsedMap.value);
-    this->mapTextDirty = false;
-    this->refreshLayerMappings();
-    if (this->onMapTextChanged) this->onMapTextChanged(this->savedInstrumentMapText);
+    this->pendingInstrumentMap = std::move(workingMap);
+    this->mapTextDirty = true;
+    if (parameter == EditableLayerParameter::Tuning || parameter == EditableLayerParameter::Attack || parameter == EditableLayerParameter::Decay || parameter == EditableLayerParameter::Gain || parameter == EditableLayerParameter::Pan || parameter == EditableLayerParameter::Bleed)
+        this->pendingPreviewArtName = layer->artName;
+    this->startTimer(this->parameterChangeDebounceMs);
+}
+
+void PadContextPopup::timerCallback() {
+    const auto previewArtName = this->pendingPreviewArtName;
+    this->pendingPreviewArtName.clear();
+    this->flushMapText();
+    if (previewArtName.isNotEmpty()) this->engine.playPreviewNote(this->slotId, previewArtName, this->getPreviewVelocity());
 }
 // Generate map text: rebuilds this slot while preserving every other slot.
 
@@ -1267,6 +1265,7 @@ juce::String PadContextPopup::generateFullMapText() const {
 
 void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::MicBleedControl* bleedCtrl) {
     if (this->suppressParameterCallbacks || layer == nullptr || bleedCtrl == nullptr || bleedCtrl->routingCombo == nullptr) return;
+    this->flushMapText();
 
     const auto oldRoute = bleedCtrl->selectedOutputId;
     const int selectedIndex = bleedCtrl->routingCombo->getSelectedId() - 1;
@@ -1454,19 +1453,27 @@ void PadContextPopup::rebuildMapLayerRows() {
 }
 
 void PadContextPopup::flushMapText() {
-    if (!this->mapTextDirty) return;
+    this->stopTimer();
+    this->pendingPreviewArtName.clear();
+    if (!this->mapTextDirty) {
+        this->pendingInstrumentMap.reset();
+        return;
+    }
 
-    auto text = this->generateFullMapText();
+    const auto text = this->pendingInstrumentMap.has_value() ? DrumKitEngine::serializeInstrumentMap(*this->pendingInstrumentMap) : this->generateFullMapText();
     if (text.trim().isEmpty()) return;
 
     this->savedInstrumentMapText = text;
+    this->pendingInstrumentMap.reset();
     this->mapTextDirty = false;
+    this->refreshLayerMappings();
 
     if (this->onMapTextChanged) this->onMapTextChanged(text);
 }
 
 void PadContextPopup::showVelocityResponseEditor(MapLayerRow* layer) {
     if (layer == nullptr) return;
+    this->flushMapText();
     this->dismissSourcePicker();
     this->dismissLibraryArticulationEditor();
     this->dismissVelocityResponseEditor();
@@ -1547,6 +1554,7 @@ void PadContextPopup::layoutVelocityResponseEditor() {
 
 void PadContextPopup::showLibraryArticulationEditor(MapLayerRow* layer) {
     if (layer == nullptr || layer->selectedSourceIndex < 0 || layer->selectedSourceIndex >= static_cast<int>(this->sourceItems.size())) return;
+    this->flushMapText();
     const auto& source = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
     if (source.rawArtCode.isEmpty()) return;
     this->dismissSourcePicker();
@@ -1608,6 +1616,7 @@ void PadContextPopup::layoutLibraryArticulationEditor() {
 // Source picker
 
 void PadContextPopup::showSourcePicker(MapLayerRow* layer) {
+    this->flushMapText();
     this->dismissLibraryArticulationEditor();
     this->dismissVelocityResponseEditor();
     this->dismissSourcePicker();
@@ -1670,6 +1679,7 @@ void PadContextPopup::showSourcePicker(MapLayerRow* layer) {
 }
 
 void PadContextPopup::showInstrumentPicker() {
+    this->flushMapText();
     this->dismissLibraryArticulationEditor();
     this->dismissVelocityResponseEditor();
     this->dismissSourcePicker();
