@@ -1,5 +1,5 @@
 #include "StatusBar.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 StatusBar::StatusBar() {
@@ -13,7 +13,7 @@ StatusBar::StatusBar() {
     this->infoLabel.setColour(juce::Label::textColourId, UITheme::Colours::textInfo);
     addAndMakeVisible(this->infoLabel);
 
-    UIHelpers::configureToggleButton(this->uiButton);
+    UIComponentStyle::configureToggleButton(this->uiButton);
     this->uiButton.setClickingTogglesState(false);
     this->uiButton.setTooltip("Open UI theme playground");
     this->uiButton.onClick = [this] {
@@ -22,7 +22,7 @@ StatusBar::StatusBar() {
     this->addAndMakeVisible(this->uiButton);
 
 #if JUCE_DEBUG
-    UIHelpers::configureControlButton(this->inspectButton);
+    UIComponentStyle::configureControlButton(this->inspectButton);
     this->inspectButton.setTooltip("Open component inspector");
     this->inspectButton.onClick = [this] {
         if (this->onInspectRequested) this->onInspectRequested();
@@ -30,7 +30,7 @@ StatusBar::StatusBar() {
     this->addAndMakeVisible(this->inspectButton);
 #endif
 
-    UIHelpers::configureToggleButton(this->logsButton);
+    UIComponentStyle::configureToggleButton(this->logsButton);
     this->logsButton.setClickingTogglesState(false);
     this->logsButton.setTooltip("Open logs and troubleshooting");
     this->logsButton.onClick = [this] {

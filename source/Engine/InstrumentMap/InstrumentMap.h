@@ -32,10 +32,7 @@ struct Map {
     std::vector<Layer> layers;
 };
 
-juce::String identityKey(const juce::String& value);
-bool candidateMatches(const std::vector<juce::String>& candidates, const juce::String& id);
 ParseResult<Map> parseText(const juce::String& text);
 juce::String serialize(const Map& instrumentMap);
 
 } // namespace InstrumentMap
-

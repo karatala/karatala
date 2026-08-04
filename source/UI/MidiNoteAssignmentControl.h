@@ -2,6 +2,7 @@
 
 #include <array>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../Engine/LayoutManager.h"
 #include "MidiNotePicker.h"
 #include "UITheme.h"
 
@@ -17,6 +18,8 @@ public:
 
     MidiNoteAssignmentControl();
     ~MidiNoteAssignmentControl() override = default;
+
+    static void applyNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note);
 
     void resized() override;
 

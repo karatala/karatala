@@ -1,7 +1,7 @@
 #include "PadContextPopup.h"
 #include "../Engine/ArticulationNames.h"
-#include "../Engine/DrumKitEngineMapHelpers.h"
-#include "UIHelpers.h"
+#include "../Engine/InstrumentMap/InstrumentMapOperations.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
@@ -466,7 +466,7 @@ void PadContextPopup::rebuildBleedControls(MapLayerRow* layer, const std::unorde
 
         bleedCtrl->routingChoices = this->buildMicRoutingChoices(sourcePath, micCode, this->slotId);
         bleedCtrl->routingCombo = std::make_unique<juce::ComboBox>();
-        UIHelpers::configureComboBox(*bleedCtrl->routingCombo);
+        UIComponentStyle::configureComboBox(*bleedCtrl->routingCombo);
         bleedCtrl->routingCombo->getProperties().set("compactRoute", true);
         bleedCtrl->routingCombo->getProperties().set("hideArrow", true);
         const auto requestedOutputId = bleedCtrl->selectedOutputId;
@@ -533,8 +533,8 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
         return;
     }
 
-    auto projections = DrumKitEngineMapHelpers::projectMapLayers(parsedMap.value, *layout);
-    auto findMapLayerProjection = [this, layer, layerIndex](const auto& candidateProjections) -> const DrumKitEngineMapHelpers::InstrumentMapLayerProjection* {
+    auto projections = InstrumentMap::projectLayers(parsedMap.value, *layout);
+    auto findMapLayerProjection = [this, layer, layerIndex](const auto& candidateProjections) -> const InstrumentMap::LayerProjection* {
         for (const auto& projection : candidateProjections) {
             if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationSlotCode.compareIgnoreCase(layer->artName) != 0 || projection.articulationSlotLayerIndex != layerIndex) continue;
             return &projection;
@@ -555,8 +555,8 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
             return slot.id.compareIgnoreCase(this->slotId) == 0;
         });
         if (slotIterator != layout->instrumentSlots.end()) {
-            DrumKitEngineMapHelpers::isolateMapLayerForArticulationSlot(parsedMap.value, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
-            projections = DrumKitEngineMapHelpers::projectMapLayers(parsedMap.value, *layout);
+            InstrumentMap::isolateLayerForArticulationSlot(parsedMap.value, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
+            projections = InstrumentMap::projectLayers(parsedMap.value, *layout);
             mapLayerProjection = findMapLayerProjection(projections);
             if (mapLayerProjection == nullptr) {
                 restoreCurrentRoute();
@@ -565,11 +565,11 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
         }
     }
 
-    auto targetProjections = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, this->slotId, layer->artName, layerIndex, linkArts, linkTomBleed);
+    auto targetProjections = InstrumentMap::collectLinkedMapLayerTargets(projections, this->slotId, layer->artName, layerIndex, linkArts, linkTomBleed);
     std::erase_if(targetProjections, [this, &parsedMap, bleedCtrl, &newRoute](const auto& projection) {
         if (projection.mapLayerIndex >= parsedMap.value.layers.size()) return true;
         const auto& mapLayer = parsedMap.value.layers[projection.mapLayerIndex];
-        const auto libraryPath = DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, projection.articulationSlotCode);
+        const auto libraryPath = InstrumentMap::libraryPathForArticulationSlot(mapLayer, projection.articulationSlotCode);
         const auto relevantMics = this->getRelevantMicsForSourcePath(libraryPath);
         const bool hasSourceMic = std::any_of(relevantMics.begin(), relevantMics.end(), [bleedCtrl](const auto& mic) {
             return mic.first.compareIgnoreCase(bleedCtrl->micCode) == 0;

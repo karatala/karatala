@@ -150,7 +150,9 @@ Organization rules:
 - Name files by responsibility, such as `InstrumentMap.h` or `MicRouting.h`, not only `Helpers.h`.
 - Start a feature with one cohesive `.h` and `.cpp` pair. Add another file only for a separate, substantial responsibility.
 - Prefer feature namespaces such as `InstrumentMap` or `ArticulationNames` over public `FooHelpers` namespaces.
-- Use a named `<Feature>Detail` namespace for private `.cpp` helpers because this project does not use nameless namespaces.
+- Keep one-use private `.cpp` helpers as file-local `static` functions, or private static class methods when class ownership is clear.
+- When a complete implementation belongs to one feature namespace, keep the complete `.cpp` inside that namespace.
+- Do not add a private namespace block only to group helpers beside class or global implementations.
 - Use one clear named namespace that matches the owned domain.
 - Keep helper dependencies one-way. Low-level helpers must not include large owner classes only for convenience.
 - Prefer pure functions with explicit inputs and outputs.
@@ -348,7 +350,7 @@ If measurements confirm a problem, create a separate snapshot/publication design
 Priority: low.
 
 - Do not optimize unfinished UI only because it contains repeated strings.
-- Reuse `UIHelpers` when touching related code.
+- Reuse `UIComponentStyle` for shared styling. Keep source-list and control operations with `SourceItem` and their concrete controls.
 - Remove clear local duplication during normal UI work.
 - Cache search text only when a representative large list shows visible or measured delay.
 - Keep experimental UI changes separate from engine cleanup.

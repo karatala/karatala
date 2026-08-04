@@ -8,9 +8,9 @@
 - `ArticulationNames.h` owns shared articulation-name normalization and matching.
 - `InstrumentType*` owns the narrow shared instrument type and its text conversions.
 - `InstrumentCatalog*` owns instrument families, aliases, and mic selector matching.
-- `InstrumentMap/` owns instrument-map data, text parsing, normalized serialization, and shared identity matching.
+- `InstrumentMap/` owns instrument-map data, text parsing, normalized serialization, and reusable map operations.
 - `ArticulationSlotFallbackRules.h` owns built-in and user-overridden articulation-slot fallback order for whole-instrument map generation.
-- `KitLibModel.h` declares parsed library metadata. `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` own value types, instrument/sample parsing, and kit/library scanning.
+- `KitLibModel.h` declares parsed library metadata and shared library identity matching. `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` own value types, instrument/sample parsing, and kit/library scanning.
 - `LibraryKitOverrides*` owns sparse user-authored library kit corrections loaded from and saved to each kit's `kit-overrides.yml`.
 - `SampleLoader*` owns asynchronous sample loading and publication.
 - `DrumKitEngine.cpp` owns core lifecycle and process-block coordination. `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, `DrumKitEngineLibraryKitOverrides.cpp`, and `DrumKitEngineMapApply.cpp` own their named workflows.

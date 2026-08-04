@@ -9,7 +9,7 @@
 #include "ParameterPot.h"
 #include "ParameterSlider.h"
 #include "StatusBar.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <vector>
@@ -42,25 +42,25 @@ public:
         this->statusBar.setInfoText("StatusBar information text");
 
         this->standardLabel.setText("juce::Label using configureCaptionLabel", juce::dontSendNotification);
-        UIHelpers::configureCaptionLabel(this->standardLabel, juce::Justification::centredLeft);
+        UIComponentStyle::configureCaptionLabel(this->standardLabel, juce::Justification::centredLeft);
 
-        UIHelpers::configureControlButton(this->controlButton);
+        UIComponentStyle::configureControlButton(this->controlButton);
         this->controlButton.setTooltip("TooltipWindow renders this tooltip after the normal delay");
-        UIHelpers::configureCategoryButton(this->categoryButton);
-        UIHelpers::configureToggleButton(this->toggleTextButton);
+        UIComponentStyle::configureCategoryButton(this->categoryButton);
+        UIComponentStyle::configureToggleButton(this->toggleTextButton);
         this->toggleTextButton.setToggleState(true, juce::dontSendNotification);
         this->standardToggle.setColour(juce::ToggleButton::textColourId, UITheme::Colours::textSecondary);
         this->standardToggle.setToggleState(true, juce::dontSendNotification);
 
-        UIHelpers::configureComboBox(this->standardCombo);
+        UIComponentStyle::configureComboBox(this->standardCombo);
         this->standardCombo.addItemList({ "Standard item", "Second item", "Disabled-looking text is separate" }, 1);
         this->standardCombo.setSelectedId(1, juce::dontSendNotification);
 
-        UIHelpers::configureComboBox(this->layoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
+        UIComponentStyle::configureComboBox(this->layoutCombo, UIComponentStyle::ComboBoxStyle::LayoutSelector);
         this->layoutCombo.addItemList({ "Long layout selector item", "Another layout" }, 1);
         this->layoutCombo.setSelectedId(1, juce::dontSendNotification);
 
-        UIHelpers::configureComboBox(this->midiCombo, UIHelpers::ComboBoxStyle::MidiControllerList);
+        UIComponentStyle::configureComboBox(this->midiCombo, UIComponentStyle::ComboBoxStyle::MidiControllerList);
         this->midiCombo.addItemList({ "1 / Modulation Wheel", "7 / Channel Volume", "11 / Expression", "64 / Sustain" }, 1);
         this->midiCombo.setSelectedId(3, juce::dontSendNotification);
 
@@ -68,13 +68,13 @@ public:
         this->filterEditor.setText("Source filter TextEditor", false);
         this->filterEditor.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
 
-        UIHelpers::configureMonoTextEditor(this->monoEditor, UITheme::Colours::textSecondary, true);
+        UIComponentStyle::configureMonoTextEditor(this->monoEditor, UITheme::Colours::textSecondary, true);
         this->monoEditor.setText("kick1/center:DemoKit/kick-24/center\n# Monospaced editor style", false);
 
         this->listBox.setModel(&this->listModel);
         this->listBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
 
-        UIHelpers::configureControlButton(this->popupMenuButton);
+        UIComponentStyle::configureControlButton(this->popupMenuButton);
         this->popupMenuButton.onClick = [this] {
             juce::PopupMenu popupMenu;
             popupMenu.setLookAndFeel(&this->getLookAndFeel());
@@ -107,7 +107,7 @@ public:
         };
 
         this->standardDemos = {
-            { "juce::Label", "Direct caption label styled by UIHelpers", &this->standardLabel, 40, 420, UITheme::Sizes::standardControlHeight },
+            { "juce::Label", "Direct caption label styled by UIComponentStyle", &this->standardLabel, 40, 420, UITheme::Sizes::standardControlHeight },
             { "juce::TextButton / control", "Standard 20 px project button", &this->controlButton, 42, 220, UITheme::Sizes::standardControlHeight },
             { "juce::TextButton / category", "Standard 20 px connected category selector", &this->categoryButton, 42, 220, UITheme::Sizes::standardControlHeight },
             { "juce::TextButton / toggle", "Standard 20 px active toggle", &this->toggleTextButton, 42, 220, UITheme::Sizes::standardControlHeight },
@@ -252,7 +252,7 @@ public:
             { "MidiNoteAssignmentControl", "Live note and MIDI learn example above" },
             { "MidiNotePicker", "Live note grid example above and CallOutBox content" },
             { "LookAndFeel", "Non-component renderer for buttons, sliders, menus, scrollbars, ComboBoxes, and tabs" },
-            { "UIHelpers", "Non-component functions that apply shared control styles" },
+            { "UIComponentStyle", "Non-component functions that apply shared control styles" },
             { "UITheme", "Non-component source of named fonts, colors, spacing, and sizes" },
         };
 

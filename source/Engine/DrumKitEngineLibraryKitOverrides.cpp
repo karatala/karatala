@@ -1,6 +1,5 @@
 #include "DrumKitEngine.h"
 #include "ArticulationNames.h"
-#include "DrumKitEngineMapHelpers.h"
 #include "InstrumentPlayer.h"
 #include "SampleSelector.h"
 #include "../Config/Helpers.h"
@@ -13,8 +12,6 @@
 #include <limits>
 #include <unordered_set>
 #include <utility>
-
-namespace DrumKitEngineLibraryOverrideDetail {
 
 static juce::String relativeSamplePath(const KitLib::DrumKitSpec& kit, const juce::File& sampleFile) {
     return sampleFile.getRelativePathFrom(kit.meta.rootDir).replaceCharacter('\\', '/');
@@ -49,8 +46,6 @@ static juce::String firstContentHash(const std::vector<KitLib::SampleSpec*>& sam
         if (sample != nullptr && sample->metadataContentHash.isNotEmpty()) return sample->metadataContentHash;
     return {};
 }
-
-} // namespace DrumKitEngineLibraryOverrideDetail
 
 DrumKitEngine::LibraryArticulationInfo DrumKitEngine::getLibraryArticulationInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const {
     LibraryArticulationInfo result;
@@ -94,7 +89,7 @@ DrumKitEngine::LibraryArticulationInfo DrumKitEngine::getLibraryArticulationInfo
                 LibrarySampleInfo sampleInfo;
                 sampleInfo.namedVelocity = velocityLevel->velocity;
                 sampleInfo.roundRobin = roundRobinLetter == '\0' ? "-" : juce::String::charToString(roundRobinLetter);
-                sampleInfo.relativePath = DrumKitEngineLibraryOverrideDetail::relativeSamplePath(*kit, sample->sampleFile);
+                sampleInfo.relativePath = relativeSamplePath(*kit, sample->sampleFile);
                 sampleInfo.fileName = sample->sampleFileName;
                 sampleInfo.micCode = sample->micSpec.raw.trim().toLowerCase();
                 sampleInfo.contentHash = sample->metadataContentHash;
@@ -120,7 +115,7 @@ DrumKitEngine::LibraryArticulationInfo DrumKitEngine::getLibraryArticulationInfo
                 for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
                     if (instrumentPlayer == nullptr) continue;
                     const auto recipeStatus = instrumentPlayer->getSourceRecipeStatus(*sample);
-                    if (DrumKitEngineLibraryOverrideDetail::recipeStatusPriority(recipeStatus) > DrumKitEngineLibraryOverrideDetail::recipeStatusPriority(sampleInfo.recipeStatus)) sampleInfo.recipeStatus = recipeStatus;
+                    if (recipeStatusPriority(recipeStatus) > recipeStatusPriority(sampleInfo.recipeStatus)) sampleInfo.recipeStatus = recipeStatus;
                 }
                 result.samples.push_back(std::move(sampleInfo));
             }
@@ -356,9 +351,9 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSampleManu
         const auto normalizedPath = relativePath.trim().replaceCharacter('\\', '/');
         if (uniquePaths.contains(normalizedPath)) continue;
         uniquePaths.add(normalizedPath);
-        auto matchingSamples = DrumKitEngineLibraryOverrideDetail::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
+        auto matchingSamples = findSamplesByRelativePath(*kit, *articulation, normalizedPath);
         if (matchingSamples.empty()) return result.returnWithError("Sample file was not found in the library articulation: " + normalizedPath);
-        const auto contentHash = DrumKitEngineLibraryOverrideDetail::firstContentHash(matchingSamples);
+        const auto contentHash = firstContentHash(matchingSamples);
         const auto existingOverrideMatch = kit->libraryKitOverrides.findSampleOverride(normalizedPath, contentHash);
         if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
         const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : normalizedPath;
@@ -422,14 +417,14 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSamplePlay
         const auto targetKey = normalizedPath + "\n" + normalizedMicCode;
         if (uniqueTargets.contains(targetKey)) continue;
         uniqueTargets.add(targetKey);
-        auto matchingSamples = DrumKitEngineLibraryOverrideDetail::findSamplesByRelativePath(*kit, *articulation, normalizedPath);
+        auto matchingSamples = findSamplesByRelativePath(*kit, *articulation, normalizedPath);
         if (matchingSamples.empty()) return result.returnWithError("Sample file was not found in the library articulation: " + normalizedPath);
         if (target.micCode.has_value() && normalizedMicCode.isEmpty()) return result.returnWithError("Mic code is empty");
         if (target.micCode.has_value() && std::none_of(matchingSamples.begin(), matchingSamples.end(), [&normalizedMicCode](const auto* sample) {
             return sample != nullptr && sample->micSpec.raw.trim().toLowerCase() == normalizedMicCode;
         })) return result.returnWithError("Mic was not found in this sample file: " + normalizedMicCode);
 
-        const auto contentHash = DrumKitEngineLibraryOverrideDetail::firstContentHash(matchingSamples);
+        const auto contentHash = firstContentHash(matchingSamples);
         const auto existingOverrideMatch = kit->libraryKitOverrides.findSampleOverride(normalizedPath, contentHash);
         if (existingOverrideMatch.ambiguousContentHash) return result.returnWithError("Sample content hash matches more than one saved override. Reload after resolving the duplicate entries.");
         const auto overridePath = existingOverrideMatch.value != nullptr ? existingOverrideMatch.storedRelativePath : normalizedPath;

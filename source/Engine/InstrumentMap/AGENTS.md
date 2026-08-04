@@ -4,23 +4,24 @@
 
 # Ownership
 
-- `InstrumentMap.h` owns map records and public map operations.
-- `InstrumentMap.cpp` owns parsing, normalized serialization, and case-insensitive identity matching.
+- `InstrumentMap.h` owns map records and the narrow text API.
+- `InstrumentMap.cpp` owns parsing and normalized serialization.
+- `InstrumentMapOperations.h/.cpp` owns reusable operations that also need layout or library model types.
 
 # Local Contracts
 
 - Each valid layer has one articulation-slot target and one full library articulation path.
 - Parsing reports malformed lines as structured warnings or errors.
 - Serialization has stable slot and articulation order.
-- Identity matching trims text, ignores case, and rejects an empty identity.
+- Library identity matching belongs to the `KitLib` model API.
 
 # Work Guidance
 
-- Keep small map primitives in this cohesive pair. Add another file only for a separate substantial responsibility.
-- Keep private implementation in the named `InstrumentMapDetail` namespace.
+- Keep each complete implementation file inside the `InstrumentMap` namespace and keep its private functions `static`.
+- Do not add a new map file for a small group of one-use functions.
 
 # Verification
 
-- Run the `[InstrumentMap]` Catch2 tests after map data, parsing, serialization, or identity changes.
+- Run the `[InstrumentMap]` Catch2 tests after map data, parsing, serialization, or operation changes.
 
 # Child DOX Index

@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "../source/Engine/DrumKitEngine.h"
-#include "../source/Engine/DrumKitEngineMapHelpers.h"
+#include "../source/Engine/InstrumentMap/InstrumentMapOperations.h"
 
 TEST_CASE("InstrumentMap parser rejects empty input", "[InstrumentMap]") {
     const auto parsed = DrumKitEngine::parseInstrumentMapText("");
@@ -165,8 +165,8 @@ TEST_CASE("InstrumentMap fingerprints include mic route overrides", "[Instrument
     DrumKitEngine::InstrumentMapLayer second = first;
     second.micRouteOverrides["dtm"] = "room/rfs";
 
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(second));
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(second));
+    CHECK(InstrumentMap::makeLayerFingerprint(first) != InstrumentMap::makeLayerFingerprint(second));
+    CHECK(InstrumentMap::makeLayerReloadFingerprint(first) != InstrumentMap::makeLayerReloadFingerprint(second));
 }
 
 TEST_CASE("InstrumentMap reload fingerprint changes when a shared map layer becomes a parameter layer", "[InstrumentMap]") {
@@ -180,7 +180,7 @@ TEST_CASE("InstrumentMap reload fingerprint changes when a shared map layer beco
     auto parameterLayer = sharedMapLayer;
     parameterLayer.volumeDb = -3.0f;
 
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(sharedMapLayer) != DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(parameterLayer));
+    CHECK(InstrumentMap::makeLayerReloadFingerprint(sharedMapLayer) != InstrumentMap::makeLayerReloadFingerprint(parameterLayer));
 }
 
 TEST_CASE("InstrumentMap slot replacement removes every old layer and preserves other slots", "[InstrumentMap][assignment]") {
@@ -215,7 +215,7 @@ TEST_CASE("InstrumentMap slot replacement removes every old layer and preserves 
     replacement.kitRef = "KitB";
     replacement.instCode = "kick-24";
     replacement.articulationFilter = { "center" };
-    DrumKitEngineMapHelpers::replaceSlotMapLayers(map, "kick1", { replacement });
+    InstrumentMap::replaceSlotLayers(map, "kick1", { replacement });
 
     REQUIRE(map.layers.size() == 2);
     CHECK(map.layers[0].slotId == "snare1");
@@ -258,7 +258,7 @@ TEST_CASE("InstrumentMap projections match map-layer numbers inside each articul
     rimParameterLayer.articulationFilter = { "rimshot" };
     map.layers.push_back(rimParameterLayer);
 
-    const auto projections = DrumKitEngineMapHelpers::projectMapLayers(map, layout);
+    const auto projections = InstrumentMap::projectLayers(map, layout);
     REQUIRE(projections.size() == 4);
     CHECK(projections[0].articulationSlotCode == "center");
     CHECK(projections[0].mapLayerIndex == 0);
@@ -291,10 +291,10 @@ TEST_CASE("InstrumentMap projections use the explicit articulation-slot filter",
     centerOnly.articulationFilter = { "center" };
     map.layers.push_back(centerOnly);
 
-    const auto projections = DrumKitEngineMapHelpers::projectMapLayers(map, layout);
+    const auto projections = InstrumentMap::projectLayers(map, layout);
     REQUIRE(projections.size() == 1);
     CHECK(projections[0].articulationSlotCode == "center");
-    CHECK(DrumKitEngineMapHelpers::libraryArticulationForSlot(map.layers[0], "center") == "center");
+    CHECK(InstrumentMap::libraryArticulationForSlot(map.layers[0], "center") == "center");
 }
 
 TEST_CASE("InstrumentMap linked mic edits resolve the library articulation path", "[InstrumentMap][linked-edit][routing]") {
@@ -304,11 +304,11 @@ TEST_CASE("InstrumentMap linked mic edits resolve the library articulation path"
     mapLayer.kitRef = "KitA";
     mapLayer.instCode = "snare-14";
     mapLayer.articulationFilter = { "rim" };
-    CHECK(DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rim");
+    CHECK(InstrumentMap::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rim");
 
     mapLayer.slotArticulationFilter = { "rim" };
     mapLayer.articulationFilter = { "rimshot" };
-    CHECK(DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rimshot");
+    CHECK(InstrumentMap::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rimshot");
 }
 
 TEST_CASE("InstrumentMap isolates a base articulation-slot filter before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
@@ -328,7 +328,7 @@ TEST_CASE("InstrumentMap isolates a base articulation-slot filter before an unli
     mapLayer.volumeDb = -2.0f;
     map.layers.push_back(mapLayer);
 
-    const auto halfLayerIndex = DrumKitEngineMapHelpers::isolateMapLayerForArticulationSlot(map, slot, 0, "bow[half]");
+    const auto halfLayerIndex = InstrumentMap::isolateLayerForArticulationSlot(map, slot, 0, "bow[half]");
 
     REQUIRE(map.layers.size() == 2);
     CHECK(halfLayerIndex == 0);
@@ -341,7 +341,7 @@ TEST_CASE("InstrumentMap isolates a base articulation-slot filter before an unli
 }
 
 TEST_CASE("InstrumentMap linked targets use same articulation layer and deduplicate both link modes", "[InstrumentMap][linked-edit]") {
-    using Projection = DrumKitEngineMapHelpers::InstrumentMapLayerProjection;
+    using Projection = InstrumentMap::LayerProjection;
     const std::vector<Projection> projections {
         { 0, "tom1", "center", 0, KitLib::InstrumentSpec::Type::Tom },
         { 1, "tom1", "center", 1, KitLib::InstrumentSpec::Type::Tom },
@@ -350,20 +350,20 @@ TEST_CASE("InstrumentMap linked targets use same articulation layer and deduplic
         { 3, "snare1", "center", 0, KitLib::InstrumentSpec::Type::Snare },
     };
 
-    const auto selectedOnly = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, false, false);
+    const auto selectedOnly = InstrumentMap::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, false, false);
     REQUIRE(selectedOnly.size() == 1);
     CHECK(selectedOnly[0].slotId == "tom1");
     CHECK(selectedOnly[0].articulationSlotCode == "center");
 
-    const auto linkedArticulations = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, true, false);
+    const auto linkedArticulations = InstrumentMap::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, true, false);
     REQUIRE(linkedArticulations.size() == 2);
     CHECK(std::none_of(linkedArticulations.begin(), linkedArticulations.end(), [](const auto& projection) { return projection.articulationSlotLayerIndex == 1; }));
 
-    const auto linkedTomBleed = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, false, true);
+    const auto linkedTomBleed = InstrumentMap::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, false, true);
     REQUIRE(linkedTomBleed.size() == 4);
     CHECK(std::none_of(linkedTomBleed.begin(), linkedTomBleed.end(), [](const auto& projection) { return projection.slotType != KitLib::InstrumentSpec::Type::Tom; }));
 
-    const auto bothLinks = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, true, true);
+    const auto bothLinks = InstrumentMap::collectLinkedMapLayerTargets(projections, "tom1", "center", 0, true, true);
     CHECK(bothLinks.size() == linkedTomBleed.size());
 }
 
@@ -479,8 +479,8 @@ TEST_CASE("InstrumentMap velocity response changes without changing an existing 
     auto second = first;
     second.velocityResponse = "1:-36,64:-9,127:0";
 
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(first) != DrumKitEngineMapHelpers::makeInstrumentMapLayerFingerprint(second));
-    CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(first) == DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(second));
+    CHECK(InstrumentMap::makeLayerFingerprint(first) != InstrumentMap::makeLayerFingerprint(second));
+    CHECK(InstrumentMap::makeLayerReloadFingerprint(first) == InstrumentMap::makeLayerReloadFingerprint(second));
 }
 
 TEST_CASE("InstrumentMap serializer omits map layers without complete slot and library paths", "[InstrumentMap]") {
@@ -697,7 +697,7 @@ TEST_CASE("InstrumentMap builder creates one map layer per library articulation 
     libraryInstrument->getOrAddArticulation("bow");
     libraryInstrument->getOrAddArticulation("bell");
 
-    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA", ArticulationSlotFallbackRules::makeDefault());
+    const auto mapLayers = InstrumentMap::buildLayers(slot, libraryKit, *libraryInstrument, "KitA", ArticulationSlotFallbackRules::makeDefault());
 
     REQUIRE(mapLayers.ok());
     REQUIRE(mapLayers.value.size() == 2);
@@ -727,7 +727,7 @@ TEST_CASE("InstrumentMap builder uses the configured articulation-slot fallback 
 
     const auto parsedRules = ArticulationSlotFallbackRules::parseYaml(YamlHelper::parse("ride: [edge, bow]"), InstrumentCatalog::makeDefault());
     REQUIRE(parsedRules.ok());
-    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA", parsedRules.value);
+    const auto mapLayers = InstrumentMap::buildLayers(slot, libraryKit, *libraryInstrument, "KitA", parsedRules.value);
 
     REQUIRE(mapLayers.ok());
     REQUIRE(mapLayers.value.size() == 1);
@@ -754,7 +754,7 @@ TEST_CASE("InstrumentMap builder skips an unmatched articulation when fallback i
 
     const auto parsedRules = ArticulationSlotFallbackRules::parseYaml(YamlHelper::parse("ride: []"), InstrumentCatalog::makeDefault());
     REQUIRE(parsedRules.ok());
-    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA", parsedRules.value);
+    const auto mapLayers = InstrumentMap::buildLayers(slot, libraryKit, *libraryInstrument, "KitA", parsedRules.value);
 
     REQUIRE(mapLayers.ok());
     CHECK(mapLayers.value.empty());

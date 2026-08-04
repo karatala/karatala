@@ -1,6 +1,5 @@
 #include "DrumKitEngine.h"
 #include "ArticulationNames.h"
-#include "DrumKitEngineMapHelpers.h"
 #include "InstrumentPlayer.h"
 #include "SampleSelector.h"
 #include "../Config/Helpers.h"
@@ -13,8 +12,6 @@
 #include <limits>
 #include <unordered_set>
 #include <utility>
-
-namespace DrumKitEnginePreviewDetail {
 
 static constexpr int previewVelocityBandSize = 8;
 
@@ -74,8 +71,6 @@ static bool isBetterPreviewSample(const KitLib::SampleSpec& candidate, const Kit
 
     return candidate.sampleFileName.compareIgnoreCase(current.sampleFileName) < 0;
 }
-
-} // namespace DrumKitEnginePreviewDetail
 
 void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity) {
     auto* layout = this->activeKitLayoutPtr.get();
@@ -212,7 +207,7 @@ std::string DrumKitEngine::makePreviewTargetCacheKey(const juce::String& kitCode
     const auto key = kitCodeRaw.trim().toLowerCase() 
         + "|" + instCode.trim().toLowerCase()
         + "|" + artCode.trim().toLowerCase()
-        + "|" + juce::String(DrumKitEnginePreviewDetail::getPreviewVelocityBucket(velocity))
+        + "|" + juce::String(getPreviewVelocityBucket(velocity))
         + "|" + relativePath.trim().replaceCharacter('\\', '/').toLowerCase()
         + "|" + micCode.trim().toLowerCase();
     return key.toStdString();
@@ -301,7 +296,7 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
             if (logicalHit == nullptr) continue;
             for (auto& sample : logicalHit->samples) {
                 if (sample == nullptr || !sample->isValid()) continue;
-                if (bestSample == nullptr || DrumKitEnginePreviewDetail::isBetterPreviewSample(*sample, *bestSample)) bestSample = sample.get();
+                if (bestSample == nullptr || isBetterPreviewSample(*sample, *bestSample)) bestSample = sample.get();
             }
         }
     }
@@ -403,6 +398,6 @@ void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce
         return;
     }
 
-    const auto resolveVelocity = DrumKitEnginePreviewDetail::getPreviewVelocityForBucket(velocity);
+    const auto resolveVelocity = getPreviewVelocityForBucket(velocity);
     this->previewResolveThreadPool.addJob(new PreviewResolveJob(*this, cacheKey, kitCodeRaw, instCode, artCode, relativePath, micCode, resolveVelocity, velocity, generation), true);
 }

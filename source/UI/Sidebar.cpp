@@ -1,6 +1,6 @@
 #include "Sidebar.h"
 
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 
 Sidebar::Sidebar() {
     this->pageButtons.add(new PageButton(PageId::Kit, "Kit"));
@@ -20,10 +20,10 @@ Sidebar::Sidebar() {
     }
 
     // HiHat openness knob
-    UIHelpers::configureValueLabel(this->hihatLabel);
+    UIComponentStyle::configureValueLabel(this->hihatLabel);
     addAndMakeVisible(this->hihatLabel);
 
-    UIHelpers::configureRotarySlider(this->hihatKnob, juce::Slider::NoTextBox, 0, 0);
+    UIComponentStyle::configureRotarySlider(this->hihatKnob, juce::Slider::NoTextBox, 0, 0);
     this->hihatKnob.setRange(0.0, 127.0, 1.0);
     this->hihatKnob.setInteraction(0.0, 1.0);
     this->hihatKnob.setValue(0.0, juce::dontSendNotification);
@@ -31,10 +31,10 @@ Sidebar::Sidebar() {
     addAndMakeVisible(this->hihatKnob);
 
     // Velocity knob
-    UIHelpers::configureValueLabel(this->velocityLabel);
+    UIComponentStyle::configureValueLabel(this->velocityLabel);
     addAndMakeVisible(this->velocityLabel);
 
-    UIHelpers::configureRotarySlider(this->velocityKnob, juce::Slider::NoTextBox, 0, 0);
+    UIComponentStyle::configureRotarySlider(this->velocityKnob, juce::Slider::NoTextBox, 0, 0);
     this->velocityKnob.setRange(1.0, 127.0, 1.0);
     this->velocityKnob.setInteraction(100.0, 1.0);
     this->velocityKnob.setValue(100.0, juce::dontSendNotification);
@@ -42,10 +42,10 @@ Sidebar::Sidebar() {
     addAndMakeVisible(this->velocityKnob);
 
     // Round-robin lock knob
-    UIHelpers::configureValueLabel(this->rrLockLabel);
+    UIComponentStyle::configureValueLabel(this->rrLockLabel);
     addAndMakeVisible(this->rrLockLabel);
 
-    UIHelpers::configureRotarySlider(this->rrLockKnob, juce::Slider::NoTextBox, 0, 0);
+    UIComponentStyle::configureRotarySlider(this->rrLockKnob, juce::Slider::NoTextBox, 0, 0);
     this->rrLockKnob.setRange(0.0, 8.0, 1.0);
     this->rrLockKnob.setInteraction(0.0, 1.0);
     this->rrLockKnob.setValue(0.0, juce::dontSendNotification);

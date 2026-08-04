@@ -1,7 +1,5 @@
 #include "PadContextPopup.h"
 #include "../Engine/ArticulationNames.h"
-#include "../Engine/DrumKitEngineMapHelpers.h"
-#include "UIHelpers.h"
 #include "UITheme.h"
 
 #include <algorithm>

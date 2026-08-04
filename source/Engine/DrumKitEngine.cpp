@@ -1,6 +1,5 @@
 #include "DrumKitEngine.h"
 #include "ArticulationNames.h"
-#include "DrumKitEngineMapHelpers.h"
 #include "InstrumentPlayer.h"
 #include "SampleSelector.h"
 #include "../Config/Helpers.h"
@@ -13,6 +12,58 @@
 #include <limits>
 #include <unordered_set>
 #include <utility>
+
+static void preparePlayerIfNeeded(InstrumentPlayer& player, double sampleRate, int samplesPerBlock) {
+    if (sampleRate <= 0.0 || samplesPerBlock <= 0) return;
+    player.setCurrentPlaybackSampleRate(sampleRate);
+    player.prepareToPlay(sampleRate, samplesPerBlock);
+}
+
+static bool canReuseSlotWithoutReload(const KitLayout::InstrumentSlot& oldSlot, const KitLayout::InstrumentSlot& newSlot) {
+    if (oldSlot.type != newSlot.type || oldSlot.articulations.size() != newSlot.articulations.size()) return false;
+
+    for (size_t idx = 0; idx < oldSlot.articulations.size(); ++idx) {
+        const auto& oldArticulation = oldSlot.articulations[idx];
+        const auto& newArticulation = newSlot.articulations[idx];
+        if (oldArticulation.nameId != newArticulation.nameId || oldArticulation.exprId != newArticulation.exprId) return false;
+    }
+    return true;
+}
+
+static void copyPlayerSettings(InstrumentPlayer& target, const InstrumentPlayer& source) {
+    target.setTuningOffsetCents(source.getTuningOffsetCents());
+
+    const auto attackOverride = source.getAttackOverrideMs();
+    if (attackOverride.has_value()) target.setAttackOverrideMs(*attackOverride);
+
+    const auto decayOverride = source.getDecayOverrideMs();
+    if (decayOverride.has_value()) target.setDecayOverrideMs(*decayOverride);
+
+    target.setVolumeDb(source.getVolumeDb());
+    target.setPan(source.getPan());
+    target.setFlipLR(source.getFlipLR());
+    target.setFlipPhase(source.getFlipPhase());
+    target.setMicBleedLevels(source.getMicBleedLevels());
+}
+
+static std::unique_ptr<InstrumentPlayer> createReplacementPlayer(DrumKitEngine* owner, const KitLayout::InstrumentSlot& layoutSlot, const InstrumentPlayer& player, double sampleRate, int samplesPerBlock) {
+    auto replacement = std::make_unique<InstrumentPlayer>(owner, layoutSlot);
+    replacement->setMicOutputMapping(player.getMicOutputMapping());
+    replacement->setMicChannelCount(player.getMicChannelCount());
+
+    const auto librarySnapshot = player.getLibrarySnapshot();
+    const auto& routingContext = player.getLastRoutingContext();
+    if (routingContext.isValid()) {
+        replacement->loadInstrumentWithRouting(routingContext.defaultInstrument, routingContext.articulationLibraryMap, routingContext.allowedArticulationNameIds, routingContext.allowedArticulationFilters, routingContext.artNameRemap, routingContext.artExactRemap, routingContext.artAliases, librarySnapshot, routingContext.strictArticulationResolution, routingContext.micRouteOverrides);
+    } else if (auto* loadedInstrument = player.getLoadedInstrumentSpec()) {
+        replacement->loadInstrument(const_cast<KitLib::InstrumentSpec*>(loadedInstrument), librarySnapshot);
+    }
+
+    replacement->copyArticulationSlotRoutesFrom(player);
+    copyPlayerSettings(*replacement, player);
+    preparePlayerIfNeeded(*replacement, sampleRate, samplesPerBlock);
+    return replacement;
+}
 
 DrumKitEngine::DrumKitEngine() {
     this->kitLayoutManagerPtr = std::make_unique<KitLayoutManager>();
@@ -73,8 +124,8 @@ bool DrumKitEngine::applyKitLayout() {
         if (primaryIt != existingState.primaryIndexById.end()) {
             prepared.oldPrimaryIndex = primaryIt->second;
             auto* oldPrimary = existingState.rawPlayers[static_cast<size_t>(prepared.oldPrimaryIndex)];
-            if (!DrumKitEngineMapHelpers::canReuseSlotWithoutReload(oldPrimary->getInstrumentSlot(), layoutSlot))
-                prepared.primaryReplacement = DrumKitEngineMapHelpers::createReplacementPlayer(this, layoutSlot, *oldPrimary, this->lastSampleRate, this->lastSamplesPerBlock);
+            if (!canReuseSlotWithoutReload(oldPrimary->getInstrumentSlot(), layoutSlot))
+                prepared.primaryReplacement = createReplacementPlayer(this, layoutSlot, *oldPrimary, this->lastSampleRate, this->lastSamplesPerBlock);
 
             auto shadowIt = existingState.shadowIndicesBySlotId.find(layoutSlot.id);
             if (shadowIt != existingState.shadowIndicesBySlotId.end()) {
@@ -84,15 +135,15 @@ bool DrumKitEngine::applyKitLayout() {
                     shadow.oldIndex = shadowIndex;
 
                     auto* oldShadow = existingState.rawPlayers[static_cast<size_t>(shadowIndex)];
-                    if (!DrumKitEngineMapHelpers::canReuseSlotWithoutReload(oldShadow->getInstrumentSlot(), layoutSlot))
-                        shadow.replacement = DrumKitEngineMapHelpers::createReplacementPlayer(this, layoutSlot, *oldShadow, this->lastSampleRate, this->lastSamplesPerBlock);
+                    if (!canReuseSlotWithoutReload(oldShadow->getInstrumentSlot(), layoutSlot))
+                        shadow.replacement = createReplacementPlayer(this, layoutSlot, *oldShadow, this->lastSampleRate, this->lastSamplesPerBlock);
 
                     prepared.shadows.push_back(std::move(shadow));
                 }
             }
         } else {
             prepared.primaryReplacement = std::make_unique<InstrumentPlayer>(this, layoutSlot);
-            DrumKitEngineMapHelpers::preparePlayerIfNeeded(*prepared.primaryReplacement, this->lastSampleRate, this->lastSamplesPerBlock);
+            preparePlayerIfNeeded(*prepared.primaryReplacement, this->lastSampleRate, this->lastSamplesPerBlock);
         }
 
         preparedSlots.push_back(std::move(prepared));

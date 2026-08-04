@@ -1,8 +1,7 @@
 #include "../source/Engine/MidiCrosstalkFilter.h"
 #include "catch2/catch_test_macros.hpp"
 
-namespace {
-std::vector<std::pair<int, int>> getNoteOns(const juce::MidiBuffer& midiMessages) {
+static std::vector<std::pair<int, int>> getNoteOns(const juce::MidiBuffer& midiMessages) {
     std::vector<std::pair<int, int>> notes;
     for (const auto metadata : midiMessages) {
         const auto message = metadata.getMessage();
@@ -11,8 +10,6 @@ std::vector<std::pair<int, int>> getNoteOns(const juce::MidiBuffer& midiMessages
     }
     return notes;
 }
-}
-
 TEST_CASE("MidiCrosstalkProfile stores directional thresholds", "[MidiCrosstalk]") {
     MidiCrosstalkProfile profile;
     REQUIRE(profile.getEntryCount() == 0);

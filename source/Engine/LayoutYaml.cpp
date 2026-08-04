@@ -4,8 +4,6 @@
 #include <array>
 #include <set>
 
-namespace LayoutYamlDetail {
-
 static std::optional<uint8_t> parseExpressionPointValue(const YamlHelper::YamlNode& node, ParseResult<KitLayout>& result, const juce::String& context, const juce::String& code, const juce::String& label) {
     if (!node.isScalar()) {
         result.addWarning(context + ": expressionPoints." + code + "." + label + " must be a scalar integer from 0 to 127");
@@ -137,8 +135,6 @@ static void appendExpressionPointsYaml(juce::String& yaml, const KitLayout::Expr
     }
 }
 
-}
-
 ParseResult<MicLayout> LayoutTraits<MicLayout>::parseYaml(const juce::String& yaml) {
     ParseResult<MicLayout> result;
     MicLayout layout;
@@ -191,8 +187,8 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
     layout.description = root["description"].asString();
     layout.vendor = root["vendor"].asString();
     layout.version = root["version"].asString();
-    layout.expressionPoints = LayoutYamlDetail::parseExpressionPointsNode(root["expressionPoints"], result, "layout");
-    LayoutYamlDetail::validateExpressionPoints(layout.expressionPoints, result, "layout");
+    layout.expressionPoints = parseExpressionPointsNode(root["expressionPoints"], result, "layout");
+    validateExpressionPoints(layout.expressionPoints, result, "layout");
 
     const auto& instsNode = root["instruments"];
     if (instsNode.isSequence()) {
@@ -232,8 +228,8 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
                     result.addWarning("instruments: invalid directMicOuts '" + directMicOutsText + "' for instrument " + inst.id);
             }
 
-            inst.expressionPoints = LayoutYamlDetail::parseExpressionPointsNode(instItem["expressionPoints"], result, "instrument " + inst.id);
-            LayoutYamlDetail::validateExpressionPoints(inst.expressionPoints, result, "instrument " + inst.id);
+            inst.expressionPoints = parseExpressionPointsNode(instItem["expressionPoints"], result, "instrument " + inst.id);
+            validateExpressionPoints(inst.expressionPoints, result, "instrument " + inst.id);
 
             const auto& artsNode = instItem["articulations"];
             if (artsNode.isSequence()) {
@@ -276,7 +272,7 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
                     inst.controllers.push_back(cc);
                 }
             }
-            LayoutYamlDetail::validateControllerNotes(inst, result);
+            validateControllerNotes(inst, result);
         }
     }
 
@@ -299,7 +295,7 @@ juce::String LayoutTraits<KitLayout>::toYaml(const KitLayout& layout) {
         yaml << "vendor: " << layout.vendor << "\n";
     if (layout.version.isNotEmpty())
         yaml << "version: " << layout.version << "\n";
-    LayoutYamlDetail::appendExpressionPointsYaml(yaml, layout.expressionPoints, "");
+    appendExpressionPointsYaml(yaml, layout.expressionPoints, "");
     yaml << "instruments:\n";
     for (const auto& slot : layout.instrumentSlots) {
         yaml << "  - id: " << slot.id << "\n";
@@ -311,7 +307,7 @@ juce::String LayoutTraits<KitLayout>::toYaml(const KitLayout& layout) {
             yaml << "    balance: " << balanceValueToString(*slot.balance) << "\n";
         if (slot.directMicOuts.has_value())
             yaml << "    directMicOuts: " << directMicOutPolicyToString(*slot.directMicOuts) << "\n";
-        LayoutYamlDetail::appendExpressionPointsYaml(yaml, slot.expressionPoints, "    ");
+        appendExpressionPointsYaml(yaml, slot.expressionPoints, "    ");
         if (!slot.articulations.empty()) {
             yaml << "    articulations:\n";
             for (const auto& art : slot.articulations) {
@@ -340,4 +336,3 @@ juce::String LayoutTraits<KitLayout>::toYaml(const KitLayout& layout) {
     }
     return yaml;
 }
-

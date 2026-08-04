@@ -1,7 +1,7 @@
 #include "VelocityResponseEditor.h"
 #include "../Config/Parsing.h"
 #include "CompactModalDialog.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
@@ -35,14 +35,14 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->statusLabel.setJustificationType(juce::Justification::centredLeft);
     this->addAndMakeVisible(this->statusLabel);
 
-    UIHelpers::configureComboBox(this->presetCombo);
+    UIComponentStyle::configureComboBox(this->presetCombo);
     this->presetCombo.setTextWhenNothingSelected("Edited Map Layer Curve*");
     this->presetCombo.onChange = [this] { this->selectPreset(); };
     this->addAndMakeVisible(this->presetCombo);
 
-    UIHelpers::configureControlButton(this->saveAsButton);
+    UIComponentStyle::configureControlButton(this->saveAsButton);
     this->addAndMakeVisible(this->saveAsButton);
-    UIHelpers::configureDialogCloseButton(this->doneButton);
+    UIComponentStyle::configureDialogCloseButton(this->doneButton);
     this->addAndMakeVisible(this->doneButton);
 
     this->dbEditor.setMultiLine(false);
@@ -50,7 +50,7 @@ VelocityResponseEditor::VelocityResponseEditor(DrumKitEngine& drumKitEngine)
     this->dbEditor.setInputRestrictions(0, "-0123456789.");
     this->dbEditor.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgControl);
     this->dbEditor.setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
-    UIHelpers::configureBorderlessTextEditor(this->dbEditor);
+    UIComponentStyle::configureBorderlessTextEditor(this->dbEditor);
     this->dbEditor.onReturnKey = [this] {
         this->commitDbEditor();
         this->dbEditor.giveAwayKeyboardFocus();

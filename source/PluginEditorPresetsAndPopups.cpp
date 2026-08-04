@@ -1,6 +1,6 @@
 #include "PluginEditor.h"
 #include "UI/CompactModalDialog.h"
-#include "UI/UIHelpers.h"
+#include "UI/UIComponentStyle.h"
 #include "UI/UITheme.h"
 #include "Engine/LayoutManager.h"
 #include <set>

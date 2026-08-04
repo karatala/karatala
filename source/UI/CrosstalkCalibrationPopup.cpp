@@ -1,5 +1,5 @@
 #include "CrosstalkCalibrationPopup.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 CrosstalkCalibrationPopup::CrosstalkCalibrationPopup(DrumKitEngine& drumKitEngine)
@@ -15,10 +15,10 @@ CrosstalkCalibrationPopup::CrosstalkCalibrationPopup(DrumKitEngine& drumKitEngin
     this->statusLabel.setMinimumHorizontalScale(0.75f);
     this->addAndMakeVisible(this->statusLabel);
 
-    UIHelpers::configureControlButton(this->startSkipButton);
-    UIHelpers::configureControlButton(this->stopButton);
-    UIHelpers::configureControlButton(this->clearButton);
-    UIHelpers::configureDialogCloseButton(this->closeButton);
+    UIComponentStyle::configureControlButton(this->startSkipButton);
+    UIComponentStyle::configureControlButton(this->stopButton);
+    UIComponentStyle::configureControlButton(this->clearButton);
+    UIComponentStyle::configureDialogCloseButton(this->closeButton);
     this->startSkipButton.onClick = [this] {
         if (this->calibrationRunning)
             this->skipTarget();
@@ -36,7 +36,7 @@ CrosstalkCalibrationPopup::CrosstalkCalibrationPopup(DrumKitEngine& drumKitEngin
     this->addAndMakeVisible(this->clearButton);
     this->addAndMakeVisible(this->closeButton);
 
-    UIHelpers::configureMonoTextEditor(this->profileEditor, UITheme::Colours::textSecondary, true);
+    UIComponentStyle::configureMonoTextEditor(this->profileEditor, UITheme::Colours::textSecondary, true);
     this->profileEditor.setReadOnly(true);
     this->profileEditor.setCaretVisible(false);
     this->addAndMakeVisible(this->profileEditor);

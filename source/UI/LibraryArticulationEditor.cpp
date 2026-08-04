@@ -1,7 +1,7 @@
 #include "LibraryArticulationEditor.h"
 #include "../Config/Parsing.h"
 #include "../Engine/RoutingTypes.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
@@ -84,10 +84,10 @@ LibraryArticulationEditor::LibraryArticulationEditor(DrumKitEngine& drumKitEngin
         &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton,
         &this->resetMicOffsetButton, &this->evenRangesButton, &this->resetRangesButton, &this->retrySaveButton, &this->reloadSavedButton,
     }) {
-        UIHelpers::configureControlButton(*button);
+        UIComponentStyle::configureControlButton(*button);
         this->addAndMakeVisible(*button);
     }
-    UIHelpers::configureDialogCloseButton(this->doneButton);
+    UIComponentStyle::configureDialogCloseButton(this->doneButton);
     this->addAndMakeVisible(this->doneButton);
     for (auto* resetButton : { &this->resetInstrumentBalanceButton, &this->resetArticulationBalanceButton, &this->resetManualGainButton, &this->resetFileOffsetButton, &this->resetMicOffsetButton })
         resetButton->setButtonText(UITheme::Symbols::times);
@@ -105,7 +105,7 @@ LibraryArticulationEditor::LibraryArticulationEditor(DrumKitEngine& drumKitEngin
         editor.setIndents(0, 0);
         editor.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgControl);
         editor.setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
-        UIHelpers::configureBorderlessTextEditor(editor);
+        UIComponentStyle::configureBorderlessTextEditor(editor);
         this->addAndMakeVisible(editor);
     };
     configureEditor(this->instrumentBalanceEditor, 4, "LlCcRr0123456789");

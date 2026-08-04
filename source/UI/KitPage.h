@@ -2,6 +2,7 @@
 
 #include "../Engine/DrumKitEngine.h"
 #include "KitPreviewGrid.h"
+#include "SourceItem.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
 #include <vector>

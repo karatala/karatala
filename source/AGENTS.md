@@ -23,7 +23,8 @@
 - Name shared files and namespaces by responsibility or feature. Do not create general `helpers` folders or public `FooHelpers` namespaces.
 - Keep main entry-point files in `source/`. Put reusable secondary code in the smallest domain that owns its rules.
 - Do not create a standalone `.h` and `.cpp` pair for one small generic operation. Add it to a cohesive existing support module.
-- Use a named `<Feature>Detail` namespace with internal linkage for private `.cpp` helpers.
+- Keep one-use private helpers as file-local `static` functions in the owning `.cpp`, or as private static class methods when class ownership is clear.
+- Prefer one namespace context for a complete `.cpp`. Do not mix small private namespace blocks with class or global implementations.
 - Create a feature subfolder only when several files share one responsibility.
 - Review [`docs/PROJECT_TERMINOLOGY_REVIEW.md`](../docs/PROJECT_TERMINOLOGY_REVIEW.md) before naming new shared modules. Do not use bare `Source` as a feature-folder name.
 

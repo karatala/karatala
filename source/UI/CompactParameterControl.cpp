@@ -14,6 +14,10 @@ CompactParameterControl::CompactParameterControl(const juce::String& name, doubl
     this->setValue(initialValue, juce::dontSendNotification);
 }
 
+juce::String CompactParameterControl::sentinelValueText(double value) {
+    return value < 0.0 ? "--" : juce::String(static_cast<int>(value));
+}
+
 void CompactParameterControl::setLabelVisible(bool shouldShow) {
     this->showLabel = shouldShow;
     this->repaint();

@@ -1,14 +1,12 @@
 #include "MidiMapTable.h"
 #include "CompactModalDialog.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <map>
 #include <optional>
 
-namespace {
-
-std::optional<int> parseExpressionPointEditorValue(const juce::String& text) {
+static std::optional<int> parseExpressionPointEditorValue(const juce::String& text) {
     const auto trimmed = text.trim();
     if (trimmed.isEmpty() || !trimmed.containsOnly("0123456789"))
         return std::nullopt;
@@ -20,15 +18,18 @@ std::optional<int> parseExpressionPointEditorValue(const juce::String& text) {
     return static_cast<int>(value);
 }
 
-} // namespace
+static juce::String getMidiControllerItemText(int controllerNumber) {
+    const auto* controllerName = juce::MidiMessage::getControllerName(controllerNumber);
+    return controllerName != nullptr ? juce::String(controllerNumber) + " / " + juce::String(controllerName) : juce::String(controllerNumber);
+}
 
 MidiMapTable::MidiMapTable() {
     this->layoutLabel.setText("Layout", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->layoutLabel, juce::Justification::centredRight, UITheme::Colours::textSecondary);
+    UIComponentStyle::configureCaptionLabel(this->layoutLabel, juce::Justification::centredRight, UITheme::Colours::textSecondary);
     this->addAndMakeVisible(this->layoutLabel);
 
     this->addAndMakeVisible(this->presetCombo);
-    UIHelpers::configureComboBox(this->presetCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
+    UIComponentStyle::configureComboBox(this->presetCombo, UIComponentStyle::ComboBoxStyle::LayoutSelector);
     this->presetCombo.setTextWhenNothingSelected("(no presets)");
     this->presetCombo.onChange = [this] {
         int selectedId = this->presetCombo.getSelectedId();
@@ -38,17 +39,17 @@ MidiMapTable::MidiMapTable() {
         }
     };
 
-    UIHelpers::configureControlButton(this->saveButton);
+    UIComponentStyle::configureControlButton(this->saveButton);
     this->saveButton.onClick = [this] {
         if (this->onPresetSaveRequested) this->onPresetSaveRequested();
     };
     this->addAndMakeVisible(this->saveButton);
 
-    UIHelpers::configureControlButton(this->moreButton);
+    UIComponentStyle::configureControlButton(this->moreButton);
     this->moreButton.onClick = [this] { this->showMoreMenu(); };
     this->addAndMakeVisible(this->moreButton);
 
-    UIHelpers::configureControlButton(this->crosstalkButton);
+    UIComponentStyle::configureControlButton(this->crosstalkButton);
     this->crosstalkButton.onClick = [this] {
         if (this->onCrosstalkPopupRequested) this->onCrosstalkPopupRequested();
     };
@@ -56,7 +57,7 @@ MidiMapTable::MidiMapTable() {
 
     auto setupHeader = [this](juce::Label& label, const juce::String& text) {
         label.setText(text, juce::dontSendNotification);
-        UIHelpers::configureTableHeaderLabel(label);
+        UIComponentStyle::configureTableHeaderLabel(label);
         this->addAndMakeVisible(label);
     };
     setupHeader(this->headerInstrument1, "Instrument");
@@ -153,9 +154,9 @@ void MidiMapTable::buildRows() {
     auto setupControllerRow = [this, &setupCommonRow](std::unique_ptr<MapRow>& row, int rowIdx) {
         setupCommonRow(row);
         row->controllerCombo = std::make_unique<juce::ComboBox>();
-        UIHelpers::configureComboBox(*row->controllerCombo, UIHelpers::ComboBoxStyle::MidiControllerList);
+        UIComponentStyle::configureComboBox(*row->controllerCombo, UIComponentStyle::ComboBoxStyle::MidiControllerList);
         for (int controllerNumber = 0; controllerNumber <= 127; ++controllerNumber)
-            row->controllerCombo->addItem(UIHelpers::getMidiControllerItemText(controllerNumber), controllerNumber + 1);
+            row->controllerCombo->addItem(getMidiControllerItemText(controllerNumber), controllerNumber + 1);
 
         row->controllerCombo->setSelectedId(row->controllerNumber + 1, juce::dontSendNotification);
         row->controllerCombo->onChange = [this, rowIdx] {
@@ -168,7 +169,7 @@ void MidiMapTable::buildRows() {
 
         if (row->controllerPtr != nullptr && KitLayout::isSupportedExpressionPointCode(row->controllerPtr->codeRaw)) {
             row->curveButton = std::make_unique<juce::TextButton>("curve");
-            UIHelpers::configureControlButton(*row->curveButton);
+            UIComponentStyle::configureControlButton(*row->curveButton);
             row->curveButton->onClick = [this, rowIdx] {
                 if (rowIdx < static_cast<int>(this->rows.size()))
                     this->showExpressionCurvePopup(*this->rows[static_cast<size_t>(rowIdx)]);
@@ -192,10 +193,10 @@ void MidiMapTable::buildRows() {
             firstRow = false;
 
             row->instrumentLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
-            UIHelpers::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
+            UIComponentStyle::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
 
             row->articulationLabel.setText(art.codeRaw, juce::dontSendNotification);
-            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccent);
+            UIComponentStyle::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccent);
 
             int rowIdx = static_cast<int>(this->rows.size());
             setupNoteRow(row, rowIdx);
@@ -215,10 +216,10 @@ void MidiMapTable::buildRows() {
             firstRow = false;
 
             row->instrumentLabel.setText(slot.display.isNotEmpty() ? slot.display : slot.id, juce::dontSendNotification);
-            UIHelpers::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
+            UIComponentStyle::configureTableRowLabel(row->instrumentLabel, UITheme::Colours::textPrimary);
 
             row->articulationLabel.setText(row->articulationCode, juce::dontSendNotification);
-            UIHelpers::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccent);
+            UIComponentStyle::configureTableRowLabel(row->articulationLabel, UITheme::Colours::textAccent);
 
             int rowIdx = static_cast<int>(this->rows.size());
             setupControllerRow(row, rowIdx);
@@ -237,7 +238,7 @@ void MidiMapTable::syncNoteButtons(MapRow& row) {
 
 void MidiMapTable::applyNoteToSlot(MapRow& row, int slotIdx, int note) {
     if (!row.notesPtr) return;
-    UIHelpers::applyMidiNoteToSlot(*row.notesPtr, slotIdx, note);
+    MidiNoteAssignmentControl::applyNoteToSlot(*row.notesPtr, slotIdx, note);
     this->syncNoteButtons(row);
     if (this->onMappingChanged) this->onMappingChanged();
 }

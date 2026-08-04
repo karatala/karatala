@@ -14,10 +14,10 @@
 # Work Guidance
 
 - Add a controller-transition benchmark before claiming hot-path performance improvements.
+- Keep small benchmark setup functions file-local `static`; do not add a benchmark helper namespace.
 
 # Verification
 
 - Build and run the `Benchmarks` target.
 
 # Child DOX Index
-

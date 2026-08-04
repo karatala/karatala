@@ -1,10 +1,10 @@
 #include "InstrumentType.h"
 
-namespace InstrumentTypeDetail {
+namespace KitLib {
 
 struct TypeEntry {
     const char* name;
-    KitLib::InstrumentType type;
+    InstrumentType type;
 };
 
 static constexpr TypeEntry typeTable[] = {
@@ -59,19 +59,15 @@ static constexpr TypeEntry typeTable[] = {
     { "ratchet", KitLib::InstrumentType::Ratchet },
 };
 
-} // namespace InstrumentTypeDetail
-
-namespace KitLib {
-
 juce::String instrumentTypeToString(InstrumentType type) {
-    for (const auto& entry : InstrumentTypeDetail::typeTable)
+    for (const auto& entry : typeTable)
         if (entry.type == type) return entry.name;
     return "unknown";
 }
 
 InstrumentType instrumentTypeFromString(const juce::String& name) {
     const auto normalized = name.toLowerCase();
-    for (const auto& entry : InstrumentTypeDetail::typeTable)
+    for (const auto& entry : typeTable)
         if (normalized == entry.name) return entry.type;
     return InstrumentType::Unknown;
 }

@@ -1,6 +1,6 @@
 #include "CompactModalDialog.h"
 
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
@@ -32,7 +32,7 @@ CompactModalDialog::CompactModalDialog(Options dialogOptions, ConfirmHandler con
         auto control = std::make_unique<FieldControl>();
         control->id = field.id;
         control->label.setText(field.label, juce::dontSendNotification);
-        UIHelpers::configureCaptionLabel(control->label, juce::Justification::centredLeft);
+        UIComponentStyle::configureCaptionLabel(control->label, juce::Justification::centredLeft);
         this->addAndMakeVisible(control->label);
 
         control->editor.setMultiLine(false);
@@ -40,7 +40,7 @@ CompactModalDialog::CompactModalDialog(Options dialogOptions, ConfirmHandler con
         control->editor.setText(field.value, false);
         control->editor.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgControl);
         control->editor.setColour(juce::TextEditor::textColourId, UITheme::Colours::textPrimary);
-        UIHelpers::configureBorderlessTextEditor(control->editor);
+        UIComponentStyle::configureBorderlessTextEditor(control->editor);
         if (field.maximumLength > 0 || field.allowedCharacters.isNotEmpty()) control->editor.setInputRestrictions(field.maximumLength, field.allowedCharacters);
         control->editor.onReturnKey = [this] { this->confirm(); };
         control->editor.onEscapeKey = [this] { this->cancel(); };
@@ -49,17 +49,17 @@ CompactModalDialog::CompactModalDialog(Options dialogOptions, ConfirmHandler con
     }
 
     this->confirmButton.setButtonText(this->options.confirmText);
-    UIHelpers::configureControlButton(this->confirmButton);
+    UIComponentStyle::configureControlButton(this->confirmButton);
     if (this->options.destructive) this->confirmButton.setColour(juce::TextButton::buttonColourId, UITheme::Colours::accentWarning);
     this->confirmButton.onClick = [this] { this->confirm(); };
     this->addAndMakeVisible(this->confirmButton);
 
     this->cancelButton.setButtonText(this->options.cancelText);
-    UIHelpers::configureControlButton(this->cancelButton);
+    UIComponentStyle::configureControlButton(this->cancelButton);
     this->cancelButton.onClick = [this] { this->cancel(); };
     this->addAndMakeVisible(this->cancelButton);
 
-    UIHelpers::configureDialogCloseButton(this->closeButton);
+    UIComponentStyle::configureDialogCloseButton(this->closeButton);
     this->closeButton.onClick = [this] { this->cancel(); };
     this->addAndMakeVisible(this->closeButton);
 }

@@ -96,6 +96,8 @@
 
 namespace KitLib {
 
+bool matchesIdentityCandidate(const std::vector<juce::String>& candidates, const juce::String& id);
+
 struct DecayEnvelope {
     static constexpr int NUM_POINTS = 10;
     static constexpr float DB_STEP = -6.0f;

@@ -35,8 +35,7 @@ struct InstrumentPlayerTestAccess {
     }
 };
 
-namespace BenchmarkHelpers {
-    static std::vector<juce::String> makeMicCodes(int count) {
+static std::vector<juce::String> makeMicCodes(int count) {
         std::vector<juce::String> micCodes;
         micCodes.reserve(static_cast<size_t>(count));
         for (int micIdx = 0; micIdx < count; ++micIdx)
@@ -117,7 +116,6 @@ namespace BenchmarkHelpers {
         }
         return rows;
     }
-}
 
 TEST_CASE("Boot performance ENABLE DUMMY!") {
     // BENCHMARK_ADVANCED("Processor constructor")
@@ -208,15 +206,15 @@ TEST_CASE("Plan item 2 - StringsDictSingleton performance", "[benchmark][PlanIte
 }
 
 TEST_CASE("Plan item 3 - route override ID lookup performance", "[benchmark][PlanItem3][MicRoute]") {
-    const auto micCodes = BenchmarkHelpers::makeMicCodes(96);
-    const auto outputIds = BenchmarkHelpers::makeMicCodes(16);
-    const auto stringOverrides = BenchmarkHelpers::makeStringRouteOverrides(micCodes, outputIds);
-    const auto idOverrides = BenchmarkHelpers::makeIdRouteOverrides(stringOverrides);
+    const auto micCodes = makeMicCodes(96);
+    const auto outputIds = makeMicCodes(16);
+    const auto stringOverrides = makeStringRouteOverrides(micCodes, outputIds);
+    const auto idOverrides = makeIdRouteOverrides(stringOverrides);
 
     BENCHMARK("Old-style string route override scan") {
         int matches = 0;
         for (const auto& micCode : micCodes)
-            if (BenchmarkHelpers::findStringRouteOverride(stringOverrides, micCode).isNotEmpty()) ++matches;
+            if (findStringRouteOverride(stringOverrides, micCode).isNotEmpty()) ++matches;
         return matches;
     };
 
@@ -231,7 +229,7 @@ TEST_CASE("Plan item 3 - route override ID lookup performance", "[benchmark][Pla
 }
 
 TEST_CASE("Plan item 3 - routing plan override target lookup performance", "[benchmark][PlanItem3][MicRoute]") {
-    const auto micLayout = BenchmarkHelpers::makeMicLayoutForRoutingPlan();
+    const auto micLayout = makeMicLayoutForRoutingPlan();
 
     MicRoutingPlan::SlotRequest request;
     request.slotId = "kick1";
@@ -322,7 +320,7 @@ TEST_CASE("Plan item 7 - memory layout size baseline", "[benchmark][PlanItem7][M
 }
 
 TEST_CASE("Plan item 8 - repeated string helper baseline", "[benchmark][PlanItem8][StringHelpers]") {
-    const auto names = BenchmarkHelpers::makeArticulationNames(512);
+    const auto names = makeArticulationNames(512);
 
     BENCHMARK("Repeated articulation trim and case matching") {
         int matches = 0;
@@ -333,7 +331,7 @@ TEST_CASE("Plan item 8 - repeated string helper baseline", "[benchmark][PlanItem
 }
 
 TEST_CASE("Plan item 9 - UI-style string cleanup baseline", "[benchmark][PlanItem9][UiStrings]") {
-    const auto rows = BenchmarkHelpers::makeUiSearchRows(512);
+    const auto rows = makeUiSearchRows(512);
     const juce::String needle = "snare";
 
     BENCHMARK("Normalize and search UI text rows") {

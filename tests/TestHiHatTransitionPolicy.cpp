@@ -3,9 +3,7 @@
 #include "catch2/catch_test_macros.hpp"
 #include <array>
 
-namespace {
-
-KitLib::DecayEnvelope makeEnvelope() {
+static KitLib::DecayEnvelope makeEnvelope() {
     KitLib::DecayEnvelope envelope;
     envelope.peakDb = -20.0f;
     envelope.peakMs = 10.0f;
@@ -14,8 +12,6 @@ KitLib::DecayEnvelope makeEnvelope() {
     envelope.validPoints = 2;
     return envelope;
 }
-
-} // namespace
 
 TEST_CASE("HiHatTransitionPolicy - hysteresis covers MIDI boundaries and both directions", "[HiHatTransitionPolicy]") {
     std::array<uint8_t, 128> articulationByCc {};

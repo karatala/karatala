@@ -1,7 +1,7 @@
 #include "InstrumentConfigPanel.h"
 #include "../Engine/ArticulationNames.h"
-#include "../Engine/DrumKitEngineMapHelpers.h"
-#include "UIHelpers.h"
+#include "../Engine/InstrumentMap/InstrumentMapOperations.h"
+#include "UIComponentStyle.h"
 #include <algorithm>
 
 // InstrumentConfigPanel
@@ -10,7 +10,7 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine) {
     auto setupHeader = [this](juce::Label& label, const juce::String& text) {
         label.setText(text, juce::dontSendNotification);
-        UIHelpers::configureTableHeaderLabel(label);
+        UIComponentStyle::configureTableHeaderLabel(label);
         this->addAndMakeVisible(label);
     };
     setupHeader(this->headerSlot, "Slot");
@@ -33,11 +33,11 @@ void InstrumentConfigPanel::resized() {
 }
 
 void InstrumentConfigPanel::rebuildSourceItems() {
-    this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
+    this->sourceItems = SourceItem::collectFromLibrary(this->engine.getInstrumentManager());
 }
 
 int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const { //TODO: why wrapper?
-    return UIHelpers::findSourceIndex(this->sourceItems, searchPath);
+    return SourceItem::findIndex(this->sourceItems, searchPath);
 }
 
 void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
@@ -61,7 +61,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
 
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto& existingMapLayers = parseResult.value.layers;
-    const auto mapLayerProjections = DrumKitEngineMapHelpers::projectMapLayers(parseResult.value, *layout);
+    const auto mapLayerProjections = InstrumentMap::projectLayers(parseResult.value, *layout);
     std::vector<bool> mapLayerIsProjected(existingMapLayers.size(), false);
     for (const auto& projection : mapLayerProjections)
         if (projection.mapLayerIndex < mapLayerIsProjected.size()) mapLayerIsProjected[projection.mapLayerIndex] = true;
@@ -87,7 +87,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
             std::vector<const DrumKitEngine::InstrumentMapLayer*> matchingMapLayers;
             for (const auto& mapLayer : existingMapLayers) {
                 if (mapLayer.slotId != slot.id) continue;
-                const auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(mapLayer);
+                const auto& articulationSlotFilters = mapLayer.slotArticulationFilter;
                 bool matchesArticulationSlot = articulationSlotFilters.empty();
                 for (const auto& articulationSlotFilter : articulationSlotFilters) {
                     if (ArticulationNames::mapFilterMatchesArticulation(articulationSlotFilter, artName)) {
@@ -104,10 +104,10 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                 for (const auto* mapLayer : matchingMapLayers) {
                     juce::String sourceFullPath = mapLayer->kitRef;
                     if (mapLayer->instCode.isNotEmpty()) sourceFullPath += "/" + mapLayer->instCode;
-                    const auto libraryArticulation = DrumKitEngineMapHelpers::libraryArticulationForSlot(*mapLayer, artName);
+                    const auto libraryArticulation = InstrumentMap::libraryArticulationForSlot(*mapLayer, artName);
                     if (libraryArticulation.isNotEmpty()) sourceFullPath += "/" + libraryArticulation;
-                    if (slot.type == KitLib::InstrumentSpec::Type::HiHat && UIHelpers::usesLegacyArticulationSlotExpressionFilter(mapLayer->slotArticulationFilter, artName))
-                        sourceFullPath = UIHelpers::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, artName);
+                    if (slot.type == KitLib::InstrumentSpec::Type::HiHat && SourceItem::usesLegacyArticulationSlotExpressionFilter(mapLayer->slotArticulationFilter, artName))
+                        sourceFullPath = SourceItem::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, artName);
 
                     const int tuning = mapLayer->tuningCents.value_or(0);
                     const int attack = mapLayer->attackTimeMs.value_or(-1);
@@ -148,13 +148,13 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     // Slot label
     row->slotLabel = std::make_unique<juce::Label>();
     row->slotLabel->setText(slotId, juce::dontSendNotification);
-    UIHelpers::configureTableRowLabel(*row->slotLabel, UITheme::Colours::textPrimary);
+    UIComponentStyle::configureTableRowLabel(*row->slotLabel, UITheme::Colours::textPrimary);
     this->contentComponent.addAndMakeVisible(*row->slotLabel);
 
     // Art label
     row->artLabel = std::make_unique<juce::Label>();
     row->artLabel->setText(artName, juce::dontSendNotification);
-    UIHelpers::configureTableRowLabel(*row->artLabel, UITheme::Colours::textAccent);
+    UIComponentStyle::configureTableRowLabel(*row->artLabel, UITheme::Colours::textAccent);
     this->contentComponent.addAndMakeVisible(*row->artLabel);
 
     // Source button
@@ -186,11 +186,11 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->tuningControl->setInteraction(0.0, 10.0, 1.0);
     configureCompactControl(*row->tuningControl);
 
-    row->attackControl = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
+    row->attackControl = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, CompactParameterControl::sentinelValueText);
     row->attackControl->setInteraction(-1.0, 10.0, 1.0);
     configureCompactControl(*row->attackControl);
 
-    row->decayControl = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
+    row->decayControl = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, CompactParameterControl::sentinelValueText);
     row->decayControl->setInteraction(-1.0, 10.0, 1.0);
     configureCompactControl(*row->decayControl);
 
@@ -210,7 +210,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     configureCompactControl(*row->panControl);
 
     row->flipLRButton = std::make_unique<juce::TextButton>("L/R");
-    UIHelpers::configureToggleButton(*row->flipLRButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    UIComponentStyle::configureToggleButton(*row->flipLRButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     row->flipLRButton->setToggleState(flipLR, juce::dontSendNotification);
     row->flipLRExplicit = flipLRExplicit;
     this->contentComponent.addAndMakeVisible(*row->flipLRButton);
@@ -220,7 +220,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     };
 
     row->flipPhaseButton = std::make_unique<juce::TextButton>(juce::String::charToString(0x00D8));
-    UIHelpers::configureToggleButton(*row->flipPhaseButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    UIComponentStyle::configureToggleButton(*row->flipPhaseButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     row->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
     this->contentComponent.addAndMakeVisible(*row->flipPhaseButton);
     row->flipPhaseButton->onClick = [this, row] { this->applyRowParametersFast(row); };

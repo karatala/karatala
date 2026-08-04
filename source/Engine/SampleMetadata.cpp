@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-namespace KitLibSampleMetadataHelpers {
+namespace KitLib {
 
 static constexpr const char* REQUIRED_COLUMN_NAMES[] = {
     "relative_path", "mic_code", "content_hash", "file_size_bytes", "onset_ms", "intensity_db", "true_peak_db", "peak_db", "peak_ms", "decay_end_ms", "stereo_balance",
@@ -143,12 +143,8 @@ static juce::String normalizePath(const juce::String& path) {
     return normalized;
 }
 
-} // namespace KitLibSampleMetadataHelpers
-
-namespace KitLib {
-
 juce::String SampleMetadataTable::makeKey(const juce::String& relativePath, const juce::String& micCode) {
-    return KitLibSampleMetadataHelpers::normalizePath(relativePath) + "\n" + micCode.trim().toLowerCase();
+    return normalizePath(relativePath) + "\n" + micCode.trim().toLowerCase();
 }
 
 ParseResult<int> SampleMetadataTable::loadFromKitRoot(const juce::File& kitRoot) {
@@ -164,61 +160,61 @@ ParseResult<int> SampleMetadataTable::loadFromKitRoot(const juce::File& kitRoot)
     if (csvText.size() >= 3 && static_cast<unsigned char>(csvText[0]) == 0xef && static_cast<unsigned char>(csvText[1]) == 0xbb && static_cast<unsigned char>(csvText[2]) == 0xbf) csvText.remove_prefix(3);
     if (csvText.empty()) return result.returnWithError("metadata.csv is empty: " + metadataFile.getFullPathName());
 
-    const size_t headerEndIdx = KitLibSampleMetadataHelpers::findLineEnd(csvText, 0);
+    const size_t headerEndIdx = findLineEnd(csvText, 0);
     const auto headerLine = csvText.substr(0, headerEndIdx);
     std::vector<juce::String> headerFields;
-    headerFields.reserve(KitLibSampleMetadataHelpers::REQUIRED_COLUMN_COUNT);
-    KitLibSampleMetadataHelpers::forEachCsvField(headerLine, [&headerFields](int, const KitLibSampleMetadataHelpers::CsvField& field) {
-        headerFields.push_back(KitLibSampleMetadataHelpers::getFieldString(field).toLowerCase());
+    headerFields.reserve(REQUIRED_COLUMN_COUNT);
+    forEachCsvField(headerLine, [&headerFields](int, const CsvField& field) {
+        headerFields.push_back(getFieldString(field).toLowerCase());
     });
 
-    std::array<int, KitLibSampleMetadataHelpers::REQUIRED_COLUMN_COUNT> columnIndexes;
+    std::array<int, REQUIRED_COLUMN_COUNT> columnIndexes;
     columnIndexes.fill(-1);
     for (int columnIdx = 0; columnIdx < static_cast<int>(headerFields.size()); ++columnIdx) {
-        for (size_t requiredIdx = 0; requiredIdx < KitLibSampleMetadataHelpers::REQUIRED_COLUMN_COUNT; ++requiredIdx) {
-            if (headerFields[static_cast<size_t>(columnIdx)] == KitLibSampleMetadataHelpers::REQUIRED_COLUMN_NAMES[requiredIdx]) columnIndexes[requiredIdx] = columnIdx;
+        for (size_t requiredIdx = 0; requiredIdx < REQUIRED_COLUMN_COUNT; ++requiredIdx) {
+            if (headerFields[static_cast<size_t>(columnIdx)] == REQUIRED_COLUMN_NAMES[requiredIdx]) columnIndexes[requiredIdx] = columnIdx;
         }
     }
 
     juce::StringArray missingColumns;
-    for (size_t requiredIdx = 0; requiredIdx < KitLibSampleMetadataHelpers::REQUIRED_COLUMN_COUNT; ++requiredIdx) {
-        if (columnIndexes[requiredIdx] < 0) missingColumns.add(KitLibSampleMetadataHelpers::REQUIRED_COLUMN_NAMES[requiredIdx]);
+    for (size_t requiredIdx = 0; requiredIdx < REQUIRED_COLUMN_COUNT; ++requiredIdx) {
+        if (columnIndexes[requiredIdx] < 0) missingColumns.add(REQUIRED_COLUMN_NAMES[requiredIdx]);
     }
     if (!missingColumns.isEmpty()) return result.returnWithError("metadata.csv is missing required columns " + missingColumns.joinIntoString(", ") + ": " + metadataFile.getFullPathName());
 
     std::vector<int> requiredIndexByColumn(headerFields.size(), -1);
-    for (size_t requiredIdx = 0; requiredIdx < KitLibSampleMetadataHelpers::REQUIRED_COLUMN_COUNT; ++requiredIdx) requiredIndexByColumn[static_cast<size_t>(columnIndexes[requiredIdx])] = static_cast<int>(requiredIdx);
+    for (size_t requiredIdx = 0; requiredIdx < REQUIRED_COLUMN_COUNT; ++requiredIdx) requiredIndexByColumn[static_cast<size_t>(columnIndexes[requiredIdx])] = static_cast<int>(requiredIdx);
     this->rowsByKey.reserve(static_cast<size_t>(std::count(csvText.begin(), csvText.end(), '\n')));
 
-    size_t lineStartIdx = KitLibSampleMetadataHelpers::findNextLineStart(csvText, headerEndIdx);
+    size_t lineStartIdx = findNextLineStart(csvText, headerEndIdx);
     int lineNumber = 2;
     while (lineStartIdx < csvText.size()) {
-        const size_t lineEndIdx = KitLibSampleMetadataHelpers::findLineEnd(csvText, lineStartIdx);
+        const size_t lineEndIdx = findLineEnd(csvText, lineStartIdx);
         const auto line = csvText.substr(lineStartIdx, lineEndIdx == std::string_view::npos ? std::string_view::npos : lineEndIdx - lineStartIdx);
-        if (!KitLibSampleMetadataHelpers::trimCsvText(line).empty()) {
-            std::array<KitLibSampleMetadataHelpers::CsvField, KitLibSampleMetadataHelpers::REQUIRED_COLUMN_COUNT> fields {};
-            KitLibSampleMetadataHelpers::forEachCsvField(line, [&fields, &requiredIndexByColumn](int columnIdx, const KitLibSampleMetadataHelpers::CsvField& field) {
+        if (!trimCsvText(line).empty()) {
+            std::array<CsvField, REQUIRED_COLUMN_COUNT> fields {};
+            forEachCsvField(line, [&fields, &requiredIndexByColumn](int columnIdx, const CsvField& field) {
                 if (columnIdx < 0 || columnIdx >= static_cast<int>(requiredIndexByColumn.size())) return;
                 const int requiredIdx = requiredIndexByColumn[static_cast<size_t>(columnIdx)];
                 if (requiredIdx >= 0) fields[static_cast<size_t>(requiredIdx)] = field;
             });
 
             SampleMetadataRow row;
-            row.relativePath = KitLibSampleMetadataHelpers::normalizePath(KitLibSampleMetadataHelpers::getFieldString(fields[KitLibSampleMetadataHelpers::RELATIVE_PATH_COLUMN_IDX]));
-            row.micCode = KitLibSampleMetadataHelpers::getFieldString(fields[KitLibSampleMetadataHelpers::MIC_CODE_COLUMN_IDX]).toLowerCase();
+            row.relativePath = normalizePath(getFieldString(fields[RELATIVE_PATH_COLUMN_IDX]));
+            row.micCode = getFieldString(fields[MIC_CODE_COLUMN_IDX]).toLowerCase();
             if (row.relativePath.isEmpty() || row.micCode.isEmpty()) {
                 result.addWarning("metadata.csv row " + juce::String(lineNumber) + " has no relative_path or mic_code and was ignored");
             } else {
-                row.contentHash = KitLibSampleMetadataHelpers::getFieldString(fields[KitLibSampleMetadataHelpers::CONTENT_HASH_COLUMN_IDX]).toLowerCase();
-                row.fileSizeBytes = KitLibSampleMetadataHelpers::parseOptionalInt64(fields[KitLibSampleMetadataHelpers::FILE_SIZE_COLUMN_IDX]).value_or(0);
-                row.onsetMs = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::ONSET_COLUMN_IDX]);
-                row.intensityDb = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::INTENSITY_COLUMN_IDX]);
-                row.truePeakDb = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::TRUE_PEAK_COLUMN_IDX]);
-                row.peakDb = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::PEAK_COLUMN_IDX]);
-                row.peakMs = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::PEAK_TIME_COLUMN_IDX]);
-                row.decayEndMs = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::DECAY_END_COLUMN_IDX]);
-                row.stereoBalance = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::STEREO_BALANCE_COLUMN_IDX]);
-                for (int pointIdx = 0; pointIdx < SampleMetadataRow::DECAY_POINT_COUNT; ++pointIdx) row.decayPointsMs[static_cast<size_t>(pointIdx)] = KitLibSampleMetadataHelpers::parseOptionalFloat(fields[KitLibSampleMetadataHelpers::DECAY_COLUMN_START_IDX + static_cast<size_t>(pointIdx)]);
+                row.contentHash = getFieldString(fields[CONTENT_HASH_COLUMN_IDX]).toLowerCase();
+                row.fileSizeBytes = parseOptionalInt64(fields[FILE_SIZE_COLUMN_IDX]).value_or(0);
+                row.onsetMs = parseOptionalFloat(fields[ONSET_COLUMN_IDX]);
+                row.intensityDb = parseOptionalFloat(fields[INTENSITY_COLUMN_IDX]);
+                row.truePeakDb = parseOptionalFloat(fields[TRUE_PEAK_COLUMN_IDX]);
+                row.peakDb = parseOptionalFloat(fields[PEAK_COLUMN_IDX]);
+                row.peakMs = parseOptionalFloat(fields[PEAK_TIME_COLUMN_IDX]);
+                row.decayEndMs = parseOptionalFloat(fields[DECAY_END_COLUMN_IDX]);
+                row.stereoBalance = parseOptionalFloat(fields[STEREO_BALANCE_COLUMN_IDX]);
+                for (int pointIdx = 0; pointIdx < SampleMetadataRow::DECAY_POINT_COUNT; ++pointIdx) row.decayPointsMs[static_cast<size_t>(pointIdx)] = parseOptionalFloat(fields[DECAY_COLUMN_START_IDX + static_cast<size_t>(pointIdx)]);
 
                 const auto key = row.relativePath + "\n" + row.micCode;
                 const bool inserted = this->rowsByKey.try_emplace(key, std::move(row)).second;
@@ -227,7 +223,7 @@ ParseResult<int> SampleMetadataTable::loadFromKitRoot(const juce::File& kitRoot)
         }
 
         if (lineEndIdx == std::string_view::npos) break;
-        lineStartIdx = KitLibSampleMetadataHelpers::findNextLineStart(csvText, lineEndIdx);
+        lineStartIdx = findNextLineStart(csvText, lineEndIdx);
         ++lineNumber;
     }
 

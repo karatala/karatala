@@ -1,18 +1,14 @@
 #include "PluginEditor.h"
 #include "UI/CompactModalDialog.h"
-#include "UI/UIHelpers.h"
+#include "UI/UIComponentStyle.h"
 #include "UI/UITheme.h"
 #include "Engine/LayoutManager.h"
 #include <set>
 
-namespace PluginEditorDetail {
-
-static auto makeProcessingSuspendGuard(PluginProcessor& processor) { //FIXME: why inside namespace, and why not in PluginProcessor like static or whatever?
+static auto makeProcessingSuspendGuard(PluginProcessor& processor) {
     processor.suspendProcessing(true);
     return juce::ScopeGuard { [processorPtr = &processor] { processorPtr->suspendProcessing(false); } };
 }
-
-} // namespace PluginEditorDetail
 
 PluginEditor::PluginEditor(PluginProcessor& p)
     : AudioProcessorEditor(&p)
@@ -151,8 +147,8 @@ void PluginEditor::setupRawPage() {
     this->instrumentMapLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     this->instrumentMapLabel.setJustificationType(juce::Justification::centredLeft);
 
-    UIHelpers::configureMonoTextEditor(this->instrumentMapEditor, UITheme::Colours::textPrimary, true);
-    UIHelpers::configureBorderlessTextEditor(this->instrumentMapEditor);
+    UIComponentStyle::configureMonoTextEditor(this->instrumentMapEditor, UITheme::Colours::textPrimary, true);
+    UIComponentStyle::configureBorderlessTextEditor(this->instrumentMapEditor);
     this->instrumentMapEditor.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->instrumentMapEditor.setReturnKeyStartsNewLine(true);
     this->instrumentMapEditor.setTextToShowWhenEmpty("kick1/center:MyKit/kick-24/center\nsnare1/center:MyKit/snare-14/center:tuning=-20;attack=25;decay=250", UITheme::Colours::textMuted);
@@ -161,12 +157,12 @@ void PluginEditor::setupRawPage() {
         instrumentMapText = this->processorRef.getEngine().getSuggestedInstrumentMapText();
     this->instrumentMapEditor.setText(instrumentMapText, false);
 
-    UIHelpers::configureControlButton(this->applyButton);
+    UIComponentStyle::configureControlButton(this->applyButton);
     this->applyButton.onClick = [this] { this->applyInstrumentMapFromEditor(); };
 }
 
 void PluginEditor::applyInstrumentMapFromEditor() {
-    const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
+    const auto processingGuard = makeProcessingSuspendGuard(this->processorRef);
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
 
@@ -191,7 +187,7 @@ void PluginEditor::applyInstrumentMapFromEditor() {
 }
 
 bool PluginEditor::applyKitPageInstrumentMap(const juce::String& mapText, const juce::String& statusText) {
-    const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
+    const auto processingGuard = makeProcessingSuspendGuard(this->processorRef);
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
     auto& engine = this->processorRef.getEngine();
@@ -309,7 +305,7 @@ void PluginEditor::setupTroubleshootingPage() {
 }
 
 void PluginEditor::reloadLibraryFromTroubleshooting() {
-    const auto processingGuard = PluginEditorDetail::makeProcessingSuspendGuard(this->processorRef);
+    const auto processingGuard = makeProcessingSuspendGuard(this->processorRef);
 
     const juce::ScopedLock callbackLock(this->processorRef.getCallbackLock());
     auto& engine = this->processorRef.getEngine();

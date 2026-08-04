@@ -1,15 +1,15 @@
 #include "MidiNoteAssignmentControl.h"
 
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 
 MidiNoteAssignmentControl::MidiNoteAssignmentControl() {
-    UIHelpers::configureControlButton(this->noteButton1);
-    UIHelpers::configureControlButton(this->noteButton2);
+    UIComponentStyle::configureControlButton(this->noteButton1);
+    UIComponentStyle::configureControlButton(this->noteButton2);
     addAndMakeVisible(this->noteButton1);
     addAndMakeVisible(this->noteButton2);
 
-    UIHelpers::configureControlButton(this->learnButton1);
-    UIHelpers::configureControlButton(this->learnButton2);
+    UIComponentStyle::configureControlButton(this->learnButton1);
+    UIComponentStyle::configureControlButton(this->learnButton2);
     addAndMakeVisible(this->learnButton1);
     addAndMakeVisible(this->learnButton2);
 
@@ -26,6 +26,16 @@ MidiNoteAssignmentControl::MidiNoteAssignmentControl() {
 
     this->updateNoteButtons();
     this->updateLearnButtons();
+}
+
+void MidiNoteAssignmentControl::applyNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note) {
+    if (slotIdx < 0) return;
+    while (static_cast<int>(notes.size()) <= slotIdx) notes.push_back(0);
+    if (note >= 0 && note <= 127) {
+        notes[static_cast<size_t>(slotIdx)] = static_cast<uint8_t>(note);
+        return;
+    }
+    if (slotIdx < static_cast<int>(notes.size())) notes.erase(notes.begin() + slotIdx);
 }
 
 void MidiNoteAssignmentControl::resized() {

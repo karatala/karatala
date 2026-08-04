@@ -2,9 +2,11 @@
 
 #include "../Config/PluginLogger.h"
 #include "../Engine/DrumKitEngine.h"
-#include "ParameterPotHelpers.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
+
+static int debugLevelToChoiceId(DebugLevel level) { return static_cast<int>(level) + 2; }
+static DebugLevel choiceIdToDebugLevel(int selectedId) { return static_cast<DebugLevel>(juce::jlimit(-1, 5, selectedId - 2)); }
 
 TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine) {
@@ -20,12 +22,12 @@ TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
     this->logLevelLabel.setJustificationType(juce::Justification::centredLeft);
     this->addAndMakeVisible(this->logLevelLabel);
 
-    UIHelpers::configureComboBox(this->logLevelCombo);
+    UIComponentStyle::configureComboBox(this->logLevelCombo);
     this->logLevelCombo.addItemList({ "OFF", "ERROR", "WARNING", "NOTICE", "INFO", "DEBUG", "VERBOSE" }, 1);
     this->logLevelCombo.onChange = [this] {
         const int selectedId = this->logLevelCombo.getSelectedId();
         if (selectedId <= 0) return;
-        this->engine.setGlobalLogLevel(ParameterPotHelpers::choiceIdToDebugLevel(selectedId));
+        this->engine.setGlobalLogLevel(choiceIdToDebugLevel(selectedId));
         this->engine.saveSettings();
         this->sendStatus("Log level saved: " + this->logLevelCombo.getText());
         this->refreshLogText();
@@ -39,22 +41,22 @@ TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
     };
     this->addAndMakeVisible(this->writeLogFilesToggle);
 
-    UIHelpers::configureControlButton(this->openLogButton);
+    UIComponentStyle::configureControlButton(this->openLogButton);
     this->openLogButton.onClick = [this] { this->openCurrentLogFile(); };
     this->addAndMakeVisible(this->openLogButton);
 
-    UIHelpers::configureControlButton(this->logsFolderButton);
+    UIComponentStyle::configureControlButton(this->logsFolderButton);
     this->logsFolderButton.onClick = [this] { this->openLogsFolder(); };
     this->addAndMakeVisible(this->logsFolderButton);
 
-    UIHelpers::configureControlButton(this->reloadLibraryButton);
+    UIComponentStyle::configureControlButton(this->reloadLibraryButton);
     this->reloadLibraryButton.onClick = [this] {
         if (this->onReloadLibraryRequested) this->onReloadLibraryRequested();
     };
     this->addAndMakeVisible(this->reloadLibraryButton);
 
-    UIHelpers::configureMonoTextEditor(this->importantLogsEditor, UITheme::Colours::textSecondary, true);
-    UIHelpers::configureBorderlessTextEditor(this->importantLogsEditor);
+    UIComponentStyle::configureMonoTextEditor(this->importantLogsEditor, UITheme::Colours::textSecondary, true);
+    UIComponentStyle::configureBorderlessTextEditor(this->importantLogsEditor);
     this->importantLogsEditor.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->importantLogsEditor.setReadOnly(true);
     this->importantLogsEditor.setCaretVisible(false);
@@ -66,7 +68,7 @@ TroubleshootingPanel::TroubleshootingPanel(DrumKitEngine& drumKitEngine)
 }
 
 void TroubleshootingPanel::refresh() {
-    this->logLevelCombo.setSelectedId(ParameterPotHelpers::debugLevelToChoiceId(this->engine.getGlobalLogLevel()), juce::dontSendNotification);
+    this->logLevelCombo.setSelectedId(debugLevelToChoiceId(this->engine.getGlobalLogLevel()), juce::dontSendNotification);
     this->writeLogFilesToggle.setToggleState(GlobalLogger::instance().getWriteLogFilesEnabled(), juce::dontSendNotification);
     this->refreshLogText();
 }

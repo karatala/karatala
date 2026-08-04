@@ -4,13 +4,9 @@
 
 std::atomic<int> gAppLogLevel { static_cast<int>(DebugLevel::Off) };
 
-namespace PluginLoggerDetail {
-
 static juce::String formatLogTimestamp(const juce::Time& timestamp) {
     return timestamp.formatted("%H:%M:%S") + "." + juce::String(timestamp.getMilliseconds()).paddedLeft('0', 3);
 }
-
-} // namespace PluginLoggerDetail
 
 juce::String DebugLevelToString(DebugLevel level) {
     switch (level) {
@@ -201,7 +197,7 @@ void GlobalLogger::rememberImportantLine(const juce::String& line) {
     if (!line.startsWith("ERROR:") && !line.startsWith("WARNING:") && !line.startsWith("NOTICE:")) return;
     const std::lock_guard<std::mutex> lock(this->recentLinesMutex);
     if (this->recentImportantLines.size() >= maxRecentImportantLines) this->recentImportantLines.pop_front();
-    this->recentImportantLines.push_back(PluginLoggerDetail::formatLogTimestamp(juce::Time::getCurrentTime()) + " " + line);
+    this->recentImportantLines.push_back(formatLogTimestamp(juce::Time::getCurrentTime()) + " " + line);
 }
 
 void GlobalLogger::enqueueLine(const juce::String& line) {
@@ -231,7 +227,7 @@ void GlobalLogger::flushQueuedLines() {
     if (target.getFullPathName().isEmpty() || !this->getWriteLogFilesEnabled()) return;
 
     juce::String output;
-    for (const auto& line : lines) output += PluginLoggerDetail::formatLogTimestamp(juce::Time::getCurrentTime()) + " " + line + "\n";
+    for (const auto& line : lines) output += formatLogTimestamp(juce::Time::getCurrentTime()) + " " + line + "\n";
     target.appendText(output);
 }
 

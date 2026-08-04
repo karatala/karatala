@@ -1,12 +1,23 @@
 #include "KitLibModel.h"
-#include "InstrumentMap/InstrumentMap.h"
 #include "../Config/PluginLogger.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 
-using namespace KitLib;
+namespace KitLib {
+
+static juce::String identityKey(const juce::String& value) {
+    return value.trim().toLowerCase();
+}
+
+bool matchesIdentityCandidate(const std::vector<juce::String>& candidates, const juce::String& id) {
+    const auto key = identityKey(id);
+    if (key.isEmpty()) return false;
+    for (const auto& candidate : candidates)
+        if (identityKey(candidate) == key) return true;
+    return false;
+}
 
 int DecayEnvelope::base62ToInt(const juce::String& s) {
     if (s.isEmpty())
@@ -188,3 +199,5 @@ ParseResult<std::vector<MicSpec>> MicSpec::parseMicCodesChain(const juce::String
     }
     return result;
 }
+
+} // namespace KitLib

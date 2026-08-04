@@ -1,9 +1,12 @@
 #include "EngineSettingsPanel.h"
 #include "../Engine/DrumKitEngine.h"
-#include "ParameterPotHelpers.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include <cmath>
 
+static juce::String millisecondsText(double seconds) { return juce::String(seconds * 1000.0, 0) + " ms"; }
+static double millisecondsValue(const juce::String& text) { return text.getDoubleValue() / 1000.0; }
+static juce::String percentageText(double value) { return juce::String(value * 100.0, 0) + "%"; }
+static double percentageValue(const juce::String& text) { return text.getDoubleValue() / 100.0; }
 
 EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine) {
@@ -11,41 +14,41 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
 
     // Group labels
     this->generalGroupLabel.setText("General", juce::dontSendNotification);
-    UIHelpers::configureSectionLabel(this->generalGroupLabel);
+    UIComponentStyle::configureSectionLabel(this->generalGroupLabel);
     this->contentComponent.addAndMakeVisible(this->generalGroupLabel);
 
     this->libraryPathLabel.setText("Sample library", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->libraryPathLabel, juce::Justification::centredLeft);
+    UIComponentStyle::configureCaptionLabel(this->libraryPathLabel, juce::Justification::centredLeft);
     this->contentComponent.addAndMakeVisible(this->libraryPathLabel);
-    UIHelpers::configureMonoTextEditor(this->libraryPathEditor, UITheme::Colours::textSecondary, false);
-    UIHelpers::configureBorderlessTextEditor(this->libraryPathEditor);
+    UIComponentStyle::configureMonoTextEditor(this->libraryPathEditor, UITheme::Colours::textSecondary, false);
+    UIComponentStyle::configureBorderlessTextEditor(this->libraryPathEditor);
     this->libraryPathEditor.setReadOnly(true);
     this->libraryPathEditor.setScrollbarsShown(false);
     this->contentComponent.addAndMakeVisible(this->libraryPathEditor);
-    UIHelpers::configureControlButton(this->browseLibraryButton);
+    UIComponentStyle::configureControlButton(this->browseLibraryButton);
     this->browseLibraryButton.onClick = [this] { this->chooseLibraryPath(); };
     this->contentComponent.addAndMakeVisible(this->browseLibraryButton);
 
     this->globalVelocityResponseLabel.setText("Global Velocity-to-dB Curve", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->globalVelocityResponseLabel, juce::Justification::centredLeft);
+    UIComponentStyle::configureCaptionLabel(this->globalVelocityResponseLabel, juce::Justification::centredLeft);
     this->contentComponent.addAndMakeVisible(this->globalVelocityResponseLabel);
-    UIHelpers::configureComboBox(this->globalVelocityResponseCombo);
+    UIComponentStyle::configureComboBox(this->globalVelocityResponseCombo);
     this->globalVelocityResponseCombo.onChange = [this] { this->applyGlobalVelocityResponseChoice(); };
     this->contentComponent.addAndMakeVisible(this->globalVelocityResponseCombo);
 
     this->kitLayoutLabel.setText("Default kit layout", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->kitLayoutLabel, juce::Justification::centredLeft);
+    UIComponentStyle::configureCaptionLabel(this->kitLayoutLabel, juce::Justification::centredLeft);
     this->contentComponent.addAndMakeVisible(this->kitLayoutLabel);
-    UIHelpers::configureComboBox(this->kitLayoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
+    UIComponentStyle::configureComboBox(this->kitLayoutCombo, UIComponentStyle::ComboBoxStyle::LayoutSelector);
     this->contentComponent.addAndMakeVisible(this->kitLayoutCombo);
 
     this->micLayoutLabel.setText("Default mic layout", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->micLayoutLabel, juce::Justification::centredLeft);
+    UIComponentStyle::configureCaptionLabel(this->micLayoutLabel, juce::Justification::centredLeft);
     this->contentComponent.addAndMakeVisible(this->micLayoutLabel);
-    UIHelpers::configureComboBox(this->micLayoutCombo, UIHelpers::ComboBoxStyle::LayoutSelector);
+    UIComponentStyle::configureComboBox(this->micLayoutCombo, UIComponentStyle::ComboBoxStyle::LayoutSelector);
     this->contentComponent.addAndMakeVisible(this->micLayoutCombo);
 
-    UIHelpers::configureControlButton(this->saveLayoutDefaultsButton);
+    UIComponentStyle::configureControlButton(this->saveLayoutDefaultsButton);
     this->saveLayoutDefaultsButton.onClick = [this] { this->saveLayoutDefaults(); };
     this->contentComponent.addAndMakeVisible(this->saveLayoutDefaultsButton);
     this->layoutDefaultsWarningLabel.setText("Layout defaults apply to plugin instances created afterward. The current instance does not change.", juce::dontSendNotification);
@@ -66,19 +69,19 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     this->contentComponent.addAndMakeVisible(*this->cacheLimitControl);
 
     this->chokeGroupLabel.setText("Aftertouch Choke", juce::dontSendNotification);
-    UIHelpers::configureSectionLabel(this->chokeGroupLabel);
+    UIComponentStyle::configureSectionLabel(this->chokeGroupLabel);
     this->contentComponent.addAndMakeVisible(this->chokeGroupLabel);
 
     this->tailGroupLabel.setText("Tail Shortening", juce::dontSendNotification);
-    UIHelpers::configureSectionLabel(this->tailGroupLabel);
+    UIComponentStyle::configureSectionLabel(this->tailGroupLabel);
     this->contentComponent.addAndMakeVisible(this->tailGroupLabel);
 
     this->hihatGroupLabel.setText("Hi-Hat Transitions / Polyphony", juce::dontSendNotification);
-    UIHelpers::configureSectionLabel(this->hihatGroupLabel);
+    UIComponentStyle::configureSectionLabel(this->hihatGroupLabel);
     this->contentComponent.addAndMakeVisible(this->hihatGroupLabel);
 
     this->uiGridGroupLabel.setText("UI / Grid", juce::dontSendNotification);
-    UIHelpers::configureSectionLabel(this->uiGridGroupLabel);
+    UIComponentStyle::configureSectionLabel(this->uiGridGroupLabel);
     this->contentComponent.addAndMakeVisible(this->uiGridGroupLabel);
 
     // -- Aftertouch Choke --
@@ -113,15 +116,15 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
 
     // -- Hi-Hat / Polyphony --
     this->addPot("Open Xfade", "Transition time when opening a ringing hi-hat. Higher values are smoother; lower values react faster.",
-                 &settings.hihatOpenCrossfadeSec, 0.005f, 0.250f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.060);
+                 &settings.hihatOpenCrossfadeSec, 0.005f, 0.250f, 0.001f, millisecondsText, millisecondsValue, 0.060);
     this->addPot("Close Xfade", "Transition time when closing a ringing hi-hat. Lower values produce a tighter choke.",
-                 &settings.hihatCloseCrossfadeSec, 0.002f, 0.150f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.020);
+                 &settings.hihatCloseCrossfadeSec, 0.002f, 0.150f, 0.001f, millisecondsText, millisecondsValue, 0.020);
     this->addPot("CC Smooth", "Combines rapid pedal messages before changing the ringing tail. Higher values reduce transition activity but add pedal latency.",
-                 &settings.hihatControllerSmoothingSec, 0.0f, 0.100f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.015);
+                 &settings.hihatControllerSmoothingSec, 0.0f, 0.100f, 0.001f, millisecondsText, millisecondsValue, 0.015);
     this->addPot("Hysteresis", "Prevents openness from flickering near articulation boundaries. Increase this if the pedal jitters between adjacent sounds.",
                  &settings.hihatBoundaryHysteresisCc, 0, 8, 2);
     this->addPot("Tail Match", "How strongly the replacement follows the current tail loudness. Zero uses a simple fallback; 100% uses decay-envelope matching.",
-                 &settings.hihatTailMatchAmount, 0.0f, 1.0f, 0.01f, ParameterPotHelpers::percentageText, ParameterPotHelpers::percentageValue, 0.75);
+                 &settings.hihatTailMatchAmount, 0.0f, 1.0f, 0.01f, percentageText, percentageValue, 0.75);
     this->addPot("Match Bias", "Loudness offset applied to matched replacement tails. Negative values make transitions more restrained.",
                  &settings.hihatTailMatchBiasDb, -12.0f, 6.0f, 0.5f, nullptr, nullptr, -3.0);
     this->addPot("Poly Xfade", "Crossfade time when same zone re-triggers. Lower = harder choke, higher = smoother overlap.",
@@ -129,9 +132,9 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     this->addPot("Hit Choke dB", "dB margin for struck-hit cross-articulation choke. Higher values make quiet hits more likely to choke a ringing hat.",
                  &settings.hihatHitChokeDbMargin, 0.0f, 20.0f, 0.5f, nullptr, nullptr, 3.0);
     this->addPot("Attack Guard", "Protects the initial stick attack from being replaced by pedal movement.",
-                 &settings.hihatTransitionAttackGuardSec, 0.0f, 0.100f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.025);
+                 &settings.hihatTransitionAttackGuardSec, 0.0f, 0.100f, 0.001f, millisecondsText, millisecondsValue, 0.025);
     this->addPot("Min Remaining", "Skips replacement samples that do not have enough audio left after matching the current decay level.",
-                 &settings.hihatTransitionMinRemainingSec, 0.010f, 0.500f, 0.001f, ParameterPotHelpers::millisecondsText, ParameterPotHelpers::millisecondsValue, 0.050);
+                 &settings.hihatTransitionMinRemainingSec, 0.010f, 0.500f, 0.001f, millisecondsText, millisecondsValue, 0.050);
     this->addPot("Silence Floor", "Very quiet historical tails below this level do not create replacement voices.",
                  &settings.hihatTransitionSilenceFloorDb, -90.0f, -36.0f, 1.0f, nullptr, nullptr, -60.0);
 
@@ -221,10 +224,10 @@ void EngineSettingsPanel::addChoice(const juce::String& name,
     auto entry = std::make_unique<ChoiceEntry>();
     entry->label.setText(name, juce::dontSendNotification);
     entry->label.setTooltip(tooltip);
-    UIHelpers::configureCaptionLabel(entry->label);
+    UIComponentStyle::configureCaptionLabel(entry->label);
     this->contentComponent.addAndMakeVisible(entry->label);
 
-    UIHelpers::configureComboBox(entry->comboBox);
+    UIComponentStyle::configureComboBox(entry->comboBox);
     entry->comboBox.setTooltip(tooltip);
     entry->comboBox.addItemList(items, 1);
     entry->loadSelectedId = std::move(loadSelectedId);
@@ -238,7 +241,7 @@ void EngineSettingsPanel::addChoice(const juce::String& name,
     };
     this->contentComponent.addAndMakeVisible(entry->comboBox);
 
-    UIHelpers::configureControlButton(entry->resetButton, juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
+    UIComponentStyle::configureControlButton(entry->resetButton, juce::TextButton::ConnectedOnLeft | juce::TextButton::ConnectedOnRight);
     entry->resetButton.onClick = [entryPtr = entry.get()] {
         entryPtr->comboBox.setSelectedId(entryPtr->defaultSelectedId, juce::sendNotificationSync);
     };

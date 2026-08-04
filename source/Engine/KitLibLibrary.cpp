@@ -1,12 +1,11 @@
 #include "KitLibModel.h"
-#include "InstrumentMap/InstrumentMap.h"
 #include "../Config/PluginLogger.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 
-using namespace KitLib;
+namespace KitLib {
 
 ParseResult<DrumKitSpec::MetaInfo> DrumKitSpec::parseInfo(const juce::String& dirName) {
     ParseResult<MetaInfo> result;
@@ -63,7 +62,7 @@ const InstrumentSpec* DrumKitSpec::findInstrumentById(const juce::String& id) co
     for (auto& existing : this->instrumentSpecsMap) {
         auto* instrument = existing.second.get();
         if (instrument == nullptr) continue;
-        if (!::InstrumentMap::candidateMatches(InstrumentSpec::getIdentityCandidates(instrument->meta), id)) continue;
+        if (!KitLib::matchesIdentityCandidate(InstrumentSpec::getIdentityCandidates(instrument->meta), id)) continue;
         matched = instrument;
         ++matchCount;
     }
@@ -75,7 +74,7 @@ juce::String DrumKitSpec::getPreferredInstrumentId(const InstrumentSpec& instrum
         int matchCount = 0;
         for (const auto& existing : this->instrumentSpecsMap) {
             const auto* otherInstrument = existing.second.get();
-            if (otherInstrument != nullptr && ::InstrumentMap::candidateMatches(InstrumentSpec::getIdentityCandidates(otherInstrument->meta), candidate)) ++matchCount;
+            if (otherInstrument != nullptr && KitLib::matchesIdentityCandidate(InstrumentSpec::getIdentityCandidates(otherInstrument->meta), candidate)) ++matchCount;
         }
         if (matchCount == 1) return candidate;
     }
@@ -204,7 +203,7 @@ const DrumKitSpec* LibraryManager::findKitById(const juce::String& id) const {
     int matchCount = 0;
     for (auto& kit : this->kitSpecs) {
         if (kit == nullptr) continue;
-        if (!::InstrumentMap::candidateMatches(LibraryManager::getIdentityCandidates(kit->meta), id)) continue;
+        if (!KitLib::matchesIdentityCandidate(LibraryManager::getIdentityCandidates(kit->meta), id)) continue;
         matched = kit.get();
         ++matchCount;
     }
@@ -215,7 +214,7 @@ juce::String LibraryManager::getPreferredKitId(const DrumKitSpec& kit) const {
     for (const auto& candidate : LibraryManager::getIdentityCandidates(kit.meta)) {
         int matchCount = 0;
         for (const auto& existing : this->kitSpecs) {
-            if (existing != nullptr && ::InstrumentMap::candidateMatches(LibraryManager::getIdentityCandidates(existing->meta), candidate)) ++matchCount;
+            if (existing != nullptr && KitLib::matchesIdentityCandidate(LibraryManager::getIdentityCandidates(existing->meta), candidate)) ++matchCount;
         }
         if (matchCount == 1) return candidate;
     }
@@ -232,3 +231,5 @@ DrumKitSpec* LibraryManager::findKit(const juce::String& name) {
             return kit.get();
     return nullptr;
 }
+
+} // namespace KitLib

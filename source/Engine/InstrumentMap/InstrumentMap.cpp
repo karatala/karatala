@@ -4,28 +4,12 @@
 #include <algorithm>
 #include <utility>
 
-namespace InstrumentMapDetail {
+namespace InstrumentMap {
 
 static juce::String makeLayerSortKey(const InstrumentMap::Layer& mapLayer) {
     const auto articulationSlotCode = mapLayer.slotArticulationFilter.empty() ? juce::String() : mapLayer.slotArticulationFilter.front().trim().toLowerCase();
     return mapLayer.slotId.trim().toLowerCase() + "/" + articulationSlotCode;
 }
-
-} // namespace InstrumentMapDetail
-
-juce::String InstrumentMap::identityKey(const juce::String& value) {
-    return value.trim().toLowerCase();
-}
-
-bool InstrumentMap::candidateMatches(const std::vector<juce::String>& candidates, const juce::String& id) {
-    const auto key = identityKey(id);
-    if (key.isEmpty()) return false;
-    for (const auto& candidate : candidates)
-        if (identityKey(candidate) == key) return true;
-    return false;
-}
-
-namespace InstrumentMapDetail {
 
 struct ParsedSlotRef {
     juce::String slotId;
@@ -97,8 +81,6 @@ static int findNextParamBoundary(const juce::String& text, int startIndex) {
     return -1;
 }
 
-} // namespace InstrumentMapDetail
-
 /**
  * Parses instrument map text.
  *
@@ -111,7 +93,7 @@ static int findNextParamBoundary(const juce::String& text, int startIndex) {
  *   snare1/rim:MixedKit/snare-14/sidestick:vol=-3.5;bleed=oh:0.25,room:0.5;micRoute=oh:room
  *
  */
-ParseResult<InstrumentMap::Map> InstrumentMap::parseText(const juce::String& text) {
+ParseResult<Map> parseText(const juce::String& text) {
     ParseResult<InstrumentMap::Map> result;
     const juce::StringArray lines = juce::StringArray::fromLines(text);
     auto parseInt = [](const juce::String& valueText, const juce::String& key, ParseResult<InstrumentMap::Map>& parseResult, int lineNumber, std::optional<int>& target) {
@@ -144,8 +126,8 @@ ParseResult<InstrumentMap::Map> InstrumentMap::parseText(const juce::String& tex
             continue;
         }
 
-        auto slotRef = InstrumentMapDetail::parseSlotRef(slotText);
-        auto libraryRef = InstrumentMapDetail::parseLibraryRef(targetText);
+        auto slotRef = parseSlotRef(slotText);
+        auto libraryRef = parseLibraryRef(targetText);
 
         if (slotRef.slotId.isEmpty()) {
             result.addWarning("Line " + juce::String(idx + 1) + ": instrument slot id is empty");
@@ -190,7 +172,7 @@ ParseResult<InstrumentMap::Map> InstrumentMap::parseText(const juce::String& tex
                 }
 
                 const auto key = paramsText.substring(start, equalsIdx).trim();
-                const int boundaryIdx = InstrumentMapDetail::findNextParamBoundary(paramsText, equalsIdx + 1);
+                const int boundaryIdx = findNextParamBoundary(paramsText, equalsIdx + 1);
                 const auto value = (boundaryIdx < 0 ? paramsText.substring(equalsIdx + 1) : paramsText.substring(equalsIdx + 1, boundaryIdx)).trim();
 
                 if (key == "tuning")
@@ -260,7 +242,7 @@ ParseResult<InstrumentMap::Map> InstrumentMap::parseText(const juce::String& tex
     return result;
 }
 
-juce::String InstrumentMap::serialize(const Map& instrumentMap) {
+juce::String serialize(const Map& instrumentMap) {
     juce::StringArray lines;
 
     std::vector<const Layer*> sortedMapLayers;
@@ -268,7 +250,7 @@ juce::String InstrumentMap::serialize(const Map& instrumentMap) {
     for (const auto& mapLayer : instrumentMap.layers) sortedMapLayers.push_back(&mapLayer);
 
     std::stable_sort(sortedMapLayers.begin(), sortedMapLayers.end(), [](const auto* leftMapLayer, const auto* rightMapLayer) {
-        return InstrumentMapDetail::makeLayerSortKey(*leftMapLayer) < InstrumentMapDetail::makeLayerSortKey(*rightMapLayer);
+        return makeLayerSortKey(*leftMapLayer) < makeLayerSortKey(*rightMapLayer);
     });
 
     for (const auto* mapLayerPtr : sortedMapLayers) {
@@ -321,3 +303,5 @@ juce::String InstrumentMap::serialize(const Map& instrumentMap) {
 
     return lines.joinIntoString("\n");
 }
+
+} // namespace InstrumentMap

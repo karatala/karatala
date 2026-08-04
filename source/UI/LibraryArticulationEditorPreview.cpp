@@ -1,13 +1,11 @@
 #include "LibraryArticulationEditor.h"
 #include "../Config/Parsing.h"
 #include "../Engine/RoutingTypes.h"
-#include "UIHelpers.h"
 #include "UITheme.h"
 
 #include <algorithm>
 #include <cmath>
 
-namespace LibraryArticulationEditorDetail {
 static juce::String logicalHitHoverKey(int namedVelocity, const juce::String& roundRobin) {
     return "hit:" + juce::String(namedVelocity) + ":" + roundRobin;
 }
@@ -15,8 +13,6 @@ static juce::String logicalHitHoverKey(int namedVelocity, const juce::String& ro
 static juce::String micHoverKey(int namedVelocity, const juce::String& roundRobin, const juce::String& micCode) {
     return "mic:" + juce::String(namedVelocity) + ":" + roundRobin + ":" + micCode.toLowerCase();
 }
-} // namespace LibraryArticulationEditorDetail
-
 void LibraryArticulationEditor::toggleLogicalHitSelection(int levelIdx, int roundRobinIdx) {
     if (!this->logicalHitExists(levelIdx, roundRobinIdx) || !this->commitPendingSampleEditors()) return;
     LogicalHitKey hit { this->rangeInfo.levels[static_cast<size_t>(levelIdx)].namedVelocity, this->roundRobins[static_cast<size_t>(roundRobinIdx)] };
@@ -25,7 +21,7 @@ void LibraryArticulationEditor::toggleLogicalHitSelection(int levelIdx, int roun
     else this->selectedHits.erase(selectedIt);
     this->activeHit = hit;
     this->hasActiveHit = true;
-    this->hoverPreviewKey = LibraryArticulationEditorDetail::logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
+    this->hoverPreviewKey = logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
     ++this->hoverPreviewGeneration;
     this->updateSelectedSamples();
     this->previewLogicalHit(hit, hit.namedVelocity);
@@ -60,7 +56,7 @@ void LibraryArticulationEditor::toggleMicSelection(const juce::String& micCode) 
     if (selectedIt == this->selectedMicCodes.end()) this->selectedMicCodes.push_back(micCode);
     else this->selectedMicCodes.erase(selectedIt);
     if (this->hasActiveHit) {
-        this->hoverPreviewKey = LibraryArticulationEditorDetail::micHoverKey(this->activeHit.namedVelocity, this->activeHit.roundRobin, micCode);
+        this->hoverPreviewKey = micHoverKey(this->activeHit.namedVelocity, this->activeHit.roundRobin, micCode);
         ++this->hoverPreviewGeneration;
     } else {
         this->clearHoverPreview();
@@ -142,7 +138,7 @@ void LibraryArticulationEditor::replayLastPreview() {
 }
 
 void LibraryArticulationEditor::queueLogicalHitHover(const LogicalHitKey& hit) {
-    const auto hoverKey = LibraryArticulationEditorDetail::logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
+    const auto hoverKey = logicalHitHoverKey(hit.namedVelocity, hit.roundRobin);
     if (this->hoverPreviewKey == hoverKey) return;
     this->hoverPreviewKey = hoverKey;
     const int previewGeneration = ++this->hoverPreviewGeneration;
@@ -156,7 +152,7 @@ void LibraryArticulationEditor::queueLogicalHitHover(const LogicalHitKey& hit) {
 void LibraryArticulationEditor::queueMicHover(const juce::String& micCode) {
     if (!this->hasActiveHit) return;
     const auto hit = this->activeHit;
-    const auto hoverKey = LibraryArticulationEditorDetail::micHoverKey(hit.namedVelocity, hit.roundRobin, micCode);
+    const auto hoverKey = micHoverKey(hit.namedVelocity, hit.roundRobin, micCode);
     if (this->hoverPreviewKey == hoverKey) return;
     this->hoverPreviewKey = hoverKey;
     const int previewGeneration = ++this->hoverPreviewGeneration;

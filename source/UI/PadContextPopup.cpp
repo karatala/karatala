@@ -1,7 +1,6 @@
 #include "PadContextPopup.h"
 #include "../Engine/ArticulationNames.h"
-#include "../Engine/DrumKitEngineMapHelpers.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
@@ -20,7 +19,7 @@ void PadContextPopup::syncNoteButtons() {
 
 void PadContextPopup::applyNoteToSlot(int slotIdx, int note) {
     if (!this->midiNotesPtr) return;
-    UIHelpers::applyMidiNoteToSlot(*this->midiNotesPtr, slotIdx, note);
+    MidiNoteAssignmentControl::applyNoteToSlot(*this->midiNotesPtr, slotIdx, note);
     this->syncMidiNotesToActiveLayout();
     this->syncNoteButtons();
     if (this->onMidiMappingChanged) this->onMidiMappingChanged();
@@ -68,7 +67,7 @@ void PadContextPopup::midiLearnNoteReceived(int midiNote) {
 // Source items
 
 void PadContextPopup::rebuildSourceItems() {
-    this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
+    this->sourceItems = SourceItem::collectFromLibrary(this->engine.getInstrumentManager());
 }
 
 void PadContextPopup::addArticulationGroup(const juce::String& articulationName) {
@@ -94,7 +93,7 @@ void PadContextPopup::addArticulationGroup(const juce::String& articulationName)
 }
 
 int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
-    return UIHelpers::findSourceIndex(this->sourceItems, searchPath);
+    return SourceItem::findIndex(this->sourceItems, searchPath);
 }
 
 juce::uint8 PadContextPopup::getPreviewVelocity() const {
@@ -136,14 +135,14 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
     this->slotLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
     addAndMakeVisible(this->slotLabel);
 
-    UIHelpers::configureToggleButton(this->linkArtsButton);
+    UIComponentStyle::configureToggleButton(this->linkArtsButton);
     this->linkArtsButton.setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::broadEditDanger);
     this->linkArtsButton.setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     this->linkArtsButton.getProperties().set("broadEditMode", true);
     this->linkArtsButton.setTooltip("Apply supported parameter and mic routing changes to the same layer across all articulations in this slot");
     this->addAndMakeVisible(this->linkArtsButton);
 
-    UIHelpers::configureToggleButton(this->linkTomBleedButton);
+    UIComponentStyle::configureToggleButton(this->linkTomBleedButton);
     this->linkTomBleedButton.setColour(juce::TextButton::buttonOnColourId, UITheme::Colours::broadEditDanger);
     this->linkTomBleedButton.setColour(juce::TextButton::textColourOnId, UITheme::Colours::textPrimary);
     this->linkTomBleedButton.getProperties().set("broadEditMode", true);
@@ -151,7 +150,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
     this->linkTomBleedButton.setVisible(this->slotType == KitLib::InstrumentSpec::Type::Tom);
     this->addAndMakeVisible(this->linkTomBleedButton);
 
-    UIHelpers::configureControlButton(this->setInstrumentButton);
+    UIComponentStyle::configureControlButton(this->setInstrumentButton);
     this->setInstrumentButton.setTooltip("Replace every map layer in this slot with one complete library instrument");
     this->setInstrumentButton.onClick = [this] { this->showInstrumentPicker(); };
     this->addAndMakeVisible(this->setInstrumentButton);

@@ -5,8 +5,6 @@
 #include <limits>
 #include <vector>
 
-namespace VelocityResponseHelpers {
-
 static juce::String serializePoints(const std::vector<VelocityResponse::Point>& points) {
     juce::StringArray tokens;
     for (const auto& point : points) {
@@ -47,12 +45,12 @@ static std::vector<float> buildMonotoneTangents(const std::vector<VelocityRespon
     }
 
     const float firstTangent = ((2.0f * intervalWidths[0] + intervalWidths[1]) * intervalSlopes[0] - intervalWidths[0] * intervalSlopes[1]) / (intervalWidths[0] + intervalWidths[1]);
-    tangents.front() = VelocityResponseHelpers::limitEndpointTangent(firstTangent, intervalSlopes.front());
+    tangents.front() = limitEndpointTangent(firstTangent, intervalSlopes.front());
     const size_t lastIntervalIdx = intervalSlopes.size() - 1;
     const float lastIntervalWidth = intervalWidths[lastIntervalIdx];
     const float previousIntervalWidth = intervalWidths[lastIntervalIdx - 1];
     const float lastTangent = ((2.0f * lastIntervalWidth + previousIntervalWidth) * intervalSlopes[lastIntervalIdx] - lastIntervalWidth * intervalSlopes[lastIntervalIdx - 1]) / (lastIntervalWidth + previousIntervalWidth);
-    tangents.back() = VelocityResponseHelpers::limitEndpointTangent(lastTangent, intervalSlopes.back());
+    tangents.back() = limitEndpointTangent(lastTangent, intervalSlopes.back());
     return tangents;
 }
 
@@ -69,8 +67,6 @@ static float interpolateMonotoneDb(const VelocityResponse::Point& leftPoint, con
     const float targetDb = leftValueWeight * leftPoint.targetDb + leftTangentWeight * intervalWidth * leftTangent + rightValueWeight * rightPoint.targetDb + rightTangentWeight * intervalWidth * rightTangent;
     return juce::jlimit(leftPoint.targetDb, rightPoint.targetDb, targetDb);
 }
-
-} // namespace VelocityResponseHelpers
 
 VelocityResponse VelocityResponse::linear() {
     VelocityResponse response;
@@ -152,18 +148,18 @@ ParseResult<VelocityResponse> VelocityResponse::fromDefinition(const juce::Strin
     }
 
     VelocityResponse response;
-    response.definition = VelocityResponseHelpers::serializePoints(points);
+    response.definition = serializePoints(points);
     response.points = points;
     response.targetDbByVelocity[0] = -100.0f;
     response.gainByVelocity[0] = 0.0f;
-    const auto tangents = VelocityResponseHelpers::buildMonotoneTangents(points);
+    const auto tangents = buildMonotoneTangents(points);
     size_t pointIdx = 0;
     for (int velocity = 1; velocity <= 127; ++velocity) {
         while (pointIdx + 1 < points.size() && velocity > points[pointIdx + 1].velocity) ++pointIdx;
         const size_t rightPointIdx = juce::jmin(pointIdx + 1, points.size() - 1);
         const auto& leftPoint = points[pointIdx];
         const auto& rightPoint = points[rightPointIdx];
-        const float targetDb = VelocityResponseHelpers::interpolateMonotoneDb(leftPoint, rightPoint, tangents[pointIdx], tangents[rightPointIdx], velocity);
+        const float targetDb = interpolateMonotoneDb(leftPoint, rightPoint, tangents[pointIdx], tangents[rightPointIdx], velocity);
         response.targetDbByVelocity[static_cast<size_t>(velocity)] = targetDb;
         response.gainByVelocity[static_cast<size_t>(velocity)] = juce::Decibels::decibelsToGain(targetDb, -100.0f);
     }
@@ -176,7 +172,7 @@ ParseResult<VelocityResponse> VelocityResponse::fromPoints(const std::vector<Poi
         ParseResult<VelocityResponse> result;
         return result.returnWithError("Velocity response needs at least two points");
     }
-    return VelocityResponse::fromDefinition(VelocityResponseHelpers::serializePoints(points));
+    return VelocityResponse::fromDefinition(serializePoints(points));
 }
 
 juce::uint8 VelocityResponse::findClosestVelocityForTargetDb(float targetDb) const {

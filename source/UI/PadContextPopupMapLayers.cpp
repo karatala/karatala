@@ -1,7 +1,7 @@
 #include "PadContextPopup.h"
 #include "../Engine/ArticulationNames.h"
-#include "../Engine/DrumKitEngineMapHelpers.h"
-#include "UIHelpers.h"
+#include "../Engine/InstrumentMap/InstrumentMapOperations.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
@@ -20,7 +20,7 @@ void PadContextPopup::populateLayers() {
         for (const auto& mapLayer : existingMapLayers) {
             if (mapLayer.slotId != this->slotId) continue;
 
-            const auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(mapLayer);
+            const auto& articulationSlotFilters = mapLayer.slotArticulationFilter;
             bool matchesArticulation = articulationSlotFilters.empty();
             for (const auto& filter : articulationSlotFilters) {
                 if (ArticulationNames::mapFilterMatchesArticulation(filter, group->artName)) {
@@ -32,10 +32,10 @@ void PadContextPopup::populateLayers() {
 
             juce::String sourceFullPath = mapLayer.kitRef;
             if (mapLayer.instCode.isNotEmpty()) sourceFullPath += "/" + mapLayer.instCode;
-            const auto libraryArticulation = DrumKitEngineMapHelpers::libraryArticulationForSlot(mapLayer, group->artName);
+            const auto libraryArticulation = InstrumentMap::libraryArticulationForSlot(mapLayer, group->artName);
             if (libraryArticulation.isNotEmpty()) sourceFullPath += "/" + libraryArticulation;
-            if (this->slotType == KitLib::InstrumentSpec::Type::HiHat && UIHelpers::usesLegacyArticulationSlotExpressionFilter(mapLayer.slotArticulationFilter, group->artName))
-                sourceFullPath = UIHelpers::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, group->artName);
+            if (this->slotType == KitLib::InstrumentSpec::Type::HiHat && SourceItem::usesLegacyArticulationSlotExpressionFilter(mapLayer.slotArticulationFilter, group->artName))
+                sourceFullPath = SourceItem::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, group->artName);
 
             const int tuning = mapLayer.tuningCents.value_or(0);
             const int attack = mapLayer.attackTimeMs.value_or(-1);
@@ -74,7 +74,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
 
     layer->velocityResponseMode = std::make_unique<juce::ComboBox>();
-    UIHelpers::configureComboBox(*layer->velocityResponseMode);
+    UIComponentStyle::configureComboBox(*layer->velocityResponseMode);
     layer->velocityResponseMode->getProperties().set("compactRoute", true);
     layer->velocityResponseMode->getProperties().set("hideArrow", true);
     this->layerContent.addAndMakeVisible(*layer->velocityResponseMode);
@@ -82,7 +82,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     this->rebuildVelocityResponseChoices(layer);
 
     layer->libraryArticulationEditorButton = std::make_unique<juce::TextButton>();
-    UIHelpers::configureSettingsButton(*layer->libraryArticulationEditorButton);
+    UIComponentStyle::configureSettingsButton(*layer->libraryArticulationEditorButton);
     layer->libraryArticulationEditorButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
     layer->libraryArticulationEditorButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textSecondary);
     layer->libraryArticulationEditorButton->setTooltip("Edit library kit corrections for velocity ranges, balance, gain, and timing of this library articulation");
@@ -98,13 +98,13 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Tuning); };
 
     // Attack pot
-    layer->attackPot = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, UIHelpers::sentinelValueText);
+    layer->attackPot = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, CompactParameterControl::sentinelValueText);
     layer->attackPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Attack); };
 
     // Decay pot
-    layer->decayPot = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, UIHelpers::sentinelValueText);
+    layer->decayPot = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, CompactParameterControl::sentinelValueText);
     layer->decayPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Decay); };
@@ -131,7 +131,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
 
     // Flip L/R button (toggle)
     layer->flipLRButton = std::make_unique<juce::TextButton>("L/R");
-    UIHelpers::configureToggleButton(*layer->flipLRButton,
+    UIComponentStyle::configureToggleButton(*layer->flipLRButton,
                                      juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     layer->flipLRButton->setToggleState(flipLR, juce::dontSendNotification);
     layer->flipLRExplicit = flipLRExplicit;
@@ -143,7 +143,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
 
     // Flip Phase button (toggle)
     layer->flipPhaseButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x98")); // phase invert
-    UIHelpers::configureToggleButton(*layer->flipPhaseButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    UIComponentStyle::configureToggleButton(*layer->flipPhaseButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     layer->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
     this->layerContent.addAndMakeVisible(*layer->flipPhaseButton);
     layer->flipPhaseButton->onClick = [this, layer] {
@@ -155,7 +155,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
 
     // Remove button
     layer->removeButton = std::make_unique<juce::TextButton>();
-    UIHelpers::configureDialogCloseButton(*layer->removeButton);
+    UIComponentStyle::configureDialogCloseButton(*layer->removeButton);
     layer->removeButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::transparent);
     layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accent);
     layer->removeButton->setTooltip("Remove layer");
@@ -327,8 +327,8 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
     const auto* layout = this->engine.getKitLayout();
     if (layout == nullptr) return;
 
-    auto projections = DrumKitEngineMapHelpers::projectMapLayers(workingMap, *layout);
-    auto findMapLayerProjection = [this, layer](const auto& candidateProjections) -> const DrumKitEngineMapHelpers::InstrumentMapLayerProjection* {
+    auto projections = InstrumentMap::projectLayers(workingMap, *layout);
+    auto findMapLayerProjection = [this, layer](const auto& candidateProjections) -> const InstrumentMap::LayerProjection* {
         for (const auto& projection : candidateProjections) {
             if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationSlotCode.compareIgnoreCase(layer->artName) != 0 || projection.articulationSlotLayerIndex != layer->mappedLayerIndex) continue;
             return &projection;
@@ -346,14 +346,14 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
             return slot.id.compareIgnoreCase(this->slotId) == 0;
         });
         if (slotIterator != layout->instrumentSlots.end()) {
-            DrumKitEngineMapHelpers::isolateMapLayerForArticulationSlot(workingMap, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
-            projections = DrumKitEngineMapHelpers::projectMapLayers(workingMap, *layout);
+            InstrumentMap::isolateLayerForArticulationSlot(workingMap, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
+            projections = InstrumentMap::projectLayers(workingMap, *layout);
             mapLayerProjection = findMapLayerProjection(projections);
             if (mapLayerProjection == nullptr) return;
         }
     }
 
-    auto targetProjections = DrumKitEngineMapHelpers::collectLinkedMapLayerTargets(projections, this->slotId, layer->artName, layer->mappedLayerIndex, linkArts, linkTomBleed);
+    auto targetProjections = InstrumentMap::collectLinkedMapLayerTargets(projections, this->slotId, layer->artName, layer->mappedLayerIndex, linkArts, linkTomBleed);
 
     int integerValue = 0;
     float floatValue = 0.0f;
@@ -410,7 +410,7 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
         std::erase_if(targetProjections, [this, &workingMap, &micCode](const auto& projection) {
             if (projection.mapLayerIndex >= workingMap.layers.size()) return true;
             const auto& mapLayer = workingMap.layers[projection.mapLayerIndex];
-            const auto libraryPath = DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, projection.articulationSlotCode);
+            const auto libraryPath = InstrumentMap::libraryPathForArticulationSlot(mapLayer, projection.articulationSlotCode);
             const auto relevantMics = this->getRelevantMicsForSourcePath(libraryPath);
             return std::none_of(relevantMics.begin(), relevantMics.end(), [&micCode](const auto& mic) {
                 return mic.first.compareIgnoreCase(micCode) == 0;
@@ -526,7 +526,7 @@ juce::String PadContextPopup::generateFullMapText() const {
     for (const auto& mapLayer : mapLayers) {
         if (mapLayer.slotId.compareIgnoreCase(this->slotId) != 0) continue;
 
-        const auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(mapLayer);
+        const auto& articulationSlotFilters = mapLayer.slotArticulationFilter;
         bool matchesVisibleArticulationSlot = articulationSlotFilters.empty();
         for (const auto* articulationGroup : this->articulationGroups) {
             if (articulationGroup == nullptr) continue;
@@ -609,7 +609,7 @@ void PadContextPopup::refreshLayerMappings() {
     if (layout == nullptr) return;
     auto parsedMap = DrumKitEngine::parseInstrumentMapText(this->savedInstrumentMapText);
     if (!parsedMap.ok()) return;
-    const auto projections = DrumKitEngineMapHelpers::projectMapLayers(parsedMap.value, *layout);
+    const auto projections = InstrumentMap::projectLayers(parsedMap.value, *layout);
 
     for (const auto* group : this->articulationGroups) {
         std::vector<MapLayerRow*> mappedRows;

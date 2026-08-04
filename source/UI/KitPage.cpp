@@ -2,35 +2,31 @@
 
 #include "../Engine/ArticulationNames.h"
 #include "CompactModalDialog.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 
-namespace KitPageDetail {
-
 static juce::String safePresetFileName(juce::String name) {
     return name.trim().replaceCharacters("\\/:|*?<>\"", "_________");
 }
 
-} // namespace KitPageDetail
-
 KitPage::KitPage(DrumKitEngine& drumKitEngine)
     : engine(drumKitEngine) {
     this->titleLabel.setText("Kits and Presets", juce::dontSendNotification);
-    UIHelpers::configureSectionLabel(this->titleLabel);
+    UIComponentStyle::configureSectionLabel(this->titleLabel);
     this->addAndMakeVisible(this->titleLabel);
 
     for (auto* button : { &this->kitsSectionButton, &this->presetsSectionButton }) {
-        UIHelpers::configureCategoryButton(*button);
+        UIComponentStyle::configureCategoryButton(*button);
         this->addAndMakeVisible(*button);
     }
     this->kitsSectionButton.onClick = [this] { this->setActiveSection(KitSection::LibraryKits); };
     this->presetsSectionButton.onClick = [this] { this->setActiveSection(KitSection::Presets); };
 
-    UIHelpers::configureBorderlessTextEditor(this->filterField);
+    UIComponentStyle::configureBorderlessTextEditor(this->filterField);
     this->filterField.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
     this->filterField.onTextChange = [this] { this->startTimer(this->filterDebounceMs); };
@@ -46,7 +42,7 @@ KitPage::KitPage(DrumKitEngine& drumKitEngine)
     this->infoTitleLabel.setJustificationType(juce::Justification::centredLeft);
     this->addAndMakeVisible(this->infoTitleLabel);
     for (auto* label : { &this->infoAuthorLabel, &this->infoLicenseLabel }) {
-        UIHelpers::configureCaptionLabel(*label, juce::Justification::centredLeft);
+        UIComponentStyle::configureCaptionLabel(*label, juce::Justification::centredLeft);
         this->addAndMakeVisible(*label);
     }
 
@@ -56,11 +52,11 @@ KitPage::KitPage(DrumKitEngine& drumKitEngine)
     this->detailsEditor.setFont(UITheme::Fonts::normal());
     this->detailsEditor.setColour(juce::TextEditor::backgroundColourId, UITheme::Colours::bgEditor);
     this->detailsEditor.setColour(juce::TextEditor::textColourId, UITheme::Colours::textSecondary);
-    UIHelpers::configureBorderlessTextEditor(this->detailsEditor);
+    UIComponentStyle::configureBorderlessTextEditor(this->detailsEditor);
     this->addAndMakeVisible(this->detailsEditor);
 
     this->previewLabel.setText("Instrument preview", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->previewLabel, juce::Justification::centredLeft);
+    UIComponentStyle::configureCaptionLabel(this->previewLabel, juce::Justification::centredLeft);
     this->addAndMakeVisible(this->previewLabel);
     this->previewViewport.setViewedComponent(&this->previewGrid, false);
     this->previewViewport.setScrollBarsShown(true, false);
@@ -71,7 +67,7 @@ KitPage::KitPage(DrumKitEngine& drumKitEngine)
     };
 
     for (auto* button : { &this->loadButton, &this->saveButton, &this->saveAsButton, &this->deleteButton }) {
-        UIHelpers::configureControlButton(*button);
+        UIComponentStyle::configureControlButton(*button);
         this->addAndMakeVisible(*button);
     }
     this->loadButton.onClick = [this] { this->loadSelected(); };
@@ -88,7 +84,7 @@ KitPage::~KitPage() {
 
 void KitPage::refresh(const juce::String& activeInstrumentMapText) {
     this->currentMapText = activeInstrumentMapText;
-    this->sourceItems = UIHelpers::buildSourceItems(this->engine.getInstrumentManager());
+    this->sourceItems = SourceItem::collectFromLibrary(this->engine.getInstrumentManager());
     this->rebuildLibraryEntries();
     this->rebuildPresetEntries(this->selectedPresetPath);
     this->rebuildFilteredEntries();
@@ -457,7 +453,7 @@ void KitPage::savePresetAs() {
     juce::Component::SafePointer<KitPage> safeThis(this);
     CompactModalDialog::show(*this, std::move(options), [safeThis](const CompactModalDialog& dialog) {
         if (safeThis == nullptr) return juce::String();
-        const auto name = KitPageDetail::safePresetFileName(dialog.getFieldText("name"));
+        const auto name = safePresetFileName(dialog.getFieldText("name"));
         if (name.isEmpty()) return juce::String("Enter a preset name.");
         const bool nameExists = std::any_of(safeThis->presets.begin(), safeThis->presets.end(), [&name](const auto& preset) {
             return preset.isUser && preset.name.equalsIgnoreCase(name);

@@ -1,6 +1,6 @@
 #include "ParameterPot.h"
 
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 
 ParameterPot::ParameterPot(const juce::String& name,
                            double minVal,
@@ -29,12 +29,12 @@ ParameterPot::ParameterPot(const juce::String& name,
                            std::function<double(const juce::String&)> valueFromTextFn)
     : layoutOptions(std::move(options)) {
     this->titleLabel.setText(name, juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->titleLabel,
+    UIComponentStyle::configureCaptionLabel(this->titleLabel,
                                      this->layoutOptions.titleJustification,
                                      UITheme::Colours::textSubtle);
     addAndMakeVisible(this->titleLabel);
 
-    UIHelpers::configureRotarySlider(this->pot,
+    UIComponentStyle::configureRotarySlider(this->pot,
                                      this->layoutOptions.valueDisplay == ValueDisplay::TextBoxBelow ? juce::Slider::TextBoxBelow
                                                                                                       : juce::Slider::NoTextBox,
                                      this->layoutOptions.textBoxWidth,
@@ -48,7 +48,7 @@ ParameterPot::ParameterPot(const juce::String& name,
     addAndMakeVisible(this->pot);
 
     if (this->layoutOptions.valueDisplay == ValueDisplay::EditableLabel) {
-        UIHelpers::configureValueLabel(this->valueLabel,
+        UIComponentStyle::configureValueLabel(this->valueLabel,
                                        this->layoutOptions.valueJustification,
                                        this->layoutOptions.valueFontHeight);
         this->valueLabel.setEditable(true);

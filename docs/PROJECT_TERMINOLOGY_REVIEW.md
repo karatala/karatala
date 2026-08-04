@@ -111,11 +111,11 @@ Real audio direction terms remain valid when they refer to a source or destinati
 
 Do not create `source/UI/Source/` or a general `helpers` folder. Keep a one-use helper in its owning `.cpp` file. Put shared code in the smallest feature that owns its rules.
 
-Use a feature namespace, such as `InstrumentMap`. Use `<Feature>Detail` for private helpers in one `.cpp` file. Do not split a file only because it is long.
+Use a feature namespace, such as `InstrumentMap`, when the complete module owns a public feature API. Keep one-use private helpers as file-local `static` functions or private static class methods. Do not add a private namespace block only to group helpers, and do not split a file only because it is long.
 
 | Before | Approved direction |
 | --- | --- |
-| ✅ `DrumPadHelpers.h` was used only by `DrumPad.cpp`. | Its code is now private in `DrumPad.cpp` under `DrumPadDetail`; the helper header was deleted. |
+| ✅ `DrumPadHelpers.h` was used only by `DrumPad.cpp`. | Its code is private in `DrumPad.cpp`; the helper header was deleted. |
 | ✅ Instrument map types and text operations were spread across engine files. | `source/Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp` now own the map data and text boundary. |
-| `UIHelpers` contains styling, library list, and MIDI operations. | Move each operation to its owning UI feature when related code changes. |
+| ✅ `UIHelpers` mixed styling, library list, and MIDI operations. | It was replaced by `UIComponentStyle`, `SourceItem`, and concrete control methods. |
 | The old Kit page and the Browse page repeated preset logic. | ✅ The old page was removed, and the replacement is the single `KitPage`. |

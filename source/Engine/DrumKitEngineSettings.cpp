@@ -1,6 +1,5 @@
 #include "DrumKitEngine.h"
 #include "ArticulationNames.h"
-#include "DrumKitEngineMapHelpers.h"
 #include "InstrumentPlayer.h"
 #include "SampleSelector.h"
 #include "../Config/Helpers.h"
@@ -14,13 +13,9 @@
 #include <unordered_set>
 #include <utility>
 
-namespace DrumKitEngineVelocityResponseHelpers {
-
 static juce::String safePresetName(const juce::String& name) {
     return juce::File::createLegalFileName(name.trim()).replaceCharacters(":#\r\n\"", "_____").trim();
 }
-
-} // namespace DrumKitEngineVelocityResponseHelpers
 
 static juce::String hiHatTransitionCurveToYaml(HiHatTransitionCurve curve) {
     switch (curve) {
@@ -149,7 +144,7 @@ std::vector<DrumKitEngine::VelocityResponsePreset> DrumKitEngine::getVelocityRes
 
 ParseResult<DrumKitEngine::VelocityResponsePreset> DrumKitEngine::saveVelocityResponsePreset(const juce::String& name, const juce::String& definition, bool replaceExisting) const {
     ParseResult<VelocityResponsePreset> result;
-    const auto safeName = DrumKitEngineVelocityResponseHelpers::safePresetName(name);
+    const auto safeName = safePresetName(name);
     if (safeName.isEmpty() || safeName == "." || safeName == "..") return result.returnWithError("Preset name is empty");
 
     auto parsedResponse = VelocityResponse::fromDefinition(definition);

@@ -1,13 +1,12 @@
 #include "LibraryArticulationEditor.h"
 #include "../Config/Parsing.h"
 #include "../Engine/RoutingTypes.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
 #include <cmath>
 
-namespace LibraryArticulationEditorDetail {
 static juce::String optionalBalanceText(const std::optional<int>& value, const juce::String& emptyText = {}) {
     return value.has_value() ? balanceValueToString(*value) : emptyText;
 }
@@ -28,8 +27,6 @@ static juce::String recipeStatusText(SampledSound::SourceRecipeStatus status) {
     }
     return {};
 }
-} // namespace LibraryArticulationEditorDetail
-
 int LibraryArticulationEditor::SelectedSampleListModel::getNumRows() {
     return static_cast<int>(this->owner.selectedSampleIndices.size());
 }
@@ -54,13 +51,13 @@ juce::String LibraryArticulationEditor::SelectedSampleListModel::getTooltipForRo
     juce::StringArray details;
     details.add(sample.fileName);
     details.add("Mic: " + sample.micCode);
-    if (sample.onsetMs.has_value()) details.add("Onset: " + LibraryArticulationEditorDetail::floatText(*sample.onsetMs) + " ms");
-    if (sample.intensityDb.has_value()) details.add("Intensity: " + LibraryArticulationEditorDetail::floatText(*sample.intensityDb) + " dB");
-    if (sample.truePeakDb.has_value()) details.add("Peak: " + LibraryArticulationEditorDetail::floatText(*sample.truePeakDb) + " dB");
+    if (sample.onsetMs.has_value()) details.add("Onset: " + floatText(*sample.onsetMs) + " ms");
+    if (sample.intensityDb.has_value()) details.add("Intensity: " + floatText(*sample.intensityDb) + " dB");
+    if (sample.truePeakDb.has_value()) details.add("Peak: " + floatText(*sample.truePeakDb) + " dB");
     if (!sample.hasMetadata) details.add("Measurements unavailable");
     if (sample.overrideMatchedByContentHash) details.add("Override matched by content hash");
     if (sample.overrideContentHashAmbiguous) details.add("Editing disabled: duplicate content hash");
-    details.add(LibraryArticulationEditorDetail::recipeStatusText(sample.recipeStatus));
+    details.add(recipeStatusText(sample.recipeStatus));
     return details.joinIntoString("\n");
 }
 
@@ -194,17 +191,17 @@ void LibraryArticulationEditor::updateBalanceControls() {
     this->instrumentBalanceEditor.setEnabled(editable);
     this->articulationBalanceEditor.setEnabled(editable);
 
-    const auto instrumentEffective = LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.instrumentBalance.effectiveValue, "C0");
-    const auto articulationEffective = LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.articulationBalance.effectiveValue, "C0");
+    const auto instrumentEffective = optionalBalanceText(this->rangeInfo.instrumentBalance.effectiveValue, "C0");
+    const auto articulationEffective = optionalBalanceText(this->rangeInfo.articulationBalance.effectiveValue, "C0");
     this->instrumentBalanceEditor.setTextToShowWhenEmpty(instrumentEffective, UITheme::Colours::textMuted);
     this->articulationBalanceEditor.setTextToShowWhenEmpty(articulationEffective, UITheme::Colours::textMuted);
-    if (!this->instrumentBalanceEditor.hasKeyboardFocus(true)) this->instrumentBalanceEditor.setText(LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.instrumentBalance.overrideValue), false);
-    if (!this->articulationBalanceEditor.hasKeyboardFocus(true)) this->articulationBalanceEditor.setText(LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.articulationBalance.overrideValue), false);
+    if (!this->instrumentBalanceEditor.hasKeyboardFocus(true)) this->instrumentBalanceEditor.setText(optionalBalanceText(this->rangeInfo.instrumentBalance.overrideValue), false);
+    if (!this->articulationBalanceEditor.hasKeyboardFocus(true)) this->articulationBalanceEditor.setText(optionalBalanceText(this->rangeInfo.articulationBalance.overrideValue), false);
     this->resetInstrumentBalanceButton.setEnabled(editable && this->rangeInfo.instrumentBalance.overrideValue.has_value());
     this->resetArticulationBalanceButton.setEnabled(editable && this->rangeInfo.articulationBalance.overrideValue.has_value());
 
-    const auto instrumentFilename = LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.instrumentBalance.filenameValue, "none");
-    const auto articulationFilename = this->rangeInfo.articulationBalance.filenameConflict ? juce::String("conflict") : LibraryArticulationEditorDetail::optionalBalanceText(this->rangeInfo.articulationBalance.filenameValue, "inherit instrument");
+    const auto instrumentFilename = optionalBalanceText(this->rangeInfo.instrumentBalance.filenameValue, "none");
+    const auto articulationFilename = this->rangeInfo.articulationBalance.filenameConflict ? juce::String("conflict") : optionalBalanceText(this->rangeInfo.articulationBalance.filenameValue, "inherit instrument");
     this->instrumentBalanceEditor.setTooltip("Folder: " + instrumentFilename + ". Current: " + instrumentEffective + ". Wheel: 4. Shift-wheel: 1.");
     this->articulationBalanceEditor.setTooltip("Folder: " + articulationFilename + ". Current: " + articulationEffective + ". Wheel: 4. Shift-wheel: 1.");
 }
@@ -258,7 +255,7 @@ void LibraryArticulationEditor::rebuildMicButtons() {
     this->micButtons.clear();
     for (const auto& micCode : this->micCodes) {
         auto button = std::make_unique<juce::TextButton>();
-        UIHelpers::configureToggleButton(*button);
+        UIComponentStyle::configureToggleButton(*button);
         button->setToggleState(this->isMicSelected(micCode), juce::dontSendNotification);
         button->setButtonText((this->isMicSelected(micCode) ? juce::String::charToString(0x25cf) : juce::String::charToString(0x25cb)) + " " + micCode);
         button->setTooltip("Hover to hear only " + micCode + ". Click to include or exclude it from batch editing.");
@@ -292,7 +289,7 @@ void LibraryArticulationEditor::updateBatchEditors() {
         editor.setEnabled(editable);
         const auto commonValue = this->getCommonBatchValue(field);
         if (!dirty && !editor.hasKeyboardFocus(true)) {
-            editor.setText(commonValue.value.has_value() && !commonValue.mixed ? LibraryArticulationEditorDetail::floatText(*commonValue.value) : juce::String(), false);
+            editor.setText(commonValue.value.has_value() && !commonValue.mixed ? floatText(*commonValue.value) : juce::String(), false);
             editor.setTextToShowWhenEmpty(commonValue.mixed ? "Mixed" : inheritedText, UITheme::Colours::textMuted);
         }
         bool anyOverride = false;
@@ -654,7 +651,7 @@ void LibraryArticulationEditor::stepBatchEditor(WheelTextEditor& editor, BatchFi
     const float coarseStep = field == BatchField::ManualGain ? 0.5f : 10.0f;
     const float fineStep = field == BatchField::ManualGain ? 0.1f : 1.0f;
     const float step = fine ? fineStep : coarseStep;
-    editor.setText(LibraryArticulationEditorDetail::floatText(currentValue + (increase ? step : -step)), false);
+    editor.setText(floatText(currentValue + (increase ? step : -step)), false);
     if (field == BatchField::ManualGain) {
         this->manualGainDirty = true;
         this->commitManualGain();

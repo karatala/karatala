@@ -1,21 +1,18 @@
 #include "KitLibModel.h"
-#include "InstrumentMap/InstrumentMap.h"
 #include "../Config/PluginLogger.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
 
-using namespace KitLib;
-
-namespace KitLibIdentityHelpers {
+namespace KitLib {
 
 static void addCandidate(std::vector<juce::String>& candidates, const juce::String& value) {
     const auto trimmed = value.trim();
     if (trimmed.isEmpty()) return;
-    const auto key = ::InstrumentMap::identityKey(trimmed);
+    const auto key = trimmed.toLowerCase();
     for (const auto& existing : candidates)
-        if (::InstrumentMap::identityKey(existing) == key) return;
+        if (existing.trim().toLowerCase() == key) return;
     candidates.push_back(trimmed);
 }
 
@@ -52,10 +49,6 @@ static juce::String relativePathForFingerprint(const juce::File& rootDir, const 
 static juce::String fileMetadataFingerprint(const juce::File& rootDir, const juce::File& file) {
     return "file|" + relativePathForFingerprint(rootDir, file) + "|size=" + juce::String(file.getSize()) + "|mtime=" + juce::String(file.getLastModificationTime().toMilliseconds());
 }
-} // namespace KitLibIdentityHelpers
-
-namespace KitLibSampleMetadataHelpers {
-
 static std::optional<float> parseSignedGainDb(const juce::String& value) {
     if (value.length() < 2) return std::nullopt;
     const auto direction = value[0];
@@ -107,10 +100,6 @@ static std::optional<float> parseSignedOffsetMs(const juce::String& value) {
     const float magnitudeMs = std::abs(static_cast<float>(numberText.getDoubleValue()));
     return direction == 'n' ? -magnitudeMs : magnitudeMs;
 }
-
-} // namespace KitLibSampleMetadataHelpers
-
-namespace KitLibCalibrationHelpers {
 
 static constexpr float MAX_POSITIVE_TRIM_DB = 36.0f;
 static constexpr float REQUIRED_HEADROOM_DB = 1.0f;
@@ -243,8 +232,6 @@ static void finalizeArticulationCalibration(KitLib::ArticulationSpec& articulati
     }
 }
 
-} // namespace KitLibCalibrationHelpers
-
 /** Parses an instrument folder name like kick-22 snare-14x6.5 ride-20-R42-Basian OMG Mental  */
 InstrumentSpec::InstrumentSpec(DrumKitSpec* kit, const MetaInfo& metaInfo)
     : parent(kit), meta(metaInfo), filenameBalance(metaInfo.balance) {
@@ -267,8 +254,8 @@ ParseResult<InstrumentSpec::MetaInfo> InstrumentSpec::parseInfo(const juce::Stri
         if (parsedBalance.has_value()) {
             result.value.balance = *parsedBalance;
             descriptionStartIdx = 3;
-        } else if (KitLibIdentityHelpers::looksLikeBalanceToken(balanceToken)) {
-            result.addWarning(KitLibIdentityHelpers::invalidBalanceWarning(processed, balanceToken));
+        } else if (looksLikeBalanceToken(balanceToken)) {
+            result.addWarning(invalidBalanceWarning(processed, balanceToken));
             descriptionStartIdx = 3;
         }
     }
@@ -286,16 +273,16 @@ std::vector<juce::String> InstrumentSpec::getIdentityCandidates(const Instrument
     std::vector<juce::String> candidates;
     juce::String base = meta.name.trim();
     if (meta.size.trim().isNotEmpty()) base += "-" + meta.size.trim();
-    KitLibIdentityHelpers::addCandidate(candidates, base);
+    addCandidate(candidates, base);
 
     juce::String balanceBase = base;
     if (meta.balance.has_value()) {
         balanceBase += "-" + balanceValueToString(*meta.balance);
-        KitLibIdentityHelpers::addCandidate(candidates, balanceBase);
+        addCandidate(candidates, balanceBase);
     }
     if (meta.description.trim().isNotEmpty())
-        KitLibIdentityHelpers::addCandidate(candidates, balanceBase + "-" + KitLibIdentityHelpers::descriptionIdentityText(meta.description));
-    KitLibIdentityHelpers::addCandidate(candidates, meta.codeRaw);
+        addCandidate(candidates, balanceBase + "-" + descriptionIdentityText(meta.description));
+    addCandidate(candidates, meta.codeRaw);
     return candidates;
 }
 
@@ -309,9 +296,9 @@ void ArticulationSpec::addFolderIdentity(const juce::String& folderCodeRaw) {
 
 std::vector<juce::String> ArticulationSpec::getIdentityCandidates() const {
     std::vector<juce::String> candidates;
-    KitLibIdentityHelpers::addCandidate(candidates, this->codeRaw);
+    addCandidate(candidates, this->codeRaw);
     for (const auto& folderCodeRaw : this->folderCodeRaws)
-        KitLibIdentityHelpers::addCandidate(candidates, folderCodeRaw);
+        addCandidate(candidates, folderCodeRaw);
     return candidates;
 }
 
@@ -332,11 +319,11 @@ juce::String InstrumentSpec::getContentFingerprint() const {
     if (this->meta.rootDir.isDirectory()) {
         const auto childDirs = this->meta.rootDir.findChildFiles(juce::File::findDirectories, true, "*");
         for (const auto& childDir : childDirs)
-            records.push_back("dir|" + KitLibIdentityHelpers::relativePathForFingerprint(this->meta.rootDir, childDir));
+            records.push_back("dir|" + relativePathForFingerprint(this->meta.rootDir, childDir));
 
         const auto childFiles = this->meta.rootDir.findChildFiles(juce::File::findFiles, true, "*");
         for (const auto& childFile : childFiles)
-            if (InstrumentSpec::isAudioFile(childFile)) records.push_back(KitLibIdentityHelpers::fileMetadataFingerprint(this->meta.rootDir, childFile));
+            if (InstrumentSpec::isAudioFile(childFile)) records.push_back(fileMetadataFingerprint(this->meta.rootDir, childFile));
     } else {
         records.push_back("missing");
     }
@@ -347,7 +334,7 @@ juce::String InstrumentSpec::getContentFingerprint() const {
     for (const auto& record : records)
         sourceText += record + "\n";
 
-    this->contentFingerprintCache = KitLibIdentityHelpers::stableContentHash(sourceText);
+    this->contentFingerprintCache = stableContentHash(sourceText);
     return this->contentFingerprintCache.value();
 }
 
@@ -525,9 +512,9 @@ void InstrumentSpec::buildCalibrationProfiles() {
         articulation->sortVelocityLevels();
         const auto boundaryResult = this->applyVelocityUpperBoundaryOverrides(*articulation);
         for (const auto& boundaryMessage : boundaryResult.errors) LOG(Warning, "Library kit override: " + boundaryMessage);
-        for (const auto& velocityLevel : articulation->velocityLevels) KitLibCalibrationHelpers::buildLogicalHitMeasurements(*velocityLevel);
-        KitLibCalibrationHelpers::fitMonotonicSourceProfile(*articulation);
-        KitLibCalibrationHelpers::finalizeArticulationCalibration(*articulation);
+        for (const auto& velocityLevel : articulation->velocityLevels) buildLogicalHitMeasurements(*velocityLevel);
+        fitMonotonicSourceProfile(*articulation);
+        finalizeArticulationCalibration(*articulation);
     }
 }
 
@@ -652,7 +639,7 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
 
             switch (paramType) {
                 case 'v': { // manual gain, dB (negative or positive)
-                    const auto parsedGainDb = KitLibSampleMetadataHelpers::parseSignedGainDb(paramValue.toLowerCase());
+                    const auto parsedGainDb = parseSignedGainDb(paramValue.toLowerCase());
                     if (parsedGainDb.has_value()) result.value.manualGainDb = *parsedGainDb;
                     else result.addWarning("Unknown volume trim format: " + paramValue + "; expected vn<dB> or vp<dB>");
                     break;
@@ -662,7 +649,7 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
                     offsetParts.addTokens(paramValue, "_", "");
                     offsetParts.removeEmptyStrings();
                     std::optional<float> parsedOffsetMs;
-                    if (!offsetParts.isEmpty()) parsedOffsetMs = KitLibSampleMetadataHelpers::parseSignedOffsetMs(offsetParts[0].toLowerCase());
+                    if (!offsetParts.isEmpty()) parsedOffsetMs = parseSignedOffsetMs(offsetParts[0].toLowerCase());
                     if (!parsedOffsetMs.has_value()) {
                         result.addWarning("Unknown playback offset format: " + paramValue + "; expected on<ms> or op<ms>");
                         break;
@@ -714,7 +701,7 @@ const ArticulationSpec* InstrumentSpec::findArticulationById(const juce::String&
     int matchCount = 0;
     for (const auto& existing : this->articulationSpecs) {
         if (existing == nullptr) continue;
-        if (!::InstrumentMap::candidateMatches(existing->getIdentityCandidates(), id)) continue;
+        if (!KitLib::matchesIdentityCandidate(existing->getIdentityCandidates(), id)) continue;
         matched = existing.get();
         ++matchCount;
     }
@@ -725,7 +712,7 @@ juce::String InstrumentSpec::getPreferredArticulationId(const ArticulationSpec& 
     for (const auto& candidate : articulation.getIdentityCandidates()) {
         int matchCount = 0;
         for (const auto& existing : this->articulationSpecs) {
-            if (existing != nullptr && ::InstrumentMap::candidateMatches(existing->getIdentityCandidates(), candidate)) ++matchCount;
+            if (existing != nullptr && KitLib::matchesIdentityCandidate(existing->getIdentityCandidates(), candidate)) ++matchCount;
         }
         if (matchCount == 1) return candidate;
     }
@@ -739,12 +726,14 @@ std::vector<juce::String> DrumKitSpec::getIdentityCandidates(const DrumKitSpec::
     const auto name = meta.name.trim();
     const auto author = meta.author.trim();
     const auto license = meta.license.trim();
-    KitLibIdentityHelpers::addCandidate(candidates, name);
-    if (author.isNotEmpty()) KitLibIdentityHelpers::addCandidate(candidates, name + " by " + author);
+    addCandidate(candidates, name);
+    if (author.isNotEmpty()) addCandidate(candidates, name + " by " + author);
     if (license.isNotEmpty()) {
         const auto base = author.isNotEmpty() ? name + " by " + author : name;
-        KitLibIdentityHelpers::addCandidate(candidates, base + " [" + license + "]");
+        addCandidate(candidates, base + " [" + license + "]");
     }
-    KitLibIdentityHelpers::addCandidate(candidates, meta.codeRaw);
+    addCandidate(candidates, meta.codeRaw);
     return candidates;
 }
+
+} // namespace KitLib

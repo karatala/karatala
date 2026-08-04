@@ -1,6 +1,6 @@
 #include "SourcePickerPopup.h"
 #include "../Engine/ArticulationNames.h"
-#include "UIHelpers.h"
+#include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
@@ -16,20 +16,20 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->titleLabel.setMinimumHorizontalScale(0.75f);
     this->addAndMakeVisible(this->titleLabel);
 
-    UIHelpers::configureDialogCloseButton(this->closeButton);
+    UIComponentStyle::configureDialogCloseButton(this->closeButton);
     this->closeButton.onClick = [this] {
         if (this->onDismiss) this->onDismiss();
     };
     this->addAndMakeVisible(this->closeButton);
 
-    UIHelpers::configureBorderlessTextEditor(this->filterField);
+    UIComponentStyle::configureBorderlessTextEditor(this->filterField);
     this->filterField.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
     this->filterField.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
     this->filterField.onTextChange = [this] { this->queueRebuildFiltered(); };
     this->addAndMakeVisible(this->filterField);
 
     for (auto* button : { &this->allCategoryButton, &this->drumsCategoryButton, &this->cymbalsCategoryButton, &this->otherCategoryButton }) {
-        UIHelpers::configureCategoryButton(*button);
+        UIComponentStyle::configureCategoryButton(*button);
         this->addAndMakeVisible(*button);
     }
     this->allCategoryButton.onClick = [this] { this->setCategory(Category::All); };
@@ -38,7 +38,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->otherCategoryButton.onClick = [this] { this->setCategory(Category::Other); };
 
     this->kindListLabel.setText("Types", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->kindListLabel, juce::Justification::centredLeft);
+    UIComponentStyle::configureCaptionLabel(this->kindListLabel, juce::Justification::centredLeft);
     this->addAndMakeVisible(this->kindListLabel);
 
     this->kindListBox.setModel(&this->kindListModel);
@@ -47,7 +47,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->addAndMakeVisible(this->kindListBox);
 
     this->articulationListLabel.setText(this->selectionMode == SelectionMode::WholeInstrument ? "Preview arts" : "Articulations", juce::dontSendNotification);
-    UIHelpers::configureCaptionLabel(this->articulationListLabel, juce::Justification::centredLeft);
+    UIComponentStyle::configureCaptionLabel(this->articulationListLabel, juce::Justification::centredLeft);
     this->addAndMakeVisible(this->articulationListLabel);
     this->articulationListBox.setModel(&this->articulationListModel);
     this->articulationListBox.setRowHeight(22);

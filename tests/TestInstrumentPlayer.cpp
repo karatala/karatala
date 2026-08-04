@@ -107,7 +107,7 @@ private:
     }
 };
 
-namespace {
+namespace InstrumentPlayerTests {
 
 KitLayout::InstrumentSlot makeHiHatSlot() {
     KitLayout::InstrumentSlot slot;
@@ -522,8 +522,6 @@ private:
         return voice;
     }
 };
-
-} // namespace
 
 TEST_CASE("InstrumentPlayer - voice starts receive independent event ids", "[InstrumentPlayer]") {
     InstrumentPlayer player(nullptr, KitLayout::InstrumentSlot {});
@@ -1804,3 +1802,5 @@ TEST_CASE("InstrumentPlayer - library logical hit preview starts all linked mics
     CHECK(overheadVoice->getCurrentlyPlayingSound() == overheadSound.get());
     CHECK(runtimeVelocityLevel.roundRobinCounter->load() == 7);
 }
+
+} // namespace InstrumentPlayerTests
