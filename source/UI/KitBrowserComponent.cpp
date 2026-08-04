@@ -358,7 +358,8 @@ void KitBrowserComponent::loadSelectedKit() {
         return;
     }
 
-    const auto mapText = this->engine.normalizeInstrumentMapText(this->engine.buildInstrumentMapForKit(*layout, *kit));
+    juce::StringArray fallbackWarnings;
+    const auto mapText = this->engine.normalizeInstrumentMapText(this->engine.buildInstrumentMapForKit(*layout, *kit, &fallbackWarnings));
     auto parsed = DrumKitEngine::parseInstrumentMapText(mapText);
     if (!parsed.ok() || parsed.value.layers.empty()) {
         this->reportStatus("This kit has no instruments compatible with the active kit layout");
@@ -373,6 +374,7 @@ void KitBrowserComponent::loadSelectedKit() {
 
     juce::String status = "Loaded kit: " + selectedKit->name;
     if (!skippedSlots.isEmpty()) status += " | no compatible instrument for: " + skippedSlots.joinIntoString(", ");
+    if (!fallbackWarnings.isEmpty()) status += " | " + fallbackWarnings.joinIntoString(" | ");
     if (this->onMapLoadRequested && this->onMapLoadRequested(mapText, status)) {
         this->currentMapText = mapText;
         this->updateActionButtons();

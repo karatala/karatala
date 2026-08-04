@@ -41,7 +41,7 @@ LogicalHitSpec
 | Mic route | One assignment from a mic to a mic layout output. |
 | Library kit override | Saved changes to balance, velocity ranges, sample gain, or playback timing in one library kit. |
 
-A map layer must store a complete `kit/instrument/articulation` library path. An articulation slot is optional. A whole-instrument selection creates one map layer for each library articulation and uses the matching articulation-slot code when one is available.
+A map layer must store a required articulation-slot target and a complete `kit/instrument/articulation` library path. A whole-instrument selection uses an exact articulation-slot match first. When no exact match exists, it uses the configured fallback order for the instrument type and shows a warning.
 
 Use `articulation slot` for the kit layout target. Use `library articulation` for recorded content. Do not use `source articulation` or `destination articulation` in new names.
 

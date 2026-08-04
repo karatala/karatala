@@ -79,7 +79,7 @@ static int findNextParamBoundary(const juce::String& text, int startIndex) {
  * Parses instrument map text.
  *
  * Line format:
- *   slot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:param=value;param=value,value;param=key:value,key:value]
+ *   slot/articulationSlot:libraryKit/libraryInstrument/libraryArticulation[:param=value;param=value,value;param=key:value,key:value]
  *
  * Examples:
  *   kick1/center:MyKit/kick-24/center
@@ -127,8 +127,8 @@ ParseResult<DrumKitEngine::InstrumentMap> parseInstrumentMapText(const juce::Str
             result.addWarning("Line " + juce::String(idx + 1) + ": instrument slot id is empty");
             continue;
         }
-        if (slotRef.hasExtraPathSegment || slotRef.articulationSlotCodes.size() > 1) {
-            result.addWarning("Line " + juce::String(idx + 1) + ": a map layer can target only one articulation slot");
+        if (slotRef.hasExtraPathSegment || slotRef.articulationSlotCodes.size() != 1) {
+            result.addWarning("Line " + juce::String(idx + 1) + ": one articulation slot is required; expected 'instrumentSlot/articulationSlot'");
             continue;
         }
         if (libraryRef.kitRef.isEmpty()) {

@@ -190,9 +190,9 @@ Current instrument map + reference panels moved here verbatim.
 │ Reference               │ Instrument Map           │
 │ (read-only text)        │ (editable text area)     │
 │                         │                          │
-│ aasimonster2/kick-22:   │ kick1:aasimonster2/...   │
-│   center [36,35]        │ snare1:aasimonster2/...  │
-│   ...                   │ hihat1:aasimonster2/...  │
+│ aasimonster2/kick-22:   │ kick1/center:kit/...     │
+│   center [36,35]        │ snare1/center:kit/...    │
+│   ...                   │ hihat1/bow[open]:kit/... │
 │                         │                          │
 │                         │ [Apply instrument map]   │
 └─────────────────────────┴──────────────────────────┘

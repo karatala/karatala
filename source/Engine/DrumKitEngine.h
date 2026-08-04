@@ -3,6 +3,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 #include "EngineSettings.h"
+#include "ArticulationSlotFallbackRules.h"
 #include "InstrumentCatalog.h"
 #include "InstrumentPlayer.h"
 #include "LayoutManager.h"
@@ -148,6 +149,7 @@ public:
         juce::String velocityResponse { "linear" };
         DebugLevel logLevel = DebugLevel::Off;
         InstrumentCatalog instrumentCatalog = InstrumentCatalog::makeDefault();
+        ArticulationSlotFallbackRules articulationSlotFallbackRules = ArticulationSlotFallbackRules::makeDefault();
     };
 
     ParseResult<Config> parseConfigYaml(const juce::String yamlStr);
@@ -190,7 +192,7 @@ public:
     static ParseResult<InstrumentMap> parseInstrumentMapText(const juce::String& text);
     static juce::String serializeInstrumentMap(const InstrumentMap& instrumentMap);
     juce::String normalizeInstrumentMapText(const juce::String& text) const;
-    juce::String buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& libraryKit) const;
+    juce::String buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& libraryKit, juce::StringArray* warnings = nullptr) const;
     ParseResult<juce::String> buildInstrumentMapWithSlotInstrument(const juce::String& currentMapText, const juce::String& slotId, const juce::String& libraryKitId, const juce::String& libraryInstrumentId) const;
 
     void mapDefaultKit();
@@ -209,6 +211,7 @@ public:
     const juce::File& getGlobalLibraryPath() const { return this->globalConfig.libraryPath; }
     uint64_t getGlobalSampleLoaderCacheLimitMegabytes() const { return this->globalConfig.sampleLoaderCacheLimitMegabytes; }
     const InstrumentCatalog& getInstrumentCatalog() const { return this->globalConfig.instrumentCatalog; }
+    const ArticulationSlotFallbackRules& getArticulationSlotFallbackRules() const { return this->globalConfig.articulationSlotFallbackRules; }
     DebugLevel getGlobalLogLevel() const { return this->globalConfig.logLevel; }
     void setGlobalLogLevel(DebugLevel level);
     bool setGlobalLibraryPath(const juce::File& libraryPath);

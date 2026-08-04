@@ -37,7 +37,7 @@ Make instrument-map editing behave like this:
 - If tuning, attack, decay, gain, pan, flip, phase, or bleed changes, samples are not reloaded.
 - If map text says `tom1/rim:SomeKit/tom-X/center`, the rim note routes to the chosen `center` library articulation because the map asked for it.
 - If map text has an explicit library articulation, `InstrumentPlayer` does not silently replace it with a different fallback unless the map generator wrote that fallback into the map text.
-- Existing simple empty-art fallback still works for non-controller slots.
+- The former simple empty-art fallback is removed. Generated maps use explicit articulation-slot targets.
 - Controller-driven hihat routing still keeps expression siblings for open, close, tight, and similar states.
 - Hihat map layers can stay explicit while loading more library-articulation states, for example `edge[open]`, `edge[half]`, `edge[close]`, `edge[tight]`, and library-articulation folders with exact `pdl_opn_cls` values.
 
@@ -233,14 +233,14 @@ Rules:
 - Explicit map route wins.
 - UI compatibility fallback is allowed only when generating map text.
 - Runtime compatibility fallback is not allowed unless the map text already names that chosen library articulation.
-- Empty-art alias is allowed only for non-controller slots and only when the articulation slot has no explicit route.
+- Empty-art aliases are removed. Every map layer names one explicit articulation slot.
 - Controller sibling loading is allowed only inside the same explicit mapped library articulation family.
 - For hihat, the explicit articulation slot and controller expression are separate decisions. The map decides the articulation-slot family, for example `bow` or `edge`. The controller decides the expression state, for example `open`, `half`, `close`, or `tight`.
 
 Verify:
 
 - `tom1/rim:SomeKit/tom-X/center` plays library articulation `center` on rim notes.
-- If `tom1/rim` is explicitly assigned, empty-art fallback does not override it.
+- If `tom1/rim` is explicitly assigned, generated fallback layers do not override it.
 - Hihat `edge[open]`, `edge[close]`, and similar routes still use controller selection.
 
 Implementation status:
@@ -254,14 +254,14 @@ Implementation status:
 - Articulation filters now use map filter matching, so `bow[open]` can stay exact while legacy `bow` can still match the bow family.
 - Explicit articulation-filter and remap loads now use exact library-articulation resolution. Default full-instrument loads still keep old fallback behavior.
 - Explicit library-articulation expressions are carried in a small exact remap, so `center[muff]` stays `center[muff]` during library-articulation lookup.
-- Empty-articulation alias fallback carries the library-articulation expression when one is explicit, so alias routes can prefer `center[muff]` over plain `center`.
+- Generated fallback layers carry the explicit library-articulation expression, so `center[muff]` stays distinct from plain `center`.
 - The instrument player routing context keeps original articulation-slot filter strings, so exact filters like `edge[open]` stay exact when choosing allowed articulation slots.
 - `InstrumentPlayer` now keeps a simple route list. Each row says: these MIDI notes for this articulation slot should play this library instrument and library articulation.
 - The instrument-map apply path now builds that route list before loading the instrument player, then passes the list into `InstrumentPlayer`.
 - When the engine asks whether an instrument player plays an articulation slot, the instrument player checks route ownership. Engine-provided route keys are retained when an instrument player is replaced during layout work.
 - Note lookup, sample loading, and hihat pedal/CC choices are now built from that route list.
-- `noteToArticulation` is now just the final MIDI-note lookup table made from the route list. Empty-art fallback also goes through the same route list.
-- Empty-articulation fallback is skipped when the map already has an explicit route for the same articulation slot. Example: explicit `rim -> center` is not overwritten by fallback.
+- `noteToArticulation` is now just the final MIDI-note lookup table made from explicit routes.
+- Type-based whole-instrument fallback creates an explicit articulation-slot route before runtime loading. Runtime does not infer a route from an empty articulation slot.
 - Extra hi-hat pedal states do not make an instrument player responsible for an articulation-slot note by themselves. Example: `bow[half]` can be available for CC selection after `bow[open]` is routed, but it does not claim the MIDI note alone.
 - Map apply decides the route list before instrument player load. Hihat-specific persistence and focused coverage are completed in Stages 6-8.
 
@@ -283,7 +283,7 @@ Plan:
    - `hihat1/edge[open]:Kit/hat/edge[open]`
 2. When a library hihat has more articulation states, load controller siblings for the same family only. For example, mapping `edge[open]` can load `edge[half]`, `edge[close]`, and `edge[tight]` if they are valid `pdl_opn_cls` siblings.
 3. Do not let a bow mapping silently load edge siblings, or edge mapping silently load bow siblings.
-4. Do not let hihat empty-art fallback copy one zone into another zone.
+4. Do not let configured hihat fallback copy one zone into another zone without an explicit generated route and warning.
 5. Keep exact library-articulation folder `pdl_opn_cls` values above user expression points. Use user expression points only when library-articulation folders have no exact expression value.
 6. Store the articulation-slot family and expression anchor in the resolved route plan, so `noteToArticulation` is only the final lookup table.
 
@@ -353,8 +353,7 @@ Focused tests:
 - ✅ One layered library-assignment change rebuilds only that instrument slot's additional instrument players.
 - ✅ Parameter-only update keeps the loaded primary instrument player.
 - ✅ Explicit articulation-slot-to-library-articulation remap wins over library-articulation fallback.
-- ✅ Empty-art alias works for simple slots.
-- ✅ Empty-art alias does not override explicit art route.
+- ✅ Empty-art aliases were superseded by required articulation-slot targets and configurable type-based fallback during map generation.
 - ✅ Hihat controller sibling routes survive the route-plan path.
 - ✅ The explicit hihat articulation-slot family remains stable while CC chooses expression states.
 - ✅ Exact hihat library-articulation `pdl_opn_cls` values override layout and default expression points.

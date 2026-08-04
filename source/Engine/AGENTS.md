@@ -5,6 +5,7 @@
 # Ownership
 
 - `InstrumentPlayer*` owns per-instrument runtime tables, voices, note/controller handling, and rendering.
+- `ArticulationSlotFallbackRules.h` owns built-in and user-overridden articulation-slot fallback order for whole-instrument map generation.
 - `KitLibModel*` owns parsed library metadata, including decay-envelope metadata and kit README text loaded during library scanning.
 - `LibraryKitOverrides*` owns sparse user-authored library kit corrections loaded from and saved to each kit's `kit-overrides.yml`.
 - `SampleLoader*` owns asynchronous sample loading and publication.
@@ -43,7 +44,8 @@
 - Every mic-layout output has a required unique semantic ID, such as `snare1/dtm` or `aux1/**m`. Saved routes use this ID so repeated codes stay distinct across layout reordering.
 - Only mic-layout target output codes may use `*`, independently for type or position. Mic codes and sample filenames stay concrete. The format remains exact. A present variant is exact, while an omitted variant accepts all variants.
 - Pad-popup layer parameters belong to the articulation slot runtime, even when one `InstrumentPlayer` contains several articulations.
-- Whole-instrument slot replacement accepts any available library instrument. It removes every existing map layer for that slot. It creates one map layer for each library articulation and preserves every other slot. Each map layer stores a full `kit/instrument/articulation` path.
+- Every instrument map layer stores one required articulation-slot target and one full `kit/instrument/articulation` library path.
+- Whole-instrument slot replacement accepts any available library instrument. It removes every existing map layer for that slot and preserves every other slot. It uses an exact articulation-slot match first. Otherwise, it uses the first available slot from the configured instrument-type fallback order and reports a warning. It skips the library articulation with a warning when no fallback slot is available.
 - Linked pad-popup edits resolve map layers before locking. Then they apply each parameter or mic-route batch under one `engineGraphLock`. A mic update changes only that stable mic code and preserves every other mic value.
 
 # Work Guidance

@@ -18,7 +18,7 @@ References checked:
 Current line shape:
 
 ```text
-instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:params]
+instrumentSlot/articulationSlot:libraryKit/libraryInstrument/libraryArticulation[:params]
 ```
 
 Current examples:
@@ -146,7 +146,7 @@ Doxygen comment style:
  * Parses instrument map text.
  *
  * Line format:
- *   instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:param=value;param=value]
+ *   instrumentSlot/articulationSlot:libraryKit/libraryInstrument/libraryArticulation[:param=value;param=value]
  *
  * Examples:
  *   kick1/center:MyKit/kick-24/center
@@ -165,7 +165,8 @@ No backward compatibility is needed because the app is not released yet.
 
 Implemented rules:
 
-- A complete library articulation belongs in the library path: `instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation`.
+- Every map layer stores a complete slot and library path: `instrumentSlot/articulationSlot:libraryKit/libraryInstrument/libraryArticulation`.
+- Whole-instrument assignment uses configured type-based fallback rules when a library articulation has no compatible articulation slot. It always warns when fallback is used or no fallback slot is available.
 - Top-level params use semicolon, not comma.
 - Comma stays only inside list values like `bleed=oh:0.25,room:0.5` and `micRoute=dtm:room,dsm:oh`.
 - Unknown params still warn through the normal unknown-param path.

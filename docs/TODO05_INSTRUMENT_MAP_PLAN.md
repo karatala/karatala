@@ -28,11 +28,11 @@ Rewrite `parseInstrumentMapText()` and `useInstrumentMap()` in `DrumKitEngine` t
 # Whole-kit generation writes explicit map layers. The format has no wildcard line.
 
 # Map specific slot to a kit instrument:
-kick1:MyDrumKit/kick-24/center
-snare1:MyDrumKit/snare-14/center
+kick1/center:MyDrumKit/kick-24/center
+snare1/center:MyDrumKit/snare-14/center
 
 # Map with per-slot parameters (key=value, comma-separated):
-kick1:MyDrumKit/kick-24/center:tuning=-2;attack=50;decay=300
+kick1/center:MyDrumKit/kick-24/center:tuning=-2;attack=50;decay=300
 hihat1/bow:MyDrumKit/hihat-14/bow:tuning=15
 
 # Per-articulation library mapping - ride bow from one library instrument, ride edge from another:
@@ -71,9 +71,9 @@ all params need to be saved in vst settings chunk.
 ```
 line                = comment | mapLayer | empty
 comment             = '#' <any text>
-mapLayer            = instrumentSlot ('/' articulationSlot)? ':' libraryKit '/' libraryInstrument '/' libraryArticulation (':' params)?
+mapLayer            = instrumentSlot '/' articulationSlot ':' libraryKit '/' libraryInstrument '/' libraryArticulation (':' params)?
 instrumentSlot      = <kit-layout instrument-slot ID>
-articulationSlot    = <optional kit-layout articulation-slot code>
+articulationSlot    = <required kit-layout articulation-slot code>
 libraryKit          = <library-kit identity>
 libraryInstrument   = <library-instrument identity>
 libraryArticulation = <required library-articulation identity>
@@ -230,7 +230,7 @@ Result: hitting the ride bow note triggers two instrument players. Hitting edge 
 New logic:
 1. Split text into lines. Skip empty lines and `#` comments.
 2. Split each line into mapping and optional parameter parts.
-3. Parse `instrumentSlot[/articulationSlot]` on the left.
+3. Parse required `instrumentSlot/articulationSlot` on the left.
 4. Require `libraryKit/libraryInstrument/libraryArticulation` on the right.
 5. Parse top-level parameters with semicolon separators.
 6. Validate known parameter keys and warn on unknown keys.
@@ -332,7 +332,7 @@ This is intentionally minimal - full per-instrument/per-mic mixer UI is deferred
 Test cases for `parseInstrumentMapText`:
 1. Empty text → error
 2. Only comments → error (no map layers)
-3. `kick1:Kit/kick/center` → one map layer with no articulation-slot filter
+3. `kick1:Kit/kick/center` → error because the articulation slot is required
 4. `kick1/center:Kit/kick/center:tuning=-2;attack=50` → parameters populated
 5. Missing library articulation → error for that map layer
 6. Unknown parameter key → warning but map layer stays valid
@@ -552,13 +552,13 @@ Instrument map values are **initial/default** values. APVTS parameters are the *
                     Instrument Map (text config)       APVTS (real-time automation)
                     ────────────────────────────       ────────────────────────────
 Per-instrument:
-    tuning          kick1:Kit/kick-24:tuning=-200     inst01_tuning = -200
-    attack          kick1:Kit/kick-24:attack=50       inst01_attack = 50
-    decay           kick1:Kit/kick-24:decay=300       inst01_decay = 300
+    tuning          kick1/center:Kit/kick-24/center:tuning=-200     inst01_tuning = -200
+    attack          kick1/center:Kit/kick-24/center:attack=50       inst01_attack = 50
+    decay           kick1/center:Kit/kick-24/center:decay=300       inst01_decay = 300
 
 Per-mic (from instrument map):
-    gain            kick1:Kit/kick-24:gain=-3         mic04_volume = -3    (Kick In mic)
-    flip            kick1:Kit/kick-24:flip=1          mic04_flipLR = true
+    gain            kick1/center:Kit/kick-24/center:gain=-3         mic04_volume = -3    (Kick In mic)
+    flip            kick1/center:Kit/kick-24/center:flip=1          mic04_flipLR = true
 
 Per-mic (standalone, not from instrument map - configured in UI or via automation only):
     pan                                               mic01_pan = 0.3      (Overheads)

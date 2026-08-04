@@ -162,6 +162,13 @@ static const KitLayout::InstrumentSlot::ArticulationSlot* findCompatibleArticula
     return nullptr;
 }
 
+static const KitLayout::InstrumentSlot::ArticulationSlot* findFallbackArticulationSlot(const KitLayout::InstrumentSlot& slot, const std::vector<juce::String>& preferences) {
+    for (const auto& preference : preferences)
+        for (const auto& articulationSlot : slot.articulations)
+            if (ArticulationNameHelpers::mapFilterMatchesArticulation(preference, articulationSlot.codeRaw)) return &articulationSlot;
+    return nullptr;
+}
+
 } // namespace Detail
 
 std::optional<bool> inferAutomaticFlipLR(const KitLayout::InstrumentSlot& slot, const KitLib::InstrumentSpec& libraryInstrument, const DrumKitEngine::InstrumentMapLayer& mapLayer) {
@@ -177,8 +184,7 @@ void appendUniqueId(std::vector<uint32_t>& values, uint32_t value) {
 }
 
 std::vector<juce::String> effectiveArticulationSlotFilter(const DrumKitEngine::InstrumentMapLayer& mapLayer) {
-    if (!mapLayer.slotArticulationFilter.empty()) return mapLayer.slotArticulationFilter;
-    return mapLayer.articulationFilter;
+    return mapLayer.slotArticulationFilter;
 }
 
 uint32_t resolveMapLayerLibraryArticulationId(const DrumKitEngine::InstrumentMapLayer& mapLayer, const juce::String& articulationSlotCode) {
@@ -385,10 +391,12 @@ KitLib::InstrumentSpec* findMatchingLibraryInstrument(
     return matched;
 }
 
-std::vector<DrumKitEngine::InstrumentMapLayer> buildInstrumentMapLayers(const KitLayout::InstrumentSlot& slot, const KitLib::DrumKitSpec& libraryKit, const KitLib::InstrumentSpec& libraryInstrument, const juce::String& preferredLibraryKitId) {
-    std::vector<DrumKitEngine::InstrumentMapLayer> mapLayers;
-    mapLayers.reserve(libraryInstrument.articulationSpecs.size());
+ParseResult<std::vector<DrumKitEngine::InstrumentMapLayer>> buildInstrumentMapLayers(const KitLayout::InstrumentSlot& slot, const KitLib::DrumKitSpec& libraryKit, const KitLib::InstrumentSpec& libraryInstrument, const juce::String& preferredLibraryKitId, const ArticulationSlotFallbackRules& fallbackRules) {
+    ParseResult<std::vector<DrumKitEngine::InstrumentMapLayer>> result;
+    result.value.reserve(libraryInstrument.articulationSpecs.size());
     const auto preferredLibraryInstrumentId = libraryKit.getPreferredInstrumentId(libraryInstrument);
+    const auto fallbackType = slot.type != KitLib::InstrumentSpec::Type::Unknown ? slot.type : libraryInstrument.meta.type;
+    const auto& fallbackPreferences = fallbackRules.forType(fallbackType);
 
     for (const auto& libraryArticulationPtr : libraryInstrument.articulationSpecs) {
         if (libraryArticulationPtr == nullptr) continue;
@@ -396,17 +404,27 @@ std::vector<DrumKitEngine::InstrumentMapLayer> buildInstrumentMapLayers(const Ki
         const auto preferredLibraryArticulationId = libraryInstrument.getPreferredArticulationId(*libraryArticulationPtr).trim();
         if (preferredLibraryArticulationId.isEmpty()) continue;
 
+        const auto* articulationSlot = Detail::findCompatibleArticulationSlotByCode(slot, *libraryArticulationPtr);
+        if (articulationSlot == nullptr) {
+            articulationSlot = Detail::findFallbackArticulationSlot(slot, fallbackPreferences);
+            if (articulationSlot == nullptr) {
+                result.addWarning("Library articulation '" + preferredLibraryArticulationId + "' has no compatible articulation slot in '" + slot.id + "' and no configured fallback slot is available; map layer skipped");
+                continue;
+            }
+            result.addWarning("Library articulation '" + preferredLibraryArticulationId + "' has no compatible articulation slot in '" + slot.id + "'; mapped to fallback slot '" + articulationSlot->codeRaw + "' using the '" + KitLib::InstrumentSpec::typeToString(fallbackType) + "' rule");
+        }
+
         DrumKitEngine::InstrumentMapLayer mapLayer;
         mapLayer.slotId = slot.id;
+        mapLayer.slotArticulationFilter = { articulationSlot->codeRaw };
         mapLayer.kitRef = preferredLibraryKitId;
         mapLayer.instCode = preferredLibraryInstrumentId;
         mapLayer.articulationFilter = { preferredLibraryArticulationId };
-        if (const auto* articulationSlot = Detail::findCompatibleArticulationSlotByCode(slot, *libraryArticulationPtr)) mapLayer.slotArticulationFilter = { articulationSlot->codeRaw };
         if (const auto inferredFlip = inferAutomaticFlipLR(slot, libraryInstrument, mapLayer)) mapLayer.flipLR = *inferredFlip;
-        mapLayers.push_back(std::move(mapLayer));
+        result.value.push_back(std::move(mapLayer));
     }
 
-    return mapLayers;
+    return result;
 }
 
 void replaceSlotMapLayers(DrumKitEngine::InstrumentMap& instrumentMap, const juce::String& slotId, std::vector<DrumKitEngine::InstrumentMapLayer> replacements) {
@@ -467,7 +485,6 @@ std::vector<InstrumentMapLayerProjection> collectLinkedMapLayerTargets(const std
 
 juce::String libraryArticulationForSlot(const DrumKitEngine::InstrumentMapLayer& mapLayer, const juce::String& articulationSlotCode) {
     if (mapLayer.articulationFilter.empty()) return {};
-    if (mapLayer.slotArticulationFilter.empty()) return mapLayer.articulationFilter.front();
     for (const auto& articulationSlotFilter : mapLayer.slotArticulationFilter)
         if (ArticulationNameHelpers::mapFilterMatchesArticulation(articulationSlotFilter, articulationSlotCode)) return mapLayer.articulationFilter.front();
     return {};

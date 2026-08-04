@@ -111,6 +111,24 @@ instrumentCatalog:
     REQUIRE(*catalog.defaultDirectMicOutsFor(KitLib::InstrumentSpec::Type::Ride) == DirectMicOutPolicy::Own);
     REQUIRE(catalog.resolveKind("cowbel") == KitLib::InstrumentSpec::Type::Cowbell);
 }
+
+TEST_CASE("EngineSettings - global config overrides articulation fallback order", "[EngineSettings][yaml][InstrumentMap]") {
+    DrumKitEngine engine;
+    const auto result = engine.parseConfigYaml(R"yaml(
+articulationFallback:
+  ride: [bell, bow]
+  crash: []
+)yaml");
+
+    REQUIRE(result.ok());
+    REQUIRE(result.errors.empty());
+    CHECK(result.value.articulationSlotFallbackRules.forType(KitLib::InstrumentSpec::Type::Ride) == std::vector<juce::String> { "bell", "bow" });
+    CHECK(result.value.articulationSlotFallbackRules.forType(KitLib::InstrumentSpec::Type::Crash).empty());
+    CHECK(result.value.articulationSlotFallbackRules.forType(KitLib::InstrumentSpec::Type::Kick) == std::vector<juce::String> { "center", "head" });
+    const auto serialized = result.value.articulationSlotFallbackRules.toYaml();
+    CHECK(serialized.contains("ride: [bell, bow]"));
+    CHECK(serialized.contains("crash: []"));
+}
 TEST_CASE("EngineSettings - realtime settings remain copyable snapshots", "[EngineSettings]") {
     EngineSettings sourceSettings;
     sourceSettings.hihatOpenCrossfadeSec.store(0.125f);

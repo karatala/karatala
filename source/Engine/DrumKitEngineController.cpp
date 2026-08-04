@@ -73,7 +73,7 @@ void DrumKitEngine::initArticulationFallbackMap() {
     this->articulationFallbackIdMap.clear();
 
     auto& dict = StringsDictSingleton::instance();
-    //TODO: move fallback map to global config and fill dynamically from it
+    // Runtime library-articulation fallback is separate from map-generation articulation-slot fallback.
     this->articulationFallbackIdMap[dict.getId("bell")] = { dict.getId("bow"), dict.getId("edge") };
     this->articulationFallbackIdMap[dict.getId("bow")] = { dict.getId("edge"), dict.getId("bell") };
     this->articulationFallbackIdMap[dict.getId("edge")] = { dict.getId("bow"), dict.getId("bell") };

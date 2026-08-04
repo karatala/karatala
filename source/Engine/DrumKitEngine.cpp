@@ -903,6 +903,7 @@ bool DrumKitEngine::setMicLayout(MicLayout layout) {
 
 void DrumKitEngine::mapDefaultKit() {
     const juce::ScopedLock graphLock(this->engineGraphLock);
+    this->lastInstrumentMapStatus.clear();
     const auto& kits = this->getInstrumentManager()->getKits();
     const KitLib::DrumKitSpec* kit = kits.empty() ? nullptr : kits[0].get(); //MAYBE: later use global setting for default kit instead
     if (kit != nullptr) {
@@ -924,7 +925,9 @@ void DrumKitEngine::mapDefaultKit() {
             this->lastAppliedShadowReloadFingerprints.clear();
             this->lastAppliedInstrumentMapText.clear();
         }
+        const auto fallbackWarnings = this->lastInstrumentMapStatus;
         this->lastInstrumentMapStatus = "Mapped default library kit and generated starter instrument map";//FIXME: refactor, ui relates shit out
+        if (fallbackWarnings.isNotEmpty()) this->lastInstrumentMapStatus += "\n" + fallbackWarnings;
     } else {
         this->suggestedInstrumentMapText.clear();
         this->lastAppliedSlotFingerprints.clear();
@@ -935,7 +938,7 @@ void DrumKitEngine::mapDefaultKit() {
     }
 }
 
-juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& libraryKit) const {
+juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, const KitLib::DrumKitSpec& libraryKit, juce::StringArray* warnings) const {
     InstrumentMap result;
     std::unordered_set<KitLib::InstrumentSpec*> usedLibraryInstruments;
     std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType;
@@ -946,8 +949,12 @@ juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, co
         const auto preferredLibraryKitId = this->libraryManagerPtr != nullptr
             ? this->libraryManagerPtr->getPreferredKitId(libraryKit)
             : DrumKitEngineIdentityMapHelpers::firstCandidateOrRaw(KitLib::DrumKitSpec::getIdentityCandidates(libraryKit.meta), libraryKit.meta.codeRaw);
-        auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *matchedLibraryInstrument, preferredLibraryKitId);
-        result.layers.insert(result.layers.end(), std::make_move_iterator(mapLayers.begin()), std::make_move_iterator(mapLayers.end()));
+        auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *matchedLibraryInstrument, preferredLibraryKitId, this->globalConfig.articulationSlotFallbackRules);
+        for (const auto& warning : mapLayers.errors) {
+            LOG(Warning, warning);
+            if (warnings != nullptr) warnings->add(warning);
+        }
+        result.layers.insert(result.layers.end(), std::make_move_iterator(mapLayers.value.begin()), std::make_move_iterator(mapLayers.value.end()));
     }
 
     return serializeInstrumentMap(result);
@@ -976,9 +983,13 @@ ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(co
     }
 
     const auto preferredLibraryKitId = this->libraryManagerPtr->getPreferredKitId(*libraryKit);
-    auto replacementMapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(*slotIterator, *libraryKit, *libraryInstrument, preferredLibraryKitId);
-    if (replacementMapLayers.empty()) return result.returnWithError("Library instrument has no articulations: " + libraryInstrumentId);
-    DrumKitEngineMapHelpers::replaceSlotMapLayers(map, slotIterator->id, std::move(replacementMapLayers));
+    auto replacementMapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(*slotIterator, *libraryKit, *libraryInstrument, preferredLibraryKitId, this->globalConfig.articulationSlotFallbackRules);
+    for (const auto& warning : replacementMapLayers.errors) {
+        LOG(Warning, warning);
+        result.addWarning(warning);
+    }
+    if (replacementMapLayers.value.empty()) return result.returnWithError("Library instrument has no articulations that can be mapped to slot '" + slotIterator->id + "'");
+    DrumKitEngineMapHelpers::replaceSlotMapLayers(map, slotIterator->id, std::move(replacementMapLayers.value));
     result.value = DrumKitEngine::serializeInstrumentMap(map);
     return result;
 }
@@ -998,10 +1009,9 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
     for (const auto* mapLayerPtr : sortedMapLayers) {
         const auto& mapLayer = *mapLayerPtr;
         if (mapLayer.slotId.trim().isEmpty() || mapLayer.kitRef.trim().isEmpty() || mapLayer.instCode.trim().isEmpty()) continue;
-        if (mapLayer.articulationFilter.size() != 1 || mapLayer.articulationFilter.front().trim().isEmpty() || mapLayer.slotArticulationFilter.size() > 1) continue;
+        if (mapLayer.articulationFilter.size() != 1 || mapLayer.articulationFilter.front().trim().isEmpty() || mapLayer.slotArticulationFilter.size() != 1 || mapLayer.slotArticulationFilter.front().trim().isEmpty()) continue;
 
-        juce::String slotRef = mapLayer.slotId.trim();
-        if (!mapLayer.slotArticulationFilter.empty() && mapLayer.slotArticulationFilter.front().trim().isNotEmpty()) slotRef += "/" + mapLayer.slotArticulationFilter.front().trim();
+        const auto slotRef = mapLayer.slotId.trim() + "/" + mapLayer.slotArticulationFilter.front().trim();
 
         const auto libraryRef = mapLayer.kitRef.trim() + "/" + mapLayer.instCode.trim() + "/" + mapLayer.articulationFilter.front().trim();
 
@@ -1048,7 +1058,9 @@ juce::String DrumKitEngine::serializeInstrumentMap(const InstrumentMap& instrume
 }
 
 void DrumKitEngine::regenerateSuggestedInstrumentMapText() { //TODO: refactor, move to ui related helper, or generate on demand in UI instead of storing in engine
-    this->suggestedInstrumentMapText = this->normalizeInstrumentMapText(DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentPlayerById));
+    juce::StringArray warnings;
+    this->suggestedInstrumentMapText = this->normalizeInstrumentMapText(DrumKitEngineTextView::buildSuggestedInstrumentMapText(this->activeKitLayoutPtr.get(), this->instrumentPlayerById, this->globalConfig.articulationSlotFallbackRules, &warnings));
+    if (!warnings.isEmpty()) this->lastInstrumentMapStatus = warnings.joinIntoString("\n");
 }
 
 juce::String DrumKitEngine::normalizeInstrumentMapText(const juce::String& text) const {
@@ -1175,6 +1187,11 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
     config.instrumentCatalog = catalog.value;
     for (const auto& warning : catalog.errors)
         result.addWarning(warning);
+
+    auto articulationFallback = ArticulationSlotFallbackRules::parseYaml(root["articulationFallback"], config.instrumentCatalog);
+    if (!articulationFallback.ok()) return result.returnWithError(articulationFallback.error());
+    config.articulationSlotFallbackRules = std::move(articulationFallback.value);
+    for (const auto& warning : articulationFallback.errors) result.addWarning(warning);
 
     // Parse engine settings
     const auto& engineNode = root["engine"];
@@ -1340,6 +1357,7 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "sampleLoaderCacheLimitMegabytes: 1024\n";
     result += "velocityResponse: linear\n";
     result += "logLevel: off\n";
+    result += ArticulationSlotFallbackRules::makeDefault().toYaml();
     const juce::File libDir = this->dataPath.getChildFile("sample_library");
     if (libDir.exists())
         result += "libraryPath: " + libDir.getFullPathName() + "\n";
@@ -1399,6 +1417,7 @@ juce::String DrumKitEngine::serializeSettingsYaml() const {
     yaml += "sampleLoaderCacheLimitMegabytes: " + juce::String(this->globalConfig.sampleLoaderCacheLimitMegabytes) + "\n";
     yaml += "velocityResponse: \"" + this->globalConfig.velocityResponse + "\"\n";
     yaml += "logLevel: " + DebugLevelToYaml(this->globalConfig.logLevel) + "\n";
+    yaml += this->globalConfig.articulationSlotFallbackRules.toYaml();
     if (this->globalConfig.libraryPath.exists())
         yaml += "libraryPath: " + this->globalConfig.libraryPath.getFullPathName() + "\n";
 
@@ -2759,6 +2778,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             continue;
         }
         auto* primarySlot = slotIt->second;
+        const auto& slotLayout = primarySlot->getInstrumentSlot();
         bool slotChanged = !primarySlot->isLoaded();
         const bool slotStateChanged = this->lastAppliedSlotFingerprints[slotId] != nextSlotFingerprints[slotId];
         const bool slotReloadChanged = this->lastAppliedSlotReloadFingerprints[slotId] != nextSlotReloadFingerprints[slotId];
@@ -2775,6 +2795,16 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         std::vector<ResolvedMapLayer> resolvedMapLayers;
         bool slotResolveFailed = false;
         for (const auto* mapLayer : slotMapLayers) {
+            const auto articulationSlotFilter = mapLayer->slotArticulationFilter.front();
+            const bool articulationSlotExists = std::any_of(slotLayout.articulations.begin(), slotLayout.articulations.end(), [&articulationSlotFilter](const auto& articulationSlot) {
+                return ArticulationNameHelpers::mapFilterMatchesArticulation(articulationSlotFilter, articulationSlot.codeRaw);
+            });
+            if (!articulationSlotExists) {
+                statusLines.add("Articulation slot '" + articulationSlotFilter + "' was not found in instrument slot '" + slotId + "'");
+                slotResolveFailed = true;
+                continue;
+            }
+
             auto* kitSpec = librarySnapshot->findKitById(mapLayer->kitRef);
             if (kitSpec == nullptr) {
                 statusLines.add(DrumKitEngineIdentityMapHelpers::describeKitResolveFailure(*librarySnapshot, mapLayer->kitRef, mapLayer->slotId));
@@ -2828,7 +2858,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
 
             auto articulationSlotFilters = DrumKitEngineMapHelpers::effectiveArticulationSlotFilter(*mapLayer);
             juce::String articulationSlotFilterText;
-            for (const auto& articulationSlotFilter : articulationSlotFilters) articulationSlotFilterText += (articulationSlotFilterText.isEmpty() ? "" : ",") + articulationSlotFilter;
+            for (const auto& slotFilter : articulationSlotFilters) articulationSlotFilterText += (articulationSlotFilterText.isEmpty() ? "" : ",") + slotFilter;
             LOG(Info, "  resolved: slot=" + mapLayer->slotId + " -> " + kitSpec->meta.name + "/" + mapLayer->instCode
                 + (articulationSlotFilterText.isNotEmpty() ? " articulationSlots=[" + articulationSlotFilterText + "]" : " articulationSlots=[ALL]"));
             resolvedMapLayers.push_back({ mapLayer, kitSpec, instSpec, std::move(articulationSlotFilters) });
@@ -2843,7 +2873,6 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
 
         slotChanged = slotChanged || slotReloadChanged;
 
-        const auto& slotLayout = primarySlot->getInstrumentSlot();
         const auto& primary = resolvedMapLayers.front();
         InstrumentPlayer::ArticulationLibraryMap articulationLibraryMap;
         InstrumentPlayer::ArticulationNameRemap primaryRemap = buildArtNameRemap(*primary.mapLayer);
@@ -2852,7 +2881,6 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         std::vector<uint32_t> claimedArticulationSlotNameIds;
         std::vector<uint32_t> primaryAllowedArticulationSlotNameIds;
         std::vector<juce::String> primaryAllowedArticulationSlotFilters;
-        InstrumentPlayer::ArticulationAliasMap artAliases;
         auto appendPrimaryAllowedArticulationSlotFilter = [&primaryAllowedArticulationSlotFilters](const juce::String& articulationSlotName) {
             const auto normalizedArticulationSlotName = articulationSlotName.trim();
             if (normalizedArticulationSlotName.isEmpty()) return;
@@ -2940,38 +2968,6 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 shadowPlans.push_back({ resolved.mapLayer, resolved.instSpec, layeredArticulationSlots, buildArtNameRemap(*resolved.mapLayer), buildArtExactRemap(*resolved.mapLayer) });
         }
 
-        uint32_t fallbackArticulationSlotNameId = 0;
-        InstrumentPlayer::ArticulationTarget fallbackLibraryArticulation;
-        if (slotLayout.controllers.empty()) {
-            for (const auto& primaryArticulationSlotName : primary.effectiveArticulationSlotFilters) {
-                if (primaryArticulationSlotName.isEmpty()) continue;
-                fallbackArticulationSlotNameId = StringsDictSingleton::getId(ArticulationNameHelpers::normalizeArticulationName(primaryArticulationSlotName));
-                fallbackLibraryArticulation.nameId = DrumKitEngineMapHelpers::resolveMapLayerLibraryArticulationId(*primary.mapLayer, primaryArticulationSlotName);
-                if (!primary.mapLayer->articulationFilter.empty()) {
-                    if (primary.mapLayer->slotArticulationFilter.empty()) {
-                        const KitLayout::InstrumentSlot::ArticulationSlot libraryArticulation(primary.mapLayer->articulationFilter.front());
-                        fallbackLibraryArticulation.exprId = libraryArticulation.exprId;
-                    } else {
-                        for (size_t artIdx = 0; artIdx < primary.mapLayer->slotArticulationFilter.size() && artIdx < primary.mapLayer->articulationFilter.size(); ++artIdx) {
-                            if (!ArticulationNameHelpers::mapFilterMatchesArticulation(primary.mapLayer->slotArticulationFilter[artIdx], primaryArticulationSlotName)) continue;
-                            const KitLayout::InstrumentSlot::ArticulationSlot libraryArticulation(primary.mapLayer->articulationFilter[artIdx]);
-                            fallbackLibraryArticulation.exprId = libraryArticulation.exprId;
-                            break;
-                        }
-                    }
-                }
-                break;
-            }
-        }
-
-        // Simple non-controller slots inherit empty articulations from the first mapped art.
-        // Controller-driven slots keep their existing primary fallback so CC tables remain intact.
-        for (const auto& articulationSlot : slotLayout.articulations) {
-            if (vectorContains(claimedArticulationSlotNameIds, articulationSlot.nameId)) continue;
-            if (fallbackLibraryArticulation.nameId != 0) artAliases[articulationSlot.nameId] = fallbackLibraryArticulation;
-            else DrumKitEngineMapHelpers::appendUniqueId(primaryAllowedArticulationSlotNameIds, articulationSlot.nameId);
-        }
-
         if (LOG_ENABLED(Info)) {
             juce::String allowedStr;
             for (const auto& articulationSlotNameId : primaryAllowedArticulationSlotNameIds)
@@ -3047,7 +3043,6 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             primaryRoutingContext.allowedArticulationFilters = primaryAllowedArticulationSlotFilters;
             primaryRoutingContext.artNameRemap = primaryRemap;
             primaryRoutingContext.artExactRemap = primaryExactRemap;
-            primaryRoutingContext.artAliases = artAliases;
             primaryRoutingContext.micRouteOverrides = primary.mapLayer->micRouteOverrides;
             primaryRoutingContext.strictArticulationResolution = primaryStrictArticulationResolution;
             auto primaryPlaybackEntries = replacement->buildArticulationPlaybackEntries(slotLayout, primaryRoutingContext);
@@ -3074,15 +3069,12 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 shadowRaw->setMicOutputMapping(primarySlot->getMicOutputMapping());
                 shadowRaw->setMicChannelCount(primarySlot->getMicChannelCount());
                 const bool shadowStrictArticulationResolution = !shadowPlan.articulationSlots.empty() || !shadowPlan.artNameRemap.empty() || !shadowPlan.artExactRemap.empty();
-                InstrumentPlayer::ArticulationAliasMap shadowAliases;
-                if (fallbackArticulationSlotNameId != 0 && vectorContains(shadowArticulationSlotNameIds, fallbackArticulationSlotNameId)) shadowAliases = artAliases;
                 InstrumentPlayer::RoutingContext shadowRoutingContext;
                 shadowRoutingContext.defaultInstrument = shadowPlan.instSpec;
                 shadowRoutingContext.allowedArticulationNameIds = shadowArticulationSlotNameIds;
                 shadowRoutingContext.allowedArticulationFilters = shadowPlan.articulationSlots;
                 shadowRoutingContext.artNameRemap = shadowPlan.artNameRemap;
                 shadowRoutingContext.artExactRemap = shadowPlan.artExactRemap;
-                shadowRoutingContext.artAliases = shadowAliases;
                 shadowRoutingContext.micRouteOverrides = shadowPlan.mapLayer->micRouteOverrides;
                 shadowRoutingContext.strictArticulationResolution = shadowStrictArticulationResolution;
                 auto shadowPlaybackEntries = shadowRaw->buildArticulationPlaybackEntries(slotLayout, shadowRoutingContext);

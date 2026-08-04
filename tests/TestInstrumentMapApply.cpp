@@ -100,7 +100,7 @@ TEST_CASE("InstrumentMap apply keeps primary players after the seeded map is app
 
 TEST_CASE("InstrumentMap apply reloads only the changed primary slot", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
-    const juce::String initialMap = "kick1:KitA/kick-22/center\nsnare1:KitA/snare-14/center";
+    const juce::String initialMap = "kick1/center:KitA/kick-22/center\nsnare1/center:KitA/snare-14/center";
     REQUIRE(fixture.engine.useInstrumentMap(initialMap));
 
     auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
@@ -108,7 +108,7 @@ TEST_CASE("InstrumentMap apply reloads only the changed primary slot", "[Instrum
     REQUIRE(kickBefore != nullptr);
     REQUIRE(snareBefore != nullptr);
 
-    const juce::String changedMap = "kick1:KitB/kick-24/center\nsnare1:KitA/snare-14/center";
+    const juce::String changedMap = "kick1/center:KitB/kick-24/center\nsnare1/center:KitA/snare-14/center";
     REQUIRE(fixture.engine.applyInstrumentMapSlotChange(changedMap, "kick1"));
     CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") != kickBefore);
     CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "snare1") == snareBefore);
@@ -116,7 +116,7 @@ TEST_CASE("InstrumentMap apply reloads only the changed primary slot", "[Instrum
 
 TEST_CASE("InstrumentMap whole-instrument assignment replaces one slot with one map layer per library articulation", "[InstrumentMap][assignment]") {
     InstrumentMapApplyFixture fixture;
-    const juce::String currentMap = "kick1/center:KitA/kick-22/center:vol=-3\nkick1/edge:KitC/kick-26/center\nsnare1:KitA/snare-14/center:tuning=20";
+    const juce::String currentMap = "kick1/center:KitA/kick-22/center:vol=-3\nkick1/edge:KitC/kick-26/center\nsnare1/center:KitA/snare-14/center:tuning=20";
 
     const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument(currentMap, "kick1", "KitB", "kick-24");
 
@@ -141,7 +141,7 @@ TEST_CASE("InstrumentMap whole-instrument assignment replaces one slot with one 
 TEST_CASE("InstrumentMap whole-instrument assignment allows a different instrument type", "[InstrumentMap][assignment]") {
     InstrumentMapApplyFixture fixture;
 
-    const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument("kick1:KitA/kick-22/center", "kick1", "KitB", "snare-13");
+    const auto updatedMap = fixture.engine.buildInstrumentMapWithSlotInstrument("kick1/center:KitA/kick-22/center", "kick1", "KitB", "snare-13");
 
     REQUIRE(updatedMap.ok());
     const auto parsed = DrumKitEngine::parseInstrumentMapText(updatedMap.value);
@@ -155,7 +155,7 @@ TEST_CASE("InstrumentMap whole-instrument assignment allows a different instrume
 
 TEST_CASE("InstrumentMap apply rebuilds shadows only for the changed layered slot", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
-    const juce::String initialMap = "snare1:KitA/snare-14/center\nsnare1:KitB/snare-13/center\ntom1:KitA/tom-10/center\ntom1:KitB/tom-12/center";
+    const juce::String initialMap = "snare1/center:KitA/snare-14/center\nsnare1/center:KitB/snare-13/center\ntom1/center:KitA/tom-10/center\ntom1/center:KitB/tom-12/center";
     REQUIRE(fixture.engine.useInstrumentMap(initialMap));
 
     auto* snareShadowBefore = DrumKitEngineTestAccess::shadowPlayer(fixture.engine, "snare1");
@@ -163,7 +163,7 @@ TEST_CASE("InstrumentMap apply rebuilds shadows only for the changed layered slo
     REQUIRE(snareShadowBefore != nullptr);
     REQUIRE(tomShadowBefore != nullptr);
 
-    const juce::String changedMap = "snare1:KitA/snare-14/center\nsnare1:KitB/snare-13/center\ntom1:KitA/tom-10/center\ntom1:KitC/tom-14/center";
+    const juce::String changedMap = "snare1/center:KitA/snare-14/center\nsnare1/center:KitB/snare-13/center\ntom1/center:KitA/tom-10/center\ntom1/center:KitC/tom-14/center";
     REQUIRE(fixture.engine.applyInstrumentMapSlotChange(changedMap, "tom1"));
     CHECK(DrumKitEngineTestAccess::shadowPlayer(fixture.engine, "snare1") == snareShadowBefore);
     CHECK(DrumKitEngineTestAccess::shadowPlayer(fixture.engine, "tom1") != tomShadowBefore);
@@ -171,32 +171,44 @@ TEST_CASE("InstrumentMap apply rebuilds shadows only for the changed layered slo
 
 TEST_CASE("InstrumentMap parameter-only apply keeps the loaded primary player", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
-    REQUIRE(fixture.engine.useInstrumentMap("kick1:KitA/kick-22/center"));
+    REQUIRE(fixture.engine.useInstrumentMap("kick1/center:KitA/kick-22/center"));
 
     auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
     REQUIRE(kickBefore != nullptr);
 
-    REQUIRE(fixture.engine.applyInstrumentMapSlotChange("kick1:KitA/kick-22/center:vol=-3", "kick1"));
+    REQUIRE(fixture.engine.applyInstrumentMapSlotChange("kick1/center:KitA/kick-22/center:vol=-3", "kick1"));
     CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") == kickBefore);
 }
 
 TEST_CASE("InstrumentMap apply rejects incomplete library paths without replacing the loaded player", "[InstrumentMap][IncrementalApply]") {
     InstrumentMapApplyFixture fixture;
-    REQUIRE(fixture.engine.useInstrumentMap("kick1:KitA/kick-22/center"));
+    REQUIRE(fixture.engine.useInstrumentMap("kick1/center:KitA/kick-22/center"));
 
     auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
     REQUIRE(kickBefore != nullptr);
 
     const std::vector<juce::String> incompleteMaps {
-        "kick1:KitA",
-        "kick1:KitA/kick-22",
-        "kick1:KitA/kick-22/",
+        "kick1/center:KitA",
+        "kick1/center:KitA/kick-22",
+        "kick1/center:KitA/kick-22/",
     };
 
     for (const auto& incompleteMap : incompleteMaps) {
         CHECK_FALSE(fixture.engine.applyInstrumentMapSlotChange(incompleteMap, "kick1"));
         CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") == kickBefore);
     }
+}
+
+TEST_CASE("InstrumentMap apply rejects an articulation slot that is not in the kit layout", "[InstrumentMap][IncrementalApply]") {
+    InstrumentMapApplyFixture fixture;
+    REQUIRE(fixture.engine.useInstrumentMap("kick1/center:KitA/kick-22/center"));
+
+    auto* kickBefore = DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1");
+    REQUIRE(kickBefore != nullptr);
+
+    CHECK_FALSE(fixture.engine.applyInstrumentMapSlotChange("kick1/rim:KitA/kick-22/center", "kick1"));
+    CHECK(DrumKitEngineTestAccess::primaryPlayer(fixture.engine, "kick1") == kickBefore);
+    CHECK(fixture.engine.getLastInstrumentMapStatus().contains("Articulation slot 'rim' was not found"));
 }
 
 } // namespace InstrumentMapApplyTests

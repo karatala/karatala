@@ -4,12 +4,12 @@
 
 The instrument map tells Karatala which library instrument and library articulation each kit-layout slot plays.
 
-Each non-empty, non-comment line is one map layer. It maps an instrument slot, and optionally an articulation slot, to one library articulation.
+Each non-empty, non-comment line is one map layer. It maps one required articulation slot to one required library articulation.
 
 ## Basic Line Shape
 
 ```text
-instrumentSlot[/articulationSlot]:libraryKit/libraryInstrument/libraryArticulation[:params]
+instrumentSlot/articulationSlot:libraryKit/libraryInstrument/libraryArticulation[:params]
 ```
 
 Simple examples:
@@ -23,7 +23,7 @@ hihat1/bow[open]:KitA/hihat-14/bow[open]:tuning=-2;attack=50;decay=300
 Parts:
 
 - `instrumentSlot` is the kit-layout instrument-slot ID, for example `kick1`, `snare1`, `hihat1`, or `ride1`.
-- `articulationSlot` is optional. It is the kit-layout articulation-slot code, for example `center`, `rim`, `bow`, `edge`, or `bell`.
+- `articulationSlot` is required. It is the kit-layout articulation-slot code, for example `center`, `rim`, `bow`, `edge`, or `bell`.
 - `libraryKit` is the complete library-kit identity.
 - `libraryInstrument` is the complete library-instrument identity inside that library kit.
 - `libraryArticulation` is required. It is the library-articulation identity inside that library instrument.
@@ -66,9 +66,26 @@ When the user selects one complete library instrument:
 
 - remove all existing map layers for the selected instrument slot;
 - create one map layer for each library articulation;
-- add the matching articulation slot when an exact match is available;
-- leave the articulation slot empty when there is no exact match;
+- use the matching articulation slot when an exact match is available;
+- otherwise use the first available articulation slot from the configured fallback order for the instrument type and show a warning;
+- skip the library articulation with a warning when no configured fallback slot exists in the kit layout;
 - preserve every map layer for all other instrument slots.
+
+Built-in fallback orders can be replaced per instrument type in `config.yaml`:
+
+```yaml
+articulationFallback:
+  kick: [center, head]
+  snare: [center, rim, sidestick]
+  tom: [center, rim]
+  hihat: [bow, edge, pedal]
+  crash: [edge, bow, bell]
+  splash: [edge, bow, bell]
+  china: [edge, bow, bell]
+  ride: [bow, edge, bell]
+```
+
+The first available articulation slot wins. A user list replaces the built-in list for that type. An empty list disables fallback for that type. Exact matches do not use fallback and do not produce a warning.
 
 ## Current Params
 

@@ -20,7 +20,7 @@
   - a new non-expression drum hit may start as `rim` instead of `center` when `zon_ctr_rim` says rim at that instant
 - For hi-hat live transitions, only `pdl_opn_cls` may change the sounding articulation after note-on, because pedal openness can move while the note is ringing.
 - Keep unsupported controller dimensions such as `zon_lft_rgt` out of implicit expression-point routing for now.
-- Ensure empty-articulation inheritance only applies when the articulation slot has no explicit map layers.
+- Remove empty-articulation inheritance. Every map layer must name an explicit articulation slot.
 - Add temporary routing diagnostics behind a narrow debug helper or flag:
   - note number
   - slot id
@@ -38,7 +38,7 @@
 - Use `Replace whole instrument` as the default when opening from a main/head articulation of a normal head/rim drum.
 - Use `Assign articulation` as the default when opening from a specific articulation slot or map layer.
 - In replace mode, show instrument-level picker rows instead of every articulation row.
-- In replace mode, generate one explicit map layer for each library articulation, such as `tom1/center` and `tom1/rim`. If there is no matching articulation slot, keep the articulation-slot part empty.
+- In replace mode, generate one explicit map layer for each library articulation, such as `tom1/center` and `tom1/rim`. If there is no matching articulation slot, use the first available slot from the configured instrument-type fallback order and show a warning. Skip the library articulation with a warning when no fallback slot is available.
 - In assign mode, keep articulation-level picker rows.
 - For hi-hat library rows, show all available articulations with their full bracketed expression labels, for example `edge[open]`, `edge[half]`, `edge[close]`, `edge[tight]`, and `pedal[splash]`.
 - Recommended UI checkbox label: `REPLACE`.
@@ -69,7 +69,7 @@
   - `pdl_opn_cls` changes openness for bow and edge notes independently.
   - `zon_bow_edg` preserves openness while changing bow/edge.
   - simple `tom1 center/rim` mapping with explicit rim map layers does not inherit center fallback.
-  - empty-art fallback still works for the original `stax1` simple-slot case.
+  - configured type-based fallback creates an explicit route for the original `stax1` simple-slot case and reports a warning.
 - Add instrument-map/UI model tests where possible:
   - whole-instrument replacement creates one explicit map layer for each library articulation.
   - whole-instrument replacement uses a matching articulation-slot code when one is available.

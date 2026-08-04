@@ -1704,7 +1704,7 @@ void PadContextPopup::showInstrumentPicker() {
             this->rebuildMapLayerRows();
             if (this->onMapTextChanged) this->onMapTextChanged(this->savedInstrumentMapText);
             if (this->onInstrumentChanged) this->onInstrumentChanged();
-            if (this->onStatusMessage) this->onStatusMessage("Instrument replaced in " + this->slotId);
+            if (this->onStatusMessage) this->onStatusMessage(updatedMap.errors.empty() ? "Instrument replaced in " + this->slotId : updatedMap.error());
             this->engine.playPreviewNote(this->slotId, this->artName, this->getPreviewVelocity());
         });
     };

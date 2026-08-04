@@ -14,13 +14,13 @@ The bleed routing combobox now changes and saves the loaded sample output route.
 Current bleed level setting:
 
 ```text
-kick1:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8
+kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8
 ```
 
 Routing override:
 
 ```text
-kick1:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m
+kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m
 ```
 
 Meaning:
@@ -65,8 +65,8 @@ Rules:
 Parser examples:
 
 ```text
-kick1:MyKit/kick-24/center:micRoute=dtm:aux1/**m
-kick1:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m,dss:aux1/**s
+kick1/center:MyKit/kick-24/center:micRoute=dtm:aux1/**m
+kick1/center:MyKit/kick-24/center:bleed=dtm:0.5,room:0.8;micRoute=dtm:aux1/**m,dss:aux1/**s
 ```
 
 ## Engine Support

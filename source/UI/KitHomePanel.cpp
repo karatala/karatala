@@ -328,9 +328,10 @@ void KitHomePanel::generateDraftFromSelectedKit() {
     const auto* selectedLayout = this->getSelectedLayout();
     if (kitIdx < 0 || kitIdx >= static_cast<int>(this->kits.size()) || selectedLayout == nullptr)
         return;
-    this->draftMapText = this->engine.buildInstrumentMapForKit(selectedLayout->layout, *this->kits[static_cast<size_t>(kitIdx)]);
+    juce::StringArray warnings;
+    this->draftMapText = this->engine.buildInstrumentMapForKit(selectedLayout->layout, *this->kits[static_cast<size_t>(kitIdx)], &warnings);
     this->rebuildSlotRows();
-    this->reportStatus("Kit assignments prepared. Press Load Kit to apply.");
+    this->reportStatus(warnings.isEmpty() ? "Kit assignments prepared. Press Load Kit to apply." : warnings.joinIntoString("\n"));
 }
 
 void KitHomePanel::replaceDraftSlot(const SlotRow& row) {
@@ -354,7 +355,10 @@ void KitHomePanel::replaceDraftSlot(const SlotRow& row) {
         const auto* libraryInstrument = libraryKit != nullptr ? libraryKit->findInstrumentById(choice.instrumentCode) : nullptr;
         if (selectedSlot != nullptr && libraryKit != nullptr && libraryInstrument != nullptr) {
             const auto preferredLibraryKitId = libraryManager->getPreferredKitId(*libraryKit);
-            replacementMapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(*selectedSlot, *libraryKit, *libraryInstrument, preferredLibraryKitId);
+            auto replacementResult = DrumKitEngineMapHelpers::buildInstrumentMapLayers(*selectedSlot, *libraryKit, *libraryInstrument, preferredLibraryKitId, this->engine.getArticulationSlotFallbackRules());
+            replacementMapLayers = std::move(replacementResult.value);
+            if (!replacementResult.errors.empty()) this->reportStatus(replacementResult.error());
+            if (replacementMapLayers.empty()) return;
         }
     }
     DrumKitEngineMapHelpers::replaceSlotMapLayers(map, row.slotId, std::move(replacementMapLayers));

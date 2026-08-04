@@ -173,7 +173,7 @@ Add a whole-instrument selection mode to `SourcePickerPopup`:
 When `Set instrument` is confirmed:
 
 1. Remove every current map layer for this instrument slot.
-2. Add one map layer with a complete library path for each library articulation in the selected library instrument. Use a matching articulation-slot code when available.
+2. Add one map layer with a complete slot and library path for each library articulation in the selected library instrument. Use an exact articulation-slot match first, then the configured instrument-type fallback order. Show a warning for every fallback or skipped library articulation.
 3. Reapply only this slot.
 4. Rebuild all pad-popup articulation rows and bleed controls from the applied map.
 5. Close the picker and preview the current pad articulation when a compatible library articulation exists.
@@ -365,7 +365,7 @@ Extend [`tests/TestInstrumentMap.cpp`](../tests/TestInstrumentMap.cpp):
 - Full-kit mapping keeps current matching and automatic-orientation behavior.
 - Assigning one instrument replaces only the chosen instrument slot.
 - Other slots and their parameters remain unchanged.
-- Whole-instrument assignment writes one complete library path for each library articulation and uses matching articulation-slot codes when available.
+- Whole-instrument assignment writes one complete slot and library path for each library articulation. It uses exact articulation-slot matches first, then configured instrument-type fallback rules with warnings.
 - `Link arts` updates the same layer number across articulation slots.
 - Missing linked layers are skipped.
 - A wildcard map layer is not duplicated.

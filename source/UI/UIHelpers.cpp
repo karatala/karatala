@@ -220,7 +220,7 @@ int findSourceIndex(const std::vector<SourceItem>& sourceItems, const juce::Stri
 
 bool usesLegacyArticulationSlotExpressionFilter(const std::vector<juce::String>& articulationSlotFilters, const juce::String& articulationSlotCode) {
     if (!articulationSlotCode.containsChar('[')) return false;
-    if (articulationSlotFilters.empty()) return true;
+    if (articulationSlotFilters.empty()) return false;
 
     for (const auto& filter : articulationSlotFilters)
         if (ArticulationNameHelpers::articulationCodeMatches(filter, articulationSlotCode)) return false;

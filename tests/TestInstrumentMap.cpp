@@ -16,11 +16,11 @@ TEST_CASE("InstrumentMap parser rejects empty input", "[InstrumentMap]") {
 
 TEST_CASE("InstrumentMap parser requires one complete library articulation path per map layer", "[InstrumentMap]") {
     const std::vector<juce::String> invalidMapLines {
-        "kick1:MyKit",
-        "kick1:MyKit/kick-24",
-        "kick1:MyKit/kick-24/",
-        "kick1:MyKit/kick-24/center,edge",
-        "kick1:MyKit/kick-24/center/extra",
+        "kick1/center:MyKit",
+        "kick1/center:MyKit/kick-24",
+        "kick1/center:MyKit/kick-24/",
+        "kick1/center:MyKit/kick-24/center,edge",
+        "kick1/center:MyKit/kick-24/center/extra",
     };
 
     for (const auto& invalidMapLine : invalidMapLines) {
@@ -29,13 +29,18 @@ TEST_CASE("InstrumentMap parser requires one complete library articulation path 
     }
 }
 
-TEST_CASE("InstrumentMap parser keeps the articulation slot optional", "[InstrumentMap]") {
-    const auto parsed = DrumKitEngine::parseInstrumentMapText("kick1:MyKit/kick-24/center");
+TEST_CASE("InstrumentMap parser requires one articulation slot per map layer", "[InstrumentMap]") {
+    const std::vector<juce::String> invalidMapLines {
+        "kick1:MyKit/kick-24/center",
+        "kick1/:MyKit/kick-24/center",
+        "kick1/center,rim:MyKit/kick-24/center",
+        "kick1/center/extra:MyKit/kick-24/center",
+    };
 
-    REQUIRE(parsed.ok());
-    REQUIRE(parsed.value.layers.size() == 1);
-    CHECK(parsed.value.layers.front().slotArticulationFilter.empty());
-    CHECK(parsed.value.layers.front().articulationFilter == std::vector<juce::String> { "center" });
+    for (const auto& invalidMapLine : invalidMapLines) {
+        const auto parsed = DrumKitEngine::parseInstrumentMapText(invalidMapLine);
+        CHECK_FALSE(parsed.ok());
+    }
 }
 
 TEST_CASE("InstrumentMap parser skips comments and parses basic map layers", "[InstrumentMap]") {
@@ -152,6 +157,7 @@ TEST_CASE("InstrumentMap serializer preserves mic route overrides in stable orde
 TEST_CASE("InstrumentMap fingerprints include mic route overrides", "[InstrumentMap]") {
     DrumKitEngine::InstrumentMapLayer first;
     first.slotId = "kick1";
+    first.slotArticulationFilter = { "center" };
     first.kitRef = "MyKit";
     first.instCode = "kick-24";
     first.articulationFilter = { "center" };
@@ -196,6 +202,7 @@ TEST_CASE("InstrumentMap slot replacement removes every old layer and preserves 
 
     DrumKitEngine::InstrumentMapLayer snare;
     snare.slotId = "snare1";
+    snare.slotArticulationFilter = { "center" };
     snare.kitRef = "KitA";
     snare.instCode = "snare-14";
     snare.articulationFilter = { "center" };
@@ -204,6 +211,7 @@ TEST_CASE("InstrumentMap slot replacement removes every old layer and preserves 
 
     DrumKitEngine::InstrumentMapLayer replacement;
     replacement.slotId = "kick1";
+    replacement.slotArticulationFilter = { "center" };
     replacement.kitRef = "KitB";
     replacement.instCode = "kick-24";
     replacement.articulationFilter = { "center" };
@@ -215,7 +223,7 @@ TEST_CASE("InstrumentMap slot replacement removes every old layer and preserves 
     CHECK(map.layers[1].slotId == "kick1");
     CHECK(map.layers[1].kitRef == "KitB");
     CHECK(map.layers[1].instCode == "kick-24");
-    CHECK(map.layers[1].slotArticulationFilter.empty());
+    CHECK(map.layers[1].slotArticulationFilter == std::vector<juce::String> { "center" });
     CHECK(map.layers[1].articulationFilter == std::vector<juce::String> { "center" });
 }
 
@@ -266,7 +274,7 @@ TEST_CASE("InstrumentMap projections match map-layer numbers inside each articul
     CHECK(projections[3].articulationSlotLayerIndex == 1);
 }
 
-TEST_CASE("InstrumentMap projections use the library articulation as an implicit articulation-slot filter", "[InstrumentMap][linked-edit]") {
+TEST_CASE("InstrumentMap projections use the explicit articulation-slot filter", "[InstrumentMap][linked-edit]") {
     KitLayout layout;
     KitLayout::InstrumentSlot slot;
     slot.id = "snare1";
@@ -277,6 +285,7 @@ TEST_CASE("InstrumentMap projections use the library articulation as an implicit
     DrumKitEngine::InstrumentMap map;
     DrumKitEngine::InstrumentMapLayer centerOnly;
     centerOnly.slotId = "snare1";
+    centerOnly.slotArticulationFilter = { "center" };
     centerOnly.kitRef = "KitA";
     centerOnly.instCode = "snare-14";
     centerOnly.articulationFilter = { "center" };
@@ -290,6 +299,8 @@ TEST_CASE("InstrumentMap projections use the library articulation as an implicit
 
 TEST_CASE("InstrumentMap linked mic edits resolve the library articulation path", "[InstrumentMap][linked-edit][routing]") {
     DrumKitEngine::InstrumentMapLayer mapLayer;
+    mapLayer.slotId = "snare1";
+    mapLayer.slotArticulationFilter = { "rim" };
     mapLayer.kitRef = "KitA";
     mapLayer.instCode = "snare-14";
     mapLayer.articulationFilter = { "rim" };
@@ -300,7 +311,7 @@ TEST_CASE("InstrumentMap linked mic edits resolve the library articulation path"
     CHECK(DrumKitEngineMapHelpers::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rimshot");
 }
 
-TEST_CASE("InstrumentMap isolates an implicit multi-slot map layer before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
+TEST_CASE("InstrumentMap isolates a base articulation-slot filter before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
     KitLayout::InstrumentSlot slot;
     slot.id = "snare1";
     slot.type = KitLib::InstrumentSpec::Type::Snare;
@@ -310,6 +321,7 @@ TEST_CASE("InstrumentMap isolates an implicit multi-slot map layer before an unl
     DrumKitEngine::InstrumentMap map;
     DrumKitEngine::InstrumentMapLayer mapLayer;
     mapLayer.slotId = "snare1";
+    mapLayer.slotArticulationFilter = { "bow" };
     mapLayer.kitRef = "KitA";
     mapLayer.instCode = "snare-14";
     mapLayer.articulationFilter = { "bow" };
@@ -458,6 +470,7 @@ TEST_CASE("InstrumentMap parser rejects an invalid layer velocity response", "[I
 TEST_CASE("InstrumentMap velocity response changes without changing an existing custom layer shape", "[InstrumentMap][VelocityResponse]") {
     DrumKitEngine::InstrumentMapLayer first;
     first.slotId = "snare1";
+    first.slotArticulationFilter = { "center" };
     first.kitRef = "MyKit";
     first.instCode = "snare-14";
     first.articulationFilter = { "center" };
@@ -470,18 +483,26 @@ TEST_CASE("InstrumentMap velocity response changes without changing an existing 
     CHECK(DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(first) == DrumKitEngineMapHelpers::makeInstrumentMapLayerReloadFingerprint(second));
 }
 
-TEST_CASE("InstrumentMap serializer omits map layers without a complete library path", "[InstrumentMap]") {
+TEST_CASE("InstrumentMap serializer omits map layers without complete slot and library paths", "[InstrumentMap]") {
     DrumKitEngine::InstrumentMap map;
     map.layers.push_back({});
 
+    DrumKitEngine::InstrumentMapLayer missingArticulationSlot;
+    missingArticulationSlot.slotId = "kick1";
+    missingArticulationSlot.kitRef = "FactoryKit";
+    missingArticulationSlot.instCode = "kick-22";
+    missingArticulationSlot.articulationFilter = { "center" };
+    map.layers.push_back(missingArticulationSlot);
+
     DrumKitEngine::InstrumentMapLayer valid;
     valid.slotId = "kick1";
+    valid.slotArticulationFilter = { "center" };
     valid.kitRef = "FactoryKit";
     valid.instCode = "kick-22";
     valid.articulationFilter = { "center" };
     map.layers.push_back(valid);
 
-    CHECK(DrumKitEngine::serializeInstrumentMap(map) == "kick1:FactoryKit/kick-22/center");
+    CHECK(DrumKitEngine::serializeInstrumentMap(map) == "kick1/center:FactoryKit/kick-22/center");
 }
 
 TEST_CASE("InstrumentMap parser warns on malformed params and unknown keys", "[InstrumentMap]") {
@@ -513,18 +534,22 @@ TEST_CASE("InstrumentMap builder infers flipLR from opposite slot and library pl
     leftSlot.id = "ride1";
     leftSlot.type = KitLib::InstrumentSpec::Type::Ride;
     leftSlot.balance = -64;
+    leftSlot.articulations.emplace_back("bow");
     layout.instrumentSlots.push_back(leftSlot);
 
     KitLayout::InstrumentSlot rightSlot;
     rightSlot.id = "ride2";
     rightSlot.type = KitLib::InstrumentSpec::Type::Ride;
     rightSlot.balance = 64;
+    rightSlot.articulations.emplace_back("bow");
     layout.instrumentSlots.push_back(rightSlot);
 
     KitLayout::InstrumentSlot mixedSlot;
     mixedSlot.id = "ride3";
     mixedSlot.type = KitLib::InstrumentSpec::Type::Ride;
     mixedSlot.balance = -64;
+    mixedSlot.articulations.emplace_back("bow");
+    mixedSlot.articulations.emplace_back("edge");
     layout.instrumentSlots.push_back(mixedSlot);
 
     KitLib::DrumKitSpec kit { { {}, "KitA", "Kit A", {}, {} } };
@@ -600,6 +625,7 @@ TEST_CASE("InstrumentMap serializer groups by slot without changing layer order"
 
     DrumKitEngine::InstrumentMapLayer kick;
     kick.slotId = "kick1";
+    kick.slotArticulationFilter = { "center" };
     kick.kitRef = "KitA";
     kick.instCode = "kick-22";
     kick.articulationFilter = { "center" };
@@ -623,7 +649,7 @@ TEST_CASE("InstrumentMap serializer groups by slot without changing layer order"
     map.layers.push_back(snareRimSecond);
 
     const auto serialized = DrumKitEngine::serializeInstrumentMap(map);
-    const juce::String expected = "kick1:KitA/kick-22/center\nsnare1/center:KitA/snare-14/center\nsnare1/rim:KitA/snare-14/rim:tuning=-10\nsnare1/rim:KitB/snare-14/rim:tuning=15";
+    const juce::String expected = "kick1/center:KitA/kick-22/center\nsnare1/center:KitA/snare-14/center\nsnare1/rim:KitA/snare-14/rim:tuning=-10\nsnare1/rim:KitB/snare-14/rim:tuning=15";
     CHECK(serialized == expected);
 }
 
@@ -632,6 +658,7 @@ TEST_CASE("InstrumentMap builder writes preferred kit and instrument ids", "[Ins
     KitLayout::InstrumentSlot slot;
     slot.id = "kick1";
     slot.type = KitLib::InstrumentSpec::Type::Kick;
+    slot.articulations.emplace_back("center");
     layout.instrumentSlots.push_back(slot);
 
     KitLib::DrumKitSpec kit { { {}, "StudioKit by Sam [CC-BY-4.0]", "StudioKit", "Sam", "CC-BY-4.0" } };
@@ -651,7 +678,7 @@ TEST_CASE("InstrumentMap builder writes preferred kit and instrument ids", "[Ins
     DrumKitEngine engine;
     const auto mapText = engine.buildInstrumentMapForKit(layout, kit);
 
-    CHECK(mapText == "kick1:StudioKit/kick-22/center");
+    CHECK(mapText == "kick1/center:StudioKit/kick-22/center");
 }
 
 TEST_CASE("InstrumentMap builder creates one map layer per library articulation and matches compatible articulation slots", "[InstrumentMap][assignment]") {
@@ -670,11 +697,67 @@ TEST_CASE("InstrumentMap builder creates one map layer per library articulation 
     libraryInstrument->getOrAddArticulation("bow");
     libraryInstrument->getOrAddArticulation("bell");
 
-    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA");
+    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA", ArticulationSlotFallbackRules::makeDefault());
 
-    REQUIRE(mapLayers.size() == 2);
-    CHECK(mapLayers[0].slotArticulationFilter == std::vector<juce::String> { "bow" });
-    CHECK(mapLayers[0].articulationFilter == std::vector<juce::String> { "bow" });
-    CHECK(mapLayers[1].slotArticulationFilter.empty());
-    CHECK(mapLayers[1].articulationFilter == std::vector<juce::String> { "bell" });
+    REQUIRE(mapLayers.ok());
+    REQUIRE(mapLayers.value.size() == 2);
+    REQUIRE(mapLayers.errors.size() == 1);
+    CHECK(mapLayers.value[0].slotArticulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(mapLayers.value[0].articulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(mapLayers.value[1].slotArticulationFilter == std::vector<juce::String> { "bow" });
+    CHECK(mapLayers.value[1].articulationFilter == std::vector<juce::String> { "bell" });
+    CHECK_THAT(mapLayers.error().toStdString(), Catch::Matchers::ContainsSubstring("mapped to fallback slot 'bow'"));
+}
+
+TEST_CASE("InstrumentMap builder uses the configured articulation-slot fallback order", "[InstrumentMap][assignment][fallback]") {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "ride1";
+    slot.type = KitLib::InstrumentSpec::Type::Ride;
+    slot.articulations.emplace_back("bow");
+    slot.articulations.emplace_back("edge");
+
+    KitLib::DrumKitSpec libraryKit { { {}, "KitA", "Kit A", {}, {} } };
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = "ride-20";
+    meta.type = KitLib::InstrumentSpec::Type::Ride;
+    libraryKit.addInstrument(meta);
+    auto* libraryInstrument = libraryKit.findInstrument("ride-20");
+    REQUIRE(libraryInstrument != nullptr);
+    libraryInstrument->getOrAddArticulation("sidestick");
+
+    const auto parsedRules = ArticulationSlotFallbackRules::parseYaml(YamlHelper::parse("ride: [edge, bow]"), InstrumentCatalog::makeDefault());
+    REQUIRE(parsedRules.ok());
+    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA", parsedRules.value);
+
+    REQUIRE(mapLayers.ok());
+    REQUIRE(mapLayers.value.size() == 1);
+    REQUIRE(mapLayers.errors.size() == 1);
+    CHECK(mapLayers.value.front().slotArticulationFilter == std::vector<juce::String> { "edge" });
+    CHECK(mapLayers.value.front().articulationFilter == std::vector<juce::String> { "sidestick" });
+    CHECK_THAT(mapLayers.error().toStdString(), Catch::Matchers::ContainsSubstring("mapped to fallback slot 'edge'"));
+}
+
+TEST_CASE("InstrumentMap builder skips an unmatched articulation when fallback is disabled", "[InstrumentMap][assignment][fallback]") {
+    KitLayout::InstrumentSlot slot;
+    slot.id = "ride1";
+    slot.type = KitLib::InstrumentSpec::Type::Ride;
+    slot.articulations.emplace_back("bow");
+
+    KitLib::DrumKitSpec libraryKit { { {}, "KitA", "Kit A", {}, {} } };
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = "ride-20";
+    meta.type = KitLib::InstrumentSpec::Type::Ride;
+    libraryKit.addInstrument(meta);
+    auto* libraryInstrument = libraryKit.findInstrument("ride-20");
+    REQUIRE(libraryInstrument != nullptr);
+    libraryInstrument->getOrAddArticulation("sidestick");
+
+    const auto parsedRules = ArticulationSlotFallbackRules::parseYaml(YamlHelper::parse("ride: []"), InstrumentCatalog::makeDefault());
+    REQUIRE(parsedRules.ok());
+    const auto mapLayers = DrumKitEngineMapHelpers::buildInstrumentMapLayers(slot, libraryKit, *libraryInstrument, "KitA", parsedRules.value);
+
+    REQUIRE(mapLayers.ok());
+    CHECK(mapLayers.value.empty());
+    REQUIRE(mapLayers.errors.size() == 1);
+    CHECK_THAT(mapLayers.error().toStdString(), Catch::Matchers::ContainsSubstring("map layer skipped"));
 }

@@ -31,7 +31,7 @@ TEST_CASE("UIHelpers keeps the old hihat source when the matching expression is 
 
 TEST_CASE("UIHelpers migrates only legacy destination expression filters", "[UI][InstrumentMap][HiHat]") {
     CHECK(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "bow" }, "bow[open]"));
-    CHECK(UIHelpers::usesLegacyArticulationSlotExpressionFilter({}, "bow[tight]"));
+    CHECK_FALSE(UIHelpers::usesLegacyArticulationSlotExpressionFilter({}, "bow[tight]"));
     CHECK_FALSE(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "bow[open]" }, "bow[open]"));
     CHECK_FALSE(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "edge" }, "bow[open]"));
     CHECK_FALSE(UIHelpers::usesLegacyArticulationSlotExpressionFilter({ "bow" }, "bow"));
