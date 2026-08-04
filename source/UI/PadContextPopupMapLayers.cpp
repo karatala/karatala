@@ -10,6 +10,27 @@
 #include <optional>
 #include <unordered_set>
 
+bool PadContextPopup::LinkedMapEdit::rebuildLayerProjections(const KitLayout& layout, const juce::String& selectedSlotId, const juce::String& selectedArticulationSlotCode, int selectedArticulationSlotLayerIndex) {
+    this->layerProjections = InstrumentMap::projectLayers(this->map, layout);
+    this->selectedProjectionIndex.reset();
+    for (size_t projectionIdx = 0; projectionIdx < this->layerProjections.size(); ++projectionIdx) {
+        const auto& projection = this->layerProjections[projectionIdx];
+        if (projection.slotId.compareIgnoreCase(selectedSlotId) != 0 || projection.articulationSlotCode.compareIgnoreCase(selectedArticulationSlotCode) != 0 || projection.articulationSlotLayerIndex != selectedArticulationSlotLayerIndex) continue;
+        this->selectedProjectionIndex = projectionIdx;
+        return true;
+    }
+    return false;
+}
+
+std::optional<size_t> PadContextPopup::LinkedMapEdit::getSelectedMapLayerIndex() const {
+    if (!this->selectedProjectionIndex.has_value() || *this->selectedProjectionIndex >= this->layerProjections.size()) return std::nullopt;
+    return this->layerProjections[*this->selectedProjectionIndex].mapLayerIndex;
+}
+
+void PadContextPopup::LinkedMapEdit::collectTargetLayerProjections(const juce::String& selectedSlotId, const juce::String& selectedArticulationSlotCode, int selectedArticulationSlotLayerIndex, bool linkArticulations, bool linkAllTomBleed) {
+    this->targetLayerProjections = InstrumentMap::collectLinkedMapLayerTargets(this->layerProjections, selectedSlotId, selectedArticulationSlotCode, selectedArticulationSlotLayerIndex, linkArticulations, linkAllTomBleed);
+}
+
 void PadContextPopup::populateLayers() {
     auto mapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
     auto parseResult = DrumKitEngine::parseInstrumentMapText(mapText);
@@ -317,45 +338,35 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
         return;
     }
 
-    DrumKitEngine::InstrumentMap workingMap;
+    LinkedMapEdit linkedMapEdit;
     if (this->pendingInstrumentMap.has_value()) {
-        workingMap = *this->pendingInstrumentMap;
+        linkedMapEdit.map = *this->pendingInstrumentMap;
     } else {
         const auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
         auto parsedMap = DrumKitEngine::parseInstrumentMapText(currentMapText);
         if (!parsedMap.ok()) return;
-        workingMap = std::move(parsedMap.value);
+        linkedMapEdit.map = std::move(parsedMap.value);
     }
     const auto* layout = this->engine.getKitLayout();
     if (layout == nullptr) return;
-
-    auto projections = InstrumentMap::projectLayers(workingMap, *layout);
-    auto findMapLayerProjection = [this, layer](const auto& candidateProjections) -> const InstrumentMap::LayerProjection* {
-        for (const auto& projection : candidateProjections) {
-            if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationSlotCode.compareIgnoreCase(layer->artName) != 0 || projection.articulationSlotLayerIndex != layer->mappedLayerIndex) continue;
-            return &projection;
-        }
-        return nullptr;
-    };
-
-    const auto* mapLayerProjection = findMapLayerProjection(projections);
-    if (mapLayerProjection == nullptr) return;
+    if (!linkedMapEdit.rebuildLayerProjections(*layout, this->slotId, layer->artName, layer->mappedLayerIndex)) return;
 
     const bool linkArts = this->linkArtsButton.getToggleState() && parameter != EditableLayerParameter::VelocityResponse;
     const bool linkTomBleed = parameter == EditableLayerParameter::Bleed && this->linkTomBleedButton.isVisible() && this->linkTomBleedButton.getToggleState();
     if (!linkArts && !linkTomBleed) {
+        const auto selectedMapLayerIndex = linkedMapEdit.getSelectedMapLayerIndex();
+        if (!selectedMapLayerIndex.has_value()) return;
         const auto slotIterator = std::find_if(layout->instrumentSlots.begin(), layout->instrumentSlots.end(), [this](const auto& slot) {
             return slot.id.compareIgnoreCase(this->slotId) == 0;
         });
         if (slotIterator != layout->instrumentSlots.end()) {
-            InstrumentMap::isolateLayerForArticulationSlot(workingMap, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
-            projections = InstrumentMap::projectLayers(workingMap, *layout);
-            mapLayerProjection = findMapLayerProjection(projections);
-            if (mapLayerProjection == nullptr) return;
+            InstrumentMap::isolateLayerForArticulationSlot(linkedMapEdit.map, *slotIterator, *selectedMapLayerIndex, layer->artName);
+            if (!linkedMapEdit.rebuildLayerProjections(*layout, this->slotId, layer->artName, layer->mappedLayerIndex)) return;
         }
     }
 
-    auto targetProjections = InstrumentMap::collectLinkedMapLayerTargets(projections, this->slotId, layer->artName, layer->mappedLayerIndex, linkArts, linkTomBleed);
+    linkedMapEdit.collectTargetLayerProjections(this->slotId, layer->artName, layer->mappedLayerIndex, linkArts, linkTomBleed);
+    auto& targetProjections = linkedMapEdit.targetLayerProjections;
 
     int integerValue = 0;
     float floatValue = 0.0f;
@@ -409,9 +420,9 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
     }
 
     if (parameter == EditableLayerParameter::Bleed) {
-        std::erase_if(targetProjections, [this, &workingMap, &micCode](const auto& projection) {
-            if (projection.mapLayerIndex >= workingMap.layers.size()) return true;
-            const auto& mapLayer = workingMap.layers[projection.mapLayerIndex];
+        std::erase_if(targetProjections, [this, &linkedMapEdit, &micCode](const auto& projection) {
+            if (projection.mapLayerIndex >= linkedMapEdit.map.layers.size()) return true;
+            const auto& mapLayer = linkedMapEdit.map.layers[projection.mapLayerIndex];
             const auto qualifiedLibArtId = InstrumentMap::qualifiedLibraryArticulationIdForSlot(mapLayer, projection.articulationSlotCode);
             const auto relevantMics = this->getRelevantMicsForQualifiedLibraryArticulationId(qualifiedLibArtId);
             return std::none_of(relevantMics.begin(), relevantMics.end(), [&micCode](const auto& mic) {
@@ -423,8 +434,8 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
 
     std::unordered_set<size_t> updatedMapLayerIndexes;
     for (const auto& projection : targetProjections) {
-        if (projection.mapLayerIndex >= workingMap.layers.size() || !updatedMapLayerIndexes.insert(projection.mapLayerIndex).second) continue;
-        auto& mapLayer = workingMap.layers[projection.mapLayerIndex];
+        if (projection.mapLayerIndex >= linkedMapEdit.map.layers.size() || !updatedMapLayerIndexes.insert(projection.mapLayerIndex).second) continue;
+        auto& mapLayer = linkedMapEdit.map.layers[projection.mapLayerIndex];
         switch (parameter) {
             case EditableLayerParameter::Tuning:
                 if (integerValue == 0) mapLayer.tuningCents.reset();
@@ -503,7 +514,7 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
     for (const auto& projection : targetProjections) runtimeTargets.push_back({ projection.slotId, projection.articulationSlotCode, projection.articulationSlotLayerIndex, runtimeUpdate });
     this->engine.updateSlotParametersBatch(runtimeTargets);
 
-    this->pendingInstrumentMap = std::move(workingMap);
+    this->pendingInstrumentMap = std::move(linkedMapEdit.map);
     this->mapTextDirty = true;
     if (parameter == EditableLayerParameter::Tuning || parameter == EditableLayerParameter::Attack || parameter == EditableLayerParameter::Decay || parameter == EditableLayerParameter::Gain || parameter == EditableLayerParameter::Pan || parameter == EditableLayerParameter::Bleed)
         this->pendingPreviewArtName = layer->artName;

@@ -2,6 +2,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/DrumKitEngine.h"
+#include "../Engine/InstrumentMap/InstrumentMapOperations.h"
 #include "AvailableLibraryArticulation.h"
 #include "LibraryAssignmentPicker.h"
 #include "DismissOverlay.h"
@@ -127,6 +128,16 @@ private:
         // Cached bounds for painting group backgrounds
         juce::Rectangle<int> mainGroupBounds;
         juce::Rectangle<int> bleedGroupBounds;
+    };
+    struct LinkedMapEdit {
+        DrumKitEngine::InstrumentMap map;
+        std::vector<InstrumentMap::LayerProjection> layerProjections;
+        std::vector<InstrumentMap::LayerProjection> targetLayerProjections;
+        std::optional<size_t> selectedProjectionIndex;
+
+        bool rebuildLayerProjections(const KitLayout& layout, const juce::String& selectedSlotId, const juce::String& selectedArticulationSlotCode, int selectedArticulationSlotLayerIndex);
+        std::optional<size_t> getSelectedMapLayerIndex() const;
+        void collectTargetLayerProjections(const juce::String& selectedSlotId, const juce::String& selectedArticulationSlotCode, int selectedArticulationSlotLayerIndex, bool linkArticulations, bool linkAllTomBleed);
     };
     juce::OwnedArray<ArticulationGroup> articulationGroups;
     juce::OwnedArray<MapLayerRow> layerRows;

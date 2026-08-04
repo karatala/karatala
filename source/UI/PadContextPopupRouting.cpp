@@ -538,17 +538,9 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
         return;
     }
 
-    auto projections = InstrumentMap::projectLayers(parsedMap.value, *layout);
-    auto findMapLayerProjection = [this, layer, layerIndex](const auto& candidateProjections) -> const InstrumentMap::LayerProjection* {
-        for (const auto& projection : candidateProjections) {
-            if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationSlotCode.compareIgnoreCase(layer->artName) != 0 || projection.articulationSlotLayerIndex != layerIndex) continue;
-            return &projection;
-        }
-        return nullptr;
-    };
-
-    const auto* mapLayerProjection = findMapLayerProjection(projections);
-    if (mapLayerProjection == nullptr) {
+    LinkedMapEdit linkedMapEdit;
+    linkedMapEdit.map = std::move(parsedMap.value);
+    if (!linkedMapEdit.rebuildLayerProjections(*layout, this->slotId, layer->artName, layerIndex)) {
         restoreCurrentRoute();
         return;
     }
@@ -556,24 +548,28 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
     const bool linkArts = this->linkArtsButton.getToggleState();
     const bool linkTomBleed = this->linkTomBleedButton.isVisible() && this->linkTomBleedButton.getToggleState();
     if (!linkArts && !linkTomBleed) {
+        const auto selectedMapLayerIndex = linkedMapEdit.getSelectedMapLayerIndex();
+        if (!selectedMapLayerIndex.has_value()) {
+            restoreCurrentRoute();
+            return;
+        }
         const auto slotIterator = std::find_if(layout->instrumentSlots.begin(), layout->instrumentSlots.end(), [this](const auto& slot) {
             return slot.id.compareIgnoreCase(this->slotId) == 0;
         });
         if (slotIterator != layout->instrumentSlots.end()) {
-            InstrumentMap::isolateLayerForArticulationSlot(parsedMap.value, *slotIterator, mapLayerProjection->mapLayerIndex, layer->artName);
-            projections = InstrumentMap::projectLayers(parsedMap.value, *layout);
-            mapLayerProjection = findMapLayerProjection(projections);
-            if (mapLayerProjection == nullptr) {
+            InstrumentMap::isolateLayerForArticulationSlot(linkedMapEdit.map, *slotIterator, *selectedMapLayerIndex, layer->artName);
+            if (!linkedMapEdit.rebuildLayerProjections(*layout, this->slotId, layer->artName, layerIndex)) {
                 restoreCurrentRoute();
                 return;
             }
         }
     }
 
-    auto targetProjections = InstrumentMap::collectLinkedMapLayerTargets(projections, this->slotId, layer->artName, layerIndex, linkArts, linkTomBleed);
-    std::erase_if(targetProjections, [this, &parsedMap, bleedCtrl, &newRoute](const auto& projection) {
-        if (projection.mapLayerIndex >= parsedMap.value.layers.size()) return true;
-        const auto& mapLayer = parsedMap.value.layers[projection.mapLayerIndex];
+    linkedMapEdit.collectTargetLayerProjections(this->slotId, layer->artName, layerIndex, linkArts, linkTomBleed);
+    auto& targetProjections = linkedMapEdit.targetLayerProjections;
+    std::erase_if(targetProjections, [this, &linkedMapEdit, bleedCtrl, &newRoute](const auto& projection) {
+        if (projection.mapLayerIndex >= linkedMapEdit.map.layers.size()) return true;
+        const auto& mapLayer = linkedMapEdit.map.layers[projection.mapLayerIndex];
         const auto qualifiedLibArtId = InstrumentMap::qualifiedLibraryArticulationIdForSlot(mapLayer, projection.articulationSlotCode);
         const auto relevantMics = this->getRelevantMicsForQualifiedLibraryArticulationId(qualifiedLibArtId);
         const bool hasSourceMic = std::any_of(relevantMics.begin(), relevantMics.end(), [bleedCtrl](const auto& mic) {
@@ -590,8 +586,8 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
 
     std::unordered_set<size_t> updatedMapLayerIndexes;
     for (const auto& projection : targetProjections) {
-        if (projection.mapLayerIndex >= parsedMap.value.layers.size() || !updatedMapLayerIndexes.insert(projection.mapLayerIndex).second) continue;
-        auto& routeOverrides = parsedMap.value.layers[projection.mapLayerIndex].micRouteOverrides;
+        if (projection.mapLayerIndex >= linkedMapEdit.map.layers.size() || !updatedMapLayerIndexes.insert(projection.mapLayerIndex).second) continue;
+        auto& routeOverrides = linkedMapEdit.map.layers[projection.mapLayerIndex].micRouteOverrides;
         for (auto routeIterator = routeOverrides.begin(); routeIterator != routeOverrides.end();) {
             if (routeIterator->first.compareIgnoreCase(bleedCtrl->micCode) == 0) routeIterator = routeOverrides.erase(routeIterator);
             else ++routeIterator;
@@ -634,7 +630,7 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
         + " target=" + routeTargetName + " layers=" + juce::String(static_cast<int>(runtimeTargets.size()));
     this->engine.logMessage(routeStatus, DebugLevel::Debug);
 
-    this->savedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(parsedMap.value);
+    this->savedInstrumentMapText = DrumKitEngine::serializeInstrumentMap(linkedMapEdit.map);
     this->mapTextDirty = false;
     this->refreshLayerMappings();
     if (this->onMapTextChanged) this->onMapTextChanged(this->savedInstrumentMapText);
