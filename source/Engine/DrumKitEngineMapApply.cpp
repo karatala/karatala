@@ -14,6 +14,45 @@
 #include <unordered_set>
 #include <utility>
 
+struct DrumKitEngine::InstrumentMapApplyPlan {
+    struct PreparedShadow {
+        std::unique_ptr<InstrumentPlayer> instrumentPlayer;
+        juce::String stateFingerprint;
+        juce::String reloadFingerprint;
+        std::vector<std::pair<int, InstrumentPlayer*>> noteRoutes;
+    };
+
+    struct PreparedShadowParameterUpdate {
+        InstrumentPlayer* instrumentPlayer = nullptr;
+        LayerParameterUpdate update;
+        juce::String stateFingerprint;
+    };
+
+    struct PreparedSlot {
+        juce::String slotId;
+        int primaryIndex = -1;
+        std::unique_ptr<InstrumentPlayer> primaryReplacement;
+        std::optional<LayerParameterUpdate> primaryParameterUpdate;
+        std::vector<std::pair<uint32_t, uint32_t>> primaryParameterRoutes;
+        bool removeOldShadows = false;
+        bool rebuildShadows = false;
+        std::vector<PreparedShadow> shadows;
+        std::vector<PreparedShadowParameterUpdate> shadowParameterUpdates;
+    };
+
+    std::vector<PreparedSlot> preparedSlots;
+    std::unordered_map<juce::String, juce::String> nextSlotFingerprints;
+    std::unordered_map<juce::String, juce::String> nextSlotReloadFingerprints;
+    juce::String normalizedMapText;
+    int preparedPlayerCount = 0;
+};
+
+struct DrumKitEngine::InstrumentMapCommitResult {
+    std::vector<std::unique_ptr<InstrumentPlayer>> retiredPlayers;
+    int appliedPlayerCount = 0;
+    size_t totalPlayerCount = 0;
+};
+
 static juce::String firstCandidateOrRaw(const std::vector<juce::String>& candidates, const juce::String& raw) {
     for (const auto& candidate : candidates)
         if (candidate.trim().isNotEmpty()) return candidate.trim();
@@ -460,6 +499,19 @@ void DrumKitEngine::applyLayerParameterUpdate(InstrumentPlayer& instrumentPlayer
     if (update.micBleedLevels.has_value()) instrumentPlayer.setMicBleedLevels(*update.micBleedLevels);
 }
 
+void DrumKitEngine::applyPreparedMapLayerUpdate(InstrumentPlayer& instrumentPlayer, const LayerParameterUpdate& update, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
+    if (!targetRoutes.empty()) {
+        instrumentPlayer.updateArticulationParameters(targetRoutes, update);
+        return;
+    }
+
+    DrumKitEngine::applyLayerParameterUpdate(instrumentPlayer, update);
+    LayerParameterUpdate velocityResponseUpdate;
+    velocityResponseUpdate.updateVelocityResponse = update.updateVelocityResponse;
+    velocityResponseUpdate.velocityResponse = update.velocityResponse;
+    instrumentPlayer.updateArticulationParameters({}, velocityResponseUpdate);
+}
+
 bool DrumKitEngine::useInstrumentMap(juce::String text) {
     return this->useInstrumentMapInternal(std::move(text), {});
 }
@@ -579,21 +631,6 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         auto parsedResponse = VelocityResponse::fromDefinition(*mapLayer.velocityResponse);
         return parsedResponse.ok() ? std::optional<VelocityResponse>(std::move(parsedResponse.value)) : std::nullopt;
     };
-    auto applyOverrides = [&resolveVelocityResponseOverride](InstrumentPlayer& instrumentPlayer, const InstrumentMapLayer& mapLayer) {
-        instrumentPlayer.setTuningOffsetCents(mapLayer.tuningCents.value_or(0));
-        instrumentPlayer.setAttackOverrideMs(mapLayer.attackTimeMs.value_or(-1));
-        instrumentPlayer.setDecayOverrideMs(mapLayer.decayTimeMs.value_or(-1));
-        instrumentPlayer.setVolumeDb(mapLayer.volumeDb.value_or(0.0f));
-        instrumentPlayer.setPan(mapLayer.pan.value_or(0));
-        instrumentPlayer.setFlipLR(mapLayer.flipLR);
-        instrumentPlayer.setFlipPhase(mapLayer.flipPhase);
-        instrumentPlayer.setMicBleedLevels(mapLayer.micBleedLevels);
-        LayerParameterUpdate velocityResponseUpdate;
-        velocityResponseUpdate.updateVelocityResponse = true;
-        velocityResponseUpdate.velocityResponse = resolveVelocityResponseOverride(mapLayer);
-        instrumentPlayer.updateArticulationParameters({}, velocityResponseUpdate);
-    };
-
     auto makeParameterUpdate = [&resolveVelocityResponseOverride](const InstrumentMapLayer& mapLayer) {
         LayerParameterUpdate update;
         update.tuningCents = mapLayer.tuningCents.value_or(0);
@@ -620,11 +657,6 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             }
         }
         return targetRoutes;
-    };
-
-    auto applyPrimaryOverrides = [&applyOverrides, &makeParameterUpdate](InstrumentPlayer& instrumentPlayer, const InstrumentMapLayer& mapLayer, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes) {
-        if (targetRoutes.empty()) applyOverrides(instrumentPlayer, mapLayer);
-        else instrumentPlayer.updateArticulationParameters(targetRoutes, makeParameterUpdate(mapLayer));
     };
 
     auto makeResolvedMapLayerFingerprint = [](const InstrumentMapLayer& mapLayer, const KitLib::InstrumentSpec& instSpec) {
@@ -674,32 +706,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
     for (const auto& warning : parsed.errors)
         statusLines.add(warning);
 
-    int applied = 0;
-
-    // Prepare replacement and shadow instrument players for each slot outside the lock.
-    struct PreparedShadow {
-        std::unique_ptr<InstrumentPlayer> instrumentPlayer;
-        juce::String stateFingerprint;
-        juce::String reloadFingerprint;
-        std::vector<std::pair<int, InstrumentPlayer*>> noteRoutes;
-    };
-    struct PreparedShadowParameterUpdate {
-        InstrumentPlayer* instrumentPlayer = nullptr;
-        const InstrumentMapLayer* mapLayer = nullptr;
-        juce::String stateFingerprint;
-    };
-    struct PreparedSlot {
-        juce::String slotId;
-        int primaryIndex = -1;
-        std::unique_ptr<InstrumentPlayer> primaryReplacement;
-        const InstrumentMapLayer* primaryParameterMapLayer = nullptr;
-        std::vector<std::pair<uint32_t, uint32_t>> primaryParameterRoutes;
-        bool removeOldShadows = false;
-        bool rebuildShadows = false;
-        std::vector<PreparedShadow> shadows;
-        std::vector<PreparedShadowParameterUpdate> shadowParameterUpdates;
-    };
-    std::vector<PreparedSlot> preparedSlots;
+    InstrumentMapApplyPlan applyPlan;
 
     for (const auto& slotId : slotOrder) {
         const auto& slotMapLayers = mapLayersBySlotId[slotId];
@@ -920,12 +927,12 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             }
         }
 
-        PreparedSlot prep;
+        InstrumentMapApplyPlan::PreparedSlot prep;
         prep.slotId = slotId;
         auto pIdxIt = primarySlotIndex.find(slotId);
         prep.primaryIndex = (pIdxIt != primarySlotIndex.end()) ? pIdxIt->second : -1;
         if (!slotChanged && slotStateChanged && prep.primaryIndex >= 0) {
-            prep.primaryParameterMapLayer = primary.mapLayer;
+            prep.primaryParameterUpdate = makeParameterUpdate(*primary.mapLayer);
             prep.primaryParameterRoutes = buildTargetRoutes(slotLayout, primary.effectiveArticulationSlotFilters);
         }
 
@@ -934,7 +941,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         const bool slotHasShadowPlans = !shadowPlans.empty();
         bool canReuseExistingShadows = slotHasExistingShadows && slotHasShadowPlans && !slotChanged && existingShadowIt->second.size() == shadowPlans.size();
         std::vector<bool> matchedExistingShadows(slotHasExistingShadows ? existingShadowIt->second.size() : 0, false);
-        std::vector<PreparedShadowParameterUpdate> shadowParameterUpdates;
+        std::vector<InstrumentMapApplyPlan::PreparedShadowParameterUpdate> shadowParameterUpdates;
 
         if (canReuseExistingShadows) {
             for (const auto& shadowPlan : shadowPlans) {
@@ -955,7 +962,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 const auto stateFingerprint = makeResolvedMapLayerFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
                 const auto& existingShadow = existingShadowIt->second[static_cast<size_t>(matchedShadowIndex)];
                 if (existingShadow.stateFingerprint != stateFingerprint)
-                    shadowParameterUpdates.push_back({ existingShadow.instrumentPlayer, shadowPlan.mapLayer, stateFingerprint });
+                    shadowParameterUpdates.push_back({ existingShadow.instrumentPlayer, makeParameterUpdate(*shadowPlan.mapLayer), stateFingerprint });
             }
         }
 
@@ -980,7 +987,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
             primaryRoutingContext.strictArticulationResolution = primaryStrictArticulationResolution;
             auto primaryPlaybackEntries = replacement->buildArticulationPlaybackEntries(slotLayout, primaryRoutingContext);
             replacement->loadInstrumentWithPlaybackEntries(primary.instSpec, primaryRoutingContext, std::move(primaryPlaybackEntries), librarySnapshot);
-            applyPrimaryOverrides(*replacement, *primary.mapLayer, buildTargetRoutes(slotLayout, primary.effectiveArticulationSlotFilters));
+            DrumKitEngine::applyPreparedMapLayerUpdate(*replacement, makeParameterUpdate(*primary.mapLayer), buildTargetRoutes(slotLayout, primary.effectiveArticulationSlotFilters));
             LOG(Info, "  PRIMARY loaded: slot=" + slotId + " inst=" + primary.instSpec->meta.codeRaw
                 + " tuning=" + juce::String(primary.mapLayer->tuningCents.value_or(0))
                 + (primary.mapLayer->attackTimeMs.has_value() ? " attack=" + juce::String(*primary.mapLayer->attackTimeMs) : "")
@@ -990,7 +997,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 replacement->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
             }
             prep.primaryReplacement = std::move(replacement);
-            ++applied;
+            ++applyPlan.preparedPlayerCount;
         }
 
         // Create shadow instrument players outside the lock.
@@ -1012,7 +1019,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                 shadowRoutingContext.strictArticulationResolution = shadowStrictArticulationResolution;
                 auto shadowPlaybackEntries = shadowRaw->buildArticulationPlaybackEntries(slotLayout, shadowRoutingContext);
                 shadowRaw->loadInstrumentWithPlaybackEntries(shadowPlan.instSpec, shadowRoutingContext, std::move(shadowPlaybackEntries), librarySnapshot);
-                applyOverrides(*shadowRaw, *shadowPlan.mapLayer);
+                DrumKitEngine::applyPreparedMapLayerUpdate(*shadowRaw, makeParameterUpdate(*shadowPlan.mapLayer), {});
                 if (LOG_ENABLED(Info)) {
                     juce::String shadowArtsStr;
                     for (const auto& articulationSlotName : shadowPlan.articulationSlots) shadowArtsStr += (shadowArtsStr.isEmpty() ? "" : ",") + articulationSlotName;
@@ -1029,105 +1036,28 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
                     shadowRaw->prepareToPlay(this->lastSampleRate, this->lastSamplesPerBlock);
                 }
 
-                PreparedShadow ps;
-                ps.stateFingerprint = makeResolvedMapLayerFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
-                ps.reloadFingerprint = makeResolvedMapLayerReloadFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
+                InstrumentMapApplyPlan::PreparedShadow preparedShadow;
+                preparedShadow.stateFingerprint = makeResolvedMapLayerFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
+                preparedShadow.reloadFingerprint = makeResolvedMapLayerReloadFingerprint(*shadowPlan.mapLayer, *shadowPlan.instSpec);
                 for (const auto& articulationSlot : slotLayout.articulations) {
                     if (!shadowRaw->routesArticulationSlot(articulationSlot.nameId, articulationSlot.exprId)) continue;
                     for (const int note : articulationSlot.notes)
-                        ps.noteRoutes.push_back({note, shadowRaw});
+                        preparedShadow.noteRoutes.push_back({note, shadowRaw});
                 }
-                ps.instrumentPlayer = std::move(shadow);
-                prep.shadows.push_back(std::move(ps));
-                ++applied;
+                preparedShadow.instrumentPlayer = std::move(shadow);
+                prep.shadows.push_back(std::move(preparedShadow));
+                ++applyPlan.preparedPlayerCount;
             }
         }
 
-        preparedSlots.push_back(std::move(prep));
+        applyPlan.preparedSlots.push_back(std::move(prep));
     }
 
-    // ======================== PHASE 3: SWAP (brief lock) ========================
-    // The lock is held only for fast pointer swaps and routing table updates.
-    // Old instrument players are collected and destroyed after the lock is released.
-    std::vector<std::unique_ptr<InstrumentPlayer>> oldPlayers;
-    {
-        const juce::ScopedLock graphLock(this->engineGraphLock);
-
-        std::unordered_set<juce::String> shadowSlotIdsToRemove;
-        for (const auto& prep : preparedSlots) {
-            if (prep.removeOldShadows) shadowSlotIdsToRemove.insert(prep.slotId);
-        }
-
-        std::unordered_set<InstrumentPlayer*> removedShadowPlayers;
-        if (!shadowSlotIdsToRemove.empty()) {
-            for (int idx = static_cast<int>(this->instrumentPlayerPtrs.size()) - 1; idx >= this->primaryInstrumentPlayerCount; --idx) {
-                auto* shadowPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
-                if (shadowPlayer == nullptr || shadowSlotIdsToRemove.find(shadowPlayer->getId()) == shadowSlotIdsToRemove.end()) continue;
-                removedShadowPlayers.insert(shadowPlayer);
-                this->lastAppliedShadowFingerprints.erase(shadowPlayer);
-                this->lastAppliedShadowReloadFingerprints.erase(shadowPlayer);
-                oldPlayers.push_back(std::move(this->instrumentPlayerPtrs[static_cast<size_t>(idx)]));
-                this->instrumentPlayerPtrs.erase(this->instrumentPlayerPtrs.begin() + idx);
-            }
-        }
-
-        // Swap in prepared primary replacements (pointer swap only)
-        bool anyPrimarySwapped = false;
-        for (auto& prep : preparedSlots) {
-            if (prep.primaryReplacement && prep.primaryIndex >= 0
-                && prep.primaryIndex < static_cast<int>(this->instrumentPlayerPtrs.size())) {
-                const auto primaryIndex = static_cast<size_t>(prep.primaryIndex);
-                oldPlayers.push_back(std::move(this->instrumentPlayerPtrs[primaryIndex]));
-                this->instrumentPlayerPtrs[primaryIndex] = std::move(prep.primaryReplacement);
-                this->instrumentPlayerById[prep.slotId] = this->instrumentPlayerPtrs[primaryIndex].get();
-                anyPrimarySwapped = true;
-            } else if (prep.primaryParameterMapLayer != nullptr && prep.primaryIndex >= 0 && prep.primaryIndex < static_cast<int>(this->instrumentPlayerPtrs.size())) {
-                applyPrimaryOverrides(*this->instrumentPlayerPtrs[static_cast<size_t>(prep.primaryIndex)], *prep.primaryParameterMapLayer, prep.primaryParameterRoutes);
-                ++applied;
-            }
-
-            for (const auto& shadowUpdate : prep.shadowParameterUpdates) {
-                if (shadowUpdate.instrumentPlayer == nullptr || shadowUpdate.mapLayer == nullptr) continue;
-                applyOverrides(*shadowUpdate.instrumentPlayer, *shadowUpdate.mapLayer);
-                this->lastAppliedShadowFingerprints[shadowUpdate.instrumentPlayer] = shadowUpdate.stateFingerprint;
-                ++applied;
-            }
-        }
-
-        if (anyPrimarySwapped) {
-            this->rebuildPrimaryInstrumentNoteRouting();
-            if (this->activeKitLayoutPtr != nullptr) {
-                for (int idx = this->primaryInstrumentPlayerCount; idx < static_cast<int>(this->instrumentPlayerPtrs.size()); ++idx) {
-                    auto* shadowPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
-                    if (shadowPlayer == nullptr) continue;
-                    const auto layoutIt = std::find_if(this->activeKitLayoutPtr->instrumentSlots.begin(), this->activeKitLayoutPtr->instrumentSlots.end(), [&shadowPlayer](const KitLayout::InstrumentSlot& slot) { return slot.id == shadowPlayer->getId(); });
-                    if (layoutIt != this->activeKitLayoutPtr->instrumentSlots.end()) this->addShadowPlayerNoteRoutes(*shadowPlayer, *layoutIt);
-                }
-            }
-        } else if (!removedShadowPlayers.empty()) {
-            for (auto& [note, instrumentPlayers] : this->instrumentPlayersByNote) {
-                juce::ignoreUnused(note);
-                std::erase_if(instrumentPlayers, [&removedShadowPlayers](InstrumentPlayer* instrumentPlayer) { return removedShadowPlayers.find(instrumentPlayer) != removedShadowPlayers.end(); });
-            }
-        }
-
-        // Add prepared shadow instrument players and their note routes.
-        for (auto& prep : preparedSlots) {
-            for (auto& ps : prep.shadows) {
-                for (const auto& [note, instrumentPlayerPtr] : ps.noteRoutes)
-                    this->instrumentPlayersByNote[note].push_back(instrumentPlayerPtr);
-                auto* shadowPlayer = ps.instrumentPlayer.get();
-                this->lastAppliedShadowFingerprints[shadowPlayer] = ps.stateFingerprint;
-                this->lastAppliedShadowReloadFingerprints[shadowPlayer] = ps.reloadFingerprint;
-                this->instrumentPlayerPtrs.push_back(std::move(ps.instrumentPlayer));
-            }
-        }
-
-        this->lastAppliedSlotFingerprints = std::move(nextSlotFingerprints);
-        this->lastAppliedSlotReloadFingerprints = std::move(nextSlotReloadFingerprints);
-        this->lastAppliedInstrumentMapText = normalizedMapText;
-    }
-    // Old instrument players are destroyed here outside the lock. The audio thread cannot access them.
+    applyPlan.nextSlotFingerprints = std::move(nextSlotFingerprints);
+    applyPlan.nextSlotReloadFingerprints = std::move(nextSlotReloadFingerprints);
+    applyPlan.normalizedMapText = normalizedMapText;
+    auto commitResult = this->commitInstrumentMapApply(applyPlan);
+    const int applied = commitResult.appliedPlayerCount;
 
     if (applied > 0 && this->sampleLoaderPtr != nullptr)
         this->sampleLoaderPtr->getQueue().startProcessing();
@@ -1139,9 +1069,92 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         statusLines.add("Instrument map applied successfully");
 
     this->lastInstrumentMapStatus = statusLines.joinIntoString("\n");
-    LOG(Info, "=== useInstrumentMap done: applied=" + juce::String(applied) + " oldPlayers=" + juce::String(oldPlayers.size())
-        + " totalPlayers=" + juce::String(this->instrumentPlayerPtrs.size()) + " ===");
+    LOG(Info, "=== useInstrumentMap done: applied=" + juce::String(applied) + " oldPlayers=" + juce::String(commitResult.retiredPlayers.size())
+        + " totalPlayers=" + juce::String(commitResult.totalPlayerCount) + " ===");
     return applied > 0;
+}
+
+DrumKitEngine::InstrumentMapCommitResult DrumKitEngine::commitInstrumentMapApply(InstrumentMapApplyPlan& plan) {
+    InstrumentMapCommitResult result;
+    result.appliedPlayerCount = plan.preparedPlayerCount;
+    result.retiredPlayers.reserve(this->instrumentPlayerPtrs.size());
+
+    std::unordered_set<juce::String> shadowSlotIdsToRemove;
+    shadowSlotIdsToRemove.reserve(plan.preparedSlots.size());
+    for (const auto& preparedSlot : plan.preparedSlots) {
+        if (preparedSlot.removeOldShadows) shadowSlotIdsToRemove.insert(preparedSlot.slotId);
+    }
+
+    std::unordered_set<InstrumentPlayer*> removedShadowPlayers;
+    removedShadowPlayers.reserve(this->instrumentPlayerPtrs.size());
+
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+
+    if (!shadowSlotIdsToRemove.empty()) {
+        for (int idx = static_cast<int>(this->instrumentPlayerPtrs.size()) - 1; idx >= this->primaryInstrumentPlayerCount; --idx) {
+            auto* shadowPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
+            if (shadowPlayer == nullptr || shadowSlotIdsToRemove.find(shadowPlayer->getId()) == shadowSlotIdsToRemove.end()) continue;
+            removedShadowPlayers.insert(shadowPlayer);
+            this->lastAppliedShadowFingerprints.erase(shadowPlayer);
+            this->lastAppliedShadowReloadFingerprints.erase(shadowPlayer);
+            result.retiredPlayers.push_back(std::move(this->instrumentPlayerPtrs[static_cast<size_t>(idx)]));
+            this->instrumentPlayerPtrs.erase(this->instrumentPlayerPtrs.begin() + idx);
+        }
+    }
+
+    bool anyPrimarySwapped = false;
+    for (auto& preparedSlot : plan.preparedSlots) {
+        if (preparedSlot.primaryReplacement && preparedSlot.primaryIndex >= 0 && preparedSlot.primaryIndex < static_cast<int>(this->instrumentPlayerPtrs.size())) {
+            const auto primaryIndex = static_cast<size_t>(preparedSlot.primaryIndex);
+            result.retiredPlayers.push_back(std::move(this->instrumentPlayerPtrs[primaryIndex]));
+            this->instrumentPlayerPtrs[primaryIndex] = std::move(preparedSlot.primaryReplacement);
+            this->instrumentPlayerById[preparedSlot.slotId] = this->instrumentPlayerPtrs[primaryIndex].get();
+            anyPrimarySwapped = true;
+        } else if (preparedSlot.primaryParameterUpdate.has_value() && preparedSlot.primaryIndex >= 0 && preparedSlot.primaryIndex < static_cast<int>(this->instrumentPlayerPtrs.size())) {
+            DrumKitEngine::applyPreparedMapLayerUpdate(*this->instrumentPlayerPtrs[static_cast<size_t>(preparedSlot.primaryIndex)], *preparedSlot.primaryParameterUpdate, preparedSlot.primaryParameterRoutes);
+            ++result.appliedPlayerCount;
+        }
+
+        for (const auto& shadowUpdate : preparedSlot.shadowParameterUpdates) {
+            if (shadowUpdate.instrumentPlayer == nullptr) continue;
+            DrumKitEngine::applyPreparedMapLayerUpdate(*shadowUpdate.instrumentPlayer, shadowUpdate.update, {});
+            this->lastAppliedShadowFingerprints[shadowUpdate.instrumentPlayer] = shadowUpdate.stateFingerprint;
+            ++result.appliedPlayerCount;
+        }
+    }
+
+    if (anyPrimarySwapped) {
+        this->rebuildPrimaryInstrumentNoteRouting();
+        if (this->activeKitLayoutPtr != nullptr) {
+            for (int idx = this->primaryInstrumentPlayerCount; idx < static_cast<int>(this->instrumentPlayerPtrs.size()); ++idx) {
+                auto* shadowPlayer = this->instrumentPlayerPtrs[static_cast<size_t>(idx)].get();
+                if (shadowPlayer == nullptr) continue;
+                const auto layoutIt = std::find_if(this->activeKitLayoutPtr->instrumentSlots.begin(), this->activeKitLayoutPtr->instrumentSlots.end(), [&shadowPlayer](const KitLayout::InstrumentSlot& slot) { return slot.id == shadowPlayer->getId(); });
+                if (layoutIt != this->activeKitLayoutPtr->instrumentSlots.end()) this->addShadowPlayerNoteRoutes(*shadowPlayer, *layoutIt);
+            }
+        }
+    } else if (!removedShadowPlayers.empty()) {
+        for (auto& [note, instrumentPlayers] : this->instrumentPlayersByNote) {
+            juce::ignoreUnused(note);
+            std::erase_if(instrumentPlayers, [&removedShadowPlayers](InstrumentPlayer* instrumentPlayer) { return removedShadowPlayers.find(instrumentPlayer) != removedShadowPlayers.end(); });
+        }
+    }
+
+    for (auto& preparedSlot : plan.preparedSlots) {
+        for (auto& preparedShadow : preparedSlot.shadows) {
+            for (const auto& [note, instrumentPlayerPtr] : preparedShadow.noteRoutes) this->instrumentPlayersByNote[note].push_back(instrumentPlayerPtr);
+            auto* shadowPlayer = preparedShadow.instrumentPlayer.get();
+            this->lastAppliedShadowFingerprints[shadowPlayer] = preparedShadow.stateFingerprint;
+            this->lastAppliedShadowReloadFingerprints[shadowPlayer] = preparedShadow.reloadFingerprint;
+            this->instrumentPlayerPtrs.push_back(std::move(preparedShadow.instrumentPlayer));
+        }
+    }
+
+    this->lastAppliedSlotFingerprints = std::move(plan.nextSlotFingerprints);
+    this->lastAppliedSlotReloadFingerprints = std::move(plan.nextSlotReloadFingerprints);
+    this->lastAppliedInstrumentMapText = std::move(plan.normalizedMapText);
+    result.totalPlayerCount = this->instrumentPlayerPtrs.size();
+    return result;
 }
 
 ParseResult<DrumKitEngine::InstrumentMap> DrumKitEngine::parseInstrumentMapText(const juce::String& text) {

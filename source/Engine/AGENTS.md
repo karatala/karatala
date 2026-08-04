@@ -13,7 +13,7 @@
 - `KitLibModel.h` declares parsed library metadata and shared library identity matching. `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` own value types, instrument/sample parsing, and kit/library scanning.
 - `LibraryKitOverrides*` owns sparse user-authored library kit corrections loaded from and saved to each kit's `kit-overrides.yml`.
 - `SampleLoader*` owns asynchronous sample loading and publication.
-- `DrumKitEngine.cpp` owns core lifecycle and process-block coordination. `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, `DrumKitEngineLibraryKitOverrides.cpp`, and `DrumKitEngineMapApply.cpp` own their named workflows.
+- `DrumKitEngine.cpp` owns core lifecycle and process-block coordination. `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, `DrumKitEngineLibraryKitOverrides.cpp`, and `DrumKitEngineMapApply.cpp` own their named workflows. Instrument-map apply prepares replacement players, value-based parameter updates, fingerprints, and note routes before `commitInstrumentMapApply()` publishes them under `engineGraphLock`.
 - `LayoutManager*` owns kit and mic layout models plus generic layout discovery. `LayoutYaml.cpp` owns YAML parsing, validation, and serialization.
 - `MicRoutingPlan*` owns resolved output allocation and mic-route lookup.
 
@@ -52,6 +52,7 @@
 - Every instrument map layer stores one required articulation-slot target and one full `kit/instrument/articulation` library path.
 - Whole-instrument slot replacement accepts any available library instrument. It removes every existing map layer for that slot and preserves every other slot. It uses an exact articulation-slot match first. Otherwise, it uses the first available slot from the configured instrument-type fallback order and reports a warning. It skips the library articulation with a warning when no fallback slot is available.
 - Linked pad-popup edits resolve map layers before locking. Then they apply each parameter or mic-route batch under one `engineGraphLock`. A mic update changes only that stable mic code and preserves every other mic value.
+- Instrument-map apply must not retain pointers to parsed map layers in its commit plan. Retired instrument players stay alive until after `engineGraphLock` is released.
 
 # Work Guidance
 

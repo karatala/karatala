@@ -255,7 +255,7 @@ public:
     bool updateMappedLibraryArticulationParameters(const juce::String& slotId, const juce::String& artName, const juce::String& qualifiedLibraryArticulationId, int libraryArticulationOccurrenceIndex, const LayerParameterUpdate& update);
     bool updateSlotMicRoutesBatch(const std::vector<MicRouteTarget>& targets);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
-    
+
     void logMessage(const juce::String& msg, DebugLevel debugLevel);
     DebugLevel maxDebugLevel = DebugLevel::Error;
 
@@ -367,7 +367,10 @@ private:
     bool applyKitLayout();
     bool applyMicLayout();
     bool applyMicLayoutUnlocked();
+    struct InstrumentMapApplyPlan;
+    struct InstrumentMapCommitResult;
     bool useInstrumentMapInternal(juce::String text, const juce::String& changedSlotIdHint);
+    InstrumentMapCommitResult commitInstrumentMapApply(InstrumentMapApplyPlan& plan);
     void buildNoteNameCache();
     void regenerateSuggestedInstrumentMapText();
     void clearShadowPlayers();
@@ -377,6 +380,7 @@ private:
     static bool playerMatchesTargetRoutes(const InstrumentPlayer& instrumentPlayer, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes);
     static bool playerRoutesArticulationSlot(const InstrumentPlayer& instrumentPlayer, const KitLayout::InstrumentSlot::ArticulationSlot& art);
     static void applyLayerParameterUpdate(InstrumentPlayer& instrumentPlayer, const LayerParameterUpdate& update);
+    static void applyPreparedMapLayerUpdate(InstrumentPlayer& instrumentPlayer, const LayerParameterUpdate& update, const std::vector<std::pair<uint32_t, uint32_t>>& targetRoutes);
     std::string makePreviewTargetCacheKey(const juce::String& kitCodeRaw,
                                           const juce::String& instCode,
                                           const juce::String& artCode,
