@@ -297,7 +297,7 @@ Start with physical moves of existing member functions. Do not change behavior d
 | [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp) | ✅ `DrumKitEngineLibraryKitOverrides.cpp`, `DrumKitEngineSettings.cpp`, `DrumKitEnginePreview.cpp`, and `DrumKitEngineMapApply.cpp` | ✅ `InstrumentMapApplyPlan` now carries prepared replacements, value-based parameter updates, fingerprints, and note routes into `commitInstrumentMapApply()`. Parsed map-layer pointers and velocity-response parsing stay outside the locked commit. |
 | [InstrumentPlayerController.cpp](../source/Engine/InstrumentPlayerController.cpp) | ✅ `InstrumentPlayerHiHat.cpp`, `InstrumentPlayerAftertouch.cpp`, and `InstrumentPlayerNotePlayback.cpp` | ✅ Hi-hat selection, ordered per-voice transition, and finalization now use scalar state/stat records. Aftertouch choke uses a fixed 64-voice preparation plan and commits only after every target mic passes validation. |
 | [PadContextPopup.cpp](../source/UI/PadContextPopup.cpp) | ✅ `PadContextPopupMapLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` | ✅ `LinkedMapEdit` now owns the editable map, rebuilt layer projections, selected projection index, and target projections for both parameter and mic-route changes. No projection pointer survives a vector rebuild. |
-| [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | ✅ `InstrumentPlayerLibraryUpdates.cpp`, `InstrumentPlayerParameters.cpp`, and `InstrumentPlayerRouting.cpp`; sample loading stays in the narrowed original file | Divide `createVelocityLevels()` into sound creation, logical-hit grouping, early-load selection, and queue submission. |
+| [InstrumentPlayerLoader.cpp](../source/Engine/InstrumentPlayerLoader.cpp) | ✅ `InstrumentPlayerLibraryUpdates.cpp`, `InstrumentPlayerParameters.cpp`, and `InstrumentPlayerRouting.cpp`; sample loading stays in the narrowed original file | ✅ `createVelocityLevels()` now coordinates `createVelocityLevelSound()`, logical-hit construction, early-load selection, and ordered queue submission. The complete workflow stays in the cohesive loader file. |
 | `KitLibModel.cpp` (removed) | ✅ `KitLibValueTypes.cpp`, `KitLibInstrument.cpp`, and `KitLibLibrary.cpp` | Keep calibration with the instrument implementation unless it grows into a substantial independent module. Split `KitLibModel.h` later, starting with independent enums and small records. Parent pointers make an immediate full header split risky. |
 | [LibraryArticulationEditor.cpp](../source/UI/LibraryArticulationEditor.cpp) | ✅ Main component, `LibraryArticulationEditorState.cpp`, and `LibraryArticulationEditorPreview.cpp` | Consider a separate selection state model only after the low-risk file split. |
 | [PluginEditor.cpp](../source/PluginEditor.cpp) | ✅ Main coordinator and `PluginEditorPresetsAndPopups.cpp` | Keep the editor as the coordinator. Split presets and popups only when either becomes a substantial independent module. |
@@ -493,7 +493,7 @@ benchmarks/
 1. ✅ Divide instrument-map preparation from its locked commit.
 2. ✅ Divide hi-hat and aftertouch workflows into bounded realtime-safe steps.
 3. ✅ Add owned linked-edit state to `PadContextPopup`.
-4. Divide velocity-level construction into named phases.
+4. ✅ Divide velocity-level construction into named phases.
 
 Verification for this phase:
 

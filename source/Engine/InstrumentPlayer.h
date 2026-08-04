@@ -723,6 +723,26 @@ private:
         , ArtRtIdx artIdx
         , MicRoutingBuilder& micRouting
     );
+    std::shared_ptr<SampledSound> createVelocityLevelSound(KitLib::InstrumentSpec* instSpec
+        , const KitLayout::MidiNotes& notes
+        , KitLib::ArticulationSpec* artSpec
+        , KitLib::SampleSpec* sampleSpec
+        , const VelocityLevelRuntime& velocityLevel
+        , const ArticulationRuntime& artRt
+        , ArtRtIdx artIdx
+        , MicRoutingBuilder& micRouting
+        , bool articulationCalibrationAvailable
+    );
+    void buildVelocityLevelLogicalHits(KitLib::InstrumentSpec* instSpec
+        , const KitLayout::MidiNotes& notes
+        , KitLib::ArticulationSpec* artSpec
+        , ArticulationRuntime& artRt
+        , ArtRtIdx artIdx
+        , MicRoutingBuilder& micRouting
+        , bool articulationCalibrationAvailable
+    );
+    void selectEarlyLoadLogicalHits(ArticulationRuntime& artRt);
+    void enqueueVelocityLevelSamples(const KitLib::InstrumentSpec& instSpec, const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt);
     void buildCcMappings(const ArticulationSlot& articulationSlot, KitLib::ArticulationSpec* artSpec, ArtRtIdx artIdx, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
     int getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;

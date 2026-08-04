@@ -144,6 +144,56 @@ void InstrumentPlayer::createVelocityLevels(KitLib::InstrumentSpec* instSpec
         }
     }
 
+    this->buildVelocityLevelLogicalHits(instSpec, notes, artSpec, artRt, artIdx, micRouting, articulationCalibrationAvailable);
+    artRt.buildVelocityMapping(this->parent->getVelocityResponse());
+    this->selectEarlyLoadLogicalHits(artRt);
+    this->enqueueVelocityLevelSamples(*instSpec, *artSpec, artRt);
+}
+
+std::shared_ptr<SampledSound> InstrumentPlayer::createVelocityLevelSound(KitLib::InstrumentSpec* instSpec
+    , const KitLayout::MidiNotes& notes
+    , KitLib::ArticulationSpec* artSpec
+    , KitLib::SampleSpec* sampleSpec
+    , const VelocityLevelRuntime& velocityLevel
+    , const ArticulationRuntime& artRt
+    , ArtRtIdx artIdx
+    , MicRoutingBuilder& micRouting
+    , bool articulationCalibrationAvailable
+) {
+    const int fileChannelCount = sampleSpec->fileChannelCount > 0 ? sampleSpec->fileChannelCount : sampleSpec->micSpec.channels;
+    const auto assignment = micRouting.resolve(sampleSpec->micSpec, fileChannelCount);
+    if (assignment.globalStart < 0) return {};
+
+    auto sound = std::make_shared<SampledSound>(instSpec, sampleSpec, sampleSpec->sampleFile, notes);
+    const std::optional<int> effectiveBalance = this->instrumentSlot.balance.has_value()
+        ? this->instrumentSlot.balance
+        : (artSpec->balanceConflict && !artSpec->balanceOverride.has_value() ? std::optional<int> {} : artSpec->getEffectiveBalance());
+    sound->decayEnvelope = sampleSpec->decayEnvelope;
+    if (articulationCalibrationAvailable && sound->decayEnvelope.isValid()) sound->decayEnvelope.peakDb += velocityLevel.calibrationTrimDb.value_or(0.0f);
+    if ((sampleSpec->hasCsvMetadata || !sampleSpec->decayCode.isEmpty()) && !sound->decayEnvelope.isValid()) {
+        LOG(Warning, "Invalid decay metadata for sample: " + sampleSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
+    }
+    sound->micBufferChannelStart = assignment.globalStart;
+    sound->micBufferChannelCount = assignment.channels;
+    sound->routedMicCode = assignment.micCode;
+    sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
+    sound->cachedMicBleedGain.store(this->getMicBleedLevel(sampleSpec->micSpec.raw), std::memory_order_relaxed);
+    sound->playbackOffsetMs = sampleSpec->playbackOffsetMs;
+    sound->canonicalFixedGainDb = sampleSpec->manualGainDb + (articulationCalibrationAvailable ? velocityLevel.calibrationTrimDb.value_or(0.0f) : 0.0f);
+    sound->requestedFixedGainDb = sound->canonicalFixedGainDb;
+    sound->runtimeArticulationIndex = artIdx;
+    InstrumentPlayer::configureSoundMicPlacement(*sound, sampleSpec->micSpec, fileChannelCount, assignment.channels, assignment.applyBalance, effectiveBalance, artRt.parameters.pan);
+    return sound;
+}
+
+void InstrumentPlayer::buildVelocityLevelLogicalHits(KitLib::InstrumentSpec* instSpec
+    , const KitLayout::MidiNotes& notes
+    , KitLib::ArticulationSpec* artSpec
+    , ArticulationRuntime& artRt
+    , ArtRtIdx artIdx
+    , MicRoutingBuilder& micRouting
+    , bool articulationCalibrationAvailable
+) {
     for (const auto& velocityLevelSpec : artSpec->velocityLevels) {
         VelocityLevelRuntime velocityLevel;
         velocityLevel.velocity = velocityLevelSpec->velocity;
@@ -162,30 +212,8 @@ void InstrumentPlayer::createVelocityLevels(KitLib::InstrumentSpec* instSpec
             logicalHit.preTrimIntensityDb = logicalHitSpec->intensityDb;
 
             for (const auto& sampleSpec : logicalHitSpec->samples) {
-                const int fileChannelCount = sampleSpec->fileChannelCount > 0 ? sampleSpec->fileChannelCount : sampleSpec->micSpec.channels;
-                const auto assignment = micRouting.resolve(sampleSpec->micSpec, fileChannelCount);
-                if (assignment.globalStart < 0) continue;
-
-                auto sound = std::make_shared<SampledSound>(instSpec, sampleSpec.get(), sampleSpec->sampleFile, notes);
-                const std::optional<int> effectiveBalance = this->instrumentSlot.balance.has_value()
-                    ? this->instrumentSlot.balance
-                    : (artSpec->balanceConflict && !artSpec->balanceOverride.has_value() ? std::optional<int> {} : artSpec->getEffectiveBalance());
-                sound->decayEnvelope = sampleSpec->decayEnvelope;
-                if (articulationCalibrationAvailable && sound->decayEnvelope.isValid()) sound->decayEnvelope.peakDb += velocityLevel.calibrationTrimDb.value_or(0.0f);
-                if ((sampleSpec->hasCsvMetadata || !sampleSpec->decayCode.isEmpty()) && !sound->decayEnvelope.isValid()) {
-                    LOG(Warning, "Invalid decay metadata for sample: " + sampleSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
-                }
-                sound->micBufferChannelStart = assignment.globalStart;
-                sound->micBufferChannelCount = assignment.channels;
-                sound->routedMicCode = assignment.micCode;
-                sound->routedMicCodeId = StringsDictSingleton::getId(assignment.micCode);
-                sound->cachedMicBleedGain.store(this->getMicBleedLevel(sampleSpec->micSpec.raw), std::memory_order_relaxed);
-                sound->playbackOffsetMs = sampleSpec->playbackOffsetMs;
-                sound->canonicalFixedGainDb = sampleSpec->manualGainDb + (articulationCalibrationAvailable ? velocityLevel.calibrationTrimDb.value_or(0.0f) : 0.0f);
-                sound->requestedFixedGainDb = sound->canonicalFixedGainDb;
-                sound->runtimeArticulationIndex = artIdx;
-                InstrumentPlayer::configureSoundMicPlacement(*sound, sampleSpec->micSpec, fileChannelCount, assignment.channels, assignment.applyBalance, effectiveBalance, artRt.parameters.pan);
-
+                auto sound = this->createVelocityLevelSound(instSpec, notes, artSpec, sampleSpec.get(), velocityLevel, artRt, artIdx, micRouting, articulationCalibrationAvailable);
+                if (sound == nullptr) continue;
                 this->addSound(sound);
                 SampleEntry sampleEntry;
                 sampleEntry.sound = sound.get();
@@ -201,9 +229,9 @@ void InstrumentPlayer::createVelocityLevels(KitLib::InstrumentSpec* instSpec
         }
         artRt.velocityLevels.push_back(std::move(velocityLevel));
     }
+}
 
-    artRt.buildVelocityMapping(this->parent->getVelocityResponse());
-
+void InstrumentPlayer::selectEarlyLoadLogicalHits(ArticulationRuntime& artRt) {
     static constexpr std::array<float, 5> CALIBRATED_EARLY_TARGETS_DB { -24.0f, -12.0f, -6.0f, -3.0f, 0.0f };
     static constexpr std::array<int, 5> UNCALIBRATED_EARLY_VELOCITIES { 10, 35, 65, 95, 120 };
     for (size_t targetIdx = 0; targetIdx < CALIBRATED_EARLY_TARGETS_DB.size(); ++targetIdx) {
@@ -236,7 +264,9 @@ void InstrumentPlayer::createVelocityLevels(KitLib::InstrumentSpec* instSpec
         }
         if (foundLogicalHit) artRt.velocityLevels[bestVelocityLevelIdx].logicalHits[bestLogicalHitIdx].earlyLoad = true;
     }
+}
 
+void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec& instSpec, const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt) {
     SampleLoader* loader = this->getSampleLoader();
     if (loader == nullptr) return;
     for (int loadPass = 0; loadPass < 2; ++loadPass) {
@@ -261,8 +291,8 @@ void InstrumentPlayer::createVelocityLevels(KitLib::InstrumentSpec* instSpec
 
                     loader->getQueue().enqueueCandidate(
                         loadSpec,
-                        instSpec->meta.type,
-                        artSpec->nameId,
+                        instSpec.meta.type,
+                        artSpec.nameId,
                         velocityLevel.velocity,
                         logicalHit.roundRobinId,
                         logicalHit.earlyLoad,
