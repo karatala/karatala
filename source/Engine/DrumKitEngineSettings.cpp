@@ -169,35 +169,35 @@ ParseResult<DrumKitEngine::VelocityResponsePreset> DrumKitEngine::saveVelocityRe
     return result;
 }
 
-DrumKitEngine::LibraryVelocityResponseInfo DrumKitEngine::getLibraryVelocityResponseInfo(const juce::String& sourcePath) const {
+DrumKitEngine::LibraryVelocityResponseInfo DrumKitEngine::getLibraryVelocityResponseInfo(const juce::String& qualifiedLibraryArticulationId) const {
     LibraryVelocityResponseInfo result;
     if (this->libraryManagerPtr == nullptr) return result;
 
-    juce::StringArray sourceParts;
-    sourceParts.addTokens(sourcePath.trim(), "/", "");
-    sourceParts.removeEmptyStrings();
-    if (sourceParts.size() < 2) return result;
+    juce::StringArray idParts;
+    idParts.addTokens(qualifiedLibraryArticulationId.trim(), "/", "");
+    idParts.removeEmptyStrings();
+    if (idParts.size() < 2) return result;
 
-    const auto* kit = this->libraryManagerPtr->findKitById(sourceParts[0]);
-    const auto* instrument = kit != nullptr ? kit->findInstrumentById(sourceParts[1]) : nullptr;
-    if (instrument == nullptr) return result;
+    const auto* libraryKit = this->libraryManagerPtr->findKitById(idParts[0]);
+    const auto* libInst = libraryKit != nullptr ? libraryKit->findInstrumentById(idParts[1]) : nullptr;
+    if (libInst == nullptr) return result;
 
-    const KitLib::ArticulationSpec* articulation = nullptr;
-    if (sourceParts.size() >= 3) articulation = instrument->findArticulationById(sourceParts[2]);
-    else if (instrument->articulationSpecs.size() == 1) articulation = instrument->articulationSpecs.front().get();
-    if (articulation == nullptr) return result;
+    const KitLib::ArticulationSpec* libArt = nullptr;
+    if (idParts.size() >= 3) libArt = libInst->findArticulationById(idParts[2]);
+    else if (libInst->articulationSpecs.size() == 1) libArt = libInst->articulationSpecs.front().get();
+    if (libArt == nullptr) return result;
 
     result.libraryArticulationFound = true;
     std::optional<float> hardestFittedDb;
-    for (auto velocityLevelIt = articulation->velocityLevels.rbegin(); velocityLevelIt != articulation->velocityLevels.rend(); ++velocityLevelIt) {
+    for (auto velocityLevelIt = libArt->velocityLevels.rbegin(); velocityLevelIt != libArt->velocityLevels.rend(); ++velocityLevelIt) {
         if (*velocityLevelIt != nullptr && (*velocityLevelIt)->fittedSourceDb.has_value()) {
             hardestFittedDb = (*velocityLevelIt)->fittedSourceDb;
             break;
         }
     }
 
-    result.levels.reserve(articulation->velocityLevels.size());
-    for (const auto& velocityLevel : articulation->velocityLevels) {
+    result.levels.reserve(libArt->velocityLevels.size());
+    for (const auto& velocityLevel : libArt->velocityLevels) {
         if (velocityLevel == nullptr) continue;
         VelocityResponseLevelInfo level;
         level.velocity = velocityLevel->velocity;

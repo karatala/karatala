@@ -191,11 +191,11 @@ ParseResult<std::vector<MicSpec>> MicSpec::parseMicCodesChain(const juce::String
     parts.removeEmptyStrings();
 
     for (const auto& part : parts) {
-        auto item = MicSpec::parseMicCode(part);
-        if (item.ok())
-            result.value.push_back(item.value);
+        auto parsedMic = MicSpec::parseMicCode(part);
+        if (parsedMic.ok())
+            result.value.push_back(parsedMic.value);
         else
-            result.addWarning("Skipping invalid mic code '" + part + "' in chain '" + codeChain + "': '" + item.error() + "'");
+            result.addWarning("Skipping invalid mic code '" + part + "' in chain '" + codeChain + "': '" + parsedMic.error() + "'");
     }
     return result;
 }

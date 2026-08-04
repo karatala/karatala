@@ -395,12 +395,44 @@ juce::String libraryArticulationForSlot(const InstrumentMap::Layer& mapLayer, co
     return {};
 }
 
-juce::String libraryPathForArticulationSlot(const InstrumentMap::Layer& mapLayer, const juce::String& articulationSlotCode) {
-    juce::String libraryPath = mapLayer.kitRef;
-    if (mapLayer.instCode.isNotEmpty()) libraryPath += "/" + mapLayer.instCode;
-    const auto libraryArticulation = libraryArticulationForSlot(mapLayer, articulationSlotCode);
-    if (libraryArticulation.isNotEmpty()) libraryPath += "/" + libraryArticulation;
-    return libraryPath;
+juce::String qualifiedLibraryArticulationIdForSlot(const InstrumentMap::Layer& mapLayer, const juce::String& articulationSlotCode) {
+    juce::String qualifiedId = mapLayer.kitRef;
+    if (mapLayer.instCode.isNotEmpty()) qualifiedId += "/" + mapLayer.instCode;
+    const auto libArtId = libraryArticulationForSlot(mapLayer, articulationSlotCode);
+    if (libArtId.isNotEmpty()) qualifiedId += "/" + libArtId;
+    return qualifiedId;
+}
+
+bool usesLegacyArticulationSlotExpressionFilter(const std::vector<juce::String>& articulationSlotFilters, const juce::String& articulationSlotCode) {
+    if (!articulationSlotCode.containsChar('[') || articulationSlotFilters.empty()) return false;
+    for (const auto& filter : articulationSlotFilters)
+        if (ArticulationNames::articulationCodeMatches(filter, articulationSlotCode)) return false;
+    for (const auto& filter : articulationSlotFilters)
+        if (ArticulationNames::mapFilterMatchesArticulation(filter, articulationSlotCode)) return true;
+    return false;
+}
+
+juce::String resolveLegacyHihatLibraryArticulationId(const KitLib::DrumKitSpec& libraryKit, const juce::String& qualifiedLibraryArticulationId, const juce::String& articulationSlotCode) {
+    const int expressionStartIdx = articulationSlotCode.indexOfChar('[');
+    const int expressionEndIdx = articulationSlotCode.indexOfChar(expressionStartIdx + 1, ']');
+    if (expressionStartIdx < 0 || expressionEndIdx <= expressionStartIdx + 1) return qualifiedLibraryArticulationId;
+
+    juce::StringArray idParts;
+    idParts.addTokens(qualifiedLibraryArticulationId.trim(), "/", "");
+    idParts.removeEmptyStrings();
+    if (idParts.size() < 3) return qualifiedLibraryArticulationId;
+
+    const auto baseLibArtId = ArticulationNames::baseArticulationName(idParts[2]);
+    const auto articulationSlotExpression = articulationSlotCode.substring(expressionStartIdx + 1, expressionEndIdx).trim();
+    if (baseLibArtId.isEmpty() || articulationSlotExpression.isEmpty()) return qualifiedLibraryArticulationId;
+
+    const auto* libInst = libraryKit.findInstrumentById(idParts[1]);
+    if (libInst == nullptr) return qualifiedLibraryArticulationId;
+
+    const auto* libArt = libInst->findArticulationById(baseLibArtId + "[" + articulationSlotExpression + "]");
+    if (libArt == nullptr) return qualifiedLibraryArticulationId;
+
+    return idParts[0] + "/" + libraryKit.getPreferredInstrumentId(*libInst) + "/" + libInst->getPreferredArticulationId(*libArt);
 }
 
 size_t isolateLayerForArticulationSlot(InstrumentMap::Map& instrumentMap, const KitLayout::InstrumentSlot& slot, size_t mapLayerIndex, const juce::String& articulationSlotCode) {

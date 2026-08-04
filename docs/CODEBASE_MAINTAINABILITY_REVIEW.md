@@ -196,7 +196,7 @@ Good small candidates:
 - ✅ [PluginEditor.cpp](../source/PluginEditor.cpp) now creates its processing suspension guard through one local operation. The guard remains before the callback lock at all four call sites.
 - ✅ The cohesive [Parsing.h](../source/Config/Parsing.h) and [Parsing.cpp](../source/Config/Parsing.cpp) module now owns parse results, wrapped-text parsing, and strict finite-float parsing. The float parser preserves full-input, range, finite-value, and locale behavior.
 - `parseSignedGainDb()` and `parseSignedOffsetMs()` in [KitLibInstrument.cpp](../source/Engine/KitLibInstrument.cpp) can share one signed metadata number parser while retaining clear wrapper names.
-- Search term syntax is repeated in [KitPage.cpp](../source/UI/KitPage.cpp) and [SourcePickerPopup.cpp](../source/UI/SourcePickerPopup.cpp). Add one UI search matcher.
+- Search term syntax is repeated in [KitPage.cpp](../source/UI/KitPage.cpp) and [LibraryAssignmentPicker.cpp](../source/UI/LibraryAssignmentPicker.cpp). Add one UI search matcher.
 - Sample load type groups are repeated in two large switches in [SampleLoader.cpp](../source/Engine/SampleLoader.cpp), lines 53-179. Use one local load-class classifier, but keep the special kick, snare, hi-hat, ride, crash, and tom rules explicit.
 - Data path resolution is repeated in [DrumKitEngine.cpp](../source/Engine/DrumKitEngine.cpp), lines 161-172, and [DrumKitEngineController.cpp](../source/Engine/DrumKitEngineController.cpp), lines 23-30. Use one constructor-independent data-path resolver.
 - The same 16-byte BLAKE2b file identity is implemented in [generate_sample_metadata.py](../scripts/generate_sample_metadata.py), lines 232-238, and [apply_kit_overrides.py](../scripts/apply_kit_overrides.py), lines 47-55. Put the standard-library-only algorithm in one script module.
@@ -244,7 +244,7 @@ The broad production helper files from this review are now removed or narrowed. 
 | `DrumKitEngineMapHelpers.h/.cpp` | ✅ Removed. Map data and text stay in `Engine/InstrumentMap/InstrumentMap.*`; reusable layout/library-aware operations are in `InstrumentMapOperations.*`; player lifecycle helpers are private in `DrumKitEngine.cpp`. |
 | [ArticulationNames.h](../source/Engine/ArticulationNames.h) | ✅ Renamed by responsibility and kept as one cohesive `Engine` header. Create an articulation feature folder only if this module grows to several files. |
 | `DrumKitEnginePreviewHelpers.h` | ✅ Removed. Its one-use private logic is now in `DrumKitEnginePreview.cpp`. |
-| `UIHelpers.h/.cpp` | ✅ Removed. `UIComponentStyle.*` owns styling, `SourceItem.*` owns library source lookup, and concrete controls own MIDI assignment and compact value text. |
+| `UIHelpers.h/.cpp` | ✅ Removed. `UIComponentStyle.*` owns styling, `AvailableLibraryArticulation.*` owns available library articulation collection and lookup, and concrete controls own MIDI assignment and compact value text. |
 | `KitHomePanelHelpers.h` | ✅ Removed with the old Kit page. Its one remaining preset-name operation is private in `KitPage.cpp`. |
 | `DrumPadHelpers.h` | ✅ Removed. Its private operations are in `DrumPad.cpp`. |
 | `ParameterPotHelpers.h` | ✅ Removed. Its small operations are private in `HorizontalKnobBrick.cpp`, `EngineSettingsPanel.cpp`, and `TroubleshootingPanel.cpp`. |
@@ -283,7 +283,7 @@ Use these rules:
 1. ✅ Remove one-use helper headers by moving their code into the owning `.cpp`.
 2. ✅ Removed `KitHomePanelHelpers.h` as part of the Kit page replacement.
 3. ✅ Create the `InstrumentMap` feature pair when map types are extracted from `DrumKitEngine`.
-4. ✅ Split `UIHelpers` into `UIComponentStyle`, `SourceItem`, and concrete control ownership.
+4. ✅ Split `UIHelpers` into `UIComponentStyle`, `AvailableLibraryArticulation`, and concrete control ownership.
 5. Split `Config/Helpers.h` one concern at a time. ✅ Parsing support moved first to the cohesive `Config/Parsing` module. Do not create a new general helper file.
 
 This order avoids a large move-only change and keeps each diff connected to a real cleanup.
@@ -475,7 +475,8 @@ source/
   UI/
     UITheme.h
     UIComponentStyle.h/.cpp
-    SourceItem.h/.cpp
+    AvailableLibraryArticulation.h/.cpp
+    LibraryAssignmentPicker.h/.cpp
     MidiNoteAssignmentControl.h/.cpp
     CompactParameterControl.h/.cpp
     ParameterPot.h/.cpp
@@ -483,7 +484,6 @@ source/
 tests/
   TestInstrumentMap.cpp
   TestInstrumentPlayer.cpp
-  TestSourceItem.cpp
 benchmarks/
   Benchmarks.cpp
 ```

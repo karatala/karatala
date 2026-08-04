@@ -145,7 +145,7 @@ public:
     juce::File getUserVelocityResponsePresetsDir() const { return this->dataPath.getChildFile("velocity_response_presets"); }
     std::vector<VelocityResponsePreset> getVelocityResponsePresets(juce::StringArray* warnings = nullptr) const;
     ParseResult<VelocityResponsePreset> saveVelocityResponsePreset(const juce::String& name, const juce::String& definition, bool replaceExisting) const;
-    LibraryVelocityResponseInfo getLibraryVelocityResponseInfo(const juce::String& sourcePath) const;
+    LibraryVelocityResponseInfo getLibraryVelocityResponseInfo(const juce::String& qualifiedLibraryArticulationId) const;
     LibraryArticulationInfo getLibraryArticulationInfo(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId) const;
     ParseResult<LibraryArticulationInfo> setLibraryVelocityUpperBoundary(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, int namedVelocity, std::optional<int> upperBoundary, bool persist = true);
     ParseResult<LibraryArticulationInfo> setLibraryVelocityUpperBoundariesBatch(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, const std::vector<VelocityUpperBoundaryTarget>& targets);
@@ -226,7 +226,7 @@ public:
      *  @param artCode        articulation code (e.g. "center"), empty = first articulation
      *  @param velocity       desired velocity 1-127
      */
-    void previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity, const juce::String& relativePath = {}, const juce::String& micCode = {});
+    void previewLibraryArticulation(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity, const juce::String& relativePath = {}, const juce::String& micCode = {});
     void rebuildMidiNoteRoutingFromLayout();
     void clearCrosstalkProfile();
     void beginCrosstalkCalibration();
@@ -252,7 +252,7 @@ public:
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, std::optional<int> tuningCents, std::optional<int> attackMs, std::optional<int> decayMs);
     void updateSlotParameters(const juce::String& slotId, const juce::String& artName, int layerIndex, const LayerParameterUpdate& update);
     bool updateSlotParametersBatch(const std::vector<LayerParameterTarget>& targets);
-    bool updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update);
+    bool updateMappedLibraryArticulationParameters(const juce::String& slotId, const juce::String& artName, const juce::String& qualifiedLibraryArticulationId, int libraryArticulationOccurrenceIndex, const LayerParameterUpdate& update);
     bool updateSlotMicRoutesBatch(const std::vector<MicRouteTarget>& targets);
     std::optional<juce::String> getNameForMidiNoteNumber(int note, int midiChannel);
     
@@ -313,15 +313,15 @@ private:
 
     class PreviewResolveJob : public juce::ThreadPoolJob {
     public:
-        PreviewResolveJob(DrumKitEngine& jobOwner, std::string jobCacheKey, juce::String sourceKitCodeRaw, juce::String sourceInstCode, juce::String sourceArtCode, juce::String sourceRelativePath, juce::String sourceMicCode, juce::uint8 targetResolveVelocity, juce::uint8 targetPlaybackVelocity, uint64_t targetGeneration)
+        PreviewResolveJob(DrumKitEngine& jobOwner, std::string jobCacheKey, juce::String newKitCodeRaw, juce::String newInstCode, juce::String newArtCode, juce::String newRelativePath, juce::String newMicCode, juce::uint8 targetResolveVelocity, juce::uint8 targetPlaybackVelocity, uint64_t targetGeneration)
             : juce::ThreadPoolJob("Preview Resolve Job")
             , owner(jobOwner)
             , cacheKey(std::move(jobCacheKey))
-            , kitCodeRaw(std::move(sourceKitCodeRaw))
-            , instCode(std::move(sourceInstCode))
-            , artCode(std::move(sourceArtCode))
-            , relativePath(std::move(sourceRelativePath))
-            , micCode(std::move(sourceMicCode))
+            , kitCodeRaw(std::move(newKitCodeRaw))
+            , instCode(std::move(newInstCode))
+            , artCode(std::move(newArtCode))
+            , relativePath(std::move(newRelativePath))
+            , micCode(std::move(newMicCode))
             , resolveVelocity(targetResolveVelocity)
             , playbackVelocity(targetPlaybackVelocity)
             , generation(targetGeneration) {
@@ -399,7 +399,7 @@ private:
                                      juce::uint8 playbackVelocity,
                                      uint64_t generation);
     void requestPreviewPlayback(const PreviewTarget& target, juce::uint8 velocity);
-    void invalidateSourcePreviewCache();
+    void invalidateLibraryPreviewCache();
     ParseResult<LibraryArticulationInfo> setLibraryPlacementBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance, bool articulationScope);
     bool publishSourceRecipeReload(const std::shared_ptr<SampledSound>& sound, uint64_t revision, float fixedGainDb, std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate);
 

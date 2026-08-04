@@ -65,7 +65,7 @@ public:
         this->midiCombo.setSelectedId(3, juce::dontSendNotification);
 
         this->filterEditor.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
-        this->filterEditor.setText("Source filter TextEditor", false);
+        this->filterEditor.setText("Library articulation filter", false);
         this->filterEditor.setTextToShowWhenEmpty("filter...", UITheme::Colours::textMuted);
 
         UIComponentStyle::configureMonoTextEditor(this->monoEditor, UITheme::Colours::textSecondary, true);
@@ -115,16 +115,16 @@ public:
             { "juce::ComboBox / standard", "Standard 20 px list selector", &this->standardCombo, 44, 340, UITheme::Sizes::standardControlHeight },
             { "juce::ComboBox / layout", "Standard 20 px layout selector", &this->layoutCombo, 44, 340, UITheme::Sizes::standardControlHeight },
             { "juce::ComboBox / MIDI", "Standard 20 px MIDI controller selector", &this->midiCombo, 44, 340, UITheme::Sizes::standardControlHeight },
-            { "juce::TextEditor / filter", "Source-picker filter with normal 14 px text", &this->filterEditor, 46, 420, UITheme::Sizes::standardControlHeight },
+            { "juce::TextEditor / filter", "Library assignment filter with normal 14 px text", &this->filterEditor, 46, 420, UITheme::Sizes::standardControlHeight },
             { "juce::TextEditor / mono", "Monospaced calibration and compact value editor style", &this->monoEditor, 78, 520 },
-            { "juce::ListBox", "List rows used by SourcePickerPopup", &this->listBox, 108, 420 },
+            { "juce::ListBox", "List rows used by LibraryAssignmentPicker", &this->listBox, 108, 420 },
             { "juce::PopupMenu", "Temporary menu opened by a standard 20 px button", &this->popupMenuButton, 42, 220, UITheme::Sizes::standardControlHeight },
         };
 
         this->fontUsages = {
-            { "normal()", UITheme::Fonts::normal(), "Instrument and articulation names, layer source details, and normal drum-pad labels" },
+            { "normal()", UITheme::Fonts::normal(), "Instrument and articulation names, library articulation details, and normal drum-pad labels" },
             { "normal() at 14 px", UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)),
-              "Standard buttons, toggles, dropdowns, menus, source lists, Raw, and Fix" },
+              "Standard buttons, toggles, dropdowns, menus, library assignment lists, Raw, and Fix" },
             { "normal().boldened()", UITheme::Fonts::normal().boldened(), "Drum-pad articulation cell labels" },
             { "label()", UITheme::Fonts::label(), "Editable values below ParameterPot controls" },
             { "label() at 13 px", UITheme::Fonts::label().withHeight(13.0f), "Editable values inside HorizontalKnobBrick controls" },
@@ -151,8 +151,8 @@ public:
             { "bgEditor", UITheme::Colours::bgEditor, "Raw text editor and MIDI map background" },
             { "bgPanel", UITheme::Colours::bgPanel, "Sidebar, StatusBar, popup groups, and knob gradient" },
             { "bgPanelRaised", UITheme::Colours::bgPanelRaised, "Menus, popup surfaces, and default widget background" },
-            { "bgControl", UITheme::Colours::bgControl, "Buttons, ComboBox fields, category controls, and source controls" },
-            { "bgControlAlt", UITheme::Colours::bgControlAlt, "Source picker lists and pad-popup source buttons" },
+            { "bgControl", UITheme::Colours::bgControl, "Buttons, ComboBox fields, category controls, and library articulation controls" },
+            { "bgControlAlt", UITheme::Colours::bgControlAlt, "Library assignment lists and pad-popup articulation buttons" },
             { "bgControlRaised", UITheme::Colours::bgControlRaised, "Knob gradient and inactive MIDI learn buttons" },
             { "borderSubtle", UITheme::Colours::borderSubtle, "Sidebar, StatusBar, table, ComboBox, and routing borders" },
             { "borderMid", UITheme::Colours::borderMid, "Rotary tracks, popup highlights, note-grid gaps, and tab background" },
@@ -166,16 +166,16 @@ public:
             { "textAccentSoft", UITheme::Colours::textAccentSoft, "MIDI map controller articulation text" },
             { "textSuccess", UITheme::Colours::textSuccess, "StatusBar success text" },
             { "accent", UITheme::Colours::accent, "Knob or slider fill, active marks, and destructive remove text" },
-            { "accentSoft", UITheme::Colours::accentSoft, "Source picker action indicator" },
-            { "accentWarning", UITheme::Colours::accentWarning, "Active toggles, invalid sources, and routing warnings" },
+            { "accentSoft", UITheme::Colours::accentSoft, "Library assignment action indicator" },
+            { "accentWarning", UITheme::Colours::accentWarning, "Active toggles, invalid library articulations, and routing warnings" },
             { "broadEditDanger", UITheme::Colours::broadEditDanger, "Active LINK ARTS and LINK TOMS BLEED controls" },
             { "midiLearnIdle", UITheme::Colours::midiLearnIdle, "Inactive MIDI learn symbol" },
             { "midiLearnActive", UITheme::Colours::midiLearnActive, "Active MIDI learn button background" },
             { "separator", UITheme::Colours::separator, "DrumPad cell and outer separators" },
             { "padEmpty", UITheme::Colours::padEmpty, "Empty DrumPad base" },
-            { "listRowOdd", UITheme::Colours::listRowOdd, "Alternating SourcePickerPopup row" },
+            { "listRowOdd", UITheme::Colours::listRowOdd, "Alternating LibraryAssignmentPicker row" },
             { "listSelection", UITheme::Colours::listSelection, "Selected list row and TextEditor selection" },
-            { "selectionStrong", UITheme::Colours::selectionStrong, "Selected source category and MIDI note" },
+            { "selectionStrong", UITheme::Colours::selectionStrong, "Selected library assignment category and MIDI note" },
             { "keyWhite", UITheme::Colours::keyWhite, "MidiNotePicker white key cells" },
             { "keyWhiteText", UITheme::Colours::keyWhiteText, "Text on white MIDI cells and active learn button" },
             { "keyBlack", UITheme::Colours::keyBlack, "MidiNotePicker black key cells" },
@@ -205,10 +205,10 @@ public:
             { "white at 60%", juce::Colours::white.withAlpha(0.6f), "Hovered or dragged ScrollBar thumb" },
             { "textPrimary at 20%", UITheme::Colours::textPrimary.withAlpha(0.2f), "PopupMenu separators" },
             { "textPrimary at 25%", UITheme::Colours::textPrimary.withAlpha(0.25f), "Inactive PopupMenu text" },
-            { "textPrimary at 80%", UITheme::Colours::textPrimary.withAlpha(0.8f), "SourcePickerPopup secondary path text" },
+            { "textPrimary at 80%", UITheme::Colours::textPrimary.withAlpha(0.8f), "LibraryAssignmentPicker secondary ID text" },
             { "textPrimary at 85%", UITheme::Colours::textPrimary.withAlpha(0.85f), "Active PopupMenu and DrumPad articulation text" },
             { "textPrimary at 90%", UITheme::Colours::textPrimary.withAlpha(0.9f), "DrumPad instrument name" },
-            { "textMuted at 75%", UITheme::Colours::textMuted.withAlpha(0.75f), "SourcePickerPopup empty or filter message" },
+            { "textMuted at 75%", UITheme::Colours::textMuted.withAlpha(0.75f), "LibraryAssignmentPicker empty or filter message" },
             { "bgControl at 75%", UITheme::Colours::bgControl.withMultipliedAlpha(0.75f), "Normal enabled TextButton base before its darker gradient" },
             { "bgControl at 30%", UITheme::Colours::bgControl.withMultipliedAlpha(0.3f), "Normal disabled TextButton base before its darker gradient" },
             { "bgControl 75%, darker 10%", UITheme::Colours::bgControl.withMultipliedAlpha(0.75f).darker(0.1f), "TextButton upper gradient color" },
@@ -241,7 +241,7 @@ public:
             { "PadContextPopup", "Zone editing popup. Requires a selected instrument slot" },
             { "PadContextPopup::LayerContentComponent", "Internal layer container inside PadContextPopup" },
             { "CrosstalkCalibrationPopup", "Calibration popup. Requires MIDI capture and engine state" },
-            { "SourcePickerPopup", "Source list popup shared by instrument and pad editors" },
+            { "LibraryAssignmentPicker", "Library assignment picker shared by instrument and pad editors" },
             { "CompactModalDialog", "Editor-contained preset, confirmation, and small value-entry dialogs" },
             { "DismissOverlay", "Transparent click-capture layer behind popups" },
             { "ScrollablePanel", "Shared Viewport container used by long panels" },
@@ -261,12 +261,12 @@ public:
             { "juce::Component", "Base container for panels, rows, pads, popups, and overlays" },
             { "juce::Button", "Base class used by TextButton controls and LookAndFeel button rendering" },
             { "juce::Label", "Direct captions, values, headers, status text, and row text" },
-            { "juce::TextButton", "Direct actions, mode buttons, source buttons, note buttons, and compact switches" },
+            { "juce::TextButton", "Direct actions, mode buttons, library articulation buttons, note buttons, and compact switches" },
             { "juce::ToggleButton", "Default-layout and log-file switches" },
-            { "juce::ComboBox", "Layout, kit, source, preset, routing, and controller selectors" },
+            { "juce::ComboBox", "Layout, kit, library articulation, preset, routing, and controller selectors" },
             { "juce::Slider", "Base of ParameterSlider and internal rotary or linear values" },
             { "juce::TextEditor", "Raw maps, logs, filters, balance values, and calibration profiles" },
-            { "juce::ListBox / ListBoxModel", "SourcePickerPopup category and source lists" },
+            { "juce::ListBox / ListBoxModel", "LibraryAssignmentPicker category and assignment lists" },
             { "juce::Viewport", "ScrollablePanel, popup layers, tables, and this audit page" },
             { "juce::ScrollBar", "Created by Viewport and styled by LookAndFeel" },
             { "juce::PopupMenu", "Preset actions and ComboBox menus" },
@@ -386,7 +386,7 @@ private:
             graphics.fillAll(background);
             graphics.setColour(UITheme::Colours::textPrimary);
             graphics.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
-            graphics.drawText("SourcePickerPopup list row " + juce::String(rowNumber + 1), 8, 0, width - 16, height, juce::Justification::centredLeft);
+            graphics.drawText("LibraryAssignmentPicker list row " + juce::String(rowNumber + 1), 8, 0, width - 16, height, juce::Justification::centredLeft);
         }
     };
 

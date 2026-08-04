@@ -15,20 +15,20 @@ Review the current UI implementation end to end, then make the next UI pass safe
 
 - Main integration: `source/PluginEditor.h`, `source/PluginEditor.cpp`
 - Pad components: `source/UI/DrumPad.*`, `source/UI/DrumPadGrid.*`
-- Instrument editing: `source/UI/InstrumentConfigPanel.*`, `source/UI/PadContextPopup.*`, `source/UI/SourcePickerPopup.*`
+- Instrument editing: `source/UI/InstrumentConfigPanel.*`, `source/UI/PadContextPopup.*`, `source/UI/LibraryAssignmentPicker.*`
 - MIDI editing: `source/UI/MidiMapTable.*`, `source/UI/MidiNotePicker.*`
 - Global UI: `source/UI/Sidebar.*`, `source/UI/StatusBar.*`, `source/UI/EngineSettingsPanel.*`
-- Controls and style helpers: `source/UI/LabeledPot.*`, `source/UI/HorizontalKnobBrick.*`, `source/UI/LookAndFeel.*`, `source/UI/UITypes.h`, `source/UI/UIHelpers.cpp`
+- Controls and style helpers: `source/UI/ParameterPot.*`, `source/UI/HorizontalKnobBrick.*`, `source/UI/LookAndFeel.*`, `source/UI/UIComponentStyle.*`, `source/UI/UITheme.h`
 - Prior docs: `docs/UI_REDESIGN_PLAN.md`, `docs/TODO06_UI_IMPROVEMENTS_PLAN.md`, `docs/TODO07_UI_OPTIMISATIONS.md`
 
 ## Current State Notes
 
 Several older UI TODOs are already partly implemented and should not be repeated blindly:
 
-- `SourcePickerPopup` is already extracted and shared by `PadContextPopup` and `InstrumentConfigPanel`.
-- `SourceItem`, `buildSourceItems`, `findSourceIndex`, and `createParamSlider` already exist in `UITypes.h` / `UIHelpers.cpp`.
+- `LibraryAssignmentPicker` is already extracted and shared by `PadContextPopup` and `InstrumentConfigPanel`.
+- `AvailableLibraryArticulation` owns available-library-articulation collection, display, and lookup operations.
 - Attack/decay sentinel values now use `-1.0` in the current slider and pot setup.
-- Instrument config slider text boxes are already `40x20` via `UIHelpers::createParamSlider`.
+- Instrument config slider text-box sizes use shared `UITheme::Sizes` values through the concrete controls and `UIComponentStyle`.
 - The Settings page is already scrollable and has reset buttons.
 - Sidebar knob labels already show `HH`, `VL`, and `RR` values.
 - Pad grid spacing already uses integer remainder distribution and configurable `padGap`.
@@ -92,7 +92,7 @@ Plan:
 
 ### 4. Pad context library picker positioning is fragile
 
-`PadContextPopup::showSourcePicker` creates the picker as a child of the popup and comments that it may overflow beyond popup bounds. In practice, this can be clipped or awkward because the overlay only covers the popup local bounds. The picker can also open downward even when the row is near the bottom of the editor.
+`PadContextPopup::showLibraryArticulationPicker` creates the picker as a child of the popup and comments that it may overflow beyond popup bounds. In practice, this can be clipped or awkward because the overlay only covers the popup local bounds. The picker can also open downward even when the row is near the bottom of the editor.
 
 Files:
 
@@ -160,23 +160,23 @@ Plan:
 
 ### 4. Debounce library picker filtering
 
-`SourcePickerPopup::rebuildFiltered` scans all library items and repaints the list on each text edit. This is fine for small libraries, but can become sluggish with large kits.
+`LibraryAssignmentPicker::rebuildFiltered` scans all available library articulations and repaints the list on each text edit. This is fine for small libraries, but can become sluggish with large kits.
 
 Plan:
 
-- Cache lowercase display text in `SourceItem` or a parallel view model.
+- Cache lowercase display labels in `AvailableLibraryArticulation` or a parallel view model.
 - Add a 75-125 ms debounce timer for filter text changes.
 - Avoid `listBox.repaint()` when `updateContent()` is enough.
 - Keep related-type filtering synchronous because it is cheap and user initiated.
 
 ### 5. Keep library preview non-blocking
 
-`previewSourceItem` uses async sample loading after selecting a sample, but it may scan instrument samples on the UI thread when articulation specs are empty.
+`previewLibraryArticulation` uses async sample loading after selecting a sample, but it may scan instrument samples on the UI thread when articulation specs are empty.
 
 Plan:
 
-- Pre-scan library items when building the library list, or move scan work behind the async loader path.
-- Cache preview targets by library-item index and velocity band.
+- Pre-scan library articulations when building the articulation list, or move scan work behind the async loader path.
+- Cache preview targets by available-library-articulation index and velocity band.
 - Keep preview clicks responsive even when the first preview of library content is cold.
 
 ## Repeated Code and Component Extraction
@@ -250,16 +250,16 @@ Migration order:
 
 There are three related implementations:
 
-- `LabeledPot`: vertical title/rotary/value component.
+- `ParameterPot`: vertical title/rotary/value component.
 - `HorizontalKnobBrick`: horizontal title/value/rotary component, currently unused outside its own files.
 - `EngineSettingsPanel::PotEntry` and `Sidebar` create styled rotary sliders manually.
-- `UIHelpers::createCompactPot` exists but is not currently used.
+- `HorizontalKnobBrick` is a small horizontal `ParameterPot` wrapper and is currently used only by the theme playground.
 
 Plan:
 
 - Create one reusable component, for example `ParameterPot`, with layout mode `Vertical`, `Horizontal`, and `SidebarCompact`.
 - Move text parsing, display formatting, drag callbacks, and slider colour setup into that component.
-- Replace `LabeledPot` and `HorizontalKnobBrick` with wrappers or remove the unused one after migration.
+- Use `ParameterPot` directly for vertical layouts and keep `HorizontalKnobBrick` only where its fixed horizontal layout is useful.
 - Make `EngineSettingsPanel` use the shared component plus a reset button, instead of duplicating pot styling.
 - Make `Sidebar` use the same styling path or a small `SidebarKnob` wrapper.
 
@@ -299,16 +299,14 @@ Repeated patterns worth extracting after `UITheme` exists:
 
 Keep these as tiny helper functions. Avoid adding a large style abstraction until the theme tokens exist.
 
-### 6. Split `UITypes.h`
+### 6. ✅ Split `UITypes.h`
 
-`UITypes.h` currently mixes `SourceItem` with UI helper declarations and includes engine headers. As the UI grows, split it into clearer files.
+`UITypes.h` and `UIHelpers.*` were removed. Their former responsibilities now have concrete owners:
 
-Plan:
-
-- `SourceItem.h`: temporary library-item model name and display helpers.
-- `UIHelpers.h/.cpp`: small setup helpers and factories.
+- `AvailableLibraryArticulation.*`: available-library-articulation collection, display, and lookup.
+- `UIComponentStyle.*`: shared component styling.
+- Concrete controls: MIDI assignment, compact value formatting, and other control-specific behavior.
 - `UITheme.h`: tokens and palette.
-- Keep include dependencies narrow to reduce rebuild cost.
 
 ## Phased Implementation Order
 
@@ -330,7 +328,7 @@ Verification:
 ### Phase 2: Add theme tokens without visual redesign
 
 - Add `UITheme.h` with current colours, fonts, spacing, and sizes.
-- Migrate `DrumPad`, `Sidebar`, `StatusBar`, `SourcePickerPopup`, and `LookAndFeel` first.
+- Migrate `DrumPad`, `Sidebar`, `StatusBar`, `LibraryAssignmentPicker`, and `LookAndFeel` first.
 - Migrate larger files (`InstrumentConfigPanel`, `PadContextPopup`, `MidiMapTable`, `EngineSettingsPanel`) one at a time.
 - Do not tune the palette while migrating; keep output visually equivalent.
 
@@ -345,7 +343,7 @@ Verification:
 - Extract `MidiNoteAssignmentControl`.
 - Extract `DismissOverlay` / `PopupHost`.
 - Add small style helpers for labels and buttons.
-- Split `UITypes.h` into narrower headers.
+- ✅ Split `UITypes.h` into narrower files with concrete ownership.
 
 Verification:
 

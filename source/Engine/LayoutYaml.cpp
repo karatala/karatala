@@ -193,15 +193,15 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
     const auto& instsNode = root["instruments"];
     if (instsNode.isSequence()) {
         for (size_t instrumentIdx = 0; instrumentIdx < instsNode.size(); ++instrumentIdx) {
-            const auto& instItem = instsNode[instrumentIdx];
+            const auto& instNode = instsNode[instrumentIdx];
             layout.instrumentSlots.emplace_back();
             auto& inst = layout.instrumentSlots.back();
             
 
-            inst.id = instItem["id"].asString();
-            inst.display = instItem["display"].asString();
+            inst.id = instNode["id"].asString();
+            inst.display = instNode["display"].asString();
 
-            const auto typeText = instItem["type"].asString().trim();
+            const auto typeText = instNode["type"].asString().trim();
             if (typeText.isNotEmpty()) {
                 inst.type = KitLib::instrumentTypeFromString(typeText);
                 if (inst.type == KitLib::InstrumentType::Unknown)
@@ -210,7 +210,7 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
                 inst.type = KitLib::instrumentTypeFromString(inst.id.removeCharacters("0123456789"));
             }
 
-            const auto balanceText = instItem["balance"].asString().trim();
+            const auto balanceText = instNode["balance"].asString().trim();
             if (balanceText.isNotEmpty()) {
                 auto parsedBalance = parseBalanceValue(balanceText);
                 if (parsedBalance.has_value())
@@ -219,7 +219,7 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
                     result.addWarning("instruments: invalid balance '" + balanceText + "' for instrument " + inst.id);
             }
 
-            const auto directMicOutsText = instItem["directMicOuts"].asString().trim();
+            const auto directMicOutsText = instNode["directMicOuts"].asString().trim();
             if (directMicOutsText.isNotEmpty()) {
                 auto parsedPolicy = directMicOutPolicyFromString(directMicOutsText);
                 if (parsedPolicy.has_value())
@@ -228,16 +228,16 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
                     result.addWarning("instruments: invalid directMicOuts '" + directMicOutsText + "' for instrument " + inst.id);
             }
 
-            inst.expressionPoints = parseExpressionPointsNode(instItem["expressionPoints"], result, "instrument " + inst.id);
+            inst.expressionPoints = parseExpressionPointsNode(instNode["expressionPoints"], result, "instrument " + inst.id);
             validateExpressionPoints(inst.expressionPoints, result, "instrument " + inst.id);
 
-            const auto& artsNode = instItem["articulations"];
+            const auto& artsNode = instNode["articulations"];
             if (artsNode.isSequence()) {
                 for (size_t articulationIdx = 0; articulationIdx < artsNode.size(); ++articulationIdx) {
-                    const auto& item = artsNode[articulationIdx];
-                    KitLayout::InstrumentSlot::ArticulationSlot art(item["code"].asString());
+                    const auto& artNode = artsNode[articulationIdx];
+                    KitLayout::InstrumentSlot::ArticulationSlot art(artNode["code"].asString());
 
-                    const auto& notesNode = item["notes"];
+                    const auto& notesNode = artNode["notes"];
                     if (notesNode.isSequence()) {
                         for (size_t noteIdx = 0; noteIdx < notesNode.size(); ++noteIdx) {
                             if (!isValidMidiValue(notesNode[noteIdx].asInt())) result.addWarning("articulations: invalid midi note " + juce::String(notesNode[noteIdx].asInt()) + " for articulation " + art.codeRaw + " in instrument " + inst.id);
@@ -252,13 +252,13 @@ ParseResult<KitLayout> LayoutTraits<KitLayout>::parseYaml(const juce::String& ya
                 }
             }
 
-            const auto& ctrlsNode = instItem["controllers"];
+            const auto& ctrlsNode = instNode["controllers"];
             if (ctrlsNode.isSequence()) {
                 for (size_t controllerIdx = 0; controllerIdx < ctrlsNode.size(); ++controllerIdx) {
-                    const auto& item = ctrlsNode[controllerIdx];
-                    KitLayout::InstrumentSlot::ContinuousController cc(item["number"].asInt(), item["code"].asString());
+                    const auto& controllerNode = ctrlsNode[controllerIdx];
+                    KitLayout::InstrumentSlot::ContinuousController cc(controllerNode["number"].asInt(), controllerNode["code"].asString());
 
-                    const auto& notesNode = item["notes"];
+                    const auto& notesNode = controllerNode["notes"];
                     if (notesNode.isSequence()) {
                         for (size_t noteIdx = 0; noteIdx < notesNode.size(); ++noteIdx) {
                             if (!isValidMidiValue(notesNode[noteIdx].asInt())) result.addWarning("controllers: invalid midi note " + juce::String(notesNode[noteIdx].asInt()) + " for controller " + juce::String(cc.number) + " in instrument " + inst.id);

@@ -10,7 +10,7 @@
 - `PadContextPopup.cpp` owns the main popup and layout. `PadContextPopupMapLayers.cpp`, `PadContextPopupRouting.cpp`, and `PadContextPopupDialogs.cpp` own their named UI workflows.
 - `KitPage.*` owns complete library-kit loading, preview, and instrument-map preset actions.
 - `CompactModalDialog` owns small editor-contained value-entry and confirmation dialogs.
-- `UIComponentStyle` owns shared component styling. `SourceItem` owns library source-list construction and lookup. MIDI assignment and compact parameter text rules belong to their concrete controls.
+- `UIComponentStyle` owns shared component styling. `AvailableLibraryArticulation` owns available library articulation collection and lookup. MIDI assignment and compact parameter text rules belong to their concrete controls.
 - Reusable controls live in `Parameter*`, `CompactParameterControl`, `HorizontalKnobBrick`, MIDI assignment, and popup classes.
 - Page and panel classes compose controls and translate user actions into engine operations.
 

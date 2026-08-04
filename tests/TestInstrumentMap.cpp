@@ -304,11 +304,11 @@ TEST_CASE("InstrumentMap linked mic edits resolve the library articulation path"
     mapLayer.kitRef = "KitA";
     mapLayer.instCode = "snare-14";
     mapLayer.articulationFilter = { "rim" };
-    CHECK(InstrumentMap::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rim");
+    CHECK(InstrumentMap::qualifiedLibraryArticulationIdForSlot(mapLayer, "rim") == "KitA/snare-14/rim");
 
     mapLayer.slotArticulationFilter = { "rim" };
     mapLayer.articulationFilter = { "rimshot" };
-    CHECK(InstrumentMap::libraryPathForArticulationSlot(mapLayer, "rim") == "KitA/snare-14/rimshot");
+    CHECK(InstrumentMap::qualifiedLibraryArticulationIdForSlot(mapLayer, "rim") == "KitA/snare-14/rimshot");
 }
 
 TEST_CASE("InstrumentMap isolates a base articulation-slot filter before an unlinked articulation edit", "[InstrumentMap][linked-edit]") {
@@ -760,4 +760,29 @@ TEST_CASE("InstrumentMap builder skips an unmatched articulation when fallback i
     CHECK(mapLayers.value.empty());
     REQUIRE(mapLayers.errors.size() == 1);
     CHECK_THAT(mapLayers.error().toStdString(), Catch::Matchers::ContainsSubstring("map layer skipped"));
+}
+
+TEST_CASE("InstrumentMap detects only legacy articulation-slot expression filters", "[InstrumentMap][HiHat]") {
+    CHECK(InstrumentMap::usesLegacyArticulationSlotExpressionFilter({ "bow" }, "bow[open]"));
+    CHECK_FALSE(InstrumentMap::usesLegacyArticulationSlotExpressionFilter({}, "bow[tight]"));
+    CHECK_FALSE(InstrumentMap::usesLegacyArticulationSlotExpressionFilter({ "bow[open]" }, "bow[open]"));
+    CHECK_FALSE(InstrumentMap::usesLegacyArticulationSlotExpressionFilter({ "edge" }, "bow[open]"));
+    CHECK_FALSE(InstrumentMap::usesLegacyArticulationSlotExpressionFilter({ "bow" }, "bow"));
+}
+
+TEST_CASE("InstrumentMap resolves legacy hihat expressions to available library articulations", "[InstrumentMap][HiHat]") {
+    KitLib::DrumKitSpec libraryKit { { {}, "KitA", "Kit A", {}, {} } };
+    KitLib::InstrumentSpec::MetaInfo meta;
+    meta.codeRaw = "hihat-14";
+    meta.type = KitLib::InstrumentSpec::Type::HiHat;
+    libraryKit.addInstrument(meta);
+    auto* libInst = libraryKit.findInstrument("hihat-14");
+    REQUIRE(libInst != nullptr);
+    libInst->getOrAddArticulation("edge[close]");
+    libInst->getOrAddArticulation("edge[open]");
+    libInst->getOrAddArticulation("edge[tight]");
+
+    CHECK(InstrumentMap::resolveLegacyHihatLibraryArticulationId(libraryKit, "KitA/hihat-14/edge[close]", "bow[open]") == "KitA/hihat-14/edge[open]");
+    CHECK(InstrumentMap::resolveLegacyHihatLibraryArticulationId(libraryKit, "KitA/hihat-14/edge[close]", "bow[tight]") == "KitA/hihat-14/edge[tight]");
+    CHECK(InstrumentMap::resolveLegacyHihatLibraryArticulationId(libraryKit, "KitA/hihat-14/edge[close]", "bow[half]") == "KitA/hihat-14/edge[close]");
 }

@@ -45,8 +45,8 @@ public:
             }
 
             std::vector<juce::String> typePreferences;
-            for (const auto& item : preferenceNode.sequenceValue) {
-                const auto articulationSlot = item.asString().trim();
+            for (const auto& preferenceValue : preferenceNode.sequenceValue) {
+                const auto articulationSlot = preferenceValue.asString().trim();
                 if (articulationSlot.isEmpty()) {
                     result.addWarning("articulationFallback: '" + typeName + "' contains an empty articulation slot");
                     continue;

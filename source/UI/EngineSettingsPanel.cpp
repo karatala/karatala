@@ -217,7 +217,7 @@ void EngineSettingsPanel::addPotCommon(const juce::String& name,
 
 void EngineSettingsPanel::addChoice(const juce::String& name,
                                     const juce::String& tooltip,
-                                    const juce::StringArray& items,
+                                    const juce::StringArray& optionLabels,
                                     int defaultSelectedId,
                                     std::function<int()> loadSelectedId,
                                     std::function<void(int)> storeSelectedId) {
@@ -229,7 +229,7 @@ void EngineSettingsPanel::addChoice(const juce::String& name,
 
     UIComponentStyle::configureComboBox(entry->comboBox);
     entry->comboBox.setTooltip(tooltip);
-    entry->comboBox.addItemList(items, 1);
+    entry->comboBox.addItemList(optionLabels, 1);
     entry->loadSelectedId = std::move(loadSelectedId);
     entry->storeSelectedId = std::move(storeSelectedId);
     entry->defaultSelectedId = defaultSelectedId;

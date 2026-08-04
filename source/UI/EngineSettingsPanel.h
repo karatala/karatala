@@ -93,7 +93,7 @@ private:
                       double defaultValue = std::numeric_limits<double>::quiet_NaN());
     void addChoice(const juce::String& name,
                    const juce::String& tooltip,
-                   const juce::StringArray& items,
+                   const juce::StringArray& optionLabels,
                    int defaultSelectedId,
                    std::function<int()> loadSelectedId,
                    std::function<void(int)> storeSelectedId);

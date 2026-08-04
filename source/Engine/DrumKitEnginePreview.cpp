@@ -378,7 +378,7 @@ void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey, const juce
 }
 
 
-void DrumKitEngine::previewSourceItem(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity, const juce::String& relativePath, const juce::String& micCode) {
+void DrumKitEngine::previewLibraryArticulation(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity, const juce::String& relativePath, const juce::String& micCode) {
     const auto cacheKey = this->makePreviewTargetCacheKey(kitCodeRaw, instCode, artCode, velocity, relativePath, micCode);
     uint64_t generation = 0;
     std::optional<PreviewTarget> cachedTarget;

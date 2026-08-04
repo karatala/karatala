@@ -350,7 +350,7 @@ If measurements confirm a problem, create a separate snapshot/publication design
 Priority: low.
 
 - Do not optimize unfinished UI only because it contains repeated strings.
-- Reuse `UIComponentStyle` for shared styling. Keep source-list and control operations with `SourceItem` and their concrete controls.
+- Reuse `UIComponentStyle` for shared styling. Keep available-library-articulation operations with `AvailableLibraryArticulation` and control operations with their concrete controls.
 - Remove clear local duplication during normal UI work.
 - Cache search text only when a representative large list shows visible or measured delay.
 - Keep experimental UI changes separate from engine cleanup.

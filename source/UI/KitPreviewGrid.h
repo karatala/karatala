@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SourceItem.h"
+#include "AvailableLibraryArticulation.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
 #include <vector>
@@ -8,26 +8,26 @@
 class KitPreviewGrid final : public juce::Component,
                              private juce::Timer {
 public:
-    struct Item {
+    struct ArticulationPad {
         juce::String groupId;
         juce::String groupTitle;
-        SourceItem source;
+        AvailableLibraryArticulation libraryArticulation;
     };
 
     KitPreviewGrid() = default;
     ~KitPreviewGrid() override = default;
 
-    void setItems(std::vector<Item> newItems);
+    void setArticulationPads(std::vector<ArticulationPad> newArticulationPads);
     int getPreferredHeight(int availableWidth);
     void paint(juce::Graphics& graphics) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& event) override;
 
-    std::function<void(const SourceItem&, juce::uint8)> onPreview;
+    std::function<void(const AvailableLibraryArticulation&, juce::uint8)> onLibraryArticulationPreview;
 
 private:
-    struct ItemBounds {
-        size_t itemIndex = 0;
+    struct ArticulationPadBounds {
+        size_t articulationPadIndex = 0;
         juce::Rectangle<int> bounds;
     };
 
@@ -37,11 +37,11 @@ private:
     static constexpr int padHeight = 26;
     static constexpr int preferredPadWidth = 104;
 
-    std::vector<Item> items;
-    std::vector<ItemBounds> itemBounds;
-    int flashedItemIndex = -1;
+    std::vector<ArticulationPad> articulationPads;
+    std::vector<ArticulationPadBounds> articulationPadBounds;
+    int flashedArticulationPadIndex = -1;
 
-    int layoutItems(int availableWidth, bool storeBounds);
+    int layoutArticulationPads(int availableWidth, bool storeBounds);
     void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KitPreviewGrid)

@@ -40,6 +40,8 @@ LogicalHitSpec
 | Mic layout | The plugin outputs, their order, channel count, and compatible mic rules. |
 | Mic route | One assignment from a mic to a mic layout output. |
 | Library kit override | Saved changes to balance, velocity ranges, sample gain, or playback timing in one library kit. |
+| Qualified library instrument ID | A logical ID in the form `<kit-id>/<instrument-id>`. It is not a filesystem path. |
+| Qualified library articulation ID | A logical ID in the form `<kit-id>/<instrument-id>/<articulation-id>`. It is not a filesystem path. |
 
 A map layer must store a required articulation-slot target and a complete `kit/instrument/articulation` library path. A whole-instrument selection uses an exact articulation-slot match first. When no exact match exists, it uses the configured fallback order for the instrument type and shows a warning.
 
@@ -88,7 +90,8 @@ Use the full names `kit layout preset`, `instrument map preset`, and `velocity r
 | `SourceArticulationOverrideEditor` | `LibraryArticulationEditor` | ✅ |
 | `KitBrowserComponent` | `KitPage` | ✅ |
 | `PageId::Browse` | `PageId::Kit` | ✅ |
-| `SourceItem` and `SourcePickerPopup` | Not selected | ⏳ Keep these names until a clear replacement is approved. |
+| `SourceItem` | `AvailableLibraryArticulation` | ✅ |
+| `SourcePickerPopup` | `LibraryAssignmentPicker` | ✅ |
 
 ## Use of `source`
 
@@ -103,9 +106,17 @@ Do not use `source` as a general project-domain term. Use the name that states t
 | `sourceBalanceResolved` | `balanceResolved` |
 | A `sourcePath` that identifies an audio file | `sampleFilePath` |
 
-The phrase `source code` remains valid. `SourceItem`, `SourcePickerPopup`, and their related library-selection path and member names are temporary exceptions until replacement names are approved.
+Use `libraryPath` only for the filesystem directory that contains all library kits. Use `qualifiedLibraryInstrumentId` or `qualifiedLibraryArticulationId` for logical slash-separated IDs.
+
+The phrase `source code` remains valid.
 
 Real audio direction terms remain valid when they refer to a source or destination buffer, channel, voice, playback position, or preprocessing recipe.
+
+## Use of `item`
+
+Do not use `Item` as a project-domain type or member name when the entity is known. Name the entity, such as `ArticulationPad`, `LibraryArticulation`, or `MapLayer`.
+
+External API names such as JUCE `paintListBoxItem()` and `addItem()` remain unchanged. Generic parser code can use `item` when the parsed entity has no more specific type.
 
 ## Files and helpers
 
@@ -117,5 +128,5 @@ Use a feature namespace, such as `InstrumentMap`, when the complete module owns 
 | --- | --- |
 | ✅ `DrumPadHelpers.h` was used only by `DrumPad.cpp`. | Its code is private in `DrumPad.cpp`; the helper header was deleted. |
 | ✅ Instrument map types and text operations were spread across engine files. | `source/Engine/InstrumentMap/InstrumentMap.h` and `InstrumentMap.cpp` now own the map data and text boundary. |
-| ✅ `UIHelpers` mixed styling, library list, and MIDI operations. | It was replaced by `UIComponentStyle`, `SourceItem`, and concrete control methods. |
+| ✅ `UIHelpers` mixed styling, library articulation lookup, and MIDI operations. | It was replaced by `UIComponentStyle`, `AvailableLibraryArticulation`, and concrete control methods. |
 | The old Kit page and the Browse page repeated preset logic. | ✅ The old page was removed, and the replacement is the single `KitPage`. |

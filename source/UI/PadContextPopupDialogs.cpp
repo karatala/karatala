@@ -11,7 +11,7 @@
 void PadContextPopup::showVelocityResponseEditor(MapLayerRow* layer) {
     if (layer == nullptr) return;
     this->flushMapText();
-    this->dismissSourcePicker();
+    this->dismissLibraryAssignmentPicker();
     this->dismissLibraryArticulationEditor();
     this->dismissVelocityResponseEditor();
 
@@ -23,23 +23,23 @@ void PadContextPopup::showVelocityResponseEditor(MapLayerRow* layer) {
     }
     if (layerNumber < 1) layerNumber = 1;
 
-    juce::String sourcePath = layer->sourcePathHint;
-    juce::String sourceDisplay = sourcePath.isNotEmpty() ? sourcePath.replace("/", " / ") : juce::String("No source selected");
-    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
-        const auto& source = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
-        sourcePath = source.fullPath();
-        sourceDisplay = source.kitDisplayName;
-        if (source.instCode.isNotEmpty()) sourceDisplay += " / " + source.instCode;
-        if (source.artCode.isNotEmpty()) sourceDisplay += " / " + source.artCode;
+    juce::String qualifiedLibraryArticulationId = layer->mappedLibraryArticulationId;
+    juce::String libArtDisplay = qualifiedLibraryArticulationId.isNotEmpty() ? qualifiedLibraryArticulationId.replace("/", " / ") : juce::String("No library articulation selected");
+    if (layer->selectedLibraryArticulationIndex >= 0 && layer->selectedLibraryArticulationIndex < static_cast<int>(this->availableLibraryArticulations.size())) {
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(layer->selectedLibraryArticulationIndex)];
+        qualifiedLibraryArticulationId = libArt.qualifiedId();
+        libArtDisplay = libArt.kitDisplayName;
+        if (libArt.instCode.isNotEmpty()) libArtDisplay += " / " + libArt.instCode;
+        if (libArt.artCode.isNotEmpty()) libArtDisplay += " / " + libArt.artCode;
     }
 
     this->activeVelocityResponseEditor = std::make_unique<VelocityResponseEditor>(this->engine);
     VelocityResponseEditor::LayerData data;
     data.title = this->slotLabel.getText() + " / " + layer->artName;
     if (layerNumber > 1) data.title += " (map layer " + juce::String(layerNumber) + ")";
-    data.title += "\n" + sourceDisplay;
+    data.title += "\n" + libArtDisplay;
     data.customDefinition = layer->velocityResponse;
-    data.libraryInfo = this->engine.getLibraryVelocityResponseInfo(sourcePath);
+    data.libraryInfo = this->engine.getLibraryVelocityResponseInfo(qualifiedLibraryArticulationId);
     this->activeVelocityResponseEditor->setLayerData(std::move(data));
     this->activeVelocityResponseEditor->onResponseChanged = [this, layer](const std::optional<juce::String>& definition, bool commit) {
         layer->velocityResponse = definition;
@@ -90,26 +90,26 @@ void PadContextPopup::layoutVelocityResponseEditor() {
 }
 
 void PadContextPopup::showLibraryArticulationEditor(MapLayerRow* layer) {
-    if (layer == nullptr || layer->selectedSourceIndex < 0 || layer->selectedSourceIndex >= static_cast<int>(this->sourceItems.size())) return;
+    if (layer == nullptr || layer->selectedLibraryArticulationIndex < 0 || layer->selectedLibraryArticulationIndex >= static_cast<int>(this->availableLibraryArticulations.size())) return;
     this->flushMapText();
-    const auto& source = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
-    if (source.rawArtCode.isEmpty()) return;
-    this->dismissSourcePicker();
+    const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(layer->selectedLibraryArticulationIndex)];
+    if (libArt.rawArtCode.isEmpty()) return;
+    this->dismissLibraryAssignmentPicker();
     this->dismissVelocityResponseEditor();
     this->dismissLibraryArticulationEditor();
 
     this->activeLibraryArticulationEditor = std::make_unique<LibraryArticulationEditor>(this->engine);
-    const auto displayTitle = source.kitDisplayName + " / " + source.instCode + " / " + source.artCode;
-    this->activeLibraryArticulationEditor->setLibraryArticulation(source.rawKitCode, source.rawInstCode, source.rawArtCode, displayTitle);
-    this->activeLibraryArticulationEditor->onPreview = [this, layer, source](int velocity, int namedVelocity, const juce::String& roundRobin, const juce::String& relativePath, const juce::String& micCode) {
+    const auto displayTitle = libArt.kitDisplayName + " / " + libArt.instCode + " / " + libArt.artCode;
+    this->activeLibraryArticulationEditor->setLibraryArticulation(libArt.rawKitCode, libArt.rawInstCode, libArt.rawArtCode, displayTitle);
+    this->activeLibraryArticulationEditor->onPreview = [this, layer, libArt](int velocity, int namedVelocity, const juce::String& roundRobin, const juce::String& relativePath, const juce::String& micCode) {
         const auto previewVelocity = static_cast<juce::uint8>(juce::jlimit(1, 127, velocity));
         if (relativePath.isNotEmpty()) {
             if (micCode.isNotEmpty()) {
-                this->engine.previewSourceItem(source.rawKitCode, source.rawInstCode, source.rawArtCode, previewVelocity, relativePath, micCode);
+                this->engine.previewLibraryArticulation(libArt.rawKitCode, libArt.rawInstCode, libArt.rawArtCode, previewVelocity, relativePath, micCode);
                 return;
             }
-            if (this->engine.playLibraryLogicalHitPreview(this->slotId, layer->artName, source.rawKitCode, source.rawInstCode, source.rawArtCode, namedVelocity, roundRobin, previewVelocity)) return;
-            this->engine.previewSourceItem(source.rawKitCode, source.rawInstCode, source.rawArtCode, previewVelocity, relativePath, micCode);
+            if (this->engine.playLibraryLogicalHitPreview(this->slotId, layer->artName, libArt.rawKitCode, libArt.rawInstCode, libArt.rawArtCode, namedVelocity, roundRobin, previewVelocity)) return;
+            this->engine.previewLibraryArticulation(libArt.rawKitCode, libArt.rawInstCode, libArt.rawArtCode, previewVelocity, relativePath, micCode);
             return;
         }
         this->engine.playPreviewNote(this->slotId, layer->artName, previewVelocity);
@@ -150,15 +150,15 @@ void PadContextPopup::layoutLibraryArticulationEditor() {
     }
 }
 
-// Source picker
+// Library assignment picker
 
-void PadContextPopup::showSourcePicker(MapLayerRow* layer) {
+void PadContextPopup::showLibraryArticulationPicker(MapLayerRow* layer) {
     this->flushMapText();
     this->dismissLibraryArticulationEditor();
     this->dismissVelocityResponseEditor();
-    this->dismissSourcePicker();
+    this->dismissLibraryAssignmentPicker();
 
-    this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
+    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog());
     int layerNumber = 0;
     for (const auto* candidateLayer : this->layerRows) {
         if (candidateLayer == nullptr || candidateLayer->artName.compareIgnoreCase(layer->artName) != 0) continue;
@@ -168,70 +168,70 @@ void PadContextPopup::showSourcePicker(MapLayerRow* layer) {
     if (layerNumber < 1) layerNumber = 1;
     auto pickerTitle = this->slotLabel.getText() + " / " + layer->artName;
     if (layerNumber > 1) pickerTitle += " (map layer " + juce::String(layerNumber) + ")";
-    this->activePicker->setTitle(pickerTitle);
-    this->activePicker->onDismiss = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    this->activeLibraryAssignmentPicker->setTitle(pickerTitle);
+    this->activeLibraryAssignmentPicker->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissLibraryAssignmentPicker(); });
     };
     auto initialFilterType = this->slotType;
-    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
-        const auto assignedType = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].instType;
+    if (layer->selectedLibraryArticulationIndex >= 0 && layer->selectedLibraryArticulationIndex < static_cast<int>(this->availableLibraryArticulations.size())) {
+        const auto assignedType = this->availableLibraryArticulations[static_cast<size_t>(layer->selectedLibraryArticulationIndex)].instType;
         if (assignedType != KitLib::InstrumentSpec::Type::Unknown) initialFilterType = assignedType;
     }
-    this->activePicker->setFilterType(initialFilterType);
+    this->activeLibraryAssignmentPicker->setFilterType(initialFilterType);
 
-    this->activePicker->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
-        if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
-        const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
-        this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
+    this->activeLibraryAssignmentPicker->onLibraryArticulationPreview = [this](int libArtIndex, juce::uint8 velocity) {
+        if (libArtIndex < 0 || libArtIndex >= static_cast<int>(this->availableLibraryArticulations.size())) return;
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+        this->engine.previewLibraryArticulation(libArt.kitCodeRaw, libArt.instCode, libArt.artCode, velocity);
     };
 
-    this->activePicker->onItemSelected = [this, layer](int sourceIndex) {
-        if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
-        const auto& selectedItem = this->sourceItems[static_cast<size_t>(sourceIndex)];
-        layer->selectedSourceIndex = sourceIndex;
-        layer->sourcePathHint = selectedItem.fullPath();
-        this->updateSourceDisplay(layer);
-        this->updateSourceCardButtonVisibility();
+    this->activeLibraryAssignmentPicker->onLibraryArticulationSelected = [this, layer](int libArtIndex) {
+        if (libArtIndex < 0 || libArtIndex >= static_cast<int>(this->availableLibraryArticulations.size())) return;
+        const auto& selectedLibArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+        layer->selectedLibraryArticulationIndex = libArtIndex;
+        layer->mappedLibraryArticulationId = selectedLibArt.qualifiedId();
+        this->updateLibraryArticulationDisplay(layer);
+        this->updateLibraryArticulationActionsVisibility();
         this->rebuildBleedControls(layer);
         this->resized();
         juce::MessageManager::callAsync([this, layer] {
-            this->dismissSourcePicker();
+            this->dismissLibraryAssignmentPicker();
             this->applyToEngine();
             this->engine.playPreviewNote(this->slotId, layer->artName, this->getPreviewVelocity());
         });
     };
-    this->pickerOverlay = std::make_unique<DismissOverlay>();
-    this->pickerOverlay->setDarkened(true);
-    this->pickerOverlay->onClick = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    this->libraryAssignmentOverlay = std::make_unique<DismissOverlay>();
+    this->libraryAssignmentOverlay->setDarkened(true);
+    this->libraryAssignmentOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissLibraryAssignmentPicker(); });
     };
-    this->addAndMakeVisible(*this->pickerOverlay);
-    this->pickerOverlay->toFront(false);
+    this->addAndMakeVisible(*this->libraryAssignmentOverlay);
+    this->libraryAssignmentOverlay->toFront(false);
 
-    this->addAndMakeVisible(*this->activePicker);
-    this->activePicker->toFront(true);
-    this->layoutSourcePicker();
-    this->activePicker->setSelectedItem(layer->selectedSourceIndex);
-    this->activePicker->focusItemList();
+    this->addAndMakeVisible(*this->activeLibraryAssignmentPicker);
+    this->activeLibraryAssignmentPicker->toFront(true);
+    this->layoutLibraryAssignmentPicker();
+    this->activeLibraryAssignmentPicker->setSelectedLibraryArticulation(layer->selectedLibraryArticulationIndex);
+    this->activeLibraryAssignmentPicker->focusAssignmentList();
 }
 
 void PadContextPopup::showInstrumentPicker() {
     this->flushMapText();
     this->dismissLibraryArticulationEditor();
     this->dismissVelocityResponseEditor();
-    this->dismissSourcePicker();
+    this->dismissLibraryAssignmentPicker();
 
-    this->activePicker = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog(), SourcePickerPopup::SelectionMode::WholeInstrument);
-    this->activePicker->setTitle(this->slotLabel.getText());
-    this->activePicker->onDismiss = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog(), LibraryAssignmentPicker::SelectionMode::Instrument);
+    this->activeLibraryAssignmentPicker->setTitle(this->slotLabel.getText());
+    this->activeLibraryAssignmentPicker->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissLibraryAssignmentPicker(); });
     };
-    this->activePicker->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
-        if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
-        const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
-        this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
+    this->activeLibraryAssignmentPicker->onLibraryArticulationPreview = [this](int libArtIndex, juce::uint8 velocity) {
+        if (libArtIndex < 0 || libArtIndex >= static_cast<int>(this->availableLibraryArticulations.size())) return;
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+        this->engine.previewLibraryArticulation(libArt.kitCodeRaw, libArt.instCode, libArt.artCode, velocity);
     };
-    this->activePicker->onInstrumentSelected = [this](const SourcePickerPopup::InstrumentSelection& selection) {
+    this->activeLibraryAssignmentPicker->onLibraryInstrumentSelected = [this](const LibraryAssignmentPicker::LibraryInstrumentSelection& selection) {
         juce::MessageManager::callAsync([this, selection] {
             const auto currentMapText = this->savedInstrumentMapText.isNotEmpty() ? this->savedInstrumentMapText : this->engine.getSuggestedInstrumentMapText();
             auto updatedMap = this->engine.buildInstrumentMapWithSlotInstrument(currentMapText, this->slotId, selection.kitId, selection.instrumentId);
@@ -247,7 +247,7 @@ void PadContextPopup::showInstrumentPicker() {
 
             this->savedInstrumentMapText = updatedMap.value;
             this->mapTextDirty = false;
-            this->dismissSourcePicker();
+            this->dismissLibraryAssignmentPicker();
             this->rebuildMapLayerRows();
             if (this->onMapTextChanged) this->onMapTextChanged(this->savedInstrumentMapText);
             if (this->onInstrumentChanged) this->onInstrumentChanged();
@@ -256,50 +256,50 @@ void PadContextPopup::showInstrumentPicker() {
         });
     };
 
-    this->pickerOverlay = std::make_unique<DismissOverlay>();
-    this->pickerOverlay->setDarkened(true);
-    this->pickerOverlay->onClick = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissSourcePicker(); });
+    this->libraryAssignmentOverlay = std::make_unique<DismissOverlay>();
+    this->libraryAssignmentOverlay->setDarkened(true);
+    this->libraryAssignmentOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissLibraryAssignmentPicker(); });
     };
-    this->addAndMakeVisible(*this->pickerOverlay);
-    this->pickerOverlay->toFront(false);
-    this->addAndMakeVisible(*this->activePicker);
-    this->activePicker->toFront(true);
-    this->layoutSourcePicker();
+    this->addAndMakeVisible(*this->libraryAssignmentOverlay);
+    this->libraryAssignmentOverlay->toFront(false);
+    this->addAndMakeVisible(*this->activeLibraryAssignmentPicker);
+    this->activeLibraryAssignmentPicker->toFront(true);
+    this->layoutLibraryAssignmentPicker();
 
-    int initialSourceIndex = -1;
+    int initialLibArtIndex = -1;
     for (const auto* layer : this->layerRows) {
-        if (layer == nullptr || layer->selectedSourceIndex < 0) continue;
-        initialSourceIndex = layer->selectedSourceIndex;
+        if (layer == nullptr || layer->selectedLibraryArticulationIndex < 0) continue;
+        initialLibArtIndex = layer->selectedLibraryArticulationIndex;
         if (ArticulationNames::articulationCodeMatches(layer->artName, this->artName)) break;
     }
-    this->activePicker->setSelectedItem(initialSourceIndex);
-    this->activePicker->focusItemList();
+    this->activeLibraryAssignmentPicker->setSelectedLibraryArticulation(initialLibArtIndex);
+    this->activeLibraryAssignmentPicker->focusAssignmentList();
 }
 
-void PadContextPopup::dismissSourcePicker() {
-    if (this->pickerOverlay) {
-        this->removeChildComponent(this->pickerOverlay.get());
-        this->pickerOverlay.reset();
+void PadContextPopup::dismissLibraryAssignmentPicker() {
+    if (this->libraryAssignmentOverlay) {
+        this->removeChildComponent(this->libraryAssignmentOverlay.get());
+        this->libraryAssignmentOverlay.reset();
     }
-    if (this->activePicker) {
-        this->removeChildComponent(this->activePicker.get());
-        this->activePicker.reset();
+    if (this->activeLibraryAssignmentPicker) {
+        this->removeChildComponent(this->activeLibraryAssignmentPicker.get());
+        this->activeLibraryAssignmentPicker.reset();
     }
 }
 
-void PadContextPopup::layoutSourcePicker() {
-    if (this->pickerOverlay) this->pickerOverlay->setBounds(this->getLocalBounds());
-    if (this->activePicker) {
+void PadContextPopup::layoutLibraryAssignmentPicker() {
+    if (this->libraryAssignmentOverlay) this->libraryAssignmentOverlay->setBounds(this->getLocalBounds());
+    if (this->activeLibraryAssignmentPicker) {
         const int pickerWidth = this->getWidth() * 4 / 5;
         const int pickerHeight = this->getHeight() * 4 / 5;
-        this->activePicker->setBounds(this->getLocalBounds().withSizeKeepingCentre(pickerWidth, pickerHeight));
+        this->activeLibraryAssignmentPicker->setBounds(this->getLocalBounds().withSizeKeepingCentre(pickerWidth, pickerHeight));
     }
 }
 
 bool PadContextPopup::dismissActiveDialog() {
-    if (this->activePicker) {
-        this->dismissSourcePicker();
+    if (this->activeLibraryAssignmentPicker) {
+        this->dismissLibraryAssignmentPicker();
         return true;
     }
     if (this->activeVelocityResponseEditor) {

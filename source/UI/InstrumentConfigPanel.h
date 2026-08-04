@@ -5,8 +5,8 @@
 #include "CompactParameterControl.h"
 #include "DismissOverlay.h"
 #include "ScrollablePanel.h"
-#include "SourceItem.h"
-#include "SourcePickerPopup.h"
+#include "AvailableLibraryArticulation.h"
+#include "LibraryAssignmentPicker.h"
 #include "UITheme.h"
 
 class InstrumentConfigPanel : public ScrollablePanel,
@@ -26,25 +26,25 @@ private:
     DrumKitEngine& engine;
     bool populated = false;
 
-    std::vector<SourceItem> sourceItems;
+    std::vector<AvailableLibraryArticulation> availableLibraryArticulations;
     std::vector<DrumKitEngine::VelocityResponsePreset> velocityResponsePresets;
     std::vector<DrumKitEngine::InstrumentMapLayer> unprojectedActiveSlotMapLayers;
-    void rebuildSourceItems();
+    void rebuildAvailableLibraryArticulations();
 
     // ─── Flat table row (one per articulation/layer) ───
     struct TableRow {
         juce::String slotId;
         juce::String artName;
         KitLib::InstrumentSpec::Type slotType = KitLib::InstrumentSpec::Type::Unknown;
-        juce::String sourcePathHint;
-        int selectedSourceIndex = -1;
+        juce::String mappedLibraryArticulationId;
+        int selectedLibraryArticulationIndex = -1;
         std::optional<juce::String> velocityResponse;
         std::unordered_map<juce::String, float> micBleedLevels;
         std::unordered_map<juce::String, juce::String> micRouteOverrides;
 
         std::unique_ptr<juce::Label> slotLabel;
         std::unique_ptr<juce::Label> artLabel;
-        std::unique_ptr<juce::TextButton> sourceButton;
+        std::unique_ptr<juce::TextButton> libraryArticulationButton;
         std::unique_ptr<juce::Label> velocityResponseStatus;
         std::unique_ptr<CompactParameterControl> tuningControl;
         std::unique_ptr<CompactParameterControl> attackControl;
@@ -60,30 +60,29 @@ private:
 
     juce::OwnedArray<TableRow> tableRows;
 
-    juce::Label headerSlot, headerArticulation, headerSource, headerResponse, headerTuning, headerAttack, headerDecay, headerGain, headerPan, headerLR, headerPhase;
+    juce::Label headerSlot, headerArticulation, headerLibraryArticulation, headerResponse, headerTuning, headerAttack, headerDecay, headerGain, headerPan, headerLR, headerPhase;
 
     // Popup management
-    std::unique_ptr<DismissOverlay> popupOverlay;
-    std::unique_ptr<SourcePickerPopup> activePopup;
+    std::unique_ptr<DismissOverlay> libraryAssignmentOverlay;
+    std::unique_ptr<LibraryAssignmentPicker> activeLibraryAssignmentPicker;
 
-    void showPickerPopup(TableRow* row);
-    void dismissPopup();
-    void layoutPopup();
+    void showLibraryArticulationPicker(TableRow* row);
+    void dismissLibraryAssignmentPicker();
+    void layoutLibraryAssignmentPicker();
     void layoutContent();
     void applyToEngine(const juce::String& changedSlotId = {});
     void applyRowParametersFast(TableRow* row);
     void timerCallback() override;
-    void updateSourceButtonDisplay(TableRow* row);
+    void updateLibraryArticulationButtonDisplay(TableRow* row);
     void updateVelocityResponseStatus(TableRow* row);
     int getMappedLayerIndexForRow(const TableRow* row) const;
     juce::String generateMapText() const;
     void addRow(const juce::String& slotId, const juce::String& artName, KitLib::InstrumentSpec::Type slotType,
-                const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+                const juce::String& qualifiedLibraryArticulationId, int tuningCents, int attackMs, int decayMs,
                 float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex = -1,
                 const std::optional<juce::String>& velocityResponse = std::nullopt,
                 const std::unordered_map<juce::String, float>& micBleedLevels = {},
                 const std::unordered_map<juce::String, juce::String>& micRouteOverrides = {});
-    int findSourceIndex(const juce::String& fullPath) const;
     void updateRemoveButtonVisibility();
     void queueMapTextFlush();
 

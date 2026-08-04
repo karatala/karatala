@@ -15,7 +15,7 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
     };
     setupHeader(this->headerSlot, "Slot");
     setupHeader(this->headerArticulation, "Articulation");
-    setupHeader(this->headerSource, "Source");
+    setupHeader(this->headerLibraryArticulation, "Library articulation");
     setupHeader(this->headerResponse, "Response");
     setupHeader(this->headerTuning, "Tuning");
     setupHeader(this->headerAttack, "Attack");
@@ -29,22 +29,18 @@ InstrumentConfigPanel::InstrumentConfigPanel(DrumKitEngine& drumKitEngine)
 void InstrumentConfigPanel::resized() {
     this->viewport.setBounds(this->getLocalBounds().withTrimmedTop(headerHeight));
     this->layoutContent();
-    this->layoutPopup();
+    this->layoutLibraryAssignmentPicker();
 }
 
-void InstrumentConfigPanel::rebuildSourceItems() {
-    this->sourceItems = SourceItem::collectFromLibrary(this->engine.getInstrumentManager());
-}
-
-int InstrumentConfigPanel::findSourceIndex(const juce::String& searchPath) const { //TODO: why wrapper?
-    return SourceItem::findIndex(this->sourceItems, searchPath);
+void InstrumentConfigPanel::rebuildAvailableLibraryArticulations() {
+    this->availableLibraryArticulations = AvailableLibraryArticulation::collectFromLibrary(this->engine.getInstrumentManager());
 }
 
 void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
-    this->dismissPopup();
+    this->dismissLibraryAssignmentPicker();
     this->stopTimer();
     this->mapTextDirty = false;
-    this->rebuildSourceItems();
+    this->rebuildAvailableLibraryArticulations();
     this->velocityResponsePresets = this->engine.getVelocityResponsePresets();
     this->tableRows.clear();
     this->contentComponent.removeAllChildren();
@@ -102,19 +98,21 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
                 this->addRow(slot.id, artName, slot.type, "", 0, -1, -1, 0.0f, 0, false, false, false);
             } else {
                 for (const auto* mapLayer : matchingMapLayers) {
-                    juce::String sourceFullPath = mapLayer->kitRef;
-                    if (mapLayer->instCode.isNotEmpty()) sourceFullPath += "/" + mapLayer->instCode;
-                    const auto libraryArticulation = InstrumentMap::libraryArticulationForSlot(*mapLayer, artName);
-                    if (libraryArticulation.isNotEmpty()) sourceFullPath += "/" + libraryArticulation;
-                    if (slot.type == KitLib::InstrumentSpec::Type::HiHat && SourceItem::usesLegacyArticulationSlotExpressionFilter(mapLayer->slotArticulationFilter, artName))
-                        sourceFullPath = SourceItem::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, artName);
+                    juce::String qualifiedLibraryArticulationId = mapLayer->kitRef;
+                    if (mapLayer->instCode.isNotEmpty()) qualifiedLibraryArticulationId += "/" + mapLayer->instCode;
+                    const auto libArtId = InstrumentMap::libraryArticulationForSlot(*mapLayer, artName);
+                    if (libArtId.isNotEmpty()) qualifiedLibraryArticulationId += "/" + libArtId;
+                    const auto* libraryManager = this->engine.getInstrumentManager();
+                    const auto* libraryKit = libraryManager != nullptr ? libraryManager->findKitById(mapLayer->kitRef) : nullptr;
+                    if (libraryKit != nullptr && slot.type == KitLib::InstrumentSpec::Type::HiHat && InstrumentMap::usesLegacyArticulationSlotExpressionFilter(mapLayer->slotArticulationFilter, artName))
+                        qualifiedLibraryArticulationId = InstrumentMap::resolveLegacyHihatLibraryArticulationId(*libraryKit, qualifiedLibraryArticulationId, artName);
 
                     const int tuning = mapLayer->tuningCents.value_or(0);
                     const int attack = mapLayer->attackTimeMs.value_or(-1);
                     const int decay = mapLayer->decayTimeMs.value_or(-1);
                     const float volume = mapLayer->volumeDb.value_or(0.0f);
                     const int pan = mapLayer->pan.value_or(0);
-                    this->addRow(slot.id, artName, slot.type, sourceFullPath, tuning, attack, decay, volume, pan, mapLayer->flipLR, mapLayer->flipLRExplicit, mapLayer->flipPhase, -1, mapLayer->velocityResponse, mapLayer->micBleedLevels, mapLayer->micRouteOverrides);
+                    this->addRow(slot.id, artName, slot.type, qualifiedLibraryArticulationId, tuning, attack, decay, volume, pan, mapLayer->flipLR, mapLayer->flipLRExplicit, mapLayer->flipPhase, -1, mapLayer->velocityResponse, mapLayer->micBleedLevels, mapLayer->micRouteOverrides);
                 }
             }
         }
@@ -126,7 +124,7 @@ void InstrumentConfigPanel::populate(const juce::String& instrumentMapText) {
 
 void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::String& artName,
                                     KitLib::InstrumentSpec::Type slotType,
-                                    const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+                                    const juce::String& qualifiedLibraryArticulationId, int tuningCents, int attackMs, int decayMs,
                                     float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, int insertionIndex,
                                     const std::optional<juce::String>& velocityResponse,
                                     const std::unordered_map<juce::String, float>& micBleedLevels,
@@ -140,7 +138,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     row->slotId = slotId;
     row->artName = artName;
     row->slotType = slotType;
-    row->sourcePathHint = sourceFullPath;
+    row->mappedLibraryArticulationId = qualifiedLibraryArticulationId;
     row->velocityResponse = velocityResponse;
     row->micBleedLevels = micBleedLevels;
     row->micRouteOverrides = micRouteOverrides;
@@ -157,14 +155,14 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
     UIComponentStyle::configureTableRowLabel(*row->artLabel, UITheme::Colours::textAccent);
     this->contentComponent.addAndMakeVisible(*row->artLabel);
 
-    // Source button
-    row->sourceButton = std::make_unique<juce::TextButton>();
-    row->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
-    row->sourceButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
-    row->sourceButton->getProperties().set("leftAlignedText", true);
-    this->contentComponent.addAndMakeVisible(*row->sourceButton);
-    row->sourceButton->onClick = [this, row] { this->showPickerPopup(row); };
-    this->updateSourceButtonDisplay(row);
+    // Library articulation button
+    row->libraryArticulationButton = std::make_unique<juce::TextButton>();
+    row->selectedLibraryArticulationIndex = AvailableLibraryArticulation::findIndexByQualifiedId(this->availableLibraryArticulations, qualifiedLibraryArticulationId);
+    row->libraryArticulationButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControl);
+    row->libraryArticulationButton->getProperties().set("leftAlignedText", true);
+    this->contentComponent.addAndMakeVisible(*row->libraryArticulationButton);
+    row->libraryArticulationButton->onClick = [this, row] { this->showLibraryArticulationPicker(row); };
+    this->updateLibraryArticulationButtonDisplay(row);
 
     row->velocityResponseStatus = std::make_unique<juce::Label>();
     row->velocityResponseStatus->setFont(UITheme::Fonts::small());
@@ -272,10 +270,10 @@ void InstrumentConfigPanel::updateRemoveButtonVisibility() {
     }
 }
 
-void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
-    this->dismissPopup();
+void InstrumentConfigPanel::showLibraryArticulationPicker(TableRow* row) {
+    this->dismissLibraryAssignmentPicker();
 
-    this->activePopup = std::make_unique<SourcePickerPopup>(this->sourceItems, this->engine.getInstrumentCatalog());
+    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog());
     juce::String slotTitle = row->slotId;
     if (const auto* layout = this->engine.getKitLayout()) {
         for (const auto& slot : layout->instrumentSlots) {
@@ -293,73 +291,73 @@ void InstrumentConfigPanel::showPickerPopup(TableRow* row) {
     if (layerNumber < 1) layerNumber = 1;
     auto pickerTitle = slotTitle + " / " + row->artName;
     if (layerNumber > 1) pickerTitle += " (map layer " + juce::String(layerNumber) + ")";
-    this->activePopup->setTitle(pickerTitle);
-    this->activePopup->onDismiss = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissPopup(); });
+    this->activeLibraryAssignmentPicker->setTitle(pickerTitle);
+    this->activeLibraryAssignmentPicker->onDismiss = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissLibraryAssignmentPicker(); });
     };
     auto initialFilterType = row->slotType;
-    if (row->selectedSourceIndex >= 0 && row->selectedSourceIndex < static_cast<int>(this->sourceItems.size())) {
-        const auto assignedType = this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].instType;
+    if (row->selectedLibraryArticulationIndex >= 0 && row->selectedLibraryArticulationIndex < static_cast<int>(this->availableLibraryArticulations.size())) {
+        const auto assignedType = this->availableLibraryArticulations[static_cast<size_t>(row->selectedLibraryArticulationIndex)].instType;
         if (assignedType != KitLib::InstrumentSpec::Type::Unknown) initialFilterType = assignedType;
     }
-    this->activePopup->setFilterType(initialFilterType);
+    this->activeLibraryAssignmentPicker->setFilterType(initialFilterType);
 
-    this->activePopup->onPreview = [this](int sourceIndex, juce::uint8 velocity) {
-        if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return;
-        const auto& item = this->sourceItems[static_cast<size_t>(sourceIndex)];
-        this->engine.previewSourceItem(item.kitCodeRaw, item.instCode, item.artCode, velocity);
+    this->activeLibraryAssignmentPicker->onLibraryArticulationPreview = [this](int libArtIndex, juce::uint8 velocity) {
+        if (libArtIndex < 0 || libArtIndex >= static_cast<int>(this->availableLibraryArticulations.size())) return;
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+        this->engine.previewLibraryArticulation(libArt.kitCodeRaw, libArt.instCode, libArt.artCode, velocity);
     };
 
-    this->activePopup->onItemSelected = [this, row](int sourceIndex) {
-        row->selectedSourceIndex = sourceIndex;
-        row->sourcePathHint = sourceIndex >= 0
-            ? this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath()
+    this->activeLibraryAssignmentPicker->onLibraryArticulationSelected = [this, row](int libArtIndex) {
+        row->selectedLibraryArticulationIndex = libArtIndex;
+        row->mappedLibraryArticulationId = libArtIndex >= 0
+            ? this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)].qualifiedId()
             : juce::String();
         row->micBleedLevels.clear();
         row->micRouteOverrides.clear();
-        this->updateSourceButtonDisplay(row);
+        this->updateLibraryArticulationButtonDisplay(row);
         juce::MessageManager::callAsync([this, row] {
-            this->dismissPopup();
+            this->dismissLibraryAssignmentPicker();
             this->applyToEngine(row->slotId);
             this->engine.playPreviewNote(row->slotId, row->artName, 100);
         });
     };
-    this->popupOverlay = std::make_unique<DismissOverlay>();
-    this->popupOverlay->setDarkened(true);
-    this->popupOverlay->onClick = [this] {
-        juce::MessageManager::callAsync([this] { this->dismissPopup(); });
+    this->libraryAssignmentOverlay = std::make_unique<DismissOverlay>();
+    this->libraryAssignmentOverlay->setDarkened(true);
+    this->libraryAssignmentOverlay->onClick = [this] {
+        juce::MessageManager::callAsync([this] { this->dismissLibraryAssignmentPicker(); });
     };
-    this->addAndMakeVisible(*this->popupOverlay);
-    this->popupOverlay->toFront(false);
+    this->addAndMakeVisible(*this->libraryAssignmentOverlay);
+    this->libraryAssignmentOverlay->toFront(false);
 
-    this->addAndMakeVisible(*this->activePopup);
-    this->activePopup->toFront(true);
-    this->layoutPopup();
-    this->activePopup->setSelectedItem(row->selectedSourceIndex);
-    this->activePopup->focusItemList();
+    this->addAndMakeVisible(*this->activeLibraryAssignmentPicker);
+    this->activeLibraryAssignmentPicker->toFront(true);
+    this->layoutLibraryAssignmentPicker();
+    this->activeLibraryAssignmentPicker->setSelectedLibraryArticulation(row->selectedLibraryArticulationIndex);
+    this->activeLibraryAssignmentPicker->focusAssignmentList();
 }
 
-void InstrumentConfigPanel::updateSourceButtonDisplay(TableRow* row) {
-    if (row == nullptr || row->sourceButton == nullptr)
+void InstrumentConfigPanel::updateLibraryArticulationButtonDisplay(TableRow* row) {
+    if (row == nullptr || row->libraryArticulationButton == nullptr)
         return;
 
-    if (row->selectedSourceIndex >= 0) {
-        row->sourceButton->setButtonText(this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)].displayText());
-        row->sourceButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textPrimary);
-        row->sourceButton->setTooltip(row->sourcePathHint);
-        return;
-    }
-
-    if (row->sourcePathHint.isNotEmpty()) {
-        row->sourceButton->setButtonText("Missing source");
-        row->sourceButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accentWarning);
-        row->sourceButton->setTooltip(row->sourcePathHint);
+    if (row->selectedLibraryArticulationIndex >= 0) {
+        row->libraryArticulationButton->setButtonText(this->availableLibraryArticulations[static_cast<size_t>(row->selectedLibraryArticulationIndex)].displayLabel());
+        row->libraryArticulationButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textPrimary);
+        row->libraryArticulationButton->setTooltip(row->mappedLibraryArticulationId);
         return;
     }
 
-    row->sourceButton->setButtonText("Select source");
-    row->sourceButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
-    row->sourceButton->setTooltip({});
+    if (row->mappedLibraryArticulationId.isNotEmpty()) {
+        row->libraryArticulationButton->setButtonText("Missing library articulation");
+        row->libraryArticulationButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accentWarning);
+        row->libraryArticulationButton->setTooltip(row->mappedLibraryArticulationId);
+        return;
+    }
+
+    row->libraryArticulationButton->setButtonText("Select library articulation");
+    row->libraryArticulationButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::textMuted);
+    row->libraryArticulationButton->setTooltip({});
 }
 
 void InstrumentConfigPanel::updateVelocityResponseStatus(TableRow* row) {
@@ -383,23 +381,23 @@ void InstrumentConfigPanel::updateVelocityResponseStatus(TableRow* row) {
     row->velocityResponseStatus->setTooltip(tooltip);
 }
 
-void InstrumentConfigPanel::dismissPopup() {
-    if (this->popupOverlay) {
-        removeChildComponent(this->popupOverlay.get());
-        this->popupOverlay.reset();
+void InstrumentConfigPanel::dismissLibraryAssignmentPicker() {
+    if (this->libraryAssignmentOverlay) {
+        removeChildComponent(this->libraryAssignmentOverlay.get());
+        this->libraryAssignmentOverlay.reset();
     }
-    if (this->activePopup) {
-        removeChildComponent(this->activePopup.get());
-        this->activePopup.reset();
+    if (this->activeLibraryAssignmentPicker) {
+        removeChildComponent(this->activeLibraryAssignmentPicker.get());
+        this->activeLibraryAssignmentPicker.reset();
     }
 }
 
-void InstrumentConfigPanel::layoutPopup() {
-    if (this->popupOverlay) this->popupOverlay->setBounds(this->getLocalBounds());
-    if (this->activePopup) {
+void InstrumentConfigPanel::layoutLibraryAssignmentPicker() {
+    if (this->libraryAssignmentOverlay) this->libraryAssignmentOverlay->setBounds(this->getLocalBounds());
+    if (this->activeLibraryAssignmentPicker) {
         const int popupWidth = this->getWidth() * 4 / 5;
         const int popupHeight = this->getHeight() * 4 / 5;
-        this->activePopup->setBounds(this->getLocalBounds().withSizeKeepingCentre(popupWidth, popupHeight));
+        this->activeLibraryAssignmentPicker->setBounds(this->getLocalBounds().withSizeKeepingCentre(popupWidth, popupHeight));
     }
 }
 
@@ -417,8 +415,8 @@ void InstrumentConfigPanel::layoutContent() {
     const int flipCol = 40;
     const int responseCol = 62;
     const int availableCol = width - slotCol - artCol - btnsCol - responseCol;
-    const int sourceCol = juce::jmax(150, availableCol * 34 / 100);
-    const int parameterArea = juce::jmax(260, availableCol - sourceCol - flipCol * 2);
+    const int libraryArticulationCol = juce::jmax(150, availableCol * 34 / 100);
+    const int parameterArea = juce::jmax(260, availableCol - libraryArticulationCol - flipCol * 2);
     const int parameterCol = parameterArea / 5;
     const int tuningCol = parameterCol;
     const int attackCol = parameterCol;
@@ -429,7 +427,7 @@ void InstrumentConfigPanel::layoutContent() {
     int xPos = 0;
     this->headerSlot.setBounds(xPos, 0, slotCol, headerHeight); xPos += slotCol;
     this->headerArticulation.setBounds(xPos, 0, artCol, headerHeight); xPos += artCol;
-    this->headerSource.setBounds(xPos, 0, sourceCol, headerHeight); xPos += sourceCol;
+    this->headerLibraryArticulation.setBounds(xPos, 0, libraryArticulationCol, headerHeight); xPos += libraryArticulationCol;
     this->headerResponse.setBounds(xPos, 0, responseCol, headerHeight); xPos += responseCol;
     this->headerTuning.setBounds(xPos, 0, tuningCol, headerHeight); xPos += tuningCol;
     this->headerAttack.setBounds(xPos, 0, attackCol, headerHeight); xPos += attackCol;
@@ -456,8 +454,8 @@ void InstrumentConfigPanel::layoutContent() {
         row->artLabel->setBounds(xPos, yPos, artCol, rowHeight);
         xPos += artCol;
 
-        row->sourceButton->setBounds(xPos, yPos + 1, sourceCol - 2, rowHeight - 2);
-        xPos += sourceCol;
+        row->libraryArticulationButton->setBounds(xPos, yPos + 1, libraryArticulationCol - 2, rowHeight - 2);
+        xPos += libraryArticulationCol;
 
         row->velocityResponseStatus->setBounds(xPos, yPos + 1, responseCol - 2, rowHeight - 2);
         xPos += responseCol;
@@ -497,16 +495,16 @@ juce::String InstrumentConfigPanel::generateMapText() const {
     instrumentMap.layers = this->unprojectedActiveSlotMapLayers;
 
     for (const auto* row : this->tableRows) {
-        if (row->selectedSourceIndex < 0)
+        if (row->selectedLibraryArticulationIndex < 0)
             continue;
 
-        const auto& srcItem = this->sourceItems[static_cast<size_t>(row->selectedSourceIndex)];
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(row->selectedLibraryArticulationIndex)];
         DrumKitEngine::InstrumentMapLayer mapLayer;
         mapLayer.slotId = row->slotId;
         if (row->artName != "(default)") mapLayer.slotArticulationFilter.push_back(row->artName);
-        mapLayer.kitRef = srcItem.kitCodeRaw;
-        mapLayer.instCode = srcItem.instCode;
-        if (srcItem.artCode.isNotEmpty()) mapLayer.articulationFilter.push_back(srcItem.artCode);
+        mapLayer.kitRef = libArt.kitCodeRaw;
+        mapLayer.instCode = libArt.instCode;
+        if (libArt.artCode.isNotEmpty()) mapLayer.articulationFilter.push_back(libArt.artCode);
 
         int tuning = static_cast<int>(row->tuningControl->getValue());
         if (tuning != 0) mapLayer.tuningCents = tuning;
@@ -535,14 +533,14 @@ juce::String InstrumentConfigPanel::generateMapText() const {
 
 int InstrumentConfigPanel::getMappedLayerIndexForRow(const TableRow* row) const {
     if (row == nullptr) return -1;
-    if (row->selectedSourceIndex < 0) return -1;
+    if (row->selectedLibraryArticulationIndex < 0) return -1;
 
     int mappedLayerIndex = 0;
     for (int idx = 0; idx < this->tableRows.size(); ++idx) {
         const auto* currentRow = this->tableRows[idx];
         if (currentRow->slotId != row->slotId) continue;
         if (currentRow->artName.trim().compareIgnoreCase(row->artName.trim()) != 0) continue;
-        if (currentRow->selectedSourceIndex < 0) continue;
+        if (currentRow->selectedLibraryArticulationIndex < 0) continue;
         if (currentRow == row) return mappedLayerIndex;
         ++mappedLayerIndex;
     }

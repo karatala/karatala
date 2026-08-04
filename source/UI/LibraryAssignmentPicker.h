@@ -2,46 +2,46 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/InstrumentCatalog.h"
-#include "SourceItem.h"
+#include "AvailableLibraryArticulation.h"
 #include <set>
 
 /**
- * @file SourcePickerPopup.h
- * Standalone source (kit/instrument/articulation) picker popup.
- * Used by both PadContextPopup and InstrumentConfigPanel.
+ * @file LibraryAssignmentPicker.h
+ * Selects a library articulation or a complete library instrument for an instrument-map assignment.
+ * Used by PadContextPopup and InstrumentConfigPanel.
  */
-class SourcePickerPopup : public juce::Component,
+class LibraryAssignmentPicker : public juce::Component,
                           private juce::Timer {
 public:
     enum class SelectionMode {
         Articulation,
-        WholeInstrument,
+        Instrument,
     };
 
-    struct InstrumentSelection {
+    struct LibraryInstrumentSelection {
         juce::String kitId;
         juce::String instrumentId;
     };
 
-    explicit SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& catalog, SelectionMode mode = SelectionMode::Articulation);
-    ~SourcePickerPopup() override = default;
+    explicit LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableLibraryArticulations, const InstrumentCatalog& catalog, SelectionMode mode = SelectionMode::Articulation);
+    ~LibraryAssignmentPicker() override = default;
 
     void resized() override;
     void paint(juce::Graphics& g) override;
 
     void setFilterType(KitLib::InstrumentType type);
-    void setSelectedItem(int originalIndex);
+    void setSelectedLibraryArticulation(int libArtIndex);
     void setTitle(const juce::String& title);
-    void focusItemList();
+    void focusAssignmentList();
 
-    /** Fires when an item is confirmed via the select button. */
-    std::function<void(int)> onItemSelected;
+    /** Fires when a library articulation is confirmed. */
+    std::function<void(int)> onLibraryArticulationSelected;
 
-    /** Fires in whole-instrument mode. The selected articulation is used only for preview. */
-    std::function<void(const InstrumentSelection&)> onInstrumentSelected;
-    
+    /** Fires in instrument mode. The selected articulation is used only for preview. */
+    std::function<void(const LibraryInstrumentSelection&)> onLibraryInstrumentSelected;
+
     /** Fires on preview click with velocity. */
-    std::function<void(int, juce::uint8)> onPreview;
+    std::function<void(int, juce::uint8)> onLibraryArticulationPreview;
 
     std::function<void()> onDismiss;
 
@@ -57,12 +57,12 @@ private:
         Other,
     };
 
-    const std::vector<SourceItem>& allItems;
+    const std::vector<AvailableLibraryArticulation>& availableLibraryArticulations;
     const InstrumentCatalog& catalog;
     SelectionMode selectionMode = SelectionMode::Articulation;
     KitLib::InstrumentType selectedKind = KitLib::InstrumentType::Unknown;
     Category selectedCategory = Category::All;
-    
+
     juce::Label titleLabel;
     juce::TextButton closeButton;
     juce::TextEditor filterField;
@@ -74,78 +74,75 @@ private:
     juce::ListBox kindListBox;
     juce::Label articulationListLabel;
     juce::ListBox articulationListBox;
-    juce::ListBox listBox;
+    juce::ListBox assignmentListBox;
 
-    struct FilteredEntry { 
-        int originalIndex; 
-    };
-    std::vector<FilteredEntry> filteredEntries;
+    std::vector<int> visibleLibraryArticulationIndexes;
     int actionRow = -1;
     int actionRowBeforeMouseSelection = -1;
     bool mouseSelectionChanged = false;
-    bool suppressSelectionPreview = false;
+    bool suppressPreviewOnSelection = false;
     std::vector<KitLib::InstrumentType> kindEntries;
     std::vector<juce::String> articulationEntries;
-    std::vector<int> articulationSourceIndexes;
+    std::vector<int> previewLibraryArticulationIndexes;
     std::set<juce::String> selectedArticulations;
-    std::vector<juce::String> cachedLowerDisplayText;
-    int selectedWholeInstrumentItemIndex = -1;
+    std::vector<juce::String> cachedLowerDisplayLabels;
+    int selectedLibraryInstrumentArticulationIndex = -1;
 
     void setCategory(Category category);
     void rebuildKindEntries();
     void rebuildArticulationEntries();
     void rebuildFiltered();
     bool matchesCategory(KitLib::InstrumentType type) const;
-    bool matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const;
+    bool matchesCurrentFilters(const AvailableLibraryArticulation& libArt, const juce::String& lowerDisplayLabel, const juce::String& filterText) const;
     Category categoryForType(KitLib::InstrumentType type) const;
     static std::optional<InstrumentFamily> familyForCategory(Category category);
     static juce::String kindLabel(KitLib::InstrumentType type);
-    static juce::String wholeInstrumentKey(const SourceItem& item);
-    static juce::String wholeInstrumentDisplayText(const SourceItem& item);
+    static juce::String qualifiedLibraryInstrumentId(const AvailableLibraryArticulation& libArt);
+    static juce::String libraryInstrumentDisplayLabel(const AvailableLibraryArticulation& libArt);
     void updateCategoryButtons();
-    void confirmItem(int originalIndex);
+    void confirmAssignment(int libArtIndex);
     void timerCallback() override;
     void queueRebuildFiltered();
 
     static constexpr int filterDebounceMs = 100;
 
-    class ListModel : public juce::ListBoxModel {
+    class AssignmentListModel : public juce::ListBoxModel {
     public:
-        explicit ListModel(SourcePickerPopup& popupOwner) : owner(popupOwner) {}
+        explicit AssignmentListModel(LibraryAssignmentPicker& popupOwner) : owner(popupOwner) {}
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
         void listBoxItemClicked(int row, const juce::MouseEvent& event) override;
         void selectedRowsChanged(int lastRowSelected) override;
         void returnKeyPressed(int lastRowSelected) override;
     private:
-        SourcePickerPopup& owner;
+        LibraryAssignmentPicker& owner;
     };
-    
-    ListModel listModel { *this };
+
+    AssignmentListModel assignmentListModel { *this };
 
     class KindListModel : public juce::ListBoxModel {
     public:
-        explicit KindListModel(SourcePickerPopup& popupOwner) : owner(popupOwner) {}
+        explicit KindListModel(LibraryAssignmentPicker& popupOwner) : owner(popupOwner) {}
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
         void listBoxItemClicked(int row, const juce::MouseEvent& event) override;
     private:
-        SourcePickerPopup& owner;
+        LibraryAssignmentPicker& owner;
     };
 
     KindListModel kindListModel { *this };
 
     class ArticulationListModel : public juce::ListBoxModel {
     public:
-        explicit ArticulationListModel(SourcePickerPopup& popupOwner) : owner(popupOwner) {}
+        explicit ArticulationListModel(LibraryAssignmentPicker& popupOwner) : owner(popupOwner) {}
         int getNumRows() override;
         void paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) override;
         void selectedRowsChanged(int lastRowSelected) override;
     private:
-        SourcePickerPopup& owner;
+        LibraryAssignmentPicker& owner;
     };
 
     ArticulationListModel articulationListModel { *this };
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SourcePickerPopup)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(LibraryAssignmentPicker)
 };

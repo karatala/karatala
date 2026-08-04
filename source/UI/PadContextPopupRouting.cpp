@@ -22,45 +22,50 @@ static juce::String getMicCodeDescription(const juce::String& micCode) {
     return description;
 }
 
-std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourcePath(const juce::String& sourcePath) const {
+std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForQualifiedLibraryArticulationId(const juce::String& qualifiedLibraryArticulationId) const {
     std::vector<std::pair<juce::String, juce::String>> result;
-    const auto normalizedPath = sourcePath.trim();
-    if (normalizedPath.isEmpty()) return result;
+    const auto normalizedQualifiedId = qualifiedLibraryArticulationId.trim();
+    if (normalizedQualifiedId.isEmpty()) return result;
 
     const auto* libraryManager = this->engine.getInstrumentManager();
     if (libraryManager == nullptr) return result;
 
-    const int matchingIndex = this->findSourceIndex(normalizedPath);
-    SourceItem sourceItem;
-    if (matchingIndex >= 0) {
-        sourceItem = this->sourceItems[static_cast<size_t>(matchingIndex)];
+    juce::String kitId;
+    juce::String instId;
+    juce::String artId;
+    const int libArtIndex = AvailableLibraryArticulation::findIndexByQualifiedId(this->availableLibraryArticulations, normalizedQualifiedId);
+    if (libArtIndex >= 0) {
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+        kitId = libArt.kitCodeRaw;
+        instId = libArt.instCode;
+        artId = libArt.artCode;
     } else {
-        juce::StringArray pathParts;
-        pathParts.addTokens(normalizedPath, "/", "");
-        pathParts.removeEmptyStrings();
-        if (pathParts.isEmpty()) return result;
+        juce::StringArray idParts;
+        idParts.addTokens(normalizedQualifiedId, "/", "");
+        idParts.removeEmptyStrings();
+        if (idParts.isEmpty()) return result;
 
-        sourceItem.kitCodeRaw = pathParts[0];
-        sourceItem.instCode = pathParts.size() > 1 ? pathParts[1] : juce::String();
-        sourceItem.artCode = pathParts.size() > 2 ? pathParts[2] : juce::String();
+        kitId = idParts[0];
+        instId = idParts.size() > 1 ? idParts[1] : juce::String();
+        artId = idParts.size() > 2 ? idParts[2] : juce::String();
     }
 
-    const auto* libraryKit = libraryManager->findKitById(sourceItem.kitCodeRaw);
-    const KitLib::InstrumentSpec* libraryInstrument = libraryKit != nullptr ? libraryKit->findInstrumentById(sourceItem.instCode) : nullptr;
+    const auto* libraryKit = libraryManager->findKitById(kitId);
+    const KitLib::InstrumentSpec* libInst = libraryKit != nullptr ? libraryKit->findInstrumentById(instId) : nullptr;
 
-    if (libraryInstrument == nullptr) return result;
+    if (libInst == nullptr) return result;
 
     std::vector<const KitLib::ArticulationSpec*> libraryArticulations;
-    if (sourceItem.artCode.isNotEmpty()) {
-        for (const auto& artPtr : libraryInstrument->articulationSpecs) {
+    if (artId.isNotEmpty()) {
+        for (const auto& artPtr : libInst->articulationSpecs) {
             if (artPtr == nullptr) continue;
-            if (ArticulationNames::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNames::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
+            if (ArticulationNames::articulationCodeMatches(artPtr->codeRaw, artId) || ArticulationNames::baseArticulationMatches(artPtr->codeRaw, artId)) {
                 libraryArticulations.push_back(artPtr.get());
                 break;
             }
         }
     } else {
-        for (const auto& artPtr : libraryInstrument->articulationSpecs) {
+        for (const auto& artPtr : libInst->articulationSpecs) {
             if (artPtr != nullptr) libraryArticulations.push_back(artPtr.get());
         }
     }
@@ -108,46 +113,51 @@ const MicLayout::Mic* PadContextPopup::findLayoutMicForSlot(const KitLayout::Ins
 }
 
 
-std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForSourcePath(const juce::String& sourcePath) const {
+std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForQualifiedLibraryArticulationId(const juce::String& qualifiedLibraryArticulationId) const {
     std::vector<KitLib::MicSpec> result;
-    const auto normalizedPath = sourcePath.trim();
-    if (normalizedPath.isEmpty()) return result;
+    const auto normalizedQualifiedId = qualifiedLibraryArticulationId.trim();
+    if (normalizedQualifiedId.isEmpty()) return result;
 
     const auto* libraryManager = this->engine.getInstrumentManager();
     if (libraryManager == nullptr)
         return result;
 
-    const int matchingIndex = this->findSourceIndex(normalizedPath);
-    SourceItem sourceItem;
-    if (matchingIndex >= 0) {
-        sourceItem = this->sourceItems[static_cast<size_t>(matchingIndex)];
+    juce::String kitId;
+    juce::String instId;
+    juce::String artId;
+    const int libArtIndex = AvailableLibraryArticulation::findIndexByQualifiedId(this->availableLibraryArticulations, normalizedQualifiedId);
+    if (libArtIndex >= 0) {
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+        kitId = libArt.kitCodeRaw;
+        instId = libArt.instCode;
+        artId = libArt.artCode;
     } else {
-        juce::StringArray pathParts;
-        pathParts.addTokens(normalizedPath, "/", "");
-        pathParts.removeEmptyStrings();
-        if (pathParts.isEmpty()) return result;
+        juce::StringArray idParts;
+        idParts.addTokens(normalizedQualifiedId, "/", "");
+        idParts.removeEmptyStrings();
+        if (idParts.isEmpty()) return result;
 
-        sourceItem.kitCodeRaw = pathParts[0];
-        sourceItem.instCode = pathParts.size() > 1 ? pathParts[1] : juce::String();
-        sourceItem.artCode = pathParts.size() > 2 ? pathParts[2] : juce::String();
+        kitId = idParts[0];
+        instId = idParts.size() > 1 ? idParts[1] : juce::String();
+        artId = idParts.size() > 2 ? idParts[2] : juce::String();
     }
 
-    const auto* libraryKit = libraryManager->findKitById(sourceItem.kitCodeRaw);
-    const KitLib::InstrumentSpec* libraryInstrument = libraryKit != nullptr ? libraryKit->findInstrumentById(sourceItem.instCode) : nullptr;
+    const auto* libraryKit = libraryManager->findKitById(kitId);
+    const KitLib::InstrumentSpec* libInst = libraryKit != nullptr ? libraryKit->findInstrumentById(instId) : nullptr;
 
-    if (libraryInstrument == nullptr) return result;
+    if (libInst == nullptr) return result;
 
     std::vector<const KitLib::ArticulationSpec*> libraryArticulations;
-    if (sourceItem.artCode.isNotEmpty()) {
-        for (const auto& artPtr : libraryInstrument->articulationSpecs) {
+    if (artId.isNotEmpty()) {
+        for (const auto& artPtr : libInst->articulationSpecs) {
             if (artPtr == nullptr) continue;
-            if (ArticulationNames::articulationCodeMatches(artPtr->codeRaw, sourceItem.artCode) || ArticulationNames::baseArticulationMatches(artPtr->codeRaw, sourceItem.artCode)) {
+            if (ArticulationNames::articulationCodeMatches(artPtr->codeRaw, artId) || ArticulationNames::baseArticulationMatches(artPtr->codeRaw, artId)) {
                 libraryArticulations.push_back(artPtr.get());
                 break;
             }
         }
     } else {
-        for (const auto& artPtr : libraryInstrument->articulationSpecs) {
+        for (const auto& artPtr : libInst->articulationSpecs) {
             if (artPtr != nullptr) libraryArticulations.push_back(artPtr.get());
         }
     }
@@ -170,7 +180,7 @@ std::vector<KitLib::MicSpec> PadContextPopup::getDirectMicSpecsForSourcePath(con
     return result;
 }
 
-PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const {
+PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const juce::String& qualifiedLibraryArticulationId, const juce::String& micCode, const juce::String& targetSlotId) const {
     MicRoutingDisplay display;
     const auto* kitLayout = this->engine.getKitLayout();
     const auto* micLayout = this->engine.getMicLayout();
@@ -198,7 +208,7 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
     const auto* layoutMic = this->findLayoutMicForSlot(*slot, micCode);
     const auto parsedSourceMic = KitLib::MicSpec::parseMicCode(micCode);
 
-    const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
+    const auto directSpecs = this->getDirectMicSpecsForQualifiedLibraryArticulationId(qualifiedLibraryArticulationId);
     for (const auto& micSpec : directSpecs) {
         bool directMicMatches = micSpec.raw.compareIgnoreCase(micCode) == 0;
         if (!directMicMatches && layoutMic != nullptr) directMicMatches = directMicSpecsMatchExactly(micSpec, layoutMic->specs);
@@ -255,10 +265,10 @@ PadContextPopup::MicRoutingDisplay PadContextPopup::buildMicRoutingDisplay(const
     return display;
 }
 
-std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const {
+std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingChoices(const juce::String& qualifiedLibraryArticulationId, const juce::String& micCode, const juce::String& targetSlotId) const {
     std::vector<MicRoutingChoice> choices;
 
-    const auto currentDisplay = this->buildMicRoutingDisplay(sourcePath, micCode, targetSlotId);
+    const auto currentDisplay = this->buildMicRoutingDisplay(qualifiedLibraryArticulationId, micCode, targetSlotId);
     choices.push_back({ "-", "Unassigned from output", "-", -1, false, false });
 
     const auto* kitLayout = this->engine.getKitLayout();
@@ -284,7 +294,7 @@ std::vector<PadContextPopup::MicRoutingChoice> PadContextPopup::buildMicRoutingC
     const auto parsedSourceMic = KitLib::MicSpec::parseMicCode(micCode);
 
     std::optional<KitLib::MicSpec> sourceDirectSpec;
-    const auto directSpecs = this->getDirectMicSpecsForSourcePath(sourcePath);
+    const auto directSpecs = this->getDirectMicSpecsForQualifiedLibraryArticulationId(qualifiedLibraryArticulationId);
     for (const auto& micSpec : directSpecs) {
         bool directMicMatches = micSpec.raw.compareIgnoreCase(micCode) == 0;
         if (!directMicMatches && layoutMic != nullptr) directMicMatches = directMicSpecsMatchExactly(micSpec, layoutMic->specs);
@@ -394,11 +404,6 @@ int PadContextPopup::findRoutingChoiceIndex(const std::vector<MicRoutingChoice>&
     return -1;
 }
 
-std::vector<std::pair<juce::String, juce::String>> PadContextPopup::getRelevantMicsForSourceIndex(int sourceIndex) const {
-    if (sourceIndex < 0 || sourceIndex >= static_cast<int>(this->sourceItems.size())) return {};
-    return this->getRelevantMicsForSourcePath(this->sourceItems[static_cast<size_t>(sourceIndex)].fullPath());
-}
-
 void PadContextPopup::rebuildBleedControls(MapLayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels, const std::unordered_map<juce::String, juce::String>& seedRoutes) {
     if (layer == nullptr) return;
 
@@ -416,13 +421,13 @@ void PadContextPopup::rebuildBleedControls(MapLayerRow* layer, const std::unorde
 
     layer->micBleeds.clear();
 
-    juce::String sourcePath;
-    if (layer->selectedSourceIndex >= 0 && layer->selectedSourceIndex < static_cast<int>(this->sourceItems.size()))
-        sourcePath = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].fullPath();
+    juce::String qualifiedLibraryArticulationId;
+    if (layer->selectedLibraryArticulationIndex >= 0 && layer->selectedLibraryArticulationIndex < static_cast<int>(this->availableLibraryArticulations.size()))
+        qualifiedLibraryArticulationId = this->availableLibraryArticulations[static_cast<size_t>(layer->selectedLibraryArticulationIndex)].qualifiedId();
     else
-        sourcePath = layer->sourcePathHint;
+        qualifiedLibraryArticulationId = layer->mappedLibraryArticulationId;
 
-    const auto micEntries = this->getRelevantMicsForSourcePath(sourcePath);
+    const auto micEntries = this->getRelevantMicsForQualifiedLibraryArticulationId(qualifiedLibraryArticulationId);
     std::vector<std::pair<juce::String, juce::String>> entriesToShow = micEntries;
     if (entriesToShow.empty() && (!existingLevels.empty() || !existingRoutes.empty())) {
         for (const auto& [micCode, level] : existingLevels) {
@@ -464,7 +469,7 @@ void PadContextPopup::rebuildBleedControls(MapLayerRow* layer, const std::unorde
             this->applyLayerParameterChange(layer, EditableLayerParameter::Bleed, bleedCtrlPtr->micCode);
         };
 
-        bleedCtrl->routingChoices = this->buildMicRoutingChoices(sourcePath, micCode, this->slotId);
+        bleedCtrl->routingChoices = this->buildMicRoutingChoices(qualifiedLibraryArticulationId, micCode, this->slotId);
         bleedCtrl->routingCombo = std::make_unique<juce::ComboBox>();
         UIComponentStyle::configureComboBox(*bleedCtrl->routingCombo);
         bleedCtrl->routingCombo->getProperties().set("compactRoute", true);
@@ -569,13 +574,13 @@ void PadContextPopup::applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::M
     std::erase_if(targetProjections, [this, &parsedMap, bleedCtrl, &newRoute](const auto& projection) {
         if (projection.mapLayerIndex >= parsedMap.value.layers.size()) return true;
         const auto& mapLayer = parsedMap.value.layers[projection.mapLayerIndex];
-        const auto libraryPath = InstrumentMap::libraryPathForArticulationSlot(mapLayer, projection.articulationSlotCode);
-        const auto relevantMics = this->getRelevantMicsForSourcePath(libraryPath);
+        const auto qualifiedLibArtId = InstrumentMap::qualifiedLibraryArticulationIdForSlot(mapLayer, projection.articulationSlotCode);
+        const auto relevantMics = this->getRelevantMicsForQualifiedLibraryArticulationId(qualifiedLibArtId);
         const bool hasSourceMic = std::any_of(relevantMics.begin(), relevantMics.end(), [bleedCtrl](const auto& mic) {
             return mic.first.compareIgnoreCase(bleedCtrl->micCode) == 0;
         });
         if (!hasSourceMic) return true;
-        const auto choices = this->buildMicRoutingChoices(libraryPath, bleedCtrl->micCode, projection.slotId);
+        const auto choices = this->buildMicRoutingChoices(qualifiedLibArtId, bleedCtrl->micCode, projection.slotId);
         return PadContextPopup::findRoutingChoiceIndex(choices, newRoute) < 0;
     });
     if (targetProjections.empty()) {

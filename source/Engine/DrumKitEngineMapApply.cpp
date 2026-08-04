@@ -110,7 +110,7 @@ static juce::String buildSuggestedInstrumentMapText(const KitLayout* layout, con
     if (layout == nullptr)
         return {};
 
-    InstrumentMap::Map instrumentMap;
+    ::InstrumentMap::Map instrumentMap;
     for (const auto& slot : layout->instrumentSlots) {
         auto slotIt = instrumentPlayerById.find(slot.id);
         if (slotIt == instrumentPlayerById.end())
@@ -120,7 +120,7 @@ static juce::String buildSuggestedInstrumentMapText(const KitLayout* layout, con
         if (loadedInstrument == nullptr || loadedInstrument->parent == nullptr)
             continue;
 
-        auto mapLayers = InstrumentMap::buildLayers(slot, *loadedInstrument->parent, *loadedInstrument, loadedInstrument->parent->meta.codeRaw, fallbackRules);
+        auto mapLayers = ::InstrumentMap::buildLayers(slot, *loadedInstrument->parent, *loadedInstrument, loadedInstrument->parent->meta.codeRaw, fallbackRules);
         for (const auto& warning : mapLayers.errors) {
             LOG(Warning, warning);
             if (warnings != nullptr) warnings->add(warning);
@@ -128,7 +128,7 @@ static juce::String buildSuggestedInstrumentMapText(const KitLayout* layout, con
         for (auto& mapLayer : mapLayers.value) instrumentMap.layers.push_back(std::move(mapLayer));
     }
 
-    return InstrumentMap::serialize(instrumentMap);
+    return ::InstrumentMap::serialize(instrumentMap);
 }
 
 void DrumKitEngine::mapDefaultKit() {
@@ -141,10 +141,10 @@ void DrumKitEngine::mapDefaultKit() {
         this->regenerateSuggestedInstrumentMapText();
         auto parsedSuggestedMap = DrumKitEngine::parseInstrumentMapText(this->suggestedInstrumentMapText);
         if (parsedSuggestedMap.ok() && this->libraryManagerPtr != nullptr && this->activeKitLayoutPtr != nullptr) {
-            InstrumentMap::applyAutomaticOrientation(parsedSuggestedMap.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
+            ::InstrumentMap::applyAutomaticOrientation(parsedSuggestedMap.value, *this->activeKitLayoutPtr, *this->libraryManagerPtr);
             const auto normalizedSuggestedMapText = DrumKitEngine::serializeInstrumentMap(parsedSuggestedMap.value);
-            this->lastAppliedSlotFingerprints = InstrumentMap::buildResolvedSlotFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
-            this->lastAppliedSlotReloadFingerprints = InstrumentMap::buildResolvedSlotReloadFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
+            this->lastAppliedSlotFingerprints = ::InstrumentMap::buildResolvedSlotFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
+            this->lastAppliedSlotReloadFingerprints = ::InstrumentMap::buildResolvedSlotReloadFingerprintMap(parsedSuggestedMap.value, *this->libraryManagerPtr);
             this->lastAppliedShadowFingerprints.clear();
             this->lastAppliedShadowReloadFingerprints.clear();
             this->lastAppliedInstrumentMapText = normalizedSuggestedMapText;
@@ -174,12 +174,12 @@ juce::String DrumKitEngine::buildInstrumentMapForKit(const KitLayout& layout, co
     std::map<KitLib::InstrumentSpec::Type, int> nextIndexByType;
 
     for (const auto& slot : layout.instrumentSlots) {
-        auto* matchedLibraryInstrument = InstrumentMap::findMatchingLibraryInstrument(slot, libraryKit, usedLibraryInstruments, nextIndexByType);
+        auto* matchedLibraryInstrument = ::InstrumentMap::findMatchingLibraryInstrument(slot, libraryKit, usedLibraryInstruments, nextIndexByType);
         if (matchedLibraryInstrument == nullptr) continue;
         const auto preferredLibraryKitId = this->libraryManagerPtr != nullptr
             ? this->libraryManagerPtr->getPreferredKitId(libraryKit)
             : firstCandidateOrRaw(KitLib::DrumKitSpec::getIdentityCandidates(libraryKit.meta), libraryKit.meta.codeRaw);
-        auto mapLayers = InstrumentMap::buildLayers(slot, libraryKit, *matchedLibraryInstrument, preferredLibraryKitId, this->globalConfig.articulationSlotFallbackRules);
+        auto mapLayers = ::InstrumentMap::buildLayers(slot, libraryKit, *matchedLibraryInstrument, preferredLibraryKitId, this->globalConfig.articulationSlotFallbackRules);
         for (const auto& warning : mapLayers.errors) {
             LOG(Warning, warning);
             if (warnings != nullptr) warnings->add(warning);
@@ -213,13 +213,13 @@ ParseResult<juce::String> DrumKitEngine::buildInstrumentMapWithSlotInstrument(co
     }
 
     const auto preferredLibraryKitId = this->libraryManagerPtr->getPreferredKitId(*libraryKit);
-    auto replacementMapLayers = InstrumentMap::buildLayers(*slotIterator, *libraryKit, *libraryInstrument, preferredLibraryKitId, this->globalConfig.articulationSlotFallbackRules);
+    auto replacementMapLayers = ::InstrumentMap::buildLayers(*slotIterator, *libraryKit, *libraryInstrument, preferredLibraryKitId, this->globalConfig.articulationSlotFallbackRules);
     for (const auto& warning : replacementMapLayers.errors) {
         LOG(Warning, warning);
         result.addWarning(warning);
     }
     if (replacementMapLayers.value.empty()) return result.returnWithError("Library instrument has no articulations that can be mapped to slot '" + slotIterator->id + "'");
-    InstrumentMap::replaceSlotLayers(map, slotIterator->id, std::move(replacementMapLayers.value));
+    ::InstrumentMap::replaceSlotLayers(map, slotIterator->id, std::move(replacementMapLayers.value));
     result.value = DrumKitEngine::serializeInstrumentMap(map);
     return result;
 }
@@ -262,7 +262,7 @@ void DrumKitEngine::mapKit(const KitLib::DrumKitSpec& kit) { //FIXME: review, pr
         }
         InstrumentPlayer* slot = sit->second;
 
-        auto* matched = InstrumentMap::findMatchingLibraryInstrument(layoutInstrument, kit, usedInstSpecSet, nextIndexByType);
+        auto* matched = ::InstrumentMap::findMatchingLibraryInstrument(layoutInstrument, kit, usedInstSpecSet, nextIndexByType);
 
         if (matched == nullptr) {
             LOG(Warning, "no matching instrument found in kit '" + kit.meta.name + "' for layout slot '" + layoutInstrument.id + "'");
@@ -296,17 +296,17 @@ void DrumKitEngine::updateSlotParameters(const juce::String& slotId, const juce:
     this->updateSlotParameters(slotId, artName, layerIndex, update);
 }
 
-bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const juce::String& artName, const juce::String& sourcePath, int sourceOccurrenceIndex, const LayerParameterUpdate& update) {
-    if (sourceOccurrenceIndex < 0) return false;
+bool DrumKitEngine::updateMappedLibraryArticulationParameters(const juce::String& slotId, const juce::String& artName, const juce::String& qualifiedLibraryArticulationId, int libraryArticulationOccurrenceIndex, const LayerParameterUpdate& update) {
+    if (libraryArticulationOccurrenceIndex < 0) return false;
 
-    juce::StringArray sourceParts;
-    sourceParts.addTokens(sourcePath.trim(), "/", "");
-    sourceParts.removeEmptyStrings();
-    if (sourceParts.size() < 2) return false;
+    juce::StringArray idParts;
+    idParts.addTokens(qualifiedLibraryArticulationId.trim(), "/", "");
+    idParts.removeEmptyStrings();
+    if (idParts.size() < 2) return false;
 
-    const auto targetKit = sourceParts[0].trim();
-    const auto targetInst = sourceParts[1].trim();
-    const auto targetArt = sourceParts.size() >= 3 ? sourceParts[2].trim() : juce::String();
+    const auto targetKit = idParts[0].trim();
+    const auto targetInst = idParts[1].trim();
+    const auto targetArt = idParts.size() >= 3 ? idParts[2].trim() : juce::String();
 
     const auto targetRoutes = this->getTargetRoutesForArticulationFilter(slotId, artName);
     auto librarySnapshot = this->libraryManagerPtr;
@@ -326,7 +326,7 @@ bool DrumKitEngine::updateSlotSourceParameters(const juce::String& slotId, const
         if (instrumentPlayerPtr->getId() != slotId) continue;
         if (!DrumKitEngine::playerMatchesTargetRoutes(*instrumentPlayerPtr, targetRoutes) || !instrumentPlayerPtr->routesLibraryArticulation(*targetInstrumentSpec, targetArticulationSpec)) continue;
 
-        if (currentOccurrence == sourceOccurrenceIndex) {
+        if (currentOccurrence == libraryArticulationOccurrenceIndex) {
             return instrumentPlayerPtr->updateArticulationParameters(targetRoutes, update);
         }
 
@@ -510,7 +510,7 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
     }
 
     normalizeInstrumentMapLayers(parsed.value, *librarySnapshot);
-    InstrumentMap::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *librarySnapshot);
+    ::InstrumentMap::applyAutomaticOrientation(parsed.value, *this->activeKitLayoutPtr, *librarySnapshot);
     const auto normalizedMapText = DrumKitEngine::serializeInstrumentMap(parsed.value);
 
     LOG(Info, "=== useInstrumentMap: " + juce::String(parsed.value.layers.size()) + " map layers ===");
@@ -628,11 +628,11 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
     };
 
     auto makeResolvedMapLayerFingerprint = [](const InstrumentMapLayer& mapLayer, const KitLib::InstrumentSpec& instSpec) {
-        return InstrumentMap::makeLayerFingerprint(mapLayer) + "\nsource\n" + instSpec.getContentFingerprint();
+        return ::InstrumentMap::makeLayerFingerprint(mapLayer) + "\nsource\n" + instSpec.getContentFingerprint();
     };
 
     auto makeResolvedMapLayerReloadFingerprint = [](const InstrumentMapLayer& mapLayer, const KitLib::InstrumentSpec& instSpec) {
-        return InstrumentMap::makeLayerReloadFingerprint(mapLayer) + "\nsource\n" + instSpec.getContentFingerprint();
+        return ::InstrumentMap::makeLayerReloadFingerprint(mapLayer) + "\nsource\n" + instSpec.getContentFingerprint();
     };
 
     std::vector<juce::String> slotOrder;
@@ -642,8 +642,8 @@ bool DrumKitEngine::useInstrumentMapInternal(juce::String text, const juce::Stri
         mapLayersBySlotId[mapLayer.slotId].push_back(&mapLayer);
     }
 
-    std::unordered_map<juce::String, juce::String> nextSlotFingerprints = InstrumentMap::buildResolvedSlotFingerprintMap(parsed.value, *librarySnapshot);
-    std::unordered_map<juce::String, juce::String> nextSlotReloadFingerprints = InstrumentMap::buildResolvedSlotReloadFingerprintMap(parsed.value, *librarySnapshot);
+    std::unordered_map<juce::String, juce::String> nextSlotFingerprints = ::InstrumentMap::buildResolvedSlotFingerprintMap(parsed.value, *librarySnapshot);
+    std::unordered_map<juce::String, juce::String> nextSlotReloadFingerprints = ::InstrumentMap::buildResolvedSlotReloadFingerprintMap(parsed.value, *librarySnapshot);
     struct ExistingShadow {
         InstrumentPlayer* instrumentPlayer = nullptr;
         juce::String stateFingerprint;

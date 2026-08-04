@@ -173,7 +173,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryVel
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
 
-    this->invalidateSourcePreviewCache();
+    this->invalidateLibraryPreviewCache();
     {
         const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
@@ -227,7 +227,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryVel
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
 
-    this->invalidateSourcePreviewCache();
+    this->invalidateLibraryPreviewCache();
     {
         const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
@@ -263,7 +263,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::resetLibraryV
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
 
-    this->invalidateSourcePreviewCache();
+    this->invalidateLibraryPreviewCache();
     {
         const juce::ScopedLock libraryLock(this->libraryModelLock);
         const juce::ScopedLock graphLock(this->engineGraphLock);
@@ -277,7 +277,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::resetLibraryV
     return result;
 }
 
-void DrumKitEngine::invalidateSourcePreviewCache() {
+void DrumKitEngine::invalidateLibraryPreviewCache() {
     this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel);
     this->previewResolveThreadPool.removeAllJobs(true, 2000);
     const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
@@ -308,7 +308,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setLibraryPla
     else candidateOverrides.setInstrumentBalance(instrument->meta.codeRaw, balance);
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
-    this->invalidateSourcePreviewCache();
+    this->invalidateLibraryPreviewCache();
 
     {
         const juce::ScopedLock libraryLock(this->libraryModelLock);
@@ -362,7 +362,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSampleManu
     }
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
-    this->invalidateSourcePreviewCache();
+    this->invalidateLibraryPreviewCache();
 
     {
         const juce::ScopedLock libraryLock(this->libraryModelLock);
@@ -434,7 +434,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::setSamplePlay
     }
     const auto saveResult = candidateOverrides.saveToKitRoot(kit->meta.rootDir);
     if (!saveResult.ok()) return result.returnWithError(saveResult.error());
-    this->invalidateSourcePreviewCache();
+    this->invalidateLibraryPreviewCache();
 
     {
         const juce::ScopedLock libraryLock(this->libraryModelLock);
@@ -479,7 +479,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::reloadLibrary
     KitLib::LibraryKitOverrides reloadedOverrides;
     auto loadResult = reloadedOverrides.loadFromKitRoot(kitRoot);
     if (!loadResult.ok()) return result.returnWithError(loadResult.error());
-    this->invalidateSourcePreviewCache();
+    this->invalidateLibraryPreviewCache();
 
     juce::String resolvedKitId;
     juce::String resolvedInstrumentId;

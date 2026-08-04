@@ -61,7 +61,7 @@ Add three connected workflows:
 - `KitLib::DrumKitSpec::readmeMarkdown` stores `README.md` or fallback `readme.md` content loaded during library scanning.
 - [`KitPage`](../source/UI/KitPage.h) is the single page for library kits and instrument-map presets.
 - [`KitPreviewGrid`](../source/UI/KitPreviewGrid.h) shows grouped rectangular articulation pads and previews without changing the map.
-- [`SourcePickerPopup`](../source/UI/SourcePickerPopup.h) supports contextual titles, a right-side `×` close button, library filtering, per-articulation preview, articulation-specific `Use`, and a whole-instrument mode with one main-list row per library instrument and a separate library-articulation preview list.
+- [`LibraryAssignmentPicker`](../source/UI/LibraryAssignmentPicker.h) supports contextual titles, a right-side `×` close button, library filtering, per-articulation preview, articulation-specific `Use`, and a whole-instrument mode with one main-list row per library instrument and a separate library-articulation preview list.
 - [`PadContextPopup`](../source/UI/PadContextPopup.h) has all articulation groups for the current instrument slot and updates tuning, attack, decay, gain, pan, phase, L/R, and bleed without reloading samples.
 - The pad-popup header contains the slot title, phase 1 link controls, `SET INSTRUMENT`, and MIDI-note controls.
 - `DrumKitEngine::applyInstrumentMapSlotChange()` replaces one instrument slot without reloading unrelated slots, while `updateSlotParametersBatch()` applies linked parameter targets under one graph lock.
@@ -114,7 +114,7 @@ Create a library-kit preview grid instead of reusing `DrumPadGrid`, because `Dru
 - Pads do not need a square aspect ratio.
 - All articulation pads in one instrument group use the same instrument-type colour.
 - Adjacent instrument groups have visible spacing, so colour does not become the only grouping cue.
-- Clicking an articulation pad calls `DrumKitEngine::previewSourceItem()`.
+- Clicking an articulation pad calls `DrumKitEngine::previewLibraryArticulation()`.
 - Use horizontal click position for preview velocity, matching the shared library picker.
 - Flash only the clicked pad while its preview starts.
 
@@ -162,7 +162,7 @@ Use this left-to-right order:
 
 ### Whole-Instrument Picker Mode
 
-Add a whole-instrument selection mode to `SourcePickerPopup`:
+Add a whole-instrument selection mode to `LibraryAssignmentPicker`:
 
 - Keep the existing 80-percent modal size, dark outside overlay, text/category/type filtering, preview, arrow keys, Enter, and outside-click dismissal.
 - Add a fixed title row with a `×` close button on the right.
@@ -295,8 +295,8 @@ Files:
 
 Files:
 
-- [`source/UI/SourcePickerPopup.h`](../source/UI/SourcePickerPopup.h)
-- [`source/UI/SourcePickerPopup.cpp`](../source/UI/SourcePickerPopup.cpp)
+- [`source/UI/LibraryAssignmentPicker.h`](../source/UI/LibraryAssignmentPicker.h)
+- [`source/UI/LibraryAssignmentPicker.cpp`](../source/UI/LibraryAssignmentPicker.cpp)
 
 ### ✅ 6. Add Pad-Popup Header Actions
 

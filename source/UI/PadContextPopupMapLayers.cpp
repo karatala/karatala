@@ -30,48 +30,50 @@ void PadContextPopup::populateLayers() {
             }
             if (!matchesArticulation) continue;
 
-            juce::String sourceFullPath = mapLayer.kitRef;
-            if (mapLayer.instCode.isNotEmpty()) sourceFullPath += "/" + mapLayer.instCode;
-            const auto libraryArticulation = InstrumentMap::libraryArticulationForSlot(mapLayer, group->artName);
-            if (libraryArticulation.isNotEmpty()) sourceFullPath += "/" + libraryArticulation;
-            if (this->slotType == KitLib::InstrumentSpec::Type::HiHat && SourceItem::usesLegacyArticulationSlotExpressionFilter(mapLayer.slotArticulationFilter, group->artName))
-                sourceFullPath = SourceItem::resolveLegacyHihatSourcePath(this->sourceItems, sourceFullPath, group->artName);
+            juce::String qualifiedLibraryArticulationId = mapLayer.kitRef;
+            if (mapLayer.instCode.isNotEmpty()) qualifiedLibraryArticulationId += "/" + mapLayer.instCode;
+            const auto libArtId = InstrumentMap::libraryArticulationForSlot(mapLayer, group->artName);
+            if (libArtId.isNotEmpty()) qualifiedLibraryArticulationId += "/" + libArtId;
+            const auto* libraryManager = this->engine.getInstrumentManager();
+            const auto* libraryKit = libraryManager != nullptr ? libraryManager->findKitById(mapLayer.kitRef) : nullptr;
+            if (libraryKit != nullptr && this->slotType == KitLib::InstrumentSpec::Type::HiHat && InstrumentMap::usesLegacyArticulationSlotExpressionFilter(mapLayer.slotArticulationFilter, group->artName))
+                qualifiedLibraryArticulationId = InstrumentMap::resolveLegacyHihatLibraryArticulationId(*libraryKit, qualifiedLibraryArticulationId, group->artName);
 
             const int tuning = mapLayer.tuningCents.value_or(0);
             const int attack = mapLayer.attackTimeMs.value_or(-1);
             const int decay = mapLayer.decayTimeMs.value_or(-1);
             const float volume = mapLayer.volumeDb.value_or(0.0f);
-            this->addMapLayerRow(group->artName, sourceFullPath, tuning, attack, decay, volume, mapLayer.pan.value_or(0), mapLayer.flipLR, mapLayer.flipLRExplicit, mapLayer.flipPhase, mapLayer.velocityResponse, mapLayer.micBleedLevels, mapLayer.micRouteOverrides, mappedLayerIndex);
+            this->addMapLayerRow(group->artName, qualifiedLibraryArticulationId, tuning, attack, decay, volume, mapLayer.pan.value_or(0), mapLayer.flipLR, mapLayer.flipLRExplicit, mapLayer.flipPhase, mapLayer.velocityResponse, mapLayer.micBleedLevels, mapLayer.micRouteOverrides, mappedLayerIndex);
             ++mappedLayerIndex;
         }
     }
 
-    this->updateSourceCardButtonVisibility();
+    this->updateLibraryArticulationActionsVisibility();
 }
 
 
-PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::optional<juce::String>& velocityResponse, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
+PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String& articulationName, const juce::String& qualifiedLibraryArticulationId, int tuningCents, int attackMs, int decayMs, float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase, const std::optional<juce::String>& velocityResponse, const std::unordered_map<juce::String, float>& micBleedLevels, const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex) { //TODO: will it be better to replace multiple params for this with one structure?
     auto* layer = this->layerRows.add(new MapLayerRow());
     layer->artName = articulationName;
-    layer->sourcePathHint = sourceFullPath;
-    layer->selectedSourceIndex = this->findSourceIndex(sourceFullPath);
+    layer->mappedLibraryArticulationId = qualifiedLibraryArticulationId;
+    layer->selectedLibraryArticulationIndex = AvailableLibraryArticulation::findIndexByQualifiedId(this->availableLibraryArticulations, qualifiedLibraryArticulationId);
     layer->mappedLayerIndex = mappedLayerIndex;
     layer->velocityResponse = velocityResponse;
 
-    // Source button (opens picker)
-    layer->sourceButton = std::make_unique<juce::TextButton>();
-    layer->sourceButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControlAlt);
-    layer->sourceButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
-    this->layerContent.addAndMakeVisible(*layer->sourceButton);
-    layer->sourceButton->onClick = [this, layer] { this->showSourcePicker(layer); };
+    // Library articulation button
+    layer->libraryArticulationButton = std::make_unique<juce::TextButton>();
+    layer->libraryArticulationButton->setColour(juce::TextButton::buttonColourId, UITheme::Colours::bgControlAlt);
+    layer->libraryArticulationButton->setConnectedEdges(juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
+    this->layerContent.addAndMakeVisible(*layer->libraryArticulationButton);
+    layer->libraryArticulationButton->onClick = [this, layer] { this->showLibraryArticulationPicker(layer); };
 
-    // Source detail label (kit / instrument / articulation)
-    layer->sourceDetailLabel = std::make_unique<juce::Label>();
-    layer->sourceDetailLabel->setFont(UITheme::Fonts::normal());
-    layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
-    layer->sourceDetailLabel->setJustificationType(juce::Justification::topLeft);
-    layer->sourceDetailLabel->setInterceptsMouseClicks(false, false);
-    this->layerContent.addAndMakeVisible(*layer->sourceDetailLabel);
+    // Library articulation label (kit / instrument / articulation)
+    layer->libraryArticulationDetailLabel = std::make_unique<juce::Label>();
+    layer->libraryArticulationDetailLabel->setFont(UITheme::Fonts::normal());
+    layer->libraryArticulationDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+    layer->libraryArticulationDetailLabel->setJustificationType(juce::Justification::topLeft);
+    layer->libraryArticulationDetailLabel->setInterceptsMouseClicks(false, false);
+    this->layerContent.addAndMakeVisible(*layer->libraryArticulationDetailLabel);
 
     layer->velocityResponseMode = std::make_unique<juce::ComboBox>();
     UIComponentStyle::configureComboBox(*layer->velocityResponseMode);
@@ -89,7 +91,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->libraryArticulationEditorButton->onClick = [this, layer] { this->showLibraryArticulationEditor(layer); };
     this->layerContent.addAndMakeVisible(*layer->libraryArticulationEditorButton);
 
-    this->updateSourceDisplay(layer);
+    this->updateLibraryArticulationDisplay(layer);
 
     // Tuning pot
     layer->tuningPot = std::make_unique<CompactParameterControl>("Tuning", -2400.0, 2400.0, 1.0, static_cast<double>(tuningCents));
@@ -160,15 +162,15 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->removeButton->setColour(juce::TextButton::textColourOffId, UITheme::Colours::accent);
     layer->removeButton->setTooltip("Remove layer");
     this->layerContent.addAndMakeVisible(*layer->removeButton);
-    layer->sourceButton->onStateChange = [this] { this->updateSourceCardButtonVisibility(); };
-    layer->libraryArticulationEditorButton->onStateChange = [this] { this->updateSourceCardButtonVisibility(); };
-    layer->removeButton->onStateChange = [this] { this->updateSourceCardButtonVisibility(); };
+    layer->libraryArticulationButton->onStateChange = [this] { this->updateLibraryArticulationActionsVisibility(); };
+    layer->libraryArticulationEditorButton->onStateChange = [this] { this->updateLibraryArticulationActionsVisibility(); };
+    layer->removeButton->onStateChange = [this] { this->updateLibraryArticulationActionsVisibility(); };
     layer->removeButton->onClick = [this, layer] {
         juce::MessageManager::callAsync([this, layer] {
             this->flushMapText();
-            const bool removedMappedLayer = layer->selectedSourceIndex >= 0;
+            const bool removedMappedLayer = layer->selectedLibraryArticulationIndex >= 0;
             this->layerRows.removeObject(layer);
-            this->updateSourceCardButtonVisibility();
+            this->updateLibraryArticulationActionsVisibility();
             this->resized();
             this->refreshLayerMappings();
             if (removedMappedLayer) this->applyToEngine();
@@ -177,51 +179,51 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     return layer;
 }
 
-void PadContextPopup::updateSourceCardButtonVisibility() {
+void PadContextPopup::updateLibraryArticulationActionsVisibility() {
     for (auto* layer : this->layerRows) {
         int articulationLayerCount = 0;
         for (const auto* candidate : this->layerRows)
             if (candidate->artName == layer->artName) ++articulationLayerCount;
         const bool canRemove = articulationLayerCount > 1;
         const bool canOpenLibraryArticulationEditor = layer->libraryArticulationEditorButton->isEnabled();
-        const bool sourceCardHovered = layer->sourceButton->isMouseOver() || layer->libraryArticulationEditorButton->isMouseOver() || layer->removeButton->isMouseOver();
+        const bool libraryArticulationHovered = layer->libraryArticulationButton->isMouseOver() || layer->libraryArticulationEditorButton->isMouseOver() || layer->removeButton->isMouseOver();
         layer->removeButton->setVisible(canRemove);
-        layer->removeButton->setAlpha(canRemove && sourceCardHovered ? 1.0f : 0.0f);
+        layer->removeButton->setAlpha(canRemove && libraryArticulationHovered ? 1.0f : 0.0f);
         layer->libraryArticulationEditorButton->setVisible(canOpenLibraryArticulationEditor);
-        layer->libraryArticulationEditorButton->setAlpha(canOpenLibraryArticulationEditor && sourceCardHovered ? 1.0f : 0.0f);
+        layer->libraryArticulationEditorButton->setAlpha(canOpenLibraryArticulationEditor && libraryArticulationHovered ? 1.0f : 0.0f);
     }
 }
 
-void PadContextPopup::updateSourceDisplay(MapLayerRow* layer) {
-    if (layer->selectedSourceIndex >= 0) {
-        const auto& src = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
+void PadContextPopup::updateLibraryArticulationDisplay(MapLayerRow* layer) {
+    if (layer->selectedLibraryArticulationIndex >= 0) {
+        const auto& src = this->availableLibraryArticulations[static_cast<size_t>(layer->selectedLibraryArticulationIndex)];
         const auto libraryArticulation = src.artCode.isNotEmpty() ? src.artCode : layer->artName;
         const auto detail = src.kitDisplayName + "\n" + src.instCode + "\n" + libraryArticulation;
-        layer->sourceDetailLabel->setText(detail, juce::dontSendNotification);
-        layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
-        layer->sourceButton->setTooltip(src.fullPath());
-    } else if (layer->sourcePathHint.isNotEmpty()) {
-        layer->sourceDetailLabel->setText("Missing source\n" + layer->sourcePathHint, juce::dontSendNotification);
-        layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::accentWarning);
-        layer->sourceButton->setTooltip(layer->sourcePathHint);
+        layer->libraryArticulationDetailLabel->setText(detail, juce::dontSendNotification);
+        layer->libraryArticulationDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textSecondary);
+        layer->libraryArticulationButton->setTooltip(src.qualifiedId());
+    } else if (layer->mappedLibraryArticulationId.isNotEmpty()) {
+        layer->libraryArticulationDetailLabel->setText("Missing library articulation\n" + layer->mappedLibraryArticulationId, juce::dontSendNotification);
+        layer->libraryArticulationDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::accentWarning);
+        layer->libraryArticulationButton->setTooltip(layer->mappedLibraryArticulationId);
     } else {
-        layer->sourceDetailLabel->setText("Select source", juce::dontSendNotification);
-        layer->sourceDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
-        layer->sourceButton->setTooltip({});
+        layer->libraryArticulationDetailLabel->setText("Select library articulation", juce::dontSendNotification);
+        layer->libraryArticulationDetailLabel->setColour(juce::Label::textColourId, UITheme::Colours::textMuted);
+        layer->libraryArticulationButton->setTooltip({});
     }
-    layer->sourceButton->setButtonText("");
-    if (layer->libraryArticulationEditorButton != nullptr) layer->libraryArticulationEditorButton->setEnabled(layer->selectedSourceIndex >= 0 && this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)].rawArtCode.isNotEmpty());
+    layer->libraryArticulationButton->setButtonText("");
+    if (layer->libraryArticulationEditorButton != nullptr) layer->libraryArticulationEditorButton->setEnabled(layer->selectedLibraryArticulationIndex >= 0 && this->availableLibraryArticulations[static_cast<size_t>(layer->selectedLibraryArticulationIndex)].rawArtCode.isNotEmpty());
 }
 
 int PadContextPopup::getLayerIndex(const MapLayerRow* layer) const {
     if (layer == nullptr) return -1;
-    if (layer->selectedSourceIndex < 0) return -1;
+    if (layer->selectedLibraryArticulationIndex < 0) return -1;
 
     int mappedLayerIndex = 0;
     for (int idx = 0; idx < this->layerRows.size(); ++idx) {
         const auto* currentLayer = this->layerRows[idx];
         if (currentLayer->artName != layer->artName) continue;
-        if (currentLayer->selectedSourceIndex < 0) continue;
+        if (currentLayer->selectedLibraryArticulationIndex < 0) continue;
         if (currentLayer == layer) return mappedLayerIndex;
         ++mappedLayerIndex;
     }
@@ -310,7 +312,7 @@ void PadContextPopup::updateVelocityResponseDisplay(MapLayerRow* layer) {
 
 void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode) {
     if (this->suppressParameterCallbacks || layer == nullptr) return;
-    if (layer->mappedLayerIndex < 0 || layer->selectedSourceIndex < 0) {
+    if (layer->mappedLayerIndex < 0 || layer->selectedLibraryArticulationIndex < 0) {
         this->mapTextDirty = true;
         return;
     }
@@ -410,8 +412,8 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
         std::erase_if(targetProjections, [this, &workingMap, &micCode](const auto& projection) {
             if (projection.mapLayerIndex >= workingMap.layers.size()) return true;
             const auto& mapLayer = workingMap.layers[projection.mapLayerIndex];
-            const auto libraryPath = InstrumentMap::libraryPathForArticulationSlot(mapLayer, projection.articulationSlotCode);
-            const auto relevantMics = this->getRelevantMicsForSourcePath(libraryPath);
+            const auto qualifiedLibArtId = InstrumentMap::qualifiedLibraryArticulationIdForSlot(mapLayer, projection.articulationSlotCode);
+            const auto relevantMics = this->getRelevantMicsForQualifiedLibraryArticulationId(qualifiedLibArtId);
             return std::none_of(relevantMics.begin(), relevantMics.end(), [&micCode](const auto& mic) {
                 return mic.first.compareIgnoreCase(micCode) == 0;
             });
@@ -543,15 +545,15 @@ juce::String PadContextPopup::generateFullMapText() const {
     mapLayers.insert(mapLayers.end(), std::make_move_iterator(unmatchedMapLayers.begin()), std::make_move_iterator(unmatchedMapLayers.end()));
 
     for (const auto* layer : this->layerRows) {
-        if (layer->selectedSourceIndex < 0) continue;
+        if (layer->selectedLibraryArticulationIndex < 0) continue;
 
-        const auto& srcItem = this->sourceItems[static_cast<size_t>(layer->selectedSourceIndex)];
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(layer->selectedLibraryArticulationIndex)];
         DrumKitEngine::InstrumentMapLayer mapLayer;
         mapLayer.slotId = this->slotId;
         if (layer->artName != "(default)") mapLayer.slotArticulationFilter.push_back(layer->artName);
-        mapLayer.kitRef = srcItem.kitCodeRaw;
-        mapLayer.instCode = srcItem.instCode;
-        if (srcItem.artCode.isNotEmpty()) mapLayer.articulationFilter.push_back(srcItem.artCode);
+        mapLayer.kitRef = libArt.kitCodeRaw;
+        mapLayer.instCode = libArt.instCode;
+        if (libArt.artCode.isNotEmpty()) mapLayer.articulationFilter.push_back(libArt.artCode);
 
         const int tuning = static_cast<int>(layer->tuningPot->getValue());
         if (tuning != 0) mapLayer.tuningCents = tuning;
@@ -614,7 +616,7 @@ void PadContextPopup::refreshLayerMappings() {
     for (const auto* group : this->articulationGroups) {
         std::vector<MapLayerRow*> mappedRows;
         for (auto* layer : this->layerRows)
-            if (layer != nullptr && layer->artName.compareIgnoreCase(group->artName) == 0 && layer->selectedSourceIndex >= 0) mappedRows.push_back(layer);
+            if (layer != nullptr && layer->artName.compareIgnoreCase(group->artName) == 0 && layer->selectedLibraryArticulationIndex >= 0) mappedRows.push_back(layer);
 
         for (const auto& projection : projections) {
             if (projection.slotId.compareIgnoreCase(this->slotId) != 0 || projection.articulationSlotCode.compareIgnoreCase(group->artName) != 0) continue;

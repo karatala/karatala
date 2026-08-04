@@ -2,8 +2,8 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../Engine/DrumKitEngine.h"
-#include "SourceItem.h"
-#include "SourcePickerPopup.h"
+#include "AvailableLibraryArticulation.h"
+#include "LibraryAssignmentPicker.h"
 #include "DismissOverlay.h"
 #include "MidiNoteAssignmentControl.h"
 #include "CompactParameterControl.h"
@@ -77,9 +77,8 @@ private:
     void applyNoteToSlot(int slotIdx, int note);
     void syncMidiNotesToActiveLayout();
 
-    std::vector<SourceItem> sourceItems;
-    void rebuildSourceItems();
-    int findSourceIndex(const juce::String& searchPath) const;
+    std::vector<AvailableLibraryArticulation> availableLibraryArticulations;
+    void rebuildAvailableLibraryArticulations();
 
     // ─── Instrument map layers ───
     struct MicRoutingChoice {
@@ -98,12 +97,12 @@ private:
     };
     struct MapLayerRow {
         juce::String artName;
-        juce::String sourcePathHint;
-        int selectedSourceIndex = -1;
+        juce::String mappedLibraryArticulationId;
+        int selectedLibraryArticulationIndex = -1;
         int mappedLayerIndex = -1;
         std::optional<juce::String> velocityResponse;
-        std::unique_ptr<juce::TextButton> sourceButton;
-        std::unique_ptr<juce::Label> sourceDetailLabel;
+        std::unique_ptr<juce::TextButton> libraryArticulationButton;
+        std::unique_ptr<juce::Label> libraryArticulationDetailLabel;
         std::unique_ptr<juce::ComboBox> velocityResponseMode;
         std::unique_ptr<juce::TextButton> libraryArticulationEditorButton;
         std::unique_ptr<CompactParameterControl> tuningPot;
@@ -134,7 +133,7 @@ private:
     std::vector<DrumKitEngine::VelocityResponsePreset> velocityResponsePresets;
 
     void addArticulationGroup(const juce::String& articulationName);
-    MapLayerRow* addMapLayerRow(const juce::String& articulationName, const juce::String& sourceFullPath, int tuningCents, int attackMs, int decayMs,
+    MapLayerRow* addMapLayerRow(const juce::String& articulationName, const juce::String& qualifiedLibraryArticulationId, int tuningCents, int attackMs, int decayMs,
                           float volumeDb, int pan, bool flipLR, bool flipLRExplicit, bool flipPhase,
                           const std::optional<juce::String>& velocityResponse,
                           const std::unordered_map<juce::String, float>& micBleedLevels,
@@ -148,8 +147,8 @@ private:
     void updateVelocityResponseDisplay(MapLayerRow* layer);
     void applyLayerParameterChange(MapLayerRow* layer, EditableLayerParameter parameter, const juce::String& micCode = {});
     void timerCallback() override;
-    void updateSourceCardButtonVisibility();
-    void updateSourceDisplay(MapLayerRow* layer);
+    void updateLibraryArticulationActionsVisibility();
+    void updateLibraryArticulationDisplay(MapLayerRow* layer);
     void rebuildBleedControls(MapLayerRow* layer, const std::unordered_map<juce::String, float>& seedLevels = {}, const std::unordered_map<juce::String, juce::String>& seedRoutes = {});
     void applyRoutingComboChange(MapLayerRow* layer, MapLayerRow::MicBleedControl* bleedCtrl);
     bool applyToEngine();
@@ -157,9 +156,8 @@ private:
     void rebuildMapLayerRows();
     juce::String generateFullMapText() const;
     void populateLayers();
-    std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourcePath(const juce::String& sourcePath) const;
-    std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForSourceIndex(int sourceIndex) const;
-    std::vector<KitLib::MicSpec> getDirectMicSpecsForSourcePath(const juce::String& sourcePath) const;
+    std::vector<std::pair<juce::String, juce::String>> getRelevantMicsForQualifiedLibraryArticulationId(const juce::String& qualifiedLibraryArticulationId) const;
+    std::vector<KitLib::MicSpec> getDirectMicSpecsForQualifiedLibraryArticulationId(const juce::String& qualifiedLibraryArticulationId) const;
     const MicLayout::Mic* findLayoutMicForSlot(const KitLayout::InstrumentSlot& slot, const juce::String& micCode) const;
     struct MicRoutingDisplay {
         juce::String routeText;
@@ -167,8 +165,8 @@ private:
         juce::String outputId;
         bool hasProblem = false;
     };
-    MicRoutingDisplay buildMicRoutingDisplay(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const;
-    std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& sourcePath, const juce::String& micCode, const juce::String& targetSlotId) const;
+    MicRoutingDisplay buildMicRoutingDisplay(const juce::String& qualifiedLibraryArticulationId, const juce::String& micCode, const juce::String& targetSlotId) const;
+    std::vector<MicRoutingChoice> buildMicRoutingChoices(const juce::String& qualifiedLibraryArticulationId, const juce::String& micCode, const juce::String& targetSlotId) const;
     static int findRoutingChoiceIndex(const std::vector<MicRoutingChoice>& choices, const juce::String& outputId);
     void updateRoutingComboDisplay(MapLayerRow::MicBleedControl& bleedCtrl) const;
     std::optional<DrumKitEngine::InstrumentMap> pendingInstrumentMap;
@@ -178,8 +176,8 @@ private:
 
     static constexpr int parameterChangeDebounceMs = 250;
 
-    std::unique_ptr<DismissOverlay> pickerOverlay;
-    std::unique_ptr<SourcePickerPopup> activePicker;
+    std::unique_ptr<DismissOverlay> libraryAssignmentOverlay;
+    std::unique_ptr<LibraryAssignmentPicker> activeLibraryAssignmentPicker;
     std::unique_ptr<DismissOverlay> velocityResponseOverlay;
     std::unique_ptr<VelocityResponseEditor> activeVelocityResponseEditor;
     std::unique_ptr<DismissOverlay> libraryArticulationOverlay;
@@ -193,10 +191,10 @@ private:
     LayerContentComponent layerContent;
     juce::Viewport layerViewport;
 
-    void showSourcePicker(MapLayerRow* layer);
+    void showLibraryArticulationPicker(MapLayerRow* layer);
     void showInstrumentPicker();
-    void dismissSourcePicker();
-    void layoutSourcePicker();
+    void dismissLibraryAssignmentPicker();
+    void layoutLibraryAssignmentPicker();
     void showVelocityResponseEditor(MapLayerRow* layer);
     void dismissVelocityResponseEditor();
     void layoutVelocityResponseEditor();

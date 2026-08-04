@@ -60,7 +60,7 @@
 
 ### Changes
 - `source/Engine/DrumKitEngine.h/.cpp` - add `playPreview()` method
-- `source/UI/InstrumentConfigPanel.h/.cpp` - update SourcePickerPopup: split click into preview vs confirm, add confirm button per row, compute velocity from mouse X
+- `source/UI/InstrumentConfigPanel.h/.cpp` - update LibraryAssignmentPicker: split click into preview vs confirm, add confirm button per row, compute velocity from mouse X
 
 ---
 

@@ -18,7 +18,7 @@ static std::optional<int> parseExpressionPointEditorValue(const juce::String& te
     return static_cast<int>(value);
 }
 
-static juce::String getMidiControllerItemText(int controllerNumber) {
+static juce::String getMidiControllerLabel(int controllerNumber) {
     const auto* controllerName = juce::MidiMessage::getControllerName(controllerNumber);
     return controllerName != nullptr ? juce::String(controllerNumber) + " / " + juce::String(controllerName) : juce::String(controllerNumber);
 }
@@ -156,7 +156,7 @@ void MidiMapTable::buildRows() {
         row->controllerCombo = std::make_unique<juce::ComboBox>();
         UIComponentStyle::configureComboBox(*row->controllerCombo, UIComponentStyle::ComboBoxStyle::MidiControllerList);
         for (int controllerNumber = 0; controllerNumber <= 127; ++controllerNumber)
-            row->controllerCombo->addItem(getMidiControllerItemText(controllerNumber), controllerNumber + 1);
+            row->controllerCombo->addItem(getMidiControllerLabel(controllerNumber), controllerNumber + 1);
 
         row->controllerCombo->setSelectedId(row->controllerNumber + 1, juce::dontSendNotification);
         row->controllerCombo->onChange = [this, rowIdx] {

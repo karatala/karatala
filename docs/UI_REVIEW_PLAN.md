@@ -16,10 +16,10 @@
 - **Problem**: If a pad with no slot is flashed (or a pad that's since been recycled), the timer still fires and calls `repaint()`.
 - **Fix**: Guard `flash()` with `if (!this->slotPtr) return;`.
 
-### 1.3 PadContextPopup & MidiMapTable: Duplicate `applyNoteToSlot` logic
+### 1.3 ✅ PadContextPopup & MidiMapTable: Duplicate `applyNoteToSlot` logic
 - **Files**: `PadContextPopup.cpp:19-30`, `MidiMapTable.cpp:110-122`
 - **Problem**: Identical note-slot logic (resize vector, insert/erase, sync buttons) duplicated verbatim. Divergence risk.
-- **Fix**: Extract to a free function in `UIHelpers` or a shared MIDI mapping utility.
+- **Completed**: `MidiNoteAssignmentControl::applyNoteToSlot` owns the shared MIDI-note update.
 
 ### 1.4 InstrumentConfigPanel: raw `new` for `TableRow`
 - **File**: `InstrumentConfigPanel.cpp` → `addRow()` uses `new TableRow()` with `OwnedArray`
@@ -57,8 +57,8 @@
 - **Problem**: Lots of repeated identical work.
 - **Fix**: Configure font/colour once via a shared helper, or set on the parent and inherit.
 
-### 2.4 SourcePickerPopup: `cachedLowerDisplayText` duplicates strings
-- **File**: `SourcePickerPopup.cpp` constructor - lowercases all display texts upfront.
+### 2.4 LibraryAssignmentPicker: `cachedLowerDisplayLabels` duplicates strings
+- **File**: `LibraryAssignmentPicker.cpp` constructor - lowercases all display labels upfront.
 - **Note**: This is actually a good optimization for filtering. No change needed, just noting it's well done.
 
 ### 2.5 DrumPadGrid `resized()`: heap-allocates 4 vectors every time
@@ -69,7 +69,7 @@
 
 ## 3. Reducing Repeated Code
 
-### 3.1 Extract `configureToggleButton()` helper
+### 3.1 ✅ Extract `configureToggleButton()` helper
 - **Files**: `PadContextPopup.cpp` - flipLR and flipPhase buttons have identical 6-line colour setup.
 - **Pattern**:
   ```cpp
@@ -80,27 +80,27 @@
   button->setColour(textColourOnId, textPrimary);
   button->setConnectedEdges(...);
   ```
-- **Fix**: Add `UIHelpers::configureToggleButton()` and call it for both.
+- **Completed**: `UIComponentStyle::configureToggleButton()` owns the shared styling.
 
-### 3.2 Extract `configureMonoTextEditor()` helper
+### 3.2 ✅ Extract `configureMonoTextEditor()` helper
 - **File**: `PluginEditor.cpp` - `referencePanel` and `instrumentMapEditor` share identical 4-line setup (font, bg colour, text colour, multi-line).
-- **Fix**: Add `UIHelpers::configureMonoTextEditor()`.
+- **Completed**: `UIComponentStyle::configureMonoTextEditor()` owns the shared styling.
 
 ### 3.3 Consolidate `addPot` / `addIntPot` in EngineSettingsPanel
 - **File**: `EngineSettingsPanel.cpp` - 90% identical code between `addPot()` and `addIntPot()`.
 - **Fix**: Merge into a single template or use a variant/union for the target pointer. The only difference is `float*` vs `int*` and the interval.
 
-### 3.4 Deduplicate `applyNoteToSlot` across PadContextPopup and MidiMapTable
+### 3.4 ✅ Deduplicate `applyNoteToSlot` across PadContextPopup and MidiMapTable
 - See bug 1.3 above. Both classes have identical implementations.
-- **Fix**: Move to a shared free function in `UIHelpers`:
+- **Completed**: The operation is a static method of the concrete `MidiNoteAssignmentControl` owner:
   ```cpp
-  void applyMidiNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note);
+  void MidiNoteAssignmentControl::applyNoteToSlot(KitLayout::MidiNotes& notes, int slotIdx, int note);
   ```
 
-### 3.5 Deduplicate `sentinelTextFn` lambda
+### 3.5 ✅ Deduplicate `sentinelTextFn` lambda
 - **Files**: `InstrumentConfigPanel.cpp:146`, `PadContextPopup.cpp:264`
 - **Pattern**: `[](double value) -> juce::String { return value < 0.0 ? "--" : juce::String(static_cast<int>(value)); }`
-- **Fix**: Define once in `UIHelpers` as a named function.
+- **Completed**: `CompactParameterControl::sentinelValueText()` owns this control-specific formatting.
 
 ### 3.6 Deduplicate slider `onValueChange` / `onDragEnd` wiring
 - **Files**: `InstrumentConfigPanel.cpp` (tuning/attack/decay sliders) and `PadContextPopup.cpp` (tuning/attack/decay/gain pots)
@@ -112,9 +112,9 @@
 - **Problem**: `LabeledPot` adds nothing over `ParameterPot` - the constructor just forwards all args. It's a vestigial abstraction.
 - **Fix**: Either give it a purpose (maybe force vertical layout) or replace all uses with `ParameterPot` directly and delete the class.
 
-### 3.8 MidiMapTable row label setup is repeated per row
+### 3.8 ✅ MidiMapTable row label setup is repeated per row
 - **File**: `MidiMapTable.cpp` → `buildRows()` - 4 identical lines per label (setFont, setColour, setJustification).
-- **Fix**: Extract `UIHelpers::configureTableRowLabel()`.
+- **Completed**: `UIComponentStyle::configureTableRowLabel()` owns the shared styling.
 
 ---
 
@@ -127,7 +127,7 @@ Several layout constants are defined as local `constexpr` in individual files in
 |---|---|---|
 | `popupPadding = 8` | PadContextPopup.cpp | `Sizes::popupPadding` |
 | `potW = 50`, `potH = 56` | PadContextPopup.cpp | `Sizes::potWidth`, `Sizes::potHeight` |
-| `sourceW = 170` | PadContextPopup.cpp | `Sizes::sourceCardWidth` |
+| ✅ `libraryArticulationWidth` | PadContextPopup.cpp | `Sizes::libraryArticulationCardWidth` |
 | `layerRowH` | PadContextPopup.cpp | `Sizes::layerRowHeight` |
 | `rowHeight = 22` | InstrumentConfigPanel.h | Already uses `Spacing::rowNormal` ✓ |
 | `instColWidth = 90` | MidiMapTable.h | `Sizes::midiMapInstCol` |

@@ -1,13 +1,14 @@
-#include "SourcePickerPopup.h"
+#include "LibraryAssignmentPicker.h"
 #include "../Engine/ArticulationNames.h"
 #include "UIComponentStyle.h"
 #include "UITheme.h"
 
 #include <algorithm>
+#include <iterator>
 #include <set>
 
-SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const InstrumentCatalog& instrumentCatalog, SelectionMode mode)
-    : allItems(items)
+LibraryAssignmentPicker::LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableLibraryArticulations, const InstrumentCatalog& instrumentCatalog, SelectionMode mode)
+    : availableLibraryArticulations(availableLibraryArticulations)
     , catalog(instrumentCatalog)
     , selectionMode(mode) {
     this->titleLabel.setFont(UITheme::Fonts::sectionTitle().withHeight(14.0f));
@@ -46,7 +47,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->kindListBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
     this->addAndMakeVisible(this->kindListBox);
 
-    this->articulationListLabel.setText(this->selectionMode == SelectionMode::WholeInstrument ? "Preview arts" : "Articulations", juce::dontSendNotification);
+    this->articulationListLabel.setText(this->selectionMode == SelectionMode::Instrument ? "Preview articulations" : "Articulations", juce::dontSendNotification);
     UIComponentStyle::configureCaptionLabel(this->articulationListLabel, juce::Justification::centredLeft);
     this->addAndMakeVisible(this->articulationListLabel);
     this->articulationListBox.setModel(&this->articulationListModel);
@@ -56,14 +57,14 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->articulationListBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
     this->addAndMakeVisible(this->articulationListBox);
 
-    this->listBox.setModel(&this->listModel);
-    this->listBox.setRowHeight(22);
-    this->listBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
-    this->addAndMakeVisible(this->listBox);
+    this->assignmentListBox.setModel(&this->assignmentListModel);
+    this->assignmentListBox.setRowHeight(22);
+    this->assignmentListBox.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
+    this->addAndMakeVisible(this->assignmentListBox);
 
-    this->cachedLowerDisplayText.reserve(this->allItems.size());
-    for (const auto& item : this->allItems)
-        this->cachedLowerDisplayText.push_back(item.displayText().toLowerCase());
+    this->cachedLowerDisplayLabels.reserve(this->availableLibraryArticulations.size());
+    for (const auto& libArt : this->availableLibraryArticulations)
+        this->cachedLowerDisplayLabels.push_back(libArt.displayLabel().toLowerCase());
 
     this->rebuildKindEntries();
     this->rebuildArticulationEntries();
@@ -71,7 +72,7 @@ SourcePickerPopup::SourcePickerPopup(const std::vector<SourceItem>& items, const
     this->updateCategoryButtons();
 }
 
-void SourcePickerPopup::setFilterType(KitLib::InstrumentType type) {
+void LibraryAssignmentPicker::setFilterType(KitLib::InstrumentType type) {
     this->selectedCategory = this->categoryForType(type);
     this->selectedKind = type;
     this->rebuildKindEntries();
@@ -80,23 +81,23 @@ void SourcePickerPopup::setFilterType(KitLib::InstrumentType type) {
     this->updateCategoryButtons();
 }
 
-void SourcePickerPopup::setSelectedItem(int originalIndex) {
-    const bool originalIndexValid = originalIndex >= 0 && originalIndex < static_cast<int>(this->allItems.size());
-    for (int idx = 0; idx < static_cast<int>(this->filteredEntries.size()); ++idx) {
-        const int filteredOriginalIndex = this->filteredEntries[static_cast<size_t>(idx)].originalIndex;
-        const bool exactMatch = filteredOriginalIndex == originalIndex;
-        const bool wholeInstrumentMatch = this->selectionMode == SelectionMode::WholeInstrument && originalIndexValid
-            && SourcePickerPopup::wholeInstrumentKey(this->allItems[static_cast<size_t>(filteredOriginalIndex)]) == SourcePickerPopup::wholeInstrumentKey(this->allItems[static_cast<size_t>(originalIndex)]);
-        if (!exactMatch && !wholeInstrumentMatch) continue;
-        this->suppressSelectionPreview = true;
-        this->listBox.selectRow(idx);
-        this->suppressSelectionPreview = false;
-        this->listBox.scrollToEnsureRowIsOnscreen(idx);
-        if (this->selectionMode == SelectionMode::WholeInstrument && originalIndexValid) {
+void LibraryAssignmentPicker::setSelectedLibraryArticulation(int libArtIndex) {
+    const bool libArtIndexValid = libArtIndex >= 0 && libArtIndex < static_cast<int>(this->availableLibraryArticulations.size());
+    for (int idx = 0; idx < static_cast<int>(this->visibleLibraryArticulationIndexes.size()); ++idx) {
+        const int visibleLibArtIndex = this->visibleLibraryArticulationIndexes[static_cast<size_t>(idx)];
+        const bool exactMatch = visibleLibArtIndex == libArtIndex;
+        const bool instrumentMatch = this->selectionMode == SelectionMode::Instrument && libArtIndexValid
+            && LibraryAssignmentPicker::qualifiedLibraryInstrumentId(this->availableLibraryArticulations[static_cast<size_t>(visibleLibArtIndex)]) == LibraryAssignmentPicker::qualifiedLibraryInstrumentId(this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)]);
+        if (!exactMatch && !instrumentMatch) continue;
+        this->suppressPreviewOnSelection = true;
+        this->assignmentListBox.selectRow(idx);
+        this->suppressPreviewOnSelection = false;
+        this->assignmentListBox.scrollToEnsureRowIsOnscreen(idx);
+        if (this->selectionMode == SelectionMode::Instrument && libArtIndexValid) {
             juce::SparseSet<int> selectedRows;
-            const auto articulationIterator = std::find(this->articulationSourceIndexes.begin(), this->articulationSourceIndexes.end(), originalIndex);
-            if (articulationIterator != this->articulationSourceIndexes.end()) {
-                const int articulationRow = static_cast<int>(std::distance(this->articulationSourceIndexes.begin(), articulationIterator));
+            const auto articulationIterator = std::find(this->previewLibraryArticulationIndexes.begin(), this->previewLibraryArticulationIndexes.end(), libArtIndex);
+            if (articulationIterator != this->previewLibraryArticulationIndexes.end()) {
+                const int articulationRow = static_cast<int>(std::distance(this->previewLibraryArticulationIndexes.begin(), articulationIterator));
                 selectedRows.addRange({ articulationRow, articulationRow + 1 });
             }
             this->articulationListBox.setSelectedRows(selectedRows, juce::dontSendNotification);
@@ -105,15 +106,15 @@ void SourcePickerPopup::setSelectedItem(int originalIndex) {
     }
 }
 
-void SourcePickerPopup::setTitle(const juce::String& title) {
+void LibraryAssignmentPicker::setTitle(const juce::String& title) {
     this->titleLabel.setText(title, juce::dontSendNotification);
 }
 
-void SourcePickerPopup::focusItemList() {
-    this->listBox.grabKeyboardFocus();
+void LibraryAssignmentPicker::focusAssignmentList() {
+    this->assignmentListBox.grabKeyboardFocus();
 }
 
-void SourcePickerPopup::resized() {
+void LibraryAssignmentPicker::resized() {
     auto area = this->getLocalBounds().reduced(4);
     auto titleRow = area.removeFromTop(22);
     this->closeButton.setBounds(titleRow.removeFromRight(22).withSizeKeepingCentre(UITheme::Sizes::standardControlHeight, UITheme::Sizes::standardControlHeight));
@@ -147,15 +148,15 @@ void SourcePickerPopup::resized() {
     this->articulationListLabel.setBounds(sidebarArea.removeFromTop(labelHeight));
     this->articulationListBox.setBounds(sidebarArea);
     body.removeFromLeft(4);
-    this->listBox.setBounds(body);
+    this->assignmentListBox.setBounds(body);
 }
 
-void SourcePickerPopup::paint(juce::Graphics& g) {
+void LibraryAssignmentPicker::paint(juce::Graphics& g) {
     g.setColour(UITheme::Colours::bgPanelRaised);
     g.fillRoundedRectangle(this->getLocalBounds().toFloat(), 6.0f);
 }
 
-void SourcePickerPopup::setCategory(Category category) {
+void LibraryAssignmentPicker::setCategory(Category category) {
     if (this->selectedCategory == category)
         return;
 
@@ -167,7 +168,7 @@ void SourcePickerPopup::setCategory(Category category) {
     this->updateCategoryButtons();
 }
 
-std::optional<InstrumentFamily> SourcePickerPopup::familyForCategory(Category category) {
+std::optional<InstrumentFamily> LibraryAssignmentPicker::familyForCategory(Category category) {
     switch (category) {
         case Category::Drums: return InstrumentFamily::Drum;
         case Category::Cymbals: return InstrumentFamily::Cymbal;
@@ -177,7 +178,7 @@ std::optional<InstrumentFamily> SourcePickerPopup::familyForCategory(Category ca
     return std::nullopt;
 }
 
-SourcePickerPopup::Category SourcePickerPopup::categoryForType(KitLib::InstrumentType type) const {
+LibraryAssignmentPicker::Category LibraryAssignmentPicker::categoryForType(KitLib::InstrumentType type) const {
     switch (this->catalog.familyFor(type)) {
         case InstrumentFamily::Drum: return Category::Drums;
         case InstrumentFamily::Cymbal: return Category::Cymbals;
@@ -187,34 +188,34 @@ SourcePickerPopup::Category SourcePickerPopup::categoryForType(KitLib::Instrumen
     return Category::All;
 }
 
-bool SourcePickerPopup::matchesCategory(KitLib::InstrumentType type) const {
+bool LibraryAssignmentPicker::matchesCategory(KitLib::InstrumentType type) const {
     const auto categoryFamily = familyForCategory(this->selectedCategory);
     if (!categoryFamily.has_value())
         return true;
     return this->catalog.familyFor(type) == *categoryFamily;
 }
 
-juce::String SourcePickerPopup::kindLabel(KitLib::InstrumentType type) {
+juce::String LibraryAssignmentPicker::kindLabel(KitLib::InstrumentType type) {
     return KitLib::instrumentTypeToString(type).replaceCharacter('_', ' ');
 }
 
-juce::String SourcePickerPopup::wholeInstrumentKey(const SourceItem& item) {
-    return item.kitCodeRaw.trim().toLowerCase() + "\n" + item.instCode.trim().toLowerCase();
+juce::String LibraryAssignmentPicker::qualifiedLibraryInstrumentId(const AvailableLibraryArticulation& libArt) {
+    return libArt.kitCodeRaw.trim().toLowerCase() + "\n" + libArt.instCode.trim().toLowerCase();
 }
 
-juce::String SourcePickerPopup::wholeInstrumentDisplayText(const SourceItem& item) {
-    const auto kitName = item.kitDisplayName.isNotEmpty() ? item.kitDisplayName : item.kitCodeRaw;
-    return item.instCode.isNotEmpty() ? kitName + "/" + item.instCode : kitName;
+juce::String LibraryAssignmentPicker::libraryInstrumentDisplayLabel(const AvailableLibraryArticulation& libArt) {
+    const auto kitName = libArt.kitDisplayName.isNotEmpty() ? libArt.kitDisplayName : libArt.kitCodeRaw;
+    return libArt.instCode.isNotEmpty() ? kitName + "/" + libArt.instCode : kitName;
 }
 
-void SourcePickerPopup::rebuildKindEntries() {
+void LibraryAssignmentPicker::rebuildKindEntries() {
     std::set<KitLib::InstrumentType> seenKinds;
-    for (const auto& item : this->allItems) {
-        if (item.instType == KitLib::InstrumentType::Unknown)
+    for (const auto& libArt : this->availableLibraryArticulations) {
+        if (libArt.instType == KitLib::InstrumentType::Unknown)
             continue;
-        if (!this->matchesCategory(item.instType))
+        if (!this->matchesCategory(libArt.instType))
             continue;
-        seenKinds.insert(item.instType);
+        seenKinds.insert(libArt.instType);
     }
 
     this->kindEntries.assign(seenKinds.begin(), seenKinds.end());
@@ -235,20 +236,20 @@ void SourcePickerPopup::rebuildKindEntries() {
     this->kindListBox.selectRow(selectedRow);
 }
 
-void SourcePickerPopup::rebuildArticulationEntries() {
-    if (this->selectionMode == SelectionMode::WholeInstrument) {
+void LibraryAssignmentPicker::rebuildArticulationEntries() {
+    if (this->selectionMode == SelectionMode::Instrument) {
         this->articulationEntries.clear();
-        this->articulationSourceIndexes.clear();
-        if (this->selectedWholeInstrumentItemIndex >= 0 && this->selectedWholeInstrumentItemIndex < static_cast<int>(this->allItems.size())) {
-            const auto selectedInstrumentKey = SourcePickerPopup::wholeInstrumentKey(this->allItems[static_cast<size_t>(this->selectedWholeInstrumentItemIndex)]);
+        this->previewLibraryArticulationIndexes.clear();
+        if (this->selectedLibraryInstrumentArticulationIndex >= 0 && this->selectedLibraryInstrumentArticulationIndex < static_cast<int>(this->availableLibraryArticulations.size())) {
+            const auto selectedInstrumentKey = LibraryAssignmentPicker::qualifiedLibraryInstrumentId(this->availableLibraryArticulations[static_cast<size_t>(this->selectedLibraryInstrumentArticulationIndex)]);
             std::set<juce::String> seenArticulations;
-            for (int itemIndex = 0; itemIndex < static_cast<int>(this->allItems.size()); ++itemIndex) {
-                const auto& item = this->allItems[static_cast<size_t>(itemIndex)];
-                if (SourcePickerPopup::wholeInstrumentKey(item) != selectedInstrumentKey) continue;
-                const auto articulationName = item.artCode.isNotEmpty() ? item.artCode : juce::String("(default)");
+            for (int libArtIndex = 0; libArtIndex < static_cast<int>(this->availableLibraryArticulations.size()); ++libArtIndex) {
+                const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+                if (LibraryAssignmentPicker::qualifiedLibraryInstrumentId(libArt) != selectedInstrumentKey) continue;
+                const auto articulationName = libArt.artCode.isNotEmpty() ? libArt.artCode : juce::String("(default)");
                 if (!seenArticulations.insert(articulationName.toLowerCase()).second) continue;
                 this->articulationEntries.push_back(articulationName);
-                this->articulationSourceIndexes.push_back(itemIndex);
+                this->previewLibraryArticulationIndexes.push_back(libArtIndex);
             }
         }
         this->articulationListBox.updateContent();
@@ -258,10 +259,10 @@ void SourcePickerPopup::rebuildArticulationEntries() {
     }
 
     std::set<juce::String> availableArticulations;
-    for (const auto& item : this->allItems) {
-        if (!this->matchesCategory(item.instType)) continue;
-        if (this->selectedKind != KitLib::InstrumentType::Unknown && item.instType != this->selectedKind) continue;
-        const auto articulationName = ArticulationNames::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
+    for (const auto& libArt : this->availableLibraryArticulations) {
+        if (!this->matchesCategory(libArt.instType)) continue;
+        if (this->selectedKind != KitLib::InstrumentType::Unknown && libArt.instType != this->selectedKind) continue;
+        const auto articulationName = ArticulationNames::normalizeArticulationName(libArt.rawArtCode.isNotEmpty() ? libArt.rawArtCode : libArt.artCode);
         if (articulationName.isNotEmpty()) availableArticulations.insert(articulationName);
     }
 
@@ -282,13 +283,13 @@ void SourcePickerPopup::rebuildArticulationEntries() {
     this->articulationListBox.setSelectedRows(selectedRows, juce::dontSendNotification);
 }
 
-bool SourcePickerPopup::matchesCurrentFilters(const SourceItem& item, const juce::String& lowerDisplayText, const juce::String& filterText) const {
-    if (!this->matchesCategory(item.instType))
+bool LibraryAssignmentPicker::matchesCurrentFilters(const AvailableLibraryArticulation& libArt, const juce::String& lowerDisplayLabel, const juce::String& filterText) const {
+    if (!this->matchesCategory(libArt.instType))
         return false;
-    if (this->selectedKind != KitLib::InstrumentType::Unknown && item.instType != this->selectedKind)
+    if (this->selectedKind != KitLib::InstrumentType::Unknown && libArt.instType != this->selectedKind)
         return false;
     if (this->selectionMode == SelectionMode::Articulation && !this->selectedArticulations.empty()) {
-        const auto articulationName = ArticulationNames::normalizeArticulationName(item.rawArtCode.isNotEmpty() ? item.rawArtCode : item.artCode);
+        const auto articulationName = ArticulationNames::normalizeArticulationName(libArt.rawArtCode.isNotEmpty() ? libArt.rawArtCode : libArt.artCode);
         if (this->selectedArticulations.find(articulationName) == this->selectedArticulations.end()) return false;
     }
 
@@ -297,40 +298,40 @@ bool SourcePickerPopup::matchesCurrentFilters(const SourceItem& item, const juce
     filterTerms.removeEmptyStrings();
     for (const auto& filterTerm : filterTerms) {
         if (filterTerm.startsWithChar('-') && filterTerm.length() > 1) {
-            if (lowerDisplayText.contains(filterTerm.substring(1))) return false;
-        } else if (filterTerm != "-" && !lowerDisplayText.contains(filterTerm)) {
+            if (lowerDisplayLabel.contains(filterTerm.substring(1))) return false;
+        } else if (filterTerm != "-" && !lowerDisplayLabel.contains(filterTerm)) {
             return false;
         }
     }
     return true;
 }
 
-void SourcePickerPopup::rebuildFiltered() {
+void LibraryAssignmentPicker::rebuildFiltered() {
     this->stopTimer();
-    this->listBox.deselectAllRows();
-    this->filteredEntries.clear();
+    this->assignmentListBox.deselectAllRows();
+    this->visibleLibraryArticulationIndexes.clear();
     this->actionRow = -1;
     this->actionRowBeforeMouseSelection = -1;
     this->mouseSelectionChanged = false;
     auto filterText = this->filterField.getText().toLowerCase();
     std::set<juce::String> addedInstruments;
 
-    for (int idx = 0; idx < static_cast<int>(this->allItems.size()); ++idx) {
-        const auto& item = this->allItems[static_cast<size_t>(idx)];
-        if (!this->matchesCurrentFilters(item, this->cachedLowerDisplayText[static_cast<size_t>(idx)], filterText))
+    for (int idx = 0; idx < static_cast<int>(this->availableLibraryArticulations.size()); ++idx) {
+        const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(idx)];
+        if (!this->matchesCurrentFilters(libArt, this->cachedLowerDisplayLabels[static_cast<size_t>(idx)], filterText))
             continue;
-        if (this->selectionMode == SelectionMode::WholeInstrument && !addedInstruments.insert(SourcePickerPopup::wholeInstrumentKey(item)).second) continue;
-        this->filteredEntries.push_back({ idx });
+        if (this->selectionMode == SelectionMode::Instrument && !addedInstruments.insert(LibraryAssignmentPicker::qualifiedLibraryInstrumentId(libArt)).second) continue;
+        this->visibleLibraryArticulationIndexes.push_back(idx);
     }
 
-    if (this->selectionMode == SelectionMode::WholeInstrument) {
-        this->selectedWholeInstrumentItemIndex = -1;
+    if (this->selectionMode == SelectionMode::Instrument) {
+        this->selectedLibraryInstrumentArticulationIndex = -1;
         this->rebuildArticulationEntries();
     }
-    this->listBox.updateContent();
+    this->assignmentListBox.updateContent();
 }
 
-void SourcePickerPopup::updateCategoryButtons() {
+void LibraryAssignmentPicker::updateCategoryButtons() {
     auto apply = [this](juce::TextButton& button, Category category) {
         const bool selected = this->selectedCategory == category;
         button.setColour(juce::TextButton::buttonColourId, selected ? UITheme::Colours::selectionStrong : UITheme::Colours::bgControl);
@@ -344,34 +345,34 @@ void SourcePickerPopup::updateCategoryButtons() {
     apply(this->otherCategoryButton, Category::Other);
 }
 
-void SourcePickerPopup::confirmItem(int originalIndex) {
-    if (originalIndex < 0 || originalIndex >= static_cast<int>(this->allItems.size())) return;
+void LibraryAssignmentPicker::confirmAssignment(int libArtIndex) {
+    if (libArtIndex < 0 || libArtIndex >= static_cast<int>(this->availableLibraryArticulations.size())) return;
     if (this->selectionMode == SelectionMode::Articulation) {
-        if (this->onItemSelected) this->onItemSelected(originalIndex);
+        if (this->onLibraryArticulationSelected) this->onLibraryArticulationSelected(libArtIndex);
         return;
     }
 
-    const auto& item = this->allItems[static_cast<size_t>(originalIndex)];
-    if (!this->onInstrumentSelected) return;
-    InstrumentSelection selection;
-    selection.kitId = item.kitCodeRaw;
-    selection.instrumentId = item.instCode;
-    this->onInstrumentSelected(selection);
+    const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+    if (!this->onLibraryInstrumentSelected) return;
+    LibraryInstrumentSelection selection;
+    selection.kitId = libArt.kitCodeRaw;
+    selection.instrumentId = libArt.instCode;
+    this->onLibraryInstrumentSelected(selection);
 }
 
-void SourcePickerPopup::timerCallback() {
+void LibraryAssignmentPicker::timerCallback() {
     this->rebuildFiltered();
 }
 
-void SourcePickerPopup::queueRebuildFiltered() {
+void LibraryAssignmentPicker::queueRebuildFiltered() {
     this->startTimer(filterDebounceMs);
 }
 
-int SourcePickerPopup::KindListModel::getNumRows() {
+int LibraryAssignmentPicker::KindListModel::getNumRows() {
     return static_cast<int>(this->owner.kindEntries.size()) + 1;
 }
 
-void SourcePickerPopup::KindListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
+void LibraryAssignmentPicker::KindListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
     const bool selected = (rowNumber == 0 && this->owner.selectedKind == KitLib::InstrumentType::Unknown)
         || (rowNumber > 0
             && rowNumber - 1 < static_cast<int>(this->owner.kindEntries.size())
@@ -390,7 +391,7 @@ void SourcePickerPopup::KindListModel::paintListBoxItem(int rowNumber, juce::Gra
     g.drawText(text, 6, 0, width - 10, height, juce::Justification::centredLeft);
 }
 
-void SourcePickerPopup::KindListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
+void LibraryAssignmentPicker::KindListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
     juce::ignoreUnused(event);
     if (row <= 0) {
         this->owner.selectedKind = KitLib::InstrumentType::Unknown;
@@ -406,11 +407,11 @@ void SourcePickerPopup::KindListModel::listBoxItemClicked(int row, const juce::M
     this->owner.rebuildFiltered();
 }
 
-int SourcePickerPopup::ArticulationListModel::getNumRows() {
+int LibraryAssignmentPicker::ArticulationListModel::getNumRows() {
     return static_cast<int>(this->owner.articulationEntries.size());
 }
 
-void SourcePickerPopup::ArticulationListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
+void LibraryAssignmentPicker::ArticulationListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.articulationEntries.size())) return;
     g.fillAll(rowIsSelected ? UITheme::Colours::listSelection : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd));
     g.setColour(rowIsSelected ? UITheme::Colours::textPrimary : UITheme::Colours::textSecondary);
@@ -418,11 +419,11 @@ void SourcePickerPopup::ArticulationListModel::paintListBoxItem(int rowNumber, j
     g.drawText(this->owner.articulationEntries[static_cast<size_t>(rowNumber)], 6, 0, width - 10, height, juce::Justification::centredLeft);
 }
 
-void SourcePickerPopup::ArticulationListModel::selectedRowsChanged(int lastRowSelected) {
-    if (this->owner.selectionMode == SelectionMode::WholeInstrument) {
-        if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.articulationSourceIndexes.size())) return;
-        const int sourceIndex = this->owner.articulationSourceIndexes[static_cast<size_t>(lastRowSelected)];
-        if (this->owner.onPreview) this->owner.onPreview(sourceIndex, static_cast<juce::uint8>(127));
+void LibraryAssignmentPicker::ArticulationListModel::selectedRowsChanged(int lastRowSelected) {
+    if (this->owner.selectionMode == SelectionMode::Instrument) {
+        if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.previewLibraryArticulationIndexes.size())) return;
+        const int libArtIndex = this->owner.previewLibraryArticulationIndexes[static_cast<size_t>(lastRowSelected)];
+        if (this->owner.onLibraryArticulationPreview) this->owner.onLibraryArticulationPreview(libArtIndex, static_cast<juce::uint8>(127));
         return;
     }
 
@@ -436,20 +437,21 @@ void SourcePickerPopup::ArticulationListModel::selectedRowsChanged(int lastRowSe
     this->owner.rebuildFiltered();
 }
 
-int SourcePickerPopup::ListModel::getNumRows() {
-    return this->owner.filteredEntries.empty() ? 1 : static_cast<int>(this->owner.filteredEntries.size());
+int LibraryAssignmentPicker::AssignmentListModel::getNumRows() {
+    return this->owner.visibleLibraryArticulationIndexes.empty() ? 1 : static_cast<int>(this->owner.visibleLibraryArticulationIndexes.size());
 }
 
-void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
-    if (this->owner.filteredEntries.empty()) {
+void LibraryAssignmentPicker::AssignmentListModel::paintListBoxItem(int rowNumber, juce::Graphics& g, int width, int height, bool rowIsSelected) {
+    if (this->owner.visibleLibraryArticulationIndexes.empty()) {
         g.fillAll(UITheme::Colours::bgControlAlt);
         g.setColour(UITheme::Colours::textMuted);
         g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
 
-        const auto emptyMessage = this->owner.allItems.empty()
-            ? juce::String("No sources available")
-            : juce::String("No matching sources");
-        const auto emptyHint = this->owner.allItems.empty()
+        const bool instrumentMode = this->owner.selectionMode == SelectionMode::Instrument;
+        const auto emptyMessage = this->owner.availableLibraryArticulations.empty()
+            ? juce::String(instrumentMode ? "No library instruments available" : "No library articulations available")
+            : juce::String(instrumentMode ? "No matching library instruments" : "No matching library articulations");
+        const auto emptyHint = this->owner.availableLibraryArticulations.empty()
             ? juce::String("Check your sample library path")
             : juce::String("Try a different search or category");
 
@@ -460,12 +462,12 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
         return;
     }
 
-    if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.filteredEntries.size())) return;
+    if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.visibleLibraryArticulationIndexes.size())) return;
 
-    auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(rowNumber)].originalIndex;
-    const auto& item = this->owner.allItems[static_cast<size_t>(originalIdx)];
-    const int btnW = SourcePickerPopup::selectButtonWidth;
-    const int prevW = SourcePickerPopup::previewButtonWidth;
+    const int libArtIndex = this->owner.visibleLibraryArticulationIndexes[static_cast<size_t>(rowNumber)];
+    const auto& libArt = this->owner.availableLibraryArticulations[static_cast<size_t>(libArtIndex)];
+    const int btnW = LibraryAssignmentPicker::selectButtonWidth;
+    const int prevW = LibraryAssignmentPicker::previewButtonWidth;
     const bool showActions = rowNumber == this->owner.actionRow;
     const int actionWidth = showActions ? btnW + prevW : 0;
     const int textWidth = width - actionWidth;
@@ -474,7 +476,7 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
 
     g.setColour(UITheme::Colours::textPrimary);
     g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
-    const auto displayText = this->owner.selectionMode == SelectionMode::WholeInstrument ? SourcePickerPopup::wholeInstrumentDisplayText(item) : item.displayText();
+    const auto displayText = this->owner.selectionMode == SelectionMode::Instrument ? LibraryAssignmentPicker::libraryInstrumentDisplayLabel(libArt) : libArt.displayLabel();
     g.drawText(displayText, 4, 0, textWidth - 8, height, juce::Justification::centredLeft);
 
     if (!showActions) return;
@@ -495,72 +497,72 @@ void SourcePickerPopup::ListModel::paintListBoxItem(int rowNumber, juce::Graphic
     g.drawText(juce::String::charToString(0x2713), btnArea, juce::Justification::centred);
 }
 
-void SourcePickerPopup::ListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
-    if (this->owner.filteredEntries.empty()) return;
-    if (row < 0 || row >= static_cast<int>(this->owner.filteredEntries.size())) return;
+void LibraryAssignmentPicker::AssignmentListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {
+    if (this->owner.visibleLibraryArticulationIndexes.empty()) return;
+    if (row < 0 || row >= static_cast<int>(this->owner.visibleLibraryArticulationIndexes.size())) return;
 
-    const auto originalIdx = this->owner.filteredEntries[static_cast<size_t>(row)].originalIndex;
+    const int libArtIndex = this->owner.visibleLibraryArticulationIndexes[static_cast<size_t>(row)];
     const bool wasActionRow = this->owner.mouseSelectionChanged ? this->owner.actionRowBeforeMouseSelection == row : this->owner.actionRow == row;
     this->owner.mouseSelectionChanged = false;
     this->owner.actionRowBeforeMouseSelection = -1;
     this->owner.actionRow = row;
-    this->owner.listBox.selectRow(row);
-    this->owner.listBox.repaint();
+    this->owner.assignmentListBox.selectRow(row);
+    this->owner.assignmentListBox.repaint();
 
     if (!wasActionRow) {
-        if (this->owner.onPreview) this->owner.onPreview(originalIdx, static_cast<juce::uint8>(127));
+        if (this->owner.onLibraryArticulationPreview) this->owner.onLibraryArticulationPreview(libArtIndex, static_cast<juce::uint8>(127));
         return;
     }
 
-    const int btnW = SourcePickerPopup::selectButtonWidth;
-    const int prevW = SourcePickerPopup::previewButtonWidth;
-    const int totalWidth = this->owner.listBox.getWidth();
+    const int btnW = LibraryAssignmentPicker::selectButtonWidth;
+    const int prevW = LibraryAssignmentPicker::previewButtonWidth;
+    const int totalWidth = this->owner.assignmentListBox.getWidth();
     const int textWidth = totalWidth - btnW - prevW;
     const int clickX = event.getPosition().getX();
 
     if (clickX >= textWidth + prevW) {
-        this->owner.confirmItem(originalIdx);
+        this->owner.confirmAssignment(libArtIndex);
     } else if (clickX >= textWidth) {
-        if (this->owner.onPreview) {
+        if (this->owner.onLibraryArticulationPreview) {
             const float xRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(clickX - textWidth) / static_cast<float>(juce::jmax(1, prevW)));
             const juce::uint8 velocity = static_cast<juce::uint8>(juce::jlimit(1, 127, static_cast<int>(xRatio * 127.0f)));
-            this->owner.onPreview(originalIdx, velocity);
+            this->owner.onLibraryArticulationPreview(libArtIndex, velocity);
         }
     } else {
-        if (this->owner.onPreview) this->owner.onPreview(originalIdx, static_cast<juce::uint8>(127));
+        if (this->owner.onLibraryArticulationPreview) this->owner.onLibraryArticulationPreview(libArtIndex, static_cast<juce::uint8>(127));
     }
 }
 
-void SourcePickerPopup::ListModel::selectedRowsChanged(int lastRowSelected) {
-    if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.filteredEntries.size())) {
+void LibraryAssignmentPicker::AssignmentListModel::selectedRowsChanged(int lastRowSelected) {
+    if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.visibleLibraryArticulationIndexes.size())) {
         this->owner.actionRow = -1;
-        if (this->owner.selectionMode == SelectionMode::WholeInstrument) {
-            this->owner.selectedWholeInstrumentItemIndex = -1;
+        if (this->owner.selectionMode == SelectionMode::Instrument) {
+            this->owner.selectedLibraryInstrumentArticulationIndex = -1;
             this->owner.rebuildArticulationEntries();
         }
-        this->owner.listBox.repaint();
+        this->owner.assignmentListBox.repaint();
         return;
     }
 
-    if (this->owner.listBox.isMouseButtonDown(true)) {
+    if (this->owner.assignmentListBox.isMouseButtonDown(true)) {
         this->owner.actionRowBeforeMouseSelection = this->owner.actionRow;
         this->owner.mouseSelectionChanged = true;
     }
     this->owner.actionRow = lastRowSelected;
-    const int originalIndex = this->owner.filteredEntries[static_cast<size_t>(lastRowSelected)].originalIndex;
-    if (this->owner.selectionMode == SelectionMode::WholeInstrument) {
-        this->owner.selectedWholeInstrumentItemIndex = originalIndex;
+    const int libArtIndex = this->owner.visibleLibraryArticulationIndexes[static_cast<size_t>(lastRowSelected)];
+    if (this->owner.selectionMode == SelectionMode::Instrument) {
+        this->owner.selectedLibraryInstrumentArticulationIndex = libArtIndex;
         this->owner.rebuildArticulationEntries();
     }
-    this->owner.listBox.repaint();
+    this->owner.assignmentListBox.repaint();
 
-    if (!this->owner.suppressSelectionPreview && !this->owner.listBox.isMouseButtonDown(true) && this->owner.onPreview) {
-        this->owner.onPreview(originalIndex, static_cast<juce::uint8>(127));
+    if (!this->owner.suppressPreviewOnSelection && !this->owner.assignmentListBox.isMouseButtonDown(true) && this->owner.onLibraryArticulationPreview) {
+        this->owner.onLibraryArticulationPreview(libArtIndex, static_cast<juce::uint8>(127));
     }
 }
 
-void SourcePickerPopup::ListModel::returnKeyPressed(int lastRowSelected) {
-    if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.filteredEntries.size())) return;
-    const int originalIdx = this->owner.filteredEntries[static_cast<size_t>(lastRowSelected)].originalIndex;
-    this->owner.confirmItem(originalIdx);
+void LibraryAssignmentPicker::AssignmentListModel::returnKeyPressed(int lastRowSelected) {
+    if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.visibleLibraryArticulationIndexes.size())) return;
+    const int libArtIndex = this->owner.visibleLibraryArticulationIndexes[static_cast<size_t>(lastRowSelected)];
+    this->owner.confirmAssignment(libArtIndex);
 }

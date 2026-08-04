@@ -64,10 +64,8 @@ void PadContextPopup::midiLearnNoteReceived(int midiNote) {
     if (this->midiAssignmentControl) this->midiAssignmentControl->setLearningSlot(-1);
     if (this->onMidiLearnStateChanged) this->onMidiLearnStateChanged(false);
 }
-// Source items
-
-void PadContextPopup::rebuildSourceItems() {
-    this->sourceItems = SourceItem::collectFromLibrary(this->engine.getInstrumentManager());
+void PadContextPopup::rebuildAvailableLibraryArticulations() {
+    this->availableLibraryArticulations = AvailableLibraryArticulation::collectFromLibrary(this->engine.getInstrumentManager());
 }
 
 void PadContextPopup::addArticulationGroup(const juce::String& articulationName) {
@@ -85,15 +83,11 @@ void PadContextPopup::addArticulationGroup(const juce::String& articulationName)
     group->addLayerButton.setTooltip("Add layer to " + articulationName);
     group->addLayerButton.onClick = [this, group] {
         auto* newLayer = this->addMapLayerRow(group->artName, "", 0, -1, -1, 0.0f, 0, false, false, false, std::nullopt, {}, {}, -1);
-        this->updateSourceCardButtonVisibility();
+        this->updateLibraryArticulationActionsVisibility();
         this->resized();
-        this->showSourcePicker(newLayer);
+        this->showLibraryArticulationPicker(newLayer);
     };
     this->layerContent.addAndMakeVisible(group->addLayerButton);
-}
-
-int PadContextPopup::findSourceIndex(const juce::String& searchPath) const {
-    return SourceItem::findIndex(this->sourceItems, searchPath);
 }
 
 juce::uint8 PadContextPopup::getPreviewVelocity() const {
@@ -191,8 +185,8 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
             this->addArticulationGroup(articulation.codeRaw);
     }
 
-    // Build source items and populate layers from existing instrument map
-    this->rebuildSourceItems();
+    // Build the available library articulations and populate layers from the current instrument map.
+    this->rebuildAvailableLibraryArticulations();
     this->refreshVelocityResponseChoices();
     this->populateLayers();
 
@@ -201,7 +195,7 @@ PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::
 PadContextPopup::~PadContextPopup() {
     this->dismissLibraryArticulationEditor();
     this->dismissVelocityResponseEditor();
-    this->dismissSourcePicker();
+    this->dismissLibraryAssignmentPicker();
 }
 
 
@@ -253,11 +247,11 @@ void PadContextPopup::resized() {
     this->layerViewport.setBounds(area);
 
     // Layer rows - single row per layer (compact parameter controls):
-    // [Source Card with hover setup/delete] | [Tuning|Attack|Decay + Curve|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
+    // [Library articulation with edit/delete] | [Tuning|Attack|Decay + Curve|Gain|L/R+Phase] | [Bleed1+Route|Bleed2+Route|...]
     const int potW = 44;
     const int potH = 32;
     const int flipColW = 36;
-    const int sourceW = UITheme::Sizes::sourceCardWidth;
+    const int libraryArticulationWidth = UITheme::Sizes::libraryArticulationCardWidth;
     const int routingComboH = 14;
     const int layerControlH = potH + routingComboH;
     const int layerRowH = layerControlH + 4;
@@ -290,15 +284,15 @@ void PadContextPopup::resized() {
             auto layerArea = contentArea.removeFromTop(layerRowH);
             auto rowArea = layerArea.reduced(0, 2);
 
-            // Source card
-            auto srcArea = rowArea.removeFromLeft(sourceW);
-            layer->sourceButton->setBounds(srcArea);
-            auto sourceInner = srcArea.reduced(6, 2).withTrimmedRight(compactButtonSize + UITheme::Spacing::sm);
-            layer->sourceDetailLabel->setBounds(sourceInner);
-            auto sourceCardButtonArea = srcArea.reduced(UITheme::Spacing::xs);
-            auto libraryArticulationEditorButtonRow = sourceCardButtonArea.removeFromTop(compactButtonSize);
+            // Library articulation
+            auto libraryArticulationArea = rowArea.removeFromLeft(libraryArticulationWidth);
+            layer->libraryArticulationButton->setBounds(libraryArticulationArea);
+            auto libraryArticulationLabelArea = libraryArticulationArea.reduced(6, 2).withTrimmedRight(compactButtonSize + UITheme::Spacing::sm);
+            layer->libraryArticulationDetailLabel->setBounds(libraryArticulationLabelArea);
+            auto libraryArticulationActionArea = libraryArticulationArea.reduced(UITheme::Spacing::xs);
+            auto libraryArticulationEditorButtonRow = libraryArticulationActionArea.removeFromTop(compactButtonSize);
             layer->libraryArticulationEditorButton->setBounds(libraryArticulationEditorButtonRow.removeFromRight(compactButtonSize));
-            auto removeButtonRow = sourceCardButtonArea.removeFromBottom(compactButtonSize);
+            auto removeButtonRow = libraryArticulationActionArea.removeFromBottom(compactButtonSize);
             layer->removeButton->setBounds(removeButtonRow.removeFromRight(compactButtonSize));
 
             rowArea.removeFromLeft(groupGap);
@@ -343,7 +337,7 @@ void PadContextPopup::resized() {
         }
     }
     this->layerContent.repaint();
-    this->layoutSourcePicker();
+    this->layoutLibraryAssignmentPicker();
     this->layoutVelocityResponseEditor();
     this->layoutLibraryArticulationEditor();
 }

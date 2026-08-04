@@ -32,10 +32,10 @@ KitPage::KitPage(DrumKitEngine& drumKitEngine)
     this->filterField.onTextChange = [this] { this->startTimer(this->filterDebounceMs); };
     this->addAndMakeVisible(this->filterField);
 
-    this->sourceList.setModel(&this->sourceListModel);
-    this->sourceList.setRowHeight(26);
-    this->sourceList.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
-    this->addAndMakeVisible(this->sourceList);
+    this->sectionList.setModel(&this->sectionListModel);
+    this->sectionList.setRowHeight(26);
+    this->sectionList.setColour(juce::ListBox::backgroundColourId, UITheme::Colours::bgControlAlt);
+    this->addAndMakeVisible(this->sectionList);
 
     this->infoTitleLabel.setFont(UITheme::Fonts::sectionTitle());
     this->infoTitleLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
@@ -62,8 +62,8 @@ KitPage::KitPage(DrumKitEngine& drumKitEngine)
     this->previewViewport.setScrollBarsShown(true, false);
     this->previewViewport.setColour(juce::ScrollBar::backgroundColourId, UITheme::Colours::bgEditor);
     this->addAndMakeVisible(this->previewViewport);
-    this->previewGrid.onPreview = [this](const SourceItem& source, juce::uint8 velocity) {
-        this->engine.previewSourceItem(source.kitCodeRaw, source.instCode, source.artCode, velocity);
+    this->previewGrid.onLibraryArticulationPreview = [this](const AvailableLibraryArticulation& libArt, juce::uint8 velocity) {
+        this->engine.previewLibraryArticulation(libArt.kitCodeRaw, libArt.instCode, libArt.artCode, velocity);
     };
 
     for (auto* button : { &this->loadButton, &this->saveButton, &this->saveAsButton, &this->deleteButton }) {
@@ -84,7 +84,7 @@ KitPage::~KitPage() {
 
 void KitPage::refresh(const juce::String& activeInstrumentMapText) {
     this->currentMapText = activeInstrumentMapText;
-    this->sourceItems = SourceItem::collectFromLibrary(this->engine.getInstrumentManager());
+    this->availableLibraryArticulations = AvailableLibraryArticulation::collectFromLibrary(this->engine.getInstrumentManager());
     this->rebuildLibraryEntries();
     this->rebuildPresetEntries(this->selectedPresetPath);
     this->rebuildFilteredEntries();
@@ -176,13 +176,13 @@ void KitPage::rebuildFilteredEntries() {
             if (KitPage::matchesFilter(this->presets[static_cast<size_t>(idx)].searchText, filterText)) this->filteredIndexes.push_back(idx);
     }
 
-    this->sourceList.updateContent();
+    this->sectionList.updateContent();
     int selectedRow = -1;
     for (int rowIndex = 0; rowIndex < static_cast<int>(this->filteredIndexes.size()); ++rowIndex) {
-        const int itemIndex = this->filteredIndexes[static_cast<size_t>(rowIndex)];
+        const int sectionEntryIndex = this->filteredIndexes[static_cast<size_t>(rowIndex)];
         const bool selected = this->activeSection == KitSection::LibraryKits
-            ? this->kits[static_cast<size_t>(itemIndex)].id == this->selectedKitId
-            : this->presets[static_cast<size_t>(itemIndex)].file.getFullPathName() == this->selectedPresetPath;
+            ? this->kits[static_cast<size_t>(sectionEntryIndex)].id == this->selectedKitId
+            : this->presets[static_cast<size_t>(sectionEntryIndex)].file.getFullPathName() == this->selectedPresetPath;
         if (selected) {
             selectedRow = rowIndex;
             break;
@@ -190,13 +190,13 @@ void KitPage::rebuildFilteredEntries() {
     }
     if (selectedRow < 0 && !this->filteredIndexes.empty()) {
         selectedRow = 0;
-        const int itemIndex = this->filteredIndexes.front();
+        const int sectionEntryIndex = this->filteredIndexes.front();
         if (this->activeSection == KitSection::LibraryKits)
-            this->selectedKitId = this->kits[static_cast<size_t>(itemIndex)].id;
+            this->selectedKitId = this->kits[static_cast<size_t>(sectionEntryIndex)].id;
         else
-            this->selectedPresetPath = this->presets[static_cast<size_t>(itemIndex)].file.getFullPathName();
+            this->selectedPresetPath = this->presets[static_cast<size_t>(sectionEntryIndex)].file.getFullPathName();
     }
-    this->sourceList.selectRow(selectedRow, false, false);
+    this->sectionList.selectRow(selectedRow, false, false);
     this->updateSelectedContent();
 }
 
@@ -220,21 +220,21 @@ const KitPage::PresetEntry* KitPage::getSelectedPreset() const {
     return nullptr;
 }
 
-std::vector<KitPreviewGrid::Item> KitPage::buildKitPreviewItems(const KitEntry& kit) const {
-    std::vector<KitPreviewGrid::Item> result;
-    for (const auto& source : this->sourceItems) {
-        if (!source.rawKitCode.equalsIgnoreCase(kit.rawId) && !source.kitCodeRaw.equalsIgnoreCase(kit.id)) continue;
-        KitPreviewGrid::Item item;
-        item.groupId = source.rawKitCode + "\n" + source.rawInstCode;
-        item.groupTitle = source.rawInstCode.isNotEmpty() ? source.rawInstCode : source.instCode;
-        item.source = source;
-        result.push_back(std::move(item));
+std::vector<KitPreviewGrid::ArticulationPad> KitPage::buildKitArticulationPads(const KitEntry& kit) const {
+    std::vector<KitPreviewGrid::ArticulationPad> result;
+    for (const auto& libArt : this->availableLibraryArticulations) {
+        if (!libArt.rawKitCode.equalsIgnoreCase(kit.rawId) && !libArt.kitCodeRaw.equalsIgnoreCase(kit.id)) continue;
+        KitPreviewGrid::ArticulationPad articulationPad;
+        articulationPad.groupId = libArt.rawKitCode + "\n" + libArt.rawInstCode;
+        articulationPad.groupTitle = libArt.rawInstCode.isNotEmpty() ? libArt.rawInstCode : libArt.instCode;
+        articulationPad.libraryArticulation = libArt;
+        result.push_back(std::move(articulationPad));
     }
     return result;
 }
 
-std::vector<KitPreviewGrid::Item> KitPage::buildPresetPreviewItems(const PresetEntry& preset) const {
-    std::vector<KitPreviewGrid::Item> result;
+std::vector<KitPreviewGrid::ArticulationPad> KitPage::buildPresetArticulationPads(const PresetEntry& preset) const {
+    std::vector<KitPreviewGrid::ArticulationPad> result;
     auto parsed = DrumKitEngine::parseInstrumentMapText(preset.file.loadFileAsString());
     const auto* library = this->engine.getInstrumentManager();
     if (!parsed.ok() || library == nullptr) return result;
@@ -259,31 +259,33 @@ std::vector<KitPreviewGrid::Item> KitPage::buildPresetPreviewItems(const PresetE
 
         std::unordered_set<std::string> addedArticulations;
         const auto& libraryArticulationFilters = !mapLayer.articulationFilter.empty() ? mapLayer.articulationFilter : mapLayer.slotArticulationFilter;
-        for (const auto& source : this->sourceItems) {
-            if (!source.rawKitCode.equalsIgnoreCase(kit->meta.codeRaw) || !source.rawInstCode.equalsIgnoreCase(instrument->meta.codeRaw)) continue;
+        for (const auto& libArt : this->availableLibraryArticulations) {
+            if (!libArt.rawKitCode.equalsIgnoreCase(kit->meta.codeRaw) || !libArt.rawInstCode.equalsIgnoreCase(instrument->meta.codeRaw)) continue;
             if (!libraryArticulationFilters.empty()) {
-                const bool matches = std::any_of(libraryArticulationFilters.begin(), libraryArticulationFilters.end(), [&source](const auto& filter) {
-                    return ArticulationNames::mapFilterMatchesArticulation(filter, source.rawArtCode);
+                const bool matches = std::any_of(libraryArticulationFilters.begin(), libraryArticulationFilters.end(), [&libArt](const auto& filter) {
+                    return ArticulationNames::mapFilterMatchesArticulation(filter, libArt.rawArtCode);
                 });
                 if (!matches) continue;
             }
-            const auto articulationKey = source.rawArtCode.toLowerCase().toStdString();
+            const auto articulationKey = libArt.rawArtCode.toLowerCase().toStdString();
             if (!addedArticulations.insert(articulationKey).second) continue;
-            result.push_back({ groupId, groupTitle, source });
+            result.push_back({ groupId, groupTitle, libArt });
         }
     }
     return result;
 }
 
 void KitPage::updateSelectedContent() {
-    std::vector<KitPreviewGrid::Item> previewItems;
+    std::vector<KitPreviewGrid::ArticulationPad> articulationPads;
     if (this->filteredIndexes.empty()) {
-        const bool sourceEmpty = this->activeSection == KitSection::LibraryKits ? this->kits.empty() : this->presets.empty();
-        this->infoTitleLabel.setText(sourceEmpty ? "No items available" : "No matching items", juce::dontSendNotification);
-        this->infoAuthorLabel.setText(sourceEmpty && this->activeSection == KitSection::LibraryKits ? "Check the sample library path" : "Try a different filter", juce::dontSendNotification);
+        const bool sectionEmpty = this->activeSection == KitSection::LibraryKits ? this->kits.empty() : this->presets.empty();
+        const auto emptyText = this->activeSection == KitSection::LibraryKits ? juce::String("No library kits available") : juce::String("No presets available");
+        const auto noMatchText = this->activeSection == KitSection::LibraryKits ? juce::String("No matching library kits") : juce::String("No matching presets");
+        this->infoTitleLabel.setText(sectionEmpty ? emptyText : noMatchText, juce::dontSendNotification);
+        this->infoAuthorLabel.setText(sectionEmpty && this->activeSection == KitSection::LibraryKits ? "Check the sample library path" : "Try a different filter", juce::dontSendNotification);
         this->infoLicenseLabel.setText(juce::String(), juce::dontSendNotification);
         this->detailsEditor.clear();
-        this->previewGrid.setItems({});
+        this->previewGrid.setArticulationPads({});
         this->updatePreviewGridSize();
         this->updateActionButtons();
         return;
@@ -296,7 +298,7 @@ void KitPage::updateSelectedContent() {
             this->infoLicenseLabel.setText(kit->license.isNotEmpty() ? "[" + kit->license + "]" : "No license information", juce::dontSendNotification);
             this->detailsEditor.setFont(UITheme::Fonts::normal());
             this->detailsEditor.setText(kit->readmeMarkdown.isNotEmpty() ? kit->readmeMarkdown : "No README.md found", false);
-            previewItems = this->buildKitPreviewItems(*kit);
+            articulationPads = this->buildKitArticulationPads(*kit);
         } else {
             this->infoTitleLabel.setText("No library kits", juce::dontSendNotification);
             this->infoAuthorLabel.setText("Check the sample library path", juce::dontSendNotification);
@@ -311,7 +313,7 @@ void KitPage::updateSelectedContent() {
             this->infoLicenseLabel.setText("Kit layout and MIDI notes are not included", juce::dontSendNotification);
             this->detailsEditor.setFont(UITheme::Fonts::mono());
             this->detailsEditor.setText(preset->file.loadFileAsString(), false);
-            previewItems = this->buildPresetPreviewItems(*preset);
+            articulationPads = this->buildPresetArticulationPads(*preset);
         } else {
             this->infoTitleLabel.setText("No presets", juce::dontSendNotification);
             this->infoAuthorLabel.setText("Save the current instrument map to create one", juce::dontSendNotification);
@@ -320,7 +322,7 @@ void KitPage::updateSelectedContent() {
         }
     }
     this->detailsEditor.setCaretPosition(0);
-    this->previewGrid.setItems(std::move(previewItems));
+    this->previewGrid.setArticulationPads(std::move(articulationPads));
     this->updatePreviewGridSize();
     this->updateActionButtons();
 }
@@ -504,31 +506,33 @@ void KitPage::timerCallback() {
     this->rebuildFilteredEntries();
 }
 
-int KitPage::SourceListModel::getNumRows() {
+int KitPage::SectionListModel::getNumRows() {
     return this->owner.filteredIndexes.empty() ? 1 : static_cast<int>(this->owner.filteredIndexes.size());
 }
 
-void KitPage::SourceListModel::paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) {
+void KitPage::SectionListModel::paintListBoxItem(int rowNumber, juce::Graphics& graphics, int width, int height, bool rowIsSelected) {
     if (this->owner.filteredIndexes.empty()) {
         graphics.fillAll(UITheme::Colours::bgControlAlt);
         graphics.setColour(UITheme::Colours::textMuted);
         graphics.setFont(UITheme::Fonts::normal());
-        const bool sourceEmpty = this->owner.activeSection == KitSection::LibraryKits ? this->owner.kits.empty() : this->owner.presets.empty();
-        graphics.drawFittedText(sourceEmpty ? "No items available" : "No matching items", 6, 0, width - 12, height, juce::Justification::centredLeft, 1);
+        const bool sectionEmpty = this->owner.activeSection == KitSection::LibraryKits ? this->owner.kits.empty() : this->owner.presets.empty();
+        const auto emptyText = this->owner.activeSection == KitSection::LibraryKits ? juce::String("No library kits available") : juce::String("No presets available");
+        const auto noMatchText = this->owner.activeSection == KitSection::LibraryKits ? juce::String("No matching library kits") : juce::String("No matching presets");
+        graphics.drawFittedText(sectionEmpty ? emptyText : noMatchText, 6, 0, width - 12, height, juce::Justification::centredLeft, 1);
         return;
     }
     if (rowNumber < 0 || rowNumber >= static_cast<int>(this->owner.filteredIndexes.size())) return;
 
     graphics.fillAll(rowIsSelected ? UITheme::Colours::listSelection : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd));
-    const int itemIndex = this->owner.filteredIndexes[static_cast<size_t>(rowNumber)];
+    const int sectionEntryIndex = this->owner.filteredIndexes[static_cast<size_t>(rowNumber)];
     juce::String title;
     juce::String detail;
     if (this->owner.activeSection == KitSection::LibraryKits) {
-        const auto& kit = this->owner.kits[static_cast<size_t>(itemIndex)];
+        const auto& kit = this->owner.kits[static_cast<size_t>(sectionEntryIndex)];
         title = kit.name;
         detail = kit.author.isNotEmpty() ? kit.author : "Unknown author";
     } else {
-        const auto& preset = this->owner.presets[static_cast<size_t>(itemIndex)];
+        const auto& preset = this->owner.presets[static_cast<size_t>(sectionEntryIndex)];
         title = preset.name;
         detail = preset.isUser ? "User" : "Factory";
     }
@@ -540,13 +544,13 @@ void KitPage::SourceListModel::paintListBoxItem(int rowNumber, juce::Graphics& g
     graphics.drawFittedText(detail, 6, 14, width - 12, height - 14, juce::Justification::centredLeft, 1);
 }
 
-void KitPage::SourceListModel::selectedRowsChanged(int lastRowSelected) {
+void KitPage::SectionListModel::selectedRowsChanged(int lastRowSelected) {
     if (lastRowSelected < 0 || lastRowSelected >= static_cast<int>(this->owner.filteredIndexes.size())) return;
-    const int itemIndex = this->owner.filteredIndexes[static_cast<size_t>(lastRowSelected)];
+    const int sectionEntryIndex = this->owner.filteredIndexes[static_cast<size_t>(lastRowSelected)];
     if (this->owner.activeSection == KitSection::LibraryKits)
-        this->owner.selectedKitId = this->owner.kits[static_cast<size_t>(itemIndex)].id;
+        this->owner.selectedKitId = this->owner.kits[static_cast<size_t>(sectionEntryIndex)].id;
     else
-        this->owner.selectedPresetPath = this->owner.presets[static_cast<size_t>(itemIndex)].file.getFullPathName();
+        this->owner.selectedPresetPath = this->owner.presets[static_cast<size_t>(sectionEntryIndex)].file.getFullPathName();
     this->owner.updateSelectedContent();
 }
 
@@ -592,7 +596,7 @@ void KitPage::resized() {
     area.removeFromLeft(UITheme::Spacing::md);
     auto previewArea = area;
 
-    this->sourceList.setBounds(listArea);
+    this->sectionList.setBounds(listArea);
     this->infoTitleLabel.setBounds(infoArea.removeFromTop(24));
     this->infoAuthorLabel.setBounds(infoArea.removeFromTop(18));
     this->infoLicenseLabel.setBounds(infoArea.removeFromTop(18));

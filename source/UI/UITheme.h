@@ -141,7 +141,7 @@ namespace Sizes {
     constexpr int popupPadding = 8;
     constexpr int potWidth = 50;
     constexpr int potHeight = 56;
-    constexpr int sourceCardWidth = 170;
+    constexpr int libraryArticulationCardWidth = 170;
     constexpr int layerRowHeight = 64;
     constexpr int padTitleRailWidth = 18;
     constexpr int tableInstrumentColumnWidth = 90;

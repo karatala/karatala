@@ -33,6 +33,8 @@ std::vector<LayerProjection> projectLayers(const Map& instrumentMap, const KitLa
 std::vector<LayerProjection> collectLinkedMapLayerTargets(const std::vector<LayerProjection>& projections, const juce::String& selectedSlotId, const juce::String& selectedArticulationSlotCode, int selectedArticulationSlotLayerIndex, bool linkArticulations, bool linkAllTomBleed);
 size_t isolateLayerForArticulationSlot(Map& instrumentMap, const KitLayout::InstrumentSlot& slot, size_t mapLayerIndex, const juce::String& articulationSlotCode);
 juce::String libraryArticulationForSlot(const Layer& mapLayer, const juce::String& articulationSlotCode);
-juce::String libraryPathForArticulationSlot(const Layer& mapLayer, const juce::String& articulationSlotCode);
+juce::String qualifiedLibraryArticulationIdForSlot(const Layer& mapLayer, const juce::String& articulationSlotCode);
+bool usesLegacyArticulationSlotExpressionFilter(const std::vector<juce::String>& articulationSlotFilters, const juce::String& articulationSlotCode);
+juce::String resolveLegacyHihatLibraryArticulationId(const KitLib::DrumKitSpec& libraryKit, const juce::String& qualifiedLibraryArticulationId, const juce::String& articulationSlotCode);
 
 } // namespace InstrumentMap
