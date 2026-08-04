@@ -29,6 +29,14 @@ StatusBar::StatusBar() {
     };
     this->addAndMakeVisible(this->inspectButton);
 #endif
+
+    UIHelpers::configureToggleButton(this->logsButton);
+    this->logsButton.setClickingTogglesState(false);
+    this->logsButton.setTooltip("Open logs and troubleshooting");
+    this->logsButton.onClick = [this] {
+        if (this->onLogsRequested) this->onLogsRequested();
+    };
+    this->addAndMakeVisible(this->logsButton);
 }
 
 void StatusBar::setStatusText(const juce::String& text) {
@@ -43,6 +51,10 @@ void StatusBar::setUiActive(bool active) {
     this->uiButton.setToggleState(active, juce::dontSendNotification);
 }
 
+void StatusBar::setLogsActive(bool active) {
+    this->logsButton.setToggleState(active, juce::dontSendNotification);
+}
+
 void StatusBar::paint(juce::Graphics& g) {
     g.fillAll(UITheme::Colours::bgPanel);
     // Top border line
@@ -52,6 +64,8 @@ void StatusBar::paint(juce::Graphics& g) {
 
 void StatusBar::resized() {
     auto area = getLocalBounds().reduced(8, 0);
+    this->logsButton.setBounds(area.removeFromRight(42).reduced(0, 2));
+    area.removeFromRight(2);
 #if JUCE_DEBUG
     this->inspectButton.setBounds(area.removeFromRight(22).reduced(1, 2));
     area.removeFromRight(2);

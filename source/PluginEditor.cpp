@@ -114,6 +114,9 @@ void PluginEditor::setupSidebarAndStatusBar() {
         }
         this->inspector->setVisible(true);
     };
+    this->statusBar.onLogsRequested = [this] {
+        this->setPage(PageId::Fix);
+    };
 
     // Status bar
     this->addAndMakeVisible(this->statusBar);
@@ -665,6 +668,7 @@ void PluginEditor::setPage(PageId pageId) {
 
     this->resized();
     this->statusBar.setUiActive(pageId == PageId::Playground);
+    this->statusBar.setLogsActive(pageId == PageId::Fix);
 }
 
 void PluginEditor::showCrosstalkPopup() {

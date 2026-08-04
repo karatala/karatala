@@ -10,7 +10,6 @@ Sidebar::Sidebar() {
     this->pageButtons.add(new PageButton(PageId::Map, "Map"));
     this->pageButtons.add(new PageButton(PageId::Raw, "Raw"));
     this->pageButtons.add(new PageButton(PageId::Settings, "Conf"));
-    this->pageButtons.add(new PageButton(PageId::Fix, "Fix"));
 
     for (auto* button : this->pageButtons) {
         button->onClick = [this, button] {
