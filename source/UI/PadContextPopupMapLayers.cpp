@@ -119,18 +119,21 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->tuningPot->setInteraction(0.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->tuningPot);
     layer->tuningPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Tuning); };
+    layer->tuningPot->onDragEnd = [this, layer] { this->queueLayerPreview(layer->artName); };
 
     // Attack pot
     layer->attackPot = std::make_unique<CompactParameterControl>("Attack", -1.0, 500.0, 1.0, attackMs >= 0 ? static_cast<double>(attackMs) : -1.0, CompactParameterControl::sentinelValueText);
     layer->attackPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->attackPot);
     layer->attackPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Attack); };
+    layer->attackPot->onDragEnd = [this, layer] { this->queueLayerPreview(layer->artName); };
 
     // Decay pot
     layer->decayPot = std::make_unique<CompactParameterControl>("Decay", -1.0, 5000.0, 1.0, decayMs >= 0 ? static_cast<double>(decayMs) : -1.0, CompactParameterControl::sentinelValueText);
     layer->decayPot->setInteraction(-1.0, 10.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->decayPot);
     layer->decayPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Decay); };
+    layer->decayPot->onDragEnd = [this, layer] { this->queueLayerPreview(layer->artName); };
 
     // Gain pot (-60 to +12 dB)
     layer->gainPot = std::make_unique<CompactParameterControl>("Gain", -60.0, 12.0, 0.1, static_cast<double>(volumeDb),
@@ -141,6 +144,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->gainPot->setInteraction(0.0, 0.5, 0.1);
     this->layerContent.addAndMakeVisible(*layer->gainPot);
     layer->gainPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Gain); };
+    layer->gainPot->onDragEnd = [this, layer] { this->queueLayerPreview(layer->artName); };
 
     // Pan pot
     layer->panPot = std::make_unique<CompactParameterControl>("Pan", -127.0, 127.0, 1.0, static_cast<double>(pan), [](double value) -> juce::String {
@@ -151,6 +155,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     layer->panPot->setInteraction(0.0, 4.0, 1.0);
     this->layerContent.addAndMakeVisible(*layer->panPot);
     layer->panPot->onValueChange = [this, layer] { this->applyLayerParameterChange(layer, EditableLayerParameter::Pan); };
+    layer->panPot->onDragEnd = [this, layer] { this->queueLayerPreview(layer->artName); };
 
     // Flip L/R button (toggle)
     layer->flipLRButton = std::make_unique<juce::TextButton>("L/R");
@@ -516,9 +521,10 @@ void PadContextPopup::applyLayerParameterChange(MapLayerRow* layer, EditableLaye
 
     this->pendingInstrumentMap = std::move(linkedMapEdit.map);
     this->mapTextDirty = true;
-    if (parameter == EditableLayerParameter::Tuning || parameter == EditableLayerParameter::Attack || parameter == EditableLayerParameter::Decay || parameter == EditableLayerParameter::Gain || parameter == EditableLayerParameter::Pan || parameter == EditableLayerParameter::Bleed)
-        this->pendingPreviewArtName = layer->artName;
-    this->startTimer(this->parameterChangeDebounceMs);
+    const bool shouldPreview = parameter == EditableLayerParameter::Tuning || parameter == EditableLayerParameter::Attack || parameter == EditableLayerParameter::Decay
+        || parameter == EditableLayerParameter::Gain || parameter == EditableLayerParameter::Pan || parameter == EditableLayerParameter::Bleed;
+    if (shouldPreview) this->queueLayerPreview(layer->artName);
+    else this->startTimer(this->parameterChangeDebounceMs);
 }
 
 void PadContextPopup::timerCallback() {

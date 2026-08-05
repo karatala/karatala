@@ -150,6 +150,7 @@ private:
                           const std::unordered_map<juce::String, float>& micBleedLevels,
                           const std::unordered_map<juce::String, juce::String>& micRouteOverrides, int mappedLayerIndex);
     juce::uint8 getPreviewVelocity() const;
+    void queueLayerPreview(const juce::String& articulationName);
     int getLayerIndex(const MapLayerRow* layer) const;
     int findVelocityResponsePresetIndex(const std::optional<juce::String>& definition) const;
     void rebuildVelocityResponseChoices(MapLayerRow* layer);

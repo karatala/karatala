@@ -98,6 +98,11 @@ juce::uint8 PadContextPopup::getPreviewVelocity() const {
     return static_cast<juce::uint8>(velocity);
 }
 
+void PadContextPopup::queueLayerPreview(const juce::String& articulationName) {
+    this->pendingPreviewArtName = articulationName;
+    this->startTimer(this->parameterChangeDebounceMs);
+}
+
 // Constructor
 
 PadContextPopup::PadContextPopup(DrumKitEngine& drumKitEngine, const KitLayout::InstrumentSlot& slot, int artIdx, const juce::String& savedMapText)

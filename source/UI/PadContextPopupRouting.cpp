@@ -468,6 +468,7 @@ void PadContextPopup::rebuildBleedControls(MapLayerRow* layer, const std::unorde
         bleedCtrl->bleedPot->onValueChange = [this, layer, bleedCtrlPtr] {
             this->applyLayerParameterChange(layer, EditableLayerParameter::Bleed, bleedCtrlPtr->micCode);
         };
+        bleedCtrl->bleedPot->onDragEnd = [this, layer] { this->queueLayerPreview(layer->artName); };
 
         bleedCtrl->routingChoices = this->buildMicRoutingChoices(qualifiedLibraryArticulationId, micCode, this->slotId);
         bleedCtrl->routingCombo = std::make_unique<juce::ComboBox>();
