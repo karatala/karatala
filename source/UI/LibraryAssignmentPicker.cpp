@@ -7,8 +7,70 @@
 #include <iterator>
 #include <set>
 
-LibraryAssignmentPicker::LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableLibraryArticulations, const InstrumentCatalog& instrumentCatalog, SelectionMode mode)
-    : availableLibraryArticulations(availableLibraryArticulations)
+static constexpr int assignmentBadgeHeight = 14;
+static constexpr int assignmentBadgeGap = 2;
+static constexpr int micBadgeHorizontalPadding = 3;
+static constexpr int countBadgeHorizontalPadding = 4;
+
+static juce::Colour micBadgeColour(const juce::String& badge) {
+    if (badge == "OH") return UITheme::Colours::libraryBadgeOverhead;
+    if (badge == "MS") return UITheme::Colours::libraryBadgeFormat;
+    if (badge.startsWithChar('R')) return UITheme::Colours::libraryBadgeRoom;
+    return UITheme::Colours::libraryBadgeDirect;
+}
+
+static int assignmentBadgeWidth(const juce::Font& font, const juce::String& text, int horizontalPadding) {
+    return juce::GlyphArrangement::getStringWidthInt(font, text) + horizontalPadding * 2;
+}
+
+static juce::String roundRobinBadgeText(const LibrarySampleSummary& summary) {
+    return summary.roundRobinCountText.isEmpty() ? juce::String() : juce::String::fromUTF8("\xf0\x9f\x8e\xb2") + " " + summary.roundRobinCountText;
+}
+
+static juce::String velocityBadgeText(const LibrarySampleSummary& summary) {
+    return summary.velocityLevelCountText.isEmpty() ? juce::String() : juce::String::fromUTF8("\xf0\x9f\x93\xb6") + " " + summary.velocityLevelCountText;
+}
+
+static int librarySummaryBadgeWidth(const LibrarySampleSummary& summary, const juce::Font& font) {
+    int totalWidth = 0;
+    auto includeWidth = [&totalWidth](int badgeWidth) {
+        if (badgeWidth <= 0) return;
+        if (totalWidth > 0) totalWidth += assignmentBadgeGap;
+        totalWidth += badgeWidth;
+    };
+    for (const auto& badge : summary.micBadges) includeWidth(assignmentBadgeWidth(font, badge, micBadgeHorizontalPadding));
+    const auto roundRobinText = roundRobinBadgeText(summary);
+    const auto velocityText = velocityBadgeText(summary);
+    if (roundRobinText.isNotEmpty()) includeWidth(assignmentBadgeWidth(font, roundRobinText, countBadgeHorizontalPadding));
+    if (velocityText.isNotEmpty()) includeWidth(assignmentBadgeWidth(font, velocityText, countBadgeHorizontalPadding));
+    return totalWidth;
+}
+
+static int paintAssignmentBadge(juce::Graphics& graphics, const juce::Font& font, const juce::String& text, int rightEdge, int rowHeight, int horizontalPadding, float cornerRadius, juce::Colour fillColour) {
+    const int badgeWidth = assignmentBadgeWidth(font, text, horizontalPadding);
+    const auto badgeBounds = juce::Rectangle<int>(rightEdge - badgeWidth, (rowHeight - assignmentBadgeHeight) / 2, badgeWidth, assignmentBadgeHeight);
+    graphics.setColour(fillColour);
+    graphics.fillRoundedRectangle(badgeBounds.toFloat(), cornerRadius);
+    graphics.setColour(UITheme::Colours::textPrimary);
+    graphics.setFont(font);
+    graphics.drawText(text, badgeBounds, juce::Justification::centred);
+    return badgeBounds.getX() - assignmentBadgeGap;
+}
+
+static void paintLibrarySummaryBadges(juce::Graphics& graphics, const LibrarySampleSummary& summary, juce::Rectangle<int> area, const juce::Font& font) {
+    juce::Graphics::ScopedSaveState saveState(graphics);
+    graphics.reduceClipRegion(area);
+    int rightEdge = area.getRight();
+    const auto velocityText = velocityBadgeText(summary);
+    if (velocityText.isNotEmpty()) rightEdge = paintAssignmentBadge(graphics, font, velocityText, rightEdge, area.getHeight(), countBadgeHorizontalPadding, assignmentBadgeHeight * 0.5f, UITheme::Colours::libraryBadgeVelocity);
+    const auto roundRobinText = roundRobinBadgeText(summary);
+    if (roundRobinText.isNotEmpty()) rightEdge = paintAssignmentBadge(graphics, font, roundRobinText, rightEdge, area.getHeight(), countBadgeHorizontalPadding, assignmentBadgeHeight * 0.5f, UITheme::Colours::libraryBadgeRoundRobin);
+    for (auto badgeIterator = summary.micBadges.rbegin(); badgeIterator != summary.micBadges.rend(); ++badgeIterator)
+        rightEdge = paintAssignmentBadge(graphics, font, *badgeIterator, rightEdge, area.getHeight(), micBadgeHorizontalPadding, 2.0f, micBadgeColour(*badgeIterator));
+}
+
+LibraryAssignmentPicker::LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableArticulations, const InstrumentCatalog& instrumentCatalog, SelectionMode mode)
+    : availableLibraryArticulations(availableArticulations)
     , catalog(instrumentCatalog)
     , selectionMode(mode) {
     this->titleLabel.setFont(UITheme::Fonts::sectionTitle().withHeight(14.0f));
@@ -203,9 +265,17 @@ juce::String LibraryAssignmentPicker::qualifiedLibraryInstrumentId(const Availab
     return libArt.kitCodeRaw.trim().toLowerCase() + "\n" + libArt.instCode.trim().toLowerCase();
 }
 
+juce::String LibraryAssignmentPicker::libraryArticulationDisplayLabel(const AvailableLibraryArticulation& libArt) {
+    const auto kitName = libArt.kitDisplayName.isNotEmpty() ? libArt.kitDisplayName : libArt.kitCodeRaw;
+    juce::StringArray parts { kitName };
+    if (libArt.instCode.isNotEmpty()) parts.add(libArt.instCode);
+    if (libArt.artCode.isNotEmpty()) parts.add(libArt.artCode);
+    return parts.joinIntoString(" / ");
+}
+
 juce::String LibraryAssignmentPicker::libraryInstrumentDisplayLabel(const AvailableLibraryArticulation& libArt) {
     const auto kitName = libArt.kitDisplayName.isNotEmpty() ? libArt.kitDisplayName : libArt.kitCodeRaw;
-    return libArt.instCode.isNotEmpty() ? kitName + "/" + libArt.instCode : kitName;
+    return libArt.instCode.isNotEmpty() ? kitName + " / " + libArt.instCode : kitName;
 }
 
 void LibraryAssignmentPicker::rebuildKindEntries() {
@@ -469,19 +539,37 @@ void LibraryAssignmentPicker::AssignmentListModel::paintListBoxItem(int rowNumbe
     const int btnW = LibraryAssignmentPicker::selectButtonWidth;
     const int prevW = LibraryAssignmentPicker::previewButtonWidth;
     const bool showActions = rowNumber == this->owner.actionRow;
-    const int actionWidth = showActions ? btnW + prevW : 0;
-    const int textWidth = width - actionWidth;
+    const int actionWidth = btnW + prevW;
 
     g.fillAll(rowIsSelected ? UITheme::Colours::listSelection : (rowNumber % 2 == 0 ? UITheme::Colours::bgControlAlt : UITheme::Colours::listRowOdd));
 
+    const auto rowFont = UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight));
+    const auto badgeFont = UITheme::Fonts::small();
+    const bool instrumentMode = this->owner.selectionMode == SelectionMode::Instrument;
+    const auto displayText = instrumentMode ? LibraryAssignmentPicker::libraryInstrumentDisplayLabel(libArt) : LibraryAssignmentPicker::libraryArticulationDisplayLabel(libArt);
+    const auto& summary = instrumentMode ? libArt.instrumentSummary : libArt.articulationSummary;
+    const int horizontalPadding = 4;
+    const int summaryGap = 12;
+    const int minimumLabelWidth = juce::jmin(160, width / 2);
+    const int desiredSummaryWidth = librarySummaryBadgeWidth(summary, badgeFont);
+    const int summaryWidth = juce::jmin(desiredSummaryWidth, juce::jmax(0, width - horizontalPadding * 2 - summaryGap - minimumLabelWidth));
+    const auto summaryArea = juce::Rectangle<int>(width - horizontalPadding - summaryWidth, 0, summaryWidth, height);
+    const auto labelArea = juce::Rectangle<int>(horizontalPadding, 0, juce::jmax(0, summaryArea.getX() - summaryGap - horizontalPadding), height);
+
     g.setColour(UITheme::Colours::textPrimary);
-    g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
-    const auto displayText = this->owner.selectionMode == SelectionMode::Instrument ? LibraryAssignmentPicker::libraryInstrumentDisplayLabel(libArt) : libArt.displayLabel();
-    g.drawText(displayText, 4, 0, textWidth - 8, height, juce::Justification::centredLeft);
+    g.setFont(rowFont);
+    g.drawFittedText(displayText, labelArea, juce::Justification::centredLeft, 1, 0.8f);
+    paintLibrarySummaryBadges(g, summary, summaryArea, badgeFont);
 
     if (!showActions) return;
 
-    auto prevArea = juce::Rectangle<int>(textWidth, 0, prevW, height).reduced(2, 3);
+    const int actionX = width - actionWidth;
+    const int actionFadeWidth = actionWidth + 24;
+    const int actionFadeX = width - actionFadeWidth;
+    g.setGradientFill(juce::ColourGradient(UITheme::Colours::bgPanelRaised.withAlpha(0.0f), static_cast<float>(actionFadeX), 0.0f, UITheme::Colours::bgPanelRaised.withAlpha(0.8f), static_cast<float>(width), 0.0f, false));
+    g.fillRect(actionFadeX, 0, actionFadeWidth, height);
+
+    auto prevArea = juce::Rectangle<int>(actionX, 0, prevW, height).reduced(2, 3);
     juce::Path previewTriangle;
     previewTriangle.addTriangle(static_cast<float>(prevArea.getX()), static_cast<float>(prevArea.getBottom()),
                                 static_cast<float>(prevArea.getRight()), static_cast<float>(prevArea.getBottom()),
@@ -489,12 +577,12 @@ void LibraryAssignmentPicker::AssignmentListModel::paintListBoxItem(int rowNumbe
     g.setColour(UITheme::Colours::accentSoft);
     g.fillPath(previewTriangle);
 
-    auto btnArea = juce::Rectangle<int>(textWidth + prevW, 0, btnW, height).withSizeKeepingCentre(btnW, btnW).reduced(1);
+    auto btnArea = juce::Rectangle<int>(actionX + prevW, 0, btnW, height).withSizeKeepingCentre(btnW, btnW).reduced(1);
     g.setColour(UITheme::Colours::borderMid);
     g.fillRoundedRectangle(btnArea.toFloat(), 2.0f);
-    g.setColour(UITheme::Colours::textPrimary.withAlpha(0.8f));
-    g.setFont(UITheme::Fonts::normal().withHeight(static_cast<float>(UITheme::Sizes::standardControlTextHeight)));
-    g.drawText(juce::String::charToString(0x2713), btnArea, juce::Justification::centred);
+    g.setColour(UITheme::Colours::textPrimary);
+    g.setFont(rowFont);
+    g.drawText(juce::String::fromUTF8("\xe2\x98\x91\xef\xb8\x8f"), btnArea, juce::Justification::centred);
 }
 
 void LibraryAssignmentPicker::AssignmentListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {

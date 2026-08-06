@@ -38,6 +38,12 @@ namespace Colours {
     inline const juce::Colour listRowOdd = juce::Colour(0xff2e2e2e);
     inline const juce::Colour listSelection = juce::Colour(0xff3a5a8a);
     inline const juce::Colour selectionStrong = juce::Colour(0xff3399FF);
+    inline const juce::Colour libraryBadgeDirect = juce::Colour(0xffa34b44);
+    inline const juce::Colour libraryBadgeOverhead = juce::Colour(0xff347fa3);
+    inline const juce::Colour libraryBadgeRoom = juce::Colour(0xff7656a0);
+    inline const juce::Colour libraryBadgeFormat = juce::Colour(0xff35887a);
+    inline const juce::Colour libraryBadgeRoundRobin = juce::Colour(0xff9a6a30);
+    inline const juce::Colour libraryBadgeVelocity = juce::Colour(0xff4e8a48);
     inline const juce::Colour keyWhite = juce::Colour(0xffF4F4F4);
     inline const juce::Colour keyWhiteText = juce::Colour(0xff222222);
     inline const juce::Colour keyBlack = juce::Colour(0xff222222);
@@ -106,7 +112,7 @@ namespace Fonts {
     inline juce::Font label() { return juce::Font(juce::FontOptions(10.0f)); }
     inline juce::Font labelBold() { return juce::Font(juce::FontOptions(10.0f).withStyle("Bold")); }
     inline juce::Font labelBoldMedium() { return labelBold().withHeight(12.0f); }
-    inline juce::Font small() { return juce::Font(juce::FontOptions(9.0f)); }
+    inline juce::Font small() { return juce::Font(juce::FontOptions(10.0f)); }
     inline juce::Font table() { return juce::Font(juce::FontOptions(10.0f)); }
     inline juce::Font tableSmall() { return table().withHeight(11.0f); }
     inline juce::Font mono() { return juce::Font(juce::FontOptions(11.0f).withName(juce::Font::getDefaultMonospacedFontName())); }

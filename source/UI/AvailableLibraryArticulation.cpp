@@ -7,6 +7,108 @@
 #include <unordered_set>
 #include <utility>
 
+static juce::String micBadgeFor(const KitLib::MicSpec& micSpec) {
+    if (micSpec.type == KitLib::MicSpec::Type::Overhead) return "OH";
+    if (micSpec.type == KitLib::MicSpec::Type::Room) {
+        if (micSpec.position == KitLib::MicSpec::Position::Close) return "RC";
+        if (micSpec.position == KitLib::MicSpec::Position::Far) return "RF";
+    }
+    if (micSpec.type == KitLib::MicSpec::Type::Direct) {
+        switch (micSpec.position) {
+            case KitLib::MicSpec::Position::Sub: return "DU";
+            case KitLib::MicSpec::Position::Side: return "DS";
+            case KitLib::MicSpec::Position::Top: return "DT";
+            case KitLib::MicSpec::Position::Bottom: return "DB";
+            case KitLib::MicSpec::Position::In: return "DI";
+            case KitLib::MicSpec::Position::Out: return "DO";
+            case KitLib::MicSpec::Position::Unknown:
+            case KitLib::MicSpec::Position::Any:
+            case KitLib::MicSpec::Position::Normal:
+            case KitLib::MicSpec::Position::Wide:
+            case KitLib::MicSpec::Position::Close:
+            case KitLib::MicSpec::Position::Far: break;
+        }
+    }
+
+    const auto rawCode = micSpec.raw.trim().toUpperCase();
+    return rawCode.length() >= 2 ? rawCode.substring(0, 2) : rawCode;
+}
+
+static void addMicBadge(std::vector<juce::String>& badges, const juce::String& badge) {
+    if (badge.isEmpty()) return;
+    const bool alreadyPresent = std::any_of(badges.begin(), badges.end(), [&badge](const auto& existingBadge) { return existingBadge.compareIgnoreCase(badge) == 0; });
+    if (!alreadyPresent) badges.push_back(badge);
+}
+
+static int micBadgePriority(const juce::String& badge) {
+    static const std::vector<juce::String> preferredOrder { "DU", "DS", "DT", "DB", "DI", "DO", "OH", "RC", "RF", "MS" };
+    const auto badgeIterator = std::find(preferredOrder.begin(), preferredOrder.end(), badge);
+    return badgeIterator == preferredOrder.end() ? static_cast<int>(preferredOrder.size()) : static_cast<int>(std::distance(preferredOrder.begin(), badgeIterator));
+}
+
+static void sortMicBadges(std::vector<juce::String>& badges) {
+    std::sort(badges.begin(), badges.end(), [](const auto& leftBadge, const auto& rightBadge) {
+        const int leftPriority = micBadgePriority(leftBadge);
+        const int rightPriority = micBadgePriority(rightBadge);
+        if (leftPriority != rightPriority) return leftPriority < rightPriority;
+        return leftBadge.compareIgnoreCase(rightBadge) < 0;
+    });
+}
+
+static void updateSummaryLabels(LibrarySampleSummary& summary) {
+    if (summary.maxRoundRobinCount > 0) {
+        summary.roundRobinCountText = summary.minRoundRobinCount == summary.maxRoundRobinCount
+            ? juce::String(summary.maxRoundRobinCount)
+            : juce::String(summary.minRoundRobinCount) + "-" + juce::String(summary.maxRoundRobinCount);
+    }
+    if (summary.maxVelocityLevelCount > 0) {
+        summary.velocityLevelCountText = summary.minVelocityLevelCount == summary.maxVelocityLevelCount
+            ? juce::String(summary.maxVelocityLevelCount)
+            : juce::String(summary.minVelocityLevelCount) + "-" + juce::String(summary.maxVelocityLevelCount);
+    }
+}
+
+static LibrarySampleSummary summarizeArticulation(const KitLib::ArticulationSpec& articulation) {
+    LibrarySampleSummary summary;
+    int velocityLevelCount = 0;
+    for (const auto& velocityLevel : articulation.velocityLevels) {
+        if (velocityLevel == nullptr || velocityLevel->isEmpty()) continue;
+        ++velocityLevelCount;
+
+        int roundRobinCount = 0;
+        for (const auto& logicalHit : velocityLevel->logicalHits) {
+            if (logicalHit == nullptr || logicalHit->isEmpty()) continue;
+            ++roundRobinCount;
+            for (const auto& sample : logicalHit->samples) {
+                if (sample == nullptr) continue;
+                addMicBadge(summary.micBadges, micBadgeFor(sample->micSpec));
+                if (sample->micSpec.format == KitLib::MicSpec::Format::MidSide) addMicBadge(summary.micBadges, "MS");
+            }
+        }
+
+        if (roundRobinCount <= 0) continue;
+        if (summary.minRoundRobinCount == 0 || roundRobinCount < summary.minRoundRobinCount) summary.minRoundRobinCount = roundRobinCount;
+        summary.maxRoundRobinCount = juce::jmax(summary.maxRoundRobinCount, roundRobinCount);
+    }
+
+    summary.minVelocityLevelCount = velocityLevelCount;
+    summary.maxVelocityLevelCount = velocityLevelCount;
+    sortMicBadges(summary.micBadges);
+    updateSummaryLabels(summary);
+    return summary;
+}
+
+static void includeArticulationSummary(LibrarySampleSummary& instrumentSummary, const LibrarySampleSummary& articulationSummary) {
+    if (articulationSummary.maxVelocityLevelCount <= 0) return;
+    for (const auto& badge : articulationSummary.micBadges) addMicBadge(instrumentSummary.micBadges, badge);
+    if (articulationSummary.minRoundRobinCount > 0 && (instrumentSummary.minRoundRobinCount == 0 || articulationSummary.minRoundRobinCount < instrumentSummary.minRoundRobinCount))
+        instrumentSummary.minRoundRobinCount = articulationSummary.minRoundRobinCount;
+    instrumentSummary.maxRoundRobinCount = juce::jmax(instrumentSummary.maxRoundRobinCount, articulationSummary.maxRoundRobinCount);
+    if (instrumentSummary.minVelocityLevelCount == 0 || articulationSummary.minVelocityLevelCount < instrumentSummary.minVelocityLevelCount)
+        instrumentSummary.minVelocityLevelCount = articulationSummary.minVelocityLevelCount;
+    instrumentSummary.maxVelocityLevelCount = juce::jmax(instrumentSummary.maxVelocityLevelCount, articulationSummary.maxVelocityLevelCount);
+}
+
 juce::String AvailableLibraryArticulation::qualifiedId() const {
     juce::String result = this->kitCodeRaw;
     if (this->instCode.isNotEmpty()) result += "/" + this->instCode;
@@ -56,18 +158,29 @@ std::vector<AvailableLibraryArticulation> AvailableLibraryArticulation::collectF
 
         for (const auto* libInst : libInstruments) {
             if (libInst == nullptr || libInst->articulationSpecs.empty()) continue;
+            std::vector<std::pair<const KitLib::ArticulationSpec*, LibrarySampleSummary>> articulationSummaries;
+            LibrarySampleSummary instrumentSummary;
             for (const auto& libArtPtr : libInst->articulationSpecs) {
                 if (libArtPtr == nullptr) continue;
-                AvailableLibraryArticulation libArt;
-                libArt.kitCodeRaw = kitId;
-                libArt.kitDisplayName = kitDisplayName;
-                libArt.instCode = kitPtr->getPreferredInstrumentId(*libInst);
-                libArt.artCode = libInst->getPreferredArticulationId(*libArtPtr);
-                libArt.rawKitCode = kitPtr->meta.codeRaw;
-                libArt.rawInstCode = libInst->meta.codeRaw;
-                libArt.rawArtCode = libArtPtr->codeRaw;
-                libArt.instType = libInst->meta.type;
-                addUniqueLibArt(std::move(libArt));
+                auto articulationSummary = summarizeArticulation(*libArtPtr);
+                includeArticulationSummary(instrumentSummary, articulationSummary);
+                articulationSummaries.emplace_back(libArtPtr.get(), std::move(articulationSummary));
+            }
+            sortMicBadges(instrumentSummary.micBadges);
+            updateSummaryLabels(instrumentSummary);
+            for (const auto& [libArtSpec, articulationSummary] : articulationSummaries) {
+                AvailableLibraryArticulation availableArticulation;
+                availableArticulation.kitCodeRaw = kitId;
+                availableArticulation.kitDisplayName = kitDisplayName;
+                availableArticulation.instCode = kitPtr->getPreferredInstrumentId(*libInst);
+                availableArticulation.artCode = libInst->getPreferredArticulationId(*libArtSpec);
+                availableArticulation.rawKitCode = kitPtr->meta.codeRaw;
+                availableArticulation.rawInstCode = libInst->meta.codeRaw;
+                availableArticulation.rawArtCode = libArtSpec->codeRaw;
+                availableArticulation.instType = libInst->meta.type;
+                availableArticulation.articulationSummary = articulationSummary;
+                availableArticulation.instrumentSummary = instrumentSummary;
+                addUniqueLibArt(std::move(availableArticulation));
             }
         }
     }

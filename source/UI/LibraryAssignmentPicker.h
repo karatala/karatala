@@ -98,6 +98,7 @@ private:
     static std::optional<InstrumentFamily> familyForCategory(Category category);
     static juce::String kindLabel(KitLib::InstrumentType type);
     static juce::String qualifiedLibraryInstrumentId(const AvailableLibraryArticulation& libArt);
+    static juce::String libraryArticulationDisplayLabel(const AvailableLibraryArticulation& libArt);
     static juce::String libraryInstrumentDisplayLabel(const AvailableLibraryArticulation& libArt);
     void updateCategoryButtons();
     void confirmAssignment(int libArtIndex);

@@ -8,6 +8,16 @@ namespace KitLib {
 class LibraryManager;
 }
 
+struct LibrarySampleSummary {
+    std::vector<juce::String> micBadges;
+    int minRoundRobinCount = 0;
+    int maxRoundRobinCount = 0;
+    int minVelocityLevelCount = 0;
+    int maxVelocityLevelCount = 0;
+    juce::String roundRobinCountText;
+    juce::String velocityLevelCountText;
+};
+
 struct AvailableLibraryArticulation {
     juce::String kitCodeRaw;
     juce::String kitDisplayName;
@@ -17,6 +27,8 @@ struct AvailableLibraryArticulation {
     juce::String rawInstCode;
     juce::String rawArtCode;
     KitLib::InstrumentType instType = KitLib::InstrumentType::Unknown;
+    LibrarySampleSummary articulationSummary;
+    LibrarySampleSummary instrumentSummary;
 
     juce::String qualifiedId() const;
     juce::String rawQualifiedId() const;
