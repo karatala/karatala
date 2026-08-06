@@ -158,7 +158,7 @@ void PadContextPopup::showLibraryArticulationPicker(MapLayerRow* layer) {
     this->dismissVelocityResponseEditor();
     this->dismissLibraryAssignmentPicker();
 
-    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog());
+    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog(), this->engine.getArticulationSlotFallbackRules());
     int layerNumber = 0;
     for (const auto* candidateLayer : this->layerRows) {
         if (candidateLayer == nullptr || candidateLayer->artName.compareIgnoreCase(layer->artName) != 0) continue;
@@ -221,7 +221,7 @@ void PadContextPopup::showInstrumentPicker() {
     this->dismissVelocityResponseEditor();
     this->dismissLibraryAssignmentPicker();
 
-    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog(), LibraryAssignmentPicker::SelectionMode::Instrument);
+    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog(), this->engine.getArticulationSlotFallbackRules(), LibraryAssignmentPicker::SelectionMode::Instrument);
     this->activeLibraryAssignmentPicker->setTitle(this->slotLabel.getText());
     this->activeLibraryAssignmentPicker->onDismiss = [this] {
         juce::MessageManager::callAsync([this] { this->dismissLibraryAssignmentPicker(); });

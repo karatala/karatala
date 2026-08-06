@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../Engine/ArticulationSlotFallbackRules.h"
 #include "../Engine/InstrumentCatalog.h"
 #include "AvailableLibraryArticulation.h"
 #include <set>
@@ -23,7 +24,7 @@ public:
         juce::String instrumentId;
     };
 
-    explicit LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableLibraryArticulations, const InstrumentCatalog& catalog, SelectionMode mode = SelectionMode::Articulation);
+    explicit LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableLibraryArticulations, const InstrumentCatalog& catalog, const ArticulationSlotFallbackRules& articulationPriorityRules, SelectionMode mode = SelectionMode::Articulation);
     ~LibraryAssignmentPicker() override = default;
 
     void resized() override;
@@ -59,6 +60,7 @@ private:
 
     const std::vector<AvailableLibraryArticulation>& availableLibraryArticulations;
     const InstrumentCatalog& catalog;
+    const ArticulationSlotFallbackRules& articulationPriorityRules;
     SelectionMode selectionMode = SelectionMode::Articulation;
     KitLib::InstrumentType selectedKind = KitLib::InstrumentType::Unknown;
     Category selectedCategory = Category::All;

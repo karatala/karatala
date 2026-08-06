@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <map>
 #include <set>
 
 static constexpr int assignmentBadgeHeight = 14;
@@ -29,6 +30,14 @@ static juce::String roundRobinBadgeText(const LibrarySampleSummary& summary) {
 
 static juce::String velocityBadgeText(const LibrarySampleSummary& summary) {
     return summary.velocityLevelCountText.isEmpty() ? juce::String() : UITheme::Symbols::signalBars + " " + summary.velocityLevelCountText;
+}
+
+static int previewArticulationPriority(const AvailableLibraryArticulation& libraryArticulation, const ArticulationSlotFallbackRules& priorityRules) {
+    const auto& preferences = priorityRules.forType(libraryArticulation.instType);
+    const auto articulationCode = libraryArticulation.rawArtCode.isNotEmpty() ? libraryArticulation.rawArtCode : libraryArticulation.artCode;
+    for (int priorityIdx = 0; priorityIdx < static_cast<int>(preferences.size()); ++priorityIdx)
+        if (ArticulationNames::mapFilterMatchesArticulation(preferences[static_cast<size_t>(priorityIdx)], articulationCode)) return priorityIdx;
+    return static_cast<int>(preferences.size()) + (ArticulationNames::normalizeArticulationName(articulationCode) == "choke" ? 1 : 0);
 }
 
 static int librarySummaryBadgeWidth(const LibrarySampleSummary& summary, const juce::Font& font) {
@@ -69,9 +78,10 @@ static void paintLibrarySummaryBadges(juce::Graphics& graphics, const LibrarySam
         rightEdge = paintAssignmentBadge(graphics, font, *badgeIterator, rightEdge, area.getHeight(), micBadgeHorizontalPadding, 2.0f, micBadgeColour(*badgeIterator));
 }
 
-LibraryAssignmentPicker::LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableArticulations, const InstrumentCatalog& instrumentCatalog, SelectionMode mode)
+LibraryAssignmentPicker::LibraryAssignmentPicker(const std::vector<AvailableLibraryArticulation>& availableArticulations, const InstrumentCatalog& instrumentCatalog, const ArticulationSlotFallbackRules& priorityRules, SelectionMode mode)
     : availableLibraryArticulations(availableArticulations)
     , catalog(instrumentCatalog)
+    , articulationPriorityRules(priorityRules)
     , selectionMode(mode) {
     this->titleLabel.setFont(UITheme::Fonts::sectionTitle().withHeight(14.0f));
     this->titleLabel.setColour(juce::Label::textColourId, UITheme::Colours::textPrimary);
@@ -384,13 +394,27 @@ void LibraryAssignmentPicker::rebuildFiltered() {
     this->actionRowBeforeMouseSelection = -1;
     this->mouseSelectionChanged = false;
     auto filterText = this->filterField.getText().toLowerCase();
-    std::set<juce::String> addedInstruments;
+    std::map<juce::String, size_t> visibleRowByInstrument;
 
     for (int idx = 0; idx < static_cast<int>(this->availableLibraryArticulations.size()); ++idx) {
         const auto& libArt = this->availableLibraryArticulations[static_cast<size_t>(idx)];
         if (!this->matchesCurrentFilters(libArt, this->cachedLowerDisplayLabels[static_cast<size_t>(idx)], filterText))
             continue;
-        if (this->selectionMode == SelectionMode::Instrument && !addedInstruments.insert(LibraryAssignmentPicker::qualifiedLibraryInstrumentId(libArt)).second) continue;
+        if (this->selectionMode == SelectionMode::Instrument) {
+            const auto instrumentKey = LibraryAssignmentPicker::qualifiedLibraryInstrumentId(libArt);
+            const auto existingRow = visibleRowByInstrument.find(instrumentKey);
+            if (existingRow == visibleRowByInstrument.end()) {
+                visibleRowByInstrument.emplace(instrumentKey, this->visibleLibraryArticulationIndexes.size());
+                this->visibleLibraryArticulationIndexes.push_back(idx);
+                continue;
+            }
+
+            const auto visibleRow = existingRow->second;
+            const int currentLibArtIndex = this->visibleLibraryArticulationIndexes[visibleRow];
+            const auto& currentLibArt = this->availableLibraryArticulations[static_cast<size_t>(currentLibArtIndex)];
+            if (previewArticulationPriority(libArt, this->articulationPriorityRules) < previewArticulationPriority(currentLibArt, this->articulationPriorityRules)) this->visibleLibraryArticulationIndexes[visibleRow] = idx;
+            continue;
+        }
         this->visibleLibraryArticulationIndexes.push_back(idx);
     }
 

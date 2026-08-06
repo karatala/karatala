@@ -274,7 +274,7 @@ void InstrumentConfigPanel::updateRemoveButtonVisibility() {
 void InstrumentConfigPanel::showLibraryArticulationPicker(TableRow* row) {
     this->dismissLibraryAssignmentPicker();
 
-    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog());
+    this->activeLibraryAssignmentPicker = std::make_unique<LibraryAssignmentPicker>(this->availableLibraryArticulations, this->engine.getInstrumentCatalog(), this->engine.getArticulationSlotFallbackRules());
     juce::String slotTitle = row->slotId;
     if (const auto* layout = this->engine.getKitLayout()) {
         for (const auto& slot : layout->instrumentSlots) {
