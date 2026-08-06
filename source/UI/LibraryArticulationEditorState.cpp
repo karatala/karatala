@@ -257,7 +257,7 @@ void LibraryArticulationEditor::rebuildMicButtons() {
         auto button = std::make_unique<juce::TextButton>();
         UIComponentStyle::configureToggleButton(*button);
         button->setToggleState(this->isMicSelected(micCode), juce::dontSendNotification);
-        button->setButtonText((this->isMicSelected(micCode) ? juce::String::charToString(0x25cf) : juce::String::charToString(0x25cb)) + " " + micCode);
+        button->setButtonText((this->isMicSelected(micCode) ? UITheme::Symbols::filledCircle : UITheme::Symbols::hollowCircle) + " " + micCode);
         button->setTooltip("Hover to hear only " + micCode + ". Click to include or exclude it from batch editing.");
         button->onClick = [this, micCode] { this->toggleMicSelection(micCode); };
         button->addMouseListener(this, false);
@@ -313,7 +313,7 @@ void LibraryArticulationEditor::updateMicButtonStates() {
         const bool selected = this->isMicSelected(this->micCodes[static_cast<size_t>(micIdx)]);
         auto& button = *this->micButtons[static_cast<size_t>(micIdx)];
         button.setToggleState(selected, juce::dontSendNotification);
-        button.setButtonText((selected ? juce::String::charToString(0x25cf) : juce::String::charToString(0x25cb)) + " " + this->micCodes[static_cast<size_t>(micIdx)]);
+        button.setButtonText((selected ? UITheme::Symbols::filledCircle : UITheme::Symbols::hollowCircle) + " " + this->micCodes[static_cast<size_t>(micIdx)]);
     }
 }
 

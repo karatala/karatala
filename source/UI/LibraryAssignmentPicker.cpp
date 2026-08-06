@@ -24,11 +24,11 @@ static int assignmentBadgeWidth(const juce::Font& font, const juce::String& text
 }
 
 static juce::String roundRobinBadgeText(const LibrarySampleSummary& summary) {
-    return summary.roundRobinCountText.isEmpty() ? juce::String() : juce::String::fromUTF8("\xf0\x9f\x8e\xb2") + " " + summary.roundRobinCountText;
+    return summary.roundRobinCountText.isEmpty() ? juce::String() : UITheme::Symbols::dice + " " + summary.roundRobinCountText;
 }
 
 static juce::String velocityBadgeText(const LibrarySampleSummary& summary) {
-    return summary.velocityLevelCountText.isEmpty() ? juce::String() : juce::String::fromUTF8("\xf0\x9f\x93\xb6") + " " + summary.velocityLevelCountText;
+    return summary.velocityLevelCountText.isEmpty() ? juce::String() : UITheme::Symbols::signalBars + " " + summary.velocityLevelCountText;
 }
 
 static int librarySummaryBadgeWidth(const LibrarySampleSummary& summary, const juce::Font& font) {
@@ -582,7 +582,7 @@ void LibraryAssignmentPicker::AssignmentListModel::paintListBoxItem(int rowNumbe
     g.fillRoundedRectangle(btnArea.toFloat(), 2.0f);
     g.setColour(UITheme::Colours::textPrimary);
     g.setFont(rowFont);
-    g.drawText(juce::String::fromUTF8("\xe2\x98\x91\xef\xb8\x8f"), btnArea, juce::Justification::centred);
+    g.drawText(UITheme::Symbols::checkedBox, btnArea, juce::Justification::centred);
 }
 
 void LibraryAssignmentPicker::AssignmentListModel::listBoxItemClicked(int row, const juce::MouseEvent& event) {

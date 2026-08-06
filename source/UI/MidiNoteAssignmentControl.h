@@ -43,8 +43,8 @@ private:
 
     juce::TextButton noteButton1 { "--" };
     juce::TextButton noteButton2 { "--" };
-    juce::TextButton learnButton1 { juce::String::charToString(0x25CF) };
-    juce::TextButton learnButton2 { juce::String::charToString(0x25CF) };
+    juce::TextButton learnButton1 { UITheme::Symbols::filledCircle };
+    juce::TextButton learnButton2 { UITheme::Symbols::filledCircle };
     juce::Component::SafePointer<MidiNotePicker> activeMidiPicker;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiNoteAssignmentControl)

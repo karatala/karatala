@@ -170,7 +170,7 @@ PadContextPopup::MapLayerRow* PadContextPopup::addMapLayerRow(const juce::String
     };
 
     // Flip Phase button (toggle)
-    layer->flipPhaseButton = std::make_unique<juce::TextButton>(juce::CharPointer_UTF8("\xc3\x98")); // phase invert
+    layer->flipPhaseButton = std::make_unique<juce::TextButton>(UITheme::Symbols::phaseInvert);
     UIComponentStyle::configureToggleButton(*layer->flipPhaseButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     layer->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
     this->layerContent.addAndMakeVisible(*layer->flipPhaseButton);

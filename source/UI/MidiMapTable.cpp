@@ -82,7 +82,7 @@ void MidiMapTable::populatePresets(std::vector<PresetEntry> presets, const juce:
     int selectedId = 0;
     for (size_t i = 0; i < this->presetEntries.size(); ++i) {
         const auto& entry = this->presetEntries[i];
-        juce::String prefix = entry.isUser ? juce::String::fromUTF8("\xf0\x9f\x91\xa4 ") : juce::String::fromUTF8("\xf0\x9f\x93\xa6 ");
+        juce::String prefix = (entry.isUser ? UITheme::Symbols::user : UITheme::Symbols::package) + " ";
         juce::String label = prefix + (entry.name.isNotEmpty() ? entry.name : entry.id);
         this->presetCombo.addItem(label, static_cast<int>(i + 1));
         if (entry.id == currentId)

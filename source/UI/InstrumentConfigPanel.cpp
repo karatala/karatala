@@ -2,6 +2,7 @@
 #include "../Engine/ArticulationNames.h"
 #include "../Engine/InstrumentMap/InstrumentMapOperations.h"
 #include "UIComponentStyle.h"
+#include "UITheme.h"
 #include <algorithm>
 
 // InstrumentConfigPanel
@@ -217,7 +218,7 @@ void InstrumentConfigPanel::addRow(const juce::String& slotId, const juce::Strin
         this->applyRowParametersFast(row);
     };
 
-    row->flipPhaseButton = std::make_unique<juce::TextButton>(juce::String::charToString(0x00D8));
+    row->flipPhaseButton = std::make_unique<juce::TextButton>(UITheme::Symbols::phaseInvert);
     UIComponentStyle::configureToggleButton(*row->flipPhaseButton, juce::Button::ConnectedOnLeft | juce::Button::ConnectedOnRight);
     row->flipPhaseButton->setToggleState(flipPhase, juce::dontSendNotification);
     this->contentComponent.addAndMakeVisible(*row->flipPhaseButton);

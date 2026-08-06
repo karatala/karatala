@@ -6,6 +6,14 @@
 namespace UITheme {
 namespace Symbols {
     inline const juce::String times = juce::String::charToString(0x00d7);
+    inline const juce::String phaseInvert = juce::String::charToString(0x00d8);
+    inline const juce::String filledCircle = juce::String::charToString(0x25cf);
+    inline const juce::String hollowCircle = juce::String::charToString(0x25cb);
+    inline const juce::String checkedBox = juce::String::charToString(0x2611) + juce::String::charToString(0xfe0f);
+    inline const juce::String dice = juce::String::charToString(0x1f3b2);
+    inline const juce::String signalBars = juce::String::charToString(0x1f4f6);
+    inline const juce::String user = juce::String::charToString(0x1f464);
+    inline const juce::String package = juce::String::charToString(0x1f4e6);
 }
 
 namespace Colours {
