@@ -69,6 +69,8 @@ engine:
     minFactor: 0.51
     voiceMinClamp: 1
     cullThresholdDb: 30
+  sample_selection:
+    minimumVelocityLevels: 2
   hihat:
     polyphonyCrossfadeTimeoutSec: 1.22
     hitChokeDbMargin: 3

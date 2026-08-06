@@ -93,6 +93,7 @@ struct EngineSettings {
 
     // -- Round-Robin --
     RealtimeSetting<int> roundRobinLock { 0 };  // 0 = normal cycling, 1+ = force variant index (1-based)
+    RealtimeSetting<int> floatingSelectionMinimumVelocityLevels { 2 };
 
     // -- UI / Grid --
     RealtimeSetting<int> padGridColumns { 0 };  // 0 = derive from active kit layout

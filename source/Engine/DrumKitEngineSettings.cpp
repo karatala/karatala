@@ -379,6 +379,12 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
             parseFloat(tailNode, "cullThresholdDb", this->engineSettings.voiceCullThresholdDb);
         }
 
+        const auto& sampleSelectionNode = engineNode["sample_selection"];
+        if (sampleSelectionNode.isMap()) {
+            const auto minimumVelocityLevels = sampleSelectionNode["minimumVelocityLevels"].asString();
+            if (minimumVelocityLevels.isNotEmpty()) this->engineSettings.floatingSelectionMinimumVelocityLevels.store(juce::jlimit(2, 5, minimumVelocityLevels.getIntValue()));
+        }
+
         const auto& hihatNode = engineNode["hihat"];
         if (hihatNode.isMap()) {
             parseFloat(hihatNode, "polyphonyCrossfadeTimeoutSec", this->engineSettings.polyphonyCrossfadeTimeoutSec);
@@ -516,6 +522,8 @@ juce::String DrumKitEngine::getDefaultYaml() {
     result += "#     minFactor: 0.3\n";
     result += "#     voiceMinClamp: 0.1\n";
     result += "#     cullThresholdDb: 12.0\n";
+    result += "#   sample_selection:\n";
+    result += "#     minimumVelocityLevels: 2\n";
     result += "#   hihat:\n";
     result += "#     polyphonyCrossfadeTimeoutSec: 0.3\n";
     result += "#     hitChokeDbMargin: 3.0\n";
@@ -583,6 +591,8 @@ juce::String DrumKitEngine::serializeSettingsYaml() const {
     yaml += "    minFactor: " + floatToYaml(settings.tailShortenMinFactor.load()) + "\n";
     yaml += "    voiceMinClamp: " + floatToYaml(settings.voiceTailShortenMinClamp.load()) + "\n";
     yaml += "    cullThresholdDb: " + floatToYaml(settings.voiceCullThresholdDb.load()) + "\n";
+    yaml += "  sample_selection:\n";
+    yaml += "    minimumVelocityLevels: " + juce::String(juce::jlimit(2, 5, settings.floatingSelectionMinimumVelocityLevels.load())) + "\n";
     yaml += "  hihat:\n";
     yaml += "    polyphonyCrossfadeTimeoutSec: " + floatToYaml(settings.polyphonyCrossfadeTimeoutSec.load()) + "\n";
     yaml += "    hitChokeDbMargin: " + floatToYaml(settings.hihatHitChokeDbMargin.load()) + "\n";

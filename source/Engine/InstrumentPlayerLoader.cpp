@@ -6,6 +6,8 @@
 #include "SampleLoader.h"
 #include <cmath>
 
+static constexpr float FLOATING_MAX_EXTRA_DISTANCE_DB = 3.0f;
+
 const MicLayout* InstrumentPlayer::getMicLayout() const { return this->parent ? this->parent->getMicLayout() : nullptr; }
 const MicRoutingPlan* InstrumentPlayer::getMicRoutingPlan() const { return this->parent ? this->parent->getMicRoutingPlan() : nullptr; }
 SampleLoader* InstrumentPlayer::getSampleLoader() { return this->parent ? this->parent->getSampleLoader() : nullptr; }
@@ -21,7 +23,10 @@ void InstrumentPlayer::ArticulationRuntime::buildVelocityMapping(const VelocityR
             break;
         }
     }
-    if (this->velocityLevels.empty()) return;
+    if (this->velocityLevels.empty()) {
+        this->buildFloatingCandidateWindows();
+        return;
+    }
 
     const VelocityResponse& effectiveVelocityResponse = this->parameters.velocityResponse.has_value() ? *this->parameters.velocityResponse : velocityResponse;
     for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
@@ -37,6 +42,64 @@ void InstrumentPlayer::ArticulationRuntime::buildVelocityMapping(const VelocityR
         this->velocityToLevel[static_cast<size_t>(velocity)] = chosenVelocityLevelIdx;
         if (this->calibrated) this->selectionTargetDb[static_cast<size_t>(velocity)] = *this->velocityLevels[static_cast<size_t>(chosenVelocityLevelIdx)].fittedSourceDb;
         this->velocityGain[static_cast<size_t>(velocity)] = effectiveVelocityResponse.getGain(static_cast<juce::uint8>(velocity));
+    }
+    this->buildFloatingCandidateWindows();
+}
+
+void InstrumentPlayer::ArticulationRuntime::buildFloatingCandidateWindows() {
+    for (auto& window : this->floatingCandidateWindows) window = {};
+    this->floatingSelectionAvailable = this->calibrated && this->velocityLevels.size() >= 2;
+    if (!this->floatingSelectionAvailable) return;
+
+    for (const auto& velocityLevel : this->velocityLevels) {
+        if (velocityLevel.logicalHits.empty() || velocityLevel.logicalHits.size() > 2) {
+            this->floatingSelectionAvailable = false;
+            return;
+        }
+        for (const auto& logicalHit : velocityLevel.logicalHits) {
+            if (!logicalHit.preTrimIntensityDb.has_value() || !std::isfinite(*logicalHit.preTrimIntensityDb)) {
+                this->floatingSelectionAvailable = false;
+                return;
+            }
+        }
+    }
+
+    for (int velocity = 0; velocity <= MIDI_MAX_VALUE; ++velocity) {
+        const VelocityLevelIdx targetVelocityLevelIdx = this->velocityToLevel[static_cast<size_t>(velocity)];
+        if (targetVelocityLevelIdx < 0 || static_cast<size_t>(targetVelocityLevelIdx) >= this->velocityLevels.size()) continue;
+
+        std::array<FloatingHitCandidate, maxFloatingHitCandidates> collectedCandidates {};
+        size_t collectedCount = 0;
+        const size_t firstVelocityLevelIdx = targetVelocityLevelIdx > 0 ? static_cast<size_t>(targetVelocityLevelIdx - 1) : 0;
+        const size_t lastVelocityLevelIdx = juce::jmin(this->velocityLevels.size() - 1, static_cast<size_t>(targetVelocityLevelIdx + 1));
+        const float targetIntensityDb = this->selectionTargetDb[static_cast<size_t>(velocity)];
+        for (size_t velocityLevelIdx = firstVelocityLevelIdx; velocityLevelIdx <= lastVelocityLevelIdx; ++velocityLevelIdx) {
+            const auto& velocityLevel = this->velocityLevels[velocityLevelIdx];
+            for (size_t logicalHitIdx = 0; logicalHitIdx < velocityLevel.logicalHits.size(); ++logicalHitIdx) {
+                if (collectedCount >= collectedCandidates.size()) break;
+                const float intensityDistanceDb = std::abs(*velocityLevel.logicalHits[logicalHitIdx].preTrimIntensityDb - targetIntensityDb);
+                collectedCandidates[collectedCount++] = { static_cast<VelocityLevelIdx>(velocityLevelIdx), static_cast<uint8_t>(logicalHitIdx), intensityDistanceDb };
+            }
+        }
+        if (collectedCount == 0) continue;
+
+        std::stable_sort(collectedCandidates.begin(), collectedCandidates.begin() + collectedCount, [](const FloatingHitCandidate& first, const FloatingHitCandidate& second) {
+            return first.intensityDistanceDb < second.intensityDistanceDb;
+        });
+
+        auto& window = this->floatingCandidateWindows[static_cast<size_t>(velocity)];
+        const float maximumDistanceDb = collectedCandidates[0].intensityDistanceDb + FLOATING_MAX_EXTRA_DISTANCE_DB;
+        float minimumIntensityDb = std::numeric_limits<float>::max();
+        float maximumIntensityDb = std::numeric_limits<float>::lowest();
+        for (size_t candidateIdx = 0; candidateIdx < collectedCount; ++candidateIdx) {
+            const auto& candidate = collectedCandidates[candidateIdx];
+            if (candidate.intensityDistanceDb > maximumDistanceDb) continue;
+            window.candidates[window.count++] = candidate;
+            const float intensityDb = *this->velocityLevels[static_cast<size_t>(candidate.velocityLevelIdx)].logicalHits[candidate.logicalHitIdx].preTrimIntensityDb;
+            minimumIntensityDb = juce::jmin(minimumIntensityDb, intensityDb);
+            maximumIntensityDb = juce::jmax(maximumIntensityDb, intensityDb);
+        }
+        window.intensityRangeDb = juce::jmax(1.0f, maximumIntensityDb - minimumIntensityDb);
     }
 }
 

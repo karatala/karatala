@@ -2,8 +2,22 @@
 #include "../source/Engine/InstrumentPlayer.h"
 #include <algorithm>
 #include <cmath>
+#include <initializer_list>
 #include "catch2/catch_approx.hpp"
 #include "catch2/catch_test_macros.hpp"
+
+static InstrumentPlayer::VelocityLevelRuntime makeFloatingVelocityLevel(juce::uint8 velocity, float fittedSourceDb, std::initializer_list<float> hitIntensitiesDb) {
+    InstrumentPlayer::VelocityLevelRuntime velocityLevel;
+    velocityLevel.velocity = velocity;
+    velocityLevel.fittedSourceDb = fittedSourceDb;
+    velocityLevel.calibrationTrimDb = 0.0f;
+    for (const float hitIntensityDb : hitIntensitiesDb) {
+        InstrumentPlayer::LogicalHitRuntime logicalHit;
+        logicalHit.preTrimIntensityDb = hitIntensityDb;
+        velocityLevel.logicalHits.push_back(std::move(logicalHit));
+    }
+    return velocityLevel;
+}
 
 TEST_CASE("VelocityResponse - linear keeps the original gain", "[VelocityResponse]") {
     const auto response = VelocityResponse::linear();
@@ -206,4 +220,36 @@ TEST_CASE("Library velocity upper boundaries change selection without changing o
     REQUIRE(articulation.velocityToLevel[91] == 1);
     REQUIRE(articulation.velocityToLevel[92] == 2);
     REQUIRE(articulation.velocityGain[50] == Catch::Approx(50.0f / 127.0f));
+}
+
+TEST_CASE("Floating sample windows use only the exact and adjacent velocity levels", "[VelocityResponse][FloatingSampleSelection]") {
+    InstrumentPlayer::ArticulationRuntime articulation(1, 0);
+    articulation.velocityLevels.push_back(makeFloatingVelocityLevel(32, -30.0f, { -21.5f }));
+    articulation.velocityLevels.push_back(makeFloatingVelocityLevel(64, -20.0f, { -20.0f, -19.0f }));
+    articulation.velocityLevels.push_back(makeFloatingVelocityLevel(96, -10.0f, { -17.5f }));
+    articulation.velocityLevels.push_back(makeFloatingVelocityLevel(127, 0.0f, { -20.1f }));
+
+    articulation.buildVelocityMapping(VelocityResponse::linear());
+
+    REQUIRE(articulation.floatingSelectionAvailable);
+    const auto& window = articulation.floatingCandidateWindows[64];
+    REQUIRE(window.count == 4);
+    CHECK(window.candidates[0].velocityLevelIdx == 1);
+    CHECK(window.candidates[0].logicalHitIdx == 0);
+    for (size_t candidateIdx = 0; candidateIdx < window.count; ++candidateIdx) CHECK(window.candidates[candidateIdx].velocityLevelIdx != 3);
+}
+
+TEST_CASE("Floating sample windows require valid intensity and at most two hits per velocity level", "[VelocityResponse][FloatingSampleSelection]") {
+    InstrumentPlayer::ArticulationRuntime missingIntensity(1, 0);
+    missingIntensity.velocityLevels.push_back(makeFloatingVelocityLevel(64, -20.0f, { -20.0f }));
+    missingIntensity.velocityLevels.push_back(makeFloatingVelocityLevel(127, 0.0f, { -10.0f }));
+    missingIntensity.velocityLevels[0].logicalHits[0].preTrimIntensityDb.reset();
+    missingIntensity.buildVelocityMapping(VelocityResponse::linear());
+    CHECK_FALSE(missingIntensity.floatingSelectionAvailable);
+
+    InstrumentPlayer::ArticulationRuntime tooManyHits(1, 0);
+    tooManyHits.velocityLevels.push_back(makeFloatingVelocityLevel(64, -20.0f, { -20.0f, -19.5f, -19.0f }));
+    tooManyHits.velocityLevels.push_back(makeFloatingVelocityLevel(127, 0.0f, { -10.0f }));
+    tooManyHits.buildVelocityMapping(VelocityResponse::linear());
+    CHECK_FALSE(tooManyHits.floatingSelectionAvailable);
 }

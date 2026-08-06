@@ -80,6 +80,10 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     UIComponentStyle::configureSectionLabel(this->hihatGroupLabel);
     this->contentComponent.addAndMakeVisible(this->hihatGroupLabel);
 
+    this->sampleSelectionGroupLabel.setText("Floating Sample Selection", juce::dontSendNotification);
+    UIComponentStyle::configureSectionLabel(this->sampleSelectionGroupLabel);
+    this->contentComponent.addAndMakeVisible(this->sampleSelectionGroupLabel);
+
     this->uiGridGroupLabel.setText("UI / Grid", juce::dontSendNotification);
     UIComponentStyle::configureSectionLabel(this->uiGridGroupLabel);
     this->contentComponent.addAndMakeVisible(this->uiGridGroupLabel);
@@ -145,6 +149,14 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
                         settings.hihatMissingDecayPolicy.store(static_cast<HiHatMissingDecayPolicy>(selectedId - 1));
                     });
     this->hihatChoiceCount = static_cast<int>(this->choices.size());
+
+    // -- Floating Sample Selection --
+    this->sampleSelectionChoiceStart = static_cast<int>(this->choices.size());
+    this->addChoice("Min Velocity Levels", "Floating selection is used only when an articulation has at least this many velocity levels and no more than two hits per level.",
+                    { "2", "3", "4", "5" }, 1,
+                    [&settings] { return juce::jlimit(2, 5, settings.floatingSelectionMinimumVelocityLevels.load()) - 1; },
+                    [&settings](int selectedId) { settings.floatingSelectionMinimumVelocityLevels.store(selectedId + 1); });
+    this->sampleSelectionChoiceCount = static_cast<int>(this->choices.size()) - this->sampleSelectionChoiceStart;
 
     // -- UI / Grid --
     this->addPot("Columns", "Grid columns. 0 - auto detect from the active kit layout.", &settings.padGridColumns, 0, 12);
@@ -418,6 +430,7 @@ void EngineSettingsPanel::resized() {
     totalHeight += groupLabelHeight + gap + groupRows(7) * controlCellH + gap;
     totalHeight += groupLabelHeight + gap + groupRows(6) * controlCellH + gap;
     totalHeight += groupLabelHeight + gap + groupRows(11) * controlCellH + choiceRowsFor(this->hihatChoiceCount) * choiceCellH + gap;
+    totalHeight += groupLabelHeight + gap + choiceRowsFor(this->sampleSelectionChoiceCount) * choiceCellH + gap;
     totalHeight += groupLabelHeight + gap + groupRows(3) * controlCellH + choiceRowsFor(uiChoiceCount) * choiceCellH + gap;
     totalHeight += 8; // bottom padding
 
@@ -512,6 +525,9 @@ void EngineSettingsPanel::resized() {
     placeGroupLabel(this->hihatGroupLabel);
     placeControlGrid(13, 11);
     placeChoiceGrid(0, this->hihatChoiceCount);
+
+    placeGroupLabel(this->sampleSelectionGroupLabel);
+    placeChoiceGrid(this->sampleSelectionChoiceStart, this->sampleSelectionChoiceCount);
 
     placeGroupLabel(this->uiGridGroupLabel);
     placeControlGrid(24, 3);

@@ -59,11 +59,14 @@ private:
     juce::Label chokeGroupLabel;
     juce::Label tailGroupLabel;
     juce::Label hihatGroupLabel;
+    juce::Label sampleSelectionGroupLabel;
     juce::Label uiGridGroupLabel;
 
     std::vector<std::unique_ptr<ControlEntry>> controls;
     std::vector<std::unique_ptr<ChoiceEntry>> choices;
     int hihatChoiceCount = 0;
+    int sampleSelectionChoiceStart = 0;
+    int sampleSelectionChoiceCount = 0;
     int uiChoiceStart = 0;
 
     void addPot(const juce::String& name,

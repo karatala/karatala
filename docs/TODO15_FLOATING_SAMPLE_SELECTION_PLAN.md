@@ -1,6 +1,6 @@
 # TODO15: Floating Sample Selection Plan
 
-Status: Design plan only. No implementation or verification has started.
+Status: The initial automatic selector is implemented. Focused tests are written but have not been run. Loading priority, preview, and hi-hat transition integration remain open.
 
 ## Scope And Ownership
 
@@ -34,7 +34,7 @@ For a calibrated map layer:
 - incomplete candidates are skipped;
 - missing, invalid, or conflicting intensity metadata uses exact selection;
 - primary and additional map layers keep independent selection history;
-- response or mode changes rebuild selection data without reloading audio;
+- calibration or exact-boundary changes rebuild selection data without reloading audio;
 - runtime work is fixed and bounded;
 - the audio thread does not allocate, parse, log, lock, access files, or scan the full articulation.
 
@@ -56,18 +56,18 @@ The local [DrumGizmo floating selection reference](drumgizmoFloatingVelocityGrou
 
 ## Plan Decisions
 
-- Add a separate per-map-layer `selectionMode` field with `Automatic`, `Exact`, and `Floating` choices. Do not reuse TODO14's `calibrationMode` field.
-- `Automatic` enables floating selection only for a reviewed dense-velocity, low-round-robin topology with complete valid intensity metadata.
-- `Exact` preserves current velocity-level behavior.
-- `Floating` is an explicit manual choice, but invalid metadata still falls back safely to exact selection.
-- Determine the automatic topology thresholds from library inspection and listening in Phase 1. Do not guess them in this document.
+- The first version is automatic. Do not add a per-map-layer selection mode.
+- Enable floating selection only when an articulation has at least the global `minimumVelocityLevels` setting, every velocity level has no more than two logical hits, and every logical hit has valid intensity metadata.
+- Store `minimumVelocityLevels` in global engine settings. Allow values from `2` through `5` and use `2` by default.
+- Preserve current exact velocity-level behavior for every ineligible articulation and every fallback.
+- The first automatic selector uses the exact target velocity level and its nearest recorded level below and above. It does not consider the full articulation during playback.
 - Use TODO14 logical-hit pre-trim intensity. Do not use post-trim peak, raw filename velocity, or output gain as a substitute.
 - Select one complete logical hit, identified by velocity level and round robin ID.
 - Keep the individual intensity of every hit. TODO14 raw medians produce trims and fitted source values guide the exact target region. Neither replaces hit-level intensity.
 - Precompute a fixed candidate window for each MIDI target outside playback.
 - Keep exact lookup beside floating windows as the fallback path.
 - Keep selection history inside each map layer runtime. Do not share history between primary and additional map layers or between plugin instances.
-- Use a hard intensity eligibility limit before diversity and randomness are scored.
+- Use a hard intensity eligibility limit before diversity and randomness are scored. The initial automatic selector keeps candidates no more than `3 dB` farther from the target than the closest candidate.
 - Keep the first version's weights internal and reviewed. Add UI only if real use shows a need.
 - Keep round robin lock on the exact path for predictable audit behavior.
 
@@ -133,17 +133,17 @@ Immutable library descriptions may be shared. Mutable history must not be shared
 
 ## Bounded Candidate Windows
 
-Build candidate windows after TODO14 logical-hit grouping and active mic routing are known. Rebuild them when `selectionTargetDb[128]` or selection mode changes. Do not reload sample audio for this rebuild.
+Build candidate windows after TODO14 logical-hit grouping and active mic routing are known. Rebuild them when `selectionTargetDb[128]`, intensity metadata, or exact velocity boundaries change. Do not reload sample audio for this rebuild.
 
 For every MIDI velocity from 1 to 127:
 
 1. Read `selectionTargetDb[midiVelocity]` from TODO14.
-2. Order valid logical hits by measured-intensity distance.
-3. Reject hits outside the agreed hard distance limit.
-4. Keep a fixed maximum number of nearby hits.
-5. Always include the closest valid hit.
-6. Include hits below and above the target when available.
-7. Allow hits from neighboring velocity levels.
+2. Collect valid logical hits from the exact target velocity level and its nearest recorded level below and above.
+3. Order those hits by measured-intensity distance.
+4. Reject hits outside the agreed hard distance limit.
+5. Keep a fixed maximum number of nearby hits.
+6. Always include the closest valid hit.
+7. Include hits below and above the target when available.
 8. Keep stable ordering for equal values.
 9. Store logical-hit indexes in a fixed-capacity array plus count.
 
@@ -227,11 +227,10 @@ Persistent buffers, cache keys, and Bake Cache behavior remain owned by TODO16.
 
 ## Map Layer, Preview, And Hi-Hat Rules
 
-- Store the per-map-layer selection mode in the instrument map.
-- Treat a mode change as a parameter-only update when the library assignment and routing are unchanged.
+- Read the global `minimumVelocityLevels` setting during selection so a setting change applies without sample reload.
 - Primary and additional map layers each own independent history and random state.
 - Changing one map layer's library assignment resets only that map layer's selection history.
-- Preview and normal playback use the same effective selection mode unless an explicit audit preview mode is later approved.
+- Keep exact logical-hit preview behavior for predictable sample auditing.
 - Each started voice keeps raw MIDI velocity, requested selection target dB, effective output gain, and selected logical hit identity.
 - Do not reconstruct MIDI velocity from nonlinear output gain.
 - A hi-hat replacement selects one complete target logical hit and reuses that result for all replacement mic voices.
@@ -242,37 +241,38 @@ Persistent buffers, cache keys, and Bake Cache behavior remain owned by TODO16.
 
 ### Phase 1: Confirm policy and reference cases
 
-- Inspect real library topologies and choose the automatic-mode thresholds.
-- Choose candidate capacity, hard intensity limit, initial score weights, and recent-use history length.
-- Decide normal-session random seeding, preview audit behavior, round-robin-lock fallback, and hi-hat history behavior.
+- ✅ Confirm the saved global `minimumVelocityLevels` range `2..5` and default `2` in the Settings panel.
+- ✅ Use six candidates, the relative `3 dB` limit, the DrumGizmo-style initial weights, and audio-sample-position history.
+- ✅ Keep preview and round-robin lock on the exact path.
+- Decide normal-session random seeding and hi-hat history behavior after listening review.
 
 Verify later: record decisions and keep reference fixtures for dense articulations with one or two logical hits per velocity level, and for normal round robin articulations.
 
-### Phase 2: Add floating eligibility to TODO14 logical hits
+### ✅ Phase 2: Add floating eligibility to TODO14 logical hits
 
-- Consume TODO14 immutable logical-hit descriptions, readiness snapshots, and structured results.
-- Validate that every eligible hit has one source-intensity dB value.
-- Calculate automatic-mode eligibility from the reviewed topology rules.
-- Add floating-policy state without changing exact audible behavior.
+- ✅ Consume TODO14 logical-hit descriptions, readiness snapshots, and structured results.
+- ✅ Validate that every eligible hit has one source-intensity dB value.
+- ✅ Calculate automatic eligibility from the saved global threshold and the maximum of two logical hits per velocity level.
+- ✅ Add floating-policy state without changing exact fallback behavior.
 
 Verify later: mono, multichannel, separate-mic, missing, conflicting, topology eligibility, and exact round robin fixtures.
 
-### Phase 3: Build bounded candidate data
+### ✅ Phase 3: Build bounded candidate data
 
-- Add fixed-capacity candidate windows to articulation runtime data.
-- Build them from TODO14 `selectionTargetDb[128]`.
-- Preserve exact lookup beside them.
-- Publish response and mode changes without sample reload.
+- ✅ Add fixed-capacity candidate windows to articulation runtime data.
+- ✅ Build them from TODO14 `selectionTargetDb[128]`.
+- ✅ Preserve exact lookup beside them.
+- ✅ Publish rebuilt calibration and exact-boundary tables without sample reload.
 
 Verify later: range boundaries, equal intensities, sparse sets, dense sets, manual response changes, and deterministic tie order.
 
-### Phase 4: Add floating selection
+### ✅ Phase 4: Add floating selection
 
-- Add hard eligibility and bounded scoring.
-- Add per-map-layer recent-use and random state.
-- Return one logical-hit result and start only its entries.
-- Reuse TODO14 all-or-nothing buffer preflight and group voice reservation.
-- Use exact complete-hit fallback when needed.
+- ✅ Add hard eligibility and bounded scoring.
+- ✅ Add per-map-layer recent-use and random state.
+- ✅ Return one logical-hit result and start only its entries.
+- ✅ Reuse TODO14 all-or-nothing buffer preflight and group voice reservation.
+- ✅ Use exact complete-hit fallback when needed.
 
 Verify later: fixed seeds, recent-use avoidance, distance protection, group reservation failure, no allocation, no full scan, and no partial or mixed logical hits.
 
@@ -287,13 +287,13 @@ Verify later: first playable data covers calibrated intensities, fallback change
 
 ### Phase 6: Integrate map layers, preview, and hi-hat
 
-- Add and serialize the per-map-layer mode.
-- Preserve independent state for each map layer.
-- Preserve exact round-robin-lock audit behavior.
+- ✅ Apply the saved global threshold independently to every map-layer runtime.
+- ✅ Preserve independent state for each map layer.
+- ✅ Preserve exact round-robin-lock audit behavior.
 - Store raw velocity and selected-hit data on voices.
 - Update preview and hi-hat replacement to select one complete logical hit.
 
-Verify later: layered slots, locked audition, preview, pedal transitions, save and reload, and no sample reload for a mode-only change.
+Verify later: layered slots, locked audition, preview, pedal transitions, save and reload, and no sample reload for a threshold-only change.
 
 ## Verification Matrix
 
@@ -312,14 +312,14 @@ Focused checks should cover:
 - fixed random sequences and stable ties;
 - round robin lock inside and outside available round robin IDs;
 - independent history for each map layer;
-- response and mode changes without sample reload;
+- calibration, exact-boundary, and global-threshold changes without sample reload;
 - calibrated loading order;
 - hi-hat transitions between different velocity layouts;
 - preview and normal playback using the intended selector.
 
 Performance review must confirm fixed candidate count and no real-time allocation, parsing, logging, file access, locking, or full-articulation scan.
 
-Listening review must compare exact, automatic, and floating behavior on drums, cymbals, hi-hats, and short percussion.
+Listening review must compare exact fallback and automatic floating behavior on drums, cymbals, hi-hats, and short percussion.
 
 ## Dependencies And Non-Goals
 

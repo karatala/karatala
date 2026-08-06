@@ -8,6 +8,14 @@ struct InstrumentPlayerTestAccess {
         return player.runtimeArticulations;
     }
 
+    static InstrumentPlayer::LogicalHitSelection chooseFloatingLogicalHit(InstrumentPlayer& player, InstrumentPlayer::ArticulationRuntime& articulation, juce::uint8 velocity) {
+        return player.chooseFloatingLogicalHit(articulation, velocity);
+    }
+
+    static void commitFloatingLogicalHitSelection(InstrumentPlayer& player, InstrumentPlayer::ArticulationRuntime& articulation, const InstrumentPlayer::LogicalHitSelection& selection) {
+        player.commitFloatingLogicalHitSelection(articulation, selection);
+    }
+
     static void configureController(InstrumentPlayer& player, int controllerNumber, uint8_t lowArticulationIdx, uint8_t highArticulationIdx) {
         player.ccToArticulationMask[static_cast<size_t>(controllerNumber)] = true;
         auto& mapping = player.ccToArticulationTable[static_cast<size_t>(controllerNumber)];
@@ -1742,6 +1750,50 @@ TEST_CASE("InstrumentPlayer - unusable choke sample keeps the existing aftertouc
 
     CHECK(sourceVoice->getEnvelopeState() == InstrumentPlayerVoice::EnvelopeState::Playing);
     CHECK(sourceVoice->isVoiceActive());
+}
+
+TEST_CASE("InstrumentPlayer - floating selection respects the global threshold and avoids immediate repetition", "[InstrumentPlayer][FloatingSampleSelection]") {
+    DrumKitEngine engine;
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.type = KitLib::InstrumentSpec::Type::Snare;
+    InstrumentPlayer player { &engine, slot };
+    player.setCurrentPlaybackSampleRate(44100.0);
+
+    auto& articulations = InstrumentPlayerTestAccess::articulations(player);
+    articulations.emplace_back(StringsDictSingleton::getId("center"), 0);
+    auto& articulation = articulations.back();
+    for (const juce::uint8 namedVelocity : { static_cast<juce::uint8>(64), static_cast<juce::uint8>(127) }) {
+        InstrumentPlayer::VelocityLevelRuntime velocityLevel;
+        velocityLevel.velocity = namedVelocity;
+        velocityLevel.fittedSourceDb = namedVelocity == 64 ? -20.0f : -10.0f;
+        velocityLevel.calibrationTrimDb = 0.0f;
+        for (int logicalHitIdx = 0; logicalHitIdx < 2; ++logicalHitIdx) {
+            InstrumentPlayer::LogicalHitRuntime logicalHit;
+            logicalHit.preTrimIntensityDb = -20.0f;
+            logicalHit.readiness->requiredEntryCount = 1;
+            logicalHit.readiness->loadedEntryCount.store(1);
+            logicalHit.readiness->ready.store(true);
+            velocityLevel.logicalHits.push_back(std::move(logicalHit));
+        }
+        articulation.velocityLevels.push_back(std::move(velocityLevel));
+    }
+    articulation.buildVelocityMapping(VelocityResponse::linear());
+
+    engine.engineSettings.floatingSelectionMinimumVelocityLevels.store(3);
+    CHECK_FALSE(InstrumentPlayerTestAccess::chooseFloatingLogicalHit(player, articulation, 64).isValid());
+
+    engine.engineSettings.floatingSelectionMinimumVelocityLevels.store(2);
+    const auto firstSelection = InstrumentPlayerTestAccess::chooseFloatingLogicalHit(player, articulation, 64);
+    REQUIRE(firstSelection.isValid());
+    InstrumentPlayerTestAccess::commitFloatingLogicalHitSelection(player, articulation, firstSelection);
+
+    const auto secondSelection = InstrumentPlayerTestAccess::chooseFloatingLogicalHit(player, articulation, 64);
+    REQUIRE(secondSelection.isValid());
+    CHECK(secondSelection.velocityLevelIdx != firstSelection.velocityLevelIdx || secondSelection.logicalHitIdx != firstSelection.logicalHitIdx);
+
+    engine.engineSettings.roundRobinLock.store(1);
+    CHECK_FALSE(InstrumentPlayerTestAccess::chooseFloatingLogicalHit(player, articulation, 64).isValid());
 }
 
 TEST_CASE("InstrumentPlayer - library logical hit preview starts all linked mics without advancing round-robin selection", "[InstrumentPlayer][LibraryKitOverridePreview]") {

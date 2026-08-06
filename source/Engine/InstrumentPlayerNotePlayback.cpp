@@ -4,6 +4,18 @@
 #include "HiHatTransitionPolicy.h"
 #include <cmath>
 
+static uint32_t advanceFloatingRandomState(uint32_t randomState) {
+    if (randomState == 0) randomState = 0x9e3779b9u;
+    randomState ^= randomState << 13;
+    randomState ^= randomState >> 17;
+    randomState ^= randomState << 5;
+    return randomState;
+}
+
+static float floatingRandomUnitValue(uint32_t randomState) {
+    return static_cast<float>(randomState & 0x00ffffffu) / static_cast<float>(0x01000000u);
+}
+
 bool InstrumentPlayer::playNote(const int midiChannel, const int midiNoteNumber, const juce::uint8 velocity) {
     const int articulationIdx = this->resolveArticulation(midiNoteNumber);
     if (articulationIdx >= 0 && articulationIdx < static_cast<int>(this->runtimeArticulations.size())) {
@@ -51,19 +63,26 @@ bool InstrumentPlayer::playLibraryLogicalHitPreview(const KitLib::ArticulationSp
 bool InstrumentPlayer::playResolvedArticulation(const int midiChannel, const int midiNoteNumber, ArtRtIdx articulationIdx, const juce::uint8 velocity) {
     if (articulationIdx < 0 || static_cast<size_t>(articulationIdx) >= this->runtimeArticulations.size()) return false;
     auto& art = this->runtimeArticulations[static_cast<size_t>(articulationIdx)];
-    int velocityLevelIdx = this->resolveVelocityLevel(art, velocity);
-    if (velocityLevelIdx < 0)
-        return false;
-
-    auto& velocityLevel = art.velocityLevels[static_cast<size_t>(velocityLevelIdx)];
-    auto* logicalHit = this->chooseLogicalHit(velocityLevel);
+    const auto floatingSelection = this->chooseFloatingLogicalHit(art, velocity);
+    int velocityLevelIdx = floatingSelection.velocityLevelIdx;
+    LogicalHitRuntime* logicalHit = nullptr;
+    if (floatingSelection.isValid()) {
+        auto& selectedVelocityLevel = art.velocityLevels[static_cast<size_t>(velocityLevelIdx)];
+        if (floatingSelection.logicalHitIdx < selectedVelocityLevel.logicalHits.size()) logicalHit = &selectedVelocityLevel.logicalHits[floatingSelection.logicalHitIdx];
+    } else {
+        velocityLevelIdx = this->resolveVelocityLevel(art, velocity);
+        if (velocityLevelIdx < 0) return false;
+        logicalHit = this->chooseLogicalHit(art.velocityLevels[static_cast<size_t>(velocityLevelIdx)]);
+    }
     if (logicalHit == nullptr) return false;
 
+    auto& velocityLevel = art.velocityLevels[static_cast<size_t>(velocityLevelIdx)];
     const float velocityGain = art.velocityGain[static_cast<size_t>(velocity)];
     this->lastRequestedVelocity.store(velocityGain);
 
     bool anyStarted = this->startVelocityLevelVoices(art, articulationIdx, velocityLevel, *logicalHit, midiChannel, midiNoteNumber, velocityGain, velocity);
     if (!anyStarted) return false;
+    if (floatingSelection.isValid()) this->commitFloatingLogicalHitSelection(art, floatingSelection);
 
     this->applyAftertouch(midiChannel, midiNoteNumber);
 
@@ -121,6 +140,51 @@ bool InstrumentPlayer::hasReadyLogicalHit(const VelocityLevelRuntime& velocityLe
         if (logicalHit.isReady()) return true;
     }
     return false;
+}
+
+InstrumentPlayer::LogicalHitSelection InstrumentPlayer::chooseFloatingLogicalHit(ArticulationRuntime& articulation, juce::uint8 velocity) const {
+    LogicalHitSelection selection;
+    if (this->parent == nullptr || !articulation.floatingSelectionAvailable) return selection;
+    const auto& settings = this->parent->getEngineSettings();
+    if (settings.roundRobinLock.load() > 0) return selection;
+    const int minimumVelocityLevels = juce::jlimit(2, 5, settings.floatingSelectionMinimumVelocityLevels.load());
+    if (articulation.velocityLevels.size() < static_cast<size_t>(minimumVelocityLevels)) return selection;
+
+    const auto& window = articulation.floatingCandidateWindows[static_cast<size_t>(velocity)];
+    float bestScore = std::numeric_limits<float>::max();
+    uint32_t randomState = articulation.floatingRandomState;
+    for (size_t candidateIdx = 0; candidateIdx < window.count; ++candidateIdx) {
+        const auto& candidate = window.candidates[candidateIdx];
+        if (candidate.velocityLevelIdx < 0 || static_cast<size_t>(candidate.velocityLevelIdx) >= articulation.velocityLevels.size()) continue;
+        const auto& velocityLevel = articulation.velocityLevels[static_cast<size_t>(candidate.velocityLevelIdx)];
+        if (candidate.logicalHitIdx >= velocityLevel.logicalHits.size()) continue;
+        const auto& logicalHit = velocityLevel.logicalHits[candidate.logicalHitIdx];
+        if (!logicalHit.isReady()) continue;
+
+        randomState = advanceFloatingRandomState(randomState);
+        const float normalizedDistance = candidate.intensityDistanceDb / window.intensityRangeDb;
+        float recentUsePenalty = 0.0f;
+        if (logicalHit.lastFloatingSelectionSample != std::numeric_limits<uint64_t>::max()) {
+            const uint64_t elapsedSamples = this->renderedSampleCount >= logicalHit.lastFloatingSelectionSample ? this->renderedSampleCount - logicalHit.lastFloatingSelectionSample : 0;
+            const double effectiveSampleRate = this->sampleRate > 0.0 ? this->sampleRate : 44100.0;
+            recentUsePenalty = 1.0f / (1.0f + static_cast<float>(static_cast<double>(elapsedSamples) / effectiveSampleRate));
+        }
+        const float score = 4.0f * normalizedDistance * normalizedDistance + 0.5f * recentUsePenalty + (1.0f / 3.0f) * floatingRandomUnitValue(randomState);
+        if (score >= bestScore) continue;
+        bestScore = score;
+        selection.velocityLevelIdx = candidate.velocityLevelIdx;
+        selection.logicalHitIdx = candidate.logicalHitIdx;
+    }
+    if (selection.isValid()) selection.nextRandomState = randomState;
+    return selection;
+}
+
+void InstrumentPlayer::commitFloatingLogicalHitSelection(ArticulationRuntime& articulation, const LogicalHitSelection& selection) {
+    if (!selection.isValid() || static_cast<size_t>(selection.velocityLevelIdx) >= articulation.velocityLevels.size()) return;
+    auto& velocityLevel = articulation.velocityLevels[static_cast<size_t>(selection.velocityLevelIdx)];
+    if (selection.logicalHitIdx >= velocityLevel.logicalHits.size()) return;
+    velocityLevel.logicalHits[selection.logicalHitIdx].lastFloatingSelectionSample = this->renderedSampleCount;
+    articulation.floatingRandomState = selection.nextRandomState;
 }
 
 InstrumentPlayer::LogicalHitRuntime* InstrumentPlayer::chooseLogicalHit(VelocityLevelRuntime& velocityLevel) {

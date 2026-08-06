@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -269,6 +270,7 @@ public:
         std::vector<size_t> sampleEntryIndexes;
         std::shared_ptr<LogicalHitReadiness> readiness = std::make_shared<LogicalHitReadiness>();
         std::optional<float> preTrimIntensityDb;
+        uint64_t lastFloatingSelectionSample = std::numeric_limits<uint64_t>::max();
         bool earlyLoad = false;
 
         bool isReady() const { return this->readiness->ready.load(std::memory_order_acquire); }
@@ -284,6 +286,28 @@ public:
         std::optional<float> calibrationTrimDb;
         // Use shared_ptr to an atomic so the runtime struct remains copyable/movable
         std::shared_ptr<std::atomic<uint32_t>> roundRobinCounter = std::make_shared<std::atomic<uint32_t>>(0);
+    };
+
+    static constexpr size_t maxFloatingHitCandidates = 6;
+
+    struct FloatingHitCandidate {
+        VelocityLevelIdx velocityLevelIdx = -1;
+        uint8_t logicalHitIdx = 0;
+        float intensityDistanceDb = 0.0f;
+    };
+
+    struct FloatingCandidateWindow {
+        std::array<FloatingHitCandidate, maxFloatingHitCandidates> candidates {};
+        uint8_t count = 0;
+        float intensityRangeDb = 1.0f;
+    };
+
+    struct LogicalHitSelection {
+        VelocityLevelIdx velocityLevelIdx = -1;
+        uint8_t logicalHitIdx = 0;
+        uint32_t nextRandomState = 0;
+
+        bool isValid() const { return this->velocityLevelIdx >= 0; }
     };
 
     struct HiHatTransitionCounters {
@@ -335,7 +359,10 @@ public:
         std::array<float, 128> selectionTargetDb;
         std::array<float, 128> selectionOffsetDb;
         std::array<float, 128> residualOutputDb;
+        std::array<FloatingCandidateWindow, 128> floatingCandidateWindows;
         bool calibrated = false;
+        bool floatingSelectionAvailable = false;
+        uint32_t floatingRandomState = 0x9e3779b9u;
         LayerParameters parameters;
         std::vector<VelocityLevelRuntime> velocityLevels;
 
@@ -343,6 +370,7 @@ public:
         juce::String getCodeRaw() const;
 
         void buildVelocityMapping(const VelocityResponse& velocityResponse);
+        void buildFloatingCandidateWindows();
     };
 
     struct RoutingContext {
@@ -756,6 +784,8 @@ private:
     std::optional<float> findHiHatReferenceOffsetMs(const InstrumentPlayerVoice& sourceVoice, ArtRtIdx sourceArtIdx, const ArticulationRuntime& targetArt, int targetVelocityLevelIdx, uint8_t targetRoundRobinId, const SampledSound& replacementTargetSound, KitLib::MicSpec::Type& referenceMicType) const;
 
     LogicalHitRuntime* chooseLogicalHit(VelocityLevelRuntime& velocityLevel);
+    LogicalHitSelection chooseFloatingLogicalHit(ArticulationRuntime& articulation, juce::uint8 velocity) const;
+    void commitFloatingLogicalHitSelection(ArticulationRuntime& articulation, const LogicalHitSelection& selection);
     bool hasReadyLogicalHit(const VelocityLevelRuntime& velocityLevel) const;
     void cullMaskedVoices(const VelocityLevelRuntime& velocityLevel, uint8_t chosenRoundRobinId, int midiChannel, int midiNoteNumber, float newVelocity);
     struct HiHatTransitionSettings;

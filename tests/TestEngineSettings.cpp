@@ -17,6 +17,25 @@ TEST_CASE("EngineSettings - realtime scalar settings load and store", "[EngineSe
     REQUIRE(intSetting.load() == 4);
 }
 
+TEST_CASE("EngineSettings - floating selection minimum velocity levels clamp and round trip", "[EngineSettings][yaml][FloatingSampleSelection]") {
+    DrumKitEngine lowEngine;
+    REQUIRE(lowEngine.parseConfigYaml("engine:\n  sample_selection:\n    minimumVelocityLevels: 1\n").ok());
+    REQUIRE(lowEngine.engineSettings.floatingSelectionMinimumVelocityLevels.load() == 2);
+
+    DrumKitEngine highEngine;
+    REQUIRE(highEngine.parseConfigYaml("engine:\n  sample_selection:\n    minimumVelocityLevels: 8\n").ok());
+    REQUIRE(highEngine.engineSettings.floatingSelectionMinimumVelocityLevels.load() == 5);
+
+    highEngine.engineSettings.floatingSelectionMinimumVelocityLevels.store(4);
+    const auto serialized = highEngine.serializeSettingsYaml();
+    REQUIRE(serialized.contains("sample_selection:"));
+    REQUIRE(serialized.contains("minimumVelocityLevels: 4"));
+
+    DrumKitEngine restoredEngine;
+    REQUIRE(restoredEngine.parseConfigYaml(serialized).ok());
+    REQUIRE(restoredEngine.engineSettings.floatingSelectionMinimumVelocityLevels.load() == 4);
+}
+
 TEST_CASE("EngineSettings - legacy hi-hat YAML migrates without overriding new keys", "[EngineSettings][yaml]") {
     DrumKitEngine engine;
     const auto result = engine.parseConfigYaml(R"yaml(
