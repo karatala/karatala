@@ -588,9 +588,9 @@ void LibraryAssignmentPicker::AssignmentListModel::paintListBoxItem(int rowNumbe
     if (!showActions) return;
 
     const int actionX = width - actionWidth;
-    const int actionFadeWidth = actionWidth + 24;
+    const int actionFadeWidth = actionWidth + 100;
     const int actionFadeX = width - actionFadeWidth;
-    g.setGradientFill(juce::ColourGradient(UITheme::Colours::bgPanelRaised.withAlpha(0.0f), static_cast<float>(actionFadeX), 0.0f, UITheme::Colours::bgPanelRaised.withAlpha(0.8f), static_cast<float>(width), 0.0f, false));
+    g.setGradientFill(juce::ColourGradient(UITheme::Colours::bgPanelRaised.withAlpha(0.0f), static_cast<float>(actionFadeX), 0.0f, UITheme::Colours::bgPanelRaised.withAlpha(0.9f), static_cast<float>(width), 0.0f, false));
     g.fillRect(actionFadeX, 0, actionFadeWidth, height);
 
     auto prevArea = juce::Rectangle<int>(actionX, 0, prevW, height).reduced(2, 3);
