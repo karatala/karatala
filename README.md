@@ -8,9 +8,6 @@ DO NOT CHANGE THIS FILE, its for my manual temporary editing only!
 
 
 
-remove base62ToInt with related stuff, we obsoleted it, instead for decay envelope we now use library kit owned cvs files
-
-
 
 
 
@@ -89,7 +86,7 @@ only there are some unfinished/bad ux on some tabs, many fixme/todo comments by 
 
 
 
-
+can u make short commit msg without grammar: 
 
 
 questionable features:
@@ -119,6 +116,18 @@ Phase 5 - Polish and consistency, still ongoing
 docs\TODO12_HIHAT_TRANSITION_FIX_PLAN.md
 Phase 4 - Original preload/group lookup path was not completed, it was mostly removed/reworked
 Known remaining perf debt: bounded 1024-sample validation scan
+
+docs/TODO14_SAMPLE_CALIBRATION_AND_VELOCITY_RESPONSE_PLAN.md
+docs/TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md
+docs/TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md
+docs/TODO17_KIT_BROWSER_AND_LINKED_PAD_EDITING_PLAN.md
+docs/TODO18_LIBRARY_ARTICULATION_AND_SAMPLE_OVERRIDES_PLAN.md
+docs/TODO18_LIBRARY_OVERRIDE_EDITOR_UX_REDESIGN_PLAN.md
+
+
+
+# TODO15: Floating Sample Selection Plan
+
 
 docs\UI_REVIEW_PLAN.md
 Phase 3 - Architecture
