@@ -321,32 +321,38 @@ MICS = {
 
     # Microphone groups for kick_ludw.
     ('kick_ludw', 'AMB'): {"keep": True, "code": 'rfs' },			# KICK_ROOM_L[srcch5] + KICK_ROOM_R[srcch6]
-    ('kick_ludw', 'KICK_IN'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
+    ('kick_ludw', 'KICK_IN'): {"keep": True, "code": 'dim' },			# KICK_IN[srcch0]
+    ('kick_ludw', 'KICK_OUT'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
     ('kick_ludw', 'OH'): {"keep": True, "code": 'ons' },			# KICK_OH_L[srcch3] + KICK_OH_R[srcch4]
 
     # Microphone groups for kick_ludw_damp.
     ('kick_ludw_damp', 'AMB'): {"keep": True, "code": 'rfs' },			# KICK_ROOM_L[srcch5] + KICK_ROOM_R[srcch6]
-    ('kick_ludw_damp', 'KICK_IN'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
+    ('kick_ludw_damp', 'KICK_IN'): {"keep": True, "code": 'dim' },			# KICK_IN[srcch0]
+    ('kick_ludw_damp', 'KICK_OUT'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
     ('kick_ludw_damp', 'OH'): {"keep": True, "code": 'ons' },			# KICK_OH_L[srcch3] + KICK_OH_R[srcch4]
 
     # Microphone groups for kick_ludw_jazz.
     ('kick_ludw_jazz', 'AMB'): {"keep": True, "code": 'rfs' },			# KICK_ROOM_L[srcch5] + KICK_ROOM_R[srcch6]
-    ('kick_ludw_jazz', 'KICK_IN'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
+    ('kick_ludw_jazz', 'KICK_IN'): {"keep": True, "code": 'dim' },			# KICK_IN[srcch0]
+    ('kick_ludw_jazz', 'KICK_OUT'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
     ('kick_ludw_jazz', 'OH'): {"keep": True, "code": 'ons' },			# KICK_OH_L[srcch3] + KICK_OH_R[srcch4]
 
     # Microphone groups for kick_prem_damp.
     ('kick_prem_damp', 'AMB'): {"keep": True, "code": 'rfs' },			# KICK_ROOM_L[srcch5] + KICK_ROOM_R[srcch6]
-    ('kick_prem_damp', 'KICK_IN'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
+    ('kick_prem_damp', 'KICK_IN'): {"keep": True, "code": 'dim' },			# KICK_IN[srcch0]
+    ('kick_prem_damp', 'KICK_OUT'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
     ('kick_prem_damp', 'OH'): {"keep": True, "code": 'ons' },			# KICK_OH_L[srcch3] + KICK_OH_R[srcch4]
 
     # Microphone groups for kick_prem_free.
     ('kick_prem_free', 'AMB'): {"keep": True, "code": 'rfs' },			# KICK_ROOM_L[srcch5] + KICK_ROOM_R[srcch6]
-    ('kick_prem_free', 'KICK_IN'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
+    ('kick_prem_free', 'KICK_IN'): {"keep": True, "code": 'dim' },			# KICK_IN[srcch0]
+    ('kick_prem_free', 'KICK_OUT'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
     ('kick_prem_free', 'OH'): {"keep": True, "code": 'ons' },			# KICK_OH_L[srcch3] + KICK_OH_R[srcch4]
 
     # Microphone groups for kick_sono.
     ('kick_sono', 'AMB'): {"keep": True, "code": 'rfs' },			# KICK_ROOM_L[srcch5] + KICK_ROOM_R[srcch6]
-    ('kick_sono', 'KICK_IN'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
+    ('kick_sono', 'KICK_IN'): {"keep": True, "code": 'dim' },			# KICK_IN[srcch0]
+    ('kick_sono', 'KICK_OUT'): {"keep": True, "code": 'dom' },			# KICK_OUT[srcch1]
     ('kick_sono', 'OH'): {"keep": True, "code": 'ons' },			# KICK_OH_L[srcch3] + KICK_OH_R[srcch4]
 
     # Microphone groups for crash_mute.

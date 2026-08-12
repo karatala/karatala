@@ -20,6 +20,11 @@
 - If required Python modules are missing, the metadata generator may install them with the active Python only after explicit interactive confirmation. Non-interactive runs never install modules.
 - Phase 6 reports are written only under the explicit `--report-folder`; they never update source folders, audio, or runtime metadata.
 - Required CSV rows contain content identity, onset, intensity, true peak, peak and decay, stereo balance, and readable columns from `-6db_ms` through `-60db_ms`.
+- DrumGizmo hi-hat velocity comes from sample power. Hi-hat openness remains an expression parameter and does not replace velocity.
+- If more than 26 DrumGizmo samples resolve to one velocity, use the nearest velocity with free round-robin capacity before assigning a letter.
+- DrumGizmo stereo channels may have unrelated channels between the left and right entries. Pair only one clear name-matched left/right candidate and keep left before right.
+- Generated DrumGizmo runtime code must recalculate duplicate targets from the current map. It must keep non-duplicate quarantine reasons as hard blocks and reject invalid current instrument and mic codes.
+- DrumGizmo source paths can be relative to the selected source root or absolute. Do not prepend the source root to an absolute path.
 
 # Work Guidance
 

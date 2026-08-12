@@ -6,6 +6,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+RECHECKABLE_QUARANTINE_REASONS = {'duplicate target path'}
+RECHECKABLE_QUARANTINE_PREFIXES = ('unknown instrument type:', 'invalid mic token(s):', 'mic code channel count does not match ')
+VALID_MIC_POSITIONS = {
+    'd': 'ustbio',
+    'o': 'nw',
+    'r': 'cf',
+}
+VALID_MIC_FORMATS = 'msi'
+VALID_INSTRUMENT_TYPES = {
+    'percussion', 'other', 'drum', 'cymbal', 'kick', 'tom', 'octoban', 'rototom', 'timbale', 'timpani', 'conga', 'bongo', 'djembe', 'cajon', 'taiko', 'surdo', 'mridangam', 'talking_drum', 'snare', 'ride', 'hihat', 'hi_hat', 'crash', 'splash', 'china', 'bell', 'stack', 'stax', 'chopper', 'gong', 'karatala', 'cowbell', 'cowbel', 'tambourine', 'shaker', 'maracas', 'cabasa', 'guiro', 'claves', 'agogo', 'wood_block', 'woodblock', 'temple_block', 'triangle', 'vibraslap', 'castanets', 'sleigh_bells', 'whip', 'ratchet',
+}
+
+
 @dataclass(frozen=True)
 class Operation:
     kit: str
@@ -25,21 +38,60 @@ class Operation:
     quarantine_reasons: list
 
 
-def _relative_path(path_text: str) -> Path:
-    return Path(*str(path_text).replace('\\', '/').split('/'))
-
-
 def _source_path(settings, source_text: str) -> Path:
-    return settings.SRC_ROOT / _relative_path(source_text)
+    normalized_text = str(source_text).replace('\\', '/')
+    source_path = Path(normalized_text)
+    is_windows_absolute = len(normalized_text) >= 3 and normalized_text[0].isalpha() and normalized_text[1:3] == ':/'
+    if source_path.is_absolute() or is_windows_absolute:
+        return source_path
+    return settings.SRC_ROOT / source_path
+
+
+def is_valid_mic_token(microphone_token: str) -> bool:
+    if len(microphone_token) not in (3, 4):
+        return False
+    if microphone_token[0] not in VALID_MIC_POSITIONS:
+        return False
+    if microphone_token[1] not in VALID_MIC_POSITIONS[microphone_token[0]]:
+        return False
+    if microphone_token[2] not in VALID_MIC_FORMATS:
+        return False
+    if len(microphone_token) == 4 and not microphone_token[3].isdigit():
+        return False
+    return True
+
+
+def is_valid_mic_code(microphone_code: str) -> bool:
+    microphone_tokens = str(microphone_code or '').split('_')
+    return bool(microphone_tokens) and all(is_valid_mic_token(microphone_token) for microphone_token in microphone_tokens)
+
+
+def mic_code_channel_count(microphone_code: str) -> int:
+    microphone_tokens = str(microphone_code or '').split('_')
+    if not microphone_tokens or not all(is_valid_mic_token(microphone_token) for microphone_token in microphone_tokens):
+        return 0
+    return sum(1 if microphone_token[2] == 'm' else 2 for microphone_token in microphone_tokens)
+
+
+def operation_microphone_code(operation: Operation, microphones: dict) -> str:
+    microphone_info = microphones.get((operation.source_instrument, operation.mic_group), {})
+    return microphone_info.get('code', operation.default_mic_code)
+
+
+def operation_hard_quarantine_reasons(operation: Operation) -> list:
+    if not operation.quarantined:
+        return []
+    if not operation.quarantine_reasons:
+        return ['unspecified generator quarantine']
+    return [reason for reason in operation.quarantine_reasons if reason not in RECHECKABLE_QUARANTINE_REASONS and not reason.startswith(RECHECKABLE_QUARANTINE_PREFIXES)]
 
 
 def operation_output_path(operation: Operation, instruments: dict, microphones: dict, settings) -> Path:
     instrument_info = instruments[operation.source_instrument]
-    microphone_info = microphones.get((operation.source_instrument, operation.mic_group), {})
     instrument = instrument_info['instrument']
     articulation = instrument_info['articulation']
     parameter = instrument_info.get('parameter', '')
-    microphone_code = microphone_info.get('code', operation.default_mic_code)
+    microphone_code = operation_microphone_code(operation, microphones)
     filename = f'{instrument}-{articulation}-{operation.velocity:03d}{operation.round_robin}-{microphone_code}.{settings.AUDIO_FORMAT}'
     return settings.OUT_ROOT / operation.kit / instrument / f'{articulation}{parameter}' / filename
 
@@ -59,6 +111,28 @@ def operation_enabled(operation: Operation, microphones: dict) -> bool:
     return microphone_info is not None and microphone_info.get('keep', True)
 
 
+def operation_validation_reasons(operation: Operation, instruments: dict, microphones: dict) -> list:
+    if not operation_enabled(operation, microphones):
+        return []
+    instrument_info = instruments.get(operation.source_instrument, {})
+    instrument_code = str(instrument_info.get('instrument', ''))
+    instrument_type = instrument_code.split('-', 1)[0].lower()
+    reasons = []
+    if '-' not in instrument_code or not instrument_code.split('-', 1)[1]:
+        reasons.append(f'invalid current instrument code: {instrument_code or "<empty>"}')
+    if instrument_type not in VALID_INSTRUMENT_TYPES:
+        reasons.append(f'invalid current instrument type: {instrument_type or "<empty>"}')
+    microphone_code = operation_microphone_code(operation, microphones)
+    if not is_valid_mic_code(microphone_code):
+        reasons.append(f'invalid current mic code: {microphone_code}')
+    elif mic_code_channel_count(microphone_code) != len(operation.sources):
+        reasons.append(f'mic code channel count does not match {len(operation.sources)} source channel(s): {microphone_code}')
+    expected_output_channels = 'stereo' if len(operation.sources) == 2 else 'mono'
+    if operation.output_channels != expected_output_channels:
+        reasons.append(f'output channel label does not match sources: {operation.output_channels}')
+    return reasons
+
+
 def operation_source_summary(operation: Operation) -> str:
     source_text = ' + '.join(f"{source.get('name', '?')}[srcch{source.get('channel', '?')}]" for source in operation.sources)
     return f'{operation.source_instrument} sample={operation.sample_name} mic={operation.mic_group} source={source_text}'
@@ -67,7 +141,9 @@ def operation_source_summary(operation: Operation) -> str:
 def enabled_duplicate_targets(operations: list, instruments: dict, microphones: dict, settings) -> dict:
     target_operations = {}
     for operation in operations:
-        if operation.quarantined or not operation_enabled(operation, microphones):
+        if not operation_enabled(operation, microphones):
+            continue
+        if operation_hard_quarantine_reasons(operation) or operation_validation_reasons(operation, instruments, microphones):
             continue
         target = operation_target_relative(operation, instruments, microphones, settings).lower()
         if target:
@@ -95,7 +171,9 @@ def ffmpeg_command(operation: Operation, instruments: dict, microphones: dict, s
     if len(sources) == 2:
         left_path = _source_path(settings, sources[0]['path'])
         right_path = _source_path(settings, sources[1]['path'])
-        return command + ['-i', str(left_path), '-i', str(right_path), '-filter_complex', '[0:a][1:a]join=inputs=2:channel_layout=stereo[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
+        left_index = int(sources[0].get('channel', 0))
+        right_index = int(sources[1].get('channel', 0))
+        return command + ['-i', str(left_path), '-i', str(right_path), '-filter_complex', f'[0:a]pan=mono|c0=c{left_index}[left];[1:a]pan=mono|c0=c{right_index}[right];[left][right]join=inputs=2:channel_layout=stereo[a]', '-map', '[a]', '-c:a', settings.AUDIO_FORMAT, str(output_path)]
     raise ValueError(f'Unsupported source grouping for {operation.source_instrument}/{operation.sample_name}/{operation.mic_group}')
 
 
@@ -121,23 +199,27 @@ def _log(message: str) -> None:
     print(message, file=sys.stderr)
 
 
-def review_status(operation: Operation, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
-    if operation.quarantined:
-        return 'QUARANTINED'
-    if target_relative.lower() in duplicate_targets:
+def review_status(operation: Operation, instruments: dict, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
+    if operation_hard_quarantine_reasons(operation):
         return 'QUARANTINED'
     if not operation_enabled(operation, microphones):
         return 'SKIPPED'
+    if operation_validation_reasons(operation, instruments, microphones):
+        return 'QUARANTINED'
+    if target_relative.lower() in duplicate_targets:
+        return 'QUARANTINED'
     return 'READY'
 
 
-def review_action(operation: Operation, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
-    if target_relative.lower() in duplicate_targets:
-        return 'fix map; enabled rows would write the same target file'
-    if operation.quarantined:
+def review_action(operation: Operation, instruments: dict, microphones: dict, duplicate_targets: set, target_relative: str) -> str:
+    if operation_hard_quarantine_reasons(operation):
         return 'review generator warning before enabling manually'
     if not operation_enabled(operation, microphones):
         return 'optional/off by default; set keep True in map if you intentionally want this mic'
+    if operation_validation_reasons(operation, instruments, microphones):
+        return 'assign valid current instrument and mic codes in map_*.py'
+    if target_relative.lower() in duplicate_targets:
+        return 'fix map; enabled rows would write the same target file'
     return 'review optional; emitted by convert script'
 
 
@@ -171,14 +253,14 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
         writer.writeheader()
         for operation in operations:
             instrument_info = instruments.get(operation.source_instrument, {})
-            microphone_info = microphones.get((operation.source_instrument, operation.mic_group), {})
             target_relative = operation_target_relative(operation, instruments, microphones, settings)
-            reasons = [reason for reason in operation.quarantine_reasons if reason != 'disabled duplicate target if enabled']
+            reasons = operation_hard_quarantine_reasons(operation)
+            reasons.extend(operation_validation_reasons(operation, instruments, microphones))
             if target_relative.lower() in duplicate_targets and 'enabled duplicate target path after map edits' not in reasons:
                 reasons.append('enabled duplicate target path after map edits')
             writer.writerow({
-                'status': review_status(operation, microphones, duplicate_targets, target_relative),
-                'action': review_action(operation, microphones, duplicate_targets, target_relative),
+                'status': review_status(operation, instruments, microphones, duplicate_targets, target_relative),
+                'action': review_action(operation, instruments, microphones, duplicate_targets, target_relative),
                 'reasons': '; '.join(reasons),
                 'duplicate_sources': ' | '.join(operation_source_summary(duplicate) for duplicate in duplicate_targets.get(target_relative.lower(), [])),
                 'kit': operation.kit,
@@ -187,7 +269,7 @@ def write_review_csv(operations: list, instruments: dict, microphones: dict, set
                 'velocity': f'{operation.velocity:03d}',
                 'round_robin': operation.round_robin,
                 'mic_group': operation.mic_group,
-                'mic_code': microphone_info.get('code', operation.default_mic_code),
+                'mic_code': operation_microphone_code(operation, microphones),
                 'source_channels': ' + '.join(source.get('name', '') for source in operation.sources),
                 'source_channel_indices': ' + '.join(str(source.get('channel', '')) for source in operation.sources),
                 'source_files': ' + '.join(source.get('path', '') for source in operation.sources),
@@ -229,7 +311,19 @@ def run_operations(operations: list, instruments: dict, microphones: dict, setti
             continue
 
         microphone_info = microphones.get((operation.source_instrument, operation.mic_group))
-        if operation.quarantined or not microphone_info or not microphone_info.get('keep', True):
+        if not microphone_info or not microphone_info.get('keep', True):
+            skipped_count += 1
+            continue
+
+        hard_quarantine_reasons = operation_hard_quarantine_reasons(operation)
+        if hard_quarantine_reasons:
+            _log(f"skip quarantined operation: {operation_source_summary(operation)} ({'; '.join(hard_quarantine_reasons)})")
+            skipped_count += 1
+            continue
+
+        validation_reasons = operation_validation_reasons(operation, instruments, microphones)
+        if validation_reasons:
+            _log(f"skip invalid operation: {operation_source_summary(operation)} ({'; '.join(validation_reasons)})")
             skipped_count += 1
             continue
 
