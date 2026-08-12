@@ -1790,10 +1790,160 @@ TEST_CASE("InstrumentPlayer - floating selection respects the global threshold a
 
     const auto secondSelection = InstrumentPlayerTestAccess::chooseFloatingLogicalHit(player, articulation, 64);
     REQUIRE(secondSelection.isValid());
-    CHECK(secondSelection.velocityLevelIdx != firstSelection.velocityLevelIdx || secondSelection.logicalHitIdx != firstSelection.logicalHitIdx);
+    CHECK((secondSelection.velocityLevelIdx != firstSelection.velocityLevelIdx || secondSelection.logicalHitIdx != firstSelection.logicalHitIdx));
 
     engine.engineSettings.roundRobinLock.store(1);
     CHECK_FALSE(InstrumentPlayerTestAccess::chooseFloatingLogicalHit(player, articulation, 64).isValid());
+}
+
+TEST_CASE("InstrumentPlayer - unavailable floating candidates fall back to the nearest ready velocity level", "[InstrumentPlayer][FloatingSampleSelection]") {
+    DrumKitEngine engine;
+    engine.engineSettings.floatingSelectionMinimumVelocityLevels.store(2);
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.type = KitLib::InstrumentSpec::Type::Snare;
+    InstrumentPlayer player { &engine, slot };
+    player.setCurrentPlaybackSampleRate(44100.0);
+
+    KitLib::InstrumentSpec instrument { nullptr, makePlaybackInstrumentMeta("snare-library", KitLib::InstrumentSpec::Type::Snare) };
+    KitLib::ArticulationSpec libraryArticulation { &instrument, "center" };
+    KitLib::VelocityLevelSpec fallbackVelocityLevel { &libraryArticulation, 127 };
+    KitLib::LogicalHitSpec fallbackLogicalHit { &fallbackVelocityLevel, 1 };
+    const auto directMic = makeDirectMic();
+    KitLib::SampleSpec fallbackSample { &fallbackLogicalHit, {}, directMic };
+    auto fallbackSound = std::make_shared<SampledSound>(&instrument, &fallbackSample);
+    fallbackSound->sampleRate = 44100.0;
+    fallbackSound->buffer = std::make_shared<juce::AudioBuffer<float>>(1, 128);
+    fallbackSound->micBufferChannelStart = 0;
+    fallbackSound->micBufferChannelCount = 1;
+    fallbackSound->loaded.store(true);
+    player.addSound(fallbackSound);
+
+    auto& articulations = InstrumentPlayerTestAccess::articulations(player);
+    articulations.emplace_back(libraryArticulation.nameId, libraryArticulation.exprId);
+    auto& articulation = articulations.back();
+    const std::array<juce::uint8, 4> namedVelocities { 32, 64, 96, 127 };
+    const std::array<float, 4> fittedSourceLevelsDb { -22.0f, -20.0f, -18.0f, 0.0f };
+    for (size_t velocityLevelIdx = 0; velocityLevelIdx < namedVelocities.size(); ++velocityLevelIdx) {
+        InstrumentPlayer::VelocityLevelRuntime velocityLevel;
+        velocityLevel.velocity = namedVelocities[velocityLevelIdx];
+        velocityLevel.fittedSourceDb = fittedSourceLevelsDb[velocityLevelIdx];
+        velocityLevel.calibrationTrimDb = 0.0f;
+        InstrumentPlayer::LogicalHitRuntime logicalHit;
+        logicalHit.roundRobinId = 1;
+        logicalHit.preTrimIntensityDb = fittedSourceLevelsDb[velocityLevelIdx];
+        logicalHit.readiness->requiredEntryCount = 1;
+        if (velocityLevelIdx == namedVelocities.size() - 1) {
+            velocityLevel.velocityLevelSpec = &fallbackVelocityLevel;
+            velocityLevel.samples.push_back({ fallbackSound.get(), 1, fallbackSound });
+            logicalHit.sampleEntryIndexes = { 0 };
+            logicalHit.readiness->loadedEntryCount.store(1);
+            logicalHit.readiness->ready.store(true);
+        }
+        velocityLevel.logicalHits.push_back(std::move(logicalHit));
+        articulation.velocityLevels.push_back(std::move(velocityLevel));
+    }
+    articulation.buildVelocityMapping(VelocityResponse::linear());
+
+    REQUIRE(articulation.floatingSelectionAvailable);
+    REQUIRE(articulation.floatingCandidateWindows[64].count == 3);
+    CHECK_FALSE(InstrumentPlayerTestAccess::chooseFloatingLogicalHit(player, articulation, 64).isValid());
+
+    InstrumentPlayerTestAccess::mapNote(player, 38, 0);
+    auto* fallbackVoice = player.addVoice(new InstrumentPlayerVoice());
+
+    REQUIRE(player.playNote(1, 38, 64));
+    CHECK(fallbackVoice->getCurrentlyPlayingSound() == fallbackSound.get());
+}
+
+TEST_CASE("InstrumentPlayer - floating selection starts one complete multi-mic logical hit", "[InstrumentPlayer][FloatingSampleSelection]") {
+    DrumKitEngine engine;
+    engine.engineSettings.floatingSelectionMinimumVelocityLevels.store(2);
+    KitLayout::InstrumentSlot slot;
+    slot.id = "snare1";
+    slot.type = KitLib::InstrumentSpec::Type::Snare;
+    InstrumentPlayer player { &engine, slot };
+    player.setCurrentPlaybackSampleRate(44100.0);
+
+    KitLib::InstrumentSpec instrument { nullptr, makePlaybackInstrumentMeta("snare-library", KitLib::InstrumentSpec::Type::Snare) };
+    KitLib::ArticulationSpec libraryArticulation { &instrument, "center" };
+    KitLib::VelocityLevelSpec targetVelocityLevel { &libraryArticulation, 64 };
+    KitLib::LogicalHitSpec primaryLogicalHit { &targetVelocityLevel, 1 };
+    KitLib::LogicalHitSpec alternateLogicalHit { &targetVelocityLevel, 2 };
+    const auto directMic = makeDirectMic();
+    const auto overheadMic = makeOverheadMic();
+    KitLib::SampleSpec primaryDirectSample { &primaryLogicalHit, {}, directMic };
+    KitLib::SampleSpec primaryOverheadSample { &primaryLogicalHit, {}, overheadMic };
+    KitLib::SampleSpec alternateDirectSample { &alternateLogicalHit, {}, directMic };
+    KitLib::SampleSpec alternateOverheadSample { &alternateLogicalHit, {}, overheadMic };
+    auto primaryDirectSound = std::make_shared<SampledSound>(&instrument, &primaryDirectSample);
+    auto primaryOverheadSound = std::make_shared<SampledSound>(&instrument, &primaryOverheadSample);
+    auto alternateDirectSound = std::make_shared<SampledSound>(&instrument, &alternateDirectSample);
+    auto alternateOverheadSound = std::make_shared<SampledSound>(&instrument, &alternateOverheadSample);
+    for (auto* directSound : { primaryDirectSound.get(), alternateDirectSound.get() }) {
+        directSound->sampleRate = 44100.0;
+        directSound->buffer = std::make_shared<juce::AudioBuffer<float>>(1, 128);
+        directSound->micBufferChannelStart = 0;
+        directSound->micBufferChannelCount = 1;
+        directSound->loaded.store(true);
+    }
+    for (auto* overheadSound : { primaryOverheadSound.get(), alternateOverheadSound.get() }) {
+        overheadSound->sampleRate = 44100.0;
+        overheadSound->buffer = std::make_shared<juce::AudioBuffer<float>>(2, 128);
+        overheadSound->micBufferChannelStart = 2;
+        overheadSound->micBufferChannelCount = 2;
+        overheadSound->loaded.store(true);
+    }
+    player.addSound(primaryDirectSound);
+    player.addSound(primaryOverheadSound);
+    player.addSound(alternateDirectSound);
+    player.addSound(alternateOverheadSound);
+
+    auto& articulations = InstrumentPlayerTestAccess::articulations(player);
+    articulations.emplace_back(libraryArticulation.nameId, libraryArticulation.exprId);
+    auto& articulation = articulations.back();
+    articulation.velocityLevels.emplace_back();
+    auto& runtimeTargetLevel = articulation.velocityLevels.back();
+    runtimeTargetLevel.velocity = 64;
+    runtimeTargetLevel.velocityLevelSpec = &targetVelocityLevel;
+    runtimeTargetLevel.fittedSourceDb = -20.0f;
+    runtimeTargetLevel.calibrationTrimDb = 0.0f;
+    runtimeTargetLevel.samples.push_back({ primaryDirectSound.get(), 1, primaryDirectSound });
+    runtimeTargetLevel.samples.push_back({ primaryOverheadSound.get(), 1, primaryOverheadSound });
+    runtimeTargetLevel.samples.push_back({ alternateDirectSound.get(), 2, alternateDirectSound });
+    runtimeTargetLevel.samples.push_back({ alternateOverheadSound.get(), 2, alternateOverheadSound });
+    for (int logicalHitIdx = 0; logicalHitIdx < 2; ++logicalHitIdx) {
+        InstrumentPlayer::LogicalHitRuntime logicalHit;
+        logicalHit.roundRobinId = static_cast<juce::uint8>(logicalHitIdx + 1);
+        logicalHit.sampleEntryIndexes = logicalHitIdx == 0 ? std::vector<size_t> { 0, 1 } : std::vector<size_t> { 2, 3 };
+        logicalHit.preTrimIntensityDb = -20.0f;
+        logicalHit.readiness->requiredEntryCount = 2;
+        logicalHit.readiness->loadedEntryCount.store(2);
+        logicalHit.readiness->ready.store(true);
+        runtimeTargetLevel.logicalHits.push_back(std::move(logicalHit));
+    }
+
+    InstrumentPlayer::VelocityLevelRuntime neighborLevel;
+    neighborLevel.velocity = 127;
+    neighborLevel.fittedSourceDb = -10.0f;
+    neighborLevel.calibrationTrimDb = 0.0f;
+    InstrumentPlayer::LogicalHitRuntime unavailableNeighborHit;
+    unavailableNeighborHit.roundRobinId = 1;
+    unavailableNeighborHit.preTrimIntensityDb = -20.0f;
+    unavailableNeighborHit.readiness->requiredEntryCount = 1;
+    neighborLevel.logicalHits.push_back(std::move(unavailableNeighborHit));
+    articulation.velocityLevels.push_back(std::move(neighborLevel));
+    articulation.buildVelocityMapping(VelocityResponse::linear());
+
+    REQUIRE(articulation.floatingSelectionAvailable);
+    InstrumentPlayerTestAccess::mapNote(player, 38, 0);
+    auto* directVoice = player.addVoice(new InstrumentPlayerVoice());
+    auto* overheadVoice = player.addVoice(new InstrumentPlayerVoice());
+
+    REQUIRE(player.playNote(1, 38, 64));
+    const bool startedPrimaryHit = directVoice->getCurrentlyPlayingSound() == primaryDirectSound.get() && overheadVoice->getCurrentlyPlayingSound() == primaryOverheadSound.get();
+    const bool startedAlternateHit = directVoice->getCurrentlyPlayingSound() == alternateDirectSound.get() && overheadVoice->getCurrentlyPlayingSound() == alternateOverheadSound.get();
+    CHECK((startedPrimaryHit || startedAlternateHit));
 }
 
 TEST_CASE("InstrumentPlayer - library logical hit preview starts all linked mics without advancing round-robin selection", "[InstrumentPlayer][LibraryKitOverridePreview]") {

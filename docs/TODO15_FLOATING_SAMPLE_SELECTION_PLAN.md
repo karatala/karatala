@@ -1,6 +1,6 @@
 # TODO15: Floating Sample Selection Plan
 
-Status: The initial automatic selector is implemented. Focused tests are written but have not been run. Loading priority, preview, and hi-hat transition integration remain open.
+Status: The initial automatic selector and its focused fallback and multi-mic checks are implemented. Focused and full test suites pass. Loading priority, preview, and hi-hat transition integration remain open.
 
 ## Scope And Ownership
 
@@ -306,8 +306,8 @@ Focused checks should cover:
 - requests below and above the measured range;
 - missing and conflicting intensity metadata;
 - partially loaded candidate sets;
-- one complete exact fallback;
-- several mic files for one hit;
+- ✅ one complete exact fallback;
+- ✅ several mic files for one hit;
 - one multichannel hit;
 - fixed random sequences and stable ties;
 - round robin lock inside and outside available round robin IDs;
@@ -354,4 +354,4 @@ Non-goals:
 - no output-bus redesign;
 - no required scoring-weight UI in the first version.
 
-No build, tests, analyzer run, or listening check was performed while writing this plan.
+Verification on 2026-08-10: the focused floating-selection suite passed with 6 test cases and 31 assertions. The full suite passed with 188 test cases and 1583 assertions. No analyzer or listening check was performed.
