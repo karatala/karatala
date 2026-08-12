@@ -631,21 +631,16 @@ TEST_CASE("KitLib - MicSpec::parseMicCodesChain parses chains and skips invalid 
     REQUIRE(r.value[1].raw == "onm");
 }
 
-TEST_CASE("KitLib - DecayEnvelope base62 decode", "[DecayEnvelope]") {
-    REQUIRE(DecayEnvelope::base62ToInt("0") == 0);
-    REQUIRE(DecayEnvelope::base62ToInt("9") == 9);
-    REQUIRE(DecayEnvelope::base62ToInt("a") == 10);
-    REQUIRE(DecayEnvelope::base62ToInt("Z") == 61);
-    REQUIRE(DecayEnvelope::base62ToInt("10") == 62);
-    REQUIRE(DecayEnvelope::base62ToInt("!") == -1);
-}
-
-TEST_CASE("KitLib - DecayEnvelope decode accumulates deltas", "[DecayEnvelope]") {
-    const auto env = DecayEnvelope::decode("A_2_3", -20.0f, 10.0f);
-    REQUIRE(env.validPoints == 3);
-    REQUIRE(env.points[0] == 36.0f);
-    REQUIRE(env.points[1] == 38.0f);
-    REQUIRE(env.points[2] == 41.0f);
+TEST_CASE("KitLib - DecayEnvelope builds from CSV points", "[DecayEnvelope]") {
+    std::array<std::optional<float>, DecayEnvelope::NUM_POINTS> pointsMs {};
+    pointsMs[0] = 36.0f;
+    pointsMs[1] = 38.0f;
+    pointsMs[2] = 41.0f;
+    const auto envelope = DecayEnvelope::fromPoints(-20.0f, 10.0f, pointsMs);
+    REQUIRE(envelope.validPoints == 3);
+    REQUIRE(envelope.points[0] == 36.0f);
+    REQUIRE(envelope.points[1] == 38.0f);
+    REQUIRE(envelope.points[2] == 41.0f);
 }
 
 TEST_CASE("KitLib - DecayEnvelope level and inverse lookups", "[DecayEnvelope]") {

@@ -452,8 +452,7 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                 sample->peakDb = parsedInfo.value.peakDb + sample->manualGainDb;
                 sample->peakMs = parsedInfo.value.peakMs;
                 sample->decayMs = parsedInfo.value.decayMs;
-                sample->decayCode = parsedInfo.value.decayCode;
-                sample->decayEnvelope = parsedInfo.value.peakDb < 0.0f ? DecayEnvelope::decode(sample->decayCode, sample->peakDb, sample->peakMs) : DecayEnvelope {};
+                sample->decayEnvelope = {};
                 if (this->parent->sampleMetadata.isActive()) {
                     const auto* metadataRow = this->parent->sampleMetadata.find(kitRelativePath, micDesc.raw);
                     const bool fileSizeMatches = metadataRow != nullptr && metadataRow->fileSizeBytes > 0 && metadataRow->fileSizeBytes == sampleFileSize;
@@ -468,8 +467,6 @@ int InstrumentSpec::scanInstrumentSamples(ScanStats* stats) {
                         sample->peakDb = metadataRow->peakDb.has_value() ? *metadataRow->peakDb + sample->manualGainDb : 0.0f;
                         sample->peakMs = metadataRow->peakMs.value_or(0.0f);
                         sample->decayMs = metadataRow->decayEndMs.value_or(0.0f);
-                        sample->decayCode.clear();
-                        sample->decayEnvelope = {};
                         if (metadataRow->peakDb.has_value() && metadataRow->peakMs.has_value()) sample->decayEnvelope = DecayEnvelope::fromPoints(sample->peakDb, sample->peakMs, metadataRow->decayPointsMs);
                         ++matchedMetadataRowCount;
                     } else if (metadataRow != nullptr) {
@@ -670,7 +667,7 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
                     }
                     break;
                 }
-                case 'p': { // peak in dB*-10 (negative value, e.g., p19 means -1.9dB) //FIXME: remove obsolete a/p/d/c (where is a?)
+                case 'p': { // peak in dB*-10 (negative value, e.g., p19 means -1.9dB) //FIXME: remove obsolete p/d
                     juce::StringArray peakParts;
                     peakParts.addTokens(paramValue, "_", "");
                     if (peakParts.size() >= 1)
@@ -681,9 +678,6 @@ ParseResult<InstrumentSpec::SampleFileInfo> InstrumentSpec::parseSampleFile(cons
                 }
                 case 'd': //FIXME: remove obsolete
                     result.value.decayMs = static_cast<float>(paramValue.getIntValue());
-                    break;
-                case 'c': // decay code (base62 encoded) //FIXME: remove obsolete
-                    result.value.decayCode = paramValue;
                     break;
                 default:
                     LOG(Notice, "Unknown parameter type '" + juce::String::charToString(paramType) + "' in optional parameters of file '" + fileNameWithoutExt + "': '" + part + "'; skipping this parameter");

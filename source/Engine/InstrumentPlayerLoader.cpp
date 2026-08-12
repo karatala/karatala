@@ -233,7 +233,7 @@ std::shared_ptr<SampledSound> InstrumentPlayer::createVelocityLevelSound(KitLib:
         : (artSpec->balanceConflict && !artSpec->balanceOverride.has_value() ? std::optional<int> {} : artSpec->getEffectiveBalance());
     sound->decayEnvelope = sampleSpec->decayEnvelope;
     if (articulationCalibrationAvailable && sound->decayEnvelope.isValid()) sound->decayEnvelope.peakDb += velocityLevel.calibrationTrimDb.value_or(0.0f);
-    if ((sampleSpec->hasCsvMetadata || !sampleSpec->decayCode.isEmpty()) && !sound->decayEnvelope.isValid()) {
+    if (sampleSpec->hasCsvMetadata && !sound->decayEnvelope.isValid()) {
         LOG(Warning, "Invalid decay metadata for sample: " + sampleSpec->sampleFile.getFileName() + ". Pedal articulation replacement will be skipped for this sample.");
     }
     sound->micBufferChannelStart = assignment.globalStart;

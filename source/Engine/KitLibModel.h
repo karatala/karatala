@@ -116,8 +116,6 @@ struct DecayEnvelope {
     float getAbsoluteDbAtMs(float elapsedMs) const;
     float getMsAtAbsoluteDb(float targetAbsDb) const;
 
-    static int base62ToInt(const juce::String& s);
-    static DecayEnvelope decode(const juce::String& decayCode, float peakDb, float peakMs);
     static DecayEnvelope fromPoints(float peakDb, float peakMs, const std::array<std::optional<float>, NUM_POINTS>& pointsMs);
 };
 
@@ -170,7 +168,6 @@ public:
     float peakDb = 0.0f;
     float peakMs = 0.0f;
     float decayMs = 0.0f;
-    juce::String decayCode;
     DecayEnvelope decayEnvelope;
     bool hasCsvMetadata = false;
     juce::String metadataContentHash;
@@ -403,7 +400,6 @@ public:
         float peakDb = 0.0f;
         float peakMs = 0.0f;
         float decayMs = 0.0f;
-        juce::String decayCode; // base62-encoded decay curve code for more precise envelope reconstruction.  refer to scripts\analyze_drum_samples.py line decay_code: str = encode_time_intervals_as_base62(decay_points)
     };
 
     DrumKitSpec* parent = nullptr;

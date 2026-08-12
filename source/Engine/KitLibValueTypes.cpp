@@ -19,55 +19,6 @@ bool matchesIdentityCandidate(const std::vector<juce::String>& candidates, const
     return false;
 }
 
-int DecayEnvelope::base62ToInt(const juce::String& s) {
-    if (s.isEmpty())
-        return -1;
-
-    int result = 0;
-    for (int i = 0; i < s.length(); ++i) {
-        const juce::juce_wchar c = s[i];
-        int value = -1;
-        if (c >= '0' && c <= '9') value = static_cast<int>(c - '0');
-        else if (c >= 'a' && c <= 'z') value = 10 + static_cast<int>(c - 'a');
-        else if (c >= 'A' && c <= 'Z') value = 36 + static_cast<int>(c - 'A');
-
-        if (value < 0)
-            return -1;
-
-        result = result * 62 + value;
-    }
-    return result;
-}
-
-DecayEnvelope DecayEnvelope::decode(const juce::String& decayCode, float peakDb, float peakMs) {
-    DecayEnvelope env;
-    env.peakDb = peakDb;
-    env.peakMs = peakMs;
-
-    if (decayCode.isEmpty())
-        return env;
-
-    auto parts = juce::StringArray::fromTokens(decayCode, "_", "");
-    parts.removeEmptyStrings();
-
-    float absoluteMs = 0.0f;
-    for (int i = 0; i < parts.size() && i < NUM_POINTS; ++i) {
-        const int deltaMs = base62ToInt(parts[i]);
-        if (deltaMs < 0)
-            break;
-
-        if (i == 0)
-            absoluteMs = static_cast<float>(deltaMs);
-        else
-            absoluteMs += static_cast<float>(deltaMs);
-
-        env.points[static_cast<size_t>(i)] = absoluteMs;
-        env.validPoints = i + 1;
-    }
-
-    return env;
-}
-
 DecayEnvelope DecayEnvelope::fromPoints(float peakDb, float peakMs, const std::array<std::optional<float>, NUM_POINTS>& pointsMs) {
     DecayEnvelope envelope;
     envelope.peakDb = peakDb;

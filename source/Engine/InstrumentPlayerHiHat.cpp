@@ -559,7 +559,7 @@ void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int con
     transitionSettings.missingDecayPolicy = settings.hihatMissingDecayPolicy.load();
     const int boundaryHysteresisCc = settings.hihatBoundaryHysteresisCc.load();
 
-    // TODO01: pedal state without note should make sound transition based on latest rms level that we can take from parsed decayCode data, like if hitted closed hat and start opening pedal it should make transition to more opened sound
+    // TODO01: pedal state without note should make sound transition based on latest rms level from parsed metadata.csv decay points, like if hitted closed hat and start opening pedal it should make transition to more opened sound
     // so new more open sample plays from offset based on rms level, for example we have analyzed data
     // instr,art,vel,rr,mic,rms_peak_ms, rms_peak_db, rms_decayed_ms-6dB,-12dB,-18dB,-24dB,-30dB,-36dB,-42dB,-48dB,-54dB,-60dB
     // hihat-X,edge[close],127,a,dtm,20, -15.76, 80,120,150,170,190,210,240,270,320,400

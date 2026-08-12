@@ -433,7 +433,7 @@ Now that voices have `EnvelopeState`, skip voices already in `FadingOut`/`Releas
 | Saved CPU from removed inaudible voices | Full sample render per voice (~3-6 voices per old hit) | Continuous savings per render block | **Significant gain** - main benefit |
 
 ### Pre-calculation at Load Time (from TODO01)
-- `DecayEnvelope` decoded from base62 once at instrument load
+- `DecayEnvelope` is built from the readable per-kit `metadata.csv` points once at instrument load
 - Runtime lookups are pure float comparisons with 10-element arrays - no string parsing, no allocation
 
 ---

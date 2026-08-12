@@ -47,6 +47,7 @@
 - Zone-pad preview may start a loaded hi-hat controller sibling directly for a state without its own MIDI note. This preview must not send CC or modify the saved controller state.
 - Publish asynchronously loaded buffers before setting their `loaded` flag with release semantics; audio-thread readers check the flag with acquire semantics first.
 - Decay metadata is an estimate of sample loudness, not a substitute for attack-envelope or phase information.
+- Runtime decay envelopes use the readable peak and decay points from each kit's `metadata.csv`.
 - Filename playback timing uses `on<ms>` to advance by skipping the source beginning and `op<ms>` to delay output. Optional `_micCode` suffixes limit an offset to selected mics in a multichannel file. Apply these offsets per runtime sound and preview without changing the shared sample-loader cache key.
 - Mic identity includes the full mic code, so variants such as `dtm1` and `dtm2` remain separate.
 - Mic placement is precomputed per routed sample. Stereo overhead keeps its recorded image and uses only manual layer pan; eligible non-room mono-to-stereo routes use placement balance plus manual pan; direct mono-to-mono and room routes ignore layer pan.
