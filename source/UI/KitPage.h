@@ -61,6 +61,8 @@ private:
     juce::String currentMapText;
     juce::String selectedKitId;
     juce::String selectedPresetPath;
+    juce::String activePresetPath;
+    juce::String activePresetMapText;
     std::vector<AvailableLibraryArticulation> availableLibraryArticulations;
     std::vector<KitEntry> kits;
     std::vector<PresetEntry> presets;
@@ -102,9 +104,14 @@ private:
 
     const KitEntry* getSelectedKit() const;
     const PresetEntry* getSelectedPreset() const;
+    bool isActivePreset(const PresetEntry& preset) const;
+    bool isActivePresetDirty() const;
+    void inferActivePreset();
+    void setActivePreset(const PresetEntry& preset, const juce::String& mapText);
+    void clearActivePreset();
     juce::File getUserPresetDirectory() const;
     std::vector<KitPreviewGrid::ArticulationPad> buildKitArticulationPads(const KitEntry& kit) const;
-    std::vector<KitPreviewGrid::ArticulationPad> buildPresetArticulationPads(const PresetEntry& preset) const;
+    std::vector<KitPreviewGrid::ArticulationPad> buildPresetArticulationPads(const juce::String& mapText) const;
     static bool matchesFilter(const juce::String& searchText, const juce::String& filterText);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KitPage)

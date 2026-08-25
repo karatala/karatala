@@ -83,10 +83,11 @@ KitPage::~KitPage() {
 }
 
 void KitPage::refresh(const juce::String& activeInstrumentMapText) {
-    this->currentMapText = activeInstrumentMapText;
+    this->currentMapText = this->engine.normalizeInstrumentMapText(activeInstrumentMapText);
     this->availableLibraryArticulations = AvailableLibraryArticulation::collectFromLibrary(this->engine.getInstrumentManager());
     this->rebuildLibraryEntries();
     this->rebuildPresetEntries(this->selectedPresetPath);
+    this->inferActivePreset();
     this->rebuildFilteredEntries();
 }
 
@@ -220,6 +221,41 @@ const KitPage::PresetEntry* KitPage::getSelectedPreset() const {
     return nullptr;
 }
 
+bool KitPage::isActivePreset(const PresetEntry& preset) const {
+    return preset.file.getFullPathName() == this->activePresetPath;
+}
+
+bool KitPage::isActivePresetDirty() const {
+    return this->activePresetPath.isNotEmpty() && this->currentMapText != this->activePresetMapText;
+}
+
+void KitPage::inferActivePreset() {
+    if (this->activePresetPath.isNotEmpty()) {
+        const bool activePresetExists = std::any_of(this->presets.begin(), this->presets.end(), [this](const auto& preset) { return preset.file.getFullPathName() == this->activePresetPath; });
+        if (!activePresetExists) this->clearActivePreset();
+        else if (this->currentMapText == this->activePresetMapText) return;
+    }
+    if (this->currentMapText.trim().isEmpty()) return;
+
+    for (const auto& preset : this->presets) {
+        const auto presetMapText = this->engine.normalizeInstrumentMapText(preset.file.loadFileAsString());
+        if (presetMapText != this->currentMapText) continue;
+        this->setActivePreset(preset, presetMapText);
+        this->selectedPresetPath = preset.file.getFullPathName();
+        return;
+    }
+}
+
+void KitPage::setActivePreset(const PresetEntry& preset, const juce::String& mapText) {
+    this->activePresetPath = preset.file.getFullPathName();
+    this->activePresetMapText = this->engine.normalizeInstrumentMapText(mapText);
+}
+
+void KitPage::clearActivePreset() {
+    this->activePresetPath.clear();
+    this->activePresetMapText.clear();
+}
+
 std::vector<KitPreviewGrid::ArticulationPad> KitPage::buildKitArticulationPads(const KitEntry& kit) const {
     std::vector<KitPreviewGrid::ArticulationPad> result;
     for (const auto& libArt : this->availableLibraryArticulations) {
@@ -233,9 +269,9 @@ std::vector<KitPreviewGrid::ArticulationPad> KitPage::buildKitArticulationPads(c
     return result;
 }
 
-std::vector<KitPreviewGrid::ArticulationPad> KitPage::buildPresetArticulationPads(const PresetEntry& preset) const {
+std::vector<KitPreviewGrid::ArticulationPad> KitPage::buildPresetArticulationPads(const juce::String& mapText) const {
     std::vector<KitPreviewGrid::ArticulationPad> result;
-    auto parsed = DrumKitEngine::parseInstrumentMapText(preset.file.loadFileAsString());
+    auto parsed = DrumKitEngine::parseInstrumentMapText(mapText);
     const auto* library = this->engine.getInstrumentManager();
     if (!parsed.ok() || library == nullptr) return result;
 
@@ -308,12 +344,14 @@ void KitPage::updateSelectedContent() {
     } else {
         const auto* preset = this->getSelectedPreset();
         if (preset != nullptr) {
-            this->infoTitleLabel.setText(preset->name, juce::dontSendNotification);
+            const bool selectedPresetIsDirty = this->isActivePreset(*preset) && this->isActivePresetDirty();
+            const auto displayMapText = selectedPresetIsDirty ? this->currentMapText : preset->file.loadFileAsString();
+            this->infoTitleLabel.setText(preset->name + (selectedPresetIsDirty ? "*" : ""), juce::dontSendNotification);
             this->infoAuthorLabel.setText(preset->isUser ? "User instrument-map preset" : "Factory instrument-map preset", juce::dontSendNotification);
             this->infoLicenseLabel.setText("Kit layout and MIDI notes are not included", juce::dontSendNotification);
             this->detailsEditor.setFont(UITheme::Fonts::mono());
-            this->detailsEditor.setText(preset->file.loadFileAsString(), false);
-            articulationPads = this->buildPresetArticulationPads(*preset);
+            this->detailsEditor.setText(displayMapText, false);
+            articulationPads = this->buildPresetArticulationPads(displayMapText);
         } else {
             this->infoTitleLabel.setText("No presets", juce::dontSendNotification);
             this->infoAuthorLabel.setText("Save the current instrument map to create one", juce::dontSendNotification);
@@ -382,7 +420,9 @@ void KitPage::loadSelectedKit() {
     if (!fallbackWarnings.isEmpty()) status += " | " + fallbackWarnings.joinIntoString(" | ");
     if (this->onMapLoadRequested && this->onMapLoadRequested(mapText, status)) {
         this->currentMapText = mapText;
-        this->updateActionButtons();
+        this->clearActivePreset();
+        this->sectionList.repaint();
+        this->updateSelectedContent();
     }
 }
 
@@ -424,7 +464,9 @@ void KitPage::loadSelectedPreset() {
     if (!skippedSlots.isEmpty()) status += " | skipped missing slots: " + skippedSlots.joinIntoString(", ");
     if (this->onMapLoadRequested && this->onMapLoadRequested(mapText, status)) {
         this->currentMapText = mapText;
-        this->updateActionButtons();
+        this->setActivePreset(*preset, mapText);
+        this->sectionList.repaint();
+        this->updateSelectedContent();
     }
 }
 
@@ -437,6 +479,8 @@ void KitPage::saveSelectedPreset() {
         return;
     }
     this->currentMapText = normalizedMapText;
+    this->setActivePreset(*preset, normalizedMapText);
+    this->sectionList.repaint();
     this->updateSelectedContent();
     this->reportStatus("Saved preset: " + preset->name);
 }
@@ -468,6 +512,8 @@ void KitPage::savePresetAs() {
         const auto normalizedMapText = safeThis->engine.normalizeInstrumentMapText(safeThis->currentMapText);
         if (!file.replaceWithText(normalizedMapText)) return juce::String("Could not save this preset.");
         safeThis->currentMapText = normalizedMapText;
+        safeThis->activePresetPath = file.getFullPathName();
+        safeThis->activePresetMapText = normalizedMapText;
         safeThis->filterField.setText(juce::String(), false);
         safeThis->rebuildPresetEntries(file.getFullPathName());
         safeThis->rebuildFilteredEntries();
@@ -490,6 +536,7 @@ void KitPage::deleteSelectedPreset() {
     CompactModalDialog::show(*this, std::move(options), [safeThis, preset](const CompactModalDialog&) {
         if (safeThis == nullptr) return juce::String();
         if (!preset.file.deleteFile()) return juce::String("Could not delete this preset.");
+        if (safeThis->isActivePreset(preset)) safeThis->clearActivePreset();
         safeThis->selectedPresetPath.clear();
         safeThis->rebuildPresetEntries();
         safeThis->rebuildFilteredEntries();
@@ -533,7 +580,7 @@ void KitPage::SectionListModel::paintListBoxItem(int rowNumber, juce::Graphics& 
         detail = kit.author.isNotEmpty() ? kit.author : "Unknown author";
     } else {
         const auto& preset = this->owner.presets[static_cast<size_t>(sectionEntryIndex)];
-        title = preset.name;
+        title = preset.name + (this->owner.isActivePreset(preset) && this->owner.isActivePresetDirty() ? "*" : "");
         detail = preset.isUser ? "User" : "Factory";
     }
     graphics.setColour(UITheme::Colours::textPrimary);

@@ -16,40 +16,76 @@ int KitPreviewGrid::getPreferredHeight(int availableWidth) {
 }
 
 int KitPreviewGrid::layoutArticulationPads(int availableWidth, bool storeBounds) {
-    if (storeBounds) this->articulationPadBounds.clear();
+    if (storeBounds) {
+        this->articulationGroupBounds.clear();
+        this->articulationPadBounds.clear();
+    }
     if (this->articulationPads.empty()) return 48;
 
-    const int contentWidth = juce::jmax(this->preferredPadWidth, availableWidth - this->padGap * 2);
-    const int columnCount = juce::jmax(1, contentWidth / (this->preferredPadWidth + this->padGap));
-    const int padWidth = juce::jmax(72, (contentWidth - (columnCount - 1) * this->padGap) / columnCount);
+    const int contentWidth = juce::jmax(this->minimumPadWidth + this->cardPadding * 2, availableWidth - this->padGap * 2);
+    const int groupColumnCount = juce::jmax(1, (contentWidth + this->groupGap) / (this->preferredGroupWidth + this->groupGap));
+    const int groupWidth = (contentWidth - (groupColumnCount - 1) * this->groupGap) / groupColumnCount;
     int currentY = this->padGap;
     size_t articulationPadIndex = 0;
 
     while (articulationPadIndex < this->articulationPads.size()) {
-        const auto groupId = this->articulationPads[articulationPadIndex].groupId;
-        currentY += this->groupHeaderHeight;
-        int groupPadCount = 0;
-        while (articulationPadIndex + static_cast<size_t>(groupPadCount) < this->articulationPads.size() && this->articulationPads[articulationPadIndex + static_cast<size_t>(groupPadCount)].groupId == groupId)
-            ++groupPadCount;
+        struct GroupLayout {
+            size_t firstArticulationPadIndex = 0;
+            int padCount = 0;
+            int padColumnCount = 1;
+            int height = 0;
+        };
+        std::vector<GroupLayout> rowGroups;
+        rowGroups.reserve(static_cast<size_t>(groupColumnCount));
+        int rowHeight = 0;
 
-        const int rowCount = static_cast<int>(std::ceil(static_cast<double>(groupPadCount) / static_cast<double>(columnCount)));
-        if (storeBounds) {
-            for (int groupPadIndex = 0; groupPadIndex < groupPadCount; ++groupPadIndex) {
-                const int columnIndex = groupPadIndex % columnCount;
-                const int rowIndex = groupPadIndex / columnCount;
-                ArticulationPadBounds padBounds;
-                padBounds.articulationPadIndex = articulationPadIndex + static_cast<size_t>(groupPadIndex);
-                padBounds.bounds = { this->padGap + columnIndex * (padWidth + this->padGap), currentY + rowIndex * (this->padHeight + this->padGap), padWidth, this->padHeight };
-                this->articulationPadBounds.push_back(padBounds);
+        while (articulationPadIndex < this->articulationPads.size() && static_cast<int>(rowGroups.size()) < groupColumnCount) {
+            GroupLayout groupLayout;
+            groupLayout.firstArticulationPadIndex = articulationPadIndex;
+            const auto groupId = this->articulationPads[articulationPadIndex].groupId;
+            while (articulationPadIndex + static_cast<size_t>(groupLayout.padCount) < this->articulationPads.size()
+                   && this->articulationPads[articulationPadIndex + static_cast<size_t>(groupLayout.padCount)].groupId == groupId) ++groupLayout.padCount;
+
+            const int padAreaWidth = groupWidth - this->cardPadding * 2;
+            const int availablePadColumns = juce::jmax(1, (padAreaWidth + this->padGap) / (this->minimumPadWidth + this->padGap));
+            groupLayout.padColumnCount = juce::jmin(groupLayout.padCount, availablePadColumns);
+            const int padRowCount = static_cast<int>(std::ceil(static_cast<double>(groupLayout.padCount) / static_cast<double>(groupLayout.padColumnCount)));
+            groupLayout.height = this->cardPadding + this->groupHeaderHeight + padRowCount * this->padHeight + juce::jmax(0, padRowCount - 1) * this->padGap + this->cardPadding;
+            rowHeight = juce::jmax(rowHeight, groupLayout.height);
+            rowGroups.push_back(groupLayout);
+            articulationPadIndex += static_cast<size_t>(groupLayout.padCount);
+        }
+
+        for (int groupColumnIndex = 0; groupColumnIndex < static_cast<int>(rowGroups.size()); ++groupColumnIndex) {
+            const auto& groupLayout = rowGroups[static_cast<size_t>(groupColumnIndex)];
+            const int groupX = this->padGap + groupColumnIndex * (groupWidth + this->groupGap);
+            const int padAreaX = groupX + this->cardPadding;
+            const int padAreaY = currentY + this->cardPadding + this->groupHeaderHeight;
+            const int padAreaWidth = groupWidth - this->cardPadding * 2;
+            const int padWidth = (padAreaWidth - (groupLayout.padColumnCount - 1) * this->padGap) / groupLayout.padColumnCount;
+
+            if (storeBounds) {
+                ArticulationGroupBounds groupBounds;
+                groupBounds.firstArticulationPadIndex = groupLayout.firstArticulationPadIndex;
+                groupBounds.bounds = { groupX, currentY, groupWidth, groupLayout.height };
+                groupBounds.titleBounds = { padAreaX, currentY + this->cardPadding, padAreaWidth, this->groupHeaderHeight };
+                this->articulationGroupBounds.push_back(groupBounds);
+
+                for (int groupPadIndex = 0; groupPadIndex < groupLayout.padCount; ++groupPadIndex) {
+                    const int padColumnIndex = groupPadIndex % groupLayout.padColumnCount;
+                    const int padRowIndex = groupPadIndex / groupLayout.padColumnCount;
+                    ArticulationPadBounds padBounds;
+                    padBounds.articulationPadIndex = groupLayout.firstArticulationPadIndex + static_cast<size_t>(groupPadIndex);
+                    padBounds.bounds = { padAreaX + padColumnIndex * (padWidth + this->padGap), padAreaY + padRowIndex * (this->padHeight + this->padGap), padWidth, this->padHeight };
+                    this->articulationPadBounds.push_back(padBounds);
+                }
             }
         }
 
-        currentY += rowCount * (this->padHeight + this->padGap);
-        currentY += this->groupGap;
-        articulationPadIndex += static_cast<size_t>(groupPadCount);
+        currentY += rowHeight + this->groupGap;
     }
 
-    return currentY + this->padGap;
+    return currentY - this->groupGap + this->padGap;
 }
 
 void KitPreviewGrid::resized() {
@@ -65,18 +101,19 @@ void KitPreviewGrid::paint(juce::Graphics& graphics) {
         return;
     }
 
-    juce::String lastGroupId;
+    for (const auto& groupBounds : this->articulationGroupBounds) {
+        if (groupBounds.firstArticulationPadIndex >= this->articulationPads.size()) continue;
+        const auto& articulationPad = this->articulationPads[groupBounds.firstArticulationPadIndex];
+        graphics.setColour(UITheme::Colours::bgControlAlt);
+        graphics.fillRoundedRectangle(groupBounds.bounds.toFloat(), 3.0f);
+        graphics.setColour(UITheme::Colours::textSecondary);
+        graphics.setFont(UITheme::Fonts::small());
+        graphics.drawFittedText(articulationPad.groupTitle, groupBounds.titleBounds, juce::Justification::centredLeft, 1, 0.7f);
+    }
+
     for (const auto& padBounds : this->articulationPadBounds) {
         if (padBounds.articulationPadIndex >= this->articulationPads.size()) continue;
         const auto& articulationPad = this->articulationPads[padBounds.articulationPadIndex];
-        if (articulationPad.groupId != lastGroupId) {
-            const int titleY = padBounds.bounds.getY() - this->groupHeaderHeight;
-            graphics.setColour(UITheme::Colours::textSecondary);
-            graphics.setFont(UITheme::Fonts::labelBoldMedium());
-            graphics.drawText(articulationPad.groupTitle, this->padGap, titleY, this->getWidth() - this->padGap * 2, this->groupHeaderHeight, juce::Justification::centredLeft);
-            lastGroupId = articulationPad.groupId;
-        }
-
         auto colour = UITheme::Colours::instrumentType(articulationPad.libraryArticulation.instType);
         if (static_cast<int>(padBounds.articulationPadIndex) == this->flashedArticulationPadIndex) colour = colour.brighter(0.65f);
         graphics.setColour(colour.withMultipliedBrightness(0.58f));

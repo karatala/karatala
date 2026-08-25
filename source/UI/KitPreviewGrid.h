@@ -26,18 +26,27 @@ public:
     std::function<void(const AvailableLibraryArticulation&, juce::uint8)> onLibraryArticulationPreview;
 
 private:
+    struct ArticulationGroupBounds {
+        size_t firstArticulationPadIndex = 0;
+        juce::Rectangle<int> bounds;
+        juce::Rectangle<int> titleBounds;
+    };
+
     struct ArticulationPadBounds {
         size_t articulationPadIndex = 0;
         juce::Rectangle<int> bounds;
     };
 
-    static constexpr int groupGap = 8;
+    static constexpr int cardPadding = 4;
+    static constexpr int groupGap = 6;
     static constexpr int groupHeaderHeight = 18;
+    static constexpr int minimumPadWidth = 72;
     static constexpr int padGap = 4;
     static constexpr int padHeight = 26;
-    static constexpr int preferredPadWidth = 104;
+    static constexpr int preferredGroupWidth = 180;
 
     std::vector<ArticulationPad> articulationPads;
+    std::vector<ArticulationGroupBounds> articulationGroupBounds;
     std::vector<ArticulationPadBounds> articulationPadBounds;
     int flashedArticulationPadIndex = -1;
 
