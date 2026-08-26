@@ -64,6 +64,14 @@ void DrumPad::timerCallback() {
     repaint();
 }
 
+int DrumPad::getScaledSize(int size) const {
+    return juce::jmax(1, juce::roundToInt(static_cast<float>(size) * this->visualScale));
+}
+
+float DrumPad::getScaledFontHeight(float height) const {
+    return juce::jmax(8.0f, height * this->visualScale);
+}
+
 juce::Colour DrumPad::getColourForType(KitLib::InstrumentSpec::Type type) { return UITheme::Colours::instrumentType(type); }
 
 void DrumPad::paint(juce::Graphics& g) {
@@ -90,14 +98,14 @@ void DrumPad::paintSimple(juce::Graphics& g) {
         g.drawRect(bounds, 1);
     }
 
-    const auto labelBounds = bounds.reduced(6);
+    const auto labelBounds = bounds.reduced(this->getScaledSize(6));
     if (this->slotPtr == nullptr) {
-        drawPadLabel(g, labelBounds, "Empty", UITheme::Colours::textMuted, UITheme::Fonts::small().withHeight(11.0f), 1);
+        drawPadLabel(g, labelBounds, "Empty", UITheme::Colours::textMuted, UITheme::Fonts::small().withHeight(this->getScaledFontHeight(11.0f)), 1);
         return;
     }
 
     const float labelHeight = static_cast<float>(juce::jlimit(10, 15, juce::jmin(bounds.getWidth() / 5, bounds.getHeight() / 3)));
-    drawPadLabel(g, labelBounds, getPadDisplayName(*this->slotPtr), UITheme::Colours::textPrimary.withAlpha(0.9f), UITheme::Fonts::labelBold().withHeight(labelHeight), 2);
+    drawPadLabel(g, labelBounds, getPadDisplayName(*this->slotPtr), UITheme::Colours::textPrimary.withAlpha(0.9f), UITheme::Fonts::labelBold().withHeight(this->getScaledFontHeight(labelHeight)), 2);
 }
 
 void DrumPad::paintZoned(juce::Graphics& g) {
@@ -110,7 +118,7 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         return;
     }
 
-    const auto titleBounds = bounds.removeFromLeft(juce::jmin(UITheme::Sizes::padTitleRailWidth, bounds.getWidth()));
+    const auto titleBounds = bounds.removeFromLeft(juce::jmin(this->getScaledSize(UITheme::Sizes::padTitleRailWidth), bounds.getWidth()));
     const auto cells = this->buildArticulationCells(bounds);
     if (cells.empty()) {
         this->paintSimple(g);
@@ -126,7 +134,10 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         g.drawHorizontalLine(cell.bounds.getBottom() - 1, static_cast<float>(cell.bounds.getX()), static_cast<float>(cell.bounds.getRight()));
         g.drawVerticalLine(cell.bounds.getRight() - 1, static_cast<float>(cell.bounds.getY()), static_cast<float>(cell.bounds.getBottom()));
 
-        if (cell.label.isNotEmpty()) drawPadLabel(g, cell.bounds.reduced(3, 2), cell.label, UITheme::Colours::textPrimary.withAlpha(0.85f), UITheme::Fonts::normal().boldened(), 2);
+        if (cell.label.isNotEmpty()) {
+            const auto cellFont = UITheme::Fonts::normal().boldened().withHeight(this->getScaledFontHeight(UITheme::Fonts::normal().getHeight()));
+            drawPadLabel(g, cell.bounds.reduced(this->getScaledSize(3), this->getScaledSize(2)), cell.label, UITheme::Colours::textPrimary.withAlpha(0.85f), cellFont, 2);
+        }
     }
 
     this->paintInstrumentTitle(g, titleBounds);
@@ -152,9 +163,9 @@ void DrumPad::paintInstrumentTitle(juce::Graphics& g, const juce::Rectangle<int>
 
     juce::Graphics::ScopedSaveState saveState(g);
     g.addTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::halfPi).translated(static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY())));
-    const auto textBounds = juce::Rectangle<int>(0, 0, bounds.getHeight(), bounds.getWidth()).reduced(7, 2);
+    const auto textBounds = juce::Rectangle<int>(0, 0, bounds.getHeight(), bounds.getWidth()).reduced(this->getScaledSize(7), this->getScaledSize(2));
     g.setColour(UITheme::Colours::textPrimary);
-    g.setFont(UITheme::Fonts::small().boldened());
+    g.setFont(UITheme::Fonts::small().boldened().withHeight(this->getScaledFontHeight(UITheme::Fonts::small().getHeight())));
     g.drawFittedText(getPadDisplayName(*this->slotPtr), textBounds, juce::Justification::centredLeft, 1, 0.9f);
 }
 
@@ -204,7 +215,7 @@ std::vector<DrumPad::ArticulationCell> DrumPad::buildHiHatCells(const juce::Rect
         if (std::any_of(zoneIndices.begin(), zoneIndices.end(), [](int articulationIdx) { return articulationIdx >= 0; })) ++zoneRowCount;
     const int mainRowCount = zoneRowCount + static_cast<int>(otherArticulationIndices.size());
     int pedalHeight = 0;
-    if (pedalArticulationIdx >= 0) pedalHeight = mainRowCount > 0 ? juce::jmin(34, juce::jmax(1, bounds.getHeight() / (mainRowCount + 1))) : bounds.getHeight();
+    if (pedalArticulationIdx >= 0) pedalHeight = mainRowCount > 0 ? juce::jmin(this->getScaledSize(34), juce::jmax(1, bounds.getHeight() / (mainRowCount + 1))) : bounds.getHeight();
     const int mainAreaHeight = bounds.getHeight() - pedalHeight;
     const int totalRowCount = mainRowCount + (pedalArticulationIdx >= 0 ? 1 : 0);
     if (totalRowCount == 0) return {};
@@ -255,7 +266,7 @@ std::optional<DrumPad::ArticulationCell> DrumPad::getCellAt(juce::Point<int> pos
         return std::nullopt;
 
     auto bodyBounds = this->getLocalBounds();
-    bodyBounds.removeFromLeft(juce::jmin(UITheme::Sizes::padTitleRailWidth, bodyBounds.getWidth()));
+    bodyBounds.removeFromLeft(juce::jmin(this->getScaledSize(UITheme::Sizes::padTitleRailWidth), bodyBounds.getWidth()));
     for (const auto& cell : this->buildArticulationCells(bodyBounds))
         if (cell.articulationIdx >= 0 && cell.bounds.contains(position)) return cell;
     return std::nullopt;

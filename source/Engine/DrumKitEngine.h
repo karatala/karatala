@@ -104,6 +104,13 @@ public:
         std::optional<juce::String> micCode;
     };
 
+    struct LibraryPreviewLayer {
+        juce::String kitId;
+        juce::String instrumentId;
+        juce::String articulationId;
+        float gainDb = 0.0f;
+    };
+
     struct VelocityUpperBoundaryTarget {
         int namedVelocity = 0;
         int upperBoundary = 0;
@@ -227,6 +234,7 @@ public:
      *  @param velocity       desired velocity 1-127
      */
     void previewLibraryArticulation(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity, const juce::String& relativePath = {}, const juce::String& micCode = {});
+    void previewLibraryArticulationGroup(const std::vector<LibraryPreviewLayer>& layers, juce::uint8 velocity);
     void rebuildMidiNoteRoutingFromLayout();
     void clearCrosstalkProfile();
     void beginCrosstalkCalibration();
@@ -311,6 +319,20 @@ private:
         float playbackOffsetMs = 0.0f;
     };
 
+    struct LoadedPreviewLayer {
+        std::shared_ptr<juce::AudioBuffer<float>> buffer;
+        double sampleRate = 0.0;
+        float gain = 1.0f;
+    };
+
+    struct PreviewGroupLoadState {
+        juce::CriticalSection lock;
+        std::vector<LoadedPreviewLayer> loadedLayers;
+        int remainingLoads = 0;
+        float playbackGain = 1.0f;
+        uint64_t generation = 0;
+    };
+
     class PreviewResolveJob : public juce::ThreadPoolJob {
     public:
         PreviewResolveJob(DrumKitEngine& jobOwner, std::string jobCacheKey, juce::String newKitCodeRaw, juce::String newInstCode, juce::String newArtCode, juce::String newRelativePath, juce::String newMicCode, juce::uint8 targetResolveVelocity, juce::uint8 targetPlaybackVelocity, uint64_t targetGeneration)
@@ -339,6 +361,21 @@ private:
         juce::String micCode;
         juce::uint8 resolveVelocity = 0;
         juce::uint8 playbackVelocity = 0;
+        uint64_t generation = 0;
+    };
+
+    class PreviewGroupResolveJob : public juce::ThreadPoolJob {
+    public:
+        PreviewGroupResolveJob(DrumKitEngine& jobOwner, std::vector<LibraryPreviewLayer> newLayers, juce::uint8 newVelocity, float newPlaybackGain, uint64_t newGeneration)
+            : juce::ThreadPoolJob("Preview Group Resolve Job"), owner(jobOwner), layers(std::move(newLayers)), velocity(newVelocity), playbackGain(newPlaybackGain), generation(newGeneration) {}
+
+        JobStatus runJob() override;
+
+    private:
+        DrumKitEngine& owner;
+        std::vector<LibraryPreviewLayer> layers;
+        juce::uint8 velocity = 0;
+        float playbackGain = 1.0f;
         uint64_t generation = 0;
     };
 
@@ -403,6 +440,10 @@ private:
                                      juce::uint8 playbackVelocity,
                                      uint64_t generation);
     void requestPreviewPlayback(const PreviewTarget& target, juce::uint8 velocity);
+    std::shared_ptr<juce::AudioBuffer<float>> preparePreviewBuffer(const PreviewTarget& target, const std::shared_ptr<juce::AudioBuffer<float>>& buffer, double sampleRate) const;
+    void resolveAndLoadPreviewGroup(std::vector<LibraryPreviewLayer> layers, juce::uint8 velocity, float playbackGain, uint64_t generation);
+    void completePreviewGroupLayer(const std::shared_ptr<PreviewGroupLoadState>& state, std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate, float gain);
+    void publishPreviewGroup(const std::shared_ptr<PreviewGroupLoadState>& state);
     void invalidateLibraryPreviewCache();
     ParseResult<LibraryArticulationInfo> setLibraryPlacementBalance(const juce::String& kitId, const juce::String& instrumentId, const juce::String& articulationId, std::optional<int> balance, bool articulationScope);
     bool publishSourceRecipeReload(const std::shared_ptr<SampledSound>& sound, uint64_t revision, float fixedGainDb, std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate);
@@ -419,5 +460,6 @@ private:
     std::unordered_map<std::string, PreviewTarget> previewTargetCache;
     std::unordered_set<std::string> pendingPreviewTargetKeys;
     std::atomic<uint64_t> previewTargetGeneration { 0 };
+    std::atomic<uint64_t> previewGeneration { 0 };
     juce::ThreadPool previewResolveThreadPool { 1 };
 };

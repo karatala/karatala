@@ -7,13 +7,13 @@
 #include <functional>
 #include <vector>
 
-class KitPage final : public juce::Component,
-                      private juce::Timer {
+class KitPage final : public juce::Component {
 public:
     explicit KitPage(DrumKitEngine& engine);
     ~KitPage() override;
 
     void refresh(const juce::String& activeInstrumentMapText);
+    void setPreviewVelocity(float velocity);
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
@@ -33,14 +33,12 @@ private:
         juce::String author;
         juce::String license;
         juce::String readmeMarkdown;
-        juce::String searchText;
     };
 
     struct PresetEntry {
         juce::File file;
         juce::String name;
         bool isUser = false;
-        juce::String searchText;
     };
 
     class SectionListModel final : public juce::ListBoxModel {
@@ -54,8 +52,6 @@ private:
         KitPage& owner;
     };
 
-    static constexpr int filterDebounceMs = 100;
-
     DrumKitEngine& engine;
     KitSection activeSection = KitSection::LibraryKits;
     juce::String currentMapText;
@@ -63,44 +59,38 @@ private:
     juce::String selectedPresetPath;
     juce::String activePresetPath;
     juce::String activePresetMapText;
+    bool previewUsesActiveMap = false;
     std::vector<AvailableLibraryArticulation> availableLibraryArticulations;
     std::vector<KitEntry> kits;
     std::vector<PresetEntry> presets;
-    std::vector<int> filteredIndexes;
+    std::vector<int> entryIndexes;
 
-    juce::Label titleLabel;
-    juce::TextButton kitsSectionButton { "LIBRARY KITS" };
+    juce::TextButton kitsSectionButton { "KITS" };
     juce::TextButton presetsSectionButton { "PRESETS" };
-    juce::TextEditor filterField;
     juce::ListBox sectionList;
     SectionListModel sectionListModel { *this };
     juce::Label infoTitleLabel;
-    juce::Label infoAuthorLabel;
-    juce::Label infoLicenseLabel;
     juce::TextEditor detailsEditor;
-    juce::Label previewLabel;
     juce::Viewport previewViewport;
     KitPreviewGrid previewGrid;
-    juce::TextButton loadButton { "LOAD KIT" };
-    juce::TextButton saveButton { "SAVE" };
-    juce::TextButton saveAsButton { "SAVE AS" };
-    juce::TextButton deleteButton { "DELETE" };
+    juce::TextButton primaryActionButton { "LOAD KIT" };
+    juce::TextButton moreButton { "..." };
 
     void setActiveSection(KitSection section);
     void rebuildLibraryEntries();
     void rebuildPresetEntries(const juce::String& preferredSelectionPath = {});
-    void rebuildFilteredEntries();
+    void rebuildListIndexes();
     void updateSelectedContent();
     void updateActionButtons();
     void updatePreviewGridSize();
-    void loadSelected();
+    void performPrimaryAction();
+    void showPresetActionsMenu();
     void loadSelectedKit();
     void loadSelectedPreset();
     void saveSelectedPreset();
     void savePresetAs();
     void deleteSelectedPreset();
     void reportStatus(const juce::String& message);
-    void timerCallback() override;
 
     const KitEntry* getSelectedKit() const;
     const PresetEntry* getSelectedPreset() const;
@@ -110,9 +100,9 @@ private:
     void setActivePreset(const PresetEntry& preset, const juce::String& mapText);
     void clearActivePreset();
     juce::File getUserPresetDirectory() const;
-    std::vector<KitPreviewGrid::ArticulationPad> buildKitArticulationPads(const KitEntry& kit) const;
-    std::vector<KitPreviewGrid::ArticulationPad> buildPresetArticulationPads(const juce::String& mapText) const;
-    static bool matchesFilter(const juce::String& searchText, const juce::String& filterText);
+    std::vector<KitPreviewGrid::PreviewInstrument> buildKitPreviewInstruments(const KitEntry& kit) const;
+    std::vector<KitPreviewGrid::PreviewInstrument> buildPresetPreviewInstruments(const juce::String& mapText) const;
+    std::vector<KitPreviewGrid::PreviewTarget> resolveDirectPreviewTargets(const std::vector<KitPreviewGrid::PreviewTarget>& targets, const juce::String& articulationCode) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KitPage)
 };

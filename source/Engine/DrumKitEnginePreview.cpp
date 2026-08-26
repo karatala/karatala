@@ -73,6 +73,8 @@ static bool isBetterPreviewSample(const KitLib::SampleSpec& candidate, const Kit
 }
 
 void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::String& artName, juce::uint8 velocity) {
+    this->previewGeneration.fetch_add(1, std::memory_order_acq_rel);
+    this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel);
     auto* layout = this->activeKitLayoutPtr.get();
     if (layout == nullptr)
         return;
@@ -108,6 +110,8 @@ void DrumKitEngine::playPreviewNote(const juce::String& slotId, const juce::Stri
 }
 
 void DrumKitEngine::playLayerPreview(const juce::String& slotId, const juce::String& artName, int layerIndex, juce::uint8 velocity) {
+    this->previewGeneration.fetch_add(1, std::memory_order_acq_rel);
+    this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel);
     if (layerIndex < 0) return;
     auto* layout = this->activeKitLayoutPtr.get();
     if (layout == nullptr) return;
@@ -140,6 +144,8 @@ void DrumKitEngine::playLayerPreview(const juce::String& slotId, const juce::Str
 }
 
 void DrumKitEngine::playPreviewArticulation(const juce::String& slotId, const juce::String& articulationCode, juce::uint8 velocity) {
+    this->previewGeneration.fetch_add(1, std::memory_order_acq_rel);
+    this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel);
     auto* layout = this->activeKitLayoutPtr.get();
     if (layout == nullptr) return;
 
@@ -200,6 +206,11 @@ bool DrumKitEngine::playLibraryLogicalHitPreview(const juce::String& slotId, con
 
 juce::ThreadPoolJob::JobStatus DrumKitEngine::PreviewResolveJob::runJob() {
     this->owner.resolveAndLoadPreviewTarget(std::move(this->cacheKey), this->kitCodeRaw, this->instCode, this->artCode, this->relativePath, this->micCode, this->resolveVelocity, this->playbackVelocity, this->generation);
+    return jobHasFinished;
+}
+
+juce::ThreadPoolJob::JobStatus DrumKitEngine::PreviewGroupResolveJob::runJob() {
+    this->owner.resolveAndLoadPreviewGroup(std::move(this->layers), this->velocity, this->playbackGain, this->generation);
     return jobHasFinished;
 }
 
@@ -315,51 +326,140 @@ std::optional<DrumKitEngine::PreviewTarget> DrumKitEngine::resolvePreviewTarget(
     return target;
 }
 
+std::shared_ptr<juce::AudioBuffer<float>> DrumKitEngine::preparePreviewBuffer(const PreviewTarget& target, const std::shared_ptr<juce::AudioBuffer<float>>& buffer, double sampleRate) const {
+    if (buffer == nullptr || buffer->getNumChannels() <= 0 || buffer->getNumSamples() <= 0 || sampleRate <= 0.0) return {};
+    const int sourceChannels = buffer->getNumChannels();
+    const int fileChannelStart = juce::jmax(0, target.fileChannelStart);
+    const int fileChannelCount = target.fileChannelCount;
+    const float playbackOffsetMs = target.playbackOffsetMs;
+    const int sourceStart = juce::jlimit(0, sourceChannels - 1, fileChannelStart);
+    const int availableChannels = sourceChannels - sourceStart;
+    const int selectedChannels = juce::jlimit(1, availableChannels, fileChannelCount > 0 ? fileChannelCount : availableChannels);
+    const int offsetSamples = juce::jmax(0, juce::roundToInt(std::abs(static_cast<double>(playbackOffsetMs)) * sampleRate / 1000.0));
+    const int sourceReadStart = playbackOffsetMs < 0.0f ? juce::jmin(offsetSamples, buffer->getNumSamples()) : 0;
+    const int destinationStart = playbackOffsetMs > 0.0f ? offsetSamples : 0;
+    const int samplesToCopy = buffer->getNumSamples() - sourceReadStart;
+    if (samplesToCopy <= 0) return {};
+
+    auto selectedBuffer = std::make_shared<juce::AudioBuffer<float>>(2, destinationStart + samplesToCopy);
+    selectedBuffer->clear();
+    selectedBuffer->copyFrom(0, destinationStart, *buffer, sourceStart, sourceReadStart, samplesToCopy);
+    if (selectedChannels >= 2) selectedBuffer->copyFrom(1, destinationStart, *buffer, sourceStart + 1, sourceReadStart, samplesToCopy);
+    else selectedBuffer->copyFrom(1, destinationStart, *buffer, sourceStart, sourceReadStart, samplesToCopy);
+    return selectedBuffer;
+}
+
 void DrumKitEngine::requestPreviewPlayback(const PreviewTarget& target, juce::uint8 velocity) {
     auto* loader = this->sampleLoaderPtr.get();
-
-    if (loader == nullptr || !target.sampleFile.existsAsFile())
-        return;
+    if (loader == nullptr || !target.sampleFile.existsAsFile()) return;
 
     const float gain = this->velocityResponse.getGain(velocity);
-
+    const uint64_t generation = this->previewGeneration.load(std::memory_order_acquire);
     SampleLoadSpec loadSpec;
     loadSpec.file = target.sampleFile;
     loadSpec.contentHash = target.contentHash;
     loadSpec.metadataFileSizeBytes = target.metadataFileSizeBytes;
     loadSpec.fixedGainDb = target.fixedGainDb;
 
-    const int fileChannelStart = juce::jmax(0, target.fileChannelStart);
-    const int fileChannelCount = target.fileChannelCount;
-    const float playbackOffsetMs = target.playbackOffsetMs;
-
-    loader->requestAsyncLoad(loadSpec, [this, gain, fileChannelStart, fileChannelCount, playbackOffsetMs](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
-        if (buffer == nullptr || buffer->getNumChannels() <= 0 || buffer->getNumSamples() <= 0) return;
-
-        const int sourceChannels = buffer->getNumChannels();
-        const int sourceStart = juce::jlimit(0, sourceChannels - 1, fileChannelStart);
-        const int availableChannels = sourceChannels - sourceStart;
-        const int selectedChannels = juce::jlimit(1, availableChannels, fileChannelCount > 0 ? fileChannelCount : availableChannels);
-        const int offsetSamples = juce::jmax(0, juce::roundToInt(std::abs(static_cast<double>(playbackOffsetMs)) * sampleRate / 1000.0));
-        const int sourceReadStart = playbackOffsetMs < 0.0f ? juce::jmin(offsetSamples, buffer->getNumSamples()) : 0;
-        const int destinationStart = playbackOffsetMs > 0.0f ? offsetSamples : 0;
-        const int samplesToCopy = buffer->getNumSamples() - sourceReadStart;
-        if (samplesToCopy <= 0) return;
-
-        auto selectedBuffer = std::make_shared<juce::AudioBuffer<float>>(2, destinationStart + samplesToCopy);
-        selectedBuffer->clear();
-        selectedBuffer->copyFrom(0, destinationStart, *buffer, sourceStart, sourceReadStart, samplesToCopy);
-        if (selectedChannels >= 2)
-            selectedBuffer->copyFrom(1, destinationStart, *buffer, sourceStart + 1, sourceReadStart, samplesToCopy);
-        else
-            selectedBuffer->copyFrom(1, destinationStart, *buffer, sourceStart, sourceReadStart, samplesToCopy);
-
+    loader->requestAsyncLoad(loadSpec, [this, target, gain, generation](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+        if (this->previewGeneration.load(std::memory_order_acquire) != generation) return;
+        auto selectedBuffer = this->preparePreviewBuffer(target, buffer, sampleRate);
+        if (selectedBuffer == nullptr) return;
         const juce::SpinLock::ScopedLockType scopedLock(this->previewLock);
+        if (this->previewGeneration.load(std::memory_order_acquire) != generation) return;
         this->previewBuffer = std::move(selectedBuffer);
         this->previewSampleRate = sampleRate;
         this->previewGain = gain;
         this->previewReadPos.store(0);
     });
+}
+
+void DrumKitEngine::resolveAndLoadPreviewGroup(std::vector<LibraryPreviewLayer> layers, juce::uint8 velocity, float playbackGain, uint64_t generation) {
+    auto* loader = this->sampleLoaderPtr.get();
+    if (loader == nullptr || this->previewGeneration.load(std::memory_order_acquire) != generation) return;
+
+    std::vector<std::pair<PreviewTarget, float>> resolvedLayers;
+    resolvedLayers.reserve(layers.size());
+    const auto resolveVelocity = getPreviewVelocityForBucket(velocity);
+    for (const auto& layer : layers) {
+        if (this->previewGeneration.load(std::memory_order_acquire) != generation) return;
+        auto target = this->resolvePreviewTarget(layer.kitId, layer.instrumentId, layer.articulationId, resolveVelocity, {}, {});
+        if (target.has_value()) resolvedLayers.emplace_back(std::move(*target), juce::Decibels::decibelsToGain(layer.gainDb));
+    }
+    if (resolvedLayers.empty() || this->previewGeneration.load(std::memory_order_acquire) != generation) return;
+
+    auto state = std::make_shared<PreviewGroupLoadState>();
+    state->remainingLoads = static_cast<int>(resolvedLayers.size());
+    state->playbackGain = playbackGain;
+    state->generation = generation;
+    for (auto& [target, layerGain] : resolvedLayers) {
+        SampleLoadSpec loadSpec;
+        loadSpec.file = target.sampleFile;
+        loadSpec.contentHash = target.contentHash;
+        loadSpec.metadataFileSizeBytes = target.metadataFileSizeBytes;
+        loadSpec.fixedGainDb = target.fixedGainDb;
+        loader->requestAsyncLoad(loadSpec, [this, state, target, layerGain](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+            this->completePreviewGroupLayer(state, this->preparePreviewBuffer(target, buffer, sampleRate), sampleRate, layerGain);
+        });
+    }
+}
+
+void DrumKitEngine::completePreviewGroupLayer(const std::shared_ptr<PreviewGroupLoadState>& state, std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate, float gain) {
+    bool groupIsComplete = false;
+    {
+        const juce::ScopedLock stateLock(state->lock);
+        if (this->previewGeneration.load(std::memory_order_acquire) != state->generation) return;
+        if (buffer != nullptr) state->loadedLayers.push_back({ std::move(buffer), sampleRate, gain });
+        --state->remainingLoads;
+        groupIsComplete = state->remainingLoads == 0;
+    }
+    if (groupIsComplete) this->publishPreviewGroup(state);
+}
+
+void DrumKitEngine::publishPreviewGroup(const std::shared_ptr<PreviewGroupLoadState>& state) {
+    if (this->previewGeneration.load(std::memory_order_acquire) != state->generation) return;
+    std::vector<LoadedPreviewLayer> loadedLayers;
+    {
+        const juce::ScopedLock stateLock(state->lock);
+        loadedLayers = state->loadedLayers;
+    }
+    if (loadedLayers.empty()) return;
+
+    double outputSampleRate = 0.0;
+    for (const auto& layer : loadedLayers) outputSampleRate = juce::jmax(outputSampleRate, layer.sampleRate);
+    if (outputSampleRate <= 0.0) return;
+    int outputSampleCount = 0;
+    for (const auto& layer : loadedLayers) {
+        if (layer.buffer == nullptr || layer.sampleRate <= 0.0) continue;
+        outputSampleCount = juce::jmax(outputSampleCount, juce::roundToInt(static_cast<double>(layer.buffer->getNumSamples()) * outputSampleRate / layer.sampleRate));
+    }
+    if (outputSampleCount <= 0) return;
+
+    auto mixedBuffer = std::make_shared<juce::AudioBuffer<float>>(2, outputSampleCount);
+    mixedBuffer->clear();
+    for (const auto& layer : loadedLayers) {
+        if (layer.buffer == nullptr || layer.sampleRate <= 0.0) continue;
+        const int layerOutputSamples = juce::jmin(outputSampleCount, juce::roundToInt(static_cast<double>(layer.buffer->getNumSamples()) * outputSampleRate / layer.sampleRate));
+        const double sourceStep = layer.sampleRate / outputSampleRate;
+        for (int channelIndex = 0; channelIndex < 2; ++channelIndex) {
+            const auto* sourceData = layer.buffer->getReadPointer(juce::jmin(channelIndex, layer.buffer->getNumChannels() - 1));
+            auto* destinationData = mixedBuffer->getWritePointer(channelIndex);
+            for (int sampleIndex = 0; sampleIndex < layerOutputSamples; ++sampleIndex) {
+                const double sourcePosition = static_cast<double>(sampleIndex) * sourceStep;
+                const int sourceIndex = juce::jmin(static_cast<int>(sourcePosition), layer.buffer->getNumSamples() - 1);
+                const int nextSourceIndex = juce::jmin(sourceIndex + 1, layer.buffer->getNumSamples() - 1);
+                const float interpolation = static_cast<float>(sourcePosition - static_cast<double>(sourceIndex));
+                destinationData[sampleIndex] += juce::jmap(interpolation, sourceData[sourceIndex], sourceData[nextSourceIndex]) * layer.gain;
+            }
+        }
+    }
+
+    const juce::SpinLock::ScopedLockType previewScopedLock(this->previewLock);
+    if (this->previewGeneration.load(std::memory_order_acquire) != state->generation) return;
+    this->previewBuffer = std::move(mixedBuffer);
+    this->previewSampleRate = outputSampleRate;
+    this->previewGain = state->playbackGain;
+    this->previewReadPos.store(0);
 }
 
 void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey, const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, const juce::String& relativePath, const juce::String& micCode, juce::uint8 resolveVelocity, juce::uint8 playbackVelocity, uint64_t generation) {
@@ -379,13 +479,15 @@ void DrumKitEngine::resolveAndLoadPreviewTarget(std::string cacheKey, const juce
 
 
 void DrumKitEngine::previewLibraryArticulation(const juce::String& kitCodeRaw, const juce::String& instCode, const juce::String& artCode, juce::uint8 velocity, const juce::String& relativePath, const juce::String& micCode) {
+    this->previewGeneration.fetch_add(1, std::memory_order_acq_rel);
     const auto cacheKey = this->makePreviewTargetCacheKey(kitCodeRaw, instCode, artCode, velocity, relativePath, micCode);
     uint64_t generation = 0;
     std::optional<PreviewTarget> cachedTarget;
 
     {
         const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
-        generation = this->previewTargetGeneration.load(std::memory_order_acquire);
+        generation = this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+        this->pendingPreviewTargetKeys.clear();
         auto it = this->previewTargetCache.find(cacheKey);
         if (it != this->previewTargetCache.end())
             cachedTarget = it->second;
@@ -400,4 +502,16 @@ void DrumKitEngine::previewLibraryArticulation(const juce::String& kitCodeRaw, c
 
     const auto resolveVelocity = getPreviewVelocityForBucket(velocity);
     this->previewResolveThreadPool.addJob(new PreviewResolveJob(*this, cacheKey, kitCodeRaw, instCode, artCode, relativePath, micCode, resolveVelocity, velocity, generation), true);
+}
+
+void DrumKitEngine::previewLibraryArticulationGroup(const std::vector<LibraryPreviewLayer>& layers, juce::uint8 velocity) {
+    if (layers.empty()) return;
+    const uint64_t generation = this->previewGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
+    const float playbackGain = this->velocityResponse.getGain(velocity);
+    {
+        const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);
+        this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel);
+        this->pendingPreviewTargetKeys.clear();
+    }
+    this->previewResolveThreadPool.addJob(new PreviewGroupResolveJob(*this, layers, velocity, playbackGain, generation), true);
 }

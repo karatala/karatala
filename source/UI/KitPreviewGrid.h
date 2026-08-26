@@ -1,57 +1,47 @@
 #pragma once
 
 #include "AvailableLibraryArticulation.h"
+#include "DrumPad.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
+#include <memory>
 #include <vector>
 
-class KitPreviewGrid final : public juce::Component,
-                             private juce::Timer {
+class KitPreviewGrid final : public juce::Component {
 public:
-    struct ArticulationPad {
-        juce::String groupId;
-        juce::String groupTitle;
+    struct PreviewTarget {
         AvailableLibraryArticulation libraryArticulation;
+        float gainDb = 0.0f;
+    };
+
+    struct PreviewInstrument {
+        KitLayout::InstrumentSlot slot;
+        std::vector<std::vector<PreviewTarget>> articulationTargets;
     };
 
     KitPreviewGrid() = default;
     ~KitPreviewGrid() override = default;
 
-    void setArticulationPads(std::vector<ArticulationPad> newArticulationPads);
+    void setPreviewInstruments(std::vector<PreviewInstrument> newPreviewInstruments);
     int getPreferredHeight(int availableWidth);
+    int getHeightForRows(int rowCount) const;
     void paint(juce::Graphics& graphics) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent& event) override;
+    void setClickVelocity(float velocity);
 
-    std::function<void(const AvailableLibraryArticulation&, juce::uint8)> onLibraryArticulationPreview;
+    std::function<void(const juce::String& slotId, const juce::String& articulationCode, bool useDirectPreview, const std::vector<PreviewTarget>& targets, juce::uint8 velocity)> onPreview;
 
 private:
-    struct ArticulationGroupBounds {
-        size_t firstArticulationPadIndex = 0;
-        juce::Rectangle<int> bounds;
-        juce::Rectangle<int> titleBounds;
-    };
+    static constexpr int padGap = 3;
+    static constexpr int preferredPadWidth = 120;
+    static constexpr int padHeight = 72;
 
-    struct ArticulationPadBounds {
-        size_t articulationPadIndex = 0;
-        juce::Rectangle<int> bounds;
-    };
+    std::vector<PreviewInstrument> previewInstruments;
+    std::vector<std::unique_ptr<DrumPad>> pads;
+    float clickVelocity = 100.0f;
 
-    static constexpr int cardPadding = 4;
-    static constexpr int groupGap = 6;
-    static constexpr int groupHeaderHeight = 18;
-    static constexpr int minimumPadWidth = 72;
-    static constexpr int padGap = 4;
-    static constexpr int padHeight = 26;
-    static constexpr int preferredGroupWidth = 180;
-
-    std::vector<ArticulationPad> articulationPads;
-    std::vector<ArticulationGroupBounds> articulationGroupBounds;
-    std::vector<ArticulationPadBounds> articulationPadBounds;
-    int flashedArticulationPadIndex = -1;
-
-    int layoutArticulationPads(int availableWidth, bool storeBounds);
-    void timerCallback() override;
+    int getColumnCount(int availableWidth) const;
+    void rebuildPads();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(KitPreviewGrid)
 };

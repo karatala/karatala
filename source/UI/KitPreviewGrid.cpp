@@ -1,147 +1,76 @@
 #include "KitPreviewGrid.h"
 
 #include "UITheme.h"
-#include <cmath>
 #include <utility>
 
-void KitPreviewGrid::setArticulationPads(std::vector<ArticulationPad> newArticulationPads) {
-    this->articulationPads = std::move(newArticulationPads);
-    this->flashedArticulationPadIndex = -1;
-    this->resized();
+void KitPreviewGrid::setPreviewInstruments(std::vector<PreviewInstrument> newPreviewInstruments) {
+    this->previewInstruments = std::move(newPreviewInstruments);
+    this->rebuildPads();
     this->repaint();
 }
 
 int KitPreviewGrid::getPreferredHeight(int availableWidth) {
-    return this->layoutArticulationPads(availableWidth, false);
+    if (this->previewInstruments.empty()) return 48;
+    const int columnCount = this->getColumnCount(availableWidth);
+    const int rowCount = (static_cast<int>(this->previewInstruments.size()) + columnCount - 1) / columnCount;
+    return this->getHeightForRows(rowCount);
 }
 
-int KitPreviewGrid::layoutArticulationPads(int availableWidth, bool storeBounds) {
-    if (storeBounds) {
-        this->articulationGroupBounds.clear();
-        this->articulationPadBounds.clear();
-    }
-    if (this->articulationPads.empty()) return 48;
+int KitPreviewGrid::getHeightForRows(int rowCount) const {
+    const int clampedRowCount = juce::jmax(0, rowCount);
+    return this->padGap * 2 + clampedRowCount * this->padHeight + juce::jmax(0, clampedRowCount - 1) * this->padGap;
+}
 
-    const int contentWidth = juce::jmax(this->minimumPadWidth + this->cardPadding * 2, availableWidth - this->padGap * 2);
-    const int groupColumnCount = juce::jmax(1, (contentWidth + this->groupGap) / (this->preferredGroupWidth + this->groupGap));
-    const int groupWidth = (contentWidth - (groupColumnCount - 1) * this->groupGap) / groupColumnCount;
-    int currentY = this->padGap;
-    size_t articulationPadIndex = 0;
-
-    while (articulationPadIndex < this->articulationPads.size()) {
-        struct GroupLayout {
-            size_t firstArticulationPadIndex = 0;
-            int padCount = 0;
-            int padColumnCount = 1;
-            int height = 0;
-        };
-        std::vector<GroupLayout> rowGroups;
-        rowGroups.reserve(static_cast<size_t>(groupColumnCount));
-        int rowHeight = 0;
-
-        while (articulationPadIndex < this->articulationPads.size() && static_cast<int>(rowGroups.size()) < groupColumnCount) {
-            GroupLayout groupLayout;
-            groupLayout.firstArticulationPadIndex = articulationPadIndex;
-            const auto groupId = this->articulationPads[articulationPadIndex].groupId;
-            while (articulationPadIndex + static_cast<size_t>(groupLayout.padCount) < this->articulationPads.size()
-                   && this->articulationPads[articulationPadIndex + static_cast<size_t>(groupLayout.padCount)].groupId == groupId) ++groupLayout.padCount;
-
-            const int padAreaWidth = groupWidth - this->cardPadding * 2;
-            const int availablePadColumns = juce::jmax(1, (padAreaWidth + this->padGap) / (this->minimumPadWidth + this->padGap));
-            groupLayout.padColumnCount = juce::jmin(groupLayout.padCount, availablePadColumns);
-            const int padRowCount = static_cast<int>(std::ceil(static_cast<double>(groupLayout.padCount) / static_cast<double>(groupLayout.padColumnCount)));
-            groupLayout.height = this->cardPadding + this->groupHeaderHeight + padRowCount * this->padHeight + juce::jmax(0, padRowCount - 1) * this->padGap + this->cardPadding;
-            rowHeight = juce::jmax(rowHeight, groupLayout.height);
-            rowGroups.push_back(groupLayout);
-            articulationPadIndex += static_cast<size_t>(groupLayout.padCount);
-        }
-
-        for (int groupColumnIndex = 0; groupColumnIndex < static_cast<int>(rowGroups.size()); ++groupColumnIndex) {
-            const auto& groupLayout = rowGroups[static_cast<size_t>(groupColumnIndex)];
-            const int groupX = this->padGap + groupColumnIndex * (groupWidth + this->groupGap);
-            const int padAreaX = groupX + this->cardPadding;
-            const int padAreaY = currentY + this->cardPadding + this->groupHeaderHeight;
-            const int padAreaWidth = groupWidth - this->cardPadding * 2;
-            const int padWidth = (padAreaWidth - (groupLayout.padColumnCount - 1) * this->padGap) / groupLayout.padColumnCount;
-
-            if (storeBounds) {
-                ArticulationGroupBounds groupBounds;
-                groupBounds.firstArticulationPadIndex = groupLayout.firstArticulationPadIndex;
-                groupBounds.bounds = { groupX, currentY, groupWidth, groupLayout.height };
-                groupBounds.titleBounds = { padAreaX, currentY + this->cardPadding, padAreaWidth, this->groupHeaderHeight };
-                this->articulationGroupBounds.push_back(groupBounds);
-
-                for (int groupPadIndex = 0; groupPadIndex < groupLayout.padCount; ++groupPadIndex) {
-                    const int padColumnIndex = groupPadIndex % groupLayout.padColumnCount;
-                    const int padRowIndex = groupPadIndex / groupLayout.padColumnCount;
-                    ArticulationPadBounds padBounds;
-                    padBounds.articulationPadIndex = groupLayout.firstArticulationPadIndex + static_cast<size_t>(groupPadIndex);
-                    padBounds.bounds = { padAreaX + padColumnIndex * (padWidth + this->padGap), padAreaY + padRowIndex * (this->padHeight + this->padGap), padWidth, this->padHeight };
-                    this->articulationPadBounds.push_back(padBounds);
-                }
-            }
-        }
-
-        currentY += rowHeight + this->groupGap;
-    }
-
-    return currentY - this->groupGap + this->padGap;
+int KitPreviewGrid::getColumnCount(int availableWidth) const {
+    const int contentWidth = juce::jmax(1, availableWidth - this->padGap * 2);
+    return juce::jmax(1, (contentWidth + this->padGap) / (this->preferredPadWidth + this->padGap));
 }
 
 void KitPreviewGrid::resized() {
-    this->layoutArticulationPads(this->getWidth(), true);
+    if (this->pads.empty()) return;
+    const int columnCount = this->getColumnCount(this->getWidth());
+    const int contentWidth = juce::jmax(1, this->getWidth() - this->padGap * 2);
+    const int padWidth = (contentWidth - juce::jmax(0, columnCount - 1) * this->padGap) / columnCount;
+    for (int padIndex = 0; padIndex < static_cast<int>(this->pads.size()); ++padIndex) {
+        const int columnIndex = padIndex % columnCount;
+        const int rowIndex = padIndex / columnCount;
+        this->pads[static_cast<size_t>(padIndex)]->setBounds(this->padGap + columnIndex * (padWidth + this->padGap), this->padGap + rowIndex * (this->padHeight + this->padGap), padWidth, this->padHeight);
+    }
 }
 
 void KitPreviewGrid::paint(juce::Graphics& graphics) {
     graphics.fillAll(UITheme::Colours::bgEditor);
-    if (this->articulationPads.empty()) {
+    if (this->previewInstruments.empty()) {
         graphics.setColour(UITheme::Colours::textMuted);
         graphics.setFont(UITheme::Fonts::normal());
         graphics.drawText("No instruments to preview", this->getLocalBounds().reduced(8), juce::Justification::centred);
-        return;
-    }
-
-    for (const auto& groupBounds : this->articulationGroupBounds) {
-        if (groupBounds.firstArticulationPadIndex >= this->articulationPads.size()) continue;
-        const auto& articulationPad = this->articulationPads[groupBounds.firstArticulationPadIndex];
-        graphics.setColour(UITheme::Colours::bgControlAlt);
-        graphics.fillRoundedRectangle(groupBounds.bounds.toFloat(), 3.0f);
-        graphics.setColour(UITheme::Colours::textSecondary);
-        graphics.setFont(UITheme::Fonts::small());
-        graphics.drawFittedText(articulationPad.groupTitle, groupBounds.titleBounds, juce::Justification::centredLeft, 1, 0.7f);
-    }
-
-    for (const auto& padBounds : this->articulationPadBounds) {
-        if (padBounds.articulationPadIndex >= this->articulationPads.size()) continue;
-        const auto& articulationPad = this->articulationPads[padBounds.articulationPadIndex];
-        auto colour = UITheme::Colours::instrumentType(articulationPad.libraryArticulation.instType);
-        if (static_cast<int>(padBounds.articulationPadIndex) == this->flashedArticulationPadIndex) colour = colour.brighter(0.65f);
-        graphics.setColour(colour.withMultipliedBrightness(0.58f));
-        graphics.fillRoundedRectangle(padBounds.bounds.toFloat(), 3.0f);
-        graphics.setColour(colour.brighter(0.35f));
-        graphics.drawRoundedRectangle(padBounds.bounds.toFloat().reduced(0.5f), 3.0f, 1.0f);
-        graphics.setColour(UITheme::Colours::textPrimary);
-        graphics.setFont(UITheme::Fonts::normal());
-        const auto label = articulationPad.libraryArticulation.artCode.isNotEmpty() ? articulationPad.libraryArticulation.artCode : juce::String("(default)");
-        graphics.drawFittedText(label, padBounds.bounds.reduced(6, 2), juce::Justification::centred, 1);
     }
 }
 
-void KitPreviewGrid::mouseDown(const juce::MouseEvent& event) {
-    for (const auto& padBounds : this->articulationPadBounds) {
-        if (!padBounds.bounds.contains(event.getPosition()) || padBounds.articulationPadIndex >= this->articulationPads.size()) continue;
-        this->flashedArticulationPadIndex = static_cast<int>(padBounds.articulationPadIndex);
-        this->repaint(padBounds.bounds.expanded(1));
-        this->startTimer(160);
-        const float positionRatio = juce::jlimit(0.0f, 1.0f, static_cast<float>(event.getPosition().getX() - padBounds.bounds.getX()) / static_cast<float>(juce::jmax(1, padBounds.bounds.getWidth())));
-        const auto velocity = static_cast<juce::uint8>(juce::jlimit(1, 127, static_cast<int>(positionRatio * 127.0f)));
-        if (this->onLibraryArticulationPreview) this->onLibraryArticulationPreview(this->articulationPads[padBounds.articulationPadIndex].libraryArticulation, velocity);
-        return;
-    }
+void KitPreviewGrid::setClickVelocity(float velocity) {
+    this->clickVelocity = juce::jlimit(1.0f, 127.0f, velocity);
+    for (auto& pad : this->pads) pad->setClickVelocity(this->clickVelocity);
 }
 
-void KitPreviewGrid::timerCallback() {
-    this->stopTimer();
-    this->flashedArticulationPadIndex = -1;
-    this->repaint();
+void KitPreviewGrid::rebuildPads() {
+    this->pads.clear();
+    this->pads.reserve(this->previewInstruments.size());
+    for (int previewInstrumentIndex = 0; previewInstrumentIndex < static_cast<int>(this->previewInstruments.size()); ++previewInstrumentIndex) {
+        auto pad = std::make_unique<DrumPad>();
+        pad->setSlot(&this->previewInstruments[static_cast<size_t>(previewInstrumentIndex)].slot);
+        pad->setPadGap(1);
+        pad->setVisualScale(0.5f);
+        pad->setClickVelocity(this->clickVelocity);
+        auto* padPointer = pad.get();
+        pad->onPadClicked = [this, previewInstrumentIndex, padPointer](const KitLayout::InstrumentSlot* slot, int articulationIndex, const juce::String& previewArticulationCode, bool useDirectPreview, float velocity) {
+            if (slot == nullptr || articulationIndex < 0 || previewInstrumentIndex < 0 || previewInstrumentIndex >= static_cast<int>(this->previewInstruments.size())) return;
+            const auto& previewInstrument = this->previewInstruments[static_cast<size_t>(previewInstrumentIndex)];
+            if (articulationIndex >= static_cast<int>(previewInstrument.articulationTargets.size())) return;
+            padPointer->flash(velocity);
+            if (this->onPreview) this->onPreview(slot->id, previewArticulationCode, useDirectPreview, previewInstrument.articulationTargets[static_cast<size_t>(articulationIndex)], static_cast<juce::uint8>(velocity));
+        };
+        this->addAndMakeVisible(*pad);
+        this->pads.push_back(std::move(pad));
+    }
+    this->resized();
 }

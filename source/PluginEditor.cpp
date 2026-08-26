@@ -37,6 +37,7 @@ PluginEditor::PluginEditor(PluginProcessor& p)
 
 void PluginEditor::setupKitPage() {
     this->kitPage = std::make_unique<KitPage>(this->processorRef.getEngine());
+    this->kitPage->setPreviewVelocity(static_cast<float>(this->sidebar.velocityKnob.getValue()));
     this->addChildComponent(*this->kitPage);
     this->kitPage->onStatusMessage = [this](const juce::String& message) {
         this->statusBar.setStatusText(message);
@@ -110,6 +111,7 @@ void PluginEditor::setupDrumPadGridPage() {
 void PluginEditor::setupSidebarKnobs() {
     this->sidebar.velocityKnob.onValueChange = [this] {
         this->drumPadGrid.setClickVelocity(static_cast<float>(this->sidebar.velocityKnob.getValue()));
+        this->kitPage->setPreviewVelocity(static_cast<float>(this->sidebar.velocityKnob.getValue()));
         this->sidebar.updateKnobLabels();
     };
 

@@ -278,6 +278,7 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::resetLibraryV
 }
 
 void DrumKitEngine::invalidateLibraryPreviewCache() {
+    this->previewGeneration.fetch_add(1, std::memory_order_acq_rel);
     this->previewTargetGeneration.fetch_add(1, std::memory_order_acq_rel);
     this->previewResolveThreadPool.removeAllJobs(true, 2000);
     const juce::ScopedLock resolutionLock(this->previewTargetResolutionLock);

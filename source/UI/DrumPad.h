@@ -23,6 +23,7 @@ public:
     float getClickVelocity() const { return this->clickVelocity; }
     void setClickVelocity(float vel) { this->clickVelocity = vel; }
     void setPadGap(int gap) { this->padGap = gap; repaint(); }
+    void setVisualScale(float scale) { this->visualScale = juce::jlimit(0.5f, 1.0f, scale); this->repaint(); }
 
 private:
     struct ArticulationCell {
@@ -37,6 +38,7 @@ private:
     std::vector<int> displayOrder;
     float clickVelocity = 100.0f;
     float flashAlpha = 0.0f;
+    float visualScale = 1.0f;
     int padGap = 0;
 
     static juce::Colour getColourForType(KitLib::InstrumentSpec::Type type);
@@ -47,6 +49,8 @@ private:
     std::vector<ArticulationCell> buildArticulationCells(const juce::Rectangle<int>& bounds) const;
     std::vector<ArticulationCell> buildHiHatCells(const juce::Rectangle<int>& bounds) const;
     std::optional<ArticulationCell> getCellAt(juce::Point<int> position) const;
+    int getScaledSize(int size) const;
+    float getScaledFontHeight(float height) const;
     void timerCallback() override;
 
     static constexpr int flashFadeDurationMs = 240;
