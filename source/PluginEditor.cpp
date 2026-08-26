@@ -374,7 +374,9 @@ void PluginEditor::refreshDrumPadGridIfNeeded(bool force) {
     if (!force && !this->drumPadGrid.isVisible())
         return;
 
-    this->drumPadGrid.populate(this->processorRef.getEngine().getKitLayout());
+    auto& engine = this->processorRef.getEngine();
+    this->drumPadGrid.populate(engine.getKitLayout());
+    this->drumPadGrid.setLoadProgressSources(engine.getInstrumentLoadProgressSources());
     this->drumPadGridDirty = false;
 }
 

@@ -336,6 +336,17 @@ bool DrumKitEngine::applyMicLayout() {
     return this->applyMicLayoutUnlocked();
 }
 
+std::vector<InstrumentLoadProgressSource> DrumKitEngine::getInstrumentLoadProgressSources() const {
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+    std::vector<InstrumentLoadProgressSource> result;
+    result.reserve(this->instrumentPlayerPtrs.size());
+    for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
+        if (instrumentPlayer == nullptr) continue;
+        result.push_back({ instrumentPlayer->getId(), instrumentPlayer->getLoadProgress() });
+    }
+    return result;
+}
+
 bool DrumKitEngine::applyMicLayoutUnlocked() {
     if (this->activeMicLayoutPtr == nullptr) {
         LOG(Warning, "mic layout was not set");

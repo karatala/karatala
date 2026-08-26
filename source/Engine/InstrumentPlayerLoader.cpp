@@ -104,6 +104,7 @@ void InstrumentPlayer::ArticulationRuntime::buildFloatingCandidateWindows() {
 }
 
 void InstrumentPlayer::unloadInstrument() {
+    this->loadProgress->reset();
     this->runtimeArticulations.clear();
     this->resetRoutingTables();
     this->aftertouchChokeTransitionCommitted = {};
@@ -351,6 +352,8 @@ void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec&
                     loadSpec.metadataFileSizeBytes = sampleSpec->metadataFileSizeBytes;
                     loadSpec.fixedGainDb = sampleSpec->manualGainDb + calibrationTrimDb;
                     const auto readiness = logicalHit.readiness;
+                    const auto loadingProgress = this->loadProgress;
+                    const uint64_t loadProgressRevision = loadingProgress->registerRequest();
 
                     loader->getQueue().enqueueCandidate(
                         loadSpec,
@@ -359,7 +362,8 @@ void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec&
                         velocityLevel.velocity,
                         logicalHit.roundRobinId,
                         logicalHit.earlyLoad,
-                        [this, weakSound, readiness, recipeRevision, fixedGainDb = loadSpec.fixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
+                        [this, weakSound, readiness, recipeRevision, loadingProgress, loadProgressRevision, fixedGainDb = loadSpec.fixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
+                            loadingProgress->markFinished(loadProgressRevision);
                             auto soundLocked = weakSound.lock();
                             if (soundLocked == nullptr || this->parent == nullptr) return;
                             const bool published = this->parent->publishSourceRecipeReload(soundLocked, recipeRevision, fixedGainDb, std::move(buffer), loadedSampleRate);

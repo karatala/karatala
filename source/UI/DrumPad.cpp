@@ -33,6 +33,13 @@ void DrumPad::setSlot(const KitLayout::InstrumentSlot* slot) {
     repaint();
 }
 
+void DrumPad::setLoadProgress(std::optional<float> progress) {
+    if (progress.has_value()) progress = juce::jlimit(0.0f, 1.0f, *progress);
+    if (this->loadProgress == progress) return;
+    this->loadProgress = progress;
+    this->repaint();
+}
+
 void DrumPad::refreshDisplayOrder() { //FIXME: get rid of display order, we will keep default order as it was specified in kit layout yaml
     this->displayOrder.clear();
     if (!this->slotPtr || this->slotPtr->articulations.empty())
@@ -160,6 +167,12 @@ void DrumPad::paintInstrumentTitle(juce::Graphics& g, const juce::Rectangle<int>
     g.fillRect(bounds);
     g.setColour(UITheme::Colours::separator);
     g.drawVerticalLine(bounds.getRight() - 1, static_cast<float>(bounds.getY()), static_cast<float>(bounds.getBottom()));
+    if (this->loadProgress.has_value()) {
+        const int progressHeight = juce::jmax(1, juce::roundToInt(static_cast<float>(bounds.getHeight()) * *this->loadProgress));
+        const int progressWidth = this->getScaledSize(2);
+        g.setColour(UITheme::Colours::textPrimary);
+        g.fillRect(bounds.getRight() - progressWidth, bounds.getBottom() - progressHeight, progressWidth, progressHeight);
+    }
 
     juce::Graphics::ScopedSaveState saveState(g);
     g.addTransform(juce::AffineTransform::rotation(juce::MathConstants<float>::halfPi).translated(static_cast<float>(bounds.getRight()), static_cast<float>(bounds.getY())));

@@ -1,8 +1,10 @@
 #include "DrumPadGrid.h"
 #include <array>
 #include <cmath>
+#include <utility>
 
 DrumPadGrid::DrumPadGrid() {
+    this->startTimerHz(loadProgressTimerHz);
 }
 
 void DrumPadGrid::populate(const KitLayout* layout) {
@@ -112,6 +114,30 @@ void DrumPadGrid::setPadGap(int gap) {
 void DrumPadGrid::setClickVelocity(float velocity) {
     for (auto& pad : this->pads)
         pad->setClickVelocity(velocity);
+}
+
+void DrumPadGrid::setLoadProgressSources(std::vector<InstrumentLoadProgressSource> sources) {
+    this->loadProgressSources = std::move(sources);
+    this->updateLoadProgress();
+}
+
+void DrumPadGrid::timerCallback() {
+    if (this->isShowing()) this->updateLoadProgress();
+}
+
+void DrumPadGrid::updateLoadProgress() {
+    for (int padIndex = 0; padIndex < static_cast<int>(this->pads.size()) && padIndex < static_cast<int>(this->padSlotIds.size()); ++padIndex) {
+        const auto& slotId = this->padSlotIds[static_cast<size_t>(padIndex)];
+        int finishedCount = 0;
+        int totalCount = 0;
+        for (const auto& source : this->loadProgressSources) {
+            if (source.slotId != slotId || source.progress == nullptr) continue;
+            finishedCount += source.progress->getFinishedCount();
+            totalCount += source.progress->getTotalCount();
+        }
+        const bool loading = totalCount > 0 && finishedCount < totalCount;
+        this->pads[static_cast<size_t>(padIndex)]->setLoadProgress(loading ? std::optional<float>(static_cast<float>(finishedCount) / static_cast<float>(totalCount)) : std::nullopt);
+    }
 }
 
 void DrumPadGrid::flashPad(const juce::String& slotId, float velocity) {

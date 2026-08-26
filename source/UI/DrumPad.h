@@ -15,6 +15,7 @@ public:
     void mouseDown(const juce::MouseEvent& event) override;
 
     void setSlot(const KitLayout::InstrumentSlot* slot);
+    void setLoadProgress(std::optional<float> progress);
     void flash(float velocity);
 
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, const juce::String& previewArticulationCode, bool useDirectPreview, float velocity)> onPadClicked;
@@ -38,6 +39,7 @@ private:
     std::vector<int> displayOrder;
     float clickVelocity = 100.0f;
     float flashAlpha = 0.0f;
+    std::optional<float> loadProgress;
     float visualScale = 1.0f;
     int padGap = 0;
 

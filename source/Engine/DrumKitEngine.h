@@ -206,6 +206,7 @@ public:
     // a mic whose instrument field names a known slot is exclusive to that slot and
     // must not spill into other slots via type fallback.
     bool hasLayoutSlotId(const juce::String& id) const { return this->instrumentPlayerById.find(id) != this->instrumentPlayerById.end(); }
+    std::vector<InstrumentLoadProgressSource> getInstrumentLoadProgressSources() const;
 
     const int getLatestContinuousControllerValue(const int ccNum) const {
         if (ccNum < 0 || ccNum > 127) return 0;

@@ -21,6 +21,7 @@
 - Keep persistence debounced and outside the audio thread.
 - Preserve keyboard, tooltip, and resize behavior when adding controls.
 - Zone pads use a vertical instrument-name rail, equal rows for normal articulations, and a Hi-Hat grid ordered tight/close/half/open with pedal as a full-width bottom row. Painting and hit testing must share the same cell geometry. Hi-Hat states without their own MIDI note stay visible and preview the loaded controller sibling directly without sending CC.
+- While a Zone instrument is loading, the existing right separator of its vertical name rail shows a 2 px white progress segment growing from bottom to top. The segment represents all primary and additional map-layer sample requests for that instrument slot and disappears when loading completes. One `DrumPadGrid` timer reads shared atomic counters; individual pads do not poll the engine.
 - Instrument-map editors preserve exact hi-hat articulation-slot expressions such as `bow[open]` and `bow[tight]`. When an editor changes a legacy base articulation slot, it can anchor the library-articulation family to the matching slot expression. It must not change an explicit remap.
 - Pad-popup mic routing shows output names but selects and saves each mic-layout output's stable semantic ID, so repeated output codes remain separate choices across layout reordering.
 - Pad-popup routing choices use the engine's mic-output matcher, including independent type and position wildcards such as `**m`, `*tm`, and `d*m`.

@@ -24,6 +24,38 @@ class SampleLoader;
 class InstrumentPlayer;
 struct InstrumentPlayerTestAccess;
 
+struct InstrumentLoadProgress {
+    void reset() {
+        this->revision.fetch_add(1, std::memory_order_acq_rel);
+        this->finishedCount.store(0, std::memory_order_release);
+        this->totalCount.store(0, std::memory_order_release);
+    }
+
+    uint64_t registerRequest() {
+        const uint64_t currentRevision = this->revision.load(std::memory_order_acquire);
+        this->totalCount.fetch_add(1, std::memory_order_acq_rel);
+        return currentRevision;
+    }
+
+    void markFinished(uint64_t requestRevision) {
+        if (this->revision.load(std::memory_order_acquire) != requestRevision) return;
+        this->finishedCount.fetch_add(1, std::memory_order_acq_rel);
+    }
+
+    int getFinishedCount() const { return this->finishedCount.load(std::memory_order_acquire); }
+    int getTotalCount() const { return this->totalCount.load(std::memory_order_acquire); }
+
+private:
+    std::atomic<uint64_t> revision { 0 };
+    std::atomic<int> finishedCount { 0 };
+    std::atomic<int> totalCount { 0 };
+};
+
+struct InstrumentLoadProgressSource {
+    juce::String slotId;
+    std::shared_ptr<const InstrumentLoadProgress> progress;
+};
+
 enum class MicPlacementMode : uint8_t {
     PreserveChannels,
     MonoCenter,
@@ -535,6 +567,7 @@ public:
     const juce::String& getId() const { return id; }
     const KitLib::InstrumentSpec* getLoadedInstrumentSpec() const { return this->instrumentSpecstPtr; }
     KitLib::InstrumentSpec* getLoadedInstrumentSpec() { return this->instrumentSpecstPtr; }
+    std::shared_ptr<const InstrumentLoadProgress> getLoadProgress() const { return this->loadProgress; }
     std::shared_ptr<const KitLib::LibraryManager> getLibrarySnapshot() const { return this->librarySnapshotPtr; }
     const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
     const RoutingContext& getLastRoutingContext() const { return this->lastRoutingContext; }
@@ -630,6 +663,7 @@ private:
     juce::OwnedArray<InstrumentPlayerVoice> voices;
     int activeVoiceCount = 0;
     std::vector<std::shared_ptr<SampledSound>> sampledSoundPtrs;
+    std::shared_ptr<InstrumentLoadProgress> loadProgress = std::make_shared<InstrumentLoadProgress>();
     int minimumSubBlockSize = 32;
     bool subBlockSubdivisionIsStrict = false;
 
