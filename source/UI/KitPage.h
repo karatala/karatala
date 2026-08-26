@@ -12,12 +12,13 @@ public:
     explicit KitPage(DrumKitEngine& engine);
     ~KitPage() override;
 
-    void refresh(const juce::String& activeInstrumentMapText);
+    void refresh(const juce::String& activeInstrumentMapText, const juce::String& activePresetReference);
     void setPreviewVelocity(float velocity);
     void paint(juce::Graphics& graphics) override;
     void resized() override;
 
     std::function<bool(const juce::String&, const juce::String&)> onMapLoadRequested;
+    std::function<void(const juce::String&)> onPresetReferenceChanged;
     std::function<void(const juce::String&)> onStatusMessage;
 
 private:
@@ -37,9 +38,12 @@ private:
 
     struct PresetEntry {
         juce::File file;
+        juce::String reference;
         juce::String name;
         bool isUser = false;
     };
+
+    static constexpr int currentSettingsEntryIndex = -1;
 
     class SectionListModel final : public juce::ListBoxModel {
     public:
@@ -57,7 +61,7 @@ private:
     juce::String currentMapText;
     juce::String selectedKitId;
     juce::String selectedPresetPath;
-    juce::String activePresetPath;
+    juce::String activePresetReference;
     juce::String activePresetMapText;
     bool previewUsesActiveMap = false;
     std::vector<AvailableLibraryArticulation> availableLibraryArticulations;
@@ -96,8 +100,10 @@ private:
     const PresetEntry* getSelectedPreset() const;
     bool isActivePreset(const PresetEntry& preset) const;
     bool isActivePresetDirty() const;
+    bool shouldShowCurrentSettings() const;
+    bool isCurrentSettingsSelected() const;
     void inferActivePreset();
-    void setActivePreset(const PresetEntry& preset, const juce::String& mapText);
+    void setActivePreset(const PresetEntry& preset);
     void clearActivePreset();
     juce::File getUserPresetDirectory() const;
     std::vector<KitPreviewGrid::PreviewInstrument> buildKitPreviewInstruments(const KitEntry& kit) const;

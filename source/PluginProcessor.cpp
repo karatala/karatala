@@ -61,6 +61,8 @@ PluginProcessor::PluginProcessor()
         this->mAudioProcessorValueTreeStatePtr->state.setProperty("mic_layout", juce::String(), nullptr);
     if (!this->mAudioProcessorValueTreeStatePtr->state.hasProperty("instrument_map"))
         this->mAudioProcessorValueTreeStatePtr->state.setProperty("instrument_map", juce::String(), nullptr);
+    if (!this->mAudioProcessorValueTreeStatePtr->state.hasProperty("instrument_map_preset_ref"))
+        this->mAudioProcessorValueTreeStatePtr->state.setProperty("instrument_map_preset_ref", juce::String(), nullptr);
 
     this->drumKitEnginePtr->init(*mAudioProcessorValueTreeStatePtr);
 }

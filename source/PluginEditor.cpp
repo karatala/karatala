@@ -45,7 +45,10 @@ void PluginEditor::setupKitPage() {
     this->kitPage->onMapLoadRequested = [this](const juce::String& mapText, const juce::String& statusText) {
         return this->applyKitPageInstrumentMap(mapText, statusText);
     };
-    this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+    this->kitPage->onPresetReferenceChanged = [this](const juce::String& presetReference) {
+        this->processorRef.getValueTreeState().state.setProperty("instrument_map_preset_ref", presetReference, nullptr);
+    };
+    this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString(), this->processorRef.getValueTreeState().state["instrument_map_preset_ref"].toString());
 }
 
 void PluginEditor::setupSidebarAndStatusBar() {
@@ -321,7 +324,7 @@ void PluginEditor::reloadLibraryFromTroubleshooting() {
     this->refreshMidiMapTableIfNeeded(true);
     this->refreshInstrumentConfigIfNeeded(true);
     if (this->kitPage)
-        this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+        this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString(), this->processorRef.getValueTreeState().state["instrument_map_preset_ref"].toString());
     if (this->troubleshootingPanel)
         this->troubleshootingPanel->refresh();
     this->statusBar.setStatusText("Library reloaded. " + engine.getLastInstrumentMapStatus());
@@ -418,7 +421,7 @@ void PluginEditor::setPage(PageId pageId) {
         this->troubleshootingPanel->refresh();
 
     if (pageId == PageId::Kit)
-        this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString());
+        this->kitPage->refresh(this->processorRef.getValueTreeState().state["instrument_map"].toString(), this->processorRef.getValueTreeState().state["instrument_map_preset_ref"].toString());
 
     if (pageId == PageId::Zone) {
         this->refreshDrumPadGridIfNeeded();

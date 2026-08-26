@@ -66,15 +66,17 @@ KitPage::KitPage(DrumKitEngine& drumKitEngine)
     this->primaryActionButton.onClick = [this] { this->performPrimaryAction(); };
     this->moreButton.onClick = [this] { this->showPresetActionsMenu(); };
 
-    this->refresh({});
+    this->refresh({}, {});
 }
 
 KitPage::~KitPage() {
     this->previewViewport.setViewedComponent(nullptr, false);
 }
 
-void KitPage::refresh(const juce::String& activeInstrumentMapText) {
+void KitPage::refresh(const juce::String& activeInstrumentMapText, const juce::String& activePresetRef) {
     this->currentMapText = this->engine.normalizeInstrumentMapText(activeInstrumentMapText);
+    this->activePresetReference = activePresetRef.trim();
+    this->activePresetMapText.clear();
     this->availableLibraryArticulations = AvailableLibraryArticulation::collectFromLibrary(this->engine.getInstrumentManager());
     this->rebuildLibraryEntries();
     this->rebuildPresetEntries(this->selectedPresetPath);
@@ -125,6 +127,7 @@ void KitPage::rebuildPresetEntries(const juce::String& preferredSelectionPath) {
         for (const auto& file : directory.findChildFiles(juce::File::findFiles, false, "*.map;*.txt")) {
             PresetEntry entry;
             entry.file = file;
+            entry.reference = juce::String(isUser ? "user:" : "factory:") + file.getFileName();
             entry.name = file.getFileNameWithoutExtension();
             entry.isUser = isUser;
             this->presets.push_back(std::move(entry));
@@ -147,7 +150,8 @@ void KitPage::rebuildPresetEntries(const juce::String& preferredSelectionPath) {
 void KitPage::rebuildListIndexes() {
     this->entryIndexes.clear();
     const int entryCount = this->activeSection == KitSection::LibraryKits ? static_cast<int>(this->kits.size()) : static_cast<int>(this->presets.size());
-    this->entryIndexes.reserve(static_cast<size_t>(entryCount));
+    this->entryIndexes.reserve(static_cast<size_t>(entryCount + (this->activeSection == KitSection::Presets && this->shouldShowCurrentSettings() ? 1 : 0)));
+    if (this->activeSection == KitSection::Presets && this->shouldShowCurrentSettings()) this->entryIndexes.push_back(currentSettingsEntryIndex);
     for (int entryIndex = 0; entryIndex < entryCount; ++entryIndex) this->entryIndexes.push_back(entryIndex);
 
     this->sectionList.updateContent();
@@ -156,7 +160,7 @@ void KitPage::rebuildListIndexes() {
         const int sectionEntryIndex = this->entryIndexes[static_cast<size_t>(rowIndex)];
         const bool selected = this->activeSection == KitSection::LibraryKits
             ? this->kits[static_cast<size_t>(sectionEntryIndex)].id == this->selectedKitId
-            : this->presets[static_cast<size_t>(sectionEntryIndex)].file.getFullPathName() == this->selectedPresetPath;
+            : (sectionEntryIndex == currentSettingsEntryIndex ? this->selectedPresetPath.isEmpty() : this->presets[static_cast<size_t>(sectionEntryIndex)].file.getFullPathName() == this->selectedPresetPath);
         if (selected) {
             selectedRow = rowIndex;
             break;
@@ -167,6 +171,8 @@ void KitPage::rebuildListIndexes() {
         const int sectionEntryIndex = this->entryIndexes.front();
         if (this->activeSection == KitSection::LibraryKits)
             this->selectedKitId = this->kits[static_cast<size_t>(sectionEntryIndex)].id;
+        else if (sectionEntryIndex == currentSettingsEntryIndex)
+            this->selectedPresetPath.clear();
         else
             this->selectedPresetPath = this->presets[static_cast<size_t>(sectionEntryIndex)].file.getFullPathName();
     }
@@ -194,38 +200,55 @@ const KitPage::PresetEntry* KitPage::getSelectedPreset() const {
 }
 
 bool KitPage::isActivePreset(const PresetEntry& preset) const {
-    return preset.file.getFullPathName() == this->activePresetPath;
+    return preset.reference == this->activePresetReference;
 }
 
 bool KitPage::isActivePresetDirty() const {
-    return this->activePresetPath.isNotEmpty() && this->currentMapText != this->activePresetMapText;
+    return this->activePresetReference.isNotEmpty() && this->currentMapText != this->activePresetMapText;
+}
+
+bool KitPage::shouldShowCurrentSettings() const {
+    return this->activePresetReference.isEmpty() && this->currentMapText.trim().isNotEmpty();
+}
+
+bool KitPage::isCurrentSettingsSelected() const {
+    return this->activeSection == KitSection::Presets && this->shouldShowCurrentSettings() && this->selectedPresetPath.isEmpty();
 }
 
 void KitPage::inferActivePreset() {
-    if (this->activePresetPath.isNotEmpty()) {
-        const bool activePresetExists = std::any_of(this->presets.begin(), this->presets.end(), [this](const auto& preset) { return preset.file.getFullPathName() == this->activePresetPath; });
-        if (!activePresetExists) this->clearActivePreset();
-        else if (this->currentMapText == this->activePresetMapText) return;
+    if (this->activePresetReference.isNotEmpty()) {
+        const auto activePresetIterator = std::find_if(this->presets.begin(), this->presets.end(), [this](const auto& preset) { return this->isActivePreset(preset); });
+        if (activePresetIterator != this->presets.end()) {
+            this->setActivePreset(*activePresetIterator);
+            this->selectedPresetPath = activePresetIterator->file.getFullPathName();
+            return;
+        }
+        this->clearActivePreset();
     }
     if (this->currentMapText.trim().isEmpty()) return;
 
     for (const auto& preset : this->presets) {
         const auto presetMapText = this->engine.normalizeInstrumentMapText(preset.file.loadFileAsString());
         if (presetMapText != this->currentMapText) continue;
-        this->setActivePreset(preset, presetMapText);
+        this->setActivePreset(preset);
         this->selectedPresetPath = preset.file.getFullPathName();
         return;
     }
+    this->selectedPresetPath.clear();
 }
 
-void KitPage::setActivePreset(const PresetEntry& preset, const juce::String& mapText) {
-    this->activePresetPath = preset.file.getFullPathName();
-    this->activePresetMapText = this->engine.normalizeInstrumentMapText(mapText);
+void KitPage::setActivePreset(const PresetEntry& preset) {
+    const bool referenceChanged = this->activePresetReference != preset.reference;
+    this->activePresetReference = preset.reference;
+    this->activePresetMapText = this->engine.normalizeInstrumentMapText(preset.file.loadFileAsString());
+    if (referenceChanged && this->onPresetReferenceChanged) this->onPresetReferenceChanged(this->activePresetReference);
 }
 
 void KitPage::clearActivePreset() {
-    this->activePresetPath.clear();
+    if (this->activePresetReference.isEmpty()) return;
+    this->activePresetReference.clear();
     this->activePresetMapText.clear();
+    if (this->onPresetReferenceChanged) this->onPresetReferenceChanged(juce::String());
 }
 
 std::vector<KitPreviewGrid::PreviewInstrument> KitPage::buildKitPreviewInstruments(const KitEntry& kit) const {
@@ -353,8 +376,13 @@ void KitPage::updateSelectedContent() {
             this->detailsEditor.clear();
         }
     } else {
-        const auto* preset = this->getSelectedPreset();
-        if (preset != nullptr) {
+        if (this->isCurrentSettingsSelected()) {
+            this->infoTitleLabel.setText("Current settings* [Unsaved]", juce::dontSendNotification);
+            this->detailsEditor.setFont(UITheme::Fonts::mono());
+            this->detailsEditor.setText(this->currentMapText, false);
+            this->previewUsesActiveMap = true;
+            previewInstruments = this->buildPresetPreviewInstruments(this->currentMapText);
+        } else if (const auto* preset = this->getSelectedPreset()) {
             const bool selectedPresetIsDirty = this->isActivePreset(*preset) && this->isActivePresetDirty();
             const auto displayMapText = selectedPresetIsDirty ? this->currentMapText : preset->file.loadFileAsString();
             const auto headerText = preset->name + (selectedPresetIsDirty ? "*" : "") + " by " + (preset->isUser ? "User" : "Factory");
@@ -377,10 +405,11 @@ void KitPage::updateSelectedContent() {
 void KitPage::updateActionButtons() {
     const bool presetsSectionActive = this->activeSection == KitSection::Presets;
     const auto* preset = this->getSelectedPreset();
+    const bool currentSettingsSelected = presetsSectionActive && this->isCurrentSettingsSelected();
     const bool selectedPresetIsDirty = presetsSectionActive && preset != nullptr && this->isActivePreset(*preset) && this->isActivePresetDirty();
-    this->primaryActionButton.setButtonText(selectedPresetIsDirty ? "SAVE" : (presetsSectionActive ? "LOAD PRESET" : "LOAD KIT"));
-    this->primaryActionButton.setEnabled(selectedPresetIsDirty ? this->currentMapText.trim().isNotEmpty() : (presetsSectionActive ? preset != nullptr : this->getSelectedKit() != nullptr));
-    this->moreButton.setVisible(presetsSectionActive);
+    this->primaryActionButton.setButtonText(currentSettingsSelected ? "SAVE AS" : (selectedPresetIsDirty ? "SAVE" : (presetsSectionActive ? "LOAD PRESET" : "LOAD KIT")));
+    this->primaryActionButton.setEnabled((currentSettingsSelected || selectedPresetIsDirty) ? this->currentMapText.trim().isNotEmpty() : (presetsSectionActive ? preset != nullptr : this->getSelectedKit() != nullptr));
+    this->moreButton.setVisible(presetsSectionActive && preset != nullptr);
     this->moreButton.setEnabled(preset != nullptr);
 
     this->kitsSectionButton.setColour(juce::TextButton::buttonColourId, !presetsSectionActive ? UITheme::Colours::selectionStrong : UITheme::Colours::bgControl);
@@ -390,6 +419,10 @@ void KitPage::updateActionButtons() {
 void KitPage::performPrimaryAction() {
     if (this->activeSection == KitSection::LibraryKits) {
         this->loadSelectedKit();
+        return;
+    }
+    if (this->isCurrentSettingsSelected()) {
+        this->savePresetAs();
         return;
     }
 
@@ -456,6 +489,7 @@ void KitPage::loadSelectedKit() {
     if (this->onMapLoadRequested && this->onMapLoadRequested(mapText, status)) {
         this->currentMapText = mapText;
         this->clearActivePreset();
+        this->selectedPresetPath.clear();
         this->sectionList.repaint();
         this->updateSelectedContent();
     }
@@ -499,9 +533,8 @@ void KitPage::loadSelectedPreset() {
     if (!skippedSlots.isEmpty()) status += " | skipped missing slots: " + skippedSlots.joinIntoString(", ");
     if (this->onMapLoadRequested && this->onMapLoadRequested(mapText, status)) {
         this->currentMapText = mapText;
-        this->setActivePreset(*preset, mapText);
-        this->sectionList.repaint();
-        this->updateSelectedContent();
+        this->setActivePreset(*preset);
+        this->rebuildListIndexes();
     }
 }
 
@@ -514,7 +547,7 @@ void KitPage::saveSelectedPreset() {
         return;
     }
     this->currentMapText = normalizedMapText;
-    this->setActivePreset(*preset, normalizedMapText);
+    this->setActivePreset(*preset);
     this->sectionList.repaint();
     this->updateSelectedContent();
     this->reportStatus("Saved preset: " + preset->name);
@@ -547,9 +580,8 @@ void KitPage::savePresetAs() {
         const auto normalizedMapText = safeThis->engine.normalizeInstrumentMapText(safeThis->currentMapText);
         if (!file.replaceWithText(normalizedMapText)) return juce::String("Could not save this preset.");
         safeThis->currentMapText = normalizedMapText;
-        safeThis->activePresetPath = file.getFullPathName();
-        safeThis->activePresetMapText = normalizedMapText;
         safeThis->rebuildPresetEntries(file.getFullPathName());
+        if (const auto* savedPreset = safeThis->getSelectedPreset()) safeThis->setActivePreset(*savedPreset);
         safeThis->rebuildListIndexes();
         safeThis->reportStatus("Saved preset: " + name);
         return juce::String();
@@ -573,6 +605,7 @@ void KitPage::deleteSelectedPreset() {
         if (safeThis->isActivePreset(preset)) safeThis->clearActivePreset();
         safeThis->selectedPresetPath.clear();
         safeThis->rebuildPresetEntries();
+        if (safeThis->shouldShowCurrentSettings()) safeThis->selectedPresetPath.clear();
         safeThis->rebuildListIndexes();
         safeThis->reportStatus("Preset deleted");
         return juce::String();
@@ -607,9 +640,15 @@ void KitPage::SectionListModel::paintListBoxItem(int rowNumber, juce::Graphics& 
         title = kit.name;
         detail = kit.author.isNotEmpty() ? kit.author : "Unknown author";
     } else {
-        const auto& preset = this->owner.presets[static_cast<size_t>(sectionEntryIndex)];
-        title = preset.name + (this->owner.isActivePreset(preset) && this->owner.isActivePresetDirty() ? "*" : "");
-        detail = preset.isUser ? "User" : "Factory";
+        if (sectionEntryIndex == currentSettingsEntryIndex) {
+            title = "Current settings*";
+            detail = "ACTIVE / Unsaved";
+        } else {
+            const auto& preset = this->owner.presets[static_cast<size_t>(sectionEntryIndex)];
+            title = preset.name + (this->owner.isActivePreset(preset) && this->owner.isActivePresetDirty() ? "*" : "");
+            detail = preset.isUser ? "User" : "Factory";
+            if (this->owner.isActivePreset(preset)) detail = "ACTIVE / " + detail;
+        }
     }
     graphics.setColour(UITheme::Colours::textPrimary);
     graphics.setFont(UITheme::Fonts::normal());
@@ -624,6 +663,8 @@ void KitPage::SectionListModel::selectedRowsChanged(int lastRowSelected) {
     const int sectionEntryIndex = this->owner.entryIndexes[static_cast<size_t>(lastRowSelected)];
     if (this->owner.activeSection == KitSection::LibraryKits)
         this->owner.selectedKitId = this->owner.kits[static_cast<size_t>(sectionEntryIndex)].id;
+    else if (sectionEntryIndex == currentSettingsEntryIndex)
+        this->owner.selectedPresetPath.clear();
     else
         this->owner.selectedPresetPath = this->owner.presets[static_cast<size_t>(sectionEntryIndex)].file.getFullPathName();
     this->owner.updateSelectedContent();
@@ -648,7 +689,7 @@ void KitPage::resized() {
     this->kitsSectionButton.setBounds(sectionTabs.removeFromLeft(kitsTabWidth));
     this->presetsSectionButton.setBounds(sectionTabs);
     headerRow.removeFromLeft(UITheme::Spacing::md);
-    if (this->activeSection == KitSection::Presets) {
+    if (this->activeSection == KitSection::Presets && this->moreButton.isVisible()) {
         this->moreButton.setBounds(headerRow.removeFromRight(28));
         headerRow.removeFromRight(UITheme::Spacing::sm);
     }
@@ -664,7 +705,7 @@ void KitPage::resized() {
     this->sectionList.setBounds(listArea);
     const int fourPreviewRowsHeight = this->previewGrid.getHeightForRows(4);
     const int maximumDetailsHeight = juce::jmax(90, contentArea.getHeight() - UITheme::Spacing::md - fourPreviewRowsHeight);
-    this->detailsEditor.setBounds(contentArea.removeFromTop(juce::jmin(160, maximumDetailsHeight)));
+    this->detailsEditor.setBounds(contentArea.removeFromTop(maximumDetailsHeight));
     contentArea.removeFromTop(UITheme::Spacing::md);
     this->previewViewport.setBounds(contentArea);
     this->updatePreviewGridSize();

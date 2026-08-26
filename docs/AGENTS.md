@@ -5,6 +5,7 @@
 # Ownership
 
 - `TODO*_PLAN.md` files describe scoped future or in-progress work.
+- `PLUGIN_INSTANCE_STATE_FORMAT.md` defines the current per-instance processor-state container and properties.
 - Performance and decay documents record cross-cutting design constraints.
 - `PROJECT_TERMINOLOGY_REVIEW.md` defines preferred project terms and related C++ names.
 
