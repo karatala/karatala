@@ -173,7 +173,7 @@ private:
     std::atomic<uint32_t> inFlightCount{0};
 
     // concurrency
-    std::atomic<uint32_t> maxInFlight{3};
+    std::atomic<uint32_t> maxInFlight{1};
 
     // Per-priority in-flight counters and first-dispatch timestamps used to aggregate logs so we only emit one message per priority class.
     std::array<std::atomic<int>, priorityClassCount> priorityInFlightCount;
@@ -227,6 +227,7 @@ public:
         std::lock_guard<std::mutex> lock(this->cacheMutex);
         this->cacheLimitBytes = bytes;
     }
+    size_t getCurrentCacheBytes() const { return this->currentCacheBytes.load(std::memory_order_acquire); }
     void setMaxSampleLengthMs(double ms) { this->maxSampleLengthMs = ms; }
     void setFadeOutMs(double ms) { this->fadeOutMs = ms; }
 
@@ -254,7 +255,7 @@ private:
 
     //========================================================
     juce::AudioFormatManager formatManager;
-    juce::ThreadPool threadPool;
+    juce::ThreadPool threadPool { juce::ThreadPool::Options().withNumberOfThreads(1).withDesiredThreadPriority(juce::Thread::Priority::low) };
 
     std::unique_ptr<SampleLoaderQueue> queuePtr;
 
@@ -266,7 +267,7 @@ private:
     std::unordered_map<juce::String, CacheEntry> cache;
     std::unordered_map<juce::String, std::vector<LoadCallback>> pendingLoads;
 
-    size_t currentCacheBytes = 0;
+    std::atomic<size_t> currentCacheBytes { 0 };
     size_t cacheLimitBytes;
 
     double maxSampleLengthMs = 5000.0;

@@ -531,36 +531,35 @@ ParseResult<DrumKitEngine::LibraryArticulationInfo> DrumKitEngine::reloadLibrary
 
 bool DrumKitEngine::publishSourceRecipeReload(const std::shared_ptr<SampledSound>& sound, uint64_t revision, float fixedGainDb, std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
     if (sound == nullptr) return false;
-    const juce::ScopedLock graphLock(this->engineGraphLock);
     if (sound->sourceRecipeRevision.load(std::memory_order_acquire) != revision) return false;
     if (buffer == nullptr) {
         sound->sourceRecipeStatus.store(SampledSound::SourceRecipeStatus::Failed, std::memory_order_release);
         return false;
     }
 
-    sound->buffer = std::move(buffer);
-    sound->sampleRate = sampleRate;
-    sound->sampleLengthSamples = sound->buffer->getNumSamples();
-    sound->sampleLengthMs = sampleRate > 0.0 ? static_cast<float>((static_cast<double>(sound->sampleLengthSamples) / sampleRate) * 1000.0) : 0.0f;
-    sound->transitionAudioValid = false;
-    if (sound->buffer->getNumChannels() > 0 && sound->buffer->getNumSamples() > 0) {
-        int sourceChannelStart = 0;
-        int sourceChannelCount = sound->buffer->getNumChannels();
-        if (sound->sampleSpec != nullptr) {
-            sourceChannelStart = sound->sampleSpec->fileChannelStart;
-            if (sound->sampleSpec->fileChannelCount > 0) sourceChannelCount = sound->sampleSpec->fileChannelCount;
-        }
-        const int sourceChannelEnd = juce::jmin(sound->buffer->getNumChannels(), sourceChannelStart + sourceChannelCount);
-        for (int sourceChannel = juce::jmax(0, sourceChannelStart); sourceChannel < sourceChannelEnd; ++sourceChannel) {
-            if (sound->buffer->getMagnitude(sourceChannel, 0, sound->buffer->getNumSamples()) <= 0.000001f) continue;
-            sound->transitionAudioValid = true;
-            break;
-        }
+    const int sampleLengthSamples = buffer->getNumSamples();
+    const float sampleLengthMs = sampleRate > 0.0 ? static_cast<float>((static_cast<double>(sampleLengthSamples) / sampleRate) * 1000.0) : 0.0f;
+
+    auto publishBuffer = [&] {
+        sound->buffer = std::move(buffer);
+        sound->sampleRate = sampleRate;
+        sound->sampleLengthSamples = sampleLengthSamples;
+        sound->sampleLengthMs = sampleLengthMs;
+        sound->canonicalFixedGainDb = fixedGainDb;
+        sound->requestedFixedGainDb = fixedGainDb;
+        sound->cachedSourceGainCorrection.store(1.0f, std::memory_order_release);
+        sound->loaded.store(true, std::memory_order_release);
+        sound->sourceRecipeStatus.store(SampledSound::SourceRecipeStatus::Applied, std::memory_order_release);
+    };
+
+    if (!sound->loaded.load(std::memory_order_acquire)) {
+        if (sound->sourceRecipeRevision.load(std::memory_order_acquire) != revision) return false;
+        publishBuffer();
+        return true;
     }
-    sound->canonicalFixedGainDb = fixedGainDb;
-    sound->requestedFixedGainDb = fixedGainDb;
-    sound->cachedSourceGainCorrection.store(1.0f, std::memory_order_release);
-    sound->loaded.store(true, std::memory_order_release);
-    sound->sourceRecipeStatus.store(SampledSound::SourceRecipeStatus::Applied, std::memory_order_release);
+
+    const juce::ScopedLock graphLock(this->engineGraphLock);
+    if (sound->sourceRecipeRevision.load(std::memory_order_acquire) != revision) return false;
+    publishBuffer();
     return true;
 }

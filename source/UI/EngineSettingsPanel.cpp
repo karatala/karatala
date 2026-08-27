@@ -67,6 +67,9 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
         this->engine.setGlobalSampleLoaderCacheLimitMegabytes(static_cast<uint64_t>(this->cacheLimitControl->getValue()));
     };
     this->contentComponent.addAndMakeVisible(*this->cacheLimitControl);
+    UIComponentStyle::configureCaptionLabel(this->cacheUsageLabel, juce::Justification::centredLeft);
+    this->cacheUsageLabel.setTooltip("Memory currently retained by the shared sample cache. Active buffers that did not fit in the cache are not included.");
+    this->contentComponent.addAndMakeVisible(this->cacheUsageLabel);
 
     this->defaultSampleLoadingLabel.setText("Default loading", juce::dontSendNotification);
     UIComponentStyle::configureCaptionLabel(this->defaultSampleLoadingLabel, juce::Justification::centredLeft);
@@ -200,10 +203,12 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     this->uiChoiceStart = static_cast<int>(this->choices.size());
 
     this->loadFromEngine();
+    this->startTimer(cacheUsageTimerId, cacheUsageTimerMs);
 }
 
 EngineSettingsPanel::~EngineSettingsPanel() {
     this->flushPendingSettingsSave();
+    this->stopTimer(cacheUsageTimerId);
 }
 
 void EngineSettingsPanel::addPot(const juce::String& name,
@@ -310,6 +315,7 @@ void EngineSettingsPanel::loadFromEngine() {
     this->defaultSampleLoadingCombo.setSelectedId(this->engine.getGlobalSampleLoadingMode() == SampleLoadingMode::Full ? 2 : 1, juce::dontSendNotification);
     this->initialRoundRobinsControl->setValue(this->engine.getGlobalInitialRoundRobinsPerVelocity(), juce::dontSendNotification);
     this->projectSampleLoadingCombo.setSelectedId(static_cast<int>(this->engine.getSampleLoadingModeOverride()) + 1, juce::dontSendNotification);
+    this->updateCacheUsageLabel();
     this->rebuildGlobalVelocityResponseChoices();
     this->rebuildLayoutChoices();
 }
@@ -431,14 +437,23 @@ void EngineSettingsPanel::onSettingChanged() {
     this->queueSettingsSave();
 }
 
-void EngineSettingsPanel::timerCallback() { this->flushPendingSettingsSave(); }
+void EngineSettingsPanel::timerCallback(int timerId) {
+    if (timerId == settingsSaveTimerId) this->flushPendingSettingsSave();
+    else if (timerId == cacheUsageTimerId) this->updateCacheUsageLabel();
+}
 
-void EngineSettingsPanel::queueSettingsSave() { this->startTimer(settingsSaveDebounceMs); }
+void EngineSettingsPanel::queueSettingsSave() { this->startTimer(settingsSaveTimerId, settingsSaveDebounceMs); }
 
 void EngineSettingsPanel::flushPendingSettingsSave() {
-    if (!this->isTimerRunning()) return;
-    this->stopTimer();
+    if (!this->isTimerRunning(settingsSaveTimerId)) return;
+    this->stopTimer(settingsSaveTimerId);
     this->engine.saveSettings();
+}
+
+void EngineSettingsPanel::updateCacheUsageLabel() {
+    const double cacheMegabytes = static_cast<double>(this->engine.getCurrentSampleLoaderCacheBytes()) / (1024.0 * 1024.0);
+    const juce::String valueText = cacheMegabytes < 10.0 ? juce::String(cacheMegabytes, 1) : juce::String(juce::roundToInt(cacheMegabytes));
+    this->cacheUsageLabel.setText("Cached: " + valueText + " MB", juce::dontSendNotification);
 }
 
 void EngineSettingsPanel::resized() {
@@ -530,6 +545,8 @@ void EngineSettingsPanel::resized() {
     auto cacheRow = generalArea.removeFromTop(40);
     cacheRow.removeFromLeft(110);
     this->cacheLimitControl->setBounds(cacheRow.removeFromLeft(170));
+    cacheRow.removeFromLeft(gap);
+    this->cacheUsageLabel.setBounds(cacheRow.removeFromLeft(150).withHeight(UITheme::Sizes::standardControlHeight));
     generalArea.removeFromTop(gap);
 
     auto defaultSampleLoadingRow = generalArea.removeFromTop(40);

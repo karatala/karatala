@@ -495,9 +495,9 @@ juce::ThreadPoolJob::JobStatus SampleLoader::LoadJob::runJob() {
 
         const size_t bytes = (size_t)channels * (size_t)samplesToRead * sizeof(float);
 
-        if (loader.currentCacheBytes + bytes <= loader.cacheLimitBytes) {
+        if (loader.currentCacheBytes.load(std::memory_order_relaxed) + bytes <= loader.cacheLimitBytes) {
             loader.cache[cacheKey] = { buffer, sampleRate };
-            loader.currentCacheBytes += bytes;
+            loader.currentCacheBytes.fetch_add(bytes, std::memory_order_release);
             // LOG(Debug, "SampleLoader::LoadJob: cached " + file.getFullPathName() + " (" + juce::String(bytes) + " bytes)");
         }
     }

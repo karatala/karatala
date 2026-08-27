@@ -342,7 +342,7 @@ std::vector<InstrumentLoadProgressSource> DrumKitEngine::getInstrumentLoadProgre
     result.reserve(this->instrumentPlayerPtrs.size());
     for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
         if (instrumentPlayer == nullptr) continue;
-        result.push_back({ instrumentPlayer->getId(), instrumentPlayer->getLoadProgress() });
+        result.push_back({ instrumentPlayer->getId(), instrumentPlayer->getLoadProgress(), instrumentPlayer->getArticulationLogicalHitProgressSources() });
     }
     return result;
 }

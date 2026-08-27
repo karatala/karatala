@@ -142,7 +142,7 @@ Retired instrument players must deactivate their demand generation. Shared deman
 - Queue cancellation and map replacement must not publish an old source recipe into a rebuilt sound. Preserve source recipe revision checks.
 - Full and Adaptive modes must share cache entries when their resolved source and preprocessing recipe are equal.
 
-The first implementation should preserve the existing `maxInFlight` limit. Queue policy and file-read concurrency are separate settings.
+Sample decoding uses one low-priority read job at a time. This protects audio processing from CPU and disk spikes and prevents lower-priority jobs from leaving the demand queue too early.
 
 ## Settings And Persistence
 
@@ -180,6 +180,8 @@ For the first implementation, a changed mode applies to the next kit, preset, in
 - Activating a dormant hit registers its file requests at that time. The existing per-pad progress can then reappear and finish again.
 - Full mode registers the remaining file requests when the full-load stage is submitted.
 - Shared cache files can complete several logical-hit subscriptions, but each instrument player's progress state must finish its own registered callbacks.
+- Each Zone articulation area shows ready complete logical hits against all mapped logical hits. Counts from additional map layers are added together.
+- The Conf page shows current shared cache use beside its cache limit. This value does not include active buffers that did not fit in the cache.
 
 ## Benefits
 
@@ -258,6 +260,17 @@ Implementation result: Adaptive keeps prepared Stage 3 file descriptions and cal
 - ✅ Replace the 100 ms idle polling delay with bounded low-latency demand checks.
 
 Implementation result: each runtime articulation exposes bounded atomic note count, requested velocity-level index, revision, and active target generation. The worker consumes coalesced revisions, promotes exact missing minimal work first, activates dormant work, and promotes one pending group per later hot request. Six queue classes implement the approved order. Equal-priority dispatch keeps one logical hit together and then prefers another target. Empty polling is 5 ms. Hi-hat controller transitions and aftertouch choke targets use the same atomic path as note-on.
+
+### ✅ Loading Stability And Status Follow-up
+
+- ✅ Remove the unused full-buffer transition-audio validation scan.
+- ✅ Publish the first buffer through the existing `loaded` release/acquire contract without locking the engine graph.
+- ✅ Keep the graph lock only when replacing a buffer that is already available to playback.
+- ✅ Decode one low-priority sample job at a time.
+- ✅ Expose ready and total logical-hit counts for every mapped articulation slot and show them on Zone pads.
+- ✅ Show current shared cache use beside the cache limit on the Conf page.
+
+Implementation result: initial sample completion no longer scans the full buffer or holds `engineGraphLock`, so it cannot make `processBlock()` clear an output block during publication. The removed `transitionAudioValid` result had no readers; hi-hat transition code keeps its separate bounded target-window validation. Live recipe replacement still uses the graph lock. The sample loader uses one low-priority decode job, Zone reads shared atomic logical-hit counters in its existing timer, and Conf reads an atomic shared-cache byte count twice per second.
 
 ### Stage 6: Verification And Documentation
 

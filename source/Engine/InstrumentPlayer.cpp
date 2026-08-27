@@ -84,6 +84,28 @@ void InstrumentPlayer::deactivateSampleLoadDemand() noexcept {
     }
 }
 
+std::vector<ArticulationLogicalHitProgressSource> InstrumentPlayer::getArticulationLogicalHitProgressSources() const {
+    std::vector<ArticulationLogicalHitProgressSource> result;
+    result.reserve(this->articulationPlaybackEntries.size());
+    for (const auto& playbackEntry : this->articulationPlaybackEntries) {
+        if (playbackEntry.isAliasEntry || playbackEntry.libraryArticulation == nullptr) continue;
+        ArtRtIdx articulationIdx = -1;
+        if (this->playbackEntryUsesArticulationSlotRuntimeKey(playbackEntry)) {
+            articulationIdx = this->findRuntimeArticulationIndex(playbackEntry.libraryArticulation->nameId, playbackEntry.libraryArticulation->exprId, playbackEntry.articulationSlotNameId, playbackEntry.articulationSlotExpressionId);
+        } else {
+            articulationIdx = this->findArticulationIndex(playbackEntry.libraryArticulation->nameId, playbackEntry.libraryArticulation->exprId);
+        }
+        if (articulationIdx < 0 || static_cast<size_t>(articulationIdx) >= this->runtimeArticulations.size()) continue;
+        const auto progress = this->runtimeArticulations[static_cast<size_t>(articulationIdx)].logicalHitProgress;
+        if (progress == nullptr) continue;
+        const bool alreadyAdded = std::any_of(result.begin(), result.end(), [&playbackEntry, &progress](const ArticulationLogicalHitProgressSource& source) {
+            return source.articulationSlotNameId == playbackEntry.articulationSlotNameId && source.articulationSlotExpressionId == playbackEntry.articulationSlotExpressionId && source.progress == progress;
+        });
+        if (!alreadyAdded) result.push_back({ playbackEntry.articulationSlotNameId, playbackEntry.articulationSlotExpressionId, progress });
+    }
+    return result;
+}
+
 void InstrumentPlayer::clearSounds() {
     const juce::ScopedLock scopedLock(this->lock);
     this->sampledSoundPtrs.clear();

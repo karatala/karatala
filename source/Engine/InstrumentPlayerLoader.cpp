@@ -210,6 +210,9 @@ void InstrumentPlayer::createVelocityLevels(KitLib::InstrumentSpec* instSpec
     }
 
     this->buildVelocityLevelLogicalHits(instSpec, notes, artSpec, artRt, artIdx, micRouting, articulationCalibrationAvailable);
+    int totalLogicalHitCount = 0;
+    for (const auto& velocityLevel : artRt.velocityLevels) totalLogicalHitCount += static_cast<int>(velocityLevel.logicalHits.size());
+    artRt.logicalHitProgress->setTotalCount(totalLogicalHitCount);
     artRt.buildVelocityMapping(this->parent->getVelocityResponse());
     this->assignInitialLoadStages(artRt);
     this->enqueueVelocityLevelSamples(*instSpec, *artSpec, artRt);
@@ -290,6 +293,7 @@ void InstrumentPlayer::buildVelocityLevelLogicalHits(KitLib::InstrumentSpec* ins
 
             if (logicalHit.sampleEntryIndexes.empty()) continue;
             logicalHit.readiness->requiredEntryCount = static_cast<int>(logicalHit.sampleEntryIndexes.size());
+            logicalHit.readiness->articulationProgress = artRt.logicalHitProgress;
             velocityLevel.logicalHits.push_back(std::move(logicalHit));
         }
         artRt.velocityLevels.push_back(std::move(velocityLevel));

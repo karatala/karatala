@@ -25,6 +25,7 @@ public:
 private:
     std::vector<std::unique_ptr<DrumPad>> pads;
     std::vector<juce::String> padSlotIds;
+    std::vector<const KitLayout::InstrumentSlot*> padSlots;
     int gridColumns = 0;
     int gridRows = 0;
     int effectiveGridColumns = 1;

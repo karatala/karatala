@@ -11,7 +11,7 @@
 class DrumKitEngine;
 
 class EngineSettingsPanel : public ScrollablePanel,
-                            private juce::Timer {
+                            private juce::MultiTimer {
 public:
     explicit EngineSettingsPanel(DrumKitEngine& engine);
     ~EngineSettingsPanel() override;
@@ -51,6 +51,7 @@ private:
     juce::TextButton saveLayoutDefaultsButton { "Save layout defaults" };
     juce::Label layoutDefaultsWarningLabel;
     std::unique_ptr<CompactParameterControl> cacheLimitControl;
+    juce::Label cacheUsageLabel;
     juce::Label defaultSampleLoadingLabel;
     juce::ComboBox defaultSampleLoadingCombo;
     std::unique_ptr<CompactParameterControl> initialRoundRobinsControl;
@@ -106,9 +107,10 @@ private:
                    std::function<int()> loadSelectedId,
                    std::function<void(int)> storeSelectedId);
     void onSettingChanged();
-    void timerCallback() override;
+    void timerCallback(int timerId) override;
     void queueSettingsSave();
     void flushPendingSettingsSave();
+    void updateCacheUsageLabel();
     void rebuildGlobalVelocityResponseChoices();
     void applyGlobalVelocityResponseChoice();
     void rebuildLayoutChoices();
@@ -116,6 +118,9 @@ private:
     void saveLayoutDefaults();
 
     static constexpr int settingsSaveDebounceMs = 350;
+    static constexpr int settingsSaveTimerId = 1;
+    static constexpr int cacheUsageTimerId = 2;
+    static constexpr int cacheUsageTimerMs = 500;
 
 public:
     std::function<void()> onGridSizeChanged;

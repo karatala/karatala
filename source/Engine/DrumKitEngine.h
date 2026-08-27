@@ -192,6 +192,7 @@ public:
     const juce::String& getGlobalMicLayoutId() const { return this->globalConfig.micLayout; }
     const juce::File& getGlobalLibraryPath() const { return this->globalConfig.libraryPath; }
     uint64_t getGlobalSampleLoaderCacheLimitMegabytes() const { return this->globalConfig.sampleLoaderCacheLimitMegabytes; }
+    uint64_t getCurrentSampleLoaderCacheBytes() const { return this->sampleLoaderPtr != nullptr ? static_cast<uint64_t>(this->sampleLoaderPtr->getCurrentCacheBytes()) : 0; }
     SampleLoadingMode getGlobalSampleLoadingMode() const { return this->engineSettings.sampleLoadingMode.load(); }
     int getGlobalInitialRoundRobinsPerVelocity() const { return juce::jlimit(1, 26, this->engineSettings.initialRoundRobinsPerVelocity.load()); }
     SampleLoadingModeOverride getSampleLoadingModeOverride() const { return this->sampleLoadingModeOverride; }

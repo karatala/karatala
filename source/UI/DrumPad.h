@@ -5,6 +5,13 @@
 #include <vector>
 #include "../Engine/LayoutManager.h"
 
+struct ArticulationRoundRobinCount {
+    int loadedCount = 0;
+    int totalCount = 0;
+
+    bool operator==(const ArticulationRoundRobinCount&) const = default;
+};
+
 class DrumPad : public juce::Component, private juce::Timer {
 public:
     explicit DrumPad() {}
@@ -16,6 +23,7 @@ public:
 
     void setSlot(const KitLayout::InstrumentSlot* slot);
     void setLoadProgress(std::optional<float> progress);
+    void setArticulationRoundRobinCounts(std::vector<ArticulationRoundRobinCount> counts);
     void flash(float velocity);
 
     std::function<void(const KitLayout::InstrumentSlot*, int articulationIdx, const juce::String& previewArticulationCode, bool useDirectPreview, float velocity)> onPadClicked;
@@ -40,6 +48,7 @@ private:
     float clickVelocity = 100.0f;
     float flashAlpha = 0.0f;
     std::optional<float> loadProgress;
+    std::vector<ArticulationRoundRobinCount> articulationRoundRobinCounts;
     float visualScale = 1.0f;
     int padGap = 0;
 

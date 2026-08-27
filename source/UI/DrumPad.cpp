@@ -29,6 +29,7 @@ static std::vector<int> buildDisplayOrder(const std::vector<KitLayout::Instrumen
 
 void DrumPad::setSlot(const KitLayout::InstrumentSlot* slot) {
     this->slotPtr = slot;
+    this->articulationRoundRobinCounts.clear();
     this->refreshDisplayOrder();
     repaint();
 }
@@ -37,6 +38,12 @@ void DrumPad::setLoadProgress(std::optional<float> progress) {
     if (progress.has_value()) progress = juce::jlimit(0.0f, 1.0f, *progress);
     if (this->loadProgress == progress) return;
     this->loadProgress = progress;
+    this->repaint();
+}
+
+void DrumPad::setArticulationRoundRobinCounts(std::vector<ArticulationRoundRobinCount> counts) {
+    if (this->articulationRoundRobinCounts == counts) return;
+    this->articulationRoundRobinCounts = std::move(counts);
     this->repaint();
 }
 
@@ -141,9 +148,20 @@ void DrumPad::paintZoned(juce::Graphics& g) {
         g.drawHorizontalLine(cell.bounds.getBottom() - 1, static_cast<float>(cell.bounds.getX()), static_cast<float>(cell.bounds.getRight()));
         g.drawVerticalLine(cell.bounds.getRight() - 1, static_cast<float>(cell.bounds.getY()), static_cast<float>(cell.bounds.getBottom()));
 
+        auto labelBounds = cell.bounds.reduced(this->getScaledSize(3), this->getScaledSize(2));
+        if (cell.articulationIdx >= 0 && static_cast<size_t>(cell.articulationIdx) < this->articulationRoundRobinCounts.size()) {
+            const auto& count = this->articulationRoundRobinCounts[static_cast<size_t>(cell.articulationIdx)];
+            if (count.totalCount > 0) {
+                const auto countBounds = labelBounds.removeFromBottom(this->getScaledSize(9));
+                g.setColour(UITheme::Colours::textSecondary.withAlpha(0.8f));
+                g.setFont(UITheme::Fonts::small().withHeight(this->getScaledFontHeight(8.0f)));
+                g.drawFittedText(juce::String(count.loadedCount) + "/" + juce::String(count.totalCount), countBounds, juce::Justification::centredRight, 1, 0.75f);
+            }
+        }
+
         if (cell.label.isNotEmpty()) {
             const auto cellFont = UITheme::Fonts::normal().boldened().withHeight(this->getScaledFontHeight(UITheme::Fonts::normal().getHeight()));
-            drawPadLabel(g, cell.bounds.reduced(this->getScaledSize(3), this->getScaledSize(2)), cell.label, UITheme::Colours::textPrimary.withAlpha(0.85f), cellFont, 2);
+            drawPadLabel(g, labelBounds, cell.label, UITheme::Colours::textPrimary.withAlpha(0.85f), cellFont, 2);
         }
     }
 

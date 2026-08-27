@@ -66,9 +66,30 @@ private:
     std::atomic<int> totalCount { 0 };
 };
 
+struct ArticulationLogicalHitProgress {
+    void setTotalCount(int count) {
+        this->readyCount.store(0, std::memory_order_release);
+        this->totalCount.store(juce::jmax(0, count), std::memory_order_release);
+    }
+    void markReady() { this->readyCount.fetch_add(1, std::memory_order_acq_rel); }
+    int getReadyCount() const { return this->readyCount.load(std::memory_order_acquire); }
+    int getTotalCount() const { return this->totalCount.load(std::memory_order_acquire); }
+
+private:
+    std::atomic<int> readyCount { 0 };
+    std::atomic<int> totalCount { 0 };
+};
+
+struct ArticulationLogicalHitProgressSource {
+    uint32_t articulationSlotNameId = 0;
+    uint32_t articulationSlotExpressionId = 0;
+    std::shared_ptr<const ArticulationLogicalHitProgress> progress;
+};
+
 struct InstrumentLoadProgressSource {
     juce::String slotId;
     std::shared_ptr<const InstrumentLoadProgress> progress;
+    std::vector<ArticulationLogicalHitProgressSource> articulations;
 };
 
 enum class MicPlacementMode : uint8_t {
@@ -97,7 +118,6 @@ public:
     double sampleRate = 0.0;
     int sampleLengthSamples = 0;
     float sampleLengthMs = 0.0f;
-    bool transitionAudioValid = false;
     int micBufferChannelStart = 0;
     int micBufferChannelCount = 0;
     juce::String routedMicCode;
@@ -303,12 +323,16 @@ public:
     struct LogicalHitReadiness {
         std::atomic<int> loadedEntryCount { 0 };
         std::atomic<bool> ready { false };
+        std::shared_ptr<ArticulationLogicalHitProgress> articulationProgress;
         int requiredEntryCount = 0;
 
         void markLoaded(bool loadedSuccessfully) {
             if (!loadedSuccessfully) return;
             const int loadedCount = this->loadedEntryCount.fetch_add(1, std::memory_order_acq_rel) + 1;
-            if (loadedCount == this->requiredEntryCount) this->ready.store(true, std::memory_order_release);
+            if (loadedCount == this->requiredEntryCount) {
+                this->ready.store(true, std::memory_order_release);
+                if (this->articulationProgress != nullptr) this->articulationProgress->markReady();
+            }
         }
     };
 
@@ -412,6 +436,7 @@ public:
         uint32_t floatingRandomState = 0x9e3779b9u;
         uint64_t loadTargetId = 0;
         std::shared_ptr<SampleLoadDemandState> loadDemandState;
+        std::shared_ptr<ArticulationLogicalHitProgress> logicalHitProgress = std::make_shared<ArticulationLogicalHitProgress>();
         LayerParameters parameters;
         std::vector<VelocityLevelRuntime> velocityLevels;
 
@@ -585,6 +610,7 @@ public:
     const KitLib::InstrumentSpec* getLoadedInstrumentSpec() const { return this->instrumentSpecstPtr; }
     KitLib::InstrumentSpec* getLoadedInstrumentSpec() { return this->instrumentSpecstPtr; }
     std::shared_ptr<const InstrumentLoadProgress> getLoadProgress() const { return this->loadProgress; }
+    std::vector<ArticulationLogicalHitProgressSource> getArticulationLogicalHitProgressSources() const;
     std::shared_ptr<const KitLib::LibraryManager> getLibrarySnapshot() const { return this->librarySnapshotPtr; }
     const KitLayout::InstrumentSlot& getInstrumentSlot() const { return this->instrumentSlot; }
     const RoutingContext& getLastRoutingContext() const { return this->lastRoutingContext; }

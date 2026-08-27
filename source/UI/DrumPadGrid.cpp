@@ -10,6 +10,7 @@ DrumPadGrid::DrumPadGrid() {
 void DrumPadGrid::populate(const KitLayout* layout) {
     this->pads.clear();
     this->padSlotIds.clear();
+    this->padSlots.clear();
 
     int slotCount = layout ? static_cast<int>(layout->instrumentSlots.size()) : 0;
     this->resolveGridSize(slotCount);
@@ -22,9 +23,11 @@ void DrumPadGrid::populate(const KitLayout* layout) {
         if (idx < slotCount) {
             pad->setSlot(&layout->instrumentSlots[static_cast<size_t>(idx)]);
             this->padSlotIds.push_back(layout->instrumentSlots[static_cast<size_t>(idx)].id);
+            this->padSlots.push_back(&layout->instrumentSlots[static_cast<size_t>(idx)]);
         } else {
             pad->setSlot(nullptr);
             this->padSlotIds.emplace_back();
+            this->padSlots.push_back(nullptr);
         }
 
         pad->onPadClicked = [this](const KitLayout::InstrumentSlot* slot, int artIdx, const juce::String& previewArticulationCode, bool useDirectPreview, float vel) {
@@ -126,17 +129,31 @@ void DrumPadGrid::timerCallback() {
 }
 
 void DrumPadGrid::updateLoadProgress() {
-    for (int padIndex = 0; padIndex < static_cast<int>(this->pads.size()) && padIndex < static_cast<int>(this->padSlotIds.size()); ++padIndex) {
+    for (int padIndex = 0; padIndex < static_cast<int>(this->pads.size()) && padIndex < static_cast<int>(this->padSlotIds.size()) && padIndex < static_cast<int>(this->padSlots.size()); ++padIndex) {
         const auto& slotId = this->padSlotIds[static_cast<size_t>(padIndex)];
+        const auto* slot = this->padSlots[static_cast<size_t>(padIndex)];
         int finishedCount = 0;
         int totalCount = 0;
+        std::vector<ArticulationRoundRobinCount> articulationCounts(slot != nullptr ? slot->articulations.size() : 0);
         for (const auto& source : this->loadProgressSources) {
             if (source.slotId != slotId || source.progress == nullptr) continue;
             finishedCount += source.progress->getFinishedCount();
             totalCount += source.progress->getTotalCount();
+            if (slot == nullptr) continue;
+            for (const auto& articulationSource : source.articulations) {
+                if (articulationSource.progress == nullptr) continue;
+                for (size_t articulationIdx = 0; articulationIdx < slot->articulations.size(); ++articulationIdx) {
+                    const auto& articulationSlot = slot->articulations[articulationIdx];
+                    if (articulationSlot.nameId != articulationSource.articulationSlotNameId || articulationSlot.exprId != articulationSource.articulationSlotExpressionId) continue;
+                    articulationCounts[articulationIdx].loadedCount += articulationSource.progress->getReadyCount();
+                    articulationCounts[articulationIdx].totalCount += articulationSource.progress->getTotalCount();
+                    break;
+                }
+            }
         }
         const bool loading = totalCount > 0 && finishedCount < totalCount;
         this->pads[static_cast<size_t>(padIndex)]->setLoadProgress(loading ? std::optional<float>(static_cast<float>(finishedCount) / static_cast<float>(totalCount)) : std::nullopt);
+        this->pads[static_cast<size_t>(padIndex)]->setArticulationRoundRobinCounts(std::move(articulationCounts));
     }
 }
 
