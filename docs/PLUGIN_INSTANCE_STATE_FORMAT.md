@@ -15,7 +15,7 @@ This is the current implementation contract. It is not a plan for future host au
 The decoded XML has this logical shape:
 
 ```xml
-<plugin_params kit_layout="..." mic_layout="..." instrument_map="..." instrument_map_preset_ref="..." velocity_response="..."/>
+<plugin_params kit_layout="..." mic_layout="..." instrument_map="..." instrument_map_preset_ref="..." velocity_response="..." sample_loading_mode="..."/>
 ```
 
 XML escaping is applied to property values. Consumers must use JUCE state decoding instead of parsing the host chunk as plain XML.
@@ -38,6 +38,7 @@ The state has no schema-version property. The APVTS parameter layout is currentl
 | `instrument_map` | Normalized multiline instrument-map text | Empty string | The engine reads and applies it. If it is invalid, the engine tries the default map. An empty value does not create a default map during state restoration. |
 | `instrument_map_preset_ref` | `factory:<filename>` or `user:<filename>` | Empty string | `KitPage` resolves it against the matching preset directory. A valid reference identifies the active preset. An empty or missing reference means that the working map is not linked to a preset. |
 | `velocity_response` | Built-in response code or serialized response points | Machine default from `config.yaml` | The engine parses and applies it. An invalid value falls back to the machine default, then to built-in linear response if the machine default is also invalid. |
+| `sample_loading_mode` | `global`, `adaptive`, or `full` | `global` | The engine resolves it before applying the restored instrument map. `global` uses the machine default from `config.yaml`. An empty or invalid value uses the machine default. Stage 1 stores and restores this property; Adaptive and Full change loading policy starting with TODO19 Stage 3. |
 
 The complete `instrument_map` syntax is documented in [INSTRUMENT_MAP_FORMAT.md](INSTRUMENT_MAP_FORMAT.md).
 
@@ -58,6 +59,8 @@ A point definition must start at velocity 1, end at velocity 127, and end at `0 
 
 `velocity_response` is updated through `PluginProcessor::setVelocityResponseDefinition()`.
 
+`sample_loading_mode` is updated by the Conf page `This project` selector through `PluginProcessor::setSampleLoadingModeOverride()`.
+
 `kit_layout` and `mic_layout` are initialized by `PluginProcessor`, but the current layout-selection paths do not synchronize later changes to these properties.
 
 ## Data Not Stored
@@ -67,7 +70,7 @@ The current state does not store:
 - A baseline used to compare the working map with its source preset.
 - Kit-page list selection or scroll positions.
 - Temporary linked-edit switches from the pad popup.
-- Machine settings such as the sample-library path and default layouts from `config.yaml`.
+- Machine settings such as the sample-library path, default layouts, default sample-loading mode, and initial round-robin count from `config.yaml`.
 
 `KitPage` compares the current normalized `instrument_map` with the referenced preset file. A difference marks the active preset as modified. If there is no reference and the current map does not exactly match a preset, the preset list shows `Current settings*`.
 

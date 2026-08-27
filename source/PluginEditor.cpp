@@ -298,6 +298,9 @@ void PluginEditor::setupSettingsPage() {
     this->settingsPanel->onGlobalVelocityResponseChanged = [this](const juce::String& definition) {
         return this->processorRef.setVelocityResponseDefinition(definition);
     };
+    this->settingsPanel->onProjectSampleLoadingModeChanged = [this](SampleLoadingModeOverride mode) {
+        this->processorRef.setSampleLoadingModeOverride(mode);
+    };
 }
 
 void PluginEditor::setupTroubleshootingPage() {

@@ -63,6 +63,8 @@ PluginProcessor::PluginProcessor()
         this->mAudioProcessorValueTreeStatePtr->state.setProperty("instrument_map", juce::String(), nullptr);
     if (!this->mAudioProcessorValueTreeStatePtr->state.hasProperty("instrument_map_preset_ref"))
         this->mAudioProcessorValueTreeStatePtr->state.setProperty("instrument_map_preset_ref", juce::String(), nullptr);
+    if (!this->mAudioProcessorValueTreeStatePtr->state.hasProperty("sample_loading_mode"))
+        this->mAudioProcessorValueTreeStatePtr->state.setProperty("sample_loading_mode", "global", nullptr);
 
     this->drumKitEnginePtr->init(*mAudioProcessorValueTreeStatePtr);
 }
@@ -80,6 +82,14 @@ bool PluginProcessor::setVelocityResponseDefinition(const juce::String& definiti
     if (!this->drumKitEnginePtr->setVelocityResponseDefinition(definition)) return false;
     this->mAudioProcessorValueTreeStatePtr->state.setProperty("velocity_response", this->drumKitEnginePtr->getVelocityResponse().getDefinition(), nullptr);
     return true;
+}
+
+void PluginProcessor::setSampleLoadingModeOverride(SampleLoadingModeOverride mode) {
+    this->drumKitEnginePtr->setSampleLoadingModeOverride(mode);
+    juce::String storedMode = "global";
+    if (mode == SampleLoadingModeOverride::Adaptive) storedMode = "adaptive";
+    else if (mode == SampleLoadingModeOverride::Full) storedMode = "full";
+    this->mAudioProcessorValueTreeStatePtr->state.setProperty("sample_loading_mode", storedMode, nullptr);
 }
 
 void PluginProcessor::parameterChanged(const juce::String& parameterId, float newValue) {

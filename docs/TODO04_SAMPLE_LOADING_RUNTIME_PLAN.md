@@ -9,7 +9,9 @@ When a kit is loaded, samples are enqueued for asynchronous loading in 4 priorit
 3. **Round-robin desync** - the old selection code included incomplete logical hits, so the counter could advance to a hit that could not play.
 4. **Pedal transitions fail silently** - `handleController()` increments `skippedNoTarget` when the replacement sample buffer is null, leaving old voices ringing with no transition.
 
-## Current Architecture (Summary)
+## Architecture At TODO04 Completion
+
+This section records the architecture used when TODO04 was completed. Current grouped queue work and the planned Adaptive and Full modes are owned by [TODO19](TODO19_ADAPTIVE_SAMPLE_LOADING_PLAN.md).
 
 ### Loading Side (`InstrumentPlayerLoader.cpp` → `SampleLoader`)
 

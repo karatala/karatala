@@ -68,6 +68,41 @@ EngineSettingsPanel::EngineSettingsPanel(DrumKitEngine& drumKitEngine)
     };
     this->contentComponent.addAndMakeVisible(*this->cacheLimitControl);
 
+    this->defaultSampleLoadingLabel.setText("Default loading", juce::dontSendNotification);
+    UIComponentStyle::configureCaptionLabel(this->defaultSampleLoadingLabel, juce::Justification::centredLeft);
+    this->contentComponent.addAndMakeVisible(this->defaultSampleLoadingLabel);
+    UIComponentStyle::configureComboBox(this->defaultSampleLoadingCombo);
+    this->defaultSampleLoadingCombo.addItemList({ "Adaptive", "Full" }, 1);
+    this->defaultSampleLoadingCombo.setTooltip("Machine default for newly loaded kits. Adaptive keeps extra round robins dormant; Full submits every mapped sample.");
+    this->defaultSampleLoadingCombo.onChange = [this, &settings] {
+        settings.sampleLoadingMode.store(this->defaultSampleLoadingCombo.getSelectedId() == 2 ? SampleLoadingMode::Full : SampleLoadingMode::Adaptive);
+        this->queueSettingsSave();
+    };
+    this->contentComponent.addAndMakeVisible(this->defaultSampleLoadingCombo);
+
+    this->initialRoundRobinsControl = std::make_unique<CompactParameterControl>("Initial RRs", 1.0, 26.0, 1.0, this->engine.getGlobalInitialRoundRobinsPerVelocity());
+    this->initialRoundRobinsControl->setInteraction(2.0, 1.0);
+    this->initialRoundRobinsControl->setTooltip("Round robins per velocity level submitted by the initial loading stages. Applies on the next kit or instrument reload.");
+    this->initialRoundRobinsControl->onValueChange = [this, &settings] {
+        settings.initialRoundRobinsPerVelocity.store(juce::jlimit(1, 26, static_cast<int>(this->initialRoundRobinsControl->getValue())));
+        this->queueSettingsSave();
+    };
+    this->initialRoundRobinsControl->onDragEnd = [this] { this->flushPendingSettingsSave(); };
+    this->contentComponent.addAndMakeVisible(*this->initialRoundRobinsControl);
+
+    this->projectSampleLoadingLabel.setText("This project", juce::dontSendNotification);
+    UIComponentStyle::configureCaptionLabel(this->projectSampleLoadingLabel, juce::Justification::centredLeft);
+    this->contentComponent.addAndMakeVisible(this->projectSampleLoadingLabel);
+    UIComponentStyle::configureComboBox(this->projectSampleLoadingCombo);
+    this->projectSampleLoadingCombo.addItemList({ "Use global", "Adaptive", "Full" }, 1);
+    this->projectSampleLoadingCombo.setTooltip("Saved in this plugin instance. The selected mode applies on the next kit or instrument reload.");
+    this->projectSampleLoadingCombo.onChange = [this] {
+        const auto mode = static_cast<SampleLoadingModeOverride>(juce::jlimit(1, 3, this->projectSampleLoadingCombo.getSelectedId()) - 1);
+        if (this->onProjectSampleLoadingModeChanged) this->onProjectSampleLoadingModeChanged(mode);
+        else this->engine.setSampleLoadingModeOverride(mode);
+    };
+    this->contentComponent.addAndMakeVisible(this->projectSampleLoadingCombo);
+
     this->chokeGroupLabel.setText("Aftertouch Choke", juce::dontSendNotification);
     UIComponentStyle::configureSectionLabel(this->chokeGroupLabel);
     this->contentComponent.addAndMakeVisible(this->chokeGroupLabel);
@@ -272,6 +307,9 @@ void EngineSettingsPanel::loadFromEngine() {
         entry->comboBox.setSelectedId(entry->loadSelectedId(), juce::dontSendNotification);
     this->libraryPathEditor.setText(this->engine.getGlobalLibraryPath().getFullPathName(), false);
     this->cacheLimitControl->setValue(static_cast<double>(this->engine.getGlobalSampleLoaderCacheLimitMegabytes()), juce::dontSendNotification);
+    this->defaultSampleLoadingCombo.setSelectedId(this->engine.getGlobalSampleLoadingMode() == SampleLoadingMode::Full ? 2 : 1, juce::dontSendNotification);
+    this->initialRoundRobinsControl->setValue(this->engine.getGlobalInitialRoundRobinsPerVelocity(), juce::dontSendNotification);
+    this->projectSampleLoadingCombo.setSelectedId(static_cast<int>(this->engine.getSampleLoadingModeOverride()) + 1, juce::dontSendNotification);
     this->rebuildGlobalVelocityResponseChoices();
     this->rebuildLayoutChoices();
 }
@@ -413,7 +451,7 @@ void EngineSettingsPanel::resized() {
     const int choiceCellW = 150;
     const int choiceCellH = 40;
     const int groupLabelHeight = 22;
-    const int generalContentHeight = 160;
+    const int generalContentHeight = 228;
     const int gap = 4;
 
     const int availableWidth = juce::jmax(contentWidth, 400) - 16; // 8px padding each side
@@ -492,6 +530,18 @@ void EngineSettingsPanel::resized() {
     auto cacheRow = generalArea.removeFromTop(40);
     cacheRow.removeFromLeft(110);
     this->cacheLimitControl->setBounds(cacheRow.removeFromLeft(170));
+    generalArea.removeFromTop(gap);
+
+    auto defaultSampleLoadingRow = generalArea.removeFromTop(40);
+    this->defaultSampleLoadingLabel.setBounds(defaultSampleLoadingRow.removeFromLeft(110));
+    this->defaultSampleLoadingCombo.setBounds(defaultSampleLoadingRow.removeFromLeft(130).withHeight(UITheme::Sizes::standardControlHeight));
+    defaultSampleLoadingRow.removeFromLeft(gap);
+    this->initialRoundRobinsControl->setBounds(defaultSampleLoadingRow.removeFromLeft(130));
+    generalArea.removeFromTop(gap);
+
+    auto projectSampleLoadingRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);
+    this->projectSampleLoadingLabel.setBounds(projectSampleLoadingRow.removeFromLeft(110));
+    this->projectSampleLoadingCombo.setBounds(projectSampleLoadingRow.removeFromLeft(180));
     generalArea.removeFromTop(gap);
 
     auto globalVelocityResponseRow = generalArea.removeFromTop(UITheme::Sizes::standardControlHeight);

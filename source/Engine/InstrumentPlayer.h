@@ -395,6 +395,7 @@ public:
         bool calibrated = false;
         bool floatingSelectionAvailable = false;
         uint32_t floatingRandomState = 0x9e3779b9u;
+        uint64_t loadTargetId = 0;
         LayerParameters parameters;
         std::vector<VelocityLevelRuntime> velocityLevels;
 

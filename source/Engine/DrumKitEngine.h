@@ -192,6 +192,11 @@ public:
     const juce::String& getGlobalMicLayoutId() const { return this->globalConfig.micLayout; }
     const juce::File& getGlobalLibraryPath() const { return this->globalConfig.libraryPath; }
     uint64_t getGlobalSampleLoaderCacheLimitMegabytes() const { return this->globalConfig.sampleLoaderCacheLimitMegabytes; }
+    SampleLoadingMode getGlobalSampleLoadingMode() const { return this->engineSettings.sampleLoadingMode.load(); }
+    int getGlobalInitialRoundRobinsPerVelocity() const { return juce::jlimit(1, 26, this->engineSettings.initialRoundRobinsPerVelocity.load()); }
+    SampleLoadingModeOverride getSampleLoadingModeOverride() const { return this->sampleLoadingModeOverride; }
+    SampleLoadingMode getEffectiveSampleLoadingMode() const;
+    void setSampleLoadingModeOverride(SampleLoadingModeOverride mode) { this->sampleLoadingModeOverride = mode; }
     const InstrumentCatalog& getInstrumentCatalog() const { return this->globalConfig.instrumentCatalog; }
     const ArticulationSlotFallbackRules& getArticulationSlotFallbackRules() const { return this->globalConfig.articulationSlotFallbackRules; }
     DebugLevel getGlobalLogLevel() const { return this->globalConfig.logLevel; }
@@ -281,6 +286,7 @@ private:
 
     Config globalConfig;
     VelocityResponse velocityResponse = VelocityResponse::linear();
+    SampleLoadingModeOverride sampleLoadingModeOverride = SampleLoadingModeOverride::UseGlobal;
 
     std::vector<std::unique_ptr<InstrumentPlayer>> instrumentPlayerPtrs;
     std::unordered_map<juce::String, InstrumentPlayer*> instrumentPlayerById; //TODO: review if this map is actually needed, maybe we can do without it

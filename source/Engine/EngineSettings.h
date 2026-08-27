@@ -1,6 +1,18 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
+
+enum class SampleLoadingMode : uint8_t {
+    Adaptive,
+    Full,
+};
+
+enum class SampleLoadingModeOverride : uint8_t {
+    UseGlobal,
+    Adaptive,
+    Full,
+};
 
 enum class HiHatTransitionCurve {
     Linear,
@@ -54,6 +66,10 @@ private:
 };
 
 struct EngineSettings {
+    // -- Sample Loading --
+    RealtimeSetting<SampleLoadingMode> sampleLoadingMode { SampleLoadingMode::Adaptive };
+    RealtimeSetting<int> initialRoundRobinsPerVelocity { 2 };
+
     // -- Aftertouch Choke --
     RealtimeSetting<float> chokeMaxDuckDepth { 0.7f };          // max volume duck (0..1)
     RealtimeSetting<float> chokeDuckTimeSec { 0.15f };          // duck ramp duration (sec)

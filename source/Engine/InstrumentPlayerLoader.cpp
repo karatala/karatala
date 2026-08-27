@@ -333,12 +333,15 @@ void InstrumentPlayer::selectEarlyLoadLogicalHits(ArticulationRuntime& artRt) {
 void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec& instSpec, const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt) {
     SampleLoader* loader = this->getSampleLoader();
     if (loader == nullptr) return;
+    if (artRt.loadTargetId == 0) artRt.loadTargetId = loader->getQueue().createLoadTargetId();
     for (int loadPass = 0; loadPass < 2; ++loadPass) {
         const bool loadEarlyHits = loadPass == 0;
         for (auto& velocityLevel : artRt.velocityLevels) {
             const float calibrationTrimDb = artRt.calibrated ? velocityLevel.calibrationTrimDb.value_or(0.0f) : 0.0f;
             for (auto& logicalHit : velocityLevel.logicalHits) {
                 if (logicalHit.earlyLoad != loadEarlyHits) continue;
+                std::vector<SampleLoaderQueue::LogicalHitLoadEntry> loadEntries;
+                loadEntries.reserve(logicalHit.sampleEntryIndexes.size());
                 for (const auto sampleEntryIdx : logicalHit.sampleEntryIndexes) {
                     auto* sound = velocityLevel.samples[sampleEntryIdx].sound;
                     if (sound == nullptr || sound->sampleSpec == nullptr) continue;
@@ -355,22 +358,18 @@ void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec&
                     const auto loadingProgress = this->loadProgress;
                     const uint64_t loadProgressRevision = loadingProgress->registerRequest();
 
-                    loader->getQueue().enqueueCandidate(
-                        loadSpec,
-                        instSpec.meta.type,
-                        artSpec.nameId,
-                        velocityLevel.velocity,
-                        logicalHit.roundRobinId,
-                        logicalHit.earlyLoad,
-                        [this, weakSound, readiness, recipeRevision, loadingProgress, loadProgressRevision, fixedGainDb = loadSpec.fixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
-                            loadingProgress->markFinished(loadProgressRevision);
-                            auto soundLocked = weakSound.lock();
-                            if (soundLocked == nullptr || this->parent == nullptr) return;
-                            const bool published = this->parent->publishSourceRecipeReload(soundLocked, recipeRevision, fixedGainDb, std::move(buffer), loadedSampleRate);
-                            if (soundLocked->sourceRecipeRevision.load(std::memory_order_acquire) == recipeRevision && !soundLocked->readinessReported.exchange(true, std::memory_order_acq_rel)) readiness->markLoaded(published);
-                        }
-                    );
+                    SampleLoaderQueue::LogicalHitLoadEntry loadEntry;
+                    loadEntry.loadSpec = loadSpec;
+                    loadEntry.callback = [this, weakSound, readiness, recipeRevision, loadingProgress, loadProgressRevision, fixedGainDb = loadSpec.fixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
+                        loadingProgress->markFinished(loadProgressRevision);
+                        auto soundLocked = weakSound.lock();
+                        if (soundLocked == nullptr || this->parent == nullptr) return;
+                        const bool published = this->parent->publishSourceRecipeReload(soundLocked, recipeRevision, fixedGainDb, std::move(buffer), loadedSampleRate);
+                        if (soundLocked->sourceRecipeRevision.load(std::memory_order_acquire) == recipeRevision && !soundLocked->readinessReported.exchange(true, std::memory_order_acq_rel)) readiness->markLoaded(published);
+                    };
+                    loadEntries.push_back(std::move(loadEntry));
                 }
+                loader->getQueue().enqueueLogicalHit(std::move(loadEntries), artRt.loadTargetId, instSpec.meta.type, artSpec.nameId, velocityLevel.velocity, logicalHit.roundRobinId, logicalHit.earlyLoad);
             }
         }
     }

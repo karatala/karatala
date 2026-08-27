@@ -1,7 +1,7 @@
 # TODO19: Adaptive Sample Loading And Dynamic Queue Plan
 
 Date: 2026-08-27  
-Status: Approved design. Implementation has not started.
+Status: Stages 1 and 2 are implemented in code. Build and tests are pending by request. Stages 3 through 6 have not started.
 
 ## Goal
 
@@ -20,8 +20,8 @@ The loader must:
 ## Current Facts
 
 - [`SampleLoaderQueue`](../source/Engine/SampleLoader.h) owns four stage deques, but the current `determineStage()` implementation only returns stages 1, 2, and 3.
-- [`SampleLoaderQueue::enqueueCandidate()`](../source/Engine/SampleLoader.cpp) queues one resolved audio file at a time. It deduplicates equivalent pending files by cache key and adds another callback to the existing request.
-- A duplicate request does not currently raise the priority of the existing queued file.
+- [`SampleLoaderQueue::enqueueLogicalHit()`](../source/Engine/SampleLoader.cpp) accepts every active mic file for one logical hit and gives those file candidates one shared group identity, target ID, stage, static priority, and sequence.
+- Equivalent pending files are still deduplicated by cache key. A duplicate from a higher static group now promotes the existing queued file and keeps all callbacks.
 - The worker always scans stages in order and then selects the lowest fixed instrument-type priority in that stage.
 - The current fixed order starts with Kick, Snare, HiHat, Ride, Crash, and Tom.
 - The worker sleeps for 100 ms when it finds no queued work. This is too long for late demand loading.
@@ -158,7 +158,7 @@ The Conf page General section shows:
 
 - `Default sample loading`: `Adaptive` or `Full`.
 - `This project`: `Use global`, `Adaptive`, or `Full`.
-- `Initial round robins`: compact integer control, default `3`.
+- `Initial round robins`: compact integer control, default `2`.
 
 Store the project override in the plugin instance state as:
 
@@ -193,8 +193,8 @@ For the first implementation, a changed mode applies to the next kit, preset, in
 - The first notes can repeat only the initial round robins until demand work finishes.
 - A note can still be silent when no complete logical hit for its articulation is ready. The note must never block for disk access.
 - Demand loading can cause disk activity during playback.
-- The current file-level queue needs a logical-hit grouping layer and dynamic priority updates.
-- Cache-key deduplication must support priority promotion without losing callbacks.
+- Logical-hit group identity and static duplicate promotion are implemented. Dormant state and demand priority classes still need queue support.
+- Cache-key deduplication and promotion need focused verification before dynamic demand uses them.
 - Hi-hat controller siblings, aftertouch targets, shadow players, and additional map layers increase the number of exact runtime demand targets.
 - Very frequent demand needs coalescing and fair dispatch to prevent queue starvation.
 - Changing from Full to Adaptive cannot reclaim buffers that the current players already own without rebuilding them.
@@ -207,7 +207,7 @@ For the first implementation, a changed mode applies to the next kit, preset, in
 | Plugin-state override | Low | One stable string property with 3 validated values. |
 | Static `N`-RR staging | Medium | It replaces current representative-hit selection and must preserve complete mic groups. |
 | Dormant logical-hit storage | Medium | Runtime load descriptions must remain valid without submitting file work. |
-| Dynamic priority and duplicate promotion | Medium to high | Current queue deduplication does not change the priority of an existing file. |
+| Dynamic priority and duplicate promotion | Medium to high | Static duplicate promotion is implemented. Demand classes and dormant activation remain. |
 | Real-time demand signal | High | Note, CC, and aftertouch paths must stay bounded and lock-free. |
 | Reload and lifetime safety | High | Old runtime generations and late callbacks must not affect new players. |
 
@@ -215,18 +215,22 @@ This is not a small queue-order change. Implement it in separate stages so stati
 
 ## Implementation Stages
 
-### Stage 1: Settings And State
+### ✅ Stage 1: Settings And State
 
 - Add global mode and initial RR count parsing, serialization, defaults, accessors, and Conf controls.
 - Add the `sample_loading_mode` plugin-state property and resolve the effective mode before instrument-map application.
 - Update `PLUGIN_INSTANCE_STATE_FORMAT.md`.
 
-### Stage 2: Complete-Hit Queue Model
+Implementation result: global mode and initial RR count are parsed and serialized under `engine.sample_loading`, Conf shows the machine values and project override, and `sample_loading_mode` is restored before the instrument map. Stage 3 will make the effective mode change queue volume.
+
+### ✅ Stage 2: Complete-Hit Queue Model
 
 - Add a stable runtime target identity for one instrument-player articulation.
 - Submit complete logical-hit groups with file-level cache deduplication below them.
 - Add priority promotion for an already queued cache key.
 - Preserve callback subscription, recipe revision, readiness, and progress behavior.
+
+Implementation result: one grouped queue call submits all active mic entries for a logical hit. File candidates share a stable runtime target ID and group priority token. Cache-key deduplication remains file-based, and a higher static group can promote an existing queued file without replacing its callback list. Verification is pending by request.
 
 ### Stage 3: Static Minimal And Full Stages
 

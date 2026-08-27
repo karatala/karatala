@@ -51,6 +51,11 @@ private:
     juce::TextButton saveLayoutDefaultsButton { "Save layout defaults" };
     juce::Label layoutDefaultsWarningLabel;
     std::unique_ptr<CompactParameterControl> cacheLimitControl;
+    juce::Label defaultSampleLoadingLabel;
+    juce::ComboBox defaultSampleLoadingCombo;
+    std::unique_ptr<CompactParameterControl> initialRoundRobinsControl;
+    juce::Label projectSampleLoadingLabel;
+    juce::ComboBox projectSampleLoadingCombo;
     std::unique_ptr<juce::FileChooser> libraryChooser;
     std::vector<juce::String> globalVelocityResponseDefinitions;
     std::vector<KitLayout> kitLayouts;
@@ -116,6 +121,7 @@ public:
     std::function<void()> onGridSizeChanged;
     std::function<void()> onLibraryReloadRequested;
     std::function<bool(const juce::String&)> onGlobalVelocityResponseChanged;
+    std::function<void(SampleLoadingModeOverride)> onProjectSampleLoadingModeChanged;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(EngineSettingsPanel)
 };

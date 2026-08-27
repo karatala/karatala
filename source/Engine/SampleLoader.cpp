@@ -21,34 +21,71 @@ void SampleLoaderQueue::stopProcessing() {
     }
 }
 
-void SampleLoaderQueue::enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, bool earlyLoad, SampleLoaderQueue::LoadCallback cb) {
-    const auto resolvedLoadSpec = this->loader.resolveLoadSpec(loadSpec);
-    const juce::String cacheKey = resolvedLoadSpec.makeCacheKey();
-    std::lock_guard<std::mutex> g(lock);
-    auto pit = this->pendingCallbacks.find(cacheKey);
-    if (pit != this->pendingCallbacks.end()) {
-        pit->second.push_back(cb);
-        queuedCount.fetch_add(1);
-        // LOG(Debug, "SampleLoaderQueue: attached additional callback for pending key " + cacheKey);
-        return;
+void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, bool earlyLoad) {
+    if (entries.empty()) return;
+
+    std::vector<ResolvedSampleLoadSpec> resolvedLoadSpecs;
+    std::vector<juce::String> cacheKeys;
+    resolvedLoadSpecs.reserve(entries.size());
+    cacheKeys.reserve(entries.size());
+    for (const auto& entry : entries) {
+        auto resolvedLoadSpec = this->loader.resolveLoadSpec(entry.loadSpec);
+        cacheKeys.push_back(resolvedLoadSpec.makeCacheKey());
+        resolvedLoadSpecs.push_back(std::move(resolvedLoadSpec));
     }
 
-    Candidate cand;
-    cand.loadSpec = resolvedLoadSpec;
-    cand.cacheKey = cacheKey;
-    cand.instType = instType;
-    cand.artId = artId;
-    cand.velocity = velocity;
-    cand.rrIndex = rrIndex;
-    cand.earlyLoad = earlyLoad;
-    cand.priority = computeInstrumentPriority(instType);
-    const int stage = determineStage(cand);
-    int idx = std::clamp(stage - 1, 0, 3);
-    stageQueues[idx].push_back(std::move(cand));
-    this->pendingCallbacks.emplace(cacheKey, std::vector<LoadCallback>{cb});
-    queuedCount.fetch_add(1);
-    // juce::String artName = StringsDictSingleton::nameOf(artId);
-    // LOG(Verbose, "SampleLoaderQueue: enqueued varSpec file=" + loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(instType) + " art=" + artName + " vel=" + juce::String((int)vel) + " rr=" + juce::String((int)rrIndex));
+    std::lock_guard<std::mutex> queueLock(this->lock);
+    auto group = std::make_shared<LogicalHitLoadGroup>();
+    group->targetId = targetId;
+    group->sequence = this->nextGroupSequence++;
+    group->instType = instType;
+    group->artId = artId;
+    group->velocity = velocity;
+    group->roundRobinId = roundRobinId;
+    group->earlyLoad = earlyLoad;
+    group->priority = this->computeInstrumentPriority(instType);
+    group->stage = this->determineStage(*group);
+    const size_t stageIdx = static_cast<size_t>(std::clamp(group->stage - 1, 0, 3));
+
+    for (size_t entryIdx = 0; entryIdx < entries.size(); ++entryIdx) {
+        const auto& cacheKey = cacheKeys[entryIdx];
+        auto pendingIt = this->pendingCallbacks.find(cacheKey);
+        if (pendingIt != this->pendingCallbacks.end()) {
+            pendingIt->second.push_back(std::move(entries[entryIdx].callback));
+            this->promoteQueuedCandidateLocked(cacheKey, group);
+        } else {
+            Candidate candidate;
+            candidate.loadSpec = std::move(resolvedLoadSpecs[entryIdx]);
+            candidate.cacheKey = cacheKey;
+            candidate.group = group;
+            this->stageQueues[stageIdx].push_back(std::move(candidate));
+            std::vector<LoadCallback> callbacks;
+            callbacks.push_back(std::move(entries[entryIdx].callback));
+            this->pendingCallbacks.emplace(cacheKey, std::move(callbacks));
+        }
+        this->queuedCount.fetch_add(1);
+    }
+}
+
+bool SampleLoaderQueue::isHigherPriority(const LogicalHitLoadGroup& first, const LogicalHitLoadGroup& second) const {
+    if (first.stage != second.stage) return first.stage < second.stage;
+    if (first.priority != second.priority) return first.priority < second.priority;
+    return first.sequence < second.sequence;
+}
+
+void SampleLoaderQueue::promoteQueuedCandidateLocked(const juce::String& cacheKey, const std::shared_ptr<const LogicalHitLoadGroup>& requestedGroup) {
+    for (size_t stageIdx = 0; stageIdx < 4; ++stageIdx) {
+        auto candidateIt = std::find_if(this->stageQueues[stageIdx].begin(), this->stageQueues[stageIdx].end(), [&cacheKey](const Candidate& candidate) { return candidate.cacheKey == cacheKey; });
+        if (candidateIt == this->stageQueues[stageIdx].end()) continue;
+        if (candidateIt->group != nullptr && this->isHigherPriority(*requestedGroup, *candidateIt->group)) {
+            Candidate promotedCandidate = std::move(*candidateIt);
+            this->stageQueues[stageIdx].erase(candidateIt);
+            promotedCandidate.group = requestedGroup;
+            const size_t requestedStageIdx = static_cast<size_t>(std::clamp(requestedGroup->stage - 1, 0, 3));
+            this->stageQueues[requestedStageIdx].push_back(std::move(promotedCandidate));
+        }
+        return;
+    }
 }
 
 int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type type) const {
@@ -106,7 +143,7 @@ int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type ty
     return 9;
 }
 
-int SampleLoaderQueue::determineStage(const Candidate& candidate) const {
+int SampleLoaderQueue::determineStage(const LogicalHitLoadGroup& group) const {
     // Use articulation Ids for detection where possible (prefer StringsDictSingleton ids)
     bool isMain = false;
     const auto centerId = StringsDictSingleton::getId("center");
@@ -116,7 +153,7 @@ int SampleLoaderQueue::determineStage(const Candidate& candidate) const {
     const auto edgeId = StringsDictSingleton::getId("edge");
     const auto pedalId = StringsDictSingleton::getId("pedal");
 
-    switch (candidate.instType) {
+    switch (group.instType) {
         case KitLib::InstrumentSpec::Type::Kick:
         case KitLib::InstrumentSpec::Type::Snare:
         case KitLib::InstrumentSpec::Type::Tom:
@@ -133,13 +170,13 @@ int SampleLoaderQueue::determineStage(const Candidate& candidate) const {
         case KitLib::InstrumentSpec::Type::Mridangam:
         case KitLib::InstrumentSpec::Type::TalkingDrum:
         case KitLib::InstrumentSpec::Type::Drum:
-            if (candidate.artId == centerId || candidate.artId == rimId) isMain = (candidate.artId == centerId);
+            if (group.artId == centerId || group.artId == rimId) isMain = (group.artId == centerId);
             break;
         case KitLib::InstrumentSpec::Type::Ride:
-            if (candidate.artId == bowId || candidate.artId == bellId) isMain = true;
+            if (group.artId == bowId || group.artId == bellId) isMain = true;
             break;
         case KitLib::InstrumentSpec::Type::HiHat:
-            if (candidate.artId == bowId || candidate.artId == pedalId) isMain = true;
+            if (group.artId == bowId || group.artId == pedalId) isMain = true;
             break;
         case KitLib::InstrumentSpec::Type::Crash:
         case KitLib::InstrumentSpec::Type::Splash:
@@ -150,7 +187,7 @@ int SampleLoaderQueue::determineStage(const Candidate& candidate) const {
         case KitLib::InstrumentSpec::Type::Gong:
         case KitLib::InstrumentSpec::Type::Karatala:
         case KitLib::InstrumentSpec::Type::Cymbal:
-            if (candidate.artId == edgeId || candidate.artId == bowId || candidate.artId == bellId) isMain = (candidate.artId == edgeId || candidate.artId == bowId);
+            if (group.artId == edgeId || group.artId == bowId || group.artId == bellId) isMain = (group.artId == edgeId || group.artId == bowId);
             break;
         case KitLib::InstrumentSpec::Type::Cowbell:
         case KitLib::InstrumentSpec::Type::Tambourine:
@@ -174,8 +211,8 @@ int SampleLoaderQueue::determineStage(const Candidate& candidate) const {
             break;
     }
 
-    if (isMain && candidate.earlyLoad) return 1;
-    if (candidate.earlyLoad) return 2;
+    if (isMain && group.earlyLoad) return 1;
+    if (group.earlyLoad) return 2;
     return 3;
 }
 
@@ -186,18 +223,20 @@ void SampleLoaderQueue::workerLoop() {
         bool found = false;
         int taskStage = -1;
 
-        // scan stages 1..4 and pick highest-priority candidate (lowest priority value)
+        // Scan stages 1..4 and keep files from one logical-hit group together at equal priority.
         {
-            std::lock_guard<std::mutex> g(this->lock);
-            for (int s = 0; s < 4; ++s) {
-                if (this->stageQueues[s].empty()) continue;
-                // find best candidate in this stage by priority value
-                auto it = std::min_element(this->stageQueues[s].begin(), this->stageQueues[s].end(), [](auto& a, auto& b){ return a.priority < b.priority; });
-                if (it != this->stageQueues[s].end()) {
-                    task = *it;
-                    this->stageQueues[s].erase(it);
+            std::lock_guard<std::mutex> queueLock(this->lock);
+            for (int stageIdx = 0; stageIdx < 4; ++stageIdx) {
+                if (this->stageQueues[stageIdx].empty()) continue;
+                auto candidateIt = std::min_element(this->stageQueues[stageIdx].begin(), this->stageQueues[stageIdx].end(), [](const Candidate& first, const Candidate& second) {
+                    if (first.group->priority != second.group->priority) return first.group->priority < second.group->priority;
+                    return first.group->sequence < second.group->sequence;
+                });
+                if (candidateIt != this->stageQueues[stageIdx].end()) {
+                    task = *candidateIt;
+                    this->stageQueues[stageIdx].erase(candidateIt);
                     found = true;
-                    taskStage = s + 1; // stages are 1..4
+                    taskStage = stageIdx + 1; // stages are 1..4
                     break;
                 }
             }
@@ -216,8 +255,8 @@ void SampleLoaderQueue::workerLoop() {
         this->dispatchedCount.fetch_add(1);
         this->inFlightCount.fetch_add(1);
 
-        // juce::String artName = StringsDictSingleton::nameOf(task.artId);
-        // LOG(Verbose, "SampleLoaderQueue: dispatching file=" + task.loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(task.instType) + " art=" + artName + " vel=" + juce::String((int)task.velocity) + " rr=" + juce::String((int)task.rrIndex));
+        // juce::String artName = StringsDictSingleton::nameOf(task.group->artId);
+        // LOG(Verbose, "SampleLoaderQueue: dispatching file=" + task.loadSpec.file.getFullPathName() + " inst=" + KitLib::InstrumentSpec::typeToString(task.group->instType) + " art=" + artName + " vel=" + juce::String((int)task.group->velocity) + " rr=" + juce::String((int)task.group->roundRobinId));
 
         // Wrap callback to update stats and call all pending callbacks registered for this spec cache key
         juce::String pendingKey = task.cacheKey;

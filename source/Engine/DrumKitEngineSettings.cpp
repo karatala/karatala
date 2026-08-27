@@ -43,6 +43,10 @@ static juce::String hiHatMissingDecayPolicyToYaml(HiHatMissingDecayPolicy policy
     return "keep_tail";
 }
 
+static juce::String sampleLoadingModeToYaml(SampleLoadingMode mode) {
+    return mode == SampleLoadingMode::Full ? "full" : "adaptive";
+}
+
 MicLayout DrumKitEngine::resolveMicLayoutFromConfig() {
     const char* dataPathEnv = "EDRUMS_DATA_PATH";
     const auto defaultDataPath = DrumKitEngine().defaultDataPath;
@@ -340,6 +344,20 @@ ParseResult<DrumKitEngine::Config> DrumKitEngine::parseConfigYaml(const juce::St
             if (val.isNotEmpty()) target.store(val.getIntValue());
         };
 
+        const auto& sampleLoadingNode = engineNode["sample_loading"];
+        if (sampleLoadingNode.isMap()) {
+            const auto mode = sampleLoadingNode["mode"].asString().trim().toLowerCase();
+            if (mode == "adaptive") this->engineSettings.sampleLoadingMode.store(SampleLoadingMode::Adaptive);
+            else if (mode == "full") this->engineSettings.sampleLoadingMode.store(SampleLoadingMode::Full);
+            else if (mode.isNotEmpty()) {
+                this->engineSettings.sampleLoadingMode.store(SampleLoadingMode::Adaptive);
+                result.addWarning("Unknown sample loading mode '" + mode + "'; using adaptive.");
+            }
+
+            const auto initialRoundRobins = sampleLoadingNode["initialRoundRobinsPerVelocity"].asString();
+            if (initialRoundRobins.isNotEmpty()) this->engineSettings.initialRoundRobinsPerVelocity.store(juce::jlimit(1, 26, initialRoundRobins.getIntValue()));
+        }
+
         const auto& chokeNode = engineNode["aftertouch_choke"];
         if (chokeNode.isMap()) {
             parseFloat(chokeNode, "maxDuckDepth", this->engineSettings.chokeMaxDuckDepth);
@@ -503,7 +521,10 @@ juce::String DrumKitEngine::getDefaultYaml() {
     if (libDir.exists())
         result += "libraryPath: " + libDir.getFullPathName() + "\n";
     result += "\n";
-    result += "# engine:\n";
+    result += "engine:\n";
+    result += "  sample_loading:\n";
+    result += "    mode: adaptive\n";
+    result += "    initialRoundRobinsPerVelocity: 2\n";
     result += "#   aftertouch_choke:\n";
     result += "#     maxDuckDepth: 0.7\n";
     result += "#     duckTimeSec: 0.15\n";
@@ -566,6 +587,9 @@ juce::String DrumKitEngine::serializeSettingsYaml() const {
 
     const auto& settings = this->engineSettings;
     yaml += "\nengine:\n";
+    yaml += "  sample_loading:\n";
+    yaml += "    mode: " + sampleLoadingModeToYaml(settings.sampleLoadingMode.load()) + "\n";
+    yaml += "    initialRoundRobinsPerVelocity: " + juce::String(juce::jlimit(1, 26, settings.initialRoundRobinsPerVelocity.load())) + "\n";
     yaml += "  aftertouch_choke:\n";
     yaml += "    maxDuckDepth: " + floatToYaml(settings.chokeMaxDuckDepth.load()) + "\n";
     yaml += "    duckTimeSec: " + floatToYaml(settings.chokeDuckTimeSec.load()) + "\n";

@@ -10,6 +10,8 @@
 #include <atomic>
 #include <array>
 #include <chrono>
+#include <cstdint>
+#include <vector>
 #include "KitLibModel.h"
 
 class SampleLoader;
@@ -55,6 +57,11 @@ class SampleLoaderQueue {
 public:
     using LoadCallback = std::function<void(std::shared_ptr<juce::AudioBuffer<float>>, double)>;
 
+    struct LogicalHitLoadEntry {
+        SampleLoadSpec loadSpec;
+        LoadCallback callback;
+    };
+
     explicit SampleLoaderQueue(SampleLoader& sampleLoader) : loader(sampleLoader) {
         this->stopFlag.store(false);
         for (auto &a : stageInFlightCount) a.store(0);
@@ -63,12 +70,9 @@ public:
     }
     ~SampleLoaderQueue() { this->stopProcessing(); }
 
-    // Enqueue a sample candidate for progressive staged loading.
-    // - `instType` is the instrument type (Kick, Snare, HiHat, ...)
-    // - `artId` is the articulation id (StringsDictSingleton::Id)
-    // - `velocity` is the velocity level value (1..127)
-    // - `rrIndex` is the round-robin index (1..26)
-    void enqueueCandidate(const SampleLoadSpec& loadSpec, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t rrIndex, bool earlyLoad, LoadCallback cb);
+    // Submit all active mic files for one logical hit with one shared priority identity.
+    void enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, bool earlyLoad);
+    uint64_t createLoadTargetId() { return this->nextLoadTargetId.fetch_add(1, std::memory_order_relaxed); }
 
     // Attempt to mark the worker as started. Returns true if the worker
     // was already started, false if we successfully marked it started.
@@ -77,15 +81,22 @@ public:
         return !this->workerStarted.compare_exchange_strong(expected, true);
     }
 private:
+    struct LogicalHitLoadGroup {
+        uint64_t targetId = 0;
+        uint64_t sequence = 0;
+        KitLib::InstrumentSpec::Type instType = KitLib::InstrumentSpec::Type::Unknown;
+        StringsDictSingleton::Id artId = 0;
+        uint8_t velocity = 0;
+        uint8_t roundRobinId = 0;
+        bool earlyLoad = false;
+        int stage = 3;
+        int priority = 9; // lower is higher priority
+    };
+
     struct Candidate {
         ResolvedSampleLoadSpec loadSpec;
         juce::String cacheKey;
-        KitLib::InstrumentSpec::Type instType;
-        StringsDictSingleton::Id artId;
-        uint8_t velocity;
-        uint8_t rrIndex;
-        bool earlyLoad = false;
-        int priority; // lower is higher priority
+        std::shared_ptr<const LogicalHitLoadGroup> group;
     };
 
     SampleLoader& loader;
@@ -97,6 +108,8 @@ private:
     std::thread workerThread;
     std::atomic<bool> stopFlag{false};
     std::atomic<bool> workerStarted{false};
+    std::atomic<uint64_t> nextLoadTargetId{1};
+    uint64_t nextGroupSequence = 1;
 
     // Stats
     std::atomic<uint32_t> queuedCount{0};
@@ -124,7 +137,11 @@ public:
 
     void workerLoop();
     int computeInstrumentPriority(KitLib::InstrumentSpec::Type type) const;
-    int determineStage(const Candidate& candidate) const;
+    int determineStage(const LogicalHitLoadGroup& group) const;
+
+private:
+    bool isHigherPriority(const LogicalHitLoadGroup& first, const LogicalHitLoadGroup& second) const;
+    void promoteQueuedCandidateLocked(const juce::String& cacheKey, const std::shared_ptr<const LogicalHitLoadGroup>& requestedGroup);
 };
 
 class SampleLoader {

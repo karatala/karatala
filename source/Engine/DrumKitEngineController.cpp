@@ -128,6 +128,15 @@ void DrumKitEngine::initSampleLibrary() {
 }
 
 void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState) {
+    const auto sampleLoadingMode = treeState.state["sample_loading_mode"].toString().trim().toLowerCase();
+    if (sampleLoadingMode.isEmpty() || sampleLoadingMode == "global") this->sampleLoadingModeOverride = SampleLoadingModeOverride::UseGlobal;
+    else if (sampleLoadingMode == "adaptive") this->sampleLoadingModeOverride = SampleLoadingModeOverride::Adaptive;
+    else if (sampleLoadingMode == "full") this->sampleLoadingModeOverride = SampleLoadingModeOverride::Full;
+    else {
+        this->sampleLoadingModeOverride = SampleLoadingModeOverride::UseGlobal;
+        LOG(Warning, "Invalid instance sample loading mode '" + sampleLoadingMode + "'. Using machine default.");
+    }
+
     const auto responseDefinition = treeState.state["velocity_response"].toString();
     auto parsedResponse = VelocityResponse::fromDefinition(responseDefinition.isNotEmpty() ? responseDefinition : this->globalConfig.velocityResponse);
     if (parsedResponse.ok()) {
@@ -168,6 +177,12 @@ void DrumKitEngine::useState(const juce::AudioProcessorValueTreeState& treeState
     for (const auto& instrumentPlayer : this->instrumentPlayerPtrs) {
         if (instrumentPlayer != nullptr) instrumentPlayer->rebuildVelocityResponseTables();
     }
+}
+
+SampleLoadingMode DrumKitEngine::getEffectiveSampleLoadingMode() const {
+    if (this->sampleLoadingModeOverride == SampleLoadingModeOverride::Adaptive) return SampleLoadingMode::Adaptive;
+    if (this->sampleLoadingModeOverride == SampleLoadingModeOverride::Full) return SampleLoadingMode::Full;
+    return this->engineSettings.sampleLoadingMode.load();
 }
 
 bool DrumKitEngine::setVelocityResponseDefinition(const juce::String& definition) {
