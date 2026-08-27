@@ -70,8 +70,8 @@ public:
     }
     ~SampleLoaderQueue() { this->stopProcessing(); }
 
-    // Submit all active mic files for one logical hit with one shared priority identity.
-    void enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, bool earlyLoad);
+    // Submit all active mic files for one logical hit. Stage 1 is highest-velocity minimal work, stage 2 is other-velocity minimal work, and stage 3 is Full-mode remainder.
+    void enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, int stage);
     uint64_t createLoadTargetId() { return this->nextLoadTargetId.fetch_add(1, std::memory_order_relaxed); }
 
     // Attempt to mark the worker as started. Returns true if the worker
@@ -88,7 +88,6 @@ private:
         StringsDictSingleton::Id artId = 0;
         uint8_t velocity = 0;
         uint8_t roundRobinId = 0;
-        bool earlyLoad = false;
         int stage = 3;
         int priority = 9; // lower is higher priority
     };
@@ -137,7 +136,6 @@ public:
 
     void workerLoop();
     int computeInstrumentPriority(KitLib::InstrumentSpec::Type type) const;
-    int determineStage(const LogicalHitLoadGroup& group) const;
 
 private:
     bool isHigherPriority(const LogicalHitLoadGroup& first, const LogicalHitLoadGroup& second) const;

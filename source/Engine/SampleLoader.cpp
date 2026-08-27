@@ -21,7 +21,7 @@ void SampleLoaderQueue::stopProcessing() {
     }
 }
 
-void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, bool earlyLoad) {
+void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, int stage) {
     if (entries.empty()) return;
 
     std::vector<ResolvedSampleLoadSpec> resolvedLoadSpecs;
@@ -42,9 +42,8 @@ void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entri
     group->artId = artId;
     group->velocity = velocity;
     group->roundRobinId = roundRobinId;
-    group->earlyLoad = earlyLoad;
     group->priority = this->computeInstrumentPriority(instType);
-    group->stage = this->determineStage(*group);
+    group->stage = std::clamp(stage, 1, 3);
     const size_t stageIdx = static_cast<size_t>(std::clamp(group->stage - 1, 0, 3));
 
     for (size_t entryIdx = 0; entryIdx < entries.size(); ++entryIdx) {
@@ -93,91 +92,6 @@ int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type ty
         case KitLib::InstrumentSpec::Type::Kick: return 1;
         case KitLib::InstrumentSpec::Type::Snare: return 2;
         case KitLib::InstrumentSpec::Type::HiHat: return 3;
-        case KitLib::InstrumentSpec::Type::Ride: return 4;
-        case KitLib::InstrumentSpec::Type::Crash: return 5;
-        case KitLib::InstrumentSpec::Type::Tom: return 6;
-        case KitLib::InstrumentSpec::Type::Splash:
-        case KitLib::InstrumentSpec::Type::China:
-        case KitLib::InstrumentSpec::Type::Bell:
-        case KitLib::InstrumentSpec::Type::Stack:
-        case KitLib::InstrumentSpec::Type::Chopper:
-        case KitLib::InstrumentSpec::Type::Gong:
-        case KitLib::InstrumentSpec::Type::Karatala:
-        case KitLib::InstrumentSpec::Type::Cymbal:
-            return 7;
-        case KitLib::InstrumentSpec::Type::Octoban:
-        case KitLib::InstrumentSpec::Type::Rototom:
-        case KitLib::InstrumentSpec::Type::Timbale:
-        case KitLib::InstrumentSpec::Type::Timpani:
-        case KitLib::InstrumentSpec::Type::Conga:
-        case KitLib::InstrumentSpec::Type::Bongo:
-        case KitLib::InstrumentSpec::Type::Djembe:
-        case KitLib::InstrumentSpec::Type::Cajon:
-        case KitLib::InstrumentSpec::Type::Taiko:
-        case KitLib::InstrumentSpec::Type::Surdo:
-        case KitLib::InstrumentSpec::Type::Mridangam:
-        case KitLib::InstrumentSpec::Type::TalkingDrum:
-        case KitLib::InstrumentSpec::Type::Drum:
-            return 8;
-        case KitLib::InstrumentSpec::Type::Cowbell:
-        case KitLib::InstrumentSpec::Type::Tambourine:
-        case KitLib::InstrumentSpec::Type::Shaker:
-        case KitLib::InstrumentSpec::Type::Maracas:
-        case KitLib::InstrumentSpec::Type::Cabasa:
-        case KitLib::InstrumentSpec::Type::Guiro:
-        case KitLib::InstrumentSpec::Type::Claves:
-        case KitLib::InstrumentSpec::Type::Agogo:
-        case KitLib::InstrumentSpec::Type::WoodBlock:
-        case KitLib::InstrumentSpec::Type::TempleBlock:
-        case KitLib::InstrumentSpec::Type::Triangle:
-        case KitLib::InstrumentSpec::Type::Vibraslap:
-        case KitLib::InstrumentSpec::Type::Castanets:
-        case KitLib::InstrumentSpec::Type::SleighBells:
-        case KitLib::InstrumentSpec::Type::Whip:
-        case KitLib::InstrumentSpec::Type::Ratchet:
-        case KitLib::InstrumentSpec::Type::Percussion:
-        case KitLib::InstrumentSpec::Type::Other:
-        case KitLib::InstrumentSpec::Type::Unknown:
-            return 9;
-    }
-    return 9;
-}
-
-int SampleLoaderQueue::determineStage(const LogicalHitLoadGroup& group) const {
-    // Use articulation Ids for detection where possible (prefer StringsDictSingleton ids)
-    bool isMain = false;
-    const auto centerId = StringsDictSingleton::getId("center");
-    const auto rimId = StringsDictSingleton::getId("rim");
-    const auto bowId = StringsDictSingleton::getId("bow");
-    const auto bellId = StringsDictSingleton::getId("bell");
-    const auto edgeId = StringsDictSingleton::getId("edge");
-    const auto pedalId = StringsDictSingleton::getId("pedal");
-
-    switch (group.instType) {
-        case KitLib::InstrumentSpec::Type::Kick:
-        case KitLib::InstrumentSpec::Type::Snare:
-        case KitLib::InstrumentSpec::Type::Tom:
-        case KitLib::InstrumentSpec::Type::Octoban:
-        case KitLib::InstrumentSpec::Type::Rototom:
-        case KitLib::InstrumentSpec::Type::Timbale:
-        case KitLib::InstrumentSpec::Type::Timpani:
-        case KitLib::InstrumentSpec::Type::Conga:
-        case KitLib::InstrumentSpec::Type::Bongo:
-        case KitLib::InstrumentSpec::Type::Djembe:
-        case KitLib::InstrumentSpec::Type::Cajon:
-        case KitLib::InstrumentSpec::Type::Taiko:
-        case KitLib::InstrumentSpec::Type::Surdo:
-        case KitLib::InstrumentSpec::Type::Mridangam:
-        case KitLib::InstrumentSpec::Type::TalkingDrum:
-        case KitLib::InstrumentSpec::Type::Drum:
-            if (group.artId == centerId || group.artId == rimId) isMain = (group.artId == centerId);
-            break;
-        case KitLib::InstrumentSpec::Type::Ride:
-            if (group.artId == bowId || group.artId == bellId) isMain = true;
-            break;
-        case KitLib::InstrumentSpec::Type::HiHat:
-            if (group.artId == bowId || group.artId == pedalId) isMain = true;
-            break;
         case KitLib::InstrumentSpec::Type::Crash:
         case KitLib::InstrumentSpec::Type::Splash:
         case KitLib::InstrumentSpec::Type::China:
@@ -187,8 +101,23 @@ int SampleLoaderQueue::determineStage(const LogicalHitLoadGroup& group) const {
         case KitLib::InstrumentSpec::Type::Gong:
         case KitLib::InstrumentSpec::Type::Karatala:
         case KitLib::InstrumentSpec::Type::Cymbal:
-            if (group.artId == edgeId || group.artId == bowId || group.artId == bellId) isMain = (group.artId == edgeId || group.artId == bowId);
-            break;
+            return 4;
+        case KitLib::InstrumentSpec::Type::Ride: return 5;
+        case KitLib::InstrumentSpec::Type::Tom: return 6;
+        case KitLib::InstrumentSpec::Type::Octoban:
+        case KitLib::InstrumentSpec::Type::Rototom:
+        case KitLib::InstrumentSpec::Type::Timbale:
+        case KitLib::InstrumentSpec::Type::Timpani:
+        case KitLib::InstrumentSpec::Type::Conga:
+        case KitLib::InstrumentSpec::Type::Bongo:
+        case KitLib::InstrumentSpec::Type::Djembe:
+        case KitLib::InstrumentSpec::Type::Cajon:
+        case KitLib::InstrumentSpec::Type::Taiko:
+        case KitLib::InstrumentSpec::Type::Surdo:
+        case KitLib::InstrumentSpec::Type::Mridangam:
+        case KitLib::InstrumentSpec::Type::TalkingDrum:
+        case KitLib::InstrumentSpec::Type::Drum:
+            return 7;
         case KitLib::InstrumentSpec::Type::Cowbell:
         case KitLib::InstrumentSpec::Type::Tambourine:
         case KitLib::InstrumentSpec::Type::Shaker:
@@ -205,15 +134,12 @@ int SampleLoaderQueue::determineStage(const LogicalHitLoadGroup& group) const {
         case KitLib::InstrumentSpec::Type::SleighBells:
         case KitLib::InstrumentSpec::Type::Whip:
         case KitLib::InstrumentSpec::Type::Ratchet:
-        case KitLib::InstrumentSpec::Type::Unknown:
         case KitLib::InstrumentSpec::Type::Percussion:
         case KitLib::InstrumentSpec::Type::Other:
-            break;
+        case KitLib::InstrumentSpec::Type::Unknown:
+            return 8;
     }
-
-    if (isMain && group.earlyLoad) return 1;
-    if (group.earlyLoad) return 2;
-    return 3;
+    return 8;
 }
 
 void SampleLoaderQueue::workerLoop() {

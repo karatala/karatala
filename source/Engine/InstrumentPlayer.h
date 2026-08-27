@@ -303,7 +303,7 @@ public:
         std::shared_ptr<LogicalHitReadiness> readiness = std::make_shared<LogicalHitReadiness>();
         std::optional<float> preTrimIntensityDb;
         uint64_t lastFloatingSelectionSample = std::numeric_limits<uint64_t>::max();
-        bool earlyLoad = false;
+        uint8_t initialLoadStage = 3; // 1: highest velocity minimal, 2: other velocities minimal, 3: Full remainder
 
         bool isReady() const { return this->readiness->ready.load(std::memory_order_acquire); }
     };
@@ -804,7 +804,7 @@ private:
         , MicRoutingBuilder& micRouting
         , bool articulationCalibrationAvailable
     );
-    void selectEarlyLoadLogicalHits(ArticulationRuntime& artRt);
+    void assignInitialLoadStages(ArticulationRuntime& artRt);
     void enqueueVelocityLevelSamples(const KitLib::InstrumentSpec& instSpec, const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt);
     void buildCcMappings(const ArticulationSlot& articulationSlot, KitLib::ArticulationSpec* artSpec, ArtRtIdx artIdx, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);

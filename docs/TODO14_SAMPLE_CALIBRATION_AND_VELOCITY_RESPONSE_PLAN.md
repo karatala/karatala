@@ -9,7 +9,7 @@ Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, Phase 5B, and Phase 6 im
 - `logical hit`: one recorded hit at one velocity level. It includes every linked mic sample.
 - `logical-hit pre-trim intensity`: the strength of one logical hit in source-intensity dB, measured from the chosen reference mic before calibration gain or other source preprocessing.
 - `raw velocity median`: the robust measured median of the logical-hit pre-trim intensities at one velocity level.
-- `fitted source value`: the monotonic value fitted from raw velocity medians and used for analysis, preload priority, and future floating selection. Exact mode still follows velocity-level boundaries.
+- `fitted source value`: the monotonic value fitted from raw velocity medians and used for analysis and floating selection. Exact mode still follows velocity-level boundaries.
 - `global loudness response`: the user-controlled target loudness for MIDI velocities 1 to 127.
 - `source response profile`: the stable monotonic relation between velocity levels and their fitted source values for one library articulation.
 - `sample calibration trim`: fixed gain derived from one raw velocity median and applied before cache publication.
@@ -20,7 +20,7 @@ Status: Phase 1 is complete. Phase 2, Phase 3, Phase 5, Phase 5B, and Phase 6 im
 
 Do not use one generic curve for both sample selection and output loudness. They are separate problems.
 
-This plan owns analysis, per-kit `metadata.csv`, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, map layer overrides, and analysis reports. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense libraries with few logical hits per velocity level. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct. [TODO18](TODO18_LIBRARY_ARTICULATION_AND_SAMPLE_OVERRIDES_PLAN.md) owns reviewed user-authored placement balance, manual gain, playback offset, and exact range overrides in `kit-overrides.yml`.
+This plan owns analysis, per-kit `metadata.csv`, the global loudness response, exact logical-hit selection, the source preprocessing recipe contract, map layer overrides, and analysis reports. [TODO15](TODO15_FLOATING_SAMPLE_SELECTION_PLAN.md) only adds optional floating selection for dense libraries with few logical hits per velocity level. [TODO16](TODO16_DERIVED_SAMPLE_CACHE_AND_BAKE_CACHE_PLAN.md) only adds persistent derived sample storage and the Bake Cache workflow after the RAM-cache recipe contract is correct. [TODO18](TODO18_LIBRARY_ARTICULATION_AND_SAMPLE_OVERRIDES_PLAN.md) owns reviewed user-authored placement balance, manual gain, playback offset, and exact range overrides in `kit-overrides.yml`. [TODO19](TODO19_ADAPTIVE_SAMPLE_LOADING_PLAN.md) supersedes this plan's representative preload-target rules.
 
 Velocity and loudness calibration are the first release. Pan recommendations and timing reports follow after the core works. Runtime timing correction and source audio rewriting need a later plan after listening review.
 
@@ -50,7 +50,7 @@ Success means:
 - manual response changes rebuild lookup tables without reloading sample audio;
 - `Reload All Kits` rereads per-kit metadata and rebuilds the affected runtime data;
 - two different source preprocessing recipes never share one cached buffer;
-- early loading covers calibrated target intensities instead of trusting raw filename velocity labels;
+- initial loading uses the deterministic per-velocity round-robin stages defined by TODO19;
 - kit parsing or measurement failure leaves the existing `metadata.csv` and its backup unchanged.
 
 Phase 1 approved the initial metric, common reference experiment, trim limits, headroom, and tolerances recorded below. The Phase 4 listening correction supersedes the common-reference and measured exact-selection decisions.
@@ -453,14 +453,14 @@ Verify later: deterministic generation; Python-to-C++ row matching; backup and r
 - ✅ Define the source content identity used by the canonical RAM-cache key.
 - ✅ Replace the incomplete cache tag contract with one canonical typed recipe and complete key.
 - ✅ Use the same recipe builder for preview, progressive loading, and normal playback.
-- ✅ Derive early-load priority from representative calibrated target intensities and complete logical hits.
+- ✅ Derive early-load priority from representative calibrated target intensities and complete logical hits. This historical preload rule is superseded by TODO19 Stage 3.
 - ✅ Update preview, voice management, and hi-hat loudness estimates.
 - ✅ Restore velocity-level boundaries for normal playback, loaded fallback, and preview after measured-dB exact selection chose wrong timbres.
 - ✅ Replace the common cross-instrument reference with each articulation's own hardest fitted level after listening found the snare too soft and quiet and the kick too loud.
 - ✅ Apply fixed calibration gain and the final fade in one loader pass, and increment the preprocessing recipe version.
 - Add clear debug status when all queued sample loads have finished. Report enough counts to distinguish loaded, failed, and still-pending work so listening can start from a known fully loaded state.
 
-For each representative target, load one close logical hit and all its active linked mic entries in the same stage. Do not prefer round robin IDs `a` and `b` only because their values are small. Load every remaining mapped hit later.
+Historical TODO14 rule: for each representative target, load one close logical hit and all its active linked mic entries in the same stage. TODO19 Stage 3 replaces this with deterministic `N`-round-robin stages in stable library order.
 
 Verify later: deterministic monotonic tables; the `articulationReferenceDb + effectiveTargetDb` median equation within tolerance for non-limited map layers; velocity 127 at `0 dB` relative; velocity-level boundary selection; group voice reservation; no partial or mixed logical hits; different recipes never share buffers; equivalent recipes do share buffers; calibrated first-playable coverage; every mapped sample eventually loads; clear all-loaded status and counts; hi-hat listening comparison.
 

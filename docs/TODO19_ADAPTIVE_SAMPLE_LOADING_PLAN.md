@@ -1,7 +1,7 @@
 # TODO19: Adaptive Sample Loading And Dynamic Queue Plan
 
 Date: 2026-08-27  
-Status: Stages 1 and 2 are implemented in code. Build and tests are pending by request. Stages 3 through 6 have not started.
+Status: Stages 1 through 3 are implemented in code. Build and tests are pending by request. Stages 4 through 6 have not started.
 
 ## Goal
 
@@ -19,18 +19,18 @@ The loader must:
 
 ## Current Facts
 
-- [`SampleLoaderQueue`](../source/Engine/SampleLoader.h) owns four stage deques, but the current `determineStage()` implementation only returns stages 1, 2, and 3.
+- [`SampleLoaderQueue`](../source/Engine/SampleLoader.h) owns four stage deques. Current initial loading uses stage 1 for the highest velocity level's minimal hits, stage 2 for the other velocity levels' minimal hits, and stage 3 for Full-mode remainder.
 - [`SampleLoaderQueue::enqueueLogicalHit()`](../source/Engine/SampleLoader.cpp) accepts every active mic file for one logical hit and gives those file candidates one shared group identity, target ID, stage, static priority, and sequence.
 - Equivalent pending files are still deduplicated by cache key. A duplicate from a higher static group now promotes the existing queued file and keeps all callbacks.
 - The worker always scans stages in order and then selects the lowest fixed instrument-type priority in that stage.
-- The current fixed order starts with Kick, Snare, HiHat, Ride, Crash, and Tom.
+- The current static family order is Kick, Snare, HiHat, crash family, Ride, Tom, other drums, and then other percussion or unknown types.
 - The worker sleeps for 100 ms when it finds no queued work. This is too long for late demand loading.
-- [`InstrumentPlayer::selectEarlyLoadLogicalHits()`](../source/Engine/InstrumentPlayerLoader.cpp) currently marks up to five representative logical hits per articulation near calibrated targets `-24`, `-12`, `-6`, `-3`, and `0 dB`, or raw velocity targets `10`, `35`, `65`, `95`, and `120` when calibration is unavailable.
-- [`InstrumentPlayer::enqueueVelocityLevelSamples()`](../source/Engine/InstrumentPlayerLoader.cpp) submits early hits first and then submits every remaining mapped hit. It registers progress before each file request.
+- [`InstrumentPlayer::assignInitialLoadStages()`](../source/Engine/InstrumentPlayerLoader.cpp) selects up to `initialRoundRobinsPerVelocity` logical hits from each velocity level in stable library order and gives the highest available velocity level the first stage.
+- [`InstrumentPlayer::enqueueVelocityLevelSamples()`](../source/Engine/InstrumentPlayerLoader.cpp) submits the two minimal stages in both modes and submits the third remainder stage only in Full mode. It registers progress before each submitted file request.
 - Playback selects only complete ready logical hits and can fall back to another ready velocity level. It must keep this non-blocking behavior.
 - MIDI note handling runs in the audio thread. It must not lock the loader, allocate memory, access files, or call normal queue mutation methods.
 - [`TODO04`](TODO04_SAMPLE_LOADING_RUNTIME_PLAN.md) is the historical progressive-playback plan. Its four-stage queue summary is not a complete description of the current queue.
-- [`TODO14`](TODO14_SAMPLE_CALIBRATION_AND_VELOCITY_RESPONSE_PLAN.md) owns calibrated logical-hit intensity, complete-hit readiness, and the current representative early-load targets.
+- [`TODO14`](TODO14_SAMPLE_CALIBRATION_AND_VELOCITY_RESPONSE_PLAN.md) owns calibrated logical-hit intensity and complete-hit readiness. Its representative preload targets are historical and are superseded by this plan's Stage 3.
 
 ## Terms
 
@@ -93,7 +93,7 @@ When several demand targets are active, dispatch at most one complete logical hi
 - When a velocity level has fewer hits than the configured count, select all of its hits.
 - Every active mic entry of one selected logical hit has the same queue priority.
 - Keep a logical hit as the dispatch unit even when its files are deduplicated independently by cache key.
-- This staged model replaces the current five representative early-hit markers after its playback quality is verified. Do not keep both systems as competing priority sources.
+- This staged model has replaced the five representative early-hit markers. Focused playback-quality verification is still pending.
 
 ## Note Demand Behavior
 
@@ -190,10 +190,10 @@ For the first implementation, a changed mode applies to the next kit, preset, in
 
 ## Costs And Risks
 
-- The first notes can repeat only the initial round robins until demand work finishes.
+- The first notes can repeat only the initial round robins until demand work finishes. Until Stages 4 and 5 are implemented, Adaptive cannot activate its remaining hits.
 - A note can still be silent when no complete logical hit for its articulation is ready. The note must never block for disk access.
 - Demand loading can cause disk activity during playback.
-- Logical-hit group identity and static duplicate promotion are implemented. Dormant state and demand priority classes still need queue support.
+- Logical-hit group identity, static duplicate promotion, and unsubmitted Adaptive runtime hits are implemented. Dormant activation and demand priority classes still need queue support.
 - Cache-key deduplication and promotion need focused verification before dynamic demand uses them.
 - Hi-hat controller siblings, aftertouch targets, shadow players, and additional map layers increase the number of exact runtime demand targets.
 - Very frequent demand needs coalescing and fair dispatch to prevent queue starvation.
@@ -205,8 +205,8 @@ For the first implementation, a changed mode applies to the next kit, preset, in
 |---|---|---|
 | Global settings and Conf controls | Low | Existing YAML and compact-control patterns can be reused. |
 | Plugin-state override | Low | One stable string property with 3 validated values. |
-| Static `N`-RR staging | Medium | It replaces current representative-hit selection and must preserve complete mic groups. |
-| Dormant logical-hit storage | Medium | Runtime load descriptions must remain valid without submitting file work. |
+| Static `N`-RR staging | Implemented | Deterministic stage assignment preserves complete mic groups and stable library order. |
+| Dormant logical-hit storage | Implemented | Adaptive retains non-minimal runtime logical hits without registering or submitting their files. |
 | Dynamic priority and duplicate promotion | Medium to high | Static duplicate promotion is implemented. Demand classes and dormant activation remain. |
 | Real-time demand signal | High | Note, CC, and aftertouch paths must stay bounded and lock-free. |
 | Reload and lifetime safety | High | Old runtime generations and late callbacks must not affect new players. |
@@ -221,7 +221,7 @@ This is not a small queue-order change. Implement it in separate stages so stati
 - Add the `sample_loading_mode` plugin-state property and resolve the effective mode before instrument-map application.
 - Update `PLUGIN_INSTANCE_STATE_FORMAT.md`.
 
-Implementation result: global mode and initial RR count are parsed and serialized under `engine.sample_loading`, Conf shows the machine values and project override, and `sample_loading_mode` is restored before the instrument map. Stage 3 will make the effective mode change queue volume.
+Implementation result: global mode and initial RR count are parsed and serialized under `engine.sample_loading`, Conf shows the machine values and project override, and `sample_loading_mode` is restored before the instrument map. Stage 3 uses the resolved mode when it submits initial work.
 
 ### ✅ Stage 2: Complete-Hit Queue Model
 
@@ -232,15 +232,18 @@ Implementation result: global mode and initial RR count are parsed and serialize
 
 Implementation result: one grouped queue call submits all active mic entries for a logical hit. File candidates share a stable runtime target ID and group priority token. Cache-key deduplication remains file-based, and a higher static group can promote an existing queued file without replacing its callback list. Verification is pending by request.
 
-### Stage 3: Static Minimal And Full Stages
+### ✅ Stage 3: Static Minimal And Full Stages
 
 - Replace representative early-hit selection with highest-level `N`, remaining-level `N`, and full-remainder stages.
 - Apply the approved instrument-family order.
 - Keep Adaptive and Full identical through the end of the minimal stages.
 
+Implementation result: stage 1 submits up to `N` stable hits from the highest source velocity level, and stage 2 submits up to `N` stable hits from every other level. Adaptive stops after stage 2. Full submits all remaining hits in stage 3. Progress counts only submitted files. The old five-target representative selection is removed.
+
 ### Stage 4: Adaptive Dormant Work
 
-- Keep non-minimal logical-hit descriptions dormant in Adaptive mode.
+- ✅ Keep non-minimal logical-hit descriptions dormant in Adaptive mode.
+- Add bounded activation of one dormant logical hit without rebuilding the instrument player.
 - Register load progress only when dormant work becomes active.
 - Confirm that minimal completion hides progress and later demand makes it visible again.
 

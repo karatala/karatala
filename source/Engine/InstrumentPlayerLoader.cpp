@@ -210,7 +210,7 @@ void InstrumentPlayer::createVelocityLevels(KitLib::InstrumentSpec* instSpec
 
     this->buildVelocityLevelLogicalHits(instSpec, notes, artSpec, artRt, artIdx, micRouting, articulationCalibrationAvailable);
     artRt.buildVelocityMapping(this->parent->getVelocityResponse());
-    this->selectEarlyLoadLogicalHits(artRt);
+    this->assignInitialLoadStages(artRt);
     this->enqueueVelocityLevelSamples(*instSpec, *artSpec, artRt);
 }
 
@@ -295,38 +295,22 @@ void InstrumentPlayer::buildVelocityLevelLogicalHits(KitLib::InstrumentSpec* ins
     }
 }
 
-void InstrumentPlayer::selectEarlyLoadLogicalHits(ArticulationRuntime& artRt) {
-    static constexpr std::array<float, 5> CALIBRATED_EARLY_TARGETS_DB { -24.0f, -12.0f, -6.0f, -3.0f, 0.0f };
-    static constexpr std::array<int, 5> UNCALIBRATED_EARLY_VELOCITIES { 10, 35, 65, 95, 120 };
-    for (size_t targetIdx = 0; targetIdx < CALIBRATED_EARLY_TARGETS_DB.size(); ++targetIdx) {
-        size_t bestVelocityLevelIdx = 0;
-        size_t bestLogicalHitIdx = 0;
-        bool foundLogicalHit = false;
-        for (int selectionPass = 0; selectionPass < 2 && !foundLogicalHit; ++selectionPass) {
-            float bestDistance = std::numeric_limits<float>::max();
-            for (size_t velocityLevelIdx = 0; velocityLevelIdx < artRt.velocityLevels.size(); ++velocityLevelIdx) {
-                auto& velocityLevel = artRt.velocityLevels[velocityLevelIdx];
-                for (size_t logicalHitOffset = 0; logicalHitOffset < velocityLevel.logicalHits.size(); ++logicalHitOffset) {
-                    const size_t logicalHitIdx = (targetIdx + logicalHitOffset) % velocityLevel.logicalHits.size();
-                    auto& logicalHit = velocityLevel.logicalHits[logicalHitIdx];
-                    if (selectionPass == 0 && logicalHit.earlyLoad) continue;
-                    const float representativeValue = artRt.calibrated
-                        ? logicalHit.preTrimIntensityDb.value_or(*velocityLevel.fittedSourceDb)
-                        : static_cast<float>(velocityLevel.velocity);
-                    const float targetValue = artRt.calibrated
-                        ? *artRt.velocityLevels.back().fittedSourceDb + CALIBRATED_EARLY_TARGETS_DB[targetIdx]
-                        : static_cast<float>(UNCALIBRATED_EARLY_VELOCITIES[targetIdx]);
-                    const float distance = std::abs(representativeValue - targetValue);
-                    if (distance < bestDistance) {
-                        bestDistance = distance;
-                        bestVelocityLevelIdx = velocityLevelIdx;
-                        bestLogicalHitIdx = logicalHitIdx;
-                        foundLogicalHit = true;
-                    }
-                }
-            }
+void InstrumentPlayer::assignInitialLoadStages(ArticulationRuntime& artRt) {
+    if (artRt.velocityLevels.empty()) return;
+    const size_t initialRoundRobinCount = static_cast<size_t>(this->parent != nullptr ? this->parent->getGlobalInitialRoundRobinsPerVelocity() : 2);
+    size_t highestVelocityLevelIdx = artRt.velocityLevels.size();
+    for (size_t candidateLevelIdx = artRt.velocityLevels.size(); candidateLevelIdx > 0; --candidateLevelIdx) {
+        if (artRt.velocityLevels[candidateLevelIdx - 1].logicalHits.empty()) continue;
+        highestVelocityLevelIdx = candidateLevelIdx - 1;
+        break;
+    }
+    if (highestVelocityLevelIdx == artRt.velocityLevels.size()) return;
+    for (size_t velocityLevelIdx = 0; velocityLevelIdx < artRt.velocityLevels.size(); ++velocityLevelIdx) {
+        auto& velocityLevel = artRt.velocityLevels[velocityLevelIdx];
+        const uint8_t minimalLoadStage = velocityLevelIdx == highestVelocityLevelIdx ? 1 : 2;
+        for (size_t logicalHitIdx = 0; logicalHitIdx < velocityLevel.logicalHits.size(); ++logicalHitIdx) {
+            velocityLevel.logicalHits[logicalHitIdx].initialLoadStage = logicalHitIdx < initialRoundRobinCount ? minimalLoadStage : 3;
         }
-        if (foundLogicalHit) artRt.velocityLevels[bestVelocityLevelIdx].logicalHits[bestLogicalHitIdx].earlyLoad = true;
     }
 }
 
@@ -334,12 +318,12 @@ void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec&
     SampleLoader* loader = this->getSampleLoader();
     if (loader == nullptr) return;
     if (artRt.loadTargetId == 0) artRt.loadTargetId = loader->getQueue().createLoadTargetId();
-    for (int loadPass = 0; loadPass < 2; ++loadPass) {
-        const bool loadEarlyHits = loadPass == 0;
+    const int lastSubmittedStage = this->parent != nullptr && this->parent->getEffectiveSampleLoadingMode() == SampleLoadingMode::Full ? 3 : 2;
+    for (int initialLoadStage = 1; initialLoadStage <= lastSubmittedStage; ++initialLoadStage) {
         for (auto& velocityLevel : artRt.velocityLevels) {
             const float calibrationTrimDb = artRt.calibrated ? velocityLevel.calibrationTrimDb.value_or(0.0f) : 0.0f;
             for (auto& logicalHit : velocityLevel.logicalHits) {
-                if (logicalHit.earlyLoad != loadEarlyHits) continue;
+                if (logicalHit.initialLoadStage != initialLoadStage) continue;
                 std::vector<SampleLoaderQueue::LogicalHitLoadEntry> loadEntries;
                 loadEntries.reserve(logicalHit.sampleEntryIndexes.size());
                 for (const auto sampleEntryIdx : logicalHit.sampleEntryIndexes) {
@@ -369,7 +353,7 @@ void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec&
                     };
                     loadEntries.push_back(std::move(loadEntry));
                 }
-                loader->getQueue().enqueueLogicalHit(std::move(loadEntries), artRt.loadTargetId, instSpec.meta.type, artSpec.nameId, velocityLevel.velocity, logicalHit.roundRobinId, logicalHit.earlyLoad);
+                loader->getQueue().enqueueLogicalHit(std::move(loadEntries), artRt.loadTargetId, instSpec.meta.type, artSpec.nameId, velocityLevel.velocity, logicalHit.roundRobinId, initialLoadStage);
             }
         }
     }
