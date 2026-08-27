@@ -96,6 +96,7 @@ bool InstrumentPlayer::prepareAftertouchChokePlan(int midiChannel, int midiNoteN
     const auto chokeArtIdx = static_cast<ArtRtIdx>(referenceSound->aftertouchChokeArticulationIndex);
     auto& chokeArt = this->runtimeArticulations[static_cast<size_t>(chokeArtIdx)];
     const juce::uint8 midiVelocity = referenceVoice->getMidiVelocity();
+    this->recordSampleLoadDemand(chokeArt, chokeArt.velocityToLevel[static_cast<size_t>(midiVelocity)]);
     const int targetVelocityLevelIdx = this->resolveVelocityLevel(chokeArt, midiVelocity);
     if (targetVelocityLevelIdx < 0 || targetVelocityLevelIdx >= static_cast<int>(chokeArt.velocityLevels.size())) return false;
     auto& targetVelocityLevel = chokeArt.velocityLevels[static_cast<size_t>(targetVelocityLevelIdx)];

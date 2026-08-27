@@ -1,5 +1,6 @@
 #include "InstrumentPlayer.h"
 #include "../Config/PluginLogger.h"
+#include "SampleLoader.h"
 #include "DrumKitEngine.h"
 #include "HiHatTransitionPolicy.h"
 #include <limits>
@@ -70,7 +71,18 @@ InstrumentPlayer::InstrumentPlayer(DrumKitEngine* parentEngine, KitLayout::Instr
     this->rebuildHiHatNoteChokeValues();
 }
 
-InstrumentPlayer::~InstrumentPlayer() = default;
+InstrumentPlayer::~InstrumentPlayer() { this->deactivateSampleLoadDemand(); }
+
+void InstrumentPlayer::recordSampleLoadDemand(ArticulationRuntime& artRt, int velocityLevelIdx) noexcept {
+    auto* demandState = artRt.loadDemandState.get();
+    if (demandState != nullptr) demandState->request(velocityLevelIdx);
+}
+
+void InstrumentPlayer::deactivateSampleLoadDemand() noexcept {
+    for (auto& articulation : this->runtimeArticulations) {
+        if (articulation.loadDemandState != nullptr) articulation.loadDemandState->deactivate();
+    }
+}
 
 void InstrumentPlayer::clearSounds() {
     const juce::ScopedLock scopedLock(this->lock);

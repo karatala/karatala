@@ -1,7 +1,7 @@
 # TODO19: Adaptive Sample Loading And Dynamic Queue Plan
 
 Date: 2026-08-27  
-Status: Stages 1 through 3 are implemented in code. Build and tests are pending by request. Stages 4 through 6 have not started.
+Status: Stages 1 through 5 are implemented in code. Build and tests are pending by request. Stage 6 has not started.
 
 ## Goal
 
@@ -19,14 +19,15 @@ The loader must:
 
 ## Current Facts
 
-- [`SampleLoaderQueue`](../source/Engine/SampleLoader.h) owns four stage deques. Current initial loading uses stage 1 for the highest velocity level's minimal hits, stage 2 for the other velocity levels' minimal hits, and stage 3 for Full-mode remainder.
-- [`SampleLoaderQueue::enqueueLogicalHit()`](../source/Engine/SampleLoader.cpp) accepts every active mic file for one logical hit and gives those file candidates one shared group identity, target ID, stage, static priority, and sequence.
-- Equivalent pending files are still deduplicated by cache key. A duplicate from a higher static group now promotes the existing queued file and keeps all callbacks.
-- The worker always scans stages in order and then selects the lowest fixed instrument-type priority in that stage.
+- [`SampleLoaderQueue`](../source/Engine/SampleLoader.h) owns six priority-class deques: demanded minimal work, newly activated dormant work, hot-articulation work, highest-velocity minimal work, other-velocity minimal work, and Full-mode remainder.
+- [`SampleLoaderQueue::enqueueLogicalHit()`](../source/Engine/SampleLoader.cpp) accepts every active mic file for one logical hit and gives those file candidates one shared group identity, target ID, priority class, static family priority, and sequence.
+- Equivalent pending files are still deduplicated by cache key. A duplicate from a higher group promotes the existing queued file and keeps all callbacks.
+- The worker scans priority classes in order, keeps files from one logical hit together, and alternates demand targets between complete logical hits at equal priority.
 - The current static family order is Kick, Snare, HiHat, crash family, Ride, Tom, other drums, and then other percussion or unknown types.
-- The worker sleeps for 100 ms when it finds no queued work. This is too long for late demand loading.
+- The worker checks demand before each dispatch loop and sleeps for 5 ms when it finds no queued work.
 - [`InstrumentPlayer::assignInitialLoadStages()`](../source/Engine/InstrumentPlayerLoader.cpp) selects up to `initialRoundRobinsPerVelocity` logical hits from each velocity level in stable library order and gives the highest available velocity level the first stage.
-- [`InstrumentPlayer::enqueueVelocityLevelSamples()`](../source/Engine/InstrumentPlayerLoader.cpp) submits the two minimal stages in both modes and submits the third remainder stage only in Full mode. It registers progress before each submitted file request.
+- [`InstrumentPlayer::enqueueVelocityLevelSamples()`](../source/Engine/InstrumentPlayerLoader.cpp) submits the two minimal stages in both modes and submits the third remainder stage only in Full mode. In Adaptive mode it retains the remaining prepared work without registering progress until demand activates it.
+- Every runtime articulation has one stable shared atomic demand state. Resolved note-on, hi-hat controller transition, and aftertouch choke paths only update that state. Queue promotion and dormant activation stay in the background worker.
 - Playback selects only complete ready logical hits and can fall back to another ready velocity level. It must keep this non-blocking behavior.
 - MIDI note handling runs in the audio thread. It must not lock the loader, allocate memory, access files, or call normal queue mutation methods.
 - [`TODO04`](TODO04_SAMPLE_LOADING_RUNTIME_PLAN.md) is the historical progressive-playback plan. Its four-stage queue summary is not a complete description of the current queue.
@@ -190,11 +191,11 @@ For the first implementation, a changed mode applies to the next kit, preset, in
 
 ## Costs And Risks
 
-- The first notes can repeat only the initial round robins until demand work finishes. Until Stages 4 and 5 are implemented, Adaptive cannot activate its remaining hits.
+- The first notes can repeat only the initial round robins until activated demand work finishes.
 - A note can still be silent when no complete logical hit for its articulation is ready. The note must never block for disk access.
 - Demand loading can cause disk activity during playback.
-- Logical-hit group identity, static duplicate promotion, and unsubmitted Adaptive runtime hits are implemented. Dormant activation and demand priority classes still need queue support.
-- Cache-key deduplication and promotion need focused verification before dynamic demand uses them.
+- Logical-hit group identity, duplicate promotion, dormant Adaptive work, demand activation, and dynamic priority classes are implemented. Focused verification is still pending.
+- Cache-key deduplication and promotion need focused verification under dynamic demand.
 - Hi-hat controller siblings, aftertouch targets, shadow players, and additional map layers increase the number of exact runtime demand targets.
 - Very frequent demand needs coalescing and fair dispatch to prevent queue starvation.
 - Changing from Full to Adaptive cannot reclaim buffers that the current players already own without rebuilding them.
@@ -207,9 +208,9 @@ For the first implementation, a changed mode applies to the next kit, preset, in
 | Plugin-state override | Low | One stable string property with 3 validated values. |
 | Static `N`-RR staging | Implemented | Deterministic stage assignment preserves complete mic groups and stable library order. |
 | Dormant logical-hit storage | Implemented | Adaptive retains non-minimal runtime logical hits without registering or submitting their files. |
-| Dynamic priority and duplicate promotion | Medium to high | Static duplicate promotion is implemented. Demand classes and dormant activation remain. |
-| Real-time demand signal | High | Note, CC, and aftertouch paths must stay bounded and lock-free. |
-| Reload and lifetime safety | High | Old runtime generations and late callbacks must not affect new players. |
+| Dynamic priority and duplicate promotion | Implemented | Six priority classes support exact demand, dormant activation, hot articulations, static preload, and Full remainder while preserving file-level deduplication. |
+| Real-time demand signal | Implemented | Note, CC, and aftertouch paths update only preallocated atomic state. Queue mutation stays in the worker. |
+| Reload and lifetime safety | Implemented | Demand generations deactivate on unload, stale sounds remain weak references, recipe revisions protect publication, and progress registration validates its generation. |
 
 This is not a small queue-order change. Implement it in separate stages so static loading remains usable after each stage.
 
@@ -240,19 +241,23 @@ Implementation result: one grouped queue call submits all active mic entries for
 
 Implementation result: stage 1 submits up to `N` stable hits from the highest source velocity level, and stage 2 submits up to `N` stable hits from every other level. Adaptive stops after stage 2. Full submits all remaining hits in stage 3. Progress counts only submitted files. The old five-target representative selection is removed.
 
-### Stage 4: Adaptive Dormant Work
+### ✅ Stage 4: Adaptive Dormant Work
 
 - ✅ Keep non-minimal logical-hit descriptions dormant in Adaptive mode.
-- Add bounded activation of one dormant logical hit without rebuilding the instrument player.
-- Register load progress only when dormant work becomes active.
-- Confirm that minimal completion hides progress and later demand makes it visible again.
+- ✅ Add bounded activation of one dormant logical hit without rebuilding the instrument player.
+- ✅ Register load progress only when dormant work becomes active.
+- ✅ Confirm in the progress-state flow that minimal completion hides progress and later demand makes it visible again.
 
-### Stage 5: Real-Time Demand Priority
+Implementation result: Adaptive keeps prepared Stage 3 file descriptions and callbacks in queue-owned demand work. One handled demand revision can activate at most one next dormant logical hit for the requested source velocity level. Its progress requests are registered only at activation and only when the instrument-player progress generation is still current.
 
-- Add preallocated per-runtime-articulation demand state.
-- Record exact note, controller transition, and aftertouch targets without queue locks or allocation.
-- Let the background worker promote minimal work, activate one extra hit, and mark the articulation hot on its third request.
-- Replace the 100 ms idle polling delay with bounded low-latency demand checks.
+### ✅ Stage 5: Real-Time Demand Priority
+
+- ✅ Add preallocated per-runtime-articulation demand state.
+- ✅ Record exact note, controller transition, and aftertouch targets without queue locks or allocation.
+- ✅ Let the background worker promote minimal work, activate one extra hit, and mark the articulation hot on its third request.
+- ✅ Replace the 100 ms idle polling delay with bounded low-latency demand checks.
+
+Implementation result: each runtime articulation exposes bounded atomic note count, requested velocity-level index, revision, and active target generation. The worker consumes coalesced revisions, promotes exact missing minimal work first, activates dormant work, and promotes one pending group per later hot request. Six queue classes implement the approved order. Equal-priority dispatch keeps one logical hit together and then prefers another target. Empty polling is 5 ms. Hi-hat controller transitions and aftertouch choke targets use the same atomic path as note-on.
 
 ### Stage 6: Verification And Documentation
 

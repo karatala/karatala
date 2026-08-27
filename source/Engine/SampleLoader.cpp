@@ -22,6 +22,22 @@ void SampleLoaderQueue::stopProcessing() {
 }
 
 void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, int stage) {
+    this->enqueueLogicalHitWithPriority(std::move(entries), targetId, instType, artId, velocity, roundRobinId, std::clamp(stage, 1, 3) + staticPriorityClassOffset);
+}
+
+void SampleLoaderQueue::registerDemandTarget(std::shared_ptr<SampleLoadDemandState> state, std::vector<LogicalHitDemandWork> work, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId) {
+    if (state == nullptr || work.empty() || targetId == 0) return;
+    auto target = std::make_shared<DemandTarget>();
+    target->state = std::move(state);
+    target->work = std::move(work);
+    target->targetId = targetId;
+    target->instType = instType;
+    target->artId = artId;
+    std::lock_guard<std::mutex> queueLock(this->lock);
+    this->demandTargets.push_back(std::move(target));
+}
+
+void SampleLoaderQueue::enqueueLogicalHitWithPriority(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, int priorityClass) {
     if (entries.empty()) return;
 
     std::vector<ResolvedSampleLoadSpec> resolvedLoadSpecs;
@@ -43,8 +59,8 @@ void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entri
     group->velocity = velocity;
     group->roundRobinId = roundRobinId;
     group->priority = this->computeInstrumentPriority(instType);
-    group->stage = std::clamp(stage, 1, 3);
-    const size_t stageIdx = static_cast<size_t>(std::clamp(group->stage - 1, 0, 3));
+    group->priorityClass = std::clamp(priorityClass, 0, priorityClassCount - 1);
+    const size_t priorityIdx = static_cast<size_t>(group->priorityClass);
 
     for (size_t entryIdx = 0; entryIdx < entries.size(); ++entryIdx) {
         const auto& cacheKey = cacheKeys[entryIdx];
@@ -57,7 +73,7 @@ void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entri
             candidate.loadSpec = std::move(resolvedLoadSpecs[entryIdx]);
             candidate.cacheKey = cacheKey;
             candidate.group = group;
-            this->stageQueues[stageIdx].push_back(std::move(candidate));
+            this->priorityQueues[priorityIdx].push_back(std::move(candidate));
             std::vector<LoadCallback> callbacks;
             callbacks.push_back(std::move(entries[entryIdx].callback));
             this->pendingCallbacks.emplace(cacheKey, std::move(callbacks));
@@ -67,22 +83,113 @@ void SampleLoaderQueue::enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entri
 }
 
 bool SampleLoaderQueue::isHigherPriority(const LogicalHitLoadGroup& first, const LogicalHitLoadGroup& second) const {
-    if (first.stage != second.stage) return first.stage < second.stage;
+    if (first.priorityClass != second.priorityClass) return first.priorityClass < second.priorityClass;
     if (first.priority != second.priority) return first.priority < second.priority;
     return first.sequence < second.sequence;
 }
 
 void SampleLoaderQueue::promoteQueuedCandidateLocked(const juce::String& cacheKey, const std::shared_ptr<const LogicalHitLoadGroup>& requestedGroup) {
-    for (size_t stageIdx = 0; stageIdx < 4; ++stageIdx) {
-        auto candidateIt = std::find_if(this->stageQueues[stageIdx].begin(), this->stageQueues[stageIdx].end(), [&cacheKey](const Candidate& candidate) { return candidate.cacheKey == cacheKey; });
-        if (candidateIt == this->stageQueues[stageIdx].end()) continue;
+    for (size_t priorityIdx = 0; priorityIdx < this->priorityQueues.size(); ++priorityIdx) {
+        auto candidateIt = std::find_if(this->priorityQueues[priorityIdx].begin(), this->priorityQueues[priorityIdx].end(), [&cacheKey](const Candidate& candidate) { return candidate.cacheKey == cacheKey; });
+        if (candidateIt == this->priorityQueues[priorityIdx].end()) continue;
         if (candidateIt->group != nullptr && this->isHigherPriority(*requestedGroup, *candidateIt->group)) {
             Candidate promotedCandidate = std::move(*candidateIt);
-            this->stageQueues[stageIdx].erase(candidateIt);
+            if (this->activeGroupSequenceByPriority[priorityIdx] == promotedCandidate.group->sequence) this->activeGroupSequenceByPriority[priorityIdx] = 0;
+            this->priorityQueues[priorityIdx].erase(candidateIt);
             promotedCandidate.group = requestedGroup;
-            const size_t requestedStageIdx = static_cast<size_t>(std::clamp(requestedGroup->stage - 1, 0, 3));
-            this->stageQueues[requestedStageIdx].push_back(std::move(promotedCandidate));
+            const size_t requestedPriorityIdx = static_cast<size_t>(std::clamp(requestedGroup->priorityClass, 0, priorityClassCount - 1));
+            this->priorityQueues[requestedPriorityIdx].push_back(std::move(promotedCandidate));
         }
+        return;
+    }
+}
+
+bool SampleLoaderQueue::promoteLogicalHit(uint64_t targetId, uint8_t velocity, uint8_t roundRobinId, int priorityClass) {
+    std::lock_guard<std::mutex> queueLock(this->lock);
+    const int requestedPriorityClass = std::clamp(priorityClass, 0, priorityClassCount - 1);
+    std::shared_ptr<LogicalHitLoadGroup> promotedGroup;
+    bool promoted = false;
+    for (size_t priorityIdx = 0; priorityIdx < this->priorityQueues.size(); ++priorityIdx) {
+        auto candidateIt = this->priorityQueues[priorityIdx].begin();
+        while (candidateIt != this->priorityQueues[priorityIdx].end()) {
+            const auto& group = candidateIt->group;
+            if (group == nullptr || group->targetId != targetId || group->velocity != velocity || group->roundRobinId != roundRobinId) {
+                ++candidateIt;
+                continue;
+            }
+            if (static_cast<int>(priorityIdx) <= requestedPriorityClass) {
+                ++candidateIt;
+                continue;
+            }
+            if (promotedGroup == nullptr) {
+                promotedGroup = std::make_shared<LogicalHitLoadGroup>(*group);
+                promotedGroup->priorityClass = requestedPriorityClass;
+                promotedGroup->sequence = this->nextGroupSequence++;
+            }
+            if (this->activeGroupSequenceByPriority[priorityIdx] == group->sequence) this->activeGroupSequenceByPriority[priorityIdx] = 0;
+            Candidate promotedCandidate = std::move(*candidateIt);
+            candidateIt = this->priorityQueues[priorityIdx].erase(candidateIt);
+            promotedCandidate.group = promotedGroup;
+            this->priorityQueues[static_cast<size_t>(requestedPriorityClass)].push_back(std::move(promotedCandidate));
+            promoted = true;
+        }
+    }
+    return promoted;
+}
+
+std::shared_ptr<SampleLoaderQueue::DemandTarget> SampleLoaderQueue::takeNextDemandTarget() {
+    std::lock_guard<std::mutex> queueLock(this->lock);
+    this->demandTargets.erase(std::remove_if(this->demandTargets.begin(), this->demandTargets.end(), [](const std::shared_ptr<DemandTarget>& target) {
+        return target == nullptr || target->state == nullptr || target->state->activeTargetId.load(std::memory_order_acquire) != target->targetId;
+    }), this->demandTargets.end());
+    if (this->demandTargets.empty()) {
+        this->nextDemandTargetIdx = 0;
+        return {};
+    }
+    if (this->nextDemandTargetIdx >= this->demandTargets.size()) this->nextDemandTargetIdx = 0;
+    for (size_t checkedTargetCount = 0; checkedTargetCount < this->demandTargets.size(); ++checkedTargetCount) {
+        const size_t targetIdx = (this->nextDemandTargetIdx + checkedTargetCount) % this->demandTargets.size();
+        const auto& target = this->demandTargets[targetIdx];
+        const uint32_t demandRevision = target->state->revision.load(std::memory_order_acquire);
+        if (demandRevision == target->lastHandledRevision) continue;
+        target->lastHandledRevision = demandRevision;
+        this->nextDemandTargetIdx = (targetIdx + 1) % this->demandTargets.size();
+        return target;
+    }
+    return {};
+}
+
+void SampleLoaderQueue::handleDemandTarget(DemandTarget& target) {
+    if (target.state == nullptr || target.state->activeTargetId.load(std::memory_order_acquire) != target.targetId) return;
+    const int requestedVelocityLevelIdx = target.state->requestedVelocityLevelIdx.load(std::memory_order_relaxed);
+    if (requestedVelocityLevelIdx < 0) return;
+
+    bool missingMinimalWork = false;
+    for (auto& work : target.work) {
+        if (!work.submitted || work.initialLoadStage > 2 || work.velocityLevelIdx != requestedVelocityLevelIdx || (work.isReady && work.isReady())) continue;
+        missingMinimalWork = true;
+        this->promoteLogicalHit(target.targetId, work.velocity, work.roundRobinId, demandMinimalPriorityClass);
+    }
+    if (missingMinimalWork) return;
+
+    if (target.state->noteCount.load(std::memory_order_relaxed) >= 3 && !target.work.empty()) {
+        for (size_t workOffset = 0; workOffset < target.work.size(); ++workOffset) {
+            const size_t workIdx = (target.nextHotWorkIdx + workOffset) % target.work.size();
+            auto& work = target.work[workIdx];
+            if (!work.submitted || (work.isReady && work.isReady())) continue;
+            if (!this->promoteLogicalHit(target.targetId, work.velocity, work.roundRobinId, hotArticulationPriorityClass)) continue;
+            target.nextHotWorkIdx = (workIdx + 1) % target.work.size();
+            break;
+        }
+    }
+
+    for (auto& work : target.work) {
+        if (work.submitted || work.velocityLevelIdx != requestedVelocityLevelIdx || work.loadEntries.empty()) continue;
+        if (target.state->activeTargetId.load(std::memory_order_acquire) != target.targetId) return;
+        if (!work.registerProgress || !work.registerProgress(work.loadEntries.size())) return;
+        if (target.state->activeTargetId.load(std::memory_order_acquire) != target.targetId) return;
+        work.submitted = true;
+        this->enqueueLogicalHitWithPriority(std::move(work.loadEntries), target.targetId, target.instType, target.artId, work.velocity, work.roundRobinId, activatedDormantPriorityClass);
         return;
     }
 }
@@ -145,31 +252,57 @@ int SampleLoaderQueue::computeInstrumentPriority(KitLib::InstrumentSpec::Type ty
 void SampleLoaderQueue::workerLoop() {
     using namespace std::chrono_literals;
     while (!this->stopFlag.load()) {
+        if (auto demandTarget = this->takeNextDemandTarget()) this->handleDemandTarget(*demandTarget);
+
         Candidate task;
         bool found = false;
-        int taskStage = -1;
+        int taskPriorityClass = -1;
 
-        // Scan stages 1..4 and keep files from one logical-hit group together at equal priority.
+        // Scan priority classes in order, keep one logical hit together, and alternate demand targets between logical hits.
         {
             std::lock_guard<std::mutex> queueLock(this->lock);
-            for (int stageIdx = 0; stageIdx < 4; ++stageIdx) {
-                if (this->stageQueues[stageIdx].empty()) continue;
-                auto candidateIt = std::min_element(this->stageQueues[stageIdx].begin(), this->stageQueues[stageIdx].end(), [](const Candidate& first, const Candidate& second) {
-                    if (first.group->priority != second.group->priority) return first.group->priority < second.group->priority;
-                    return first.group->sequence < second.group->sequence;
-                });
-                if (candidateIt != this->stageQueues[stageIdx].end()) {
-                    task = *candidateIt;
-                    this->stageQueues[stageIdx].erase(candidateIt);
+            for (size_t priorityIdx = 0; priorityIdx < this->priorityQueues.size(); ++priorityIdx) {
+                auto& priorityQueue = this->priorityQueues[priorityIdx];
+                if (priorityQueue.empty()) {
+                    this->activeGroupSequenceByPriority[priorityIdx] = 0;
+                    continue;
+                }
+
+                auto candidateIt = priorityQueue.end();
+                const uint64_t activeGroupSequence = this->activeGroupSequenceByPriority[priorityIdx];
+                if (activeGroupSequence != 0) {
+                    candidateIt = std::find_if(priorityQueue.begin(), priorityQueue.end(), [activeGroupSequence](const Candidate& candidate) { return candidate.group != nullptr && candidate.group->sequence == activeGroupSequence; });
+                }
+                if (candidateIt == priorityQueue.end()) {
+                    const uint64_t lastTargetId = this->lastDispatchedTargetByPriority[priorityIdx];
+                    candidateIt = std::min_element(priorityQueue.begin(), priorityQueue.end(), [lastTargetId](const Candidate& first, const Candidate& second) {
+                        const bool firstAlternatesTarget = lastTargetId == 0 || first.group->targetId != lastTargetId;
+                        const bool secondAlternatesTarget = lastTargetId == 0 || second.group->targetId != lastTargetId;
+                        if (firstAlternatesTarget != secondAlternatesTarget) return firstAlternatesTarget;
+                        if (first.group->priority != second.group->priority) return first.group->priority < second.group->priority;
+                        return first.group->sequence < second.group->sequence;
+                    });
+                }
+                if (candidateIt != priorityQueue.end()) {
+                    task = std::move(*candidateIt);
+                    priorityQueue.erase(candidateIt);
                     found = true;
-                    taskStage = stageIdx + 1; // stages are 1..4
+                    taskPriorityClass = static_cast<int>(priorityIdx);
+                    const uint64_t groupSequence = task.group != nullptr ? task.group->sequence : 0;
+                    const bool groupHasQueuedFiles = groupSequence != 0 && std::any_of(priorityQueue.begin(), priorityQueue.end(), [groupSequence](const Candidate& candidate) { return candidate.group != nullptr && candidate.group->sequence == groupSequence; });
+                    if (groupHasQueuedFiles) {
+                        this->activeGroupSequenceByPriority[priorityIdx] = groupSequence;
+                    } else {
+                        this->activeGroupSequenceByPriority[priorityIdx] = 0;
+                        this->lastDispatchedTargetByPriority[priorityIdx] = task.group != nullptr ? task.group->targetId : 0;
+                    }
                     break;
                 }
             }
         }
 
         if (!found) {
-            std::this_thread::sleep_for(100ms);
+            std::this_thread::sleep_for(5ms);
             continue;
         }
 
@@ -187,15 +320,14 @@ void SampleLoaderQueue::workerLoop() {
         // Wrap callback to update stats and call all pending callbacks registered for this spec cache key
         juce::String pendingKey = task.cacheKey;
         const auto dispatchTime = std::chrono::steady_clock::now();
-        const int stageIdx = std::clamp(taskStage - 1, 0, 3);
+        const int priorityIdx = std::clamp(taskPriorityClass, 0, priorityClassCount - 1);
 
-        // Update per-stage counters/timestamp for aggregated logging
-        this->stageInFlightCount[static_cast<size_t>(stageIdx)].fetch_add(1);
-        this->stageDispatchedCount[static_cast<size_t>(stageIdx)].fetch_add(1);
+        // Update per-priority counters/timestamp for aggregated logging
+        this->priorityInFlightCount[static_cast<size_t>(priorityIdx)].fetch_add(1);
+        this->priorityDispatchedCount[static_cast<size_t>(priorityIdx)].fetch_add(1);
         {
-            std::lock_guard<std::mutex> g(this->stageTimeMutex);
-            if (this->stageFirstDispatchTime[static_cast<size_t>(stageIdx)] == std::chrono::steady_clock::time_point())
-                this->stageFirstDispatchTime[static_cast<size_t>(stageIdx)] = dispatchTime;
+            std::lock_guard<std::mutex> priorityTimeLock(this->priorityTimeMutex);
+            if (this->priorityFirstDispatchTime[static_cast<size_t>(priorityIdx)] == std::chrono::steady_clock::time_point()) this->priorityFirstDispatchTime[static_cast<size_t>(priorityIdx)] = dispatchTime;
         }
 
         loader.requestAsyncLoad(task.loadSpec, [this, pendingKey](std::shared_ptr<juce::AudioBuffer<float>> buf, double sr){
@@ -218,22 +350,21 @@ void SampleLoaderQueue::workerLoop() {
             this->loadedCount.fetch_add(1);
             this->inFlightCount.fetch_sub(1);
 
-            // Decrement per-stage in-flight counter and if this was the last
-            // in-flight task for the stage, emit a single aggregated log.
+            // Per-priority aggregated logging stays disabled until load status reporting is implemented.
             // try {
-            //     const int prev = this->stageInFlightCount[stageIdx].fetch_sub(1);
+            //     const int prev = this->priorityInFlightCount[priorityIdx].fetch_sub(1);
             //     if (prev == 1) {
             //         std::chrono::steady_clock::time_point start;
             //         int dispatched = 0;
             //         {
-            //             std::lock_guard<std::mutex> g(this->stageTimeMutex);
-            //             start = this->stageFirstDispatchTime[stageIdx];
-            //             this->stageFirstDispatchTime[stageIdx] = std::chrono::steady_clock::time_point();
+            //             std::lock_guard<std::mutex> g(this->priorityTimeMutex);
+            //             start = this->priorityFirstDispatchTime[priorityIdx];
+            //             this->priorityFirstDispatchTime[priorityIdx] = std::chrono::steady_clock::time_point();
             //         }
-            //         dispatched = this->stageDispatchedCount[stageIdx].exchange(0);
+            //         dispatched = this->priorityDispatchedCount[priorityIdx].exchange(0);
             //         if (start != std::chrono::steady_clock::time_point()) {
             //             const double secs = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::steady_clock::now() - start).count();
-            //             LOG(Info, "SampleLoaderQueue: stage " + juce::String((int)taskStage) + " finished " + juce::String(secs, 3) + "s for " + juce::String(dispatched) + " files");
+            //             LOG(Info, "SampleLoaderQueue: priority " + juce::String(priorityIdx) + " finished " + juce::String(secs, 3) + "s for " + juce::String(dispatched) + " files");
             //         }
             //     }
             // } catch (...) {}

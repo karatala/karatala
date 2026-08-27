@@ -53,6 +53,30 @@ struct ResolvedSampleLoadSpec {
     juce::String makeCacheKey() const { return this->sourceIdentity + "|" + this->recipe.makeKey(); }
 };
 
+struct SampleLoadDemandState {
+    std::atomic<uint32_t> noteCount { 0 };
+    std::atomic<int> requestedVelocityLevelIdx { -1 };
+    std::atomic<uint32_t> revision { 0 };
+    std::atomic<uint64_t> activeTargetId { 0 };
+
+    void activate(uint64_t targetId) noexcept {
+        this->noteCount.store(0, std::memory_order_relaxed);
+        this->requestedVelocityLevelIdx.store(-1, std::memory_order_relaxed);
+        this->revision.store(0, std::memory_order_relaxed);
+        this->activeTargetId.store(targetId, std::memory_order_release);
+    }
+
+    void request(int velocityLevelIdx) noexcept {
+        if (velocityLevelIdx < 0 || this->activeTargetId.load(std::memory_order_acquire) == 0) return;
+        this->requestedVelocityLevelIdx.store(velocityLevelIdx, std::memory_order_relaxed);
+        uint32_t currentNoteCount = this->noteCount.load(std::memory_order_relaxed);
+        while (currentNoteCount < 3 && !this->noteCount.compare_exchange_weak(currentNoteCount, currentNoteCount + 1, std::memory_order_relaxed)) {}
+        this->revision.fetch_add(1, std::memory_order_release);
+    }
+
+    void deactivate() noexcept { this->activeTargetId.store(0, std::memory_order_release); }
+};
+
 class SampleLoaderQueue {
 public:
     using LoadCallback = std::function<void(std::shared_ptr<juce::AudioBuffer<float>>, double)>;
@@ -62,16 +86,28 @@ public:
         LoadCallback callback;
     };
 
+    struct LogicalHitDemandWork {
+        std::vector<LogicalHitLoadEntry> loadEntries;
+        std::function<bool(size_t)> registerProgress;
+        std::function<bool()> isReady;
+        int velocityLevelIdx = -1;
+        uint8_t velocity = 0;
+        uint8_t roundRobinId = 0;
+        int initialLoadStage = 3;
+        bool submitted = false;
+    };
+
     explicit SampleLoaderQueue(SampleLoader& sampleLoader) : loader(sampleLoader) {
         this->stopFlag.store(false);
-        for (auto &a : stageInFlightCount) a.store(0);
-        for (auto &a : stageDispatchedCount) a.store(0);
-        for (auto &t : stageFirstDispatchTime) t = std::chrono::steady_clock::time_point();
+        for (auto& count : this->priorityInFlightCount) count.store(0);
+        for (auto& count : this->priorityDispatchedCount) count.store(0);
+        for (auto& timePoint : this->priorityFirstDispatchTime) timePoint = std::chrono::steady_clock::time_point();
     }
     ~SampleLoaderQueue() { this->stopProcessing(); }
 
     // Submit all active mic files for one logical hit. Stage 1 is highest-velocity minimal work, stage 2 is other-velocity minimal work, and stage 3 is Full-mode remainder.
     void enqueueLogicalHit(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, int stage);
+    void registerDemandTarget(std::shared_ptr<SampleLoadDemandState> state, std::vector<LogicalHitDemandWork> work, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId);
     uint64_t createLoadTargetId() { return this->nextLoadTargetId.fetch_add(1, std::memory_order_relaxed); }
 
     // Attempt to mark the worker as started. Returns true if the worker
@@ -88,7 +124,7 @@ private:
         StringsDictSingleton::Id artId = 0;
         uint8_t velocity = 0;
         uint8_t roundRobinId = 0;
-        int stage = 3;
+        int priorityClass = 5;
         int priority = 9; // lower is higher priority
     };
 
@@ -98,11 +134,31 @@ private:
         std::shared_ptr<const LogicalHitLoadGroup> group;
     };
 
+    struct DemandTarget {
+        std::shared_ptr<SampleLoadDemandState> state;
+        std::vector<LogicalHitDemandWork> work;
+        uint64_t targetId = 0;
+        KitLib::InstrumentSpec::Type instType = KitLib::InstrumentSpec::Type::Unknown;
+        StringsDictSingleton::Id artId = 0;
+        uint32_t lastHandledRevision = 0;
+        size_t nextHotWorkIdx = 0;
+    };
+
+    static constexpr int priorityClassCount = 6;
+    static constexpr int demandMinimalPriorityClass = 0;
+    static constexpr int activatedDormantPriorityClass = 1;
+    static constexpr int hotArticulationPriorityClass = 2;
+    static constexpr int staticPriorityClassOffset = 2;
+
     SampleLoader& loader;
     std::mutex lock;
-    std::deque<Candidate> stageQueues[4]; // index 0->stage1, 1->stage2, ...
+    std::array<std::deque<Candidate>, priorityClassCount> priorityQueues;
     // map cache key -> pending callbacks (used to attach callbacks for equivalent load specs)
     std::unordered_map<juce::String, std::vector<LoadCallback>> pendingCallbacks;
+    std::vector<std::shared_ptr<DemandTarget>> demandTargets;
+    size_t nextDemandTargetIdx = 0;
+    std::array<uint64_t, priorityClassCount> activeGroupSequenceByPriority {};
+    std::array<uint64_t, priorityClassCount> lastDispatchedTargetByPriority {};
 
     std::thread workerThread;
     std::atomic<bool> stopFlag{false};
@@ -119,12 +175,11 @@ private:
     // concurrency
     std::atomic<uint32_t> maxInFlight{3};
 
-    // Per-stage in-flight counters and first-dispatch timestamps used to
-    // aggregate logs so we only emit one message per stage (not per file).
-    std::array<std::atomic<int>, 4> stageInFlightCount;
-    std::array<std::atomic<int>, 4> stageDispatchedCount;
-    std::array<std::chrono::steady_clock::time_point, 4> stageFirstDispatchTime;
-    std::mutex stageTimeMutex;
+    // Per-priority in-flight counters and first-dispatch timestamps used to aggregate logs so we only emit one message per priority class.
+    std::array<std::atomic<int>, priorityClassCount> priorityInFlightCount;
+    std::array<std::atomic<int>, priorityClassCount> priorityDispatchedCount;
+    std::array<std::chrono::steady_clock::time_point, priorityClassCount> priorityFirstDispatchTime;
+    std::mutex priorityTimeMutex;
 
 public:
     void startProcessing();
@@ -140,6 +195,10 @@ public:
 private:
     bool isHigherPriority(const LogicalHitLoadGroup& first, const LogicalHitLoadGroup& second) const;
     void promoteQueuedCandidateLocked(const juce::String& cacheKey, const std::shared_ptr<const LogicalHitLoadGroup>& requestedGroup);
+    void enqueueLogicalHitWithPriority(std::vector<LogicalHitLoadEntry> entries, uint64_t targetId, KitLib::InstrumentSpec::Type instType, StringsDictSingleton::Id artId, uint8_t velocity, uint8_t roundRobinId, int priorityClass);
+    bool promoteLogicalHit(uint64_t targetId, uint8_t velocity, uint8_t roundRobinId, int priorityClass);
+    std::shared_ptr<DemandTarget> takeNextDemandTarget();
+    void handleDemandTarget(DemandTarget& target);
 };
 
 class SampleLoader {

@@ -104,6 +104,7 @@ void InstrumentPlayer::ArticulationRuntime::buildFloatingCandidateWindows() {
 }
 
 void InstrumentPlayer::unloadInstrument() {
+    this->deactivateSampleLoadDemand();
     this->loadProgress->reset();
     this->runtimeArticulations.clear();
     this->resetRoutingTables();
@@ -318,14 +319,20 @@ void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec&
     SampleLoader* loader = this->getSampleLoader();
     if (loader == nullptr) return;
     if (artRt.loadTargetId == 0) artRt.loadTargetId = loader->getQueue().createLoadTargetId();
+    artRt.loadDemandState = std::make_shared<SampleLoadDemandState>();
+    artRt.loadDemandState->activate(artRt.loadTargetId);
+    std::vector<SampleLoaderQueue::LogicalHitDemandWork> demandWork;
     const int lastSubmittedStage = this->parent != nullptr && this->parent->getEffectiveSampleLoadingMode() == SampleLoadingMode::Full ? 3 : 2;
-    for (int initialLoadStage = 1; initialLoadStage <= lastSubmittedStage; ++initialLoadStage) {
-        for (auto& velocityLevel : artRt.velocityLevels) {
+    for (int initialLoadStage = 1; initialLoadStage <= 3; ++initialLoadStage) {
+        for (size_t velocityLevelIdx = 0; velocityLevelIdx < artRt.velocityLevels.size(); ++velocityLevelIdx) {
+            auto& velocityLevel = artRt.velocityLevels[velocityLevelIdx];
             const float calibrationTrimDb = artRt.calibrated ? velocityLevel.calibrationTrimDb.value_or(0.0f) : 0.0f;
             for (auto& logicalHit : velocityLevel.logicalHits) {
                 if (logicalHit.initialLoadStage != initialLoadStage) continue;
                 std::vector<SampleLoaderQueue::LogicalHitLoadEntry> loadEntries;
                 loadEntries.reserve(logicalHit.sampleEntryIndexes.size());
+                const auto loadingProgress = this->loadProgress;
+                const uint64_t progressRevision = loadingProgress->getRevision();
                 for (const auto sampleEntryIdx : logicalHit.sampleEntryIndexes) {
                     auto* sound = velocityLevel.samples[sampleEntryIdx].sound;
                     if (sound == nullptr || sound->sampleSpec == nullptr) continue;
@@ -339,22 +346,38 @@ void InstrumentPlayer::enqueueVelocityLevelSamples(const KitLib::InstrumentSpec&
                     loadSpec.metadataFileSizeBytes = sampleSpec->metadataFileSizeBytes;
                     loadSpec.fixedGainDb = sampleSpec->manualGainDb + calibrationTrimDb;
                     const auto readiness = logicalHit.readiness;
-                    const auto loadingProgress = this->loadProgress;
-                    const uint64_t loadProgressRevision = loadingProgress->registerRequest();
+                    auto* parentEngine = this->parent;
 
                     SampleLoaderQueue::LogicalHitLoadEntry loadEntry;
                     loadEntry.loadSpec = loadSpec;
-                    loadEntry.callback = [this, weakSound, readiness, recipeRevision, loadingProgress, loadProgressRevision, fixedGainDb = loadSpec.fixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
-                        loadingProgress->markFinished(loadProgressRevision);
+                    loadEntry.callback = [parentEngine, weakSound, readiness, recipeRevision, loadingProgress, progressRevision, fixedGainDb = loadSpec.fixedGainDb](std::shared_ptr<juce::AudioBuffer<float>> buffer, double loadedSampleRate) {
+                        loadingProgress->markFinished(progressRevision);
                         auto soundLocked = weakSound.lock();
-                        if (soundLocked == nullptr || this->parent == nullptr) return;
-                        const bool published = this->parent->publishSourceRecipeReload(soundLocked, recipeRevision, fixedGainDb, std::move(buffer), loadedSampleRate);
+                        if (soundLocked == nullptr || parentEngine == nullptr) return;
+                        const bool published = parentEngine->publishSourceRecipeReload(soundLocked, recipeRevision, fixedGainDb, std::move(buffer), loadedSampleRate);
                         if (soundLocked->sourceRecipeRevision.load(std::memory_order_acquire) == recipeRevision && !soundLocked->readinessReported.exchange(true, std::memory_order_acq_rel)) readiness->markLoaded(published);
                     };
                     loadEntries.push_back(std::move(loadEntry));
                 }
-                loader->getQueue().enqueueLogicalHit(std::move(loadEntries), artRt.loadTargetId, instSpec.meta.type, artSpec.nameId, velocityLevel.velocity, logicalHit.roundRobinId, initialLoadStage);
+                if (loadEntries.empty()) continue;
+
+                SampleLoaderQueue::LogicalHitDemandWork work;
+                work.velocityLevelIdx = static_cast<int>(velocityLevelIdx);
+                work.velocity = velocityLevel.velocity;
+                work.roundRobinId = logicalHit.roundRobinId;
+                work.initialLoadStage = initialLoadStage;
+                work.isReady = [readiness = logicalHit.readiness] { return readiness->ready.load(std::memory_order_acquire); };
+                work.registerProgress = [loadingProgress, progressRevision](size_t requestCount) { return loadingProgress->registerRequests(progressRevision, static_cast<int>(requestCount)); };
+                work.submitted = initialLoadStage <= lastSubmittedStage;
+                if (work.submitted) {
+                    if (!work.registerProgress(loadEntries.size())) continue;
+                    loader->getQueue().enqueueLogicalHit(std::move(loadEntries), artRt.loadTargetId, instSpec.meta.type, artSpec.nameId, velocityLevel.velocity, logicalHit.roundRobinId, initialLoadStage);
+                } else {
+                    work.loadEntries = std::move(loadEntries);
+                }
+                demandWork.push_back(std::move(work));
             }
         }
     }
+    loader->getQueue().registerDemandTarget(artRt.loadDemandState, std::move(demandWork), artRt.loadTargetId, instSpec.meta.type, artSpec.nameId);
 }

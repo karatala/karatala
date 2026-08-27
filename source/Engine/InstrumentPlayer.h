@@ -7,6 +7,7 @@
 #include <memory>
 #include <algorithm>
 #include <limits>
+#include <mutex>
 #include <set>
 #include <optional>
 #include <unordered_map>
@@ -22,19 +23,32 @@
 class DrumKitEngine;
 class SampleLoader;
 class InstrumentPlayer;
+struct SampleLoadDemandState;
 struct InstrumentPlayerTestAccess;
 
 struct InstrumentLoadProgress {
     void reset() {
+        const std::lock_guard<std::mutex> registrationLock(this->registrationMutex);
         this->revision.fetch_add(1, std::memory_order_acq_rel);
         this->finishedCount.store(0, std::memory_order_release);
         this->totalCount.store(0, std::memory_order_release);
     }
 
     uint64_t registerRequest() {
+        const std::lock_guard<std::mutex> registrationLock(this->registrationMutex);
         const uint64_t currentRevision = this->revision.load(std::memory_order_acquire);
         this->totalCount.fetch_add(1, std::memory_order_acq_rel);
         return currentRevision;
+    }
+
+    uint64_t getRevision() const { return this->revision.load(std::memory_order_acquire); }
+
+    bool registerRequests(uint64_t expectedRevision, int requestCount) {
+        if (requestCount <= 0) return false;
+        const std::lock_guard<std::mutex> registrationLock(this->registrationMutex);
+        if (this->revision.load(std::memory_order_acquire) != expectedRevision) return false;
+        this->totalCount.fetch_add(requestCount, std::memory_order_acq_rel);
+        return true;
     }
 
     void markFinished(uint64_t requestRevision) {
@@ -46,6 +60,7 @@ struct InstrumentLoadProgress {
     int getTotalCount() const { return this->totalCount.load(std::memory_order_acquire); }
 
 private:
+    mutable std::mutex registrationMutex;
     std::atomic<uint64_t> revision { 0 };
     std::atomic<int> finishedCount { 0 };
     std::atomic<int> totalCount { 0 };
@@ -396,6 +411,7 @@ public:
         bool floatingSelectionAvailable = false;
         uint32_t floatingRandomState = 0x9e3779b9u;
         uint64_t loadTargetId = 0;
+        std::shared_ptr<SampleLoadDemandState> loadDemandState;
         LayerParameters parameters;
         std::vector<VelocityLevelRuntime> velocityLevels;
 
@@ -806,6 +822,8 @@ private:
     );
     void assignInitialLoadStages(ArticulationRuntime& artRt);
     void enqueueVelocityLevelSamples(const KitLib::InstrumentSpec& instSpec, const KitLib::ArticulationSpec& artSpec, ArticulationRuntime& artRt);
+    void recordSampleLoadDemand(ArticulationRuntime& artRt, int velocityLevelIdx) noexcept;
+    void deactivateSampleLoadDemand() noexcept;
     void buildCcMappings(const ArticulationSlot& articulationSlot, KitLib::ArticulationSpec* artSpec, ArtRtIdx artIdx, CcDimensionsMap& foundCcDimensions);
     void processCcDimensions(CcDimensionsMap& foundCcDimensions);
     int getRuntimeExpressionValue(const ArticulationRuntime& art, KitLib::ArticulationSpec::ExpressionDimension::Type dimensionType) const;

@@ -624,6 +624,7 @@ void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int con
     this->hihatPedalClosedState[controllerIdx] = isMostClosedState;
     const int openHalfPocLimit = mappedPedalOpenCloseValueCount <= 2 || secondHighestMappedPoc < 0 ? maximumMappedPoc : secondHighestMappedPoc;
     float loudestLowerPocDb = -100.0f;
+    juce::uint8 demandMidiVelocity = 127;
     bool hasAudibleLowerPocVoice = false;
     bool hasAudibleOpenHalfVoice = false;
     for (auto* voice : this->voices) {
@@ -640,7 +641,10 @@ void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int con
         if (voiceAudibleDb < transitionSettings.silenceFloorDb)
             continue;
         hasAudibleLowerPocVoice = true;
-        loudestLowerPocDb = juce::jmax(loudestLowerPocDb, voiceAudibleDb);
+        if (voiceAudibleDb > loudestLowerPocDb) {
+            loudestLowerPocDb = voiceAudibleDb;
+            demandMidiVelocity = voice->getMidiVelocity();
+        }
         if (voicePedalOpenCloseValue < openHalfPocLimit)
             hasAudibleOpenHalfVoice = true;
     }
@@ -656,6 +660,8 @@ void InstrumentPlayer::processHiHatControllerTransition(int midiChannel, int con
 
     this->pendingCcArticulation[controllerIdx] = -1;
     const uint8_t newArtIdx = static_cast<uint8_t>(selectedArtIdx);
+    auto& demandArticulation = this->runtimeArticulations[static_cast<size_t>(newArtIdx)];
+    this->recordSampleLoadDemand(demandArticulation, demandArticulation.velocityToLevel[static_cast<size_t>(demandMidiVelocity)]);
     if (LOG_ENABLED(Verbose))
         LOG(Verbose, "HiHat pedal transition: cc=" + juce::String(controllerNumber) + " value=" + juce::String(controllerValue));
 

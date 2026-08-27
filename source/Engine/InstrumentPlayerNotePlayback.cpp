@@ -63,6 +63,7 @@ bool InstrumentPlayer::playLibraryLogicalHitPreview(const KitLib::ArticulationSp
 bool InstrumentPlayer::playResolvedArticulation(const int midiChannel, const int midiNoteNumber, ArtRtIdx articulationIdx, const juce::uint8 velocity) {
     if (articulationIdx < 0 || static_cast<size_t>(articulationIdx) >= this->runtimeArticulations.size()) return false;
     auto& art = this->runtimeArticulations[static_cast<size_t>(articulationIdx)];
+    this->recordSampleLoadDemand(art, art.velocityToLevel[static_cast<size_t>(velocity)]);
     const auto floatingSelection = this->chooseFloatingLogicalHit(art, velocity);
     int velocityLevelIdx = floatingSelection.velocityLevelIdx;
     LogicalHitRuntime* logicalHit = nullptr;
