@@ -19,6 +19,7 @@
 
 # Local Contracts
 
+- Default data storage is the common documents folder's `Karatala` directory on Windows, `/Users/Shared/Karatala` on macOS, and the user's application data folder's `Karatala` directory on Linux (`$XDG_CONFIG_HOME/Karatala` or `~/.config/Karatala`). `EDRUMS_DATA_PATH` overrides the location. The engine creates `config.yaml` when missing; installers and manual-install ZIPs supply additional kit layouts separately.
 - Code reached from `processBlock`, `renderNextBlock`, `handleMidiEvent`, note-on, controller, or aftertouch paths is realtime code.
 - Realtime settings shared with the message thread must use atomics or an immutable snapshot; do not introduce unsynchronized mutable scalar reads/writes.
 - Precompute routing, articulation, velocity, round-robin, and envelope lookup data during load and rebuild work where practical.

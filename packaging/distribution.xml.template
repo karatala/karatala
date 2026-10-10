@@ -5,18 +5,23 @@
         <os-version min="10.13" />
     </allowed-os-versions>
     <license file="EULA" />
-    <readme file="README" />
+    <readme file="README.txt" />
     <background file="background.png" mime-type="image/png" scaling="tofit" alignment="bottomleft"/>
     <background-darkAqua file="background.png" mime-type="image/png" scaling="tofit" alignment="bottomleft"/>
     <options customize="always" rootVolumeOnly="true" hostArchitectures="x86_64,arm64" />
     <domain enable_anywhere="false" enable_currentUserHome="false" enable_localSystem="true" />
 
     <choices-outline>
+        <line choice="data" />
         <line choice="app" />
         <line choice="vst3" />
         <line choice="au" />
         <line choice="clap" />
     </choices-outline>
+
+    <choice id="data" visible="false" start_selected="true" start_enabled="false" title="Drum layouts">
+        <pkg-ref id="${BUNDLE_ID}.data.pkg" version="${VERSION}" onConclusion="none">${PRODUCT_NAME}.data.pkg</pkg-ref>
+    </choice>
 
     <choice id="app" visible="true" start_selected="true" title="${PRODUCT_NAME} Standalone">
         <pkg-ref id="${BUNDLE_ID}.app.pkg" version="${VERSION}" onConclusion="none">${PRODUCT_NAME}.app.pkg</pkg-ref>

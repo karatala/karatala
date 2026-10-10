@@ -120,7 +120,11 @@ public:
     ~DrumKitEngine();
 
     juce::File dataPath;
+    #if JUCE_LINUX
+    const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::userApplicationDataDirectory).getChildFile("Karatala") };
+    #else
     const juce::File defaultDataPath { juce::File::getSpecialLocation(juce::File::SpecialLocationType::commonDocumentsDirectory).getChildFile("Karatala") };
+    #endif
     const char* DATA_PATH_ENV = "EDRUMS_DATA_PATH";
 
     struct Config {

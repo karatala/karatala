@@ -28,13 +28,19 @@ DisableDirPage=yes
 
 ; MAKE SURE YOU READ/MODIFY THE EULA BEFORE USING IT
 LicenseFile="resources\EULA"
+InfoBeforeFile="resources\README.txt"
 UninstallFilesDir="{commonappdata}\{#ProductName}\uninstall"
 
-[UninstallDelete]
-Type: filesandordirs; Name: "{commoncf64}\VST3\{#ProductName}Data"
+[Dirs]
+Name: "{commondocs}\Karatala"; Permissions: users-modify; Flags: uninsneveruninstall
+Name: "{commondocs}\Karatala\kit_layouts"; Permissions: users-modify; Flags: uninsneveruninstall
+Name: "{commondocs}\Karatala\instrument_map_presets"; Permissions: users-modify; Flags: uninsneveruninstall
 
 ; MSVC adds a .ilk when building the plugin. Let's not include that.
 [Files]
+Source: "..\data\kit_layouts\*.yml"; DestDir: "{commondocs}\Karatala\kit_layouts"; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "..\docs\default preset.txt"; DestDir: "{commondocs}\Karatala\instrument_map_presets"; DestName: "Default.txt"; Flags: onlyifdoesntexist uninsneveruninstall
+Source: "resources\README.txt"; DestDir: "{commondocs}\Karatala"; Flags: ignoreversion
 Source: "..\Builds\{#ProjectName}_artefacts\Release\VST3\{#ProductName}.vst3\*"; DestDir: "{commoncf64}\VST3\{#ProductName}.vst3\"; Excludes: *.ilk; Flags: ignoreversion recursesubdirs; Components: vst3
 Source: "..\Builds\{#ProjectName}_artefacts\Release\CLAP\{#ProductName}.clap"; DestDir: "{commoncf64}\CLAP\"; Flags: ignoreversion; Components: clap
 Source: "..\Builds\{#ProjectName}_artefacts\Release\Standalone\{#ProductName}.exe"; DestDir: "{commonpf64}\{#Publisher}\{#ProductName}"; Flags: ignoreversion; Components: standalone
@@ -42,10 +48,3 @@ Source: "..\Builds\{#ProjectName}_artefacts\Release\Standalone\{#ProductName}.ex
 [Icons]
 Name: "{autoprograms}\{#ProductName}"; Filename: "{commonpf64}\{#Publisher}\{#ProductName}\{#ProductName}.exe"; Components: standalone
 Name: "{autoprograms}\Uninstall {#ProductName}"; Filename: "{uninstallexe}"
-
-; This is optional, for preset or other plugin data
-[Run]
-Filename: "{cmd}"; \
-    WorkingDir: "{commoncf64}\VST3"; \
-    Parameters: "/C mklink /D ""{commoncf64}\VST3\{#ProductName}Data"" ""{commonappdata}\{#ProductName}"""; \
-    Flags: runascurrentuser; Components: vst3

@@ -104,6 +104,14 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Install Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.8.3'
+
+      - name: Create Install Guide
+        run: pandoc docs/INSTALL.md --from=gfm --to=plain --wrap=none --lua-filter=packaging/install-guide-links.lua --output=packaging/resources/README.txt
+
       - name: Cache the build
         uses: mozilla-actions/sccache-action@v0.0.9
 
@@ -191,6 +199,13 @@ jobs:
           plutil -replace BundleIsRelocatable -bool NO standalone.plist
           pkgbuild --identifier "${{ env.BUNDLE_ID }}.app.pkg" --version $VERSION --root "$(dirname "${{ env.STANDALONE_PATH }}")" --component-plist standalone.plist --install-location "/Applications" "packaging/${{ env.PRODUCT_NAME }}.app.pkg"
 
+          DATA_PACKAGE_ROOT="$RUNNER_TEMP/karatala-data"
+          mkdir -p "$DATA_PACKAGE_ROOT/Karatala/kit_layouts" "$DATA_PACKAGE_ROOT/Karatala/instrument_map_presets"
+          cp data/kit_layouts/*.yml "$DATA_PACKAGE_ROOT/Karatala/kit_layouts/"
+          cp "docs/default preset.txt" "$DATA_PACKAGE_ROOT/Karatala/instrument_map_presets/Default.txt"
+          chmod 1777 "$DATA_PACKAGE_ROOT/Karatala" "$DATA_PACKAGE_ROOT/Karatala/kit_layouts" "$DATA_PACKAGE_ROOT/Karatala/instrument_map_presets"
+          pkgbuild --identifier "${{ env.BUNDLE_ID }}.data.pkg" --version "$VERSION" --root "$DATA_PACKAGE_ROOT" --install-location "/Users/Shared" "packaging/${{ env.PRODUCT_NAME }}.data.pkg"
+
           cd packaging
           envsubst < distribution.xml.template > distribution.xml
           if [[ "$MACOS_SIGNING_ENABLED" == "true" ]]; then
@@ -203,11 +218,6 @@ jobs:
             productbuild --resources ./resources --distribution distribution.xml "$MACOS_PACKAGE_NAME"
           fi
           echo "MACOS_PACKAGE_NAME=$MACOS_PACKAGE_NAME" >> "$GITHUB_ENV"
-
-      - name: Zip
-        if: ${{ runner.os == 'Linux' }}
-        working-directory: ${{ env.ARTIFACTS_PATH }}
-        run: 7z a -tzip "${{ env.ARTIFACT_NAME }}.zip" "-xr!lib${{ env.PRODUCT_NAME }}_SharedCode.a" .
 
       - name: Generate Installer
         if: ${{ runner.os == 'Windows' }}
@@ -252,6 +262,26 @@ jobs:
           fi
           echo "WINDOWS_PACKAGE_NAME=$WINDOWS_PACKAGE_NAME" >> "$GITHUB_ENV"
 
+      - name: Create Manual Install ZIP
+        run: |
+          ZIP_ROOT="$RUNNER_TEMP/karatala-manual-install"
+          mkdir -p "$ZIP_ROOT/data/kit_layouts" "$ZIP_ROOT/data/instrument_map_presets"
+          cp -R "${{ env.ARTIFACTS_PATH }}/VST3" "$ZIP_ROOT/"
+          cp -R "${{ env.ARTIFACTS_PATH }}/CLAP" "$ZIP_ROOT/"
+          cp -R "${{ env.ARTIFACTS_PATH }}/Standalone" "$ZIP_ROOT/"
+          cp data/kit_layouts/*.yml "$ZIP_ROOT/data/kit_layouts/"
+          cp "docs/default preset.txt" "$ZIP_ROOT/data/instrument_map_presets/Default.txt"
+          cp packaging/resources/README.txt "$ZIP_ROOT/README.txt"
+          cp LICENSE "$ZIP_ROOT/LICENSE.txt"
+          ZIP_PATH="$GITHUB_WORKSPACE/${{ env.ARTIFACTS_PATH }}/${{ env.ARTIFACT_NAME }}.zip"
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            cp -R "${{ env.ARTIFACTS_PATH }}/AU" "$ZIP_ROOT/"
+            ditto -c -k --sequesterRsrc "$ZIP_ROOT" "$ZIP_PATH"
+          else
+            cd "$ZIP_ROOT"
+            7z a -tzip "$ZIP_PATH" .
+          fi
+
       - name: Upload Exe (Windows)
         if: ${{ runner.os == 'Windows' }}
         uses: actions/upload-artifact@v6
@@ -259,8 +289,7 @@ jobs:
           name: ${{ env.WINDOWS_PACKAGE_NAME }}
           path: "${{ env.ARTIFACTS_PATH }}/${{ env.WINDOWS_PACKAGE_NAME }}"
 
-      - name: Upload Zip (Linux)
-        if: ${{ runner.os == 'Linux' }}
+      - name: Upload ZIP
         uses: actions/upload-artifact@v6
         with:
           name: ${{ env.ARTIFACT_NAME }}.zip
