@@ -392,13 +392,14 @@ void DrumKitEngine::resolveAndLoadPreviewGroup(std::vector<LibraryPreviewLayer> 
     state->remainingLoads = static_cast<int>(resolvedLayers.size());
     state->playbackGain = playbackGain;
     state->generation = generation;
-    for (auto& [target, layerGain] : resolvedLayers) {
+    for (const auto& resolvedLayer : resolvedLayers) {
+        const auto& target = resolvedLayer.first;
         SampleLoadSpec loadSpec;
         loadSpec.file = target.sampleFile;
         loadSpec.contentHash = target.contentHash;
         loadSpec.metadataFileSizeBytes = target.metadataFileSizeBytes;
         loadSpec.fixedGainDb = target.fixedGainDb;
-        loader->requestAsyncLoad(loadSpec, [this, state, target, layerGain](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
+        loader->requestAsyncLoad(loadSpec, [this, state, target = resolvedLayer.first, layerGain = resolvedLayer.second](std::shared_ptr<juce::AudioBuffer<float>> buffer, double sampleRate) {
             this->completePreviewGroupLayer(state, this->preparePreviewBuffer(target, buffer, sampleRate), sampleRate, layerGain);
         });
     }
