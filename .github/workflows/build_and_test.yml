@@ -2,8 +2,15 @@ name: Pamplejuce
 
 on:
   workflow_dispatch: # lets you run a build from the UI
-  # push:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
   pull_request:
+
+permissions:
+  contents: read
 
 # When pushing new commits, cancel any running builds on that branch
 concurrency:
@@ -267,9 +274,11 @@ jobs:
           path: packaging/${{ env.MACOS_PACKAGE_NAME }}
 
   release:
-    if: contains(github.ref, 'tags/v')
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     needs: build_and_test
+    permissions:
+      contents: write
 
     steps:
       - name: Get Artifacts
