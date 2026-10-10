@@ -284,9 +284,10 @@ jobs:
       - name: Get Artifacts
         uses: actions/download-artifact@v7
 
-      - name: Create Release
+      - name: Create Draft Release and Upload Packages
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           prerelease: true
           # download-artifact puts these files in their own dirs...
           # Using globs sidesteps having to pass the version around
@@ -295,3 +296,10 @@ jobs:
             */*.zip
             */*.dmg
             */*.pkg
+
+      - name: Publish Prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release edit "$RELEASE_TAG" --draft=false --prerelease
