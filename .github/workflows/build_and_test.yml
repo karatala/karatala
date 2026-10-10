@@ -20,6 +20,7 @@ concurrency:
 env:
   BUILD_TYPE: Release
   BUILD_DIR: Builds
+  CMAKE_BUILD_PARALLEL_LEVEL: 2
   DISPLAY: :0 # linux pluginval needs this
   HOMEBREW_NO_INSTALL_CLEANUP: 1
   SCCACHE_GHA_ENABLED: true
@@ -57,13 +58,17 @@ jobs:
             os: ubuntu-22.04
             pluginval-binary: ./pluginval
             extra-flags: -G Ninja
+            build-targets: Karatala_Standalone Karatala_VST3 Karatala_CLAP Tests
           - name: macOS
             os: macos-14
             pluginval-binary: pluginval.app/Contents/MacOS/pluginval
             extra-flags: -G Ninja -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+            build-targets: Karatala_Standalone Karatala_VST3 Karatala_CLAP Karatala_AU Tests
           - name: Windows
             os: windows-latest
             pluginval-binary: ./pluginval.exe
+            extra-flags: -G Ninja
+            build-targets: Karatala_Standalone Karatala_VST3 Karatala_CLAP Tests
 
     steps:
       # Setup MSVC toolchain and developer command prompt (Windows)
@@ -116,14 +121,14 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Configure
-        run: cmake -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
+        run: cmake -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE}} -DKARATALA_BUILD_BENCHMARKS=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache ${{ matrix.extra-flags }} .
 
       - name: Build
-        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }}
+        run: cmake --build ${{ env.BUILD_DIR }} --config ${{ env.BUILD_TYPE }} --target ${{ matrix.build-targets }}
 
-      - name: Test & Benchmarks
+      - name: Tests
         working-directory: ${{ env.BUILD_DIR }}
-        run: ctest --verbose --output-on-failure
+        run: ctest --verbose --output-on-failure --no-tests=error
 
       - name: Read in .env from CMake # see GitHubENV.cmake
         run: |
@@ -272,7 +277,6 @@ jobs:
           cp data/kit_layouts/*.yml "$ZIP_ROOT/data/kit_layouts/"
           cp "docs/default preset.txt" "$ZIP_ROOT/data/instrument_map_presets/Default.txt"
           cp packaging/resources/README.txt "$ZIP_ROOT/README.txt"
-          cp LICENSE "$ZIP_ROOT/LICENSE.txt"
           ZIP_PATH="$GITHUB_WORKSPACE/${{ env.ARTIFACTS_PATH }}/${{ env.ARTIFACT_NAME }}.zip"
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             cp -R "${{ env.ARTIFACTS_PATH }}/AU" "$ZIP_ROOT/"

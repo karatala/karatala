@@ -172,11 +172,17 @@ include(PamplejuceIPP)
 include(Tests)
 
 # A separate target for Benchmarks (keeps the Tests target fast)
-include(Benchmarks)
+option(KARATALA_BUILD_BENCHMARKS "Build performance benchmarks" OFF)
+if(KARATALA_BUILD_BENCHMARKS)
+    include(Benchmarks)
+endif()
 
 # Tests and benchmarks need the plugin code, but should reuse its compiled library instead of
 # compiling all project and JUCE sources again through the SharedCode interface target.
 foreach(RunnerTarget IN ITEMS Tests Benchmarks)
+    if(NOT TARGET "${RunnerTarget}")
+        continue()
+    endif()
     get_target_property(RunnerLinkLibraries "${RunnerTarget}" LINK_LIBRARIES)
     list(REMOVE_ITEM RunnerLinkLibraries SharedCode)
     set_property(TARGET "${RunnerTarget}" PROPERTY LINK_LIBRARIES "${RunnerLinkLibraries}")
