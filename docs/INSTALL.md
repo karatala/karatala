@@ -2,9 +2,9 @@
 
 ## Download
 
-You need two downloads:
+You need the sample library and the Karatala app or plugin:
 
-1. [Download the free sample library (about 4Gb .zip)](https://github.com/karatala/sample_library/archive/refs/heads/main.zip). Open the ZIP and extract the sample_folder to a place where you want to keep it.
+1. [Download the free sample library](https://github.com/karatala/sample_library/releases/latest). Click **Assets** if the files are hidden. Each kit has its own ZIP file. Download all kit ZIPs to use the **Default** preset. The full library is about 4 GB. You can download fewer kits if you only want those sounds.
 2. [Download Karatala for your computer](https://github.com/karatala/karatala/releases). Open the newest release. Click **Assets** if the files are hidden.
 
 Look for names like these. The version number can be different:
@@ -16,6 +16,26 @@ Look for names like these. The version number can be different:
 | Linux | `Karatala Drum Kit Engine-1.0.0-Linux.zip` | Use the ZIP |
 
 Choose one Karatala download: the installer or the ZIP. The sample library is a separate download for both choices. **Source code** downloads are for people who want to work on the code.
+
+## Prepare the sample library
+
+On the sample library release page, download the kit ZIP files under **Assets**. Do not download **Source code (zip)** or **Source code (tar.gz)** for the samples.
+
+1. Create a folder (for example named `karatala_sample_library`) in a place where you want to keep the sounds.
+2. Open each kit ZIP and extract its kit folder into that folder
+3. Keep the kit folder names and all files inside them unchanged.
+
+For example, two extracted kits must look like this:
+
+```text
+karatala_sample_library/
+    AasiMonster by DIE [CC-BY-4.0]/
+        ...
+    ArtStar by Deva [CC-BY-4.0]/
+        ...
+```
+
+Put all kit folders directly inside `karatala_sample_library`. Do not add a separate folder with the ZIP file's name around each kit. Later, choose `karatala_sample_library` in Karatala's settings.
 
 ## Install with an installer
 
@@ -72,7 +92,7 @@ CLAP files end in `.clap`. AU files end in `.component`. Create the destination 
 
 1. Open Karatala. In your music app, add it as an instrument on a track. If it is missing, ask the music app to scan its plugins again.
 2. Click **Conf**. This is the settings page.
-3. Next to **Sample library**, click **Browse...**. Choose the extracted folder that contains the drum kits. It may be called `sample_library-main`. If no kits appear, check that you chose the folder with the kits, not the folder above it.
+3. Next to **Sample library**, click **Browse...**. Choose the folder you created above. If no kits appear, check that the kit folders are directly inside it.
 4. Choose your drum module under **Default kit layout**. Click **Save layout defaults**, then close and open Karatala again. If your module is not listed, start with the default layout and use **Map** to set the notes.
 5. Click **Kit > Presets**, choose **Default**, and click **LOAD PRESET**. Wait for sounds to load. This preset uses several kits from the full sample library. You can also choose one library kit and click **LOAD KIT**.
 6. Click a pad to hear a sound. Start with a low speaker or headphone volume.
@@ -85,7 +105,7 @@ You do not need to write a config file or edit the layout files for these steps.
 Choose the folder that contains the kits in **Conf > Sample library > Browse...**:
 
 ```text
-sample_library-main/                 <- choose this folder
+karatala_sample_library/                      <- choose this folder
     Kit Name by Author [License]/
         kick-22/
             center/
